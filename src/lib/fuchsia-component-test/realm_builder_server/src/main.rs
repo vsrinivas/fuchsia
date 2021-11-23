@@ -128,6 +128,7 @@ async fn handle_realm_builder_factory_stream(
                     registry: registry.clone(),
                     runner: runner.clone(),
                     runner_proxy_placeholder: runner_proxy_placeholder.clone(),
+                    realm_path: vec![],
                 };
 
                 execution_scope.spawn(async move {
@@ -202,6 +203,7 @@ struct Realm {
     registry: Arc<resolver::Registry>,
     runner: Arc<runner::Runner>,
     runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
+    realm_path: Vec<String>,
 }
 
 impl Realm {
@@ -314,19 +316,10 @@ impl Realm {
         if !is_legacy_url(&legacy_url) {
             return Err(RealmBuilderError::InvalidManifestExtension);
         }
-        let child_realm_node = RealmNode2::new_from_decl(cm_rust::ComponentDecl {
-            program: Some(cm_rust::ProgramDecl {
-                runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
-                info: fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: runner::LEGACY_URL_KEY.to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str(legacy_url))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
-                },
-            }),
-            ..cm_rust::ComponentDecl::default()
-        });
+        let child_realm_node = RealmNode2::new_from_decl(new_decl_with_program_entries(vec![(
+            runner::LEGACY_URL_KEY.to_string(),
+            legacy_url,
+        )]));
         self.realm_node.add_child(name.clone(), options, child_realm_node).await
     }
 
@@ -350,21 +343,12 @@ impl Realm {
     ) -> Result<(), RealmBuilderError> {
         let local_component_id =
             self.runner.register_local_component(self.runner_proxy_placeholder.clone()).await;
-        let child_realm_node = RealmNode2::new_from_decl(cm_rust::ComponentDecl {
-            program: Some(cm_rust::ProgramDecl {
-                runner: Some(runner::RUNNER_NAME.try_into().unwrap()),
-                info: fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: runner::MOCK_ID_KEY.to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str(
-                            local_component_id.into(),
-                        ))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
-                },
-            }),
-            ..cm_rust::ComponentDecl::default()
-        });
+        let mut child_path = self.realm_path.clone();
+        child_path.push(name.clone());
+        let child_realm_node = RealmNode2::new_from_decl(new_decl_with_program_entries(vec![
+            (runner::MOCK_ID_KEY.to_string(), local_component_id.into()),
+            (runner::LOCAL_COMPONENT_NAME_KEY.to_string(), child_path.join("/").to_string()),
+        ]));
         self.realm_node.add_child(name.clone(), options, child_realm_node).await
     }
 
@@ -386,6 +370,27 @@ impl Realm {
         }
         let child_node = self.realm_node.get_sub_realm(&name).await?;
         child_node.replace_decl(component_decl.fidl_into_native()).await
+    }
+}
+
+fn new_decl_with_program_entries(entries: Vec<(String, String)>) -> cm_rust::ComponentDecl {
+    cm_rust::ComponentDecl {
+        program: Some(cm_rust::ProgramDecl {
+            runner: Some(runner::RUNNER_NAME.try_into().unwrap()),
+            info: fdata::Dictionary {
+                entries: Some(
+                    entries
+                        .into_iter()
+                        .map(|(key, val)| fdata::DictionaryEntry {
+                            key: key,
+                            value: Some(Box::new(fdata::DictionaryValue::Str(val))),
+                        })
+                        .collect(),
+                ),
+                ..fdata::Dictionary::EMPTY
+            },
+        }),
+        ..cm_rust::ComponentDecl::default()
     }
 }
 
@@ -2018,8 +2023,11 @@ fn get_capability_name(capability: &ftest::Capability) -> Result<String, Error> 
 mod tests {
     use {
         super::*,
-        fidl::endpoints::{create_endpoints, create_proxy_and_stream},
+        fidl::endpoints::{
+            create_endpoints, create_proxy_and_stream, create_request_stream, ClientEnd,
+        },
         fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
+        matches::assert_matches,
         std::convert::TryInto,
     };
 
@@ -2113,9 +2121,8 @@ mod tests {
     fn launch_builder_task(
         realm_node: RealmNode2,
         registry: Arc<resolver::Registry>,
+        runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
     ) -> (ftest::BuilderProxy, fasync::Task<()>) {
-        let runner_proxy_placeholder = Arc::new(Mutex::new(None));
-
         let (pkg_dir, pkg_dir_stream) = create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
         drop(pkg_dir_stream);
 
@@ -2137,7 +2144,7 @@ mod tests {
 
         let registry = resolver::Registry::new();
         let (builder_proxy, _builder_stream_task) =
-            launch_builder_task(realm_node, registry.clone());
+            launch_builder_task(realm_node, registry.clone(), Arc::new(Mutex::new(None)));
 
         let (runner_client_end, runner_server_end) = create_endpoints().unwrap();
         drop(runner_server_end);
@@ -2158,6 +2165,8 @@ mod tests {
         registry: Arc<resolver::Registry>,
         runner: Arc<runner::Runner>,
         _realm_and_builder_task: fasync::Task<()>,
+        runner_stream: fcrunner::ComponentRunnerRequestStream,
+        runner_client_end: Option<ClientEnd<fcrunner::ComponentRunnerMarker>>,
     }
 
     impl RealmAndBuilderTask {
@@ -2175,8 +2184,11 @@ mod tests {
             let runner = runner::Runner::new();
             let runner_proxy_placeholder = Arc::new(Mutex::new(None));
 
-            let (builder_proxy, builder_task) =
-                launch_builder_task(realm_root.clone(), registry.clone());
+            let (builder_proxy, builder_task) = launch_builder_task(
+                realm_root.clone(),
+                registry.clone(),
+                runner_proxy_placeholder.clone(),
+            );
 
             let realm = Realm {
                 pkg_dir,
@@ -2184,32 +2196,38 @@ mod tests {
                 registry: registry.clone(),
                 runner: runner.clone(),
                 runner_proxy_placeholder,
+                realm_path: vec![],
             };
 
             let realm_and_builder_task = fasync::Task::local(async move {
                 realm.handle_stream(realm_strealm).await.expect("failed to handle realm stream");
                 builder_task.await;
             });
+            let (runner_client_end, runner_stream) =
+                create_request_stream::<fcrunner::ComponentRunnerMarker>().unwrap();
             Self {
                 realm_proxy,
                 builder_proxy,
                 registry,
                 runner,
                 _realm_and_builder_task: realm_and_builder_task,
+                runner_stream,
+                runner_client_end: Some(runner_client_end),
             }
         }
 
-        async fn call_build(&self) -> Result<String, ftest::RealmBuilderError2> {
-            let (runner_client_end, runner_server_end) = create_endpoints().unwrap();
-            drop(runner_server_end);
-            self.builder_proxy.build(runner_client_end).await.expect("failed to send build command")
+        async fn call_build(&mut self) -> Result<String, ftest::RealmBuilderError2> {
+            self.builder_proxy
+                .build(self.runner_client_end.take().expect("call_build called twice"))
+                .await
+                .expect("failed to send build command")
         }
 
         // Calls `Builder.Build` on `self.builder_proxy`, which should populate `self.registry`
         // with the contents of the realm and then return the URL for the root of this realm. That
         // URL is then used to look up the `ComponentTree` that ended up in the resolver, which can
         // be `assert_eq`'d against what the tree is expected to be.
-        async fn call_build_and_get_tree(&self) -> ComponentTree {
+        async fn call_build_and_get_tree(&mut self) -> ComponentTree {
             let url = self.call_build().await.expect("builder unexpectedly returned an error");
             ComponentTree::new_from_resolver(url, self.registry.clone())
                 .await
@@ -2222,7 +2240,7 @@ mod tests {
         let realm_node = RealmNode2::new();
 
         let (builder_proxy, _builder_stream_task) =
-            launch_builder_task(realm_node, resolver::Registry::new());
+            launch_builder_task(realm_node, resolver::Registry::new(), Arc::new(Mutex::new(None)));
 
         let (runner_client_end, runner_server_end) = create_endpoints().unwrap();
         drop(runner_server_end);
@@ -2509,8 +2527,87 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn build_fills_in_the_runner_proxy() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+
+        // Add two local children
+        realm_and_builder_task
+            .realm_proxy
+            .add_local_child("a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_local_child returned an error");
+        realm_and_builder_task
+            .realm_proxy
+            .add_local_child("b", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_local_child")
+            .expect("add_local_child returned an error");
+
+        // Confirm that the mocks runner has entries for the two children we just added
+        let mocks = realm_and_builder_task.runner.mocks().await;
+        assert!(mocks.contains_key(&"0".to_string())); // "a" was added first, so it gets 0
+        assert!(mocks.contains_key(&"1".to_string())); // "b" was added second, so it gets 1
+
+        // Confirm that the entries in the mocks runner for these children does not have a
+        // `fcrunner::ComponentRunnerProxy` for these children, as this value is supposed to be
+        // populated with the channel provided by `Builder.Build`, and we haven't called that yet.
+        let get_runner_proxy =
+            |mocks: &HashMap<_, _>, id: &str| match mocks.clone().remove(&id.to_string()) {
+                Some(runner::ControlHandleOrRunnerProxy::RunnerProxy(rp)) => rp,
+                Some(runner::ControlHandleOrRunnerProxy::ControlHandle(_)) => {
+                    panic!("unexpected control handle")
+                }
+                None => panic!("value unexpectedly missing"),
+            };
+
+        assert!(get_runner_proxy(&mocks, "0").lock().await.is_none());
+        assert!(get_runner_proxy(&mocks, "1").lock().await.is_none());
+
+        // Call `Builder.Build`, and confirm that the entries for our local children in the mocks
+        // runner now has a `fcrunner::ComponentRunnerProxy`.
+        let _ = realm_and_builder_task.call_build().await.expect("build failed");
+
+        assert!(get_runner_proxy(&mocks, "0").lock().await.is_some());
+        assert!(get_runner_proxy(&mocks, "1").lock().await.is_some());
+
+        // Confirm that the `fcrunner::ComponentRunnerProxy` for one of the local children has the
+        // value we expect, by writing a value into it and seeing the same value come out on the
+        // other side of our channel.
+        let example_program = fdata::Dictionary {
+            entries: Some(vec![fdata::DictionaryEntry {
+                key: "hippos".to_string(),
+                value: Some(Box::new(fdata::DictionaryValue::Str("rule!".to_string()))),
+            }]),
+            ..fdata::Dictionary::EMPTY
+        };
+
+        let (_controller_client_end, controller_server_end) =
+            create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
+        let runner_proxy_for_a = get_runner_proxy(&mocks, "0").lock().await.clone().unwrap();
+        runner_proxy_for_a
+            .start(
+                fcrunner::ComponentStartInfo {
+                    program: Some(example_program.clone()),
+                    ..fcrunner::ComponentStartInfo::EMPTY
+                },
+                controller_server_end,
+            )
+            .expect("failed to write start message");
+        assert_matches!(
+            realm_and_builder_task
+                .runner_stream
+                .try_next()
+                .await
+                .expect("failed to read from runner_stream"),
+            Some(fcrunner::ComponentRunnerRequest::Start { start_info, .. })
+                if start_info.program == Some(example_program)
+        );
+    }
+
+    #[fuchsia::test]
     async fn add_child() {
-        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
             .realm_proxy
             .add_child("a", "test:///a", ftest::ChildOptions::EMPTY)
@@ -2621,7 +2718,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn add_relative_child() {
-        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
             .realm_proxy
             .add_child("a", "#meta/realm_builder_server_unit_tests.cm", ftest::ChildOptions::EMPTY)
@@ -2674,7 +2771,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn add_relative_child_with_child() {
-        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
             .realm_proxy
             .add_child(
@@ -2734,7 +2831,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn add_legacy_child() {
-        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
             .realm_proxy
             .add_legacy_child("a", EXAMPLE_LEGACY_URL, ftest::ChildOptions::EMPTY)
@@ -2845,7 +2942,7 @@ mod tests {
             ..cm_rust::ComponentDecl::default()
         };
 
-        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
             .realm_proxy
             .add_child_from_decl("a", a_decl.clone().native_into_fidl(), ftest::ChildOptions::EMPTY)
@@ -2903,7 +3000,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn add_local_child() {
-        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
         realm_and_builder_task
             .realm_proxy
             .add_local_child("a", ftest::ChildOptions::EMPTY)
@@ -2915,10 +3012,16 @@ mod tests {
             program: Some(cm_rust::ProgramDecl {
                 runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
                 info: fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: runner::MOCK_ID_KEY.to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
-                    }]),
+                    entries: Some(vec![
+                        fdata::DictionaryEntry {
+                            key: runner::MOCK_ID_KEY.to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                        },
+                        fdata::DictionaryEntry {
+                            key: runner::LOCAL_COMPONENT_NAME_KEY.to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("a".to_string()))),
+                        },
+                    ]),
                     ..fdata::Dictionary::EMPTY
                 },
             }),

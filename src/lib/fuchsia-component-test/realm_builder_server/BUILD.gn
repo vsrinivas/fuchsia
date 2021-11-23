@@ -45,7 +45,10 @@ rustc_binary("realm_builder_server_bin") {
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",
   ]
-  test_deps = [ "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc" ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//third_party/rust_crates:matches",
+  ]
 }
 
 fuchsia_component("realm_builder_server_component") {

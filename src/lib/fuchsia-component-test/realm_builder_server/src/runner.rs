@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsysv1,
@@ -23,6 +23,7 @@ use {
 pub const RUNNER_NAME: &'static str = "realm_builder";
 pub const MOCK_ID_KEY: &'static str = "mock_id";
 pub const LEGACY_URL_KEY: &'static str = "legacy_url";
+pub const LOCAL_COMPONENT_NAME_KEY: &'static str = "LOCAL_COMPONENT_NAME";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MockId(String);
@@ -130,34 +131,46 @@ impl Runner {
     async fn launch_mock_component(
         self: &Arc<Self>,
         mock_id: String,
-        start_info: fcrunner::ComponentStartInfo,
+        mut start_info: fcrunner::ComponentStartInfo,
         controller: ServerEnd<fcrunner::ComponentControllerMarker>,
     ) -> Result<(), Error> {
         let mocks_guard = self.mocks.lock().await;
         let mock_control_handle_or_runner_proxy =
             mocks_guard.get(&mock_id).ok_or(format_err!("no such mock: {:?}", mock_id))?.clone();
 
-        let mock_control_handle = match mock_control_handle_or_runner_proxy {
-            ControlHandleOrRunnerProxy::ControlHandle(control_handle) => control_handle,
-            ControlHandleOrRunnerProxy::RunnerProxy(_) => panic!("runner proxies are unsupported"),
+        match mock_control_handle_or_runner_proxy {
+            ControlHandleOrRunnerProxy::ControlHandle(mock_control_handle) => {
+                mock_control_handle.send_on_mock_run_request(
+                    &mock_id,
+                    ftest::MockComponentStartInfo {
+                        ns: start_info.ns,
+                        outgoing_dir: start_info.outgoing_dir,
+                        ..ftest::MockComponentStartInfo::EMPTY
+                    },
+                )?;
+
+                fasync::Task::local(run_mock_controller(
+                    controller.into_stream()?,
+                    mock_id,
+                    start_info.runtime_dir.unwrap(),
+                    mock_control_handle.clone(),
+                ))
+                .detach();
+            }
+            ControlHandleOrRunnerProxy::RunnerProxy(runner_proxy_placeholder) => {
+                let runner_proxy_placeholder_guard = runner_proxy_placeholder.lock().await;
+                if runner_proxy_placeholder_guard.is_none() {
+                    return Err(format_err!("runner request received for a local component before Builder.Build was called, this should be impossible"));
+                }
+                let runner_proxy = runner_proxy_placeholder_guard.as_ref().unwrap();
+                if let Some(mut program) = start_info.program.as_mut() {
+                    remove_mock_id(&mut program);
+                }
+                runner_proxy
+                    .start(start_info, controller)
+                    .context("failed to send start request for local component to client")?;
+            }
         };
-
-        mock_control_handle.send_on_mock_run_request(
-            &mock_id,
-            ftest::MockComponentStartInfo {
-                ns: start_info.ns,
-                outgoing_dir: start_info.outgoing_dir,
-                ..ftest::MockComponentStartInfo::EMPTY
-            },
-        )?;
-
-        fasync::Task::local(run_mock_controller(
-            controller.into_stream()?,
-            mock_id,
-            start_info.runtime_dir.unwrap(),
-            mock_control_handle.clone(),
-        ))
-        .detach();
         Ok(())
     }
 
@@ -204,24 +217,26 @@ enum MockIdOrLegacyUrl {
 /// dictionary. It is an error for both keys to be present at once, or for anything else to be
 /// present in the dictionary.
 fn extract_mock_id_or_legacy_url<'a>(dict: fdata::Dictionary) -> Result<MockIdOrLegacyUrl, Error> {
-    let mut entries = dict.entries.ok_or(format_err!("program section is empty"))?;
-    if entries.len() != 1 {
-        return Err(format_err!(
-            "program section must contain only one field, this one has: {:?}",
-            entries.into_iter().map(|e| e.key).collect::<Vec<_>>()
-        ));
+    let entries = dict.entries.ok_or(format_err!("program section is empty"))?;
+    for entry in entries.into_iter() {
+        let entry_value =
+            entry.value.map(|box_| *box_).ok_or(format_err!("program section is missing value"))?;
+        match (entry.key.as_str(), entry_value) {
+            (MOCK_ID_KEY, fdata::DictionaryValue::Str(s)) => {
+                return Ok(MockIdOrLegacyUrl::MockId(s.clone()))
+            }
+            (LEGACY_URL_KEY, fdata::DictionaryValue::Str(s)) => {
+                return Ok(MockIdOrLegacyUrl::LegacyUrl(s.clone()))
+            }
+            _ => continue,
+        }
     }
-    let entry = entries.pop().unwrap();
-    let entry_value =
-        entry.value.map(|box_| *box_).ok_or(format_err!("program section is missing value"))?;
-    match (entry.key.as_str(), entry_value) {
-        (MOCK_ID_KEY, fdata::DictionaryValue::Str(s)) => {
-            return Ok(MockIdOrLegacyUrl::MockId(s.clone()))
-        }
-        (LEGACY_URL_KEY, fdata::DictionaryValue::Str(s)) => {
-            return Ok(MockIdOrLegacyUrl::LegacyUrl(s.clone()))
-        }
-        _ => return Err(format_err!("malformed program section")),
+    return Err(format_err!("malformed program section"));
+}
+
+fn remove_mock_id(dict: &mut fdata::Dictionary) {
+    if let Some(entries) = &mut dict.entries {
+        *entries = entries.drain(..).filter(|entry| entry.key.as_str() != MOCK_ID_KEY).collect();
     }
 }
 
@@ -260,4 +275,93 @@ async fn run_mock_controller(
     }
 
     execution_scope.shutdown();
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        fidl::endpoints::{create_endpoints, create_proxy_and_stream},
+        matches::assert_matches,
+    };
+
+    // There are two separate `fuchsia.component.runner/ComponentRunner` channels for every local
+    // component that's launched: one connecting component manager to the realm builder runner, and
+    // one connecting the realm builder runner to a client. This test feeds a launch request into
+    // the client end of the first channel pair (pretending to be component manager), and observes
+    // the request be sent out by the realm builder runner on the server end of the second pair
+    // (pretending to be the realm builder client).
+    #[fuchsia::test]
+    async fn launch_local_component() {
+        let runner = Runner::new();
+
+        let (client_runner_proxy, mut client_runner_request_stream) =
+            create_proxy_and_stream::<fcrunner::ComponentRunnerMarker>().unwrap();
+        let MockId(mock_id) =
+            runner.register_local_component(Arc::new(Mutex::new(Some(client_runner_proxy)))).await;
+
+        let (server_runner_proxy, server_runner_request_stream) =
+            create_proxy_and_stream::<fcrunner::ComponentRunnerMarker>().unwrap();
+
+        let _runner_request_stream_task = fasync::Task::local(async move {
+            if let Err(e) = runner.handle_runner_request_stream(server_runner_request_stream).await
+            {
+                panic!("error returned by request stream: {:?}", e);
+            }
+        });
+
+        let example_program = fdata::Dictionary {
+            entries: Some(vec![
+                fdata::DictionaryEntry {
+                    key: "hippos".to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str("rule!".to_string()))),
+                },
+                fdata::DictionaryEntry {
+                    key: MOCK_ID_KEY.to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str(mock_id))),
+                },
+            ]),
+            ..fdata::Dictionary::EMPTY
+        };
+
+        let (_controller_client_end, controller_server_end) =
+            create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
+        let (_outgoing_dir_client_end, outgoing_dir_server_end) =
+            create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (_runtime_dir_client_end, runtime_dir_server_end) =
+            create_endpoints::<fio::DirectoryMarker>().unwrap();
+
+        server_runner_proxy
+            .start(
+                fcrunner::ComponentStartInfo {
+                    program: Some(example_program),
+                    ns: Some(vec![]),
+                    outgoing_dir: Some(outgoing_dir_server_end),
+                    runtime_dir: Some(runtime_dir_server_end),
+                    ..fcrunner::ComponentStartInfo::EMPTY
+                },
+                controller_server_end,
+            )
+            .expect("failed to write start message");
+
+        assert_matches!(
+            client_runner_request_stream
+                .try_next()
+                .await
+                .expect("failed to read from client_runner_request_stream"),
+            Some(fcrunner::ComponentRunnerRequest::Start { start_info, .. })
+                if start_info.program == Some(fdata::Dictionary {
+                    // The `MOCK_ID_KEY` entry gets removed from the program section before sending
+                    // it off to the client, as this value is only used for bookkeeping internal to
+                    // the realm builder runner.
+                    entries: Some(vec![
+                        fdata::DictionaryEntry {
+                            key: "hippos".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("rule!".to_string()))),
+                        },
+                    ]),
+                    ..fdata::Dictionary::EMPTY
+                })
+        );
+    }
 }
