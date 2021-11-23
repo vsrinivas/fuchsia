@@ -9,9 +9,15 @@ import("//build/host.gni")
 group("verifiers") {
   deps = [
     "//src/security/verifiers/verify_bootfs($host_toolchain)",
+    "//src/security/verifiers/verify_component_resolvers($host_toolchain)",
     "//src/security/verifiers/verify_kernel_cmdline($host_toolchain)",
     "//src/security/verifiers/verify_route_sources($host_toolchain)",
     "//src/security/verifiers/verify_routes($host_toolchain)",
     "//src/security/verifiers/verify_static_pkgs($host_toolchain)",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "//src/security/verifiers/verify_component_resolvers:tests($host_toolchain)" ]
 }

@@ -21,6 +21,7 @@ group("tests") {
     "kms:tests",
     "scrutiny:tests",
     "tee_manager:tests",
+    "verifiers:tests",
     "zxcrypt:tests",
   ]
 }
