@@ -183,7 +183,7 @@ pub fn parse_session_spec(value: &str) -> Result<SessionSpec, String> {
     }
 
     if value == "0" {
-        return Ok(SessionSpec::Relative(0));
+        return Err(String::from("'0' is not a valid session specifier: use ~1 for the most recent session in `dump` mode."));
     }
 
     let split = value.split_once('~');

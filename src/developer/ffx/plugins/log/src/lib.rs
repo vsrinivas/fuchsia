@@ -503,14 +503,14 @@ pub async fn log_cmd<W: std::io::Write>(
     }
 
     let from_bound = if let Some(since) = cmd.since {
-        Some(TimeBound::Absolute(since.timestamp() as u64))
+        Some(TimeBound::Absolute(since.timestamp_nanos() as u64))
     } else if let Some(since_monotonic) = cmd.since_monotonic {
         Some(TimeBound::Monotonic(since_monotonic.as_nanos() as u64))
     } else {
         None
     };
     let to_bound = if let Some(until) = cmd.until {
-        Some(TimeBound::Absolute(until.timestamp() as u64))
+        Some(TimeBound::Absolute(until.timestamp_nanos() as u64))
     } else if let Some(until_monotonic) = cmd.until_monotonic {
         Some(TimeBound::Monotonic(until_monotonic.as_nanos() as u64))
     } else {
@@ -1286,7 +1286,9 @@ mod test {
         };
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
-            min_timestamp_nanos: Some(TimeBound::Absolute(FAKE_START_TIMESTAMP as u64)),
+            min_timestamp_nanos: Some(TimeBound::Absolute(
+                Duration::from_secs(FAKE_START_TIMESTAMP as u64).as_nanos() as u64,
+            )),
             session: Some(SessionSpec::Relative(0)),
             ..DaemonDiagnosticsStreamParameters::EMPTY
         };

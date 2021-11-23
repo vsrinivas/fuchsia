@@ -23,7 +23,7 @@ use {
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
         DiagnosticsStreamError, LogSession, RepositoryRegistryMarker, SessionSpec, StreamMode,
-        TargetCollectionMarker,
+        TargetCollectionMarker, TimeBound,
     },
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, DiagnosticsData,
@@ -619,6 +619,10 @@ impl Daemon {
                         .context("sending missing parameter response");
                 };
 
+                let target_result = self
+                    .get_target(target_str.clone())
+                    .on_timeout(Duration::from_secs(1), || Err(DaemonError::Timeout))
+                    .await;
                 let (target_identifier, stream) = if stream_mode == StreamMode::SnapshotAll {
                     let target_str = if let Some(target_str) = target_str {
                         target_str
@@ -692,6 +696,27 @@ impl Daemon {
 
                             sorted.sort_by_key(|t| -t.0);
 
+                            // If there is not an active session, we offset the session number relative to the
+                            // index by 1, as `0` is reserved for an active session
+                            let has_active_session = if let Ok(ref t) = target_result {
+                                t.is_logger_running()
+                            } else {
+                                false
+                            };
+
+                            let rel = if has_active_session {
+                                rel
+                            } else {
+                                if rel == 0 {
+                                    return responder
+                                        .send(&mut Err(
+                                            DiagnosticsStreamError::NoMatchingOfflineSessions,
+                                        ))
+                                        .context("sending no matching offline sessions response");
+                                }
+                                rel - 1
+                            };
+
                             if let Some((_, stream)) = sorted.into_iter().nth(rel as usize) {
                                 (target_str, Arc::new(stream))
                             } else {
@@ -705,12 +730,8 @@ impl Daemon {
                         _ => bail!("unexpected SessionSpec value"),
                     }
                 } else {
-                    let target = match self
-                        .get_target(target_str.clone())
-                        .on_timeout(Duration::from_secs(3), || Err(DaemonError::Timeout))
-                        .await
-                    {
-                        Ok(t) => t,
+                    match target_result {
+                        Ok(t) => (t.nodename_str(), t.stream_info()),
                         Err(DaemonError::Timeout) => {
                             return responder
                                 .send(&mut Err(DiagnosticsStreamError::NoMatchingTargets))
@@ -726,9 +747,7 @@ impl Daemon {
                                 .send(&mut Err(DiagnosticsStreamError::TargetMatchFailed))
                                 .context("sending TargetMatchFailed response");
                         }
-                    };
-
-                    (target.nodename_str(), target.stream_info())
+                    }
                 };
 
                 match stream
@@ -747,12 +766,27 @@ impl Daemon {
                     }
                 }
 
-                let mut log_iterator = stream
-                    .stream_entries(
-                        parameters.stream_mode.unwrap(),
-                        parameters.min_target_timestamp_nanos.map(|t| Timestamp::from(t as i64)),
-                    )
-                    .await?;
+                let min_timestamp = match parameters.min_timestamp_nanos {
+                    Some(TimeBound::Absolute(t)) => {
+                        if let Some(session) = stream.session_timestamp_nanos().await {
+                            Some(Timestamp::from(t as i64 - session))
+                        } else {
+                            None
+                        }
+                    }
+                    Some(TimeBound::Monotonic(t)) => Some(Timestamp::from(t as i64)),
+                    Some(bound) => {
+                        log::error!("Got unexpected TimeBound field {:?}", bound);
+                        responder.send(&mut Err(DiagnosticsStreamError::GenericError))?;
+                        return Ok(());
+                    }
+                    None => {
+                        parameters.min_target_timestamp_nanos.map(|t| Timestamp::from(t as i64))
+                    }
+                };
+
+                let mut log_iterator =
+                    stream.stream_entries(parameters.stream_mode.unwrap(), min_timestamp).await?;
                 let task = Task::local(async move {
                     let mut iter_stream = iterator.into_stream()?;
 
