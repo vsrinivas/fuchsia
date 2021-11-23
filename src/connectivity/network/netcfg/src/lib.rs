@@ -950,54 +950,64 @@ impl<'a> NetCfg<'a> {
         watchers: &mut DnsServerWatchers<'_>,
         virtualization_handler: &mut impl virtualization::Handler,
     ) -> Result<(), errors::Error> {
-        let update_result = self
-            .interface_properties
+        let Self {
+            interface_properties,
+            dns_servers,
+            interface_states,
+            lookup_admin,
+            dhcp_server,
+            dhcpv6_client_provider,
+            ..
+        } = self;
+        let update_result = interface_properties
             .update(event)
             .context("failed to update interface properties with watcher event")
-            .map_err(errors::Error::Fatal)?
-            // Modify the result so that it refers to interfaces by ID rather than by holding a
-            // reference into the interface state.
-            //
-            // This forces the caller to lookup the interface properties, but allows us to share the
-            // result with methods that require a &mut self.
-            //
-            // TODO(https://fxbug.dev/88615): consider avoiding `UpdateResult::map` by refactoring
-            // `NetCfg::handle_interface_update_result` not to need a `&mut self`.
-            .map(|properties| properties.id);
-        self.handle_interface_update_result(&update_result, watchers)
-            .await
-            .context("handle interface update")?;
+            .map_err(errors::Error::Fatal)?;
+        Self::handle_interface_update_result(
+            &update_result,
+            watchers,
+            dns_servers,
+            interface_states,
+            lookup_admin,
+            dhcp_server,
+            dhcpv6_client_provider,
+        )
+        .await
+        .context("handle interface update")?;
         virtualization_handler
-            .handle_interface_update_result(&self.interface_properties, &update_result)
+            .handle_interface_update_result(&update_result)
             .await
             .context("handle interface update for virtualization")?;
         Ok(())
     }
 
+    // This method takes mutable references to several fields of `NetCfg` separately as parameters,
+    // rather than `&mut self` directly, because `update_result` already holds a reference into
+    // `self.interface_properties`.
     async fn handle_interface_update_result(
-        &mut self,
-        update_result: &fnet_interfaces_ext::UpdateResult<u64>,
+        update_result: &fnet_interfaces_ext::UpdateResult<'_>,
         watchers: &mut DnsServerWatchers<'_>,
+        dns_servers: &mut DnsServers,
+        interface_states: &mut HashMap<u64, InterfaceState>,
+        lookup_admin: &fnet_name::LookupAdminProxy,
+        dhcp_server: &Option<fnet_dhcp::Server_Proxy>,
+        dhcpv6_client_provider: &Option<fnet_dhcpv6::ClientProviderProxy>,
     ) -> Result<(), errors::Error> {
         match update_result {
-            fnet_interfaces_ext::UpdateResult::Added(id) => {
-                let properties =
-                    self.interface_properties.get(&id).expect("lookup interface by ID");
-                match self.interface_states.get_mut(&id) {
+            fnet_interfaces_ext::UpdateResult::Added(properties) => {
+                match interface_states.get_mut(&properties.id) {
                     Some(state) => state
-                        .on_discovery(properties, self.dhcpv6_client_provider.as_ref(), watchers)
+                        .on_discovery(properties, dhcpv6_client_provider.as_ref(), watchers)
                         .await
                         .context("failed to handle interface added event"),
                     // An interface netcfg won't be configuring was added, do nothing.
                     None => Ok(()),
                 }
             }
-            fnet_interfaces_ext::UpdateResult::Existing(id) => {
-                let properties =
-                    self.interface_properties.get(&id).expect("lookup interface by ID");
-                match self.interface_states.get_mut(&id) {
+            fnet_interfaces_ext::UpdateResult::Existing(properties) => {
+                match interface_states.get_mut(&properties.id) {
                     Some(state) => state
-                        .on_discovery(properties, self.dhcpv6_client_provider.as_ref(), watchers)
+                        .on_discovery(properties, dhcpv6_client_provider.as_ref(), watchers)
                         .await
                         .context("failed to handle existing interface event"),
                     // An interface netcfg won't be configuring was discovered, do nothing.
@@ -1006,14 +1016,12 @@ impl<'a> NetCfg<'a> {
             }
             fnet_interfaces_ext::UpdateResult::Changed {
                 previous: fnet_interfaces::Properties { online: previous_online, .. },
-                current: id,
+                current: current_properties,
             } => {
-                let current_properties =
-                    self.interface_properties.get(&id).expect("lookup interface by ID");
                 let &fnet_interfaces_ext::Properties {
                     id, ref name, online, ref addresses, ..
                 } = current_properties;
-                match self.interface_states.get_mut(&id) {
+                match interface_states.get_mut(&id) {
                     // An interface netcfg is not configuring was changed, do nothing.
                     None => return Ok(()),
                     Some(InterfaceState {
@@ -1022,7 +1030,7 @@ impl<'a> NetCfg<'a> {
                             InterfaceConfigState::Host(HostInterfaceState { dhcpv6_client_addr }),
                     }) => {
                         let dhcpv6_client_provider =
-                            if let Some(dhcpv6_client_provider) = &self.dhcpv6_client_provider {
+                            if let Some(dhcpv6_client_provider) = dhcpv6_client_provider {
                                 dhcpv6_client_provider
                             } else {
                                 return Ok(());
@@ -1043,19 +1051,14 @@ impl<'a> NetCfg<'a> {
                                 sockaddr.display_ext(),
                             );
 
-                            return dhcpv6::stop_client(
-                                &self.lookup_admin,
-                                &mut self.dns_servers,
-                                id,
-                                watchers,
-                            )
-                            .await
-                            .with_context(|| {
-                                format!(
-                                    "error stopping DHCPv6 client on down interface {} (id={})",
-                                    name, id
-                                )
-                            });
+                            return dhcpv6::stop_client(&lookup_admin, dns_servers, *id, watchers)
+                                .await
+                                .with_context(|| {
+                                    format!(
+                                        "error stopping DHCPv6 client on down interface {} (id={})",
+                                        name, id
+                                    )
+                                });
                         }
 
                         // Stop the DHCPv6 client if its address can no longer be found on the
@@ -1083,20 +1086,15 @@ impl<'a> NetCfg<'a> {
                                 );
 
                                 let () =
-                                    dhcpv6::stop_client(
-                                        &self.lookup_admin,
-                                        &mut self.dns_servers,
-                                        id,
-                                        watchers,
-                                    )
-                                    .await
-                                    .with_context(|| {
-                                        format!(
+                                    dhcpv6::stop_client(&lookup_admin, dns_servers, *id, watchers)
+                                        .await
+                                        .with_context(|| {
+                                            format!(
                                             "error stopping DHCPv6 client on  interface {} (id={}) \
                                             since sockaddr {} was removed",
                                             name, id, sockaddr.display_ext()
                                         )
-                                    })?;
+                                        })?;
                             }
                         }
 
@@ -1104,7 +1102,7 @@ impl<'a> NetCfg<'a> {
                         if dhcpv6_client_addr.is_none() {
                             *dhcpv6_client_addr = start_dhcpv6_client(
                                 current_properties,
-                                dhcpv6_client_provider,
+                                &dhcpv6_client_provider,
                                 watchers,
                             )?;
                         }
@@ -1116,23 +1114,24 @@ impl<'a> NetCfg<'a> {
                     }) => {
                         // TODO(fxbug.dev/55879): Stop the DHCP server when the address it is
                         // listening on is removed.
-                        let dhcp_server = if let Some(dhcp_server) = &self.dhcp_server {
+                        let dhcp_server = if let Some(dhcp_server) = dhcp_server {
                             dhcp_server
                         } else {
                             return Ok(());
                         };
 
-                        if previous_online.map_or(true, |previous_online| previous_online == online)
+                        if previous_online
+                            .map_or(true, |previous_online| previous_online == *online)
                         {
                             return Ok(());
                         }
 
-                        if online {
+                        if *online {
                             info!(
                                 "WLAN AP interface {} (id={}) came up so starting DHCP server",
                                 name, id
                             );
-                            dhcpv4::start_server(dhcp_server)
+                            dhcpv4::start_server(&dhcp_server)
                                 .await
                                 .context("error starting DHCP server")
                         } else {
@@ -1140,7 +1139,7 @@ impl<'a> NetCfg<'a> {
                                 "WLAN AP interface {} (id={}) went down so stopping DHCP server",
                                 name, id
                             );
-                            dhcpv4::stop_server(dhcp_server)
+                            dhcpv4::stop_server(&dhcp_server)
                                 .await
                                 .context("error stopping DHCP server")
                         }
@@ -1152,7 +1151,7 @@ impl<'a> NetCfg<'a> {
                 name,
                 ..
             }) => {
-                match self.interface_states.remove(&id) {
+                match interface_states.remove(&id) {
                     // An interface netcfg was not responsible for configuring was removed, do
                     // nothing.
                     None => Ok(()),
@@ -1175,8 +1174,8 @@ impl<'a> NetCfg<'a> {
                                 );
 
                                 dhcpv6::stop_client(
-                                    &self.lookup_admin,
-                                    &mut self.dns_servers,
+                                    &lookup_admin,
+                                    dns_servers,
                                     *id,
                                     watchers,
                                 )
@@ -1189,14 +1188,14 @@ impl<'a> NetCfg<'a> {
                                 })
                             }
                             InterfaceConfigState::WlanAp(WlanApInterfaceState {}) => {
-                                if let Some(dhcp_server) = &self.dhcp_server {
+                                if let Some(dhcp_server) = dhcp_server {
                                     // The DHCP server should only run on the WLAN AP interface, so stop it
                                     // since the AP interface is removed.
                                     info!(
                                         "WLAN AP interface {} (id={}) is removed, stopping DHCP server",
                                         name, id
                                     );
-                                    dhcpv4::stop_server(dhcp_server)
+                                    dhcpv4::stop_server(&dhcp_server)
                                         .await
                                         .context("error stopping DHCP server")
                                 } else {

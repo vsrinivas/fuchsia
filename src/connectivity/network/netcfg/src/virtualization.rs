@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::convert::TryFrom as _;
 use std::pin::Pin;
 
@@ -111,8 +111,7 @@ pub(super) trait Handler {
 
     async fn handle_interface_update_result(
         &mut self,
-        interface_properties: &HashMap<u64, fnet_interfaces_ext::Properties>,
-        update_result: &fnet_interfaces_ext::UpdateResult<u64>,
+        update_result: &fnet_interfaces_ext::UpdateResult<'_>,
     ) -> Result<(), errors::Error>;
 }
 
@@ -530,14 +529,12 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
 
     async fn handle_interface_update_result(
         &mut self,
-        interface_properties: &HashMap<u64, fnet_interfaces_ext::Properties>,
-        update_result: &fnet_interfaces_ext::UpdateResult<u64>,
+        update_result: &fnet_interfaces_ext::UpdateResult<'_>,
     ) -> Result<(), errors::Error> {
         match update_result {
-            fnet_interfaces_ext::UpdateResult::Added(id)
-            | fnet_interfaces_ext::UpdateResult::Existing(id) => {
-                let fnet_interfaces_ext::Properties { id, online, device_class, .. } =
-                    *interface_properties.get(&id).expect("lookup interface by ID");
+            fnet_interfaces_ext::UpdateResult::Added(properties)
+            | fnet_interfaces_ext::UpdateResult::Existing(properties) => {
+                let fnet_interfaces_ext::Properties { id, online, device_class, .. } = **properties;
                 // If this interface is one that was added as part of a virtual network netcfg is
                 // managing, it's not a candidate to provide upstream connectivity.
                 if self.bridge_state.contains_guest(id)
@@ -554,10 +551,10 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
             }
             fnet_interfaces_ext::UpdateResult::Changed {
                 previous: fnet_interfaces::Properties { online: previously_online, .. },
-                current,
+                current: current_properties,
             } => {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } =
-                    *interface_properties.get(&current).expect("lookup interface by ID");
+                    **current_properties;
                 // We currently ignore the situation where an interface that is providing upstream
                 // connectivity changes from online to offline. The only signal that causes us to
                 // destroy an existing bridge is if the interface providing upstream connectivity is
@@ -628,8 +625,7 @@ impl Handler for Stub {
 
     async fn handle_interface_update_result(
         &mut self,
-        _interface_properties: &HashMap<u64, fnet_interfaces_ext::Properties>,
-        _update_result: &fnet_interfaces_ext::UpdateResult<u64>,
+        _update_result: &fnet_interfaces_ext::UpdateResult<'_>,
     ) -> Result<(), errors::Error> {
         Ok(())
     }
