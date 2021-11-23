@@ -2471,7 +2471,7 @@ configurations. Once it is enabled, we want the board to run all instances
 of minfs, including # data and all minfs created to run test, should enable
 dirty cache. This ensures that we run what we test.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/storage/minfs/BUILD.gn:12
 
