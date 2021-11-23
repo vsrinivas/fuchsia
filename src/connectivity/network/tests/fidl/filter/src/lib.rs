@@ -10,8 +10,10 @@ use anyhow::Context as _;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_filter as fnetfilter;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
-use futures::{io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, TryFutureExt as _};
-use net_declare::fidl_subnet;
+use futures::{
+    io::AsyncReadExt as _, io::AsyncWriteExt as _, FutureExt as _, StreamExt, TryFutureExt as _,
+};
+use net_declare::{fidl_mac, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
 use netfilter::FidlReturn as _;
 use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
@@ -22,6 +24,8 @@ use netstack_testing_macros::variants_test;
 
 const CLIENT_IPV4_SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.2/24");
 const SERVER_IPV4_SUBNET: fnet::Subnet = fidl_subnet!("192.168.0.1/24");
+const CLIENT_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("02:00:00:00:00:01");
+const SERVER_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("02:00:00:00:00:02");
 
 const CLIENT_PORT: u16 = 1234;
 const SERVER_PORT: u16 = 8080;
@@ -284,9 +288,10 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
         .create_netstack_realm::<Netstack2, _>(format!("{}_client", name))
         .expect("failed to create client realm");
     let client_ep = client
-        .join_network::<E, _>(
+        .join_network_with(
             &net,
             "client",
+            E::make_config(netemul::DEFAULT_MTU, Some(CLIENT_MAC_ADDRESS)),
             &netemul::InterfaceConfig::StaticIp(CLIENT_IPV4_SUBNET),
         )
         .await
@@ -299,13 +304,32 @@ async fn test_filter<E: netemul::Endpoint>(name: &str, test: Test) {
         .create_netstack_realm::<Netstack2, _>(format!("{}_server", name))
         .expect("failed to create server realm");
     let server_ep = server
-        .join_network::<E, _>(
+        .join_network_with(
             &net,
             "server",
+            E::make_config(netemul::DEFAULT_MTU, Some(SERVER_MAC_ADDRESS)),
             &netemul::InterfaceConfig::StaticIp(SERVER_IPV4_SUBNET),
         )
         .await
         .expect("server failed to join network");
+
+    // Put client and server in each other's neighbor table. We've observed
+    // flakes in CQ due to ARP timeouts and ARP resolution is immaterial to the
+    // tests we run here.
+    let () = futures::stream::iter([
+        (&server, &server_ep, &CLIENT_MAC_ADDRESS, &CLIENT_IPV4_SUBNET.addr),
+        (&client, &client_ep, &SERVER_MAC_ADDRESS, &SERVER_IPV4_SUBNET.addr),
+    ])
+    .for_each_concurrent(None, |(realm, ep, mac, addr)| {
+        let controller = realm
+            .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
+            .expect("connect to protocol");
+        controller.add_entry(ep.id(), &mut addr.clone(), &mut mac.clone()).map(|r| {
+            r.expect("add_entry").expect("add_entry failed");
+        })
+    })
+    .await;
+
     let server_filter = server
         .connect_to_protocol::<fnetfilter::FilterMarker>()
         .expect("server failed to connect to filter service");

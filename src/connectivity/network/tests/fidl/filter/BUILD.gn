@@ -9,6 +9,7 @@ rustc_test("filter") {
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
+    "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/lib/netfilter",
     "//src/connectivity/network/testing/netemul/rust:lib",
