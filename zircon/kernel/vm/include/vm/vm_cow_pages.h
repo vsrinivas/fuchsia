@@ -359,6 +359,9 @@ class VmCowPages final
   // all return true.  Also calls DebugValidateBacklinksLocked() on every node in the hierarchy.
   bool DebugValidatePageSplitsHierarchyLocked() const TA_REQ(lock_);
 
+  // VMO_FRUGAL_VALIDATION
+  bool DebugValidateVmoPageBorrowingLocked() const TA_REQ(lock_);
+
   // Different operations that RangeChangeUpdate* can perform against any VmMappings that are found.
   enum class RangeChangeOp {
     Unmap,
