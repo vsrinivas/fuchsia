@@ -17,6 +17,7 @@ group("test") {
   if (!is_debug) {
     deps += [
       "api:audio-core-api-pipeline-tests",
+      "api:audio-core-fidelity-test",
       "hardware:audio_core_hardware_tests",
       "stress:audio-core-stress-tests",
     ]

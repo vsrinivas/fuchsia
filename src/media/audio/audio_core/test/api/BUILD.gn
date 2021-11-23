@@ -26,6 +26,21 @@ audio_core_test_package("audio-core-with-test-effects") {
   }
 }
 
+resource("audio-core-config-48k") {
+  sources = [ "testdata/audio_core_config_48k.json" ]
+  outputs = [ "data/audio-core-config-48k/audio_core_config.json" ]
+}
+
+resource("audio-core-config-96k") {
+  sources = [ "testdata/audio_core_config_96k.json" ]
+  outputs = [ "data/audio-core-config-96k/audio_core_config.json" ]
+}
+
+resource("audio-core-config-48k-96k") {
+  sources = [ "testdata/audio_core_config_48k_96k.json" ]
+  outputs = [ "data/audio-core-config-48k-96k/audio_core_config.json" ]
+}
+
 resource("audio-core-config-with-gain-limits") {
   sources = [ "testdata/audio_core_config_with_gain_limits.json" ]
   outputs = [ "data/audio-core-config-with-gain-limits/audio_core_config.json" ]
@@ -55,6 +70,15 @@ resource("audio-core-config-with-ultrasound") {
   outputs = [ "data/ultrasound/audio_core_config.json" ]
 }
 
+source_set("fidelity_results") {
+  testonly = true
+  sources = [
+    "fidelity_results.cc",
+    "fidelity_results.h",
+  ]
+  deps = [ "//src/media/audio/lib/test:hermetic_pipeline_test" ]
+}
+
 audio_core_api_test_component("activity-reporter-test") {
   source = "activity_reporter_test.cc"
   executable_deps = []
@@ -80,6 +104,21 @@ audio_core_api_test_component("audio-clock-pipeline-test") {
     "//sdk/lib/media/audio/cpp",
     "//sdk/lib/stdcompat",
     "//src/media/audio/audio_core/mixer",
+  ]
+}
+
+audio_core_api_test_component("audio-core-fidelity-test") {
+  source = "audio_core_fidelity_test.cc"
+  executable_deps = [
+    ":fidelity_results",
+    "//src/media/audio/audio_core/mixer:coefficient_table",
+    "//src/media/audio/lib/analysis",
+    "//src/media/audio/lib/test:hermetic_pipeline_test",
+  ]
+  component_deps = [
+    ":audio-core-config-48k",
+    ":audio-core-config-48k-96k",
+    ":audio-core-config-96k",
   ]
 }
 
@@ -193,6 +232,7 @@ fuchsia_test_package("audio-core-api-pipeline-tests") {
   test_components = [
     ":audio-capturer-pipeline-test",
     ":audio-clock-pipeline-test",
+    ":audio-core-fidelity-test",
     ":audio-policy-pipeline-test",
     ":audio-renderer-pipeline-test",
   ]

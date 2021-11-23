@@ -40,6 +40,10 @@ class HermeticPipelineTest : public HermeticAudioTest {
     // on the content of Input frames [X-neg_filter_width, Y+pos_filter_width].
     //
     // These should be upper-bounds; they don't need to be exact.
+
+    // TODO(fxbug.dev/89247): Refactor pos_filter_width and neg_filter_width into four fields:
+    // ramp_in, stabilization, post_stabilization and ring_out.
+
     size_t pos_filter_width = 0;
     size_t neg_filter_width = 0;
 
