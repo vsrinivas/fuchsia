@@ -21,10 +21,20 @@ type LogInterestSelector = struct {
 @discoverable
 protocol LogSettings {
     /// Requests a change in interest for the matched components.
-    /// Sending new requests will apply the new interest to the matched
-    /// components without undoing the previous request effects.
-    /// TODO(fxbug.dev/88205): All effects of this method are reverted as soon as the protocol
-    /// is closed.
+    ///
+    /// Each component holds a set of requested interests.
+    ///
+    /// When a new request on LogSettings#RegisterInterest is received,
+    /// the sets for matched components receive the new minimum interest.
+    /// If the interest is less than the previous minimum interest, then a
+    /// `RegisterInterest` request is sent with the new minimum interest.
+    ///
+    /// If a connection to `LogSettings` sends another `RegisterInterest`
+    /// request, its previous interest request will be undone.
+    ///
+    /// When the connection to `LogSettings` is finished, the interests are
+    /// undone. Each matched component minimum interest is updated with the
+    /// new minimum interest in the set.
     RegisterInterest(struct {
         selectors vector<LogInterestSelector>:MAX_LOG_SELECTORS;
     });

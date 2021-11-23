@@ -37,11 +37,22 @@ use {
     futures::channel::mpsc,
     futures::prelude::*,
     io_util,
+    lazy_static::lazy_static,
     parking_lot::RwLock,
     selectors,
-    std::{collections::HashMap, sync::Arc},
+    std::{
+        collections::{BTreeMap, HashMap},
+        sync::{
+            atomic::{AtomicUsize, Ordering},
+            Arc,
+        },
+    },
     tracing::{debug, error, warn},
 };
+
+lazy_static! {
+    static ref CONNECTION_ID: AtomicUsize = AtomicUsize::new(0);
+}
 
 /// DataRepo holds all diagnostics data and is a singleton wrapped by multiple
 /// [`pipeline::Pipeline`]s in a given Archivist instance.
@@ -121,6 +132,7 @@ impl DataRepo {
         mut stream: LogRequestStream,
         mut sender: mpsc::UnboundedSender<Task<()>>,
     ) -> Result<(), LogsError> {
+        let connection_id = CONNECTION_ID.fetch_add(1, Ordering::Relaxed);
         while let Some(request) = stream.next().await {
             let request = request.map_err(|source| LogsError::HandlingRequests {
                 protocol: LogMarker::NAME,
@@ -145,11 +157,12 @@ impl DataRepo {
                 if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
             let logs = self.logs_cursor(mode, None);
             if let Some(s) = selectors {
-                self.write().update_logs_interest(s);
+                self.write().update_logs_interest(connection_id, s);
             }
 
             sender.send(listener.spawn(logs, dump_logs)).await.ok();
         }
+        self.write().finish_interest_connection(connection_id);
         Ok(())
     }
 
@@ -157,22 +170,19 @@ impl DataRepo {
         self,
         mut stream: LogSettingsRequestStream,
     ) -> Result<(), LogsError> {
+        let connection_id = CONNECTION_ID.fetch_add(1, Ordering::Relaxed);
         while let Some(request) = stream.next().await {
             let request = request.map_err(|source| LogsError::HandlingRequests {
                 protocol: LogSettingsMarker::NAME,
                 source,
             })?;
-
-            // TODO(fxbug.dev/88205): this currently matches existing behavior. However we'd like to
-            // revert to the old interest as soon as this protocol is disconnected. To do this,
-            // we'll handle a set of interests requested per component, if the interest is not
-            // already contained in the maximum interest found in the set we'll update it.
             match request {
                 LogSettingsRequest::RegisterInterest { selectors, .. } => {
-                    self.write().update_logs_interest(selectors);
+                    self.write().update_logs_interest(connection_id, selectors);
                 }
             }
         }
+        self.write().finish_interest_connection(connection_id);
 
         Ok(())
     }
@@ -234,6 +244,10 @@ pub struct DataRepoState {
     logs_interest: Vec<LogInterestSelector>,
     /// BatchIterators for logs need to be made aware of new components starting and their logs.
     logs_multiplexers: MultiplexerBroker,
+
+    /// Interest registrations that we have received through fuchsia.logger.Log/ListWithSelectors
+    /// or through fuchsia.logger.LogSettings/RegisterInterest.
+    interest_registrations: BTreeMap<usize, Vec<LogInterestSelector>>,
 }
 
 impl DataRepoState {
@@ -244,6 +258,7 @@ impl DataRepoState {
             logs_budget,
             logs_interest: vec![],
             logs_multiplexers: Default::default(),
+            interest_registrations: BTreeMap::new(),
         }))
     }
 
@@ -368,12 +383,32 @@ impl DataRepoState {
         ))
     }
 
-    pub fn update_logs_interest(&mut self, selectors: Vec<LogInterestSelector>) {
-        self.logs_interest = selectors;
+    pub fn update_logs_interest(
+        &mut self,
+        connection_id: usize,
+        selectors: Vec<LogInterestSelector>,
+    ) {
+        let previous_selectors =
+            self.interest_registrations.insert(connection_id, selectors).unwrap_or(vec![]);
+        // unwrap safe, we just inserted.
+        let new_selectors = self.interest_registrations.get(&connection_id).unwrap();
         for (_, dir) in self.data_directories.iter() {
             if let Some(dir) = dir {
                 if let Some(logs) = &dir.logs {
-                    logs.update_interest(&self.logs_interest);
+                    logs.update_interest(&new_selectors, &previous_selectors);
+                }
+            }
+        }
+    }
+
+    pub fn finish_interest_connection(&mut self, connection_id: usize) {
+        let selectors = self.interest_registrations.remove(&connection_id);
+        if let Some(selectors) = selectors {
+            for (_, dir) in self.data_directories.iter() {
+                if let Some(dir) = dir {
+                    if let Some(logs) = &dir.logs {
+                        logs.reset_interest(&selectors);
+                    }
                 }
             }
         }
