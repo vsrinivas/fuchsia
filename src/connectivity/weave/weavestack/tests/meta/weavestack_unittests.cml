@@ -27,6 +27,7 @@
         },
         {
             protocol: [
+                "fuchsia.net.interfaces.admin.Installer",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.posix.socket.Provider",
             ],
