@@ -350,6 +350,7 @@ struct vm_page {
 
   // helper routines
   bool is_free() const { return state() == vm_page_state::FREE; }
+  // TODO(dustingreen): Make is_loaned() atomically-readable so we can avoid pmm_is_loaned().
   bool is_loaned() const { return loaned; }
   bool is_loan_cancelled() const { return loan_cancelled; }
 

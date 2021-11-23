@@ -1096,12 +1096,14 @@ ktl::optional<PageQueues::VmoContainerBacklink> PageQueues::GetCowWithReplaceabl
             // FREE, avoiding any need to wait, and avoiding stuff needed to support such a wait.
             //
             // We're under PageQueues lock, so this value is stable at the moment, but by the time
-            // the caller acquires the cow lock this page can be elsewhere (in a different
-            // VmCowPages, or at a different offset of this VmCowPages).  Very rarely this offset
-            // might still happen to be "correct" despite the page having been removed and re-added
-            // at the same offset of the same VmCowPages by the time cow->ReplacePage() is called.
-            // The cow->ReplacePage() does a re-check that this page is still at this offset.  The
-            // caller's loop takes care of chasing down the page.
+            // the caller acquires the cow lock this page could potentially be elsewhere, depending
+            // on whether the page is allowed to move to a different VmCowPages or to a different
+            // location in this VmCowPages, without going through FREE.
+            //
+            // The cow->RemovePageForEviction() does a re-check that this page is still at this
+            // offset.  The caller's loop takes care of chasing down the page if it moves between
+            // VmCowPages or to a different offset in the same VmCowPages without going through
+            // FREE.
             uint64_t page_offset = page->object.get_page_offset();
             // We may be racing with destruction of VMO. As we currently hold PageQueues lock we
             // know that our back pointer is correct as the VmCowPages has not yet completed
@@ -1123,9 +1125,9 @@ ktl::optional<PageQueues::VmoContainerBacklink> PageQueues::GetCowWithReplaceabl
               continue;
             } else {
               // We AddRef(ed) the using cow_container.  Success.  Return the backlink.  The caller
-              // can use this to call cow->ReplacePage(), which is ok to call on a cow with refcount
-              // 0 as long as the caller is holding the backlink's cow_container VmCowPagesContainer
-              // ref.
+              // can use this to call cow->RemovePageForEviction(), which is ok to call on a cow
+              // with refcount 0 as long as the caller is holding the backlink's cow_container
+              // VmCowPagesContainer ref.
               return backlink;
             }
           }
