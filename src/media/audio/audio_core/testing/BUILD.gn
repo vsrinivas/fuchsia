@@ -47,7 +47,4 @@ source_set("testing") {
     "//src/media/audio/lib/test:message_transceiver",
     "//zircon/system/ulib/async-testing",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

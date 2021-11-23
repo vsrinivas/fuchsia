@@ -20,7 +20,7 @@ using ASF = fuchsia::media::AudioSampleFormat;
 namespace media::audio::tools {
 namespace {
 
-float to_usecs(zx::duration duration) { return static_cast<double>(duration.to_nsecs()) / 1000.0; }
+float to_usecs(zx::duration duration) { return static_cast<float>(duration.to_nsecs()) / 1000.0f; }
 
 std::string AsfToString(const ASF& sample_format, bool abbreviate) {
   if (sample_format == ASF::UNSIGNED_8) {
@@ -55,7 +55,7 @@ struct Stats {
 
   void Add(zx::duration elapsed) {
     if (perftest_result) {
-      perftest_result->AppendValue(elapsed.get());
+      perftest_result->AppendValue(static_cast<double>(elapsed.get()));
     }
 
     if (runs > 0) {
@@ -414,8 +414,8 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   // Allocate enough source and destination frames for kMixLength.
   // When allocating source frames, we round up to ensure we have enough source frames.
   const int32_t dest_frame_count =
-      TimelineRate(cfg.dest_rate, 1'000'000'000)
-          .Scale(kMixLength.to_nsecs(), TimelineRate::RoundingMode::Floor);
+      static_cast<int32_t>(TimelineRate(cfg.dest_rate, 1'000'000'000)
+                               .Scale(kMixLength.to_nsecs(), TimelineRate::RoundingMode::Floor));
   const int64_t source_frames =
       TimelineRate(cfg.source_rate, 1'000'000'000)
           .Scale(kMixLength.to_nsecs(), TimelineRate::RoundingMode::Ceiling);
@@ -425,7 +425,8 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
 
   // This is a 500Hz sine wave, but the actual data doesn't matter.
   const auto periods = TimelineRate(500, 1'000'000'000).Scale(kMixLength.to_nsecs());
-  auto source = GenerateCosineAudio(source_format, source_frames, periods, amplitude);
+  auto source =
+      GenerateCosineAudio(source_format, source_frames, static_cast<double>(periods), amplitude);
 
   auto accum = std::make_unique<float[]>(dest_frame_count * cfg.num_output_chans);
   int64_t dest_offset, previous_dest_offset;
@@ -563,7 +564,8 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
 
   // Produce 10ms worth of output at 48kHz.
   using SampleT = typename SampleFormatTraits<SampleFormat>::SampleT;
-  int32_t frame_count = TimelineRate(48000, 1'000'000'000).Scale(kMixLength.to_nsecs());
+  int32_t frame_count =
+      static_cast<int32_t>(TimelineRate(48000, 1'000'000'000).Scale(kMixLength.to_nsecs()));
   int32_t num_samples = frame_count * cfg.num_chans;
   auto dest = std::make_unique<SampleT[]>(num_samples);
 
@@ -599,7 +601,7 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
         // This is a 1kHz sine wave, but the actual shape doesn't matter.
         // We use an amplitude < 1.0 to avoid code that clamps +1.0 values on integer outputs.
         const auto periods = TimelineRate(1000, 1'000'000'000).Scale(kMixLength.to_nsecs());
-        accum = GenerateCosineAudio(accum_format, frame_count, periods, 0.9);
+        accum = GenerateCosineAudio(accum_format, frame_count, static_cast<double>(periods), 0.9);
         break;
       }
       default:

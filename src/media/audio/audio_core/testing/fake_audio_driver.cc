@@ -191,7 +191,7 @@ void FakeAudioDriver::GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifi
 
   fuchsia::hardware::audio::RingBuffer_GetVmo_Result result = {};
   fuchsia::hardware::audio::RingBuffer_GetVmo_Response response = {};
-  response.num_frames = ring_buffer_frames;
+  response.num_frames = static_cast<uint32_t>(ring_buffer_frames);
   response.ring_buffer = std::move(dup);
   result.set_response(std::move(response));
   callback(std::move(result));
