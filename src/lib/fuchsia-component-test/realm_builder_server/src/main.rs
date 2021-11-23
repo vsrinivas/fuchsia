@@ -223,10 +223,19 @@ impl Realm {
                         }
                     }
                 }
-                // TODO(88417)
-                ftest::RealmRequest::AddLegacyChild { .. } => {
-                    unimplemented!();
+                ftest::RealmRequest::AddLegacyChild { name, legacy_url, options, responder } => {
+                    match self.add_legacy_child(name.clone(), legacy_url.clone(), options).await {
+                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Err(e) => {
+                            warn!(
+                                "unable to add legacy child {:?} with url {:?} to realm: {:?}",
+                                name, legacy_url, e
+                            );
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
                 }
+                // TODO(88417)
                 ftest::RealmRequest::AddChildFromDecl { .. } => {
                     unimplemented!();
                 }
@@ -273,6 +282,9 @@ impl Realm {
         url: String,
         options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
+        if is_legacy_url(&url) {
+            return Err(RealmBuilderError::InvalidManifestExtension);
+        }
         if is_relative_url(&url) {
             let child_realm_node =
                 RealmNode2::load_from_pkg(url, Clone::clone(&self.pkg_dir)).await?;
@@ -280,6 +292,31 @@ impl Realm {
         } else {
             self.realm_node.add_child_decl(name, url, options).await
         }
+    }
+
+    async fn add_legacy_child(
+        &self,
+        name: String,
+        legacy_url: String,
+        options: ftest::ChildOptions,
+    ) -> Result<(), RealmBuilderError> {
+        if !is_legacy_url(&legacy_url) {
+            return Err(RealmBuilderError::InvalidManifestExtension);
+        }
+        let child_realm_node = RealmNode2::new_from_decl(cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                info: fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: runner::LEGACY_URL_KEY.to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(legacy_url))),
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                },
+            }),
+            ..cm_rust::ComponentDecl::default()
+        });
+        self.realm_node.add_child(name.clone(), options, child_realm_node).await
     }
 
     async fn get_component_decl(
@@ -421,9 +458,6 @@ impl RealmNode2 {
         child_url: String,
         child_options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
-        if child_url.trim().ends_with(".cmx") {
-            return Err(RealmBuilderError::InvalidManifestExtension);
-        }
         let mut state_guard = self.state.lock().await;
         if state_guard.finalized {
             return Err(RealmBuilderError::BuildAlreadyCalled);
@@ -1912,6 +1946,10 @@ fn is_relative_url(url: &str) -> bool {
     true
 }
 
+fn is_legacy_url(url: &str) -> bool {
+    url.trim().ends_with(".cmx")
+}
+
 fn get_capability_name(capability: &ftest::Capability) -> Result<String, Error> {
     match &capability {
         ftest::Capability::Protocol(ftest::ProtocolCapability { name, .. }) => {
@@ -1935,6 +1973,8 @@ mod tests {
         fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
         std::convert::TryInto,
     };
+
+    const EXAMPLE_LEGACY_URL: &'static str = "fuchsia-pkg://fuchsia.com/a#meta/a.cmx";
 
     #[derive(Debug, Clone, PartialEq)]
     struct ComponentTree {
@@ -2641,6 +2681,103 @@ mod tests {
         };
         expected_tree.add_binder_expose();
         assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_legacy_child() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_legacy_child("a", EXAMPLE_LEGACY_URL, ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let expected_a_decl = cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                info: fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: runner::LEGACY_URL_KEY.to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                            EXAMPLE_LEGACY_URL.to_string(),
+                        ))),
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                },
+            }),
+            ..cm_rust::ComponentDecl::default()
+        };
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl::default(),
+            children: vec![(
+                "a".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree { decl: expected_a_decl, children: vec![] },
+            )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_legacy_child_that_conflicts_with_child_decl() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_legacy_child("a", EXAMPLE_LEGACY_URL, ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_legacy_child was supposed to error");
+        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+    }
+
+    #[fuchsia::test]
+    async fn add_legacy_child_that_conflicts_with_mutable_child() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child("a", "#meta/realm_builder_server_unit_tests.cm", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_legacy_child("a", EXAMPLE_LEGACY_URL, ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_legacy_child was supposed to error");
+        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+    }
+
+    #[fuchsia::test]
+    async fn add_legacy_child_with_modern_url_returns_error() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_legacy_child("a", "#meta/a.cm", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_legacy_child was supposed to error");
+        assert_eq!(err, ftest::RealmBuilderError2::InvalidManifestExtension);
+    }
+
+    #[fuchsia::test]
+    async fn add_child_with_legacy_url_returns_error() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_child("a", EXAMPLE_LEGACY_URL, ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_legacy_child was supposed to error");
+        assert_eq!(err, ftest::RealmBuilderError2::InvalidManifestExtension);
     }
 
     // Everything below this line are tests for the old fuchsia.component.test.RealmBuilder logic,
