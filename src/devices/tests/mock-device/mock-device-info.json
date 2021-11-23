@@ -1,0 +1,9 @@
+{
+    "short_description": "Driver SDK mock device test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Test"
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "short_description": "Driver SDK inspect test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Test"
+    ]
+}

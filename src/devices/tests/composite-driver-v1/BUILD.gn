@@ -43,6 +43,7 @@ fuchsia_driver("driver") {
 fuchsia_driver_component("component") {
   component_name = "composite-driver-v1"
   deps = [ ":driver" ]
+  info = "component-info.json"
 }
 
 test("composite-driver-v1-test") {

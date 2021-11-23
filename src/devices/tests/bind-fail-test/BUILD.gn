@@ -34,6 +34,7 @@ fuchsia_driver("fuchsia_driver") {
 fuchsia_driver_component("driver") {
   component_name = "bind-fail-test-driver"
   deps = [ ":fuchsia_driver" ]
+  info = "driver-info.json"
 }
 
 test("tests") {

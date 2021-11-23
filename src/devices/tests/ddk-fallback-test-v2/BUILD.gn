@@ -35,6 +35,7 @@ fuchsia_driver("ddk-fallback-test-driver-module") {
 
 fuchsia_driver_component("ddk-fallback-test-driver") {
   deps = [ ":ddk-fallback-test-driver-module" ]
+  info = "ddk-fallback-test-driver-info.json"
 }
 
 test("test") {

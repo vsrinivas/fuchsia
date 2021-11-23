@@ -45,6 +45,7 @@ fuchsia_driver_component("mock-device") {
   testonly = true
   component_name = "mock-device"
   deps = [ ":mock-device-driver" ]
+  info = "mock-device-info.json"
 }
 
 fidl("fuchsia.device.mock") {

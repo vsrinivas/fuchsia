@@ -30,4 +30,5 @@ fuchsia_driver("driver") {
 fuchsia_driver_component("component") {
   component_name = "test-root"
   deps = [ ":driver" ]
+  info = "component-info.json"
 }

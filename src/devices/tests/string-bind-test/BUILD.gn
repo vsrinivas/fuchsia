@@ -66,6 +66,7 @@ fuchsia_driver("parent-driver-driver") {
 fuchsia_driver_component("parent-driver") {
   component_name = "string-bind-parent"
   deps = [ ":parent-driver-driver" ]
+  info = "parent-driver-info.json"
 }
 
 driver_bind_rules("child-driver-bind") {
@@ -94,4 +95,5 @@ fuchsia_driver("child-driver-driver") {
 fuchsia_driver_component("child-driver") {
   component_name = "string-bind-child"
   deps = [ ":child-driver-driver" ]
+  info = "child-driver-info.json"
 }

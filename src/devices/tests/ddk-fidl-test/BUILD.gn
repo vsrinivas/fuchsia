@@ -37,6 +37,7 @@ fuchsia_driver("fidl-llcpp-driver-driver") {
 fuchsia_driver_component("fidl-llcpp-driver") {
   component_name = "fidl-llcpp-driver"
   deps = [ ":fidl-llcpp-driver-driver" ]
+  info = "fidl-llcpp-driver-info.json"
 }
 
 driver_bind_rules("ddk-fidl-async-bind") {
@@ -72,6 +73,7 @@ fuchsia_driver("fidl-async-llcpp-driver-driver") {
 fuchsia_driver_component("fidl-async-llcpp-driver") {
   component_name = "fidl-async-llcpp-driver"
   deps = [ ":fidl-async-llcpp-driver-driver" ]
+  info = "fidl-async-llcpp-driver-info.json"
 }
 
 test("ddk-fidl-test") {

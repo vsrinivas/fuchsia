@@ -44,4 +44,5 @@ fuchsia_driver("sysdev-driver") {
 fuchsia_driver_component("sysdev") {
   component_name = "sysdev"
   deps = [ ":sysdev-driver" ]
+  info = "sysdev-info.json"
 }

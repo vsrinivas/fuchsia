@@ -1,0 +1,9 @@
+{
+    "short_description": "Driver SDK sysdev test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Test"
+    ]
+}
