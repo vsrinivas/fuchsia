@@ -376,10 +376,12 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 			return admin.AddressRemovalReasonAlreadyAssigned
 		}
 
-		switch status := ci.ns.addInterfaceAddress(ci.nicid, protocolAddr, false /* addRoute */); status {
+		status := ci.ns.addInterfaceAddress(ci.nicid, protocolAddr, false /* addRoute */)
+		_ = syslog.DebugTf(addressStateProviderName, "addInterfaceAddress(%d, %+v, false) = %s", ci.nicid, protocolAddr, status)
+		switch status {
 		case zx.ErrOk:
 			impl.mu.state = initialAddressAssignmentState(protocolAddr, online)
-			syslog.DebugTf(addressStateProviderName, "initial state for %+v: %s", protocolAddr, impl.mu.state)
+			_ = syslog.DebugTf(addressStateProviderName, "initial state for %+v: %s", protocolAddr, impl.mu.state)
 			ifs.addressStateProviders.mu.providers[addr] = &impl
 			return 0
 		case zx.ErrInvalidArgs:
