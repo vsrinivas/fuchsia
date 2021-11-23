@@ -593,28 +593,9 @@ impl Ipv4PacketBuilder {
         self.ecn = ecn;
     }
 
-    /// Sets the ID field using the callback if it needs to be set.
-    ///
-    /// As Per [RFC 6864 Section 2]:
-    ///
-    ///   > The IPv4 ID field is thus meaningful only for non-atomic datagrams --
-    ///   > either those datagrams that have already been fragmented or those for
-    ///   > which fragmentation remains permitted...
-    ///   >
-    ///   > ...Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
-    ///
-    /// This method checks whether the packet represented by the builder qualifies
-    /// as a non-atomic datagram. If so, it invokes `f` to generate an ID and sets
-    /// the ID field to the value returned.
-    ///
-    /// [RFC 6864 Section 2]: https://tools.ietf.org/html/rfc6864#section-2
-    pub fn maybe_set_id<F: FnOnce() -> u16>(&mut self, f: F) {
-        if ((self.flags & (1 << DF_FLAG_OFFSET)) == 0)
-            || ((self.flags & (1 << MF_FLAG_OFFSET)) == 1)
-            || (self.frag_off > 0)
-        {
-            self.id = f()
-        }
+    /// Set the ID field.
+    pub fn id(&mut self, id: u16) {
+        self.id = id
     }
 
     /// Set the Don't Fragment (DF) flag.
@@ -658,6 +639,24 @@ impl Ipv4PacketBuilder {
         assert_eq!(header_len % 4, 0);
         let ihl: u8 = u8::try_from(header_len / 4).expect("Header too large");
 
+        // As Per [RFC 6864 Section 2]:
+        //
+        //   > The IPv4 ID field is thus meaningful only for non-atomic datagrams --
+        //   > either those datagrams that have already been fragmented or those for
+        //   > which fragmentation remains permitted...
+        //   >
+        //   > ...Non-atomic datagrams: (DF==0)||(MF==1)||(frag_offset>0)
+        //
+        // [RFC 6864 Section 2]: https://tools.ietf.org/html/rfc6864#section-2
+        let id = if ((self.flags & (1 << DF_FLAG_OFFSET)) == 0)
+            || ((self.flags & (1 << MF_FLAG_OFFSET)) == 1)
+            || (self.frag_off > 0)
+        {
+            self.id
+        } else {
+            0
+        };
+
         let mut hdr_prefix = HeaderPrefix::new(
             ihl,
             self.dscp,
@@ -671,7 +670,7 @@ impl Ipv4PacketBuilder {
                 debug_assert!(total_len <= core::u16::MAX as usize);
                 total_len as u16
             },
-            self.id,
+            id,
             self.flags,
             self.frag_off,
             self.ttl,
@@ -1133,7 +1132,7 @@ mod tests {
         let mut builder = new_builder();
         builder.dscp(0x12);
         builder.ecn(3);
-        builder.maybe_set_id(|| 0x0405);
+        builder.id(0x0405);
         builder.df_flag(true);
         builder.mf_flag(true);
         builder.fragment_offset(0x0607);
@@ -1158,6 +1157,25 @@ mod tests {
         assert!(packet.mf_flag());
         assert_eq!(packet.fragment_offset(), 0x0607);
         assert_eq!(packet.fragment_type(), Ipv4FragmentType::NonInitialFragment);
+    }
+
+    #[test]
+    fn test_serialize_id_unset() {
+        let mut builder = new_builder();
+        builder.id(0x0405);
+        builder.df_flag(true);
+
+        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9])
+            .into_serializer()
+            .encapsulate(builder)
+            .serialize_vec_outer()
+            .unwrap();
+        let packet = buf.parse::<Ipv4Packet<_>>().unwrap();
+        assert_eq!(packet.id(), 0);
+        assert!(packet.df_flag());
+        assert_eq!(packet.mf_flag(), false);
+        assert_eq!(packet.fragment_offset(), 0);
+        assert_eq!(packet.fragment_type(), Ipv4FragmentType::InitialFragment);
     }
 
     #[test]

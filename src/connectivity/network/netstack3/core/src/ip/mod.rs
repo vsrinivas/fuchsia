@@ -1882,7 +1882,7 @@ pub(crate) fn send_ip_packet_from_device<
             get_hop_limit::<_, A::Version>(ctx, device),
             proto,
         );
-        builder.maybe_set_id(|| ctx.state.ipv4.gen_next_packet_id());
+        builder.id(ctx.state.ipv4.gen_next_packet_id());
         builder
     };
 
@@ -2369,7 +2369,7 @@ mod tests {
         let m_flag = fragment_offset < (fragment_count - 1);
 
         let mut builder = get_ipv4_builder();
-        builder.maybe_set_id(|| fragment_id);
+        builder.id(fragment_id);
         builder.fragment_offset(fragment_offset as u16);
         builder.mf_flag(m_flag);
         let mut body: Vec<u8> = Vec::new();

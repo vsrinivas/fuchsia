@@ -579,7 +579,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Ct
                 ));
 
                 let mut builder = builder.clone();
-                builder.maybe_set_id(|| self.state.ipv4.gen_next_packet_id());
+                builder.id(self.state.ipv4.gen_next_packet_id());
 
                 crate::device::send_ip_frame(self, *device, *next_hop, body.encapsulate(builder))
                     .map_err(|ser| (ser.into_inner(), IpSockSendError::Mtu))
