@@ -47,8 +47,9 @@ void HermeticPipelineTest::WriteWavFile(const std::string& test_name,
   WavWriter<true> w;
   auto file_name = "/cache/" + test_name + "_" + file_name_suffix + ".wav";
   auto& format = slice.format();
-  if (!w.Initialize(file_name.c_str(), format.sample_format(), format.channels(),
-                    format.frames_per_second(), format.bytes_per_frame() * 8 / format.channels())) {
+  if (!w.Initialize(file_name.c_str(), format.sample_format(),
+                    static_cast<uint16_t>(format.channels()), format.frames_per_second(),
+                    static_cast<uint16_t>(format.bytes_per_frame() * 8 / format.channels()))) {
     FX_LOGS(ERROR) << "Could not create output file " << file_name;
     return;
   }
@@ -56,7 +57,7 @@ void HermeticPipelineTest::WriteWavFile(const std::string& test_name,
   auto ok =
       w.Write(
           const_cast<typename AudioBufferSlice<SampleFormat>::SampleT*>(&slice.buf()->samples()[0]),
-          slice.NumBytes()) &&
+          static_cast<uint32_t>(slice.NumBytes())) &&
       w.UpdateHeader() && w.Close();
   if (!ok) {
     FX_LOGS(ERROR) << "Error writing to output file " << file_name;

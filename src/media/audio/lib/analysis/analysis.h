@@ -104,7 +104,7 @@ std::optional<int64_t> FindImpulseLeadingEdge(
   FX_CHECK(slice.format().channels() == 1);
 
   auto normalize = [](typename SampleFormatTraits<SampleFormat>::SampleT val) {
-    float d = val;
+    float d = static_cast<float>(val);
     if constexpr (SampleFormat == fuchsia::media::AudioSampleFormat::UNSIGNED_8) {
       d -= 128;
     }
@@ -121,7 +121,7 @@ std::optional<int64_t> FindImpulseLeadingEdge(
   }
   for (int64_t f = 0; f < slice.NumFrames(); f++) {
     float val = normalize(slice.SampleAt(f, 0));
-    if (val <= noise_floor) {
+    if (val <= static_cast<float>(noise_floor)) {
       continue;
     }
     if (1.5 * val > max_value) {

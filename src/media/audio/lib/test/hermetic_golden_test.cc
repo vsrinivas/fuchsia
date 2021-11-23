@@ -98,9 +98,9 @@ void WaveformTestRunner<InputFormat, OutputFormat>::CompareFreqs(
     // If there are an integer number of periods, we can precisely measure the magnitude at hz.
     // Otherwise, the magnitude will be smeared between the two adjacent integers.
     int64_t periods = expected.NumFrames() / fpp;
-    freqs_in_unit_periods.insert(periods);
+    freqs_in_unit_periods.insert(static_cast<int32_t>(periods));
     if (expected.NumFrames() % fpp > 0) {
-      freqs_in_unit_periods.insert(periods + 1);
+      freqs_in_unit_periods.insert(static_cast<int32_t>(periods + 1));
     }
   }
 

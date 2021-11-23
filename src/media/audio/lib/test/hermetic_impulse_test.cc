@@ -43,7 +43,8 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
   auto input_frame_to_output_frame = [&tc](int64_t input_frame) {
     auto input_fps = static_cast<double>(tc.input_format.frames_per_second());
     auto output_fps = static_cast<double>(tc.output_format.frames_per_second());
-    return static_cast<int64_t>(std::ceil(output_fps / input_fps * input_frame));
+    return static_cast<int64_t>(
+        std::ceil(output_fps / input_fps * static_cast<double>(input_frame)));
   };
 
   auto num_output_frames = input_frame_to_output_frame(num_input_frames);

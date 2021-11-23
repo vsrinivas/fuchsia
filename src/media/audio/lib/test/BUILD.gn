@@ -100,9 +100,6 @@ source_set("hermetic_pipeline_test") {
   ]
 
   public_deps = [ ":hermetic_audio_test" ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Main entry point for tests that use hermetic_pipeline_test.h.
