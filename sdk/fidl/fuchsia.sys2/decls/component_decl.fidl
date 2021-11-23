@@ -53,4 +53,7 @@ type ComponentDecl = table {
 
     /// Additional metadata about the component.
     9: facets fuchsia.data.Dictionary;
+
+    /// The declaration of the component's configuration interface.
+   10: config ConfigDecl;
 };

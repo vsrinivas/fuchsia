@@ -164,6 +164,7 @@ mod tests {
             collections: vec![],
             facets: None,
             environments: vec![],
+            config: None,
         }
     }
 
@@ -185,6 +186,7 @@ mod tests {
             collections: vec![],
             facets: None,
             environments: vec![],
+            config: None,
         }
     }
 

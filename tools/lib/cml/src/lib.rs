@@ -25,11 +25,13 @@ use {
     serde::{de, Deserialize},
     serde_json::{Map, Value},
     std::{
-        collections::{HashMap, HashSet},
+        collections::{BTreeMap, HashMap, HashSet},
         fmt,
         hash::Hash,
+        num::NonZeroU32,
         ops::Deref,
         path,
+        str::FromStr,
     },
 };
 
@@ -1340,6 +1342,29 @@ pub struct Document {
     /// framework enforces no schema for this section, but third parties may expect their facets to
     /// adhere to a particular schema.
     pub facets: Option<Map<String, Value>>,
+
+    /// A JSON object containing all configuration fields for this component. Each field must have
+    /// a key and a value type.
+    ///
+    /// Example:
+    ///
+    /// ```json5
+    /// config: {
+    ///     debug_mode: {
+    ///         type: "bool"
+    ///     },
+    ///     tags: {
+    ///         type: "vector",
+    ///         max_count: 10,
+    ///         element: {
+    ///             type: "string",
+    ///             max_size: 20
+    ///         }
+    ///     }
+    /// }
+    /// ```
+    /// TODO(87560): Write detailed syntax for the `config` section
+    pub config: Option<BTreeMap<ConfigKey, ConfigValueType>>,
 }
 
 macro_rules! merge_from_field {
@@ -1375,6 +1400,15 @@ impl Document {
         merge_from_field!(self, other, environments);
         self.merge_program(other, include_path)?;
         self.merge_facets(other, include_path)?;
+
+        // Config includes are not supported currently
+        if other.config.is_some() {
+            return Err(Error::validate(format!(
+                "config found in manifest include, which is not supported: {}",
+                include_path.display()
+            )));
+        }
+
         Ok(())
     }
 
@@ -1635,6 +1669,119 @@ pub struct Environment {
     pub debug: Option<Vec<DebugRegistration>>,
     #[serde(rename(deserialize = "__stop_timeout_ms"))]
     pub stop_timeout_ms: Option<StopTimeoutMs>,
+}
+
+#[derive(Clone, Hash, Debug, PartialEq, PartialOrd, Eq, Ord)]
+pub struct ConfigKey(String);
+
+impl ConfigKey {
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl ToString for ConfigKey {
+    fn to_string(&self) -> String {
+        self.0.clone()
+    }
+}
+
+impl FromStr for ConfigKey {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, ParseError> {
+        let length = s.len();
+        if length == 0 || length > 64 {
+            return Err(ParseError::InvalidLength);
+        }
+
+        for (i, c) in s.char_indices() {
+            // Follows the FIDL specification: identifiers must start with a letter, can contain
+            // letters, numbers, and underscores, but cannot end with an underscore
+            if (i == 0) && !c.is_ascii_lowercase() {
+                return Err(ParseError::InvalidValue);
+            } else if (i == length - 1) && !c.is_ascii_lowercase() && !c.is_ascii_digit() {
+                return Err(ParseError::InvalidValue);
+            } else if !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '_' {
+                return Err(ParseError::InvalidValue);
+            }
+        }
+
+        Ok(Self(s.to_string()))
+    }
+}
+
+impl<'de> de::Deserialize<'de> for ConfigKey {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: de::Deserializer<'de>,
+    {
+        struct Visitor;
+
+        impl<'de> de::Visitor<'de> for Visitor {
+            type Value = ConfigKey;
+
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                f.write_str(
+                    "a non-empty string no more than 64 characters in length, which must \
+                    start with a letter, can contain letters, numbers, and underscores, \
+                    but cannot end with an underscore",
+                )
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                s.parse().map_err(|err| match err {
+                    ParseError::InvalidValue => E::invalid_value(
+                        de::Unexpected::Str(s),
+                        &"a name which must start with a letter, can contain letters, \
+                        numbers, and underscores, but cannot end with an underscore",
+                    ),
+                    ParseError::InvalidLength => E::invalid_length(
+                        s.len(),
+                        &"a non-empty name no more than 64 characters in length",
+                    ),
+                    e => {
+                        panic!("unexpected parse error: {:?}", e);
+                    }
+                })
+            }
+        }
+        deserializer.deserialize_string(Visitor)
+    }
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(tag = "type", deny_unknown_fields, rename_all = "lowercase")]
+pub enum ConfigValueType {
+    Bool,
+    Uint8,
+    Uint16,
+    Uint32,
+    Uint64,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    String { max_size: NonZeroU32 },
+    Vector { max_count: NonZeroU32, element: ConfigVectorElementType },
+}
+
+#[derive(Deserialize, Debug, PartialEq)]
+#[serde(tag = "type", deny_unknown_fields, rename_all = "lowercase")]
+pub enum ConfigVectorElementType {
+    Bool,
+    Uint8,
+    Uint16,
+    Uint32,
+    Uint64,
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    String { max_size: NonZeroU32 },
 }
 
 #[derive(Deserialize, Debug, PartialEq)]

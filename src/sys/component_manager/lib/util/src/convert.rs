@@ -93,6 +93,7 @@ pub(crate) mod decl {
     pub(crate) type ChildDecl = fidl_fuchsia_component_decl::Child;
     pub(crate) type CollectionDecl = fidl_fuchsia_component_decl::Collection;
     pub(crate) type EnvironmentDecl = fidl_fuchsia_component_decl::Environment;
+    pub(crate) type ConfigDecl = fidl_fuchsia_component_decl::Config;
 }
 
 #[cfg(test)]
@@ -467,7 +468,21 @@ mod tests {
                     stop_timeout_ms: Some(4567),
                     ..$namespace::EnvironmentDecl::EMPTY
                 }]),
-
+                config: Some($namespace::ConfigDecl {
+                    fields: Some(vec![$namespace::ConfigField {
+                        key: Some("test".to_string()),
+                        value_type: Some($namespace::ConfigValueType::Bool(
+                            $namespace::ConfigBooleanType::EMPTY,
+                        )),
+                        ..$namespace::ConfigField::EMPTY
+                    }]),
+                    declaration_checksum: Some(vec![
+                        0x9F, 0x86, 0xD0, 0x81, 0x88, 0x4C, 0x7D, 0x65, 0x9A, 0x2F, 0xEA, 0xA0,
+                        0xC5, 0x5A, 0xD0, 0x15, 0xA3, 0xBF, 0x4F, 0x1B, 0x2B, 0x0B, 0x82, 0x2C,
+                        0xD1, 0x5D, 0x6C, 0x15, 0xB0, 0xF0, 0x0A, 0x08,
+                    ]),
+                    ..$namespace::ConfigDecl::EMPTY
+                }),
                 // We include these fields because we want to ensure that this ABI
                 // compatibility contract is enforced whenever the Component decl
                 // types are updated.

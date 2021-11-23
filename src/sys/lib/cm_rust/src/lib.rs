@@ -113,6 +113,7 @@ pub struct ComponentDecl {
     pub collections: Vec<CollectionDecl>,
     pub facets: Option<fdata::Dictionary>,
     pub environments: Vec<EnvironmentDecl>,
+    pub config: Option<ConfigDecl>,
 }
 
 impl ComponentDecl {
@@ -831,6 +832,100 @@ impl EnvironmentDecl {
     }
 }
 
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigDecl, fdecl::Config")]
+pub struct ConfigDecl {
+    pub fields: Vec<ConfigField>,
+    pub declaration_checksum: Vec<u8>,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigField, fdecl::ConfigField")]
+pub struct ConfigField {
+    pub key: String,
+    pub value_type: ConfigValueType,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigStringType, fdecl::ConfigStringType")]
+pub struct ConfigStringType {
+    pub max_size: u32,
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigBooleanType, fdecl::ConfigBooleanType")]
+pub struct ConfigBooleanType {}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigUnsigned8Type, fdecl::ConfigUnsigned8Type")]
+pub struct ConfigUnsigned8Type {}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigSigned8Type, fdecl::ConfigSigned8Type")]
+pub struct ConfigSigned8Type {}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigUnsigned16Type, fdecl::ConfigUnsigned16Type")]
+pub struct ConfigUnsigned16Type {}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigSigned16Type, fdecl::ConfigSigned16Type")]
+pub struct ConfigSigned16Type {}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigUnsigned32Type, fdecl::ConfigUnsigned32Type")]
+pub struct ConfigUnsigned32Type {}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigSigned32Type, fdecl::ConfigSigned32Type")]
+pub struct ConfigSigned32Type {}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigUnsigned64Type, fdecl::ConfigUnsigned64Type")]
+pub struct ConfigUnsigned64Type {}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigSigned64Type, fdecl::ConfigSigned64Type")]
+pub struct ConfigSigned64Type {}
+
+#[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fsys::ConfigVectorElementType, fdecl::ConfigVectorElementType")]
+pub enum ConfigVectorElementType {
+    Bool(ConfigBooleanType),
+    Uint8(ConfigUnsigned8Type),
+    Int8(ConfigSigned8Type),
+    Uint16(ConfigUnsigned16Type),
+    Int16(ConfigSigned16Type),
+    Uint32(ConfigUnsigned32Type),
+    Int32(ConfigSigned32Type),
+    Uint64(ConfigUnsigned64Type),
+    Int64(ConfigSigned64Type),
+    String(ConfigStringType),
+}
+
+#[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_table = "fsys::ConfigVectorType, fdecl::ConfigVectorType")]
+pub struct ConfigVectorType {
+    pub max_count: u32,
+    pub element_type: ConfigVectorElementType,
+}
+
+#[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
+#[fidl_decl(fidl_union = "fsys::ConfigValueType, fdecl::ConfigValueType")]
+pub enum ConfigValueType {
+    Bool(ConfigBooleanType),
+    Uint8(ConfigUnsigned8Type),
+    Int8(ConfigSigned8Type),
+    Uint16(ConfigUnsigned16Type),
+    Int16(ConfigSigned16Type),
+    Uint32(ConfigUnsigned32Type),
+    Int32(ConfigSigned32Type),
+    Uint64(ConfigUnsigned64Type),
+    Int64(ConfigSigned64Type),
+    String(ConfigStringType),
+    Vector(ConfigVectorType),
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
 #[fidl_decl(fidl_table = "fsys::RunnerRegistration, fdecl::RunnerRegistration")]
@@ -922,6 +1017,7 @@ impl Default for ProgramDecl {
     }
 }
 
+fidl_translations_identical!(u8);
 fidl_translations_identical!(u32);
 fidl_translations_identical!(bool);
 fidl_translations_identical!(String);
@@ -1866,6 +1962,7 @@ mod tests {
                 collections: vec![],
                 facets: None,
                 environments: vec![],
+                config: None,
             },
         },
         try_from_all => {
@@ -2243,6 +2340,21 @@ mod tests {
                         ..fsys::EnvironmentDecl::EMPTY
                     }
                 ]),
+                config: Some(fsys::ConfigDecl {
+                    fields: Some(vec![
+                        fsys::ConfigField {
+                            key: Some("enable_logging".to_string()),
+                            value_type: Some(fsys::ConfigValueType::Bool(fsys::ConfigBooleanType::EMPTY)),
+                            ..fsys::ConfigField::EMPTY
+                        }
+                    ]),
+                    declaration_checksum: Some(vec![
+                        0x66, 0x3E, 0x10, 0x72, 0x26, 0xA7, 0x5F, 0x0B, 0x23, 0x1D, 0x6C, 0x8D,
+                        0x03, 0x6B, 0xC3, 0x58, 0x85, 0x70, 0xB4, 0x4D, 0x8A, 0x11, 0x16, 0x20,
+                        0x5B, 0x11, 0x87, 0x96, 0x5E, 0x14, 0x67, 0xF8
+                    ]),
+                    ..fsys::ConfigDecl::EMPTY
+                }),
                 ..fsys::ComponentDecl::EMPTY
             },
             result = {
@@ -2506,7 +2618,20 @@ mod tests {
                             ],
                             stop_timeout_ms: Some(4567),
                         }
-                    ]
+                    ],
+                    config: Some(ConfigDecl {
+                        fields: vec![
+                            ConfigField {
+                                key: "enable_logging".to_string(),
+                                value_type: ConfigValueType::Bool(ConfigBooleanType {})
+                            }
+                        ],
+                        declaration_checksum: vec![
+                            0x66, 0x3E, 0x10, 0x72, 0x26, 0xA7, 0x5F, 0x0B, 0x23, 0x1D, 0x6C, 0x8D,
+                            0x03, 0x6B, 0xC3, 0x58, 0x85, 0x70, 0xB4, 0x4D, 0x8A, 0x11, 0x16, 0x20,
+                            0x5B, 0x11, 0x87, 0x96, 0x5E, 0x14, 0x67, 0xF8
+                        ]
+                    }),
                 }
             },
         },
@@ -2768,7 +2893,8 @@ mod tests {
                         entries: Some(vec![]),
                         ..fdata::Dictionary::EMPTY
                     }),
-                    environments: vec![]
+                    environments: vec![],
+                    config: None,
                 }
             },
         },

@@ -21,3 +21,8 @@ group("dynamic_offers") {
     "//tools/cmc:*",
   ]
 }
+
+# The allowlist of components that can use the "structured_config" feature in CML.
+group("structured_config") {
+  visibility = [ "//tools/cmc:*" ]
+}

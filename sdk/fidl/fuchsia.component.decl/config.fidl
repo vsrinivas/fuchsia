@@ -1,0 +1,105 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.component.decl;
+
+/// The string identifier for a config field.
+alias ConfigKey = string:CONFIG_KEY_MAX_SIZE;
+
+/// A SHA-256 hash produced over a component's config interface.
+/// NOTE: 32 bytes is enough to encode a SHA-256 hash, max can be grown ABI-compatibly
+alias ConfigChecksum = vector<uint8>:32;
+
+/// Config keys can only consist of these many characters
+const CONFIG_KEY_MAX_SIZE uint32 = 64;
+
+/// The declaration of a component's configuration interface.
+type Config = table {
+    /// Ordered fields of the component's configuration interface.
+    1: fields vector<ConfigField>:MAX;
+
+    /// Checksum over the config declaration.
+    2: declaration_checksum ConfigChecksum;
+};
+
+/// Declares a single config field (key + value type)
+type ConfigField = table {
+    /// The identifier for this config field.
+    /// This key will be used to match overrides.
+    1: key ConfigKey;
+
+    /// The value type for this config field. Config values are verified
+    /// against this type during build time and run time.
+    2: value_type ConfigValueType;
+};
+
+/// Defines valid types for a config value
+type ConfigValueType = flexible union {
+    1: bool ConfigBooleanType;
+    2: uint8 ConfigUnsigned8Type;
+    3: uint16 ConfigUnsigned16Type;
+    4: uint32 ConfigUnsigned32Type;
+    5: uint64 ConfigUnsigned64Type;
+    6: int8 ConfigSigned8Type;
+    7: int16 ConfigSigned16Type;
+    8: int32 ConfigSigned32Type;
+    9: int64 ConfigSigned64Type;
+   10: string ConfigStringType;
+   11: vector ConfigVectorType;
+};
+
+/// This is an empty table for the boolean type
+type ConfigBooleanType = table {};
+
+/// This is an empty table for the uint8 type
+type ConfigUnsigned8Type = table {};
+
+/// This is an empty table for the uint16 type
+type ConfigUnsigned16Type = table {};
+
+/// This is an empty table for the uint32 type
+type ConfigUnsigned32Type = table {};
+
+/// This is an empty table for the uint64 type
+type ConfigUnsigned64Type = table {};
+
+/// This is an empty table for the int8 type
+type ConfigSigned8Type = table {};
+
+/// This is an empty table for the int16 type
+type ConfigSigned16Type = table {};
+
+/// This is an empty table for the int32 type
+type ConfigSigned32Type = table {};
+
+/// This is an empty table for the int64 type
+type ConfigSigned64Type = table {};
+
+type ConfigStringType = table {
+    /// Maximum size of the string
+    1: max_size uint32;
+};
+
+type ConfigVectorType = table {
+    /// Maximum number of elements allowed in the vector
+    1: max_count uint32;
+
+    /// Type of elements stored in the vector
+    2: element_type ConfigVectorElementType;
+};
+
+/// Defines valid types for elements stored in a vector.
+/// This is different from `ConfigValueType` because vectors cannot store vectors.
+type ConfigVectorElementType = flexible union {
+    1: bool ConfigBooleanType;
+    2: uint8 ConfigUnsigned8Type;
+    3: uint16 ConfigUnsigned16Type;
+    4: uint32 ConfigUnsigned32Type;
+    5: uint64 ConfigUnsigned64Type;
+    6: int8 ConfigSigned8Type;
+    7: int16 ConfigSigned16Type;
+    8: int32 ConfigSigned32Type;
+    9: int64 ConfigSigned64Type;
+   10: string ConfigStringType;
+};

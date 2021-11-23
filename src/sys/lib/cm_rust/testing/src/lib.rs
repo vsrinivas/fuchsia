@@ -154,6 +154,12 @@ impl ComponentDeclBuilder {
         self
     }
 
+    /// Add a config declaration.
+    pub fn add_config(mut self, config: cm_rust::ConfigDecl) -> Self {
+        self.result.config = Some(config);
+        self
+    }
+
     /// Generate the final ComponentDecl.
     pub fn build(self) -> ComponentDecl {
         self.result

@@ -18,6 +18,7 @@ fidl("fuchsia.component.decl") {
     "child.fidl",
     "collection.fidl",
     "component.fidl",
+    "config.fidl",
     "environment.fidl",
     "events.fidl",
     "expose.fidl",

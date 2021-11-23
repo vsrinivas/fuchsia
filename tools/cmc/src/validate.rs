@@ -16,7 +16,7 @@ use {
     directed_graph::{self, DirectedGraph},
     serde_json::Value,
     std::{
-        collections::{HashMap, HashSet},
+        collections::{BTreeMap, HashMap, HashSet},
         fmt,
         fs::File,
         hash::Hash,
@@ -269,6 +269,11 @@ impl<'a> ValidationContext<'a> {
             for env in environments {
                 self.validate_environment(&env, &mut strong_dependencies)?;
             }
+        }
+
+        // Validate "config"
+        if let Some(config) = &self.document.config {
+            self.validate_config(config)?;
         }
 
         // Check for dependency cycles
@@ -1127,6 +1132,19 @@ impl<'a> ValidationContext<'a> {
             },
             None => Ok(()),
         }
+    }
+
+    fn validate_config(
+        &self,
+        fields: &BTreeMap<cml::ConfigKey, cml::ConfigValueType>,
+    ) -> Result<(), Error> {
+        self.features.check(Feature::StructuredConfig)?;
+
+        if fields.is_empty() {
+            return Err(Error::validate("'config' section is empty"));
+        }
+
+        Ok(())
     }
 
     fn validate_environment(
@@ -5068,6 +5086,274 @@ mod tests {
                 ]
             }),
             Err(Error::RestrictedFeature(s)) if s == "services"
+        ),
+    }
+
+    // Tests structured config when the feature is enabled
+    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::StructuredConfig]), {
+        test_cml_configs(
+            json!({
+                "config": {
+                    "verbosity": {
+                        "type": "string",
+                        "max_size": 20,
+                    },
+                    "timeout": { "type": "uint64" },
+                    "tags": {
+                        "type": "vector",
+                        "max_count": 10,
+                        "element": {
+                            "type": "string",
+                            "max_size": 50
+                        }
+                    }
+                }
+            }),
+            Ok(())
+        ),
+
+        test_cml_configs_not_object(
+            json!({
+                "config": "abcd"
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected a map"
+        ),
+
+        test_cml_configs_empty(
+            json!({
+                "config": {
+                }
+            }),
+            Err(Error::Validate { err, .. }) if &err == "'config' section is empty"
+        ),
+
+        test_cml_configs_bad_type(
+            json!({
+                "config": {
+                    "verbosity": 123456
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid type: integer `123456`, expected internally tagged enum"
+        ),
+
+        test_cml_configs_unknown_type(
+            json!({
+                "config": {
+                    "verbosity": {
+                        "type": "foo"
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "unknown variant `foo`, expected one of `bool`, `uint8`, `uint16`, `uint32`, `uint64`, `int8`, `int16`, `int32`, `int64`, `string`, `vector`"
+        ),
+
+        test_cml_configs_no_max_count_vector(
+            json!({
+                "config": {
+                    "tags": {
+                        "type": "vector",
+                        "element": {
+                            "type": "string",
+                            "max_size": 50,
+                        }
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "missing field `max_count`"
+        ),
+
+        test_cml_configs_no_max_size_string(
+            json!({
+                "config": {
+                    "verbosity": {
+                        "type": "string",
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "missing field `max_size`"
+        ),
+
+        test_cml_configs_no_max_size_string_vector(
+            json!({
+                "config": {
+                    "tags": {
+                        "type": "vector",
+                        "max_count": 10,
+                        "element": {
+                            "type": "string",
+                        }
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "missing field `max_size`"
+        ),
+
+        test_cml_configs_empty_key(
+            json!({
+                "config": {
+                    "": {
+                        "type": "bool"
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid length 0, expected a non-empty name no more than 64 characters in length"
+        ),
+
+        test_cml_configs_too_long_key(
+            json!({
+                "config": {
+                    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": {
+                        "type": "bool"
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid length 74, expected a non-empty name no more than 64 characters in length"
+        ),
+        test_cml_configs_key_starts_with_number(
+            json!({
+                "config": {
+                    "8abcd": { "type": "uint8" }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"8abcd\", expected a name which must start with a letter, can contain letters, numbers, and underscores, but cannot end with an underscore"
+        ),
+
+        test_cml_configs_key_ends_with_underscore(
+            json!({
+                "config": {
+                    "abcd_": { "type": "uint8" }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"abcd_\", expected a name which must start with a letter, can contain letters, numbers, and underscores, but cannot end with an underscore"
+        ),
+
+        test_cml_configs_capitals_in_key(
+            json!({
+                "config": {
+                    "ABCD": { "type": "uint8" }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"ABCD\", expected a name which must start with a letter, can contain letters, numbers, and underscores, but cannot end with an underscore"
+        ),
+
+        test_cml_configs_special_chars_in_key(
+            json!({
+                "config": {
+                    "!@#$": { "type": "uint8" }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"!@#$\", expected a name which must start with a letter, can contain letters, numbers, and underscores, but cannot end with an underscore"
+        ),
+
+        test_cml_configs_dashes_in_key(
+            json!({
+                "config": {
+                    "abcd-efgh": { "type": "uint8" }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"abcd-efgh\", expected a name which must start with a letter, can contain letters, numbers, and underscores, but cannot end with an underscore"
+        ),
+
+        test_cml_configs_bad_max_size_string(
+            json!({
+                "config": {
+                    "verbosity": {
+                        "type": "string",
+                        "max_size": "abcd"
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected u32"
+        ),
+
+        test_cml_configs_zero_max_size_string(
+            json!({
+                "config": {
+                    "verbosity": {
+                        "type": "string",
+                        "max_size": 0
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "expected a non-zero value"
+        ),
+
+        test_cml_configs_bad_max_count_on_vector(
+            json!({
+                "config": {
+                    "toggles": {
+                        "type": "vector",
+                        "max_count": "abcd",
+                        "element": {
+                            "type": "bool"
+                        }
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected u32"
+        ),
+
+        test_cml_configs_zero_max_count_on_vector(
+            json!({
+                "config": {
+                    "toggles": {
+                        "type": "vector",
+                        "max_count": 0,
+                        "element": {
+                            "type": "bool"
+                        }
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "expected a non-zero value"
+        ),
+
+        test_cml_configs_bad_max_size_string_vector(
+            json!({
+                "config": {
+                    "toggles": {
+                        "type": "vector",
+                        "max_count": 100,
+                        "element": {
+                            "type": "string",
+                            "max_size": "abcd"
+                        }
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "invalid type: string \"abcd\", expected u32"
+        ),
+
+        test_cml_configs_zero_max_size_string_vector(
+            json!({
+                "config": {
+                    "toggles": {
+                        "type": "vector",
+                        "max_count": 100,
+                        "element": {
+                            "type": "string",
+                            "max_size": 0
+                        }
+                    }
+                }
+            }),
+            Err(Error::Parse { err, .. }) if &err == "expected a non-zero value"
+        ),
+    }}
+
+    // Tests structured config when the feature is disabled
+    test_validate_cml! {
+        test_cml_config_without_config_feature(
+            json!({
+                "config": {
+                    "verbosity": {
+                        "type": "string",
+                        "max_size": 50
+                    },
+                    "timeout": { "type": "uint64" },
+                }
+            }),
+            Err(Error::RestrictedFeature(s)) if s == "structured_config"
         ),
     }
 

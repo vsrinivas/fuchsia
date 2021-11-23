@@ -21,17 +21,18 @@ macro_rules! compile {
             use {
                 crate::{
                     error::Error, AnyRef, AsClause, Capability, CapabilityClause, Child,
-                    Collection, DebugRegistration, Document, Environment, EnvironmentExtends,
-                    EnvironmentRef, EventMode, EventModesClause, EventSubscriptionsClause, Expose,
-                    ExposeFromRef, ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause,
-                    Program, ResolverRegistration, RightsClause, RunnerRegistration, Use,
-                    UseFromRef,
+                    Collection, ConfigKey, ConfigValueType, ConfigVectorElementType,
+                    DebugRegistration, Document, Environment, EnvironmentExtends, EnvironmentRef,
+                    EventMode, EventModesClause, EventSubscriptionsClause, Expose, ExposeFromRef,
+                    ExposeToRef, FromClause, Offer, OneOrMany, Path, PathClause, Program,
+                    ResolverRegistration, RightsClause, RunnerRegistration, Use, UseFromRef,
                 },
                 cm_rust::convert as fdecl,
                 cm_types::{self as cm, Name},
                 fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
                 serde_json::{Map, Value},
-                std::collections::HashSet,
+                sha2::{Digest, Sha256},
+                std::collections::{BTreeMap, HashSet},
                 std::convert::Into,
             };
 
@@ -83,6 +84,7 @@ macro_rules! compile {
                         .map(|env| translate_environments(env, &all_capability_names))
                         .transpose()?,
                     facets: document.facets.clone().map(dictionary_from_nested_map).transpose()?,
+                    config: document.config.as_ref().map(|c| translate_config(c)),
                     ..$namespace::ComponentDecl::EMPTY
                 })
             }
@@ -693,6 +695,128 @@ macro_rules! compile {
                     });
                 }
                 Ok(out_collections)
+            }
+
+            /// Translates a vector element type string to a [`fuchsia.sys2.ConfigVectorElementType`]
+            fn translate_vector_element_type(
+                element_type: &ConfigVectorElementType,
+            ) -> $namespace::ConfigVectorElementType {
+                match element_type {
+                    ConfigVectorElementType::Bool => $namespace::ConfigVectorElementType::Bool(
+                        $namespace::ConfigBooleanType::EMPTY,
+                    ),
+                    ConfigVectorElementType::Uint8 => $namespace::ConfigVectorElementType::Uint8(
+                        $namespace::ConfigUnsigned8Type::EMPTY,
+                    ),
+                    ConfigVectorElementType::Int8 => $namespace::ConfigVectorElementType::Int8(
+                        $namespace::ConfigSigned8Type::EMPTY,
+                    ),
+                    ConfigVectorElementType::Uint16 => $namespace::ConfigVectorElementType::Uint16(
+                        $namespace::ConfigUnsigned16Type::EMPTY,
+                    ),
+                    ConfigVectorElementType::Int16 => $namespace::ConfigVectorElementType::Int16(
+                        $namespace::ConfigSigned16Type::EMPTY,
+                    ),
+                    ConfigVectorElementType::Uint32 => $namespace::ConfigVectorElementType::Uint32(
+                        $namespace::ConfigUnsigned32Type::EMPTY,
+                    ),
+                    ConfigVectorElementType::Int32 => $namespace::ConfigVectorElementType::Int32(
+                        $namespace::ConfigSigned32Type::EMPTY,
+                    ),
+                    ConfigVectorElementType::Uint64 => $namespace::ConfigVectorElementType::Uint64(
+                        $namespace::ConfigUnsigned64Type::EMPTY,
+                    ),
+                    ConfigVectorElementType::Int64 => $namespace::ConfigVectorElementType::Int64(
+                        $namespace::ConfigSigned64Type::EMPTY,
+                    ),
+                    ConfigVectorElementType::String { max_size } => {
+                        $namespace::ConfigVectorElementType::String($namespace::ConfigStringType {
+                            max_size: Some(max_size.get()),
+                            ..$namespace::ConfigStringType::EMPTY
+                        })
+                    }
+                }
+            }
+
+            /// Translates a value type string to a [`fuchsia.sys2.ConfigValueType`]
+            fn translate_value_type(value_type: &ConfigValueType) -> $namespace::ConfigValueType {
+                match value_type {
+                    ConfigValueType::Bool => {
+                        $namespace::ConfigValueType::Bool($namespace::ConfigBooleanType::EMPTY)
+                    }
+                    ConfigValueType::Uint8 => {
+                        $namespace::ConfigValueType::Uint8($namespace::ConfigUnsigned8Type::EMPTY)
+                    }
+                    ConfigValueType::Int8 => {
+                        $namespace::ConfigValueType::Int8($namespace::ConfigSigned8Type::EMPTY)
+                    }
+                    ConfigValueType::Uint16 => {
+                        $namespace::ConfigValueType::Uint16($namespace::ConfigUnsigned16Type::EMPTY)
+                    }
+                    ConfigValueType::Int16 => {
+                        $namespace::ConfigValueType::Int16($namespace::ConfigSigned16Type::EMPTY)
+                    }
+                    ConfigValueType::Uint32 => {
+                        $namespace::ConfigValueType::Uint32($namespace::ConfigUnsigned32Type::EMPTY)
+                    }
+                    ConfigValueType::Int32 => {
+                        $namespace::ConfigValueType::Int32($namespace::ConfigSigned32Type::EMPTY)
+                    }
+                    ConfigValueType::Uint64 => {
+                        $namespace::ConfigValueType::Uint64($namespace::ConfigUnsigned64Type::EMPTY)
+                    }
+                    ConfigValueType::Int64 => {
+                        $namespace::ConfigValueType::Int64($namespace::ConfigSigned64Type::EMPTY)
+                    }
+                    ConfigValueType::String { max_size } => {
+                        $namespace::ConfigValueType::String($namespace::ConfigStringType {
+                            max_size: Some(max_size.get()),
+                            ..$namespace::ConfigStringType::EMPTY
+                        })
+                    }
+                    ConfigValueType::Vector { max_count, element } => {
+                        let element_type = translate_vector_element_type(element);
+                        $namespace::ConfigValueType::Vector($namespace::ConfigVectorType {
+                            max_count: Some(max_count.get()),
+                            element_type: Some(element_type),
+                            ..$namespace::ConfigVectorType::EMPTY
+                        })
+                    }
+                }
+            }
+
+            /// Translates a map of [`String`] -> [`ConfigValueType`] to a [`fuchsia.sys2.ConfigDecl`]
+            fn translate_config(
+                fields: &BTreeMap<ConfigKey, ConfigValueType>,
+            ) -> $namespace::ConfigDecl {
+                let mut fidl_fields = vec![];
+
+                // Compute a SHA-256 hash from each field
+                let mut hasher = Sha256::new();
+
+                for (key, value) in fields {
+                    fidl_fields.push($namespace::ConfigField {
+                        key: Some(key.to_string()),
+                        value_type: Some(translate_value_type(value)),
+                        ..$namespace::ConfigField::EMPTY
+                    });
+
+                    hasher.update(key.as_str());
+
+                    // TODO(fxbug.dev/88499): Compute checksum using Hash trait. Currently,
+                    // the Debug trait does not provide a strong uniqueness guarantee.
+                    hasher.update(format!("{:?}", value));
+                }
+
+                // The SHA-256 hash must be 32 bytes in size
+                let hash: Vec<u8> = hasher.finalize().to_vec();
+                assert_eq!(hash.len(), 32);
+
+                $namespace::ConfigDecl {
+                    fields: Some(fidl_fields),
+                    declaration_checksum: Some(hash),
+                    ..$namespace::ConfigDecl::EMPTY
+                }
             }
 
             fn translate_environments(

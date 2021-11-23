@@ -23,6 +23,7 @@ rustc_library("cml") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
+    "//third_party/rust_crates:sha2",
   ]
 
   test_deps = [

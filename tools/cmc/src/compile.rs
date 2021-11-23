@@ -662,6 +662,114 @@ macro_rules! test_suite {
                 },
             }}
 
+            test_compile_with_features! { FeatureSet::from(vec![Feature::StructuredConfig]), {
+                test_compile_config => {
+                    input = json!({
+                        "config": {
+                            "test8": {
+                                "type": "vector",
+                                "max_count": 100,
+                                "element": {
+                                    "type": "uint16"
+                                }
+                            },
+                            "test7": { "type": "int64" },
+                            "test6": { "type": "uint64" },
+                            "test5": { "type": "int8" },
+                            "test4": { "type": "uint8" },
+                            "test3": { "type": "bool" },
+                            "test2": {
+                                "type": "vector",
+                                "max_count": 100,
+                                "element": {
+                                    "type": "string",
+                                    "max_size": 50
+                                }
+                            },
+                            "test1": {
+                                "type": "string",
+                                "max_size": 50
+                            }
+                        }
+                    }),
+                    output = $namespace::ComponentDecl {
+                        config: Some($namespace::ConfigDecl {
+                            fields: Some(vec![
+                                $namespace::ConfigField {
+                                    key: Some("test1".to_string()),
+                                    value_type: Some($namespace::ConfigValueType::String(
+                                        $namespace::ConfigStringType {
+                                            max_size: Some(50),
+                                            ..$namespace::ConfigStringType::EMPTY
+                                        }
+                                    )),
+                                    ..$namespace::ConfigField::EMPTY
+                                },
+                                $namespace::ConfigField {
+                                    key: Some("test2".to_string()),
+                                    value_type: Some($namespace::ConfigValueType::Vector(
+                                        $namespace::ConfigVectorType {
+                                            max_count: Some(100),
+                                            element_type: Some($namespace::ConfigVectorElementType::String(
+                                                $namespace::ConfigStringType {
+                                                    max_size: Some(50),
+                                                    ..$namespace::ConfigStringType::EMPTY
+                                                }
+                                            )),
+                                            ..$namespace::ConfigVectorType::EMPTY
+                                        }
+                                    )),
+                                    ..$namespace::ConfigField::EMPTY
+                                },
+                                $namespace::ConfigField {
+                                    key: Some("test3".to_string()),
+                                    value_type: Some($namespace::ConfigValueType::Bool($namespace::ConfigBooleanType::EMPTY)),
+                                    ..$namespace::ConfigField::EMPTY
+                                },
+                                $namespace::ConfigField {
+                                    key: Some("test4".to_string()),
+                                    value_type: Some($namespace::ConfigValueType::Uint8($namespace::ConfigUnsigned8Type::EMPTY)),
+                                    ..$namespace::ConfigField::EMPTY
+                                },
+                                $namespace::ConfigField {
+                                    key: Some("test5".to_string()),
+                                    value_type: Some($namespace::ConfigValueType::Int8($namespace::ConfigSigned8Type::EMPTY)),
+                                    ..$namespace::ConfigField::EMPTY
+                                },
+                                $namespace::ConfigField {
+                                    key: Some("test6".to_string()),
+                                    value_type: Some($namespace::ConfigValueType::Uint64($namespace::ConfigUnsigned64Type::EMPTY)),
+                                    ..$namespace::ConfigField::EMPTY
+                                },
+                                $namespace::ConfigField {
+                                    key: Some("test7".to_string()),
+                                    value_type: Some($namespace::ConfigValueType::Int64($namespace::ConfigSigned64Type::EMPTY)),
+                                    ..$namespace::ConfigField::EMPTY
+                                },
+
+                                $namespace::ConfigField {
+                                    key: Some("test8".to_string()),
+                                    value_type: Some($namespace::ConfigValueType::Vector(
+                                        $namespace::ConfigVectorType {
+                                            max_count: Some(100),
+                                            element_type: Some($namespace::ConfigVectorElementType::Uint16($namespace::ConfigUnsigned16Type::EMPTY)),
+                                            ..$namespace::ConfigVectorType::EMPTY
+                                        }
+                                    )),
+                                    ..$namespace::ConfigField::EMPTY
+                                },
+                            ]),
+                            declaration_checksum: Some(vec![
+                                29, 216, 58, 250, 74, 84, 151, 187, 165, 124, 211, 208, 215, 241, 78, 166,
+                                54, 186, 142, 201, 10, 136, 180, 16, 171, 129, 154, 142, 44, 7, 46, 146
+                            ]),
+                            ..$namespace::ConfigDecl::EMPTY
+                        }),
+                        ..$namespace::ComponentDecl::EMPTY
+                    },
+                },
+            }}
+
             #[test]
             fn test_invalid_json() {
                 let tmp_dir = TempDir::new().unwrap();

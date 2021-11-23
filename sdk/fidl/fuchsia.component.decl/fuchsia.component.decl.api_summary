@@ -1,6 +1,7 @@
 enum/member fuchsia.component.decl/AllowedOffers.STATIC_AND_DYNAMIC 2
 enum/member fuchsia.component.decl/AllowedOffers.STATIC_ONLY 1
 strict enum fuchsia.component.decl/AllowedOffers uint32
+const fuchsia.component.decl/CONFIG_KEY_MAX_SIZE uint32 64
 union/member fuchsia.component.decl/Capability.directory fuchsia.component.decl/Directory
 union/member fuchsia.component.decl/Capability.event fuchsia.component.decl/Event
 union/member fuchsia.component.decl/Capability.protocol fuchsia.component.decl/Protocol
@@ -30,6 +31,7 @@ struct fuchsia.component.decl/CollectionRef
 table/member fuchsia.component.decl/Component.capabilities vector<fuchsia.component.decl/Capability>
 table/member fuchsia.component.decl/Component.children vector<fuchsia.component.decl/Child>
 table/member fuchsia.component.decl/Component.collections vector<fuchsia.component.decl/Collection>
+table/member fuchsia.component.decl/Component.config fuchsia.component.decl/Config
 table/member fuchsia.component.decl/Component.environments vector<fuchsia.component.decl/Environment>
 table/member fuchsia.component.decl/Component.exposes vector<fuchsia.component.decl/Expose>
 table/member fuchsia.component.decl/Component.facets fuchsia.data/Dictionary
@@ -37,6 +39,49 @@ table/member fuchsia.component.decl/Component.offers vector<fuchsia.component.de
 table/member fuchsia.component.decl/Component.program fuchsia.component.decl/Program
 table/member fuchsia.component.decl/Component.uses vector<fuchsia.component.decl/Use>
 table fuchsia.component.decl/Component
+table/member fuchsia.component.decl/Config.declaration_checksum vector<uint8>:32
+table/member fuchsia.component.decl/Config.fields vector<fuchsia.component.decl/ConfigField>
+table fuchsia.component.decl/Config
+table fuchsia.component.decl/ConfigBooleanType
+table/member fuchsia.component.decl/ConfigField.key string:64
+table/member fuchsia.component.decl/ConfigField.value_type fuchsia.component.decl/ConfigValueType
+table fuchsia.component.decl/ConfigField
+table fuchsia.component.decl/ConfigSigned16Type
+table fuchsia.component.decl/ConfigSigned32Type
+table fuchsia.component.decl/ConfigSigned64Type
+table fuchsia.component.decl/ConfigSigned8Type
+table/member fuchsia.component.decl/ConfigStringType.max_size uint32
+table fuchsia.component.decl/ConfigStringType
+table fuchsia.component.decl/ConfigUnsigned16Type
+table fuchsia.component.decl/ConfigUnsigned32Type
+table fuchsia.component.decl/ConfigUnsigned64Type
+table fuchsia.component.decl/ConfigUnsigned8Type
+union/member fuchsia.component.decl/ConfigValueType.bool fuchsia.component.decl/ConfigBooleanType
+union/member fuchsia.component.decl/ConfigValueType.int16 fuchsia.component.decl/ConfigSigned16Type
+union/member fuchsia.component.decl/ConfigValueType.int32 fuchsia.component.decl/ConfigSigned32Type
+union/member fuchsia.component.decl/ConfigValueType.int64 fuchsia.component.decl/ConfigSigned64Type
+union/member fuchsia.component.decl/ConfigValueType.int8 fuchsia.component.decl/ConfigSigned8Type
+union/member fuchsia.component.decl/ConfigValueType.string fuchsia.component.decl/ConfigStringType
+union/member fuchsia.component.decl/ConfigValueType.uint16 fuchsia.component.decl/ConfigUnsigned16Type
+union/member fuchsia.component.decl/ConfigValueType.uint32 fuchsia.component.decl/ConfigUnsigned32Type
+union/member fuchsia.component.decl/ConfigValueType.uint64 fuchsia.component.decl/ConfigUnsigned64Type
+union/member fuchsia.component.decl/ConfigValueType.uint8 fuchsia.component.decl/ConfigUnsigned8Type
+union/member fuchsia.component.decl/ConfigValueType.vector fuchsia.component.decl/ConfigVectorType
+flexible union fuchsia.component.decl/ConfigValueType
+union/member fuchsia.component.decl/ConfigVectorElementType.bool fuchsia.component.decl/ConfigBooleanType
+union/member fuchsia.component.decl/ConfigVectorElementType.int16 fuchsia.component.decl/ConfigSigned16Type
+union/member fuchsia.component.decl/ConfigVectorElementType.int32 fuchsia.component.decl/ConfigSigned32Type
+union/member fuchsia.component.decl/ConfigVectorElementType.int64 fuchsia.component.decl/ConfigSigned64Type
+union/member fuchsia.component.decl/ConfigVectorElementType.int8 fuchsia.component.decl/ConfigSigned8Type
+union/member fuchsia.component.decl/ConfigVectorElementType.string fuchsia.component.decl/ConfigStringType
+union/member fuchsia.component.decl/ConfigVectorElementType.uint16 fuchsia.component.decl/ConfigUnsigned16Type
+union/member fuchsia.component.decl/ConfigVectorElementType.uint32 fuchsia.component.decl/ConfigUnsigned32Type
+union/member fuchsia.component.decl/ConfigVectorElementType.uint64 fuchsia.component.decl/ConfigUnsigned64Type
+union/member fuchsia.component.decl/ConfigVectorElementType.uint8 fuchsia.component.decl/ConfigUnsigned8Type
+flexible union fuchsia.component.decl/ConfigVectorElementType
+table/member fuchsia.component.decl/ConfigVectorType.element_type fuchsia.component.decl/ConfigVectorElementType
+table/member fuchsia.component.decl/ConfigVectorType.max_count uint32
+table fuchsia.component.decl/ConfigVectorType
 table/member fuchsia.component.decl/DebugProtocolRegistration.source fuchsia.component.decl/Ref
 table/member fuchsia.component.decl/DebugProtocolRegistration.source_name string:100
 table/member fuchsia.component.decl/DebugProtocolRegistration.target_name string:100

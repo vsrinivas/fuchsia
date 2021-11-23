@@ -50,4 +50,19 @@ pub type ChildDecl = fidl_fuchsia_component_decl::Child;
 pub type CollectionDecl = fidl_fuchsia_component_decl::Collection;
 pub type EnvironmentDecl = fidl_fuchsia_component_decl::Environment;
 
+pub type ConfigDecl = fidl_fuchsia_component_decl::Config;
+pub type ConfigValueType = fidl_fuchsia_component_decl::ConfigValueType;
+pub type ConfigVectorElementType = fidl_fuchsia_component_decl::ConfigVectorElementType;
+pub type ConfigBooleanType = fidl_fuchsia_component_decl::ConfigBooleanType;
+pub type ConfigUnsigned8Type = fidl_fuchsia_component_decl::ConfigUnsigned8Type;
+pub type ConfigUnsigned16Type = fidl_fuchsia_component_decl::ConfigUnsigned16Type;
+pub type ConfigUnsigned32Type = fidl_fuchsia_component_decl::ConfigUnsigned32Type;
+pub type ConfigUnsigned64Type = fidl_fuchsia_component_decl::ConfigUnsigned64Type;
+pub type ConfigSigned8Type = fidl_fuchsia_component_decl::ConfigSigned8Type;
+pub type ConfigSigned16Type = fidl_fuchsia_component_decl::ConfigSigned16Type;
+pub type ConfigSigned32Type = fidl_fuchsia_component_decl::ConfigSigned32Type;
+pub type ConfigSigned64Type = fidl_fuchsia_component_decl::ConfigSigned64Type;
+pub type ConfigStringType = fidl_fuchsia_component_decl::ConfigStringType;
+pub type ConfigVectorType = fidl_fuchsia_component_decl::ConfigVectorType;
+
 pub type Ref = fidl_fuchsia_component_decl::Ref;

@@ -45,6 +45,9 @@ pub enum Feature {
 
     /// Allows `ComponentDecl.allowed_offers` to be specified in CML.
     DynamicOffers,
+
+    /// Enables structured configuration support in CML.
+    StructuredConfig,
 }
 
 impl FromStr for Feature {
@@ -53,6 +56,7 @@ impl FromStr for Feature {
         match s {
             "services" => Ok(Feature::Services),
             "dynamic_offers" => Ok(Feature::DynamicOffers),
+            "structured_config" => Ok(Feature::StructuredConfig),
             _ => Err(format!("unrecognized feature \"{}\"", s)),
         }
     }
@@ -63,6 +67,7 @@ impl fmt::Display for Feature {
         f.write_str(match self {
             Feature::Services => "services",
             Feature::DynamicOffers => "dynamic_offers",
+            Feature::StructuredConfig => "structured_config",
         })
     }
 }
