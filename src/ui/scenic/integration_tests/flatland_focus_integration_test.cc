@@ -16,6 +16,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "sdk/lib/ui/scenic/cpp/view_creation_tokens.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 // This test exercises the focus protocols implemented by Scenic (fuchsia.ui.focus.FocusChain,
@@ -72,17 +73,6 @@ const std::vector<std::string> GlobalServices() {
 const zx::duration kWaitTime = zx::msec(100);
 const uint32_t kDefaultLogicalPixelSize = 1;
 
-std::pair<ViewCreationToken, ViewportCreationToken> NewViewCreationTokens() {
-  ViewportCreationToken parent_token;
-  ViewCreationToken child_token;
-  {
-    const auto status = zx::channel::create(0, &parent_token.value, &child_token.value);
-    FX_CHECK(status == ZX_OK);
-  }
-  return std::make_pair<ViewCreationToken, ViewportCreationToken>(std::move(child_token),
-                                                                  std::move(parent_token));
-}
-
 }  // namespace
 
 class FlatlandFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
@@ -119,7 +109,7 @@ class FlatlandFocusIntegrationTest : public gtest::TestWithEnvironmentFixture,
       FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
     });
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
-    auto [child_token, parent_token] = NewViewCreationTokens();
+    auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
     flatland_display_->SetContent(std::move(parent_token), child_view_watcher.NewRequest());
 
     // Set up root view.
@@ -249,7 +239,7 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_RequestUnconnected_ShouldFa
   EXPECT_EQ(CountReceivedFocusChains(), 0u);
 
   // Set up the child view.
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
   environment_->ConnectToService(child_session.NewRequest());
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
@@ -267,7 +257,7 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_RequestUnconnected_ShouldFa
 
 TEST_F(FlatlandFocusIntegrationTest, RequestValidity_RequestConnected_ShouldSucceed) {
   // Set up the child view.
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
   environment_->ConnectToService(child_session.NewRequest());
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
@@ -292,7 +282,7 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_RequestConnected_ShouldSucc
 
 TEST_F(FlatlandFocusIntegrationTest, RequestValidity_SelfRequest_ShouldSucceed) {
   // Set up the child view and attach it to the root.
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   AttachToRoot(std::move(parent_token));
 
   fuchsia::ui::composition::FlatlandPtr child_session;
@@ -326,7 +316,7 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_SelfRequest_ShouldSucceed) 
 
 TEST_F(FlatlandFocusIntegrationTest, ChildView_CreatedBeforeAttachingToRoot_ShouldNotKillFocuser) {
   // Set up the child view.
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
   environment_->ConnectToService(child_session.NewRequest());
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
@@ -352,7 +342,7 @@ TEST_F(FlatlandFocusIntegrationTest, ChildView_CreatedBeforeAttachingToRoot_Shou
 
 TEST_F(FlatlandFocusIntegrationTest, FocusChain_Updated_OnViewDisconnect) {
   // Set up the child view.
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
   environment_->ConnectToService(child_session.NewRequest());
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
@@ -389,7 +379,7 @@ TEST_F(FlatlandFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
 
 TEST_F(FlatlandFocusIntegrationTest, ViewRefFocused_HappyCase) {
   // Set up the child view.
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   AttachToRoot(std::move(parent_token));
   fuchsia::ui::composition::FlatlandPtr child_session;
   environment_->ConnectToService(child_session.NewRequest());
@@ -422,7 +412,7 @@ TEST_F(FlatlandFocusIntegrationTest, ViewRefFocused_HappyCase) {
 TEST_F(FlatlandFocusIntegrationTest,
        ChildView_PresentsBeforeParentPresent_ShouldNotKillVrfEndpoint) {
   // Set up the child view.
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
   environment_->ConnectToService(child_session.NewRequest());
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
@@ -451,7 +441,7 @@ TEST_F(FlatlandFocusIntegrationTest,
 TEST_F(FlatlandFocusIntegrationTest,
        ChildView_PresentsAfterParentPresent_ShouldNotKillVrfEndpoint) {
   // Set up the child view.
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   fuchsia::ui::composition::FlatlandPtr child_session;
   environment_->ConnectToService(child_session.NewRequest());
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;

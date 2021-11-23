@@ -514,13 +514,14 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
     importers.push_back(screenshot_buffer_collection_importer);
 
+    // Capture flatland_manager since the primary display may not have been initialized yet.
     screenshot_manager_ = std::make_unique<screenshot::ScreenshotManager>(
-        flatland_engine_, flatland_renderer,
-        flatland_manager_->GetPrimaryFlatlandDisplayForRendering(), std::move(importers));
+        flatland_engine_, flatland_renderer, flatland_manager_, std::move(importers));
 
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot>)> handler =
         fit::bind_member(screenshot_manager_.get(), &screenshot::ScreenshotManager::CreateClient);
-    // TODO (fxbug.dev/64652): AddPublicService()
+    zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+    FX_DCHECK(status == ZX_OK);
   }
 
   { observer_registry_.Publish(app_context_.get()); }

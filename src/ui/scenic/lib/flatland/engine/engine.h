@@ -19,6 +19,10 @@
 
 namespace flatland {
 
+using ImageRectangles = std::vector<Rectangle2D>;
+using ImageMetadatas = std::vector<allocation::ImageMetadata>;
+using Renderables = std::pair<ImageRectangles, ImageMetadatas>;
+
 // Engine is responsible for building a display list for DisplayCompositor, to insulate it from
 // needing to know anything about the Flatland scene graph.
 class Engine {
@@ -38,8 +42,8 @@ class Engine {
   // view_tree::SubtreeSnapshot.
   view_tree::SubtreeSnapshot GenerateViewTreeSnapshot(const FlatlandDisplay& display) const;
 
-  std::pair<const std::vector<Rectangle2D>&, const std::vector<allocation::ImageMetadata>&>
-  GetRenderables(const FlatlandDisplay& display);
+  // Returns all renderables reachable from |root|.
+  Renderables GetRenderables(TransformHandle root);
 
  private:
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;

@@ -16,38 +16,15 @@
 namespace screenshot {
 ScreenshotManager::ScreenshotManager(
     std::shared_ptr<flatland::Engine> engine, std::shared_ptr<flatland::VkRenderer> renderer,
-    std::shared_ptr<flatland::FlatlandDisplay> display,
+    std::shared_ptr<flatland::FlatlandManager> flatland_manager,
     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers)
-    : display_width_(1024),
-      display_height_(600),
-      engine_(engine),
+    : engine_(engine),
       renderer_(renderer),
-      display_(display),
+      flatland_manager_(flatland_manager),
       buffer_collection_importers_(std::move(buffer_collection_importers)) {
-  // Check display config.
-  std::string display_info_string;
-  if (files::ReadFileToString("/config/data/display_info", &display_info_string)) {
-    FX_LOGS(INFO) << "Found config file at /config/data/display_info";
-
-    rapidjson::Document document;
-    document.Parse(display_info_string);
-
-    if (document.HasMember("width")) {
-      auto& val = document["width"];
-      FX_CHECK(val.IsInt()) << "display_width must be an integer";
-      display_width_ = val.GetInt();
-    }
-
-    if (document.HasMember("height")) {
-      auto& val = document["height"];
-      FX_CHECK(val.IsInt()) << "display_height must be an integer";
-      display_height_ = val.GetInt();
-    }
-  } else {
-    FX_LOGS(INFO) << "No config file found at /config/data/display_info; using default values";
-    display_width_ = 1024;
-    display_height_ = 600;
-  }
+  FX_DCHECK(engine_);
+  FX_DCHECK(renderer_);
+  FX_DCHECK(flatland_manager_);
 }
 
 void ScreenshotManager::CreateClient(
@@ -55,8 +32,15 @@ void ScreenshotManager::CreateClient(
   const auto id = next_client_id_++;
 
   std::unique_ptr<Screenshot> screenshot = std::make_unique<Screenshot>(
-      std::move(request), display_width_, display_height_, buffer_collection_importers_, renderer_,
-      [this]() { return engine_->GetRenderables(*(display_.get())); });
+      std::move(request), buffer_collection_importers_, renderer_, [this]() {
+        FX_DCHECK(flatland_manager_);
+        FX_DCHECK(engine_);
+
+        auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering();
+        FX_DCHECK(display);
+
+        return engine_->GetRenderables(display->root_transform());
+      });
 
   screenshot_clients_[id] = std::move(screenshot);
 }

@@ -19,6 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "sdk/lib/ui/scenic/cpp/view_creation_tokens.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 #include "src/ui/scenic/integration_tests/utils.h"
 
@@ -109,17 +110,6 @@ std::array<float, 2> TransformPointerCoords(std::array<float, 2> pointer,
   return {homogenized.x, homogenized.y};
 }
 
-std::pair<ViewCreationToken, ViewportCreationToken> NewViewCreationTokens() {
-  ViewportCreationToken parent_token;
-  ViewCreationToken child_token;
-  {
-    const auto status = zx::channel::create(0, &parent_token.value, &child_token.value);
-    FX_CHECK(status == ZX_OK);
-  }
-  return std::make_pair<ViewCreationToken, ViewportCreationToken>(std::move(child_token),
-                                                                  std::move(parent_token));
-}
-
 }  // namespace
 
 class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
@@ -164,7 +154,7 @@ class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
     });
 
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
-    auto [child_token, parent_token] = NewViewCreationTokens();
+    auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
     flatland_display_->SetContent(std::move(parent_token), child_view_watcher.NewRequest());
 
     fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
@@ -344,7 +334,7 @@ TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
 
   // Set up the root graph.
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
-  auto [child_token, parent_token] = NewViewCreationTokens();
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
   ViewportProperties properties;
   properties.set_logical_size({kDefaultSize, kDefaultSize});
   const TransformId kRootTransform{.value = 1};

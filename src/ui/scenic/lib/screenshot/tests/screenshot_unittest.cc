@@ -61,7 +61,7 @@ TEST_F(ScreenshotTest, CreateImage_SingleImporter_Success) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
   std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
   screenshot_importers.push_back(buffer_collection_importer_);
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, screenshot_importers, nullptr,
+  screenshot::Screenshot sc(screenshotter.NewRequest(), screenshot_importers, nullptr,
                             &GetRenderables);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
@@ -89,7 +89,7 @@ TEST_F(ScreenshotTest, CreateImage_SingleImporter_Failure) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
   std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
   screenshot_importers.push_back(buffer_collection_importer_);
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, screenshot_importers, nullptr,
+  screenshot::Screenshot sc(screenshotter.NewRequest(), screenshot_importers, nullptr,
                             &GetRenderables);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
@@ -123,7 +123,7 @@ TEST_F(ScreenshotTest, CreateImage_MultipleImporters_Success) {
 
   screenshot_importers.push_back(buffer_collection_importer_);
   screenshot_importers.push_back(buffer_collection_importer2);
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, screenshot_importers, nullptr,
+  screenshot::Screenshot sc(screenshotter.NewRequest(), screenshot_importers, nullptr,
                             &GetRenderables);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
@@ -159,7 +159,7 @@ TEST_F(ScreenshotTest, CreateImage_MultipleImporters_ImportFailure) {
 
   screenshot_importers.push_back(buffer_collection_importer_);
   screenshot_importers.push_back(buffer_collection_importer2);
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, screenshot_importers, nullptr,
+  screenshot::Screenshot sc(screenshotter.NewRequest(), screenshot_importers, nullptr,
                             &GetRenderables);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
@@ -189,7 +189,7 @@ TEST_F(ScreenshotTest, CreateImage_MultipleImporters_ImportFailure) {
 
 TEST_F(ScreenshotTest, CreateImage_MissingArguments) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, {}, nullptr, &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), {}, nullptr, &GetRenderables);
   sc.CreateImage({}, [](fuchsia::ui::composition::Screenshot_CreateImage_Result result) {
     EXPECT_TRUE(result.is_err());
     auto error = result.err();
@@ -199,7 +199,7 @@ TEST_F(ScreenshotTest, CreateImage_MissingArguments) {
 
 TEST_F(ScreenshotTest, CreateImage_InvalidID) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, {}, nullptr, &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), {}, nullptr, &GetRenderables);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
@@ -221,7 +221,7 @@ TEST_F(ScreenshotTest, CreateImage_InvalidID) {
 
 TEST_F(ScreenshotTest, CreateImage_DuplicateID) {
   fuchsia::ui::composition::ScreenshotPtr screenshotter;
-  screenshot::Screenshot sc(screenshotter.NewRequest(), 100, 100, {}, nullptr, &GetRenderables);
+  screenshot::Screenshot sc(screenshotter.NewRequest(), {}, nullptr, &GetRenderables);
 
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();

@@ -14,12 +14,13 @@
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
-namespace screenshot {
-
+namespace {
 using Rectangle2D = escher::Rectangle2D;
 using glm::vec2;
-using GetRenderables = fit::function<
-    std::pair<const std::vector<Rectangle2D>&, const std::vector<allocation::ImageMetadata>&>()>;
+using GetRenderables = std::function<flatland::Renderables()>;
+}  // namespace
+
+namespace screenshot {
 
 class Screenshot : public fuchsia::ui::composition::Screenshot {
  public:
@@ -28,7 +29,6 @@ class Screenshot : public fuchsia::ui::composition::Screenshot {
                                                     uint32_t image_width, uint32_t image_height);
 
   Screenshot(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot> request,
-             uint32_t display_width, uint32_t display_height,
              const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
                  buffer_collection_importers,
              std::shared_ptr<flatland::VkRenderer> renderer, GetRenderables get_renderables);
@@ -47,9 +47,6 @@ class Screenshot : public fuchsia::ui::composition::Screenshot {
   static constexpr int64_t kInvalidId = 0;
 
   fidl::Binding<fuchsia::ui::composition::Screenshot> binding_;
-
-  uint32_t display_width_;
-  uint32_t display_height_;
 
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
 

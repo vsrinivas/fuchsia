@@ -70,9 +70,10 @@ type TakeScreenshotArgs = resource table {
 
 
 /// This protocol provides a low-level Screenshot API for clients to use.
-/// Screenshot clients should familiarize themselves with the sysmem and
-/// Allocator protocols as those are necessary to create the BufferCollections
+/// Screenshot clients should familiarize themselves with the [`fuchsia.sysmem/BufferCollection`] and
+/// [`fuchsia.ui.composition/Allocator`] protocols as those are necessary to create the BufferCollections
 /// and images Screenshot uses.
+@discoverable
 protocol Screenshot {
     /// Clients should first use the Allocator protocol to register a
     /// BufferCollection for screenshot use.
@@ -103,7 +104,7 @@ protocol Screenshot {
     /// the buffer is too small, a best effort attempt will be made to render
     /// the image.
     ///
-    /// Clients may wait on the zx::event they pass for successful completion of
+    /// Clients should wait on the zx::event they pass for successful completion of
     /// the screenshot. It is not guaranteed that the screenshot will be
     /// completed by the time this function returns.
     TakeScreenshot(resource struct {

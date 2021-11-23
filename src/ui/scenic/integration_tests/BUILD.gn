@@ -11,6 +11,7 @@ group("integration_tests") {
     ":flatland_integration_tests",
     ":gfx_integration_tests",
     ":observer_integration_tests",
+    ":screenshot_integration_test",
   ]
 }
 
@@ -196,6 +197,25 @@ fuchsia_test_component("observer_registry_integration_test") {
   deps = [ ":observer_registry_integration_test_bin" ]
 }
 
+executable("screenshot_integration_test_bin") {
+  testonly = true
+  sources = [ "screenshot_integration_test.cc" ]
+  deps = [
+    ":common_deps",
+    "//sdk//fidl/fuchsia.ui.composition",
+    "//src/ui/scenic/lib/allocation:allocation",
+    "//src/ui/scenic/lib/screenshot:screenshot",
+    "//src/ui/scenic/lib/utils:utils",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("screenshot_integration_test") {
+  component_name = "screenshot_integration_test"
+  manifest = "meta/screenshot_integration_test.cmx"
+  deps = [ ":screenshot_integration_test_bin" ]
+}
+
 fuchsia_test_package("gfx_integration_tests") {
   package_deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   test_components = [
@@ -218,6 +238,7 @@ fuchsia_test_package("flatland_integration_tests") {
   test_components = [
     ":flatland_touch_integration_test",
     ":flatland_focus_integration_test",
+    ":screenshot_integration_test",
   ]
   test_specs = {
     # TODO(fxbug.dev/71344): Should have the same environments as "gfx_integration_tests" above, but

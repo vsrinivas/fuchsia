@@ -24,20 +24,17 @@ class ScreenshotManager {
  public:
   ScreenshotManager(std::shared_ptr<flatland::Engine> engine,
                     std::shared_ptr<flatland::VkRenderer> renderer,
-                    std::shared_ptr<flatland::FlatlandDisplay> display,
+                    std::shared_ptr<flatland::FlatlandManager> flatland_manager,
                     std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>
                         buffer_collection_importers);
 
   void CreateClient(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot> screenshot);
 
  private:
-  uint32_t display_width_;
-  uint32_t display_height_;
-
   // We need these for rendering the scene into the client supplied buffer.
   std::shared_ptr<flatland::Engine> engine_;
   std::shared_ptr<flatland::VkRenderer> renderer_;
-  std::shared_ptr<flatland::FlatlandDisplay> display_;
+  std::shared_ptr<flatland::FlatlandManager> flatland_manager_;
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
 
   ClientId next_client_id_ = 1;

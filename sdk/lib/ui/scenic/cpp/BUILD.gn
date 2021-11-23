@@ -23,6 +23,8 @@ sdk_source_set("cpp") {
     "resources.h",
     "session.cc",
     "session.h",
+    "view_creation_tokens.cc",
+    "view_creation_tokens.h",
     "view_identity.cc",
     "view_identity.h",
     "view_ref_pair.cc",

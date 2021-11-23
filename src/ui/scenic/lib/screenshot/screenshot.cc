@@ -15,14 +15,11 @@ using fuchsia::ui::composition::ScreenshotError;
 namespace screenshot {
 
 Screenshot::Screenshot(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot> request,
-                       uint32_t display_width, uint32_t display_height,
                        const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
                            buffer_collection_importers,
                        std::shared_ptr<flatland::VkRenderer> renderer,
                        GetRenderables get_renderables)
     : binding_(this, std::move(request)),
-      display_width_(display_width),
-      display_height_(display_height),
       buffer_collection_importers_(buffer_collection_importers),
       renderer_(renderer),
       get_renderables_(std::move(get_renderables)) {}
@@ -112,6 +109,7 @@ void Screenshot::RemoveImage(fuchsia::ui::composition::RemoveImageArgs args,
   }
 
   image_ids_.erase(args.image_id());
+  callback(fpromise::ok());
 }
 
 void Screenshot::TakeScreenshot(fuchsia::ui::composition::TakeScreenshotArgs args,
@@ -132,22 +130,28 @@ void Screenshot::TakeScreenshot(fuchsia::ui::composition::TakeScreenshotArgs arg
     return;
   }
 
-  auto metadata = image_ids_[image_id];
+  const auto& metadata = image_ids_[image_id];
 
   // Get renderables from the engine.
   auto renderables = get_renderables_();
+  const auto& rects = renderables.first;
+  const auto& image_metadatas = renderables.second;
 
   auto rotation =
       args.has_rotation() ? args.rotation() : fuchsia::ui::composition::Rotation::CW_0_DEGREES;
-  auto rotated_images =
-      RotateRenderables(renderables.first, rotation, display_width_, display_height_);
+
+  auto image_width = metadata.width;
+  auto image_height = metadata.height;
+
+  const auto& rotated_rects = RotateRenderables(rects, rotation, image_width, image_height);
 
   zx::event event = std::move(*(args.mutable_event()));
   std::vector<zx::event> events;
   events.push_back(std::move(event));
 
   // Render content into user-provided buffer, which will signal the user-provided event.
-  renderer_->Render(metadata, rotated_images, renderables.second, std::move(events));
+  renderer_->Render(metadata, rotated_rects, image_metadatas, std::move(events));
+  callback(fpromise::ok());
 }
 
 std::vector<Rectangle2D> Screenshot::RotateRenderables(const std::vector<Rectangle2D>& rects,
@@ -172,29 +176,28 @@ std::vector<Rectangle2D> Screenshot::RotateRenderables(const std::vector<Rectang
     auto w = extent[0];
     auto h = extent[1];
 
-    // Account for the new image size if the rotation is 90 or 270 degrees.
-    auto new_extent = extent;
-    if (rotation != fuchsia::ui::composition::Rotation::CW_180_DEGREES) {
-      new_extent = {h, w};
-    }
-
     // Account for rotation of the rectangle itself.
     std::array<vec2, 4> new_uv_coords;
     // Account for translation of the rectangle in the bounds of the canvas.
     vec2 new_origin;
+    // Account for the new extent.
+    vec2 new_extent;
 
     switch (rotation) {
       case fuchsia::ui::composition::Rotation::CW_90_DEGREES:
         new_uv_coords = {uvs[3], uvs[0], uvs[1], uvs[2]};
         new_origin = {image_width - y - h, x};
+        new_extent = {h, w};
         break;
       case fuchsia::ui::composition::Rotation::CW_180_DEGREES:
         new_uv_coords = {uvs[2], uvs[3], uvs[0], uvs[1]};
         new_origin = {image_width - x - w, image_height - y - h};
+        new_extent = {w, h};
         break;
       case fuchsia::ui::composition::Rotation::CW_270_DEGREES:
         new_uv_coords = {uvs[1], uvs[2], uvs[3], uvs[0]};
         new_origin = {y, image_height - x - w};
+        new_extent = {h, w};
         break;
       default:
         FX_DCHECK(false);

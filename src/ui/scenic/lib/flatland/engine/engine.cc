@@ -146,14 +146,13 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(const FlatlandDispla
 
 // TODO(fxbug.dev/81842) If we put Screenshot on its own thread, we should make this call thread
 // safe.
-std::pair<const std::vector<Rectangle2D>&, const std::vector<allocation::ImageMetadata>&>
-Engine::GetRenderables(const FlatlandDisplay& display) {
+Renderables Engine::GetRenderables(TransformHandle root) {
   const auto snapshot = uber_struct_system_->Snapshot();
   const auto links = link_system_->GetResolvedTopologyLinks();
   const auto link_system_id = link_system_->GetInstanceId();
 
   const auto topology_data = flatland::GlobalTopologyData::ComputeGlobalTopologyData(
-      snapshot, links, link_system_id, display.root_transform());
+      snapshot, links, link_system_id, root);
   const auto global_matrices = flatland::ComputeGlobalMatrices(
       topology_data.topology_vector, topology_data.parent_indices, snapshot);
 

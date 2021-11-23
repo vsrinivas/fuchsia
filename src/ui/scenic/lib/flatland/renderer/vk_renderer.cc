@@ -425,7 +425,8 @@ void VkRenderer::Render(const ImageMetadata& render_target,
                         const std::vector<zx::event>& release_fences) {
   TRACE_DURATION("gfx", "VkRenderer::Render");
 
-  FX_DCHECK(rectangles.size() == images.size());
+  FX_DCHECK(rectangles.size() == images.size())
+      << "# rects: " << rectangles.size() << " and #images: " << images.size();
 
   // Copy over the texture and render target data to local containers that do not need
   // to be accessed via a lock. We're just doing a shallow copy via the copy assignment
@@ -439,6 +440,8 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   // After moving, the original containers are emptied.
   const auto local_pending_textures = std::move(pending_textures_);
   const auto local_pending_render_targets = std::move(pending_render_targets_);
+  pending_textures_.clear();
+  pending_render_targets_.clear();
   lock.unlock();
 
   // If we have any |images| protected, we should switch to a protected escher::Frame and
