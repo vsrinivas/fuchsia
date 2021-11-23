@@ -33,6 +33,7 @@
 #include <zircon/syscalls/iommu.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/threads.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <array>
@@ -941,13 +942,15 @@ class MultiVmoTestInstance : public TestInstance {
     bool reliable_mappings = true;
     uint64_t vmo_size = uniform_rand(kMaxVmoPages, rng) * zx_system_get_page_size();
 
-    // Some contiguous VMO operations work differently, so create a contiguous VMO at 0.5
-    // probability.
+    // Mix in contiguous VMOs as a significant fraction, since physical page loaning and borrowing
+    // needs to get covered heavily.  Also, some other VMO operations work differently on
+    // contiguous VMOs.
     if (bti_ && uniform_rand(2, rng) == 0) {
       zx_status_t result = zx::vmo::create_contiguous(bti_, vmo_size, 0, &vmo);
       if (result != ZX_OK) {
         return;
       }
+      is_contiguous_ = true;
     } else {
       uint32_t options = 0;
       // Skew away from resizable VMOs as they are not common and many operations don't work.
@@ -1113,15 +1116,18 @@ class MultiVmoTestInstance : public TestInstance {
       // Produce a random offset and size up front since many ops will need it.
       uint64_t op_off, op_size;
       random_off_size(rng, vmo_size, &op_off, &op_size);
-      switch (uniform_rand(10, rng)) {
+      switch (uniform_rand(131, rng)) {
         case 0:  // give up early
           Printf("G");
           return;
           break;
-        case 1: {  // duplicate
+        case 1 ... 10: {  // duplicate
           Printf("D");
           zx::vmo dup_vmo;
           zx_status_t result = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+          if (result != ZX_OK) {
+            PrintfAlways("vmo.duplicate() failed - result: %d\n", result);
+          }
           ZX_ASSERT(result == ZX_OK);
           make_thread(
               [this, dup = std::move(dup_vmo), ops = op_count, reliable_mappings]() mutable {
@@ -1129,7 +1135,7 @@ class MultiVmoTestInstance : public TestInstance {
               });
           break;
         }
-        case 2: {  // read
+        case 11 ... 20: {  // read
           Printf("R");
           std::vector<uint8_t> buffer;
           bool use_map = false;
@@ -1150,7 +1156,7 @@ class MultiVmoTestInstance : public TestInstance {
           }
           break;
         }
-        case 3: {  // write
+        case 21 ... 30: {  // write
           Printf("W");
           std::vector<uint8_t> buffer;
           bool use_map = false;
@@ -1171,25 +1177,33 @@ class MultiVmoTestInstance : public TestInstance {
           }
           break;
         }
-        case 4:  // vmo_set_size
+        case 31 ... 40:  // vmo_set_size
           Printf("S");
           vmo.set_size(uniform_rand(kMaxVmoPages * zx_system_get_page_size(), rng));
           break;
-        case 5: {  // vmo_op_range
+        case 81 ... 100:  // commit
+          Printf("c");
+          vmo.op_range(ZX_VMO_OP_COMMIT, op_off, op_size, nullptr, 0);
+          break;
+        case 101 ... 120:  // decommit
+          Printf("d");
+          vmo.op_range(ZX_VMO_OP_DECOMMIT, op_off, op_size, nullptr, 0);
+          break;
+        case 121 ... 130: {  // vmo_op_range (other than COMMIT/DECOMMIT which have their own cases)
           Printf("O");
-          static const uint32_t ops[] = {ZX_VMO_OP_COMMIT,
-                                         ZX_VMO_OP_DECOMMIT,
-                                         ZX_VMO_OP_ZERO,
+          static const uint32_t ops[] = {ZX_VMO_OP_ZERO,
                                          ZX_VMO_OP_LOCK,
                                          ZX_VMO_OP_UNLOCK,
                                          ZX_VMO_OP_CACHE_SYNC,
                                          ZX_VMO_OP_CACHE_INVALIDATE,
                                          ZX_VMO_OP_CACHE_CLEAN,
-                                         ZX_VMO_OP_CACHE_CLEAN_INVALIDATE};
+                                         ZX_VMO_OP_CACHE_CLEAN_INVALIDATE,
+                                         ZX_VMO_OP_DONT_NEED,
+                                         ZX_VMO_OP_TRY_LOCK};
           vmo.op_range(ops[uniform_rand(std::size(ops), rng)], op_off, op_size, nullptr, 0);
           break;
         }
-        case 6: {  // vmo_set_cache_policy
+        case 41 ... 50: {  // vmo_set_cache_policy
           Printf("P");
           static const uint32_t policies[] = {ZX_CACHE_POLICY_CACHED, ZX_CACHE_POLICY_UNCACHED,
                                               ZX_CACHE_POLICY_UNCACHED_DEVICE,
@@ -1197,7 +1211,7 @@ class MultiVmoTestInstance : public TestInstance {
           vmo.set_cache_policy(policies[uniform_rand(std::size(policies), rng)]);
           break;
         }
-        case 7: {  // vmo_create_child
+        case 51 ... 60: {  // vmo_create_child
           Printf("C");
           static const uint32_t type[] = {
               ZX_VMO_CHILD_SNAPSHOT, ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, ZX_VMO_CHILD_SLICE};
@@ -1219,7 +1233,7 @@ class MultiVmoTestInstance : public TestInstance {
           }
           break;
         }
-        case 8: {  // vmar_map/unmap
+        case 61 ... 70: {  // vmar_map/unmap
           // If reliable mappings is true it means we know that no one else is going to mess with
           // the VMO in a way that would cause access to a valid mapping to generate a fault.
           // Generally this means that the VMO is not resizable.
@@ -1244,7 +1258,7 @@ class MultiVmoTestInstance : public TestInstance {
           }
           break;
         }
-        case 9: {  // bti_pin/bti_unpin
+        case 71 ... 80: {  // bti_pin/bti_unpin
           Printf("I");
           if (bti_) {
             if (pmt || uniform_rand(2, rng) == 0) {
@@ -1377,6 +1391,8 @@ class MultiVmoTestInstance : public TestInstance {
   // Valid if we got the root resource.
   zx::iommu iommu_;
   zx::bti bti_;
+
+  bool is_contiguous_ = false;
 };
 
 // Test thread which initializes/tears down TestInstances
