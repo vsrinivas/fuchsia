@@ -27,6 +27,15 @@
 
 // Enables BT PCM audio.
 #define ENABLE_BT
+// Enable DAI test.
+//#define ENABLE_DAI_TEST
+
+#ifdef ENABLE_BT
+#ifdef ENABLE_DAI_TEST
+#include "src/devices/board/drivers/sherlock/sherlock-dai-test-in-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-dai-test-out-bind.h"
+#endif
+#endif
 
 namespace sherlock {
 
@@ -134,7 +143,6 @@ zx_status_t Sherlock::AudioInit() {
   const device_fragment_part_t enable_gpio_fragment[] = {
       {countof(enable_gpio_match), enable_gpio_match},
   };
-
   const device_fragment_part_t luis_codec_i2c_fragment[] = {
       {countof(luis_codec_i2c_match), luis_codec_i2c_match},
   };
@@ -217,10 +225,10 @@ zx_status_t Sherlock::AudioInit() {
 
 #ifdef ENABLE_BT
   // PCM pin assignments.
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(8), S905D2_GPIOX_8_TDMA_DIN1_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(9), S905D2_GPIOX_8_TDMA_D0_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(10), S905D2_GPIOX_10_TDMA_FS_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(11), S905D2_GPIOX_11_TDMA_SCLK_FN);
+  gpio_impl_.SetAltFunction(T931_GPIOX(8), T931_GPIOX_8_TDMA_DIN1_FN);
+  gpio_impl_.SetAltFunction(T931_GPIOX(9), T931_GPIOX_9_TDMA_D0_FN);
+  gpio_impl_.SetAltFunction(T931_GPIOX(10), T931_GPIOX_10_TDMA_FS_FN);
+  gpio_impl_.SetAltFunction(T931_GPIOX(11), T931_GPIOX_11_TDMA_SCLK_FN);
   gpio_impl_.SetDriveStrength(T931_GPIOX(9), ua, nullptr);
   gpio_impl_.SetDriveStrength(T931_GPIOX(10), ua, nullptr);
   gpio_impl_.SetDriveStrength(T931_GPIOX(11), ua, nullptr);
@@ -533,6 +541,34 @@ zx_status_t Sherlock::AudioInit() {
       zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
       return status;
     }
+
+#ifdef ENABLE_DAI_TEST
+    // Add test driver.
+    bool is_input = false;
+    const device_metadata_t test_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data = &is_input,
+            .length = sizeof(is_input),
+        },
+    };
+    zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+                                {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DAI_TEST}};
+    composite_device_desc_t comp_desc = {};
+    comp_desc.props = props;
+    comp_desc.props_count = countof(props);
+    comp_desc.spawn_colocated = false;
+    comp_desc.fragments = sherlock_dai_test_out_fragments;
+    comp_desc.fragments_count = countof(sherlock_dai_test_out_fragments);
+    comp_desc.primary_fragment = "dai-out";
+    comp_desc.metadata_list = test_metadata;
+    comp_desc.metadata_count = countof(test_metadata);
+    status = DdkAddComposite("sherlock-dai-test-out", &comp_desc);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
+      return status;
+    }
+#endif
   }
 #endif
 
@@ -643,6 +679,33 @@ zx_status_t Sherlock::AudioInit() {
       return status;
     }
   }
+#ifdef ENABLE_DAI_TEST
+  // Add test driver.
+  bool is_input = true;
+  const device_metadata_t test_metadata[] = {
+      {
+          .type = DEVICE_METADATA_PRIVATE,
+          .data = &is_input,
+          .length = sizeof(is_input),
+      },
+  };
+  zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+                              {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DAI_TEST}};
+  composite_device_desc_t comp_desc = {};
+  comp_desc.props = props;
+  comp_desc.props_count = countof(props);
+  comp_desc.spawn_colocated = false;
+  comp_desc.fragments = sherlock_dai_test_in_fragments;
+  comp_desc.fragments_count = countof(sherlock_dai_test_in_fragments);
+  comp_desc.primary_fragment = "dai-in";
+  comp_desc.metadata_list = test_metadata;
+  comp_desc.metadata_count = countof(test_metadata);
+  status = DdkAddComposite("sherlock-dai-test-in", &comp_desc);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: PCM CompositeDeviceAdd failed: %d", __FILE__, status);
+    return status;
+  }
+#endif
 #endif
   return ZX_OK;
 }

@@ -395,12 +395,11 @@ static zx_status_t dai_bind(void* ctx, zx_device_t* device) {
   }
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_AMLOGIC_S905D2},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AMLOGIC_DAI_OUT},
   };
   const char* name = "aml-g12-tdm-dai-out";
   if (metadata.is_input) {
-    props[2].value = PDEV_DID_AMLOGIC_DAI_IN;
+    props[1].value = PDEV_DID_AMLOGIC_DAI_IN;
     name = "aml-g12-tdm-dai-in";
   }
   status = dai->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));

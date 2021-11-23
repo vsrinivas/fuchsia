@@ -146,7 +146,7 @@ zx_status_t Astro::AudioInit() {
 #ifdef ENABLE_BT
   // PCM pin assignments.
   gpio_impl_.SetAltFunction(S905D2_GPIOX(8), S905D2_GPIOX_8_TDMA_DIN1_FN);
-  gpio_impl_.SetAltFunction(S905D2_GPIOX(9), S905D2_GPIOX_8_TDMA_D0_FN);
+  gpio_impl_.SetAltFunction(S905D2_GPIOX(9), S905D2_GPIOX_9_TDMA_D0_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(10), S905D2_GPIOX_10_TDMA_FS_FN);
   gpio_impl_.SetAltFunction(S905D2_GPIOX(11), S905D2_GPIOX_11_TDMA_SCLK_FN);
   gpio_impl_.SetDriveStrength(S905D2_GPIOX(9), ua, nullptr);
