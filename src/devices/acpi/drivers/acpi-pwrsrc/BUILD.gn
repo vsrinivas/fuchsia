@@ -39,6 +39,7 @@ fuchsia_driver("driver") {
 fuchsia_driver_component("component") {
   component_name = "acpi-pwrsrc"
   deps = [ ":driver" ]
+  info = "component-info.json"
 }
 
 fuchsia_system_package("acpi-pwrsrc") {
