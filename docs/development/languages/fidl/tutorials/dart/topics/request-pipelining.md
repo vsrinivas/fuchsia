@@ -181,12 +181,13 @@ To run the example code:
    fx shell run fuchsia-pkg://fuchsia.com/example-launcher-dart#meta/example-launcher-dart.cmx fuchsia-pkg://fuchsia.com/echo-launcher-dart-client#meta/echo-launcher-dart-client.cmx fuchsia-pkg://fuchsia.com/echo-launcher-dart-server#meta/echo-launcher-dart-server.cmx fuchsia.examples.EchoLauncher
    ```
 
-You should see the following print output in the QEMU console (or using `fx log`):
+You should see output similar to the following in the QEMU console
+(or using `ffx log`):
 
 ```
-[269547.480853][3][790426877][echo-launcher-server, main.dart(86)] INFO: Running EchoLauncher server
-[269547.605037][3][1058778107][echo-launcher-client, main.dart(39)] INFO: Got echo response pipelined: hello
-[269547.609355][3][1058778107][echo-launcher-client, main.dart(27)] INFO: Got echo response not pipelined: hello
+[echo-launcher-server][][I] Running EchoLauncher server
+[echo-launcher-server][][I] Got echo response pipelined: hello
+[echo-launcher-server][][I] Got echo response not pipelined: hello
 ```
 
 Based on the print order, you can see that the pipelined case is faster. The

@@ -114,15 +114,16 @@ Note: You can explore the full source for the realm component at
     ```
 
 The server component starts when the client attempts to connect to the `Echo`
-protocol. You should see the following output using `fx log`:
+protocol. You should see output similar to the following in the device logs
+(`ffx log`):
 
 ```none {:.devsite-disable-click-to-copy}
-[echo_server] INFO: Running echo server
-[echo_server] INFO: echo_server_llcpp: Incoming connection for fuchsia.examples.Echo
+[echo_server][][I] Running echo server
+[echo_server][][I] echo_server_llcpp: Incoming connection for fuchsia.examples.Echo
 ...
-[echo_client] INFO: Got response after 5 seconds
-[echo_client] INFO: Got response after 5 seconds
-[echo_client] INFO: Got response after 5 seconds
+[echo_client][][I] Got response after 5 seconds
+[echo_client][][I] Got response after 5 seconds
+[echo_client][][I] Got response after 5 seconds
 ```
 
 By using the async completer, the client receives all 3 responses after 5 seconds,

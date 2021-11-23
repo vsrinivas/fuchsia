@@ -282,10 +282,11 @@ ffx component run fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo_server.c
 Note: Components are resolved using their [component URL][glossary.component-url],
 which is determined with the [`fuchsia-pkg://`][glossary.fuchsia-pkg-url] scheme.
 
-You should see the following output coming from `fx log`:
+You should see output similar to the following in the device logs
+(`ffx log`):
 
 ```none {:.devsite-disable-click-to-copy}
-[ffx-laboratory:echo_server] INFO: Running echo server
+[ffx-laboratory:echo_server][][I] Running echo server
 ```
 
 The server is now running and waiting for incoming requests.

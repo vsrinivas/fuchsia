@@ -178,7 +178,7 @@ to the `run` command:
 1.  Open another terminal and view the system log:
 
     ```posix-terminal
-    fx log --only hello-world
+    ffx log --filter hello-world
     ```
 
     The component prints the following output to the log:

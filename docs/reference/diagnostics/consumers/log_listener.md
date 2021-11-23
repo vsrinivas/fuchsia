@@ -2,7 +2,7 @@
 
 The `log_listener` binary is included in all device builds that include `pkgfs` and is currently
 the primary tool used by engineers to interactively read a live log stream. In-tree developers
-usually invoke it with [`fx log`](https://fuchsia.dev/reference/tools/fx/cmd/log).
+usually invoke it with [`ffx log`](/docs/reference/tools/sdk/ffx.md).
 
 <table>
   <tr>

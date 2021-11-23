@@ -347,7 +347,7 @@ then exit. Open a new terminal window and filter the device logs for messages
 from the example:
 
 ```posix-terminal
-fx log --only echo
+ffx log --filter echo
 ```
 
 You should see the following output in the device logs:

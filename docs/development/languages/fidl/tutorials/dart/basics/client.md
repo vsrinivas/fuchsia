@@ -177,7 +177,8 @@ the client that provides the server's protocol, then launches the client in it.
     fx shell run fuchsia-pkg://fuchsia.com/example-launcher-dart#meta/example-launcher-dart.cmx fuchsia-pkg://fuchsia.com/echo-dart-client#meta/echo-dart-client.cmx fuchsia-pkg://fuchsia.com/echo-dart-server#meta/echo-dart-server.cmx fuchsia.examples.Echo
     ```
 
-You should see the print output in the QEMU console (or using `fx log`).
+You should see output similar to the following in the QEMU console
+(or using `ffx log`):
 
 ```
 [105541.570] 489493:489495> Listening for incoming connections...

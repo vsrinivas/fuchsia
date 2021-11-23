@@ -133,7 +133,7 @@ fx serve
 This step is useful for debugging your test.
 
 ```
-fx log
+ffx log
 ```
 
 #### Tab 4: Run the test

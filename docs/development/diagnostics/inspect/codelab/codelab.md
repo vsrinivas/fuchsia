@@ -127,7 +127,7 @@ command line arguments as strings to Reverse:
       To see the command output take a look at the logs:
 
       ```
-      fx log --tag inspect_cpp_codelab
+      ffx log --tags inspect_cpp_codelab
       ```
 
       This command prints some output containing errors.
@@ -145,7 +145,7 @@ command line arguments as strings to Reverse:
       To see the command output take a look at the logs:
 
       ```
-      fx log --tag inspect_rust_codelab
+      ffx log --tags inspect_rust_codelab
       ```
 
       This command prints some output containing errors.
@@ -528,14 +528,14 @@ Now that you have added Inspect to your component, you can read what it says:
 
       ```
       ffx component run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
-      fx log --tag inspect_cpp_codelab
+      ffx log --tags inspect_cpp_codelab
       ```
 
    * {Rust}
 
       ```
       ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
-      fx log --tag inspect_rust_codelab
+      ffx log --tags inspect_rust_codelab
       ```
 
    * {Dart}
@@ -933,7 +933,7 @@ The output above shows that the connection is still open and it received one req
       ffx component run fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/client_part_1.cm
       Creating component instance: client_part_1
 
-      fx log --tag inspect_cpp_codelab
+      ffx log --tags inspect_cpp_codelab
       [00039.129068][39163][39165][inspect_cpp_codelab, client] INFO: Input: Hello
       [00039.194151][39163][39165][inspect_cpp_codelab, client] INFO: Output: olleH
       [00039.194170][39163][39165][inspect_cpp_codelab, client] INFO: Input: World
@@ -947,7 +947,7 @@ The output above shows that the connection is still open and it received one req
       ffx component run fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/client_part_1.cm
       Creating component instance: client_part_1
 
-      fx log --tag inspect_rust_codelab
+      ffx log --tags inspect_rust_codelab
       [00039.129068][39163][39165][inspect_rust_codelab, client] INFO: Input: Hello
       [00039.194151][39163][39165][inspect_rust_codelab, client] INFO: Output: olleH
       [00039.194170][39163][39165][inspect_rust_codelab, client] INFO: Input: World
@@ -1008,19 +1008,19 @@ If you see the logs, you will see that this log is never printed.
 * {C++}
 
    ```cpp
-   fx log --tag inspect_cpp_codelab
+   ffx log --tags inspect_cpp_codelab
    ```
 
 * {Rust}
 
    ```rust
-   fx log --tag inspect_rust_codelab
+   ffx log --tags inspect_rust_codelab
    ```
 
 * {Dart}
 
    ```dart
-   fx log --tag inspect_dart_codelab_part_2
+   ffx log --tags inspect_dart_codelab_part_2
    ```
 
 You will need to diagnose and solve this problem.
@@ -1194,7 +1194,7 @@ look at the logs:
 * {C++}
 
    ```
-   $ fx log --only FizzBuzz
+   $ ffx log --filter FizzBuzz
    ...
    ... Component fuchsia-pkg://fuchsia.com/inspect_cpp_codelab#meta/part_2.cm
    is not allowed to connect to fuchsia.examples.inspect.FizzBuzz...
@@ -1203,7 +1203,7 @@ look at the logs:
 * {Rust}
 
    ```
-   $ fx log --only FizzBuzz
+   $ ffx log --filter FizzBuzz
    ...
    ... Component fuchsia-pkg://fuchsia.com/inspect_rust_codelab#meta/part_2.cm
    is not allowed to connect to fuchsia.examples.inspect.FizzBuzz...
@@ -1212,7 +1212,7 @@ look at the logs:
 * {Dart}
 
    ```
-   $ fx log --only FizzBuzz
+   $ ffx log --filter FizzBuzz
    ...
    ... Component fuchsia-pkg://fuchsia.com/inspect_dart_codelab_part_2.cmx
    is not allowed to connect to fuchsia.examples.inspect.FizzBuzz...
@@ -1253,7 +1253,7 @@ and run again. You should now see FizzBuzz in the logs and an OK status:
 * {C++}
 
    ```
-   $ fx log --tag inspect_cpp_codelab
+   $ ffx log --tags inspect_cpp_codelab
    [inspect_cpp_codelab, part2] INFO: main.cc(57): Got FizzBuzz: 1 2 Fizz
    4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz 16 17 Fizz 19 Buzz Fizz
    22 23 Fizz Buzz 26 Fizz 28 29 FizzBuzz
@@ -1262,7 +1262,7 @@ and run again. You should now see FizzBuzz in the logs and an OK status:
 * {Rust}
 
    ```
-   $ fx log --tag inspect_rust_codelab
+   $ ffx log --tags inspect_rust_codelab
    [inspect_rust_codelab, part2] INFO: main.rs(52): Got FizzBuzz: 1 2 Fizz
    4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz 16 17 Fizz 19 Buzz Fizz
    22 23 Fizz Buzz 26 Fizz 28 29 FizzBuzz
@@ -1271,7 +1271,7 @@ and run again. You should now see FizzBuzz in the logs and an OK status:
 * {Dart}
 
    ```
-   $ fx log --tag inspect_dart_codelab
+   $ ffx log --tags inspect_dart_codelab
    [inspect_dart_codelab, part2] INFO: main.dart(35): Got FizzBuzz: 1 2 Fizz
    4 Buzz Fizz 7 8 Fizz Buzz 11 Fizz 13 14 FizzBuzz 16 17 Fizz 19 Buzz Fizz
    22 23 Fizz Buzz 26 Fizz 28 29 FizzBuzz

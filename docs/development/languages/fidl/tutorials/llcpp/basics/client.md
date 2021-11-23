@@ -246,15 +246,16 @@ Note: You can explore the full source for the realm component at
     ```
 
 The server component starts when the client attempts to connect to the `Echo`
-protocol. You should see the following output using `fx log`:
+protocol. You should see output similar to the following in the device logs
+(`ffx log`):
 
 ```none {:.devsite-disable-click-to-copy}
-[echo_server] INFO: Running echo server
-[echo_server] INFO: Incoming connection for fuchsia.examples.Echo
-[echo_client] INFO: Got response (result callback): hello
-[echo_client] INFO: Got response (response callback): hello
-[echo_client] INFO: Got synchronous response: hello
-[echo_client] INFO: Got event: hi
+[echo_server][][I] Running echo server
+[echo_server][][I] Incoming connection for fuchsia.examples.Echo
+[echo_client][][I] Got response (result callback): hello
+[echo_client][][I] Got response (response callback): hello
+[echo_client][][I] Got synchronous response: hello
+[echo_client][][I] Got event: hi
 ```
 
 Terminate the realm component to stop execution and clean up the component

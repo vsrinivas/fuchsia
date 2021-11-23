@@ -236,7 +236,7 @@ Then run the server:
 fx shell run fuchsia-pkg://fuchsia.com/echo-dart-server#meta/echo-server.cmx
 ```
 
-You should see server hanging and the startup log using `fx log`.
+You should see server hanging and the startup log using `ffx log`.
 This is expected because an
 [event loop](https://dart.dev/tutorials/language/futures) to handle incoming
 requests is running. The next step will be to write a client for the server.

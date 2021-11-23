@@ -254,20 +254,20 @@ Printed "Hello world!" in the device's log.
 ...
 ```
 
-To scan the device’s log for the `Hello world!` string,
+To scan the device logs for the `Hello world!` string,
 run the following command:
 
 ```posix-terminal
-fx log --dump_logs yes --only Hello,world!
+ffx log --filter "Hello world!" dump
 ```
 
-This command only prints the lines that contain `Hello` or `world!` from
-the device’s log, for example:
+This command only prints the lines that contain `Hello world!` from
+the device logs, for example:
 
 ```none {:.devsite-disable-click-to-copy}
-[00770.760238][105502][105667][sl4f, parse_request] INFO: request id: String(""), name: "logging_facade.LogInfo", args: Object({"message": String("Hello world!")})
-[00770.760356][105502][105504][sl4f, run_fidl_loop] INFO: Received synchronous request: Sender, MethodId { facade: "logging_facade", method: "LogInfo" }, Object({"message": String("Hello world!")})
-[00770.760432][105502][105504][sl4f] INFO: "\"Hello world!\""
+[sl4f][][I] request id: String(""), name: "logging_facade.LogInfo", args: Object({"message": String("Hello world!")})
+[sl4f][][I] Received synchronous request: Sender, MethodId { facade: "logging_facade", method: "LogInfo" }, Object({"message": String("Hello world!")})
+[sl4f][][I] "\"Hello world!\""
 ```
 
 ## 6. Edit the test {#edit-the-test}

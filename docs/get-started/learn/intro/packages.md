@@ -147,7 +147,7 @@ Package on disk: no
 Open a new terminal and begin streaming the device logs for `pkg-resolver`:
 
 ```posix-terminal
-fx log --only pkg-resolver
+ffx log --filter pkg-resolver
 ```
 
 This shows all the instances where a package was loaded from the package

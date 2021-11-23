@@ -20,7 +20,7 @@ Your device must be running a `core`
 [product configuration](/docs/concepts/build_system/boards_and_products.md)
 or a product configuration that extends `core` (such as `workstation`).
 
-Optionally, you can run `fx log`, which will provide some additional information
+Optionally, you can run `ffx log`, which will provide some additional information
 about the interactions between `ffx` and your Fuchsia target device.
 
 ## Introduction
@@ -117,7 +117,7 @@ fuchsia-5254-0063-5e7a  <unknown>    Unknown    Product    [fe80::5054:ff:fe63:5
 
 If a target has been set as default there will be a `*` next to it.
 
-If you had `fx log` running, you should also see something like the following in
+If you had `ffx log` running, you should also see something like the following in
 the logs:
 
 ```

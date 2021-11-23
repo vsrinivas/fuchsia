@@ -137,7 +137,7 @@ There are a couple ways to check if a routing failure was the cause of channel
 closure:
 
 - Check for an [epitaph][doc-epitaphs] on the closed channel.
-- Check the component manager logs with `fx log --only component_manager`
+- Check the component manager logs with `ffx log --filter component_manager`
 - Run `ffx scrutiny verify routes` on the host in order to statically check
   protocol and directory capability routes, and see
   [Errors from the capability routing static analyzer](#static-analyzer)
@@ -188,10 +188,10 @@ or closed the channel itself](#troubleshoot-use-terminated).
 For a more detailed description of the error, check the logs. The log to check
 depends on the runner:
 
-- For the ELF runner, check the component manager logs with `fx log --only
+- For the ELF runner, check the component manager logs with `ffx log --filter
   component_manager`
 - For other runners, check the [logs][doc-logs] of the runner component. You
-  can do this by running `fx log --tag <runner-name>`.
+  can do this by running `ffx log --tags <runner-name>`.
 
 The form of the error message is runner-dependent. For the ELF runner, look for a message starting
 with `ERROR: Failed to start component`:
@@ -220,11 +220,11 @@ happen while the component was running, or can be a side effect of the
 component terminating.
 
 If the component terminated because it crashed, you can look for a crash report
-in `fx log` that starts like this:
+in `ffx log` that starts like this:
 
 ```
-[00177.191] 01775:02371> crashsvc: exception received, processing
-[00177.191] 01775:02371> <== fatal : process echo_client.cm[21090] thread initial-thread[21092]
+[33860.645][klog][klog][I] crashsvc: exception received, processing
+[33860.645][klog][klog][I] <== fatal : process echo_client.cm[21090] thread initial-thread[21092]
 <stack trace follows...>
 ```
 

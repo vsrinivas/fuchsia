@@ -175,7 +175,7 @@ Once that's done and built `session_manager` should automatically start your
 session on boot. You should see the "Hello" message in the system log.
 
 ```none {:.devsite-disable-click-to-copy}
-$ fx log --only hello
+$ ffx log --filter hello
 [session_manager] INFO: Launching session: fuchsia-pkg://fuchsia.com/hello-world-session#meta/hello-world-session.cm
 [hello_world_session] INFO: Hello World!
 ```

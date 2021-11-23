@@ -69,7 +69,7 @@ main() {
 By default only messages with `INFO` severity or higher are printed. Severity level can be adjusted
 by providing the `level` parameter in the `setupLogger()` call.
 
-For example, to make all log messages appear in [`fx log`]:
+For example, to make all log messages appear in [`ffx log`]:
 
 ```dart
 setupLogger(name: 'noisy-component', level: Level.ALL);
@@ -99,7 +99,7 @@ See [`stdout` & `stderr`] in the language-agnostic logging docs for details on t
 streams in the system.
 
 [Logger]: https://pub.dev/documentation/logging/latest/logging/Logger-class.html
-[`fx log`]: /docs/development/diagnostics/logs/viewing.md
+[`ffx log`]: /docs/development/diagnostics/logs/viewing.md
 [dart-dev]: /docs/development/languages/dart/README.md
 [`stdout` & `stderr`]: /docs/development/diagnostics/logs/recording.md#stdout-stderr
 [language agnostic logging docs]: /docs/concepts/diagnostics/logs/README.md

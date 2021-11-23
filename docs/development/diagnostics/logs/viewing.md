@@ -23,8 +23,8 @@ live device. For more information about where logs are stored on-device, see [Co
 
 ### syslog and kernel log
 
-During development, running `fx log` is a good default to see all logs. This script connects to the
-target device with SSH and runs the [`log_listener`] program, printing every message from the system
+During development, running `ffx log` is a good default to see all logs. Under the hood, this
+command runs the [`log_listener`] program, printing every message from the system
 log. This includes those [forwarded from the klog].
 
 [`log_listener`] receives logs through the [`fuchsia.logger.Log`] and
@@ -62,7 +62,7 @@ time=278.14, the pretty output will look like:
 [278.14][my-component.cmx][W] something happened
 ```
 
-With a running device available, run `fx log -h` to see the options for modifying the output format.
+With a running device available, run `ffx log --help` to see the options for modifying the output format.
 
 #### `fx test`
 
@@ -78,7 +78,7 @@ The klog is [printed over the kernel console] and serial.
 
 It's also [forwarded over UDP by netsvc], which is what's printed when you run `fx klog`. Running
 `fx klog` in a background terminal can be a good way to capture logs if your SSH session fails, or
-as a backup if there are other issues with running `fx log`.
+as a backup if there are other issues with running `ffx log`.
 
 If neither of the above are options, you can also use [`dlog`] from a device shell directly to dump
 the kernel debug logs.
@@ -141,7 +141,7 @@ stdout, stderr, and logs from the test environment and prints them inline.
 ### syslog.txt
 
 Botanist runs `log_listener` on the target device and saves that output to syslog.txt. This is
-comparable to running `fx log` at a development machine.
+comparable to running `ffx log` at a development machine.
 
 ### infra_and_test_std_and_klog.txt
 

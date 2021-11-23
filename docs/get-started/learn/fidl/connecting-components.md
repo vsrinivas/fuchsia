@@ -387,7 +387,7 @@ ffx component bind /core/ffx-laboratory:echo-realm/echo_client
 Open another terminal window and verify the log output from the client component:
 
 ```posix-terminal
-fx log --only echo
+ffx log --filter echo
 ```
 
 You should see the following output in the device logs:

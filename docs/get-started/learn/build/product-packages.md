@@ -236,7 +236,7 @@ Open a new terminal window and filter the device logs for messages from the
 example:
 
 ```posix-terminal
-fx log --only hello
+ffx log --filter hello
 ```
 
 You should see the following output in the device logs:

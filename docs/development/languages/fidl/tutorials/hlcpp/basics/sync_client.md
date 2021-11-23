@@ -177,11 +177,12 @@ Note: You can explore the full source for the realm component at
     ```
 
 The server component starts when the client attempts to connect to the `Echo`
-protocol. You should see the following output using `fx log`:
+protocol. You should see output similar to the following in the device logs
+(`ffx log`):
 
 ```none {:.devsite-disable-click-to-copy}
-[echo_server] INFO: Running echo server
-[echo_client] INFO: Got response: hello
+[echo_server][][I] Running echo server
+[echo_client][][I] Got response: hello
 ```
 
 Terminate the realm component to stop execution and clean up the component

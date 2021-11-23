@@ -49,13 +49,13 @@ pointing to the corresponding lines in the program source files.
 This is because the **debug symbols** are stripped out of the core binaries
 by default at build time. To properly analyze the crash log, you need to
 reapply those symbols to the backtrace to see the call stack in terms of source
-code line numbers. When you call the `fx log` command, the developer tools
+code line numbers. When you call the `ffx log` command, the developer tools
 process the raw log through an additional binary called `symbolizer` that
 reapplies the symbols from your local build configuration to any backtraces in
 the log.
 
 ```posix-terminal
-fx log
+ffx log
 ```
 
 The output you see includes the symbols reapplied to the backtrace:

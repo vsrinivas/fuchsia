@@ -205,17 +205,18 @@ Note: You can explore the full source for the realm component at
     ```
 
 The server component starts when the client attempts to connect to the
-`EchoLauncher` protocol. You should see the following output using `fx log`:
+`EchoLauncher` protocol. You should see output similar to the following
+in the device logs (`ffx log`):
 
-```
-[echo_server] INFO: Running echo launcher server
-[echo_server] INFO: echo_server_llcpp: Incoming connection for fuchsia.examples.EchoLauncher
-[echo_server] INFO: Got non pipelined request
-[echo_server] INFO: Got pipelined request
-[echo_server] INFO: Got echo request for prefix pipelined:
-[echo_client] INFO: Got echo response pipelined: hello!
-[echo_server] INFO: Got echo request for prefix non pipelined:
-[echo_client] INFO: Got echo response non pipelined: hello!
+```none {:.devsite-disable-click-to-copy}`
+[echo_server][][I] Running echo launcher server
+[echo_server][][I] echo_server_llcpp: Incoming connection for fuchsia.examples.EchoLauncher
+[echo_server][][I] Got non pipelined request
+[echo_server][][I] Got pipelined request
+[echo_server][][I] Got echo request for prefix pipelined:
+[echo_client][][I] Got echo response pipelined: hello!
+[echo_server][][I] Got echo request for prefix non pipelined:
+[echo_client][][I] Got echo response non pipelined: hello!
 ```
 
 Based on the print order, you can see that the pipelined case is faster. The
