@@ -244,9 +244,15 @@ impl Realm {
                         }
                     }
                 }
-                // TODO(88417, 88423)
-                ftest::RealmRequest::AddLocalChild { .. } => {
-                    unimplemented!();
+                // TODO(88423)
+                ftest::RealmRequest::AddLocalChild { name, options, responder } => {
+                    match self.add_local_child(name.clone(), options).await {
+                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Err(e) => {
+                            warn!("unable to add local child {:?} to realm: {:?}", name, e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
                 }
                 // TODO(88429)
                 ftest::RealmRequest::AddChildRealm { .. } => {
@@ -334,6 +340,31 @@ impl Realm {
             return Err(RealmBuilderError::InvalidComponentDecl(name, e));
         }
         let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native());
+        self.realm_node.add_child(name.clone(), options, child_realm_node).await
+    }
+
+    async fn add_local_child(
+        &self,
+        name: String,
+        options: ftest::ChildOptions,
+    ) -> Result<(), RealmBuilderError> {
+        let local_component_id =
+            self.runner.register_local_component(self.runner_proxy_placeholder.clone()).await;
+        let child_realm_node = RealmNode2::new_from_decl(cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some(runner::RUNNER_NAME.try_into().unwrap()),
+                info: fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: runner::MOCK_ID_KEY.to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str(
+                            local_component_id.into(),
+                        ))),
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                },
+            }),
+            ..cm_rust::ComponentDecl::default()
+        });
         self.realm_node.add_child(name.clone(), options, child_realm_node).await
     }
 
@@ -2867,6 +2898,78 @@ mod tests {
             .await
             .expect("failed to call add_child")
             .expect_err("add_legacy_child was supposed to error");
+        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+    }
+
+    #[fuchsia::test]
+    async fn add_local_child() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_local_child("a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let a_decl = cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                info: fdata::Dictionary {
+                    entries: Some(vec![fdata::DictionaryEntry {
+                        key: runner::MOCK_ID_KEY.to_string(),
+                        value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                    }]),
+                    ..fdata::Dictionary::EMPTY
+                },
+            }),
+            ..cm_rust::ComponentDecl::default()
+        };
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl::default(),
+            children: vec![(
+                "a".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree { decl: a_decl, children: vec![] },
+            )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+        assert!(realm_and_builder_task.runner.mocks().await.contains_key(&"0".to_string()));
+    }
+
+    #[fuchsia::test]
+    async fn add_local_child_that_conflicts_with_child_decl() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_local_child("a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_local_child was supposed to error");
+        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+    }
+
+    #[fuchsia::test]
+    async fn add_local_child_that_conflicts_with_mutable_child() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child("a", "#meta/realm_builder_server_unit_tests.cm", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_local_child("a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_local_child was supposed to error");
         assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
     }
 

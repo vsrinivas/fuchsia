@@ -33,7 +33,8 @@ impl From<MockId> for String {
     }
 }
 
-enum ControlHandleOrRunnerProxy {
+#[derive(Debug, Clone)]
+pub enum ControlHandleOrRunnerProxy {
     ControlHandle(ftest::RealmBuilderControlHandle),
     #[allow(unused)]
     RunnerProxy(Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>),
@@ -47,6 +48,11 @@ pub struct Runner {
 impl Runner {
     pub fn new() -> Arc<Self> {
         Arc::new(Self { next_mock_id: Mutex::new(0), mocks: Mutex::new(HashMap::new()) })
+    }
+
+    #[cfg(test)]
+    pub async fn mocks(self: &Arc<Self>) -> HashMap<String, ControlHandleOrRunnerProxy> {
+        self.mocks.lock().await.clone()
     }
 
     pub async fn register_mock(
@@ -64,7 +70,6 @@ impl Runner {
         MockId(mock_id)
     }
 
-    #[allow(unused)]
     pub async fn register_local_component(
         self: &Arc<Self>,
         runner_proxy: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
