@@ -33,7 +33,7 @@ macro_rules! log_unimplemented {
 macro_rules! increment_counter {
     ($ctx:ident, $key:expr) => {
         #[cfg(test)]
-        $ctx.state_mut().test_counters.increment($key);
+        $ctx.state.test_counters.increment($key);
     };
 }
 

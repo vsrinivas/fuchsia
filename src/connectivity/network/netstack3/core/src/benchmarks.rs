@@ -195,7 +195,7 @@ fn bench_forward_minimum<B: Bencher>(b: &mut B, frame_size: usize) {
 
         #[cfg(debug_assertions)]
         {
-            assert_eq!(ctx.dispatcher().frames_sent, iters);
+            assert_eq!(ctx.dispatcher.frames_sent, iters);
         }
 
         // Since we modified the buffer in-place, it now has the wrong source

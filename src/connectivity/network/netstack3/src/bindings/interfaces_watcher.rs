@@ -64,7 +64,7 @@ where
     C::Dispatcher: AsRef<Devices>,
 {
     let ctx = ctx.lock().await;
-    let existing = ctx.dispatcher().as_ref().iter_devices().map(|info| {
+    let existing = ctx.dispatcher.as_ref().iter_devices().map(|info| {
         let features = info.features();
         // TODO(https://fxbug.dev/84863): rewrite features in terms of fuchsia.hardware.network.
         let device_class = if features.contains(fidl_ethernet::Features::Loopback) {

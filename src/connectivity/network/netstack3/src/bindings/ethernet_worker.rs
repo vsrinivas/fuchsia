@@ -104,7 +104,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             // We need to call get_status even if we don't use the output, since
                             // calling it acks the message, and prevents the device from sending
                             // more status changed messages.
-                            if let Some(device) = ctx.dispatcher().as_ref().get_device(id) {
+                            if let Some(device) = ctx.dispatcher.as_ref().get_device(id) {
                                 if let Ok(status) = device.client().get_status().await {
                                     info!("device {:?} status changed to: {:?}", id, status);
                                     // Handle the new device state. If this results in no change, no
@@ -132,7 +132,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                             let mut ctx = ctx.lock().await;
 
                             if let Some(id) =
-                                AsRef::<Devices>::as_ref(ctx.dispatcher()).get_core_id(id)
+                                AsRef::<Devices>::as_ref(&ctx.dispatcher).get_core_id(id)
                             {
                                 receive_frame(ctx.deref_mut(), id, Buf::new(&mut buf[..len], ..));
                             } else {

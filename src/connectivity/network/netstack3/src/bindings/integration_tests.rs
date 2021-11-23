@@ -317,14 +317,14 @@ impl TestStack {
             let signal = {
                 let mut ctx = self.ctx.lock().await;
                 if check_status(
-                    ctx.dispatcher()
+                    ctx.dispatcher
                         .get_device_info(if_id)
                         .expect("Wait for interface status on unknown device"),
                 ) {
                     return;
                 }
                 let (sender, receiver) = futures::channel::oneshot::channel();
-                ctx.dispatcher_mut().status_changed_signal = Some(sender);
+                ctx.dispatcher.status_changed_signal = Some(sender);
                 receiver
             };
             let () = signal.await.expect("Stream ended before it was signalled");
@@ -690,7 +690,7 @@ async fn test_add_remove_interface() {
             .ctx
             .lock()
             .await
-            .dispatcher()
+            .dispatcher
             .get_device_info(if_id)
             .expect("Get device client")
             .path(),
@@ -700,7 +700,7 @@ async fn test_add_remove_interface() {
     // remove the interface:
     let () = stack.del_ethernet_interface(if_id).await.squash_result().expect("Remove interface");
     // ensure the interface disappeared from records:
-    assert_matches!(test_stack.ctx.lock().await.dispatcher().get_device_info(if_id), None);
+    assert_matches!(test_stack.ctx.lock().await.dispatcher.get_device_info(if_id), None);
 
     // if we try to remove it again, NotFound should be returned:
     let res =
@@ -729,7 +729,7 @@ async fn test_ethernet_link_up_down() {
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been added to the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active());
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active());
 
     // Setting the link down should disable the interface and remove it from
     // the core. The AdministrativeStatus should remain unchanged.
@@ -742,7 +742,7 @@ async fn test_ethernet_link_up_down() {
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been removed from the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Setting the link down again should cause no effect on the device state,
     // and should be handled gracefully.
@@ -754,7 +754,7 @@ async fn test_ethernet_link_up_down() {
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been removed from the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Setting the link up should reenable the interface and add it to
     // the core.
@@ -767,7 +767,7 @@ async fn test_ethernet_link_up_down() {
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been added to the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active());
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active());
 
     // Setting the link up again should cause no effect on the device state,
     // and should be handled gracefully.
@@ -782,7 +782,7 @@ async fn test_ethernet_link_up_down() {
     let core_id = t
         .get(0)
         .with_ctx(|ctx| {
-            let device_info = ctx.dispatcher().get_device_info(if_id).unwrap();
+            let device_info = ctx.dispatcher.get_device_info(if_id).unwrap();
             assert!(device_info.is_active());
             device_info.core_id().unwrap()
         })
@@ -920,9 +920,7 @@ async fn test_disable_enable_interface() {
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Ensure that the device has been removed from the core.
-    assert!(
-        test_stack.ctx().await.dispatcher().get_device_info(if_id).unwrap().is_active() == false
-    );
+    assert!(test_stack.ctx().await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Enable the interface and test again.
     let () =
@@ -933,7 +931,7 @@ async fn test_disable_enable_interface() {
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Ensure that the device has been added to the core.
-    assert!(test_stack.ctx().await.dispatcher().get_device_info(if_id).unwrap().is_active());
+    assert!(test_stack.ctx().await.dispatcher.get_device_info(if_id).unwrap().is_active());
 
     // Check that we get the correct error for a non-existing interface id.
     assert_eq!(
@@ -978,7 +976,7 @@ async fn test_phy_admin_interface_state_interaction() {
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Ensure that the device has been removed from the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Setting the link down now that the interface is already down should only
     // change the cached state. Both phy and admin should be down now.
@@ -991,7 +989,7 @@ async fn test_phy_admin_interface_state_interaction() {
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Disabled);
 
     // Ensure that the device is still removed from the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Enable the interface and test again, only cached status should be changed
     // and core state should still be disabled.
@@ -1003,7 +1001,7 @@ async fn test_phy_admin_interface_state_interaction() {
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
 
     // Ensure that the device is still removed from the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Disable the interface and test again, both should be down now.
     let () =
@@ -1014,7 +1012,7 @@ async fn test_phy_admin_interface_state_interaction() {
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Down);
 
     // Ensure that the device is still removed from the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Setting the link up should only affect cached state
     assert!(t.set_endpoint_link_up(&ep_name, true).await.is_ok());
@@ -1026,7 +1024,7 @@ async fn test_phy_admin_interface_state_interaction() {
     assert_eq!(if_info.properties.physical_status, PhysicalStatus::Up);
 
     // Ensure that the device is still removed from the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active() == false);
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active() == false);
 
     // Finally, setting admin status up should update the cached state and
     // re-add the device to the core.
@@ -1039,7 +1037,7 @@ async fn test_phy_admin_interface_state_interaction() {
     assert_eq!(if_info.properties.administrative_status, AdministrativeStatus::Enabled);
 
     // Ensure that the device has been added to the core.
-    assert!(t.ctx(0).await.dispatcher().get_device_info(if_id).unwrap().is_active());
+    assert!(t.ctx(0).await.dispatcher.get_device_info(if_id).unwrap().is_active());
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1194,9 +1192,7 @@ async fn test_list_del_routes() {
 
     let route1 = EntryEither::new(
         SubnetEither::new(Ipv4Addr::from([192, 168, 0, 0]).into(), 24).unwrap(),
-        EntryDest::Local {
-            device: test_stack.ctx().await.dispatcher().get_core_id(if_id).unwrap(),
-        },
+        EntryDest::Local { device: test_stack.ctx().await.dispatcher.get_core_id(if_id).unwrap() },
     )
     .unwrap();
     let route2 = EntryEither::new(
@@ -1221,7 +1217,7 @@ async fn test_list_del_routes() {
         .with_ctx(|ctx| {
             routes
                 .into_iter()
-                .map(|e| EntryEither::try_from_fidl_with_ctx(ctx.dispatcher(), e).unwrap())
+                .map(|e| EntryEither::try_from_fidl_with_ctx(&ctx.dispatcher, e).unwrap())
                 .collect()
         })
         .await;

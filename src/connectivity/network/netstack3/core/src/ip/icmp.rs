@@ -354,11 +354,11 @@ pub trait BufferIcmpContext<I: IcmpIpExt, B: BufferMut>: IcmpContext<I> {
 
 impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>> IcmpContext<I> for Ctx<D> {
     fn receive_icmp_error(&mut self, conn: IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
-        IcmpContext::receive_icmp_error(self.dispatcher_mut(), conn, seq_num, err);
+        IcmpContext::receive_icmp_error(&mut self.dispatcher, conn, seq_num, err);
     }
 
     fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: IpSockCreationError) {
-        self.dispatcher_mut().close_icmp_connection(conn, err);
+        self.dispatcher.close_icmp_connection(conn, err);
     }
 }
 
@@ -366,7 +366,7 @@ impl<I: IcmpIpExt, B: BufferMut, D: EventDispatcher + BufferIcmpContext<I, B>>
     BufferIcmpContext<I, B> for Ctx<D>
 {
     fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<I>, seq_num: u16, data: B) {
-        self.dispatcher_mut().receive_icmp_echo_reply(conn, seq_num, data);
+        self.dispatcher.receive_icmp_echo_reply(conn, seq_num, data);
     }
 }
 
@@ -2181,14 +2181,14 @@ mod tests {
         }
 
         for counter in assert_counters {
-            assert!(*ctx.state().test_counters.get(counter) > 0, "counter at zero: {}", counter);
+            assert!(*ctx.state.test_counters.get(counter) > 0, "counter at zero: {}", counter);
         }
 
         if let Some((expect_message, expect_code)) = expect_message_code {
-            assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+            assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
             let (src_mac, dst_mac, src_ip, dst_ip, _, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<I, _, M, _>(
-                    &ctx.dispatcher().frames_sent()[0].1,
+                    &ctx.dispatcher.frames_sent()[0].1,
                     f,
                 )
                 .unwrap();
@@ -2200,7 +2200,7 @@ mod tests {
             assert_eq!(message, expect_message);
             assert_eq!(code, expect_code);
         } else {
-            assert_empty(ctx.dispatcher().frames_sent().iter());
+            assert_empty(ctx.dispatcher.frames_sent().iter());
         }
     }
 
@@ -2747,19 +2747,19 @@ mod tests {
         net.run_until_idle().unwrap();
         assert_eq!(
             *net.context("bob")
-                .state()
+                .state
                 .test_counters
                 .get(&format!("{}::echo_request", recv_icmp_packet_name)),
             1
         );
         assert_eq!(
             *net.context("alice")
-                .state()
+                .state
                 .test_counters
                 .get(&format!("{}::echo_reply", recv_icmp_packet_name)),
             1
         );
-        let replies = net.context("alice").dispatcher_mut().take_icmp_replies(conn);
+        let replies = net.context("alice").dispatcher.take_icmp_replies(conn);
         assert!(!replies.is_empty());
         let (seq, body) = &replies[0];
         assert_eq!(*seq, 7);

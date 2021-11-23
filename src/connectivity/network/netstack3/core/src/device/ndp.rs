@@ -2648,10 +2648,8 @@ mod tests {
     fn test_send_neighbor_solicitation_on_cache_miss() {
         set_logger_for_test();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let dev_id = ctx
-            .state_mut()
-            .device
-            .add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id =
+            ctx.state.device.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
         // Now we have to manually assign the IP addresses, see
         // `EthernetLinkDevice::get_ipv6_addr`
@@ -2675,7 +2673,7 @@ mod tests {
         }
         // Check that we hit the timeout after MAX_MULTICAST_SOLICIT.
         assert_eq!(
-            *ctx.state().test_counters.get("ndp::neighbor_solicitation_timer"),
+            *ctx.state.test_counters.get("ndp::neighbor_solicitation_timer"),
             1,
             "timeout counter at zero"
         );
@@ -2755,7 +2753,7 @@ mod tests {
         );
 
         assert_eq!(
-            *net.context("remote").state().test_counters.get("ndp::rx_neighbor_solicitation"),
+            *net.context("remote").state.test_counters.get("ndp::rx_neighbor_solicitation"),
             1,
             "remote received solicitation"
         );
@@ -2765,7 +2763,7 @@ mod tests {
         let _: StepResult = net.step();
 
         assert_eq!(
-            *net.context("local").state().test_counters.get("ndp::rx_neighbor_advertisement"),
+            *net.context("local").state.test_counters.get("ndp::rx_neighbor_advertisement"),
             1,
             "local received advertisement"
         );
@@ -2805,7 +2803,7 @@ mod tests {
         assert_eq!(net.context("local").dispatcher.frames_sent().len(), 1);
         let _: StepResult = net.step();
         assert_eq!(
-            *net.context("remote").state().test_counters.get("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request"),
+            *net.context("remote").state.test_counters.get("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::echo_request"),
             1
         );
 
@@ -2821,10 +2819,8 @@ mod tests {
 
         set_logger_for_test();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let dev_id = ctx
-            .state_mut()
-            .device
-            .add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id =
+            ctx.state.device.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
         // Now we have to manually assign the IP addresses, see
         // `EthernetLinkDevice::get_ipv6_addr`
@@ -2890,16 +2886,12 @@ mod tests {
 
         // Create the devices (will start DAD at the same time).
         assert_eq!(
-            net.context("local")
-                .state_mut()
-                .add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into()),
+            net.context("local").state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into()),
             device_id
         );
         crate::device::initialize_device(net.context("local"), device_id);
         assert_eq!(
-            net.context("remote")
-                .state_mut()
-                .add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into()),
+            net.context("remote").state.add_ethernet_device(mac, Ipv6::MINIMUM_LINK_MTU.into()),
             device_id
         );
         crate::device::initialize_device(net.context("remote"), device_id);
@@ -3014,8 +3006,7 @@ mod tests {
         // `1` (see `DUP_ADDR_DETECT_TRANSMITS`).
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
-        let dev_id =
-            ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
         let addr = local_ip();
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(addr.get(), 128).unwrap()).unwrap();
@@ -3043,8 +3034,7 @@ mod tests {
         ndp_configs.set_dup_addr_detect_transmits(None);
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
-        let dev_id =
-            ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
         // Enable DAD.
@@ -3147,11 +3137,10 @@ mod tests {
     #[test]
     fn test_dad_multiple_ips_simultaneously() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let dev_id =
-            ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
-        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher.frames_sent());
 
         let mut ndp_configs = NdpConfigurations::default();
         ndp_configs.set_dup_addr_detect_transmits(NonZeroU8::new(3));
@@ -3164,13 +3153,13 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
             .unwrap()
             .is_tentative());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Send another NS.
         let local_timer_id =
             NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip()).into();
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id]);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
 
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
@@ -3181,7 +3170,7 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
             .unwrap()
             .is_tentative());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
         // Run to the end for DAD for local ip
         let remote_timer_id =
@@ -3196,7 +3185,7 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
             .unwrap()
             .is_tentative());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 6);
 
         // Run to the end for DAD for local ip
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [remote_timer_id]);
@@ -3206,7 +3195,7 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
             .unwrap()
             .is_assigned());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 6);
 
         // No more timers.
         assert!(trigger_next_timer(&mut ctx).is_none());
@@ -3215,8 +3204,7 @@ mod tests {
     #[test]
     fn test_dad_cancel_when_ip_removed() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let dev_id =
-            ctx.state_mut().add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
+        let dev_id = ctx.state.add_ethernet_device(TEST_LOCAL_MAC, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, dev_id);
 
         // Enable DAD.
@@ -3225,7 +3213,7 @@ mod tests {
         ndp_configs.set_max_router_solicitations(None);
         crate::device::set_ndp_configurations(&mut ctx, dev_id, ndp_configs);
 
-        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher.frames_sent());
 
         // Add an IP.
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(local_ip().get(), 128).unwrap())
@@ -3233,13 +3221,13 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &local_ip().into_specified())
             .unwrap()
             .is_tentative());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Send another NS.
         let local_timer_id =
             NdpTimerId::new_dad_ns_transmission(dev_id.id().into(), local_ip()).into();
         assert_eq!(run_for(&mut ctx, Duration::from_secs(1)), [local_timer_id]);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
 
         // Add another IP
         add_ip_addr_subnet(&mut ctx, dev_id, AddrSubnet::new(remote_ip().get(), 128).unwrap())
@@ -3250,7 +3238,7 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
             .unwrap()
             .is_tentative());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
         // Run 1s
         let remote_timer_id =
@@ -3262,7 +3250,7 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
             .unwrap()
             .is_tentative());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 5);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 5);
 
         // Remove local ip
         del_ip_addr(&mut ctx, dev_id, &local_ip().into_specified()).unwrap();
@@ -3270,7 +3258,7 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
             .unwrap()
             .is_tentative());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 5);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 5);
 
         // Run to the end for DAD for local ip
         assert_eq!(run_for(&mut ctx, Duration::from_secs(2)), [remote_timer_id, remote_timer_id]);
@@ -3278,7 +3266,7 @@ mod tests {
         assert!(get_ip_addr_state(&ctx, dev_id, &remote_ip().into_specified())
             .unwrap()
             .is_assigned());
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 6);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 6);
 
         // No more timers.
         assert!(trigger_next_timer(&mut ctx).is_none());
@@ -3738,7 +3726,7 @@ mod tests {
             )
             .unwrap();
             let (buf, _, _, _) =
-                parse_ethernet_frame(&ctx.dispatcher().frames_sent()[frame_offset].1[..]).unwrap();
+                parse_ethernet_frame(&ctx.dispatcher.frames_sent()[frame_offset].1[..]).unwrap();
             // Packet's hop limit should be 100.
             assert_eq!(buf[7], hop_limit);
         }
@@ -4010,7 +3998,7 @@ mod tests {
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should be set.
-        assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Receive a RA with same prefix but valid_lifetime = 0;
 
@@ -4032,7 +4020,7 @@ mod tests {
         // Should remove the prefix from our list now.
         assert!(!ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should be unset.
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.timer_events());
 
         // Receive a new RA with new prefix (same as before but new since it
         // isn't in our list right now).
@@ -4055,7 +4043,7 @@ mod tests {
         // Prefix should be in our list now.
         assert!(ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should be set.
-        assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Receive the exact same RA as before.
 
@@ -4077,7 +4065,7 @@ mod tests {
         // Prefix should be in our list still.
         assert!(ndp_state.has_prefix(&addr_subnet));
         // Invalidation timeout should still be set.
-        assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Timeout the prefix.
 
@@ -4122,11 +4110,11 @@ mod tests {
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
-        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher.frames_sent());
         let device_id =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device_id);
-        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher.frames_sent());
 
         let time = ctx.now();
         assert_eq!(
@@ -4136,10 +4124,10 @@ mod tests {
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
         assert!(ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher().frames_sent()[0].1,
+                &ctx.dispatcher.frames_sent()[0].1,
                 |_| {},
             )
             .unwrap();
@@ -4154,7 +4142,7 @@ mod tests {
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher().frames_sent()[1].1,
+                &ctx.dispatcher.frames_sent()[1].1,
                 |_| {},
             )
             .unwrap();
@@ -4177,7 +4165,7 @@ mod tests {
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
         let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher().frames_sent()[2].1,
+                &ctx.dispatcher.frames_sent()[2].1,
                 |p| {
                     // We should have a source link layer option now because we
                     // have a source IP address set.
@@ -4198,7 +4186,7 @@ mod tests {
         // No more timers.
         assert!(trigger_next_timer(&mut ctx).is_none());
         // Should have only sent 3 packets (Router solicitations).
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
 
         // Configure MAX_RTR_SOLICITATIONS in the stack.
 
@@ -4209,11 +4197,11 @@ mod tests {
         stack_builder.device_builder().set_default_ndp_configs(ndp_configs);
         let mut ctx = Ctx::new(stack_builder.build(), DummyEventDispatcher::default());
 
-        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher.frames_sent());
         let device_id =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device_id);
-        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher.frames_sent());
 
         let time = ctx.now();
         assert_eq!(
@@ -4223,7 +4211,7 @@ mod tests {
         // Initial router solicitation should be a random delay between 0 and
         // `MAX_RTR_SOLICITATION_DELAY`.
         assert!(ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
         // Should trigger 1 more router solicitations
         let time = ctx.now();
@@ -4232,10 +4220,10 @@ mod tests {
             NdpTimerId::new_router_solicitation(device_id.id().into()).into()
         );
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
 
         // Each packet would be the same.
-        for f in ctx.dispatcher().frames_sent() {
+        for f in ctx.dispatcher.frames_sent() {
             let (src_mac, _, src_ip, _, _, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                     &f.1,
@@ -4270,8 +4258,8 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
 
-        assert_empty(ctx.dispatcher().frames_sent());
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.frames_sent());
+        assert_empty(ctx.dispatcher.timer_events());
 
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -4279,24 +4267,24 @@ mod tests {
         let timer_id = NdpTimerId::new_router_solicitation(device.id().into()).into();
 
         // Send the first router solicitation.
-        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher.frames_sent());
         let timers: Vec<(&DummyInstant, &TimerId)> =
-            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+            ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
 
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), timer_id);
 
         // Should have sent a router solicitation and still have the timer
         // setup.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let (_, _dst_mac, _, _, _, _, _) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher().frames_sent()[0].1,
+                &ctx.dispatcher.frames_sent()[0].1,
                 |_| {},
             )
             .unwrap();
         let timers: Vec<(&DummyInstant, &TimerId)> =
-            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+            ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
         // Capture the instant when the timer was supposed to fire so we can
         // make sure that a new timer doesn't replace the current one.
@@ -4308,9 +4296,9 @@ mod tests {
 
         // Should have not send any new packets and still have the original
         // router solicitation timer set.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let timers: Vec<(&DummyInstant, &TimerId)> =
-            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+            ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
         assert_eq!(*timers[0].0, instant);
 
@@ -4324,8 +4312,8 @@ mod tests {
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
 
-        assert_empty(ctx.dispatcher().frames_sent());
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.frames_sent());
+        assert_empty(ctx.dispatcher.timer_events());
 
         let device =
             ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
@@ -4333,23 +4321,23 @@ mod tests {
         let timer_id = NdpTimerId::new_router_solicitation(device.id().into()).into();
 
         // Send the first router solicitation.
-        assert_empty(ctx.dispatcher().frames_sent());
+        assert_empty(ctx.dispatcher.frames_sent());
         let timers: Vec<(&DummyInstant, &TimerId)> =
-            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+            ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
 
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), timer_id);
 
         // Should have sent a frame and have a router solicitation timer setup.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         matches::assert_matches!(
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher().frames_sent()[0].1,
+                &ctx.dispatcher.frames_sent()[0].1,
                 |_| {},
             ),
             Ok((_, _, _, _, _, _, _))
         );
-        assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
+        assert_eq!(ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).count(), 1);
 
         // Enable routing on the device.
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
@@ -4357,30 +4345,30 @@ mod tests {
 
         // Should have not sent any new packets, but unset the router
         // solicitation timer.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        assert_empty(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id));
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id));
 
         // Unsetting routing should succeed.
         set_routing_enabled::<_, Ipv6>(&mut ctx, device, false);
         assert!(!is_routing_enabled::<_, Ipv6>(&ctx, device));
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let timers: Vec<(&DummyInstant, &TimerId)> =
-            ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).collect();
+            ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).collect();
         assert_eq!(timers.len(), 1);
 
         // Send the first router solicitation after being turned into a host.
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), timer_id);
 
         // Should have sent a router solicitation.
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
         matches::assert_matches!(
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
-                &ctx.dispatcher().frames_sent()[1].1,
+                &ctx.dispatcher.frames_sent()[1].1,
                 |_| {},
             ),
             Ok((_, _, _, _, _, _, _))
         );
-        assert_eq!(ctx.dispatcher().timer_events().filter(|x| *x.1 == timer_id).count(), 1);
+        assert_eq!(ctx.dispatcher.timer_events().filter(|x| *x.1 == timer_id).count(), 1);
     }
 
     #[test]
@@ -4392,12 +4380,11 @@ mod tests {
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device = ctx
-            .state_mut()
-            .add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device =
+            ctx.state.add_ethernet_device(dummy_config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
-        assert_empty(ctx.dispatcher().frames_sent());
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.frames_sent());
+        assert_empty(ctx.dispatcher.timer_events());
 
         // Updating the IP should resolve immediately since DAD is turned off by
         // `DummyEventDispatcherBuilder::build`.
@@ -4416,8 +4403,8 @@ mod tests {
             .unwrap(),
             AddressState::Assigned
         );
-        assert_empty(ctx.dispatcher().frames_sent());
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.frames_sent());
+        assert_empty(ctx.dispatcher.timer_events());
 
         // Enable DAD for the device.
         let mut ndp_configs = crate::device::get_ndp_configurations(&ctx, device).clone();
@@ -4449,8 +4436,8 @@ mod tests {
             .unwrap(),
             AddressState::Tentative
         );
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        assert_eq!(ctx.dispatcher().timer_events().count(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.timer_events().count(), 1);
 
         // Disable DAD during DAD.
         ndp_configs.set_dup_addr_detect_transmits(None);
@@ -4462,11 +4449,11 @@ mod tests {
         .into();
         // Allow already started DAD to complete (2 more more NS, 3 more timers).
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 2);
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
         assert_eq!(trigger_next_timer(&mut ctx).unwrap(), expected_timer_id);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 3);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 3);
         assert_eq!(
             NdpContext::<EthernetLinkDevice>::ipv6_addr_state(
                 &ctx,
@@ -4552,8 +4539,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let neighbor_mac = config.remote_mac;
@@ -4877,8 +4863,7 @@ mod tests {
         let _: &mut Ipv6StateBuilder = state_builder.ipv6_builder().forward(true);
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(state_builder, DummyEventDispatcher::default());
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
         crate::device::set_routing_enabled::<_, Ipv6>(&mut ctx, device, true);
 
@@ -4926,8 +4911,7 @@ mod tests {
     fn test_host_stateless_address_autoconfiguration() {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
@@ -5027,7 +5011,7 @@ mod tests {
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
@@ -5041,7 +5025,7 @@ mod tests {
             1
         );
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
@@ -5115,7 +5099,7 @@ mod tests {
         // Timers should have been reset.
         let now = ctx.now();
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
@@ -5129,7 +5113,7 @@ mod tests {
             1
         );
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
@@ -5183,8 +5167,7 @@ mod tests {
     fn test_host_stateless_address_autoconfiguration_new_ra_with_preferred_lifetime_zero() {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
@@ -5240,17 +5223,17 @@ mod tests {
 
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
-        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
             *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
                 .into()
         }));
-        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
             *x.0 == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
                 && *x.1
                     == NdpTimerId::new_invalidate_slaac_address(device.id().into(), expected_addr)
                         .into()
         }));
-        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
             *x.1 == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into()
         }));
 
@@ -5266,8 +5249,7 @@ mod tests {
     fn test_host_stateless_address_autoconfiguration_updated_ra_with_preferred_lifetime_zero() {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
@@ -5334,7 +5316,7 @@ mod tests {
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
@@ -5348,7 +5330,7 @@ mod tests {
             1
         );
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
@@ -5362,7 +5344,7 @@ mod tests {
             1
         );
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.1
                     == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr)
@@ -5430,12 +5412,12 @@ mod tests {
 
         // Timers should have been reset.
         let now = ctx.now();
-        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
             *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
                 .into()
         }));
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| *x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
@@ -5495,12 +5477,12 @@ mod tests {
 
         // Timers should have been reset.
         let now = ctx.now();
-        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
             *x.1 == NdpTimerId::new_deprecate_slaac_address(device.id().into(), expected_addr)
                 .into()
         }));
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| *x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap()
@@ -5561,7 +5543,7 @@ mod tests {
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
@@ -5575,7 +5557,7 @@ mod tests {
             1
         );
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
@@ -5588,7 +5570,7 @@ mod tests {
                 .count(),
             1
         );
-        assert_empty(ctx.dispatcher().timer_events().filter(|x| {
+        assert_empty(ctx.dispatcher.timer_events().filter(|x| {
             *x.1 == NdpTimerId::new_dad_ns_transmission(device.id().into(), expected_addr).into()
         }));
 
@@ -5647,8 +5629,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
@@ -5673,7 +5654,7 @@ mod tests {
                 .unwrap();
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.timer_events());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -5714,7 +5695,7 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.timer_events());
     }
 
     #[test]
@@ -5725,8 +5706,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
@@ -5753,7 +5733,7 @@ mod tests {
         assert_eq!(*entry.addr_sub(), manual_addr_sub);
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.timer_events());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -5793,7 +5773,7 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
 
         // No new timers were added.
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.timer_events());
     }
 
     #[test]
@@ -5803,8 +5783,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
@@ -5831,7 +5810,7 @@ mod tests {
                 .unwrap();
         assert_eq!(entry.state(), AddressState::Assigned);
         assert_eq!(entry.config_type(), AddrConfigType::Manual);
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.timer_events());
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -5879,15 +5858,14 @@ mod tests {
         assert_eq!(entry.config_type(), AddrConfigType::Slaac);
 
         // Address invalidation timers were added.
-        assert_eq!(ctx.dispatcher().timer_events().count(), 2);
+        assert_eq!(ctx.dispatcher.timer_events().count(), 2);
     }
 
     #[test]
     fn test_host_slaac_invalid_prefix_information() {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
@@ -5930,7 +5908,7 @@ mod tests {
         ));
 
         // Address invalidation timers were added.
-        assert_empty(ctx.dispatcher().timer_events());
+        assert_empty(ctx.dispatcher.timer_events());
     }
 
     #[test]
@@ -5940,8 +5918,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;
@@ -6016,7 +5993,7 @@ mod tests {
         // Make sure deprecate and invalidation timers are set.
         let now = ctx.now();
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(preferred_lifetime.into())).unwrap())
@@ -6030,7 +6007,7 @@ mod tests {
             1
         );
         assert_eq!(
-            ctx.dispatcher()
+            ctx.dispatcher
                 .timer_events()
                 .filter(|x| (*x.0
                     == now.checked_add(Duration::from_secs(valid_lifetime.into())).unwrap())
@@ -6119,7 +6096,7 @@ mod tests {
             assert_eq!(entry.config_type(), AddrConfigType::Slaac);
             assert_eq!(entry.valid_until().unwrap(), valid_until);
             assert_eq!(
-                ctx.dispatcher()
+                ctx.dispatcher
                     .timer_events()
                     .filter(|x| (*x.0
                         == now
@@ -6135,7 +6112,7 @@ mod tests {
                 1
             );
             assert_eq!(
-                ctx.dispatcher()
+                ctx.dispatcher
                     .timer_events()
                     .filter(|x| (*x.0 == valid_until)
                         && (*x.1
@@ -6151,8 +6128,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let src_mac = config.remote_mac;

@@ -431,7 +431,7 @@ impl<I: IcmpIpExt, D: EventDispatcher + UdpContext<I>> UdpContext<I> for Ctx<D> 
         id: Result<UdpConnId<I>, UdpListenerId<I>>,
         err: I::ErrorCode,
     ) {
-        UdpContext::receive_icmp_error(self.dispatcher_mut(), id, err);
+        UdpContext::receive_icmp_error(&mut self.dispatcher, id, err);
     }
 }
 
@@ -491,7 +491,7 @@ impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B> + BufferUdpContext<I, B>> Bu
         src_port: NonZeroU16,
         body: B,
     ) {
-        BufferUdpContext::receive_udp_from_conn(self.dispatcher_mut(), conn, src_ip, src_port, body)
+        BufferUdpContext::receive_udp_from_conn(&mut self.dispatcher, conn, src_ip, src_port, body)
     }
 
     fn receive_udp_from_listen(
@@ -503,7 +503,7 @@ impl<I: IpExt, B: BufferMut, D: BufferDispatcher<B> + BufferUdpContext<I, B>> Bu
         body: B,
     ) {
         BufferUdpContext::receive_udp_from_listen(
-            self.dispatcher_mut(),
+            &mut self.dispatcher,
             listener,
             src_ip,
             dst_ip,
@@ -533,9 +533,9 @@ impl<I: Ip, D: EventDispatcher> DualStateContext<UdpState<I>, D::Rng> for Ctx<D>
         #[specialize_ip]
         fn get<I: Ip, D: EventDispatcher>(ctx: &Ctx<D>) -> (&UdpState<I>, &D::Rng) {
             #[ipv4]
-            return (&ctx.state().transport.udpv4, ctx.dispatcher().rng());
+            return (&ctx.state.transport.udpv4, ctx.dispatcher.rng());
             #[ipv6]
-            return (&ctx.state().transport.udpv6, ctx.dispatcher().rng());
+            return (&ctx.state.transport.udpv6, ctx.dispatcher.rng());
         }
 
         get(self)
@@ -544,7 +544,7 @@ impl<I: Ip, D: EventDispatcher> DualStateContext<UdpState<I>, D::Rng> for Ctx<D>
     fn get_states_mut_with(&mut self, _id0: (), _id1: ()) -> (&mut UdpState<I>, &mut D::Rng) {
         #[specialize_ip]
         fn get<I: Ip, D: EventDispatcher>(ctx: &mut Ctx<D>) -> (&mut UdpState<I>, &mut D::Rng) {
-            let (state, dispatcher) = ctx.state_and_dispatcher();
+            let Ctx { state, dispatcher } = ctx;
             #[ipv4]
             return (&mut state.transport.udpv4, dispatcher.rng_mut());
             #[ipv6]

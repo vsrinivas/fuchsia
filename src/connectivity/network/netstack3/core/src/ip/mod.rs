@@ -505,21 +505,21 @@ fn get_state_inner_mut<I: Ip, D: EventDispatcher>(
 
 impl<I: Ip, D: EventDispatcher> StateContext<IpLayerFragmentCache<I>> for Ctx<D> {
     fn get_state_with(&self, _id: ()) -> &IpLayerFragmentCache<I> {
-        &get_state_inner(self.state()).fragment_cache
+        &get_state_inner(&self.state).fragment_cache
     }
 
     fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerFragmentCache<I> {
-        &mut get_state_inner_mut(self.state_mut()).fragment_cache
+        &mut get_state_inner_mut(&mut self.state).fragment_cache
     }
 }
 
 impl<I: Ip, D: EventDispatcher> StateContext<IpLayerPathMtuCache<I, D::Instant>> for Ctx<D> {
     fn get_state_with(&self, _id: ()) -> &IpLayerPathMtuCache<I, D::Instant> {
-        &get_state_inner(self.state()).path_mtu
+        &get_state_inner(&self.state).path_mtu
     }
 
     fn get_state_mut_with(&mut self, _id: ()) -> &mut IpLayerPathMtuCache<I, D::Instant> {
-        &mut get_state_inner_mut(self.state_mut()).path_mtu
+        &mut get_state_inner_mut(&mut self.state).path_mtu
     }
 }
 
@@ -569,12 +569,11 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
         time: Self::Instant,
         key: FragmentCacheKey<A>,
     ) -> Option<Self::Instant> {
-        self.dispatcher_mut()
-            .schedule_timer_instant(time, IpLayerTimerId::new_reassembly_timer_id(key))
+        self.dispatcher.schedule_timer_instant(time, IpLayerTimerId::new_reassembly_timer_id(key))
     }
 
     fn cancel_timer(&mut self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.dispatcher_mut().cancel_timer(IpLayerTimerId::new_reassembly_timer_id(key))
+        self.dispatcher.cancel_timer(IpLayerTimerId::new_reassembly_timer_id(key))
     }
 
     // TODO(rheacock): the compiler thinks that `f` doesn't have to be mutable,
@@ -590,7 +589,7 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
             ctx: &mut Ctx<D>,
             mut f: F,
         ) {
-            ctx.dispatcher_mut().cancel_timers_with(|id| match id {
+            ctx.dispatcher.cancel_timers_with(|id| match id {
                 #[ipv4addr]
                 TimerId(TimerIdInner::IpLayer(IpLayerTimerId::ReassemblyTimeoutv4(key))) => f(key),
                 #[ipv6addr]
@@ -603,7 +602,7 @@ impl<A: IpAddress, D: EventDispatcher> TimerContext<FragmentCacheKey<A>> for Ctx
     }
 
     fn scheduled_instant(&self, key: FragmentCacheKey<A>) -> Option<Self::Instant> {
-        self.dispatcher().scheduled_instant(IpLayerTimerId::new_reassembly_timer_id(key))
+        self.dispatcher.scheduled_instant(IpLayerTimerId::new_reassembly_timer_id(key))
     }
 }
 
@@ -613,20 +612,19 @@ impl<I: Ip, D: EventDispatcher> TimerContext<PmtuTimerId<I>> for Ctx<D> {
         time: Self::Instant,
         _id: PmtuTimerId<I>,
     ) -> Option<Self::Instant> {
-        self.dispatcher_mut().schedule_timer_instant(time, IpLayerTimerId::new_pmtu_timer_id::<I>())
+        self.dispatcher.schedule_timer_instant(time, IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 
     fn cancel_timer(&mut self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
-        self.dispatcher_mut().cancel_timer(IpLayerTimerId::new_pmtu_timer_id::<I>())
+        self.dispatcher.cancel_timer(IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 
     fn cancel_timers_with<F: FnMut(&PmtuTimerId<I>) -> bool>(&mut self, _f: F) {
-        self.dispatcher_mut()
-            .cancel_timers_with(|id| id == &IpLayerTimerId::new_pmtu_timer_id::<I>());
+        self.dispatcher.cancel_timers_with(|id| id == &IpLayerTimerId::new_pmtu_timer_id::<I>());
     }
 
     fn scheduled_instant(&self, _id: PmtuTimerId<I>) -> Option<Self::Instant> {
-        self.dispatcher().scheduled_instant(IpLayerTimerId::new_pmtu_timer_id::<I>())
+        self.dispatcher.scheduled_instant(IpLayerTimerId::new_pmtu_timer_id::<I>())
     }
 }
 
@@ -1568,7 +1566,7 @@ pub(crate) fn lookup_route<A: IpAddress, D: EventDispatcher>(
     ctx: &Ctx<D>,
     dst_ip: SpecifiedAddr<A>,
 ) -> Option<Destination<A, DeviceId>> {
-    get_state_inner::<A::Version, _>(ctx.state()).table.lookup(dst_ip)
+    get_state_inner::<A::Version, _>(&ctx.state).table.lookup(dst_ip)
 }
 
 /// Add a route to the forwarding table, returning `Err` if the subnet
@@ -1580,7 +1578,7 @@ pub(crate) fn add_route<D: EventDispatcher, A: IpAddress>(
     next_hop: SpecifiedAddr<A>,
 ) -> Result<(), ExistsError> {
     let res =
-        get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.add_route(subnet, next_hop);
+        get_state_inner_mut::<A::Version, _>(&mut ctx.state).table.add_route(subnet, next_hop);
 
     if res.is_ok() {
         #[ipv4addr]
@@ -1600,9 +1598,8 @@ pub(crate) fn add_device_route<D: EventDispatcher, A: IpAddress>(
     subnet: Subnet<A>,
     device: DeviceId,
 ) -> Result<(), ExistsError> {
-    let res = get_state_inner_mut::<A::Version, _>(ctx.state_mut())
-        .table
-        .add_device_route(subnet, device);
+    let res =
+        get_state_inner_mut::<A::Version, _>(&mut ctx.state).table.add_device_route(subnet, device);
 
     if res.is_ok() {
         #[ipv4addr]
@@ -1621,7 +1618,7 @@ pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Ctx<D>,
     subnet: Subnet<A>,
 ) -> Result<(), NotFoundError> {
-    let res = get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.del_route(subnet);
+    let res = get_state_inner_mut::<A::Version, _>(&mut ctx.state).table.del_route(subnet);
 
     if res.is_ok() {
         #[ipv4addr]
@@ -1637,7 +1634,7 @@ pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
 pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     ctx: &Ctx<D>,
 ) -> Iter<'_, Entry<A, DeviceId>> {
-    get_state_inner::<A::Version, _>(ctx.state()).table.iter_installed()
+    get_state_inner::<A::Version, _>(&ctx.state).table.iter_installed()
 }
 
 /// Send an IPv4 packet to a remote host.
@@ -1909,27 +1906,27 @@ pub(crate) fn send_ip_packet_from_device<
 
 impl<D: EventDispatcher> StateContext<Icmpv4State<D::Instant, IpSock<Ipv4, DeviceId>>> for Ctx<D> {
     fn get_state_with(&self, _id: ()) -> &Icmpv4State<D::Instant, IpSock<Ipv4, DeviceId>> {
-        &self.state().ipv4.icmp
+        &self.state.ipv4.icmp
     }
 
     fn get_state_mut_with(
         &mut self,
         _id: (),
     ) -> &mut Icmpv4State<D::Instant, IpSock<Ipv4, DeviceId>> {
-        &mut self.state_mut().ipv4.icmp
+        &mut self.state.ipv4.icmp
     }
 }
 
 impl<D: EventDispatcher> StateContext<Icmpv6State<D::Instant, IpSock<Ipv6, DeviceId>>> for Ctx<D> {
     fn get_state_with(&self, _id: ()) -> &Icmpv6State<D::Instant, IpSock<Ipv6, DeviceId>> {
-        &self.state().ipv6.icmp
+        &self.state.ipv6.icmp
     }
 
     fn get_state_mut_with(
         &mut self,
         _id: (),
     ) -> &mut Icmpv6State<D::Instant, IpSock<Ipv6, DeviceId>> {
-        &mut self.state_mut().ipv6.icmp
+        &mut self.state.ipv6.icmp
     }
 }
 
@@ -1972,7 +1969,7 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv4> for Ctx<D> {
         &mut IcmpState<Ipv4Addr, D::Instant, IpSock<Ipv4, DeviceId>>,
         &ForwardingTable<Ipv4, DeviceId>,
     ) {
-        let state = &mut self.state_mut().ipv4;
+        let state = &mut self.state.ipv4;
         (state.icmp.as_mut(), &state.inner.table)
     }
 }
@@ -2070,7 +2067,7 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv6> for Ctx<D> {
         &mut IcmpState<Ipv6Addr, D::Instant, IpSock<Ipv6, DeviceId>>,
         &ForwardingTable<Ipv6, DeviceId>,
     ) {
-        let state = &mut self.state_mut().ipv6;
+        let state = &mut self.state.ipv6;
         (state.icmp.as_mut(), &state.inner.table)
     }
 }
@@ -2182,7 +2179,7 @@ fn get_icmp_error_message_destination<D: EventDispatcher, A: IpAddress>(
 
 /// Is `ctx` configured to route packets?
 pub(crate) fn is_routing_enabled<D: EventDispatcher, I: Ip>(ctx: &Ctx<D>) -> bool {
-    get_state_inner::<I, _>(ctx.state()).forward
+    get_state_inner::<I, _>(&ctx.state).forward
 }
 
 /// Get the hop limit for new IP packets that will be sent out from `device`.
@@ -2488,7 +2485,7 @@ mod tests {
         bytes[24..40].copy_from_slice(DUMMY_CONFIG_V6.local_ip.bytes());
         let buf = Buf::new(bytes, ..);
         receive_ipv6_packet(&mut ctx, device, FrameDestination::Unicast, buf);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::ErroneousHeaderField,
@@ -2519,7 +2516,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
         assert_eq!(get_counter_val(&mut ctx, "dispatch_receive_ipv6_packet"), 1);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // Test with unrecognized option type set with
         // action = discard.
@@ -2531,7 +2528,7 @@ mod tests {
         );
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // Test with unrecognized option type set with
         // action = discard & send icmp
@@ -2545,7 +2542,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
@@ -2565,7 +2562,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
@@ -2585,7 +2582,7 @@ mod tests {
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         expected_icmps += 1;
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
         verify_icmp_for_unrecognized_ext_hdr_option(
             &mut ctx,
             Icmpv6ParameterProblemCode::UnrecognizedIpv6Option,
@@ -2605,7 +2602,7 @@ mod tests {
         // Do not expect an ICMP response for this packet
         receive_ipv6_packet(&mut ctx, device, frame_dst, buf);
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv6_parameter_problem"), expected_icmps);
-        assert_eq!(ctx.dispatcher().frames_sent().len(), expected_icmps);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), expected_icmps);
 
         // None of our tests should have sent an icmpv4 packet, or dispatched an
         // IP packet after the first.
@@ -3362,8 +3359,7 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default()
             .build_with(StackStateBuilder::default(), DummyEventDispatcher::default());
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let frame_dst = FrameDestination::Unicast;
@@ -3419,8 +3415,7 @@ mod tests {
         let cfg = DUMMY_CONFIG_V6;
         let mut ctx =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(cfg.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(cfg.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let ip: Ipv6Addr = cfg.local_mac.to_ipv6_link_local().addr().get();
@@ -3555,8 +3550,8 @@ mod tests {
 
         // Receive packet destined to a remote address when forwarding is
         // enabled globally but disabled on the inbound interface.
-        ctx.state_mut().ipv4.inner.forward = true;
-        ctx.state_mut().ipv6.inner.forward = true;
+        ctx.state.ipv4.inner.forward = true;
+        ctx.state.ipv6.inner.forward = true;
         assert_eq!(
             receive_ipv4_packet_action(&mut ctx, v4_dev, v4_config.remote_ip),
             ReceivePacketAction::Drop { reason: DropReason::ForwardingDisabledInboundIface }
@@ -3585,8 +3580,8 @@ mod tests {
 
         // Receive packet destined to a host with no route when forwarding is
         // enabled both globally and on the inbound device.
-        ctx.state_mut().ipv4.inner.table = Default::default();
-        ctx.state_mut().ipv6.inner.table = Default::default();
+        ctx.state.ipv4.inner.table = Default::default();
+        ctx.state.ipv6.inner.table = Default::default();
         assert_eq!(
             receive_ipv4_packet_action(&mut ctx, v4_dev, v4_config.remote_ip),
             ReceivePacketAction::SendNoRouteToDest

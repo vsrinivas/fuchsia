@@ -160,7 +160,7 @@ where
     }
 
     fn get_timer_dispatcher(&mut self) -> &mut timers::TimerDispatcher<TimerId> {
-        self.dispatcher_mut().as_mut()
+        self.dispatcher.as_mut()
     }
 }
 
@@ -337,9 +337,9 @@ where
     D: DeviceStatusNotifier,
 {
     fn update_device_state<F: FnOnce(&mut DeviceInfo)>(&mut self, id: u64, f: F) {
-        if let Some(device_info) = self.dispatcher_mut().as_mut().get_device_mut(id) {
+        if let Some(device_info) = self.dispatcher.as_mut().get_device_mut(id) {
             f(device_info);
-            self.dispatcher_mut().device_status_changed(id)
+            self.dispatcher.device_status_changed(id)
         }
     }
 }
@@ -365,8 +365,8 @@ where
     D: AsRef<Devices> + AsMut<Devices>,
 {
     fn enable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        let (state, disp) = self.state_and_dispatcher();
-        let device = disp.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
+        let Ctx { state, dispatcher } = self;
+        let device = dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
 
         if device.admin_enabled() && device.phy_up() {
             // TODO(rheacock, fxbug.dev/21135): Handle core and driver state in
@@ -376,7 +376,7 @@ where
             let generate_core_id = |info: &DeviceInfo| {
                 state.add_ethernet_device(Mac::new(info.mac().octets), info.mtu())
             };
-            match disp.as_mut().activate_device(id, generate_core_id) {
+            match dispatcher.as_mut().activate_device(id, generate_core_id) {
                 Ok(device_info) => {
                     // we can unwrap core_id here because activate_device just
                     // succeeded.
@@ -399,7 +399,7 @@ where
     }
 
     fn disable_interface(&mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match self.dispatcher_mut().as_mut().deactivate_device(id) {
+        match self.dispatcher.as_mut().deactivate_device(id) {
             Ok((core_id, device_info)) => {
                 // Sanity check that there is a reason that the device is
                 // disabled.
@@ -489,7 +489,7 @@ impl Netstack {
 
     /// Starts servicing timers.
     async fn spawn_timers(&self) {
-        self.lock().await.dispatcher_mut().timers.spawn(self.clone());
+        self.lock().await.dispatcher.timers.spawn(self.clone());
     }
 
     /// Consumes the netstack and starts serving all the FIDL services it

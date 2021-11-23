@@ -1539,22 +1539,22 @@ mod tests {
         });
 
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
         assert_empty(net.pending_frames.iter());
 
         // Bob and Calvin should get any packet sent by Alice.
 
         send_packet(net.context("alice"), ip_a, ip_b, device);
-        assert_eq!(net.context("alice").dispatcher().frames_sent().len(), 1);
-        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_eq!(net.context("alice").dispatcher.frames_sent().len(), 1);
+        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
         assert_empty(net.pending_frames.iter());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
         assert_eq!(net.pending_frames.len(), 2);
         assert!(net
             .pending_frames
@@ -1569,14 +1569,14 @@ mod tests {
 
         net.pending_frames = BinaryHeap::new();
         send_packet(net.context("bob"), ip_b, ip_a, device);
-        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
-        assert_eq!(net.context("bob").dispatcher().frames_sent().len(), 1);
-        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
+        assert_eq!(net.context("bob").dispatcher.frames_sent().len(), 1);
+        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
         assert_empty(net.pending_frames.iter());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
         assert_eq!(net.pending_frames.len(), 1);
         assert!(net
             .pending_frames
@@ -1587,14 +1587,14 @@ mod tests {
 
         net.pending_frames = BinaryHeap::new();
         send_packet(net.context("calvin"), ip_c, ip_a, device);
-        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
-        assert_eq!(net.context("calvin").dispatcher().frames_sent().len(), 1);
+        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
+        assert_eq!(net.context("calvin").dispatcher.frames_sent().len(), 1);
         assert_empty(net.pending_frames.iter());
         net.collect_frames();
-        assert_empty(net.context("alice").dispatcher().frames_sent().iter());
-        assert_empty(net.context("bob").dispatcher().frames_sent().iter());
-        assert_empty(net.context("calvin").dispatcher().frames_sent().iter());
+        assert_empty(net.context("alice").dispatcher.frames_sent().iter());
+        assert_empty(net.context("bob").dispatcher.frames_sent().iter());
+        assert_empty(net.context("calvin").dispatcher.frames_sent().iter());
         assert_empty(net.pending_frames.iter());
     }
 }

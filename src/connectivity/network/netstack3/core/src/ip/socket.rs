@@ -532,7 +532,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
             proto,
             unroutable_behavior,
             per_proto_data: Ipv6SocketData {
-                flow_label: gen_ipv6_flowlabel(self.dispatcher_mut().rng_mut()),
+                flow_label: gen_ipv6_flowlabel(self.dispatcher.rng_mut()),
             },
         };
         let cached = compute_ipv6_cached_info(self, &defn)?;
@@ -1243,7 +1243,7 @@ mod tests {
 
         // Since the dispatcher's random number generator is deterministic, we can
         // use a clone to assert on the sequence of flow labels it will produce.
-        let mut rng = ctx.dispatcher().rng().clone();
+        let mut rng = ctx.dispatcher.rng().clone();
 
         // A template socket that we can use to more concisely define sockets in
         // various test cases.
@@ -1389,9 +1389,9 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
-        let (dev, frame) = &ctx.dispatcher().frames_sent()[0];
+        let (dev, frame) = &ctx.dispatcher.frames_sent()[0];
         assert_eq!(dev, &DeviceId::new_ethernet(0));
         let (mut body, src_mac, dst_mac, _ethertype) = parse_ethernet_frame(&frame).unwrap();
         let packet = (&mut body).parse::<Ipv4Packet<&[u8]>>().unwrap();
@@ -1459,9 +1459,9 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
+        assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
 
-        let (dev, frame) = &ctx.dispatcher().frames_sent()[0];
+        let (dev, frame) = &ctx.dispatcher.frames_sent()[0];
         assert_eq!(dev, &DeviceId::new_ethernet(0));
         let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
             parse_ip_packet_in_ethernet_frame::<Ipv6>(&frame).unwrap();

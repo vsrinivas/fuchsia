@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::ops::DerefMut as _;
+
 use super::{
     devices::{CommonInfo, Devices},
     ethernet_worker,
@@ -181,7 +183,7 @@ where
         .await
         .map_err(|_| fidl_net_stack::Error::Internal)?;
 
-        let (state, disp) = self.ctx.state_and_dispatcher();
+        let Ctx { state, dispatcher } = self.ctx.deref_mut();
         let client_stream = client.get_stream();
 
         let online = client
@@ -202,7 +204,7 @@ where
             online,
         );
 
-        let devices: &mut Devices = disp.as_mut();
+        let devices: &mut Devices = dispatcher.as_mut();
         let id = if online {
             let eth_id = state.add_ethernet_device(Mac::new(info.mac.octets), info.mtu);
             devices.add_active_device(eth_id, comm_info)
@@ -216,7 +218,7 @@ where
                 // If we have a core_id associated with id, that means the
                 // device was added in the active state, so we must initialize
                 // it using the new core_id.
-                let devices: &Devices = self.ctx.dispatcher().as_ref();
+                let devices: &Devices = self.ctx.dispatcher.as_ref();
                 if let Some(core_id) = devices.get_core_id(id) {
                     initialize_device(&mut self.ctx, core_id);
                 }
@@ -236,7 +238,7 @@ where
     C::Dispatcher: AsMut<Devices>,
 {
     fn fidl_del_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match self.ctx.dispatcher_mut().as_mut().remove_device(id) {
+        match self.ctx.dispatcher.as_mut().remove_device(id) {
             Some(_info) => {
                 // TODO(rheacock): ensure that the core client deletes all data
                 Ok(())
@@ -256,7 +258,7 @@ where
 {
     fn fidl_list_interfaces(self) -> Vec<fidl_net_stack::InterfaceInfo> {
         let mut devices = Vec::new();
-        for device in self.ctx.dispatcher().as_ref().iter_devices() {
+        for device in self.ctx.dispatcher.as_ref().iter_devices() {
             let mut addresses = Vec::new();
             if let Some(core_id) = device.core_id() {
                 for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -299,7 +301,7 @@ where
         id: u64,
     ) -> Result<fidl_net_stack::InterfaceInfo, fidl_net_stack::Error> {
         let device =
-            self.ctx.dispatcher().as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
+            self.ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         let mut addresses = Vec::new();
         if let Some(core_id) = device.core_id() {
             for addr in get_all_ip_addr_subnets(&self.ctx, core_id) {
@@ -339,7 +341,7 @@ where
         addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         let device_info =
-            self.ctx.dispatcher().as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
+            self.ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         // TODO(brunodalbo): We should probably allow adding static addresses
         // to interfaces that are not installed, return BadState for now
         let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
@@ -358,7 +360,7 @@ where
         addr: fidl_net::Subnet,
     ) -> Result<(), fidl_net_stack::Error> {
         let device_info =
-            self.ctx.dispatcher().as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
+            self.ctx.dispatcher.as_ref().get_device(id).ok_or(fidl_net_stack::Error::NotFound)?;
         // TODO(gongt): Since addresses can't be added to inactive interfaces
         // they can't be deleted either; return BadState for now.
         let device_id = device_info.core_id().ok_or(fidl_net_stack::Error::BadState)?;
@@ -369,7 +371,7 @@ where
 
     fn fidl_get_forwarding_table(self) -> Vec<fidl_net_stack::ForwardingEntry> {
         get_all_routes(&self.ctx)
-            .filter_map(|entry| match entry.try_into_fidl_with_ctx(self.ctx.dispatcher()) {
+            .filter_map(|entry| match entry.try_into_fidl_with_ctx(&self.ctx.dispatcher) {
                 Ok(entry) => Some(entry),
                 Err(_) => {
                     error!("Failed to map forwarding entry into FIDL");
@@ -383,7 +385,7 @@ where
         mut self,
         entry: ForwardingEntry,
     ) -> Result<(), fidl_net_stack::Error> {
-        let entry = match EntryEither::try_from_fidl_with_ctx(self.ctx.dispatcher(), entry) {
+        let entry = match EntryEither::try_from_fidl_with_ctx(&self.ctx.dispatcher, entry) {
             Ok(entry) => entry,
             Err(e) => return Err(e.into()),
         };

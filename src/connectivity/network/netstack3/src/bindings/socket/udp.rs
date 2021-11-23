@@ -299,7 +299,7 @@ where
             async move {
                 let id = {
                     let mut locked = ctx.lock().await;
-                    I::get_collection_mut(locked.dispatcher_mut())
+                    I::get_collection_mut(&mut locked.dispatcher)
                         .binding_data
                         .push(BindingData::<I>::new(local_event, peer_event, properties))
                 };
@@ -964,11 +964,11 @@ where
     }
 
     fn get_state(&self) -> &BindingData<I> {
-        I::get_collection(self.ctx.dispatcher()).binding_data.get(self.binding_id).unwrap()
+        I::get_collection(&self.ctx.dispatcher).binding_data.get(self.binding_id).unwrap()
     }
 
     fn get_state_mut(&mut self) -> &mut BindingData<I> {
-        I::get_collection_mut(self.ctx.dispatcher_mut())
+        I::get_collection_mut(&mut self.ctx.dispatcher)
             .binding_data
             .get_mut(self.binding_id)
             .unwrap()
@@ -995,7 +995,7 @@ where
                 let list_info = remove_udp_listener(self.ctx.deref_mut(), listener_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
-                    I::get_collection_mut(self.ctx.dispatcher_mut()).listeners.remove(&listener_id),
+                    I::get_collection_mut(&mut self.ctx.dispatcher).listeners.remove(&listener_id),
                     None
                 );
 
@@ -1007,7 +1007,7 @@ where
                 let conn_info = remove_udp_conn(self.ctx.deref_mut(), conn_id);
                 // also remove from the EventLoop context:
                 assert_ne!(
-                    I::get_collection_mut(self.ctx.dispatcher_mut()).conns.remove(&conn_id),
+                    I::get_collection_mut(&mut self.ctx.dispatcher).conns.remove(&conn_id),
                     None
                 );
                 (Some(conn_info.local_ip), Some(conn_info.local_port))
@@ -1021,9 +1021,7 @@ where
         self.get_state_mut().info.state =
             SocketState::BoundConnect { conn_id, shutdown_read: false, shutdown_write: false };
         assert_eq!(
-            I::get_collection_mut(self.ctx.dispatcher_mut())
-                .conns
-                .insert(&conn_id, self.binding_id),
+            I::get_collection_mut(&mut self.ctx.dispatcher).conns.insert(&conn_id, self.binding_id),
             None
         );
         Ok(())
@@ -1045,7 +1043,7 @@ where
             .map_err(IntoErrno::into_errno)?;
         self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
         assert_eq!(
-            I::get_collection_mut(self.ctx.dispatcher_mut())
+            I::get_collection_mut(&mut self.ctx.dispatcher)
                 .listeners
                 .insert(&listener_id, self.binding_id),
             None
@@ -1100,7 +1098,7 @@ where
             SocketState::BoundListen { listener_id } => {
                 // remove from bindings:
                 assert_ne!(
-                    I::get_collection_mut(self.ctx.dispatcher_mut()).listeners.remove(&listener_id),
+                    I::get_collection_mut(&mut self.ctx.dispatcher).listeners.remove(&listener_id),
                     None
                 );
                 // remove from core:
@@ -1109,7 +1107,7 @@ where
             SocketState::BoundConnect { conn_id, .. } => {
                 // remove from bindings:
                 assert_ne!(
-                    I::get_collection_mut(self.ctx.dispatcher_mut()).conns.remove(&conn_id),
+                    I::get_collection_mut(&mut self.ctx.dispatcher).conns.remove(&conn_id),
                     None
                 );
                 // remove from core:
@@ -1125,7 +1123,7 @@ where
             // always make sure the socket is closed with core.
             self.close_core();
             matches::assert_matches!(
-                I::get_collection_mut(self.ctx.dispatcher_mut())
+                I::get_collection_mut(&mut self.ctx.dispatcher)
                     .binding_data
                     .remove(self.binding_id),
                 Some(BindingData {
@@ -1921,7 +1919,7 @@ mod tests {
             t.get(i)
                 .with_ctx(|ctx| {
                     let udpsocks =
-                        <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
+                        <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                     assert_eq!(udpsocks.binding_data.iter().count(), 1);
                     assert_eq!(udpsocks.listeners.iter().count(), 1);
                     assert!(udpsocks.conns.is_empty());
@@ -1947,7 +1945,7 @@ mod tests {
             t.get(i)
                 .with_ctx(|ctx| {
                     let udpsocks =
-                        <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
+                        <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                     assert!(udpsocks.binding_data.is_empty());
                     assert!(udpsocks.listeners.is_empty());
                     assert!(udpsocks.conns.is_empty());
@@ -1991,8 +1989,7 @@ mod tests {
         // empty
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks =
-                    <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
+                let udpsocks = <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                 assert!(!udpsocks.binding_data.is_empty());
             })
             .await;
@@ -2005,8 +2002,7 @@ mod tests {
         // Now it should become empty
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks =
-                    <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
+                let udpsocks = <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;
@@ -2043,8 +2039,7 @@ mod tests {
         // No socket should be there now.
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks =
-                    <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
+                let udpsocks = <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;
@@ -2106,8 +2101,7 @@ mod tests {
         // make sure we don't leak anything.
         test_stack
             .with_ctx(|ctx| {
-                let udpsocks =
-                    <A::AddrType as IpAddress>::Version::get_collection(ctx.dispatcher());
+                let udpsocks = <A::AddrType as IpAddress>::Version::get_collection(&ctx.dispatcher);
                 assert!(udpsocks.binding_data.is_empty());
             })
             .await;

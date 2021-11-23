@@ -97,7 +97,7 @@ impl<D: EventDispatcher>
     }
 
     fn is_device_usable(&self, device: EthernetDeviceId) -> bool {
-        is_device_usable(self.state(), device.into())
+        is_device_usable(&self.state, device.into())
     }
 }
 
@@ -150,7 +150,7 @@ impl<D: EventDispatcher>
         id0: EthernetDeviceId,
         _id1: (),
     ) -> (&IpLinkDeviceState<D::Instant, EthernetDeviceState>, &D::Rng) {
-        (self.state().device.ethernet.get(id0.0).unwrap().device(), self.dispatcher().rng())
+        (self.state.device.ethernet.get(id0.0).unwrap().device(), self.dispatcher.rng())
     }
 
     fn get_states_mut_with(
@@ -158,7 +158,7 @@ impl<D: EventDispatcher>
         id0: EthernetDeviceId,
         _id1: (),
     ) -> (&mut IpLinkDeviceState<D::Instant, EthernetDeviceState>, &mut D::Rng) {
-        let (state, dispatcher) = self.state_and_dispatcher();
+        let Ctx { state, dispatcher } = self;
         (state.device.ethernet.get_mut(id0.0).unwrap().device_mut(), dispatcher.rng_mut())
     }
 }
@@ -169,7 +169,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, EthernetDeviceId> for
         device: EthernetDeviceId,
         frame: S,
     ) -> Result<(), S> {
-        DeviceLayerEventDispatcher::send_frame(self.dispatcher_mut(), device.into(), frame)
+        DeviceLayerEventDispatcher::send_frame(&mut self.dispatcher, device.into(), frame)
     }
 }
 
@@ -768,7 +768,7 @@ pub(crate) fn is_device_initialized<D: EventDispatcher>(
 ///
 /// Panics if `device` is already initialized.
 pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) {
-    let state = get_common_device_state_mut(ctx.state_mut(), device);
+    let state = get_common_device_state_mut(&mut ctx.state, device);
 
     // `device` must currently be uninitialized.
     assert!(state.is_uninitialized());
@@ -795,7 +795,7 @@ pub fn initialize_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId)
         }
     }
 
-    get_common_device_state_mut(ctx.state_mut(), device).initialization_status =
+    get_common_device_state_mut(&mut ctx.state, device).initialization_status =
         InitializationStatus::Initialized;
 }
 
@@ -813,7 +813,7 @@ pub fn remove_device<D: EventDispatcher>(ctx: &mut Ctx<D>, device: DeviceId) -> 
             // TODO(rheacock): Generate any final frames to send here.
             crate::device::ethernet::deinitialize(ctx, device.id.into());
             let _: DeviceState<_> = ctx
-                .state_mut()
+                .state
                 .device
                 .ethernet
                 .remove(device.id)
@@ -837,7 +837,7 @@ pub(crate) fn list_devices<D: EventDispatcher>(
     };
 
     // UPDATE ME when `DeviceProtocol` enum changes!
-    ctx.state().device.ethernet.iter().filter_map(|(id, state)| {
+    ctx.state.device.ethernet.iter().filter_map(|(id, state)| {
         if state.common.is_initialized() {
             Some(DeviceId::new_ethernet(id))
         } else {
@@ -867,7 +867,7 @@ where
     S: Serializer<Buffer = B>,
 {
     // `device` must not be uninitialized.
-    assert!(is_device_usable(ctx.state(), device));
+    assert!(is_device_usable(&ctx.state, device));
 
     match device.protocol {
         DeviceProtocol::Ethernet => {
@@ -887,7 +887,7 @@ pub fn receive_frame<B: BufferMut, D: BufferDispatcher<B>>(
     buffer: B,
 ) {
     // `device` must be initialized.
-    assert!(is_device_initialized(ctx.state(), device));
+    assert!(is_device_initialized(&ctx.state, device));
 
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::receive_frame(ctx, device.id.into(), buffer),
@@ -1000,7 +1000,7 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     addr_sub: AddrSubnet<A>,
 ) -> Result<(), AddressError> {
     // `device` must be initialized.
-    assert!(is_device_initialized(ctx.state(), device));
+    assert!(is_device_initialized(&ctx.state, device));
 
     trace!("add_ip_addr_subnet: adding addr {:?} to device {:?}", addr_sub, device);
 
@@ -1032,7 +1032,7 @@ pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
     addr: &SpecifiedAddr<A>,
 ) -> Result<(), AddressError> {
     // `device` must be initialized.
-    assert!(is_device_initialized(ctx.state(), device));
+    assert!(is_device_initialized(&ctx.state, device));
 
     trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
 
@@ -1071,7 +1071,7 @@ pub(crate) fn join_ip_multicast<D: EventDispatcher, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) {
     // `device` must not be uninitialized.
-    assert!(is_device_usable(ctx.state(), device));
+    assert!(is_device_usable(&ctx.state, device));
 
     trace!("join_ip_multicast: device {:?} joining multicast {:?}", device, multicast_addr);
 
@@ -1105,7 +1105,7 @@ pub(crate) fn leave_ip_multicast<D: EventDispatcher, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) {
     // `device` must not be uninitialized.
-    assert!(is_device_usable(ctx.state(), device));
+    assert!(is_device_usable(&ctx.state, device));
 
     trace!("join_ip_multicast: device {:?} leaving multicast {:?}", device, multicast_addr);
 

@@ -67,7 +67,7 @@ impl<D: EventDispatcher> InstantContext for Ctx<D> {
     type Instant = D::Instant;
 
     fn now(&self) -> Self::Instant {
-        self.dispatcher().now()
+        self.dispatcher.now()
     }
 }
 
@@ -150,19 +150,19 @@ impl<D: EventDispatcher> TimerContext<TimerId> for Ctx<D> {
         time: Self::Instant,
         id: TimerId,
     ) -> Option<Self::Instant> {
-        self.dispatcher_mut().schedule_timer_instant(time, id)
+        self.dispatcher.schedule_timer_instant(time, id)
     }
 
     fn cancel_timer(&mut self, id: TimerId) -> Option<Self::Instant> {
-        self.dispatcher_mut().cancel_timer(id)
+        self.dispatcher.cancel_timer(id)
     }
 
     fn cancel_timers_with<F: FnMut(&TimerId) -> bool>(&mut self, f: F) {
-        self.dispatcher_mut().cancel_timers_with(f)
+        self.dispatcher.cancel_timers_with(f)
     }
 
     fn scheduled_instant(&self, id: TimerId) -> Option<Self::Instant> {
-        self.dispatcher().scheduled_instant(id)
+        self.dispatcher.scheduled_instant(id)
     }
 }
 
@@ -236,11 +236,11 @@ impl<D: EventDispatcher> RngContext for Ctx<D> {
     type Rng = D::Rng;
 
     fn rng(&self) -> &D::Rng {
-        self.dispatcher().rng()
+        self.dispatcher.rng()
     }
 
     fn rng_mut(&mut self) -> &mut D::Rng {
-        self.dispatcher_mut().rng_mut()
+        self.dispatcher.rng_mut()
     }
 }
 

@@ -522,7 +522,7 @@ mod tests {
                 .ctx
                 .try_lock()
                 .unwrap()
-                .state_mut()
+                .state
                 .add_ethernet_device(Mac::new([1, 2, 3, 4, 5, 6]), 1500);
             Self { binding: 1, core }
         }

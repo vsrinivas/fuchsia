@@ -213,8 +213,10 @@ impl<D: EventDispatcher> Default for StackState<D> {
 /// reference to a `Ctx` is passed to every function in the netstack.
 #[derive(Default)]
 pub struct Ctx<D: EventDispatcher> {
-    state: StackState<D>,
-    dispatcher: D,
+    /// Contains the state of the stack.
+    pub state: StackState<D>,
+    /// The dispatcher, take a look at [`EventDispatcher`] for more details.
+    pub dispatcher: D,
 }
 
 impl<D: EventDispatcher> Ctx<D> {
@@ -226,35 +228,6 @@ impl<D: EventDispatcher> Ctx<D> {
     /// Constructs a new `Ctx` using the default `StackState`.
     pub fn with_default_state(dispatcher: D) -> Ctx<D> {
         Ctx { state: StackState::default(), dispatcher }
-    }
-
-    /// Gets the stack state immutably.
-    pub fn state(&self) -> &StackState<D> {
-        &self.state
-    }
-
-    /// Get the stack state mutably.
-    pub fn state_mut(&mut self) -> &mut StackState<D> {
-        &mut self.state
-    }
-
-    /// Get the dispatcher immutably.
-    pub fn dispatcher(&self) -> &D {
-        &self.dispatcher
-    }
-
-    /// Get the dispatcher mutably.
-    pub fn dispatcher_mut(&mut self) -> &mut D {
-        &mut self.dispatcher
-    }
-
-    /// Get the stack state and the dispatcher.
-    ///
-    /// This is useful when a mutable reference to both are required at the same
-    /// time, which isn't possible when using the `state` or `dispatcher`
-    /// methods.
-    pub fn state_and_dispatcher(&mut self) -> (&mut StackState<D>, &mut D) {
-        (&mut self.state, &mut self.dispatcher)
     }
 }
 
@@ -523,8 +496,7 @@ mod test {
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
-        let device =
-            ctx.state_mut().add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
+        let device = ctx.state.add_ethernet_device(config.local_mac, Ipv6::MINIMUM_LINK_MTU.into());
         crate::device::initialize_device(&mut ctx, device);
 
         let ip: IpAddr = I::get_other_ip_address(1).get().into();
