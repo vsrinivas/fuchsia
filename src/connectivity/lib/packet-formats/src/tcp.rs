@@ -9,6 +9,7 @@ use core::fmt::{self, Debug, Formatter};
 use core::num::NonZeroU16;
 use core::ops::Range;
 
+use explicit::ResultExt as _;
 use net_types::ip::IpAddress;
 use packet::records::options::{Options, OptionsRaw};
 use packet::{
@@ -357,13 +358,13 @@ impl<B: ByteSlice> TcpSegment<B> {
         self.header_len() + self.body.len()
     }
 
-    /// Construct a builder with the same contents as this packet.
+    /// Constructs a builder with the same contents as this packet.
     pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> TcpSegmentBuilder<A> {
         TcpSegmentBuilder {
             src_ip,
             dst_ip,
-            src_port: self.src_port().get(),
-            dst_port: self.dst_port().get(),
+            src_port: Some(self.src_port()),
+            dst_port: Some(self.dst_port()),
             seq_num: self.seq_num(),
             ack_num: self.hdr_prefix.ack.get(),
             data_offset_reserved_flags: self.hdr_prefix.data_offset_reserved_flags,
@@ -456,6 +457,49 @@ where
     }
 }
 
+impl<B: ByteSlice> TcpSegmentRaw<B> {
+    /// Constructs a builder with the same contents as this packet.
+    ///
+    /// Returns `None` if an entire TCP header was not successfully parsed.
+    ///
+    /// Note that, since `TcpSegmentRaw` does not validate its header fields,
+    /// it's possible for `builder` to produce a `TcpSegmentBuilder` which
+    /// describes an invalid TCP segment, or one which this module is not
+    /// capable of building from scratch. In particular:
+    /// - The source or destination ports may be zero, which is illegal (these
+    ///   ports are reserved in IANA's [Service Name and Transport Protocol Port
+    ///   Number Registry]).
+    /// - The ACK number may be nonzero even though the ACK flag is not set.
+    ///   This is not illegal according to [RFC 793], but it's possible that
+    ///   some implementations expect it not to happen.
+    /// - Some of the reserved zero bits between the Data Offset and Flags
+    ///   fields may be set. This may be due to a noncompliant implementation or
+    ///   a future change to TCP which makes use of these bits.
+    ///
+    /// [Service Name and Transport Protocol Port Number Registry]: https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml
+    /// [RFC 793]: https://datatracker.ietf.org/doc/html/rfc793
+    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> Option<TcpSegmentBuilder<A>> {
+        self.hdr_prefix.as_ref().complete().ok_checked::<&PartialHeaderPrefix<B>>().map(
+            |hdr_prefix| TcpSegmentBuilder {
+                src_ip,
+                dst_ip,
+                // Might be zero, which is illegal.
+                src_port: NonZeroU16::new(hdr_prefix.src_port.get()),
+                // Might be zero, which is illegal.
+                dst_port: NonZeroU16::new(hdr_prefix.dst_port.get()),
+                // All values are valid.
+                seq_num: hdr_prefix.seq_num.get(),
+                // Might be nonzero even if the ACK flag is not set.
+                ack_num: hdr_prefix.ack.get(),
+                // Reserved zero bits may be set.
+                data_offset_reserved_flags: hdr_prefix.data_offset_reserved_flags,
+                // All values are valid.
+                window_size: hdr_prefix.window_size.get(),
+            },
+        )
+    }
+}
+
 // NOTE(joshlf): In order to ensure that the checksum is always valid, we don't
 // expose any setters for the fields of the TCP segment; the only way to set
 // them is via TcpSegmentBuilder. This, combined with checksum validation
@@ -467,8 +511,8 @@ where
 pub struct TcpSegmentBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
-    src_port: u16,
-    dst_port: u16,
+    src_port: Option<NonZeroU16>,
+    dst_port: Option<NonZeroU16>,
     seq_num: u32,
     ack_num: u32,
     data_offset_reserved_flags: DataOffsetReservedFlags,
@@ -494,8 +538,8 @@ impl<A: IpAddress> TcpSegmentBuilder<A> {
         TcpSegmentBuilder {
             src_ip,
             dst_ip,
-            src_port: src_port.get(),
-            dst_port: dst_port.get(),
+            src_port: Some(src_port),
+            dst_port: Some(dst_port),
             seq_num,
             ack_num,
             data_offset_reserved_flags,
@@ -539,8 +583,8 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
         data_offset_reserved_flags.set_data_offset(MIN_DATA_OFFSET);
         header
             .write_obj_front(&HeaderPrefix::new(
-                self.src_port,
-                self.dst_port,
+                self.src_port.map_or(0, NonZeroU16::get),
+                self.dst_port.map_or(0, NonZeroU16::get),
                 self.seq_num,
                 self.ack_num,
                 data_offset_reserved_flags,
@@ -946,6 +990,63 @@ mod tests {
             .unwrap()
             .unwrap_a();
         assert_eq!(&buf_0[..], &buf_1[..]);
+    }
+
+    #[test]
+    fn test_parse_serialize_reserved_bits() {
+        // Test that we are forwards-compatible with the reserved zero bits in
+        // the header being set - we can parse packets with these bits set and
+        // we will not reject them. Test that we serialize these bits when
+        // serializing from the `builder` methods.
+
+        let mut buffer = (&[])
+            .into_serializer()
+            .encapsulate(new_builder(TEST_SRC_IPV4, TEST_DST_IPV4))
+            .serialize_vec_outer()
+            .unwrap()
+            .unwrap_b();
+
+        // Set all three reserved bits and update the checksum.
+        let mut hdr_prefix =
+            LayoutVerified::<_, HeaderPrefix>::new_unaligned(buffer.as_mut()).unwrap();
+        let old_checksum = hdr_prefix.checksum;
+        let old_data_offset_reserved_flags = hdr_prefix.data_offset_reserved_flags;
+        hdr_prefix.data_offset_reserved_flags.as_bytes_mut()[0] |= 0b00000111;
+        hdr_prefix.checksum = internet_checksum::update(
+            old_checksum,
+            old_data_offset_reserved_flags.as_bytes(),
+            hdr_prefix.data_offset_reserved_flags.as_bytes(),
+        );
+
+        let mut buf0 = buffer.clone();
+        let mut buf1 = buffer.clone();
+
+        let segment_raw = buf0.parse_with::<_, TcpSegmentRaw<_>>(()).unwrap();
+        let segment = buf1
+            .parse_with::<_, TcpSegment<_>>(TcpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4))
+            .unwrap();
+
+        // Serialize using the results of `TcpSegmentRaw::builder` and `TcpSegment::builder`.
+        assert_eq!(
+            (&[])
+                .into_serializer()
+                .encapsulate(segment_raw.builder(TEST_SRC_IPV4, TEST_DST_IPV4).unwrap())
+                .serialize_vec_outer()
+                .unwrap()
+                .unwrap_b()
+                .as_ref(),
+            buffer.as_ref()
+        );
+        assert_eq!(
+            (&[])
+                .into_serializer()
+                .encapsulate(segment.builder(TEST_SRC_IPV4, TEST_DST_IPV4))
+                .serialize_vec_outer()
+                .unwrap()
+                .unwrap_b()
+                .as_ref(),
+            buffer.as_ref()
+        );
     }
 
     #[test]

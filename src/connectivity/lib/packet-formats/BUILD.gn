@@ -18,6 +18,7 @@ rustc_library("packet-formats") {
     # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
     "//src/connectivity/lib/internet-checksum",
     "//src/connectivity/lib/net-types",
+    "//src/connectivity/network/lib/explicit",
     "//src/connectivity/network/netstack3/core/fakestd",
     "//src/lib/network/packet",
     "//src/lib/zerocopy",

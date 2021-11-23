@@ -166,9 +166,14 @@ impl<B: ByteSlice> UdpPacket<B> {
         self.header.checksum != U16::ZERO
     }
 
-    /// Construct a builder with the same contents as this packet.
+    /// Constructs a builder with the same contents as this packet.
     pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
-        UdpPacketBuilder { src_ip, dst_ip, src_port: self.src_port(), dst_port: self.dst_port() }
+        UdpPacketBuilder {
+            src_ip,
+            dst_ip,
+            src_port: self.src_port(),
+            dst_port: Some(self.dst_port()),
+        }
     }
 }
 
@@ -314,6 +319,16 @@ impl<B: ByteSlice> UdpPacketRaw<B> {
                 .get(),
         )
     }
+
+    /// Constructs a builder with the same contents as this packet.
+    ///
+    /// Note that, since `UdpPacketRaw` does not validate its header fields,
+    /// it's possible for `builder` to produce a `UdpPacketBuilder` which
+    /// describes an invalid UDP packet. In particular, it's possible that its
+    /// destination port will be zero, which is illegal.
+    pub fn builder<A: IpAddress>(&self, src_ip: A, dst_ip: A) -> UdpPacketBuilder<A> {
+        UdpPacketBuilder { src_ip, dst_ip, src_port: self.src_port(), dst_port: self.dst_port() }
+    }
 }
 
 // NOTE(joshlf): In order to ensure that the checksum is always valid, we don't
@@ -328,18 +343,18 @@ pub struct UdpPacketBuilder<A: IpAddress> {
     src_ip: A,
     dst_ip: A,
     src_port: Option<NonZeroU16>,
-    dst_port: NonZeroU16,
+    dst_port: Option<NonZeroU16>,
 }
 
 impl<A: IpAddress> UdpPacketBuilder<A> {
-    /// Construct a new `UdpPacketBuilder`.
+    /// Constructs a new `UdpPacketBuilder`.
     pub fn new(
         src_ip: A,
         dst_ip: A,
         src_port: Option<NonZeroU16>,
         dst_port: NonZeroU16,
     ) -> UdpPacketBuilder<A> {
-        UdpPacketBuilder { src_ip, dst_ip, src_port, dst_port }
+        UdpPacketBuilder { src_ip, dst_ip, src_port, dst_port: Some(dst_port) }
     }
 }
 
@@ -371,8 +386,8 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
         let mut header = &mut header;
 
         header.write_obj_front(&Header {
-            src_port: U16::new(self.src_port.map(NonZeroU16::get).unwrap_or(0)),
-            dst_port: U16::new(self.dst_port.get()),
+            src_port: U16::new(self.src_port.map_or(0, NonZeroU16::get)),
+            dst_port: U16::new(self.dst_port.map_or(0, NonZeroU16::get)),
             length: U16::new(total_len.try_into().unwrap_or_else(|_| {
                 if A::Version::VERSION.is_v6() {
                     // See comment in max_body_len
