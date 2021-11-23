@@ -495,7 +495,6 @@ impl VDLFiles {
             .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args))
             .arg(format!("--accel={}", vdl_args.acceleration))
             .arg(format!("--image_architecture={}", vdl_args.image_architecture))
-            .arg("--use_ffx_for_discovery") // TODO(fxbug.dev/86745): Remove once ffx is default.
             .arg(format!("--isolated_ffx_config_path={}", vdl_args.isolated_ffx_config_path));
 
         for i in 0..start_command.envs.len() {
