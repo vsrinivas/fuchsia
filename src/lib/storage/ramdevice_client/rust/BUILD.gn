@@ -6,6 +6,10 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 
+group("rust") {
+  public_deps = [ ":ramdevice_client" ]
+}
+
 rustc_library("ramdevice_client") {
   with_unit_tests = true
   edition = "2018"
@@ -19,7 +23,7 @@ rustc_library("ramdevice_client") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:matches",
   ]
-  non_rust_deps = [ "//zircon/system/ulib/ramdevice-client" ]
+  non_rust_deps = [ "//src/lib/storage/ramdevice_client/cpp" ]
 
   sources = [
     "src/lib.rs",

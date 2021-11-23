@@ -13,9 +13,9 @@ source_set("verified-volume-client") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/lib/digest",
+    "//src/lib/storage/ramdevice_client/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zx",
   ]
 
@@ -180,9 +180,9 @@ test("block-verity-test") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/digest",
+    "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/fvm:test_support",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zxtest",
   ]
 

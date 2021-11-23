@@ -26,8 +26,8 @@ test("biotime-test") {
   output_name = "biotime-test"
   deps = [
     "//sdk/lib/fdio",
+    "//src/lib/storage/ramdevice_client/cpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

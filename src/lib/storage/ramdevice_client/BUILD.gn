@@ -8,8 +8,9 @@ group("tests") {
 }
 
 # Forward some targets for easier transition
+# Note the old zircon directory forwarded to the CPP implementation.
 group("ramdevice_client") {
-  public_deps = [ "rust:ramdevice_client" ]
+  public_deps = [ "rust" ]
 }
 group("ramdisk-isolated-devmgr") {
   testonly = true

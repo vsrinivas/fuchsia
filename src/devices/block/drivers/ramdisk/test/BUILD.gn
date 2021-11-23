@@ -17,11 +17,11 @@ test("ramdisk") {
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
+    "//src/lib/storage/ramdevice_client/cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]

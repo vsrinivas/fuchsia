@@ -13,12 +13,12 @@ executable("fvm-check") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/digest",
+    "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/fvm",
     "//src/storage/gpt",
     "//third_party/boringssl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/cksum",
   ]

@@ -7,9 +7,9 @@ executable("nand-loader") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",
+    "//src/lib/storage/ramdevice_client/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zx",
   ]
 }
