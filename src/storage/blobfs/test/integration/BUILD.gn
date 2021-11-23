@@ -425,10 +425,12 @@ wrap_with_decompressor("blobfs-use-second-bitmap") {
 }
 
 fuchsia_test_package("blobfs-large-integration-package") {
-  package_deps = [
-    "//src/developer/debug/debug_agent:debug_agent",
-    "//src/storage/blobfs/test/integration:blobfs-integration-package",
-  ]
+  package_deps = [ "//src/developer/debug/debug_agent:debug_agent" ]
+  if (!is_coverage) {
+    # TODO(https://fxbug.dev/81190): Re-enable this test once it passes on coverage builders
+    package_deps +=
+        [ "//src/storage/blobfs/test/integration:blobfs-integration-package" ]
+  }
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
