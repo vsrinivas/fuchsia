@@ -13,6 +13,7 @@ if (is_host) {
     config_data = [ "data/config.json" ]
     plugin_deps = [
       "list:ffx_emulator_list",
+      "show:ffx_emulator_show",
       "shutdown:ffx_emulator_shutdown",
       "start:ffx_emulator_start",
     ]
@@ -21,6 +22,7 @@ if (is_host) {
       "configuration:tests",
       "engines:tests",
       "list:tests",
+      "show:tests",
       "shutdown:tests",
       "start:tests",
     ]
