@@ -198,9 +198,9 @@ class PageQueues {
   ktl::optional<VmoBacklink> PeekPagerBacked(size_t lowest_queue);
 
   // Not all methods are safe to call via a referenced VmoContainerBacklink since VmCowPages
-  // refcount may already be 0, but ReplacePage() is.  For loaned page reclaim we don't have the
-  // option of just recognizing that the VmCowPages is deleting soon and moving on - we must get
-  // the page.
+  // refcount may already be 0, but RemovePageForEviction() is.  For loaned page reclaim we don't
+  // have the option of just recognizing that the VmCowPages is deleting soon and moving on - we
+  // must get the page.
   struct VmoContainerBacklink {
     fbl::RefPtr<VmCowPagesContainer> cow_container;
     vm_page_t* page = nullptr;
@@ -212,7 +212,8 @@ class PageQueues {
   // to exclude the owning cow from being returned, or if there isn't an owning cow.  We use a
   // VmoContainerBacklink instead of VmoBacklink so that it remains possible to get a backlink
   // until _after_ all the pages have been removed from the VmCowPages and have become FREE.  Not
-  // all methods are safe to call via a referenced VmoContainerBacklink, but ReplacePage() is.
+  // all methods are safe to call via a referenced VmoContainerBacklink, but RemovePageForEviction()
+  // is.
   ktl::optional<VmoContainerBacklink> GetCowWithReplaceablePage(vm_page_t* page,
                                                                 VmCowPages* owning_cow);
 

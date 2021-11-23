@@ -443,11 +443,9 @@ zx_status_t VmObjectPaged::CreateChildSlice(uint64_t offset, uint64_t size, bool
     Guard<Mutex> guard{&lock_};
     AssertHeld(vmo->lock_);
 
-    // If this VMO is contiguous then we allow creating an uncached slice as we will never
-    // have to perform zeroing of pages. Pages will never be zeroed since contiguous VMOs have
-    // all of their pages allocated (and so COW of the zero page will never happen). The VMO is
-    // also not allowed to be resizable and so will never have to allocate new pages (and zero
-    // them).
+    // If this VMO is contiguous then we allow creating an uncached slice.  When zeroing pages that
+    // are reclaimed from having been loaned from a contiguous VMO, we will zero the pages and flush
+    // the zeroes to RAM.
     if (cache_policy_ != ARCH_MMU_FLAG_CACHED && !is_contiguous()) {
       return ZX_ERR_BAD_STATE;
     }
@@ -655,7 +653,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     // region should also be an error. To enforce this without having to have new metadata to track
     // zero length pin regions is to just forbid them. Note that the user entry points for pinning
     // already forbid zero length ranges.
-    if (len == 0) {
+    if (unlikely(len == 0)) {
       return ZX_ERR_INVALID_ARGS;
     }
     // verify that the range is within the object
@@ -695,6 +693,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     uint64_t committed_len = 0;
     zx_status_t status =
         cow_pages_locked()->CommitRangeLocked(offset, len, &committed_len, &page_request);
+    DEBUG_ASSERT(committed_len <= len);
 
     // Regardless of the return state some pages may have been committed and so unmap any pages in
     // the range we touched.

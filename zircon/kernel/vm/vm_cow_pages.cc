@@ -22,6 +22,7 @@
 #include <vm/vm_page_list.h>
 
 #include "include/vm/page_source.h"
+#include "include/vm/pmm.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
@@ -1446,6 +1447,8 @@ vm_page_t* VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_li
                      target_page->object.cow_left_split));
       DEBUG_ASSERT(!(target_page_owner->stack_.dir_flag == StackDir::Right &&
                      target_page->object.cow_right_split));
+      // For now, we won't see a loaned page here.
+      DEBUG_ASSERT(!pmm_is_loaned(target_page));
 
       target_page->object.cow_left_split = 0;
       target_page->object.cow_right_split = 0;
@@ -2139,13 +2142,41 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
     }
   });
 
+  // This is separate from pin_cleanup because we never cancel this one.
+  list_node_t freed_list;
+  list_initialize(&freed_list);
+  __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
+  auto freed_pages_cleanup = fit::defer([&freed_list, &page_remover] {
+    page_remover.Flush();
+    pmm_free(&freed_list);
+  });
+
   zx_status_t status = page_list_.ForEveryPageInRange(
-      [&next_offset](const VmPageOrMarker* p, uint64_t page_offset) {
+      [this, &next_offset, &page_remover](const VmPageOrMarker* p, uint64_t page_offset) {
+        AssertHeld(lock_);
         if (page_offset != next_offset || !p->IsPage()) {
           return ZX_ERR_BAD_STATE;
         }
-        vm_page_t* page = p->Page();
-        DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
+        vm_page_t* old_page = p->Page();
+        DEBUG_ASSERT(old_page->state() == vm_page_state::OBJECT);
+
+        vm_page_t* page = old_page;
+        if (pmm_is_loaned(old_page)) {
+          DEBUG_ASSERT(!old_page->object.pin_count);
+          vm_page_t* new_page;
+          // It's possible for the old_page to become non-loaned by the time we call
+          // pmm_alloc_page(), but that's fine; we'll just replace anyway with new_page which we
+          // know isn't loaned.
+          DEBUG_ASSERT(!(pmm_alloc_flags_ & PMM_ALLOC_FLAG_CAN_BORROW));
+          zx_status_t status = pmm_alloc_page(pmm_alloc_flags_, &new_page);
+          if (status != ZX_OK) {
+            return status;
+          }
+          DEBUG_ASSERT(!new_page->is_loaned());
+          SwapPageLocked(page_offset, old_page, new_page);
+          page_remover.Push(old_page);
+          page = new_page;
+        }
 
         if (page->object.pin_count == VM_PAGE_OBJECT_MAX_PIN_COUNT) {
           return ZX_ERR_UNAVAILABLE;
@@ -3492,6 +3523,41 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
   return true;
 }
 
+void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t* new_page) {
+  DEBUG_ASSERT(!old_page->object.pin_count);
+  DEBUG_ASSERT(new_page->state() == vm_page_state::ALLOC);
+
+  // unmap before removing old page
+  RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::Unmap);
+
+  // Some of the fields initialized by this call get overwritten by CopyPageForReplacementLocked(),
+  // and some don't (such as state()).
+  InitializeVmPage(new_page);
+
+  VmPageOrMarker* p = page_list_.Lookup(offset);
+  DEBUG_ASSERT(p);
+  DEBUG_ASSERT(p->IsPage());
+
+  // remove old
+  vm_page_t* release_result = p->ReleasePage();
+  DEBUG_ASSERT(release_result == old_page);
+  *p = VmPageOrMarker::Empty();
+
+  CopyPageForReplacementLocked(new_page, old_page);
+
+  // Add replacement page in place of old page.
+  //
+  // We could optimize this by doing what's needed to *p directly, but for now call this
+  // common code.
+  VmPageOrMarker new_vm_page = VmPageOrMarker::Page(new_page);
+  zx_status_t status = AddPageLocked(&new_vm_page, offset, /*do_range_update*/ false);
+  // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only occur
+  // if page_list_ had to allocate.  Here, page_list_ hasn't yet had a chance to clean up any
+  // internal structures, so AddNewPagesLocked() didn't need to allocate, so we know that
+  // AddNewPagesLocked() will succeed.
+  DEBUG_ASSERT(status == ZX_OK);
+}
+
 bool VmCowPages::DebugValidatePageSplitsHierarchyLocked() const {
   const VmCowPages* cur = this;
   AssertHeld(cur->lock_);
@@ -4209,6 +4275,25 @@ uint64_t VmCowPages::ReclaimPagesFromDiscardableVmos(uint64_t target_pages,
     }
   }
   return total_pages_discarded;
+}
+
+void VmCowPages::CopyPageForReplacementLocked(vm_page_t* dst_page, vm_page_t* src_page) {
+  DEBUG_ASSERT(!src_page->object.pin_count);
+  void* src = paddr_to_physmap(src_page->paddr());
+  DEBUG_ASSERT(src);
+  void* dst = paddr_to_physmap(dst_page->paddr());
+  DEBUG_ASSERT(dst);
+  memcpy(dst, src, PAGE_SIZE);
+  if (paged_ref_) {
+    AssertHeld(paged_ref_->lock_ref());
+    if (paged_ref_->GetMappingCachePolicyLocked() != ARCH_MMU_FLAG_CACHED) {
+      arch_clean_invalidate_cache_range((vaddr_t)dst, PAGE_SIZE);
+    }
+  }
+  dst_page->object.cow_left_split = src_page->object.cow_left_split;
+  dst_page->object.cow_right_split = src_page->object.cow_right_split;
+  dst_page->object.always_need = src_page->object.always_need;
+  dst_page->object.dirty = src_page->object.dirty;
 }
 
 VmCowPagesContainer* VmCowPages::raw_container() {

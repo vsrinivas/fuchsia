@@ -303,6 +303,8 @@ class VmCowPages final
   // already be committed and this either pins all pages in the range, or pins no pages and returns
   // an error. The caller can assume that on success len / PAGE_SIZE pages were pinned.
   // The |offset| and |len| are assumed to be page aligned and within the range of |size_|.
+  //
+  // This method also replaces any loaned pages with non-loaned pages.
   zx_status_t PinRangeLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
   // See VmObject::Unpin
@@ -338,6 +340,11 @@ class VmCowPages final
   // If this page is not evicted as a result of the hint, the caller can assume that the page has
   // been moved out from the evictable page queue(s) into the active queue(s).
   bool RemovePageForEviction(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action);
+
+  // Swap an old page for a new page.  The old page must be at offset.  The new page must be in
+  // ALLOC state.  On return, the old_page is owned by the caller.  Typically the caller will
+  // remove the old_page from pmm_page_queues() and free the old_page.
+  void SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t* new_page) TA_REQ(lock_);
 
   // Attempts to dedup the given page at the specified offset with the zero page. The only
   // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that
@@ -807,6 +814,8 @@ class VmCowPages final
     page_source_->FreePages(&list);
   }
 
+  void CopyPageForReplacementLocked(vm_page_t* dst_page, vm_page_t* src_page) TA_REQ(lock_);
+
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;
 
@@ -951,9 +960,9 @@ class VmCowPages final
 // that it remains possible to upgrade from a raw container pointer until after the VmCowPages
 // fbl_recycle() has mostly completed and has removed and freed all the pages.
 //
-// This way, if we can upgrade, then we can call ReplacePage() and it'll either work or the page
-// will already have been removed, or we can't upgrade, in which case all the pages have already
-// been removed and freed.
+// This way, if we can upgrade, then we can call RemovePageForEviction() and it'll either work or
+// the page will already have been removed from that location in the VmCowPages, or we can't
+// upgrade, in which case all the pages have already been removed and freed.
 //
 // In contrast if we were to attempt upgrade of a raw VmCowPages pointer to VmCowPages ref, the
 // ability to upgrade would disappear before the backlink is removed to make room for a
