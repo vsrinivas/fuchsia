@@ -5,8 +5,6 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/devmgr-launcher/launch.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
@@ -57,8 +55,6 @@ class BlockVerityTest : public zxtest::Test {
   BlockVerityTest() {}
   void SetUp() override {
     IsolatedDevmgr::Args args;
-
-    args.disable_block_watcher = true;
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
     // Create ramdisk.
     ramdisk_ =

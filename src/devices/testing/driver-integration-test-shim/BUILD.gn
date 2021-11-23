@@ -15,6 +15,7 @@ library_headers("driver-integration-test-shim-headers") {
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
     "//sdk/lib/fit",
     "//sdk/lib/vfs/cpp",
+    "//src/lib/ddk:ddk-metadata-headers",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",

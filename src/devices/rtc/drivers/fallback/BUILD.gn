@@ -49,8 +49,8 @@ test("fallback-rtc") {
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_c",
     "//sdk/lib/fdio",
     "//src/devices/rtc/lib/rtc",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
