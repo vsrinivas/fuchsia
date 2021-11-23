@@ -31,6 +31,7 @@ using std::search_n;
 // "Modifying sequence operations" (subset)
 using std::copy;
 using std::copy_if;
+using std::exchange;
 using std::fill;
 using std::fill_n;
 using std::swap;

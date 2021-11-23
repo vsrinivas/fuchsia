@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include "private.h"
+
 #ifndef HAVE_SANCOV
 #error "build system regression"
 #endif
@@ -19,10 +20,12 @@ InstrumentationDataVmo SancovGetCountsVmo() { return {}; }
 #include <stdint.h>
 #include <zircon/assert.h>
 
+#include <ktl/algorithm.h>
 #include <ktl/atomic.h>
-#include <ktl/span.h>
-#include <object/vm_object_dispatcher.h>
+#include <lk/init.h>
 #include <vm/vm_object_paged.h>
+
+#include "kernel-mapped-vmo.h"
 
 namespace {
 
@@ -40,12 +43,6 @@ constexpr ktl::string_view kPcVmoName = "data/zircon.elf.1.sancov";
 // This follows the sancov PCs file name just for consistency.
 constexpr ktl::string_view kCountsVmoName = "data/zircon.elf.1.sancov-counts";
 
-using Guard = ktl::atomic<uint32_t>;
-static_assert(sizeof(Guard) == sizeof(uint32_t));
-
-using Count = ktl::atomic<uint64_t>;
-static_assert(sizeof(Count) == sizeof(uint64_t));
-
 // Go back from the return address to the call site.
 // Note this must exactly match the calculation in the sancov tool.
 #ifdef __aarch64__
@@ -56,51 +53,103 @@ constexpr uintptr_t kReturnAddressBias = 4;
 constexpr uintptr_t kReturnAddressBias = 1;
 #endif
 
-extern "C" {
-
 // These are defined by the linker script.  The __sancov_guards section is
-// populated by the compiler.  The __sancov_pc_table has one element for
-// each element in __sancov_guards (statically allocated via linker script).
-// Likewise for __sancov_pc_counts.
-extern Guard __start___sancov_guards[], __stop___sancov_guards[];
-extern uintptr_t __sancov_pc_table[], __sancov_pc_table_end[], __sancov_pc_table_vmo_end[];
-extern Count __sancov_pc_counts[], __sancov_pc_counts_end[], __sancov_pc_counts_vmo_end[];
+// populated by the compiler with one slot corresponding to each instrumented
+// PC location.
+extern "C" uint32_t __start___sancov_guards[], __stop___sancov_guards[];
+
+[[gnu::const]] size_t GuardsCount() { return __stop___sancov_guards - __start___sancov_guards; }
+
+[[gnu::const]] size_t DataSize() { return (GuardsCount() + 1) * sizeof(uint64_t); }
+
+// Instrumented code runs from the earliest point, before initialization.  The
+// memory for storing the PCs and counts hasn't been set up.  However, code is
+// running only on the boot CPU.  So in the pre-initialization period, we
+// accumulate 32-bit counts in the __sancov_guard slots.  Then after the full
+// buffers are set up, we copy those counts into the 64-bit counter slots and
+// re-zero all the guard slots.  Thereafter, each guard slot serves as an
+// atomic flag indicating whether its corresponding PC has been stored yet.
+// This way, no early PC hits are lost in the counts.  However, for PCs whose
+// only hits were before buffer setup, the nonzero counts will be paired with
+// zero PC slots because the PC values are only saved in the real buffers.
+
+uint64_t* gSancovPcTable = nullptr;
+uint64_t* gSancovPcCounts = nullptr;
+
+KernelMappedVmo gSancovPcVmo, gSancovCountsVmo;
+
+void InitSancov(uint level) {
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, DataSize(), &vmo);
+  ZX_ASSERT(status == ZX_OK);
+  status = gSancovPcVmo.Init(ktl::move(vmo), 0, DataSize(), "sancov-pc-table");
+  ZX_ASSERT(status == ZX_OK);
+
+  status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, DataSize(), &vmo);
+  ZX_ASSERT(status == ZX_OK);
+  status = gSancovCountsVmo.Init(ktl::move(vmo), 0, DataSize(), "sancov-pc-counts-table");
+  ZX_ASSERT(status == ZX_OK);
+
+  gSancovPcTable = reinterpret_cast<uint64_t*>(gSancovPcVmo.base());
+  gSancovPcCounts = reinterpret_cast<uint64_t*>(gSancovCountsVmo.base());
+
+  gSancovPcTable[0] = kMagic64;
+  gSancovPcCounts[0] = kCountsMagic;
+
+  // Move the counts accumulated in the guard slots into their proper places,
+  // and reset the guards.
+  for (size_t i = 0; i < GuardsCount(); ++i) {
+    gSancovPcCounts[i + 1] = ktl::exchange(__start___sancov_guards[i], 0);
+  }
+
+  // Just in case of LTO or whatnot, ensure that everything is in place before
+  // returning to run any instrumented code.
+  ktl::atomic_signal_fence(ktl::memory_order_seq_cst);
+}
+
+// This needs to happen after the full VM system is available, but while the
+// kernel is still running only in the initial thread on the boot CPU.
+LK_INIT_HOOK(InitSancov, InitSancov, LK_INIT_LEVEL_KERNEL)
+
+}  // namespace
+
+extern "C" {
 
 // This is run along with static constructors, pretty early in startup.
 // It's always run on the boot CPU before secondary CPUs are started up.
-void __sanitizer_cov_trace_pc_guard_init(Guard* start, Guard* end) {
-  // The compiler generates a call to this in every TU but via COMDAT so
-  // there is only one.
-  ZX_ASSERT(__sancov_pc_table[0] == 0);
-
+void __sanitizer_cov_trace_pc_guard_init(uint32_t* start, uint32_t* end) {
   // It's always called with the bounds of the section, which for the
   // kernel are known statically anyway.
   ZX_ASSERT(start == __start___sancov_guards);
   ZX_ASSERT(end == __stop___sancov_guards);
-
-  // Index 0 is special.  The first slot is reserved for the magic number.
-  __sancov_pc_table[0] = kMagic64;
-  __sancov_pc_counts[0].store(kCountsMagic, ktl::memory_order_relaxed);
 }
 
 // This is called every time through a covered event.
 // This might be run before __sanitizer_cov_trace_pc_guard_init has run.
-void __sanitizer_cov_trace_pc_guard(Guard* guard) {
+void __sanitizer_cov_trace_pc_guard(uint32_t* guard_ptr) {
   // Compute the table index based just on the address of the guard.
-  // The __sancov_pc_table and __sancov_pc_counts arrays parallel the guards,
+  // The gSancovPcTable and gSancovPcCounts arrays parallel the guards,
   // but the first slot in each of those is reserved for the magic number.
-  size_t idx = guard - __start___sancov_guards + 1;
+  const size_t idx = guard_ptr - __start___sancov_guards + 1;
+
+  if (!gSancovPcCounts) [[unlikely]] {
+    // Pre-initialization, just count the hit in the guard slot.  See above.
+    ++*guard_ptr;
+    return;
+  }
 
   // Every time through, increment the counter.
-  __sancov_pc_counts[idx].fetch_add(1, ktl::memory_order_relaxed);
+  ktl::atomic_ref count(gSancovPcCounts[idx]);
+  count.fetch_add(1, ktl::memory_order_relaxed);
 
   // Use the guard as a simple flag to indicate whether the PC has been stored.
-  if (unlikely(guard->load(ktl::memory_order_relaxed) == 0) &&
-      likely(guard->exchange(1, ktl::memory_order_relaxed) == 0)) {
+  ktl::atomic_ref guard(*guard_ptr);
+  if (unlikely(guard.load(ktl::memory_order_relaxed) == 0) &&
+      likely(guard.exchange(1, ktl::memory_order_relaxed) == 0)) {
     // This is really the first time through this PC on any CPU.
     // This is now the only path that will ever use this slot in
     // the table, so storing there doesn't need to be atomic.
-    __sancov_pc_table[idx] =
+    gSancovPcTable[idx] =
         // Take the raw return address.
         reinterpret_cast<uintptr_t>(__builtin_return_address(0)) -
         // Adjust it to point into the call instruction.
@@ -113,75 +162,23 @@ void __sanitizer_cov_trace_pc_guard(Guard* guard) {
 
 }  // extern "C"
 
-// These are kept alive forever to keep a permanent reference to the VMO so
-// that the memory always remains valid, even if userspace closes the last
-// handle.
-fbl::RefPtr<VmObjectPaged> gSancovPcVmo, gSancovCountsVmo;
-
-}  // namespace
-
 InstrumentationDataVmo SancovGetPcVmo() {
-  ktl::span contents(__sancov_pc_table, __sancov_pc_table_end);
-  ktl::span contents_vmo(__sancov_pc_table, __sancov_pc_table_vmo_end);
-  if (contents.empty()) {
-    return {};
-  }
-
-  // This is kept alive forever to keep a permanent reference to the VMO so
-  // that the memory always remains valid, even if userspace closes the last
-  // handle.
-  fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::CreateFromWiredPages(contents_vmo.data(),
-                                                           contents_vmo.size_bytes(), false, &vmo);
-  ZX_ASSERT(status == ZX_OK);
-
-  gSancovPcVmo = vmo;
-
-  zx_rights_t rights;
-  KernelHandle<VmObjectDispatcher> handle;
-  status =
-      VmObjectDispatcher::Create(ktl::move(vmo), contents.size_bytes(),
-                                 VmObjectDispatcher::InitialMutability::kMutable, &handle, &rights);
-  ZX_ASSERT(status == ZX_OK);
-  handle.dispatcher()->set_name(kPcVmoName.data(), kPcVmoName.size());
-
   return {
       .announce = "SanitizerCoverage",
       .sink_name = "sancov",
       .units = "PCs",
-      .scale = sizeof(__sancov_pc_table[0]),
-      .handle = Handle::Make(ktl::move(handle), rights & ~ZX_RIGHT_WRITE).release(),
+      .scale = sizeof(gSancovPcTable[0]),
+      .handle = gSancovPcVmo.Publish(kPcVmoName, DataSize()),
   };
 }
 
 InstrumentationDataVmo SancovGetCountsVmo() {
-  ktl::span contents(__sancov_pc_counts, __sancov_pc_counts_end);
-  ktl::span contents_vmo(__sancov_pc_counts, __sancov_pc_counts_vmo_end);
-  if (contents.empty()) {
-    return {};
-  }
-
-  fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::CreateFromWiredPages(contents_vmo.data(),
-                                                           contents_vmo.size_bytes(), false, &vmo);
-  ZX_ASSERT(status == ZX_OK);
-
-  gSancovCountsVmo = vmo;
-
-  zx_rights_t rights;
-  KernelHandle<VmObjectDispatcher> handle;
-  status =
-      VmObjectDispatcher::Create(ktl::move(vmo), contents.size_bytes(),
-                                 VmObjectDispatcher::InitialMutability::kMutable, &handle, &rights);
-  ZX_ASSERT(status == ZX_OK);
-  handle.dispatcher()->set_name(kCountsVmoName.data(), kCountsVmoName.size());
-
   return {
       .announce = "SanitizerCoverage Counts",
       .sink_name = "sancov-counts",
       .units = "counters",
-      .scale = sizeof(__sancov_pc_counts[0]),
-      .handle = Handle::Make(ktl::move(handle), rights & ~ZX_RIGHT_WRITE).release(),
+      .scale = sizeof(gSancovPcCounts[0]),
+      .handle = gSancovCountsVmo.Publish(kCountsVmoName, DataSize()),
   };
 }
 

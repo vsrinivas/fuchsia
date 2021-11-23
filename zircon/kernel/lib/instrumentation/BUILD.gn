@@ -26,7 +26,16 @@ zx_library("instrumentation") {
 if (is_kernel) {
   source_set("private") {
     visibility = [ ":*" ]
-    public = [ "private.h" ]
+    public = [
+      "kernel-mapped-vmo.h",
+      "private.h",
+    ]
+    sources = [ "kernel-mapped-vmo.cc" ]
+    public_deps = [ "//zircon/kernel/vm:headers" ]
+    deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/object",
+    ]
   }
 
   # This defines C symbol `__llvm_profile_header` with reference to the other
@@ -74,9 +83,9 @@ if (is_kernel) {
     sources = [ "sancov.cc" ]
     deps = [
       ":private",
+      "//zircon/kernel/lib/init",
       "//zircon/kernel/lib/ktl",
-      "//zircon/kernel/lib/libc",
-      "//zircon/kernel/object",
+      "//zircon/kernel/vm:headers",
     ]
 
     # sancov code shouldn't make asan checks.
