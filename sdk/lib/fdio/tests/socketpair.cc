@@ -34,17 +34,19 @@
 using fdio_tests::SocketPair;
 using fdio_tests::TypeToString;
 
-#ifdef __Fuchsia__
-#define SEND_FLAGS 0
+constexpr int kSendFlags =
+#if defined(MSG_NOSIGNAL)
+    MSG_NOSIGNAL
 #else
-#define SEND_FLAGS MSG_NOSIGNAL
-#endif  // __Fuchsia__
+    0
+#endif
+    ;
 
 std::thread send_thread(const fbl::unique_fd& fd) {
   return std::thread([&]() {
     std::array<char, 256> buf;
 
-    EXPECT_EQ(send(fd.get(), buf.data(), buf.size(), SEND_FLAGS), -1);
+    EXPECT_EQ(send(fd.get(), buf.data(), buf.size(), kSendFlags), -1);
     EXPECT_EQ(errno, EPIPE) << strerror(errno);
   });
 }
@@ -112,7 +114,7 @@ TEST_P(SocketPairShutdown, Read) {
   EXPECT_EQ(read(fds()[0].get(), buf, sizeof(buf)), ssize_t(sizeof(buf))) << strerror(errno);
 
   // But not send any further bytes
-  EXPECT_EQ(send(fds()[1].get(), buf, sizeof(buf), SEND_FLAGS), -1);
+  EXPECT_EQ(send(fds()[1].get(), buf, sizeof(buf), kSendFlags), -1);
   EXPECT_EQ(errno, EPIPE) << strerror(errno);
 
   // Or read any more
@@ -142,7 +144,7 @@ TEST_P(SocketPairShutdown, Write) {
   EXPECT_EQ(errno, EAGAIN) << strerror(errno);
 
   // But not writable
-  EXPECT_EQ(send(fds()[0].get(), buf, sizeof(buf), SEND_FLAGS), -1);
+  EXPECT_EQ(send(fds()[0].get(), buf, sizeof(buf), kSendFlags), -1);
   EXPECT_EQ(errno, EPIPE) << strerror(errno);
 
   // Should still be able to write + read a message in the other direction.
@@ -159,7 +161,7 @@ TEST_P(SocketPairShutdown, ReadWrite) {
   char buf[1];
 
   // Writing should fail.
-  EXPECT_EQ(send(fds()[0].get(), buf, sizeof(buf), SEND_FLAGS), -1);
+  EXPECT_EQ(send(fds()[0].get(), buf, sizeof(buf), kSendFlags), -1);
   EXPECT_EQ(errno, EPIPE) << strerror(errno);
 
   // Reading should return no data.
@@ -363,14 +365,14 @@ TEST_P(SocketPair, MAYBE_StreamSendmsgNonblockBoundary) {
   };
 
   // 1. Keep sending data until socket is saturated.
-  while (sendmsg(fds()[0].get(), &msg, SEND_FLAGS) > 0) {
+  while (sendmsg(fds()[0].get(), &msg, kSendFlags) > 0) {
   }
 
   // 2. Consume one segment of the data.
   EXPECT_EQ(read(fds()[1].get(), memchunk.get(), memlength), memlength) << strerror(errno);
 
   // 3. Push again 2 packets of <memlength> bytes, observe only one sent.
-  EXPECT_EQ(sendmsg(fds()[0].get(), &msg, SEND_FLAGS), memlength) << strerror(errno);
+  EXPECT_EQ(sendmsg(fds()[0].get(), &msg, kSendFlags), memlength) << strerror(errno);
 }
 
 static constexpr ssize_t WRITE_DATA_SIZE = 1024 * 1024;

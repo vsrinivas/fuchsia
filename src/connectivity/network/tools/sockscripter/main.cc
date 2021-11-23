@@ -11,14 +11,12 @@ class PosixCalls : public ApiAbstraction {
  public:
   int socket(int domain, int type, int protocol) override {
     int s = ::socket(domain, type, protocol);
-#if defined(__MACH__)
-    // Since we don't install signal handlers, prevent signal triggering on send which can cause
-    // SIGPIPE to be raised on unconnected stream sockets.
-    // As MACH has no MSG_NOSIGNAL, we instead set the socket option at creation time to prevent
-    // SIGPIPE.
-    if (s != -1) {
-      int tru = 1;
-      ::setsockopt(s, SOL_SOCKET, SO_NOSIGPIPE, &tru, sizeof(tru));
+#if defined(SO_NOSIGPIPE)
+    // Since we don't install signal handlers, prevent signal triggering on
+    // send which can cause SIGPIPE to be raised on unconnected stream sockets.
+    if (s >= 0) {
+      constexpr bool kTrue = true;
+      ::setsockopt(s, SOL_SOCKET, SO_NOSIGPIPE, &kTrue, sizeof(kTrue));
     }
 #endif
     return s;
@@ -51,9 +49,9 @@ class PosixCalls : public ApiAbstraction {
   int listen(int fd, int backlog) override { return ::listen(fd, backlog); }
 
   ssize_t send(int fd, const void* buf, size_t len, int flags) override {
-#if !defined(__Fuchsia__) && !defined(__MACH__)
-    // Since we don't install signal handlers, prevent signal triggering on send which can cause
-    // SIGPIPE to be raised on unconnected stream sockets.
+#if defined(MSG_NOSIGNAL)
+    // Since we don't install signal handlers, prevent signal triggering on
+    // send which can cause SIGPIPE to be raised on unconnected stream sockets.
     flags |= MSG_NOSIGNAL;
 #endif
     return ::send(fd, buf, len, flags);
@@ -61,9 +59,10 @@ class PosixCalls : public ApiAbstraction {
 
   ssize_t sendto(int fd, const void* buf, size_t buflen, int flags, const struct sockaddr* addr,
                  socklen_t addrlen) override {
-#if !defined(__Fuchsia__) && !defined(__MACH__)
-    // Since we don't install signal handlers, prevent signal triggering on sendto which can cause
-    // SIGPIPE to be raised on unconnected stream sockets.
+#if defined(MSG_NOSIGNAL)
+    // Since we don't install signal handlers, prevent signal triggering on
+    // sendto which can cause SIGPIPE to be raised on unconnected stream
+    // sockets.
     flags |= MSG_NOSIGNAL;
 #endif
     return ::sendto(fd, buf, buflen, flags, addr, addrlen);

@@ -257,7 +257,6 @@ zx_status_t zxio::recvmsg_inner(struct msghdr* msg, int flags, size_t* out_actua
 
 zx_status_t zxio::sendmsg_inner(const struct msghdr* msg, int flags, size_t* out_actual) {
   if (flags) {
-    // TODO(https://fxbug.dev/67925): support MSG_NOSIGNAL
     // TODO(https://fxbug.dev/67925): support MSG_OOB
     return ZX_ERR_NOT_SUPPORTED;
   }

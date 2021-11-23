@@ -2043,7 +2043,9 @@ ssize_t sendmsg(int fd, const struct msghdr* msg, int flags) {
   // The |flags| are typically used to express intent *not* to issue SIGPIPE
   // via MSG_NOSIGNAL. Applications use this frequently to avoid having to
   // install additional signal handlers to handle cases where connection has
-  // been closed by remote end.
+  // been closed by remote end. Signals aren't a notion on Fuchsia, so this
+  // flag can be safely ignored.
+  flags &= ~MSG_NOSIGNAL;
   const bool blocking = ((ioflag & IOFLAG_NONBLOCK) | (flags & MSG_DONTWAIT)) == 0;
   flags &= ~MSG_DONTWAIT;
   zx::time deadline = zx::deadline_after(io->sndtimeo());
