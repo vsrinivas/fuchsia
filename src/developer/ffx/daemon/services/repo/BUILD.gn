@@ -55,6 +55,7 @@ if (is_host) {
       ":empty-repo",
       "//third_party/rust_crates:matches",
       "//third_party/rust_crates:serial_test",
+      "//third_party/rust_crates:simplelog",
     ]
 
     sources = [

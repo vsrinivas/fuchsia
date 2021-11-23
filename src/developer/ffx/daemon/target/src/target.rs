@@ -5,7 +5,7 @@
 use {
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
-    crate::overnet::host_pipe::HostPipeConnection,
+    crate::overnet::host_pipe::{HostAddr, HostPipeConnection},
     crate::{FASTBOOT_MAX_AGE, MDNS_MAX_AGE, ZEDBOOT_MAX_AGE},
     addr::TargetAddr,
     anyhow::{anyhow, bail, Error, Result},
@@ -142,6 +142,7 @@ pub struct Target {
     // The event synthesizer is retained on the target as a strong
     // reference, as the queue only retains a weak reference.
     target_event_synthesizer: Rc<TargetEventSynthesizer>,
+    pub(crate) ssh_host_address: RefCell<Option<HostAddr>>,
 }
 
 impl Target {
@@ -170,6 +171,7 @@ impl Target {
             logger: Default::default(),
             target_event_synthesizer,
             fastboot_interface: RefCell::new(None),
+            ssh_host_address: RefCell::new(None),
         });
         target.target_event_synthesizer.target.replace(Rc::downgrade(&target));
         target
@@ -449,6 +451,13 @@ impl Target {
         } else {
             None
         }
+    }
+
+    pub fn ssh_host_address_info(&self) -> Option<bridge::SshHostAddrInfo> {
+        self.ssh_host_address
+            .borrow()
+            .as_ref()
+            .map(|addr| bridge::SshHostAddrInfo { address: addr.to_string() })
     }
 
     fn rcs_state(&self) -> bridge::RemoteControlState {
@@ -926,6 +935,7 @@ impl From<&Target> for bridge::Target {
             ssh_address: target.ssh_address_info(),
             // TODO(awdavies): Gather more information here when possible.
             target_type: Some(bridge::TargetType::Unknown),
+            ssh_host_address: target.ssh_host_address_info(),
             ..bridge::Target::EMPTY
         }
     }

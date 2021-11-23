@@ -28,7 +28,7 @@ use {
     std::{
         collections::HashSet,
         convert::{TryFrom, TryInto},
-        net,
+        net::SocketAddr,
         rc::Rc,
         sync::Arc,
         time::Duration,
@@ -56,12 +56,12 @@ struct ServerInfo {
 #[derive(Debug)]
 enum ServerState {
     Running(ServerInfo),
-    Stopped(net::SocketAddr),
+    Stopped(SocketAddr),
     Unconfigured,
 }
 
 impl ServerState {
-    async fn new_running(addr: net::SocketAddr, manager: Arc<RepositoryManager>) -> Result<Self> {
+    async fn new_running(addr: SocketAddr, manager: Arc<RepositoryManager>) -> Result<Self> {
         log::info!("Starting repository server on {}", addr);
 
         let (server_fut, sink, server) = RepositoryServer::builder(addr, Arc::clone(&manager))
@@ -114,7 +114,7 @@ impl ServerState {
 
     /// Returns the address is running on. Returns None if the server is not
     /// running, or is unconfigured.
-    fn listen_addr(&self) -> Option<net::SocketAddr> {
+    fn listen_addr(&self) -> Option<SocketAddr> {
         match self {
             ServerState::Running(x) => Some(x.server.local_addr()),
             _ => None,
@@ -251,9 +251,21 @@ async fn register_target(
         }
     };
 
+    // Before we register the repository, we need to decide which address the
+    // target device should use to reach the repository. If the server is
+    // running on a loopback device, then we need to create a tunnel for the
+    // device to access the server.
+    let (should_make_tunnel, repo_host) = create_repo_host(
+        listen_addr,
+        target.ssh_host_address.ok_or_else(|| {
+            log::error!("target {:?} does not have a host address", target_info.target_identifier);
+            bridge::RepositoryError::InternalError
+        })?,
+    );
+
     let config = repo
         .get_config(
-            &format!("{}/{}", listen_addr, repo.name()),
+            &format!("{}/{}", repo_host, repo.name()),
             target_info.storage_type.clone().map(|storage_type| storage_type.into()),
         )
         .await
@@ -278,11 +290,13 @@ async fn register_target(
         let () = create_aliases(cx, repo.name(), &target_nodename, &target_info.aliases).await?;
     }
 
-    // Start the tunnel to the device if one isn't running already.
-    start_tunnel(&cx, &inner, &target_nodename).await.map_err(|err| {
-        log::error!("Failed to start tunnel to target {:?}: {:#}", target_nodename, err);
-        bridge::RepositoryError::TargetCommunicationFailure
-    })?;
+    if should_make_tunnel {
+        // Start the tunnel to the device if one isn't running already.
+        start_tunnel(&cx, &inner, &target_nodename).await.map_err(|err| {
+            log::error!("Failed to start tunnel to target {:?}: {:#}", target_nodename, err);
+            bridge::RepositoryError::TargetCommunicationFailure
+        })?;
+    }
 
     if save_config == SaveConfig::Save {
         // Make sure we update the target info with the real nodename.
@@ -295,6 +309,45 @@ async fn register_target(
     }
 
     Ok(())
+}
+
+/// Decide which repo host we should use when creating a repository config, and
+/// whether or not we need to create a tunnel in order for the device to talk to
+/// the repository.
+fn create_repo_host(
+    listen_addr: SocketAddr,
+    host_address: bridge::SshHostAddrInfo,
+) -> (bool, String) {
+    // We need to decide which address the target device should use to reach the
+    // repository. If the server is running on a loopback device, then we need
+    // to create a tunnel for the device to access the server.
+    if listen_addr.ip().is_loopback() {
+        return (true, listen_addr.to_string());
+    }
+
+    // However, if it's not a loopback address, then configure the device to
+    // communicate by way of the ssh host's address. This is helpful when the
+    // device can access the repository only through a specific interface.
+
+    // FIXME(http://fxbug.dev/87439): Once the tunnel bug is fixed, we may
+    // want to default all traffic going through the tunnel. Consider
+    // creating an ffx config variable to decide if we want to always
+    // tunnel, or only tunnel if the server is on a loopback address.
+
+    // IPv6 addresses can contain a ':', IPv4 cannot.
+    let repo_host = if host_address.address.contains(':') {
+        if let Some(pos) = host_address.address.rfind('%') {
+            let ip = &host_address.address[..pos];
+            let scope_id = &host_address.address[pos + 1..];
+            format!("[{}%25{}]:{}", ip, scope_id, listen_addr.port())
+        } else {
+            format!("[{}]:{}", host_address.address, listen_addr.port())
+        }
+    } else {
+        format!("{}:{}", host_address.address, listen_addr.port())
+    };
+
+    (false, repo_host)
 }
 
 fn aliases_to_rules(
@@ -1012,15 +1065,12 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
         };
 
         // Find any saved registrations for this target and register them on the device.
-        let mut found = false;
         for (repo_name, targets) in pkg::config::get_registrations().await {
             log::info!("registrations {:?} {:?}", repo_name, targets);
             for (target_nodename, target_info) in targets {
                 if target_nodename != source_nodename {
                     continue;
                 }
-
-                found = true;
 
                 if let Err(err) = register_target(
                     &self.cx,
@@ -1044,17 +1094,6 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
                         target_nodename,
                     );
                 }
-            }
-        }
-
-        // Start a repository tunnel if we had any registrations for this device.
-        if found {
-            if let Err(err) = start_tunnel(&self.cx, &self.inner, &source_nodename).await {
-                log::error!(
-                    "failed to start repository tunnel for {:?}: {:#}",
-                    source_nodename,
-                    err
-                );
             }
         }
 
@@ -1084,7 +1123,7 @@ mod tests {
             cell::RefCell,
             fs,
             future::Future,
-            net::{Ipv4Addr, SocketAddr},
+            net::{Ipv4Addr, Ipv6Addr, SocketAddr},
             rc::Rc,
             sync::{Arc, Mutex},
         },
@@ -1092,6 +1131,7 @@ mod tests {
 
     const REPO_NAME: &str = "some-repo";
     const TARGET_NODENAME: &str = "some-target";
+    const HOST_ADDR: &str = "1.2.3.4";
     const EMPTY_REPO_PATH: &str = "host_x64/test_data/ffx_daemon_service_repo/empty-repo";
 
     macro_rules! rule {
@@ -1105,6 +1145,13 @@ mod tests {
     async fn test_repo_config(
         repo: &Rc<RefCell<Repo<TestEventHandlerProvider>>>,
     ) -> RepositoryConfig {
+        test_repo_config_with_repo_host(repo, None).await
+    }
+
+    async fn test_repo_config_with_repo_host(
+        repo: &Rc<RefCell<Repo<TestEventHandlerProvider>>>,
+        repo_host: Option<String>,
+    ) -> RepositoryConfig {
         // The repository server started on a random address, so look it up.
         let inner = Arc::clone(&repo.borrow().inner);
         let addr = if let Some(addr) = inner.read().await.server.listen_addr() {
@@ -1113,9 +1160,15 @@ mod tests {
             panic!("server is not running");
         };
 
+        let repo_host = if let Some(repo_host) = repo_host {
+            format!("{}:{}", repo_host, addr.port())
+        } else {
+            addr.to_string()
+        };
+
         RepositoryConfig {
             mirrors: Some(vec![MirrorConfig {
-                mirror_url: Some(format!("http://{}/{}", addr, REPO_NAME)),
+                mirror_url: Some(format!("http://{}/{}", repo_host, REPO_NAME)),
                 subscribe: Some(true),
                 ..MirrorConfig::EMPTY
             }]),
@@ -1417,6 +1470,11 @@ mod tests {
     // * clear out the config keys before we run each test to make sure state isn't leaked across
     //   tests.
     fn run_test<F: Future>(fut: F) -> F::Output {
+        let _ = simplelog::SimpleLogger::init(
+            simplelog::LevelFilter::Debug,
+            simplelog::Config::default(),
+        );
+
         fuchsia_async::TestExecutor::new().unwrap().run_singlethreaded(async move {
             ffx_config::init(&[], None, None).unwrap();
 
@@ -1505,7 +1563,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -1627,7 +1691,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -1741,7 +1811,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -1851,6 +1927,135 @@ mod tests {
         })
     }
 
+    async fn check_add_register_server(
+        listen_addr: SocketAddr,
+        ssh_host_addr: String,
+        expected_repo_host: String,
+    ) {
+        ffx_config::set(
+            ("repository.server.listen", ConfigLevel::User),
+            format!("{}", listen_addr).into(),
+        )
+        .await
+        .unwrap();
+
+        let repo = Rc::new(RefCell::new(Repo::<TestEventHandlerProvider>::default()));
+        let (fake_repo_manager, fake_repo_manager_closure) = FakeRepositoryManager::new();
+        let (fake_engine, fake_engine_closure) = FakeEngine::new();
+        let (_fake_rcs, fake_rcs_closure) = FakeRcs::new();
+
+        let daemon = FakeDaemonBuilder::new()
+            .rcs_handler(fake_rcs_closure)
+            .register_instanced_service_closure::<RepositoryManagerMarker, _>(
+                fake_repo_manager_closure,
+            )
+            .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
+            .inject_fidl_service(Rc::clone(&repo))
+            .target(bridge::Target {
+                nodename: Some(TARGET_NODENAME.to_string()),
+                ssh_host_address: Some(bridge::SshHostAddrInfo { address: ssh_host_addr.clone() }),
+                ..bridge::Target::EMPTY
+            })
+            .build();
+
+        let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
+
+        // Make sure there is nothing in the registry.
+        assert_eq!(fake_engine.take_events(), vec![]);
+        assert_eq!(get_repositories(&proxy).await, vec![]);
+        assert_eq!(get_target_registrations(&proxy).await, vec![]);
+
+        add_repo(&proxy, REPO_NAME).await;
+
+        // We shouldn't have added repositories or rewrite rules to the fuchsia device yet.
+        assert_eq!(fake_repo_manager.take_events(), vec![]);
+        assert_eq!(fake_engine.take_events(), vec![]);
+
+        proxy
+            .register_target(bridge::RepositoryTarget {
+                repo_name: Some(REPO_NAME.to_string()),
+                target_identifier: Some(TARGET_NODENAME.to_string()),
+                storage_type: Some(bridge::RepositoryStorageType::Ephemeral),
+                aliases: None,
+                ..bridge::RepositoryTarget::EMPTY
+            })
+            .await
+            .expect("communicated with proxy")
+            .expect("target registration to succeed");
+
+        // Registering the target should have set up a repository.
+        let repo_config = test_repo_config_with_repo_host(&repo, Some(expected_repo_host)).await;
+        assert_eq!(
+            fake_repo_manager.take_events(),
+            vec![RepositoryManagerEvent::Add { repo: repo_config }]
+        );
+    }
+
+    #[serial_test::serial]
+    #[test]
+    fn test_add_register_server_loopback_ipv4() {
+        run_test(async {
+            check_add_register_server(
+                (Ipv4Addr::LOCALHOST, 0).into(),
+                Ipv4Addr::LOCALHOST.to_string(),
+                Ipv4Addr::LOCALHOST.to_string(),
+            )
+            .await
+        })
+    }
+
+    #[serial_test::serial]
+    #[test]
+    fn test_add_register_server_loopback_ipv6() {
+        run_test(async {
+            check_add_register_server(
+                (Ipv6Addr::LOCALHOST, 0).into(),
+                Ipv6Addr::LOCALHOST.to_string(),
+                format!("[{}]", Ipv6Addr::LOCALHOST),
+            )
+            .await
+        })
+    }
+
+    #[serial_test::serial]
+    #[test]
+    fn test_add_register_server_non_loopback_ipv4() {
+        run_test(async {
+            check_add_register_server(
+                (Ipv4Addr::UNSPECIFIED, 0).into(),
+                Ipv4Addr::UNSPECIFIED.to_string(),
+                Ipv4Addr::UNSPECIFIED.to_string(),
+            )
+            .await
+        })
+    }
+
+    #[serial_test::serial]
+    #[test]
+    fn test_add_register_server_non_loopback_ipv6() {
+        run_test(async {
+            check_add_register_server(
+                (Ipv6Addr::UNSPECIFIED, 0).into(),
+                Ipv6Addr::UNSPECIFIED.to_string(),
+                format!("[{}]", Ipv6Addr::UNSPECIFIED),
+            )
+            .await
+        })
+    }
+
+    #[serial_test::serial]
+    #[test]
+    fn test_add_register_server_non_loopback_ipv6_with_scope() {
+        run_test(async {
+            check_add_register_server(
+                (Ipv6Addr::UNSPECIFIED, 0).into(),
+                format!("{}%eth1", Ipv6Addr::UNSPECIFIED),
+                format!("[{}%25eth1]", Ipv6Addr::UNSPECIFIED),
+            )
+            .await
+        })
+    }
+
     #[serial_test::serial]
     #[test]
     fn test_register_deduplicates_rules() {
@@ -1871,7 +2076,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .register_fidl_service::<Repo<TestEventHandlerProvider>>()
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -1929,7 +2140,13 @@ mod tests {
                     fake_repo_manager_closure,
                 )
                 .register_fidl_service::<Repo<TestEventHandlerProvider>>()
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -1969,7 +2186,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -2012,7 +2235,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -2074,7 +2303,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -2129,7 +2364,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -2185,7 +2426,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -2225,7 +2472,13 @@ mod tests {
                 )
                 .register_instanced_service_closure::<EngineMarker, _>(fake_engine_closure)
                 .inject_fidl_service(Rc::clone(&repo))
-                .nodename(TARGET_NODENAME.to_string())
+                .target(bridge::Target {
+                    nodename: Some(TARGET_NODENAME.to_string()),
+                    ssh_host_address: Some(bridge::SshHostAddrInfo {
+                        address: HOST_ADDR.to_string(),
+                    }),
+                    ..bridge::Target::EMPTY
+                })
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
@@ -2285,5 +2538,47 @@ mod tests {
             }),
             Some("[fe80::1%1000]:9182".to_string())
         )
+    }
+
+    #[test]
+    fn test_create_repo_port_loopback() {
+        for (listen_addr, expected) in [
+            ((Ipv4Addr::LOCALHOST, 1234).into(), "127.0.0.1:1234"),
+            ((Ipv6Addr::LOCALHOST, 1234).into(), "[::1]:1234"),
+        ] {
+            // The host address should be ignored, but lets confirm it.
+            for host_addr in
+                ["1.2.3.4", "fe80::111:2222:3333:444:1234", "fe80::111:2222:3333:444:1234%ethxc2"]
+            {
+                assert_eq!(
+                    create_repo_host(
+                        listen_addr,
+                        bridge::SshHostAddrInfo { address: host_addr.into() },
+                    ),
+                    (true, expected.to_string()),
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_create_repo_port_non_loopback() {
+        for listen_addr in
+            [(Ipv4Addr::UNSPECIFIED, 1234).into(), (Ipv6Addr::UNSPECIFIED, 1234).into()]
+        {
+            for (host_addr, expected) in [
+                ("1.2.3.4", "1.2.3.4:1234"),
+                ("fe80::111:2222:3333:444", "[fe80::111:2222:3333:444]:1234"),
+                ("fe80::111:2222:3333:444%ethxc2", "[fe80::111:2222:3333:444%25ethxc2]:1234"),
+            ] {
+                assert_eq!(
+                    create_repo_host(
+                        listen_addr,
+                        bridge::SshHostAddrInfo { address: host_addr.into() },
+                    ),
+                    (false, expected.to_string()),
+                );
+            }
+        }
     }
 }

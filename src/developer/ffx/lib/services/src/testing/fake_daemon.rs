@@ -108,10 +108,10 @@ where
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct FakeDaemon {
-    nodename: Option<String>,
     register: Option<ServiceRegister>,
+    target: bridge::Target,
     target_collection: Rc<TargetCollection>,
     rcs_handler: Option<Arc<dyn Fn(rcs::RemoteControlRequest, Option<String>)>>,
 }
@@ -132,6 +132,17 @@ impl FakeDaemon {
             .shutdown(Context::new(self.clone()))
             .await
             .map_err(Into::into)
+    }
+}
+
+impl Default for FakeDaemon {
+    fn default() -> Self {
+        FakeDaemon {
+            register: Default::default(),
+            target: bridge::Target::EMPTY,
+            target_collection: Default::default(),
+            rcs_handler: Default::default(),
+        }
     }
 }
 
@@ -198,10 +209,7 @@ impl DaemonServiceProvider for FakeDaemon {
                 },
                 _ => bail!("invalid selector"),
             };
-        Ok((
-            bridge::Target { nodename: self.nodename.clone(), ..bridge::Target::EMPTY },
-            self.open_service_proxy(service_name).await?,
-        ))
+        Ok((self.target.clone(), self.open_service_proxy(service_name).await?))
     }
 
     async fn get_target_collection(&self) -> Result<Rc<TargetCollection>> {
@@ -209,10 +217,9 @@ impl DaemonServiceProvider for FakeDaemon {
     }
 }
 
-#[derive(Default)]
 pub struct FakeDaemonBuilder {
     map: NameToStreamHandlerMap,
-    nodename: Option<String>,
+    target: bridge::Target,
     rcs_handler: Option<Arc<dyn Fn(rcs::RemoteControlRequest, Option<String>)>>,
 }
 
@@ -222,7 +229,12 @@ impl FakeDaemonBuilder {
     }
 
     pub fn nodename(mut self, nodename: String) -> Self {
-        self.nodename = Some(nodename);
+        self.target.nodename = Some(nodename);
+        self
+    }
+
+    pub fn target(mut self, target: bridge::Target) -> Self {
+        self.target = target;
         self
     }
 
@@ -283,9 +295,19 @@ impl FakeDaemonBuilder {
     pub fn build(self) -> FakeDaemon {
         FakeDaemon {
             register: Some(ServiceRegister::new(self.map)),
-            nodename: self.nodename,
+            target: self.target,
             rcs_handler: self.rcs_handler,
             ..Default::default()
+        }
+    }
+}
+
+impl Default for FakeDaemonBuilder {
+    fn default() -> Self {
+        Self {
+            map: Default::default(),
+            target: bridge::Target::EMPTY,
+            rcs_handler: Default::default(),
         }
     }
 }

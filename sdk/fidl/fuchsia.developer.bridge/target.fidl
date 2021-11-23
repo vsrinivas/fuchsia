@@ -38,6 +38,11 @@ type TargetType = strict enum {
     UNKNOWN = 1;
 };
 
+/// Address of the ssh host address from the perspective of the target.
+type SshHostAddrInfo = struct {
+    address string:256;
+};
+
 /// Current known state of the remote control
 type RemoteControlState = strict enum {
     UP = 1;
@@ -71,6 +76,8 @@ type Target = table {
     /// port number has been set.
    10: ssh_address TargetAddrInfo;
    11: fastboot_interface FastbootInterface;
+    /// The address of the ssh host as seen by the target.
+   12: ssh_host_address SshHostAddrInfo;
 };
 
 type TargetRebootError = strict enum {

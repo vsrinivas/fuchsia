@@ -142,35 +142,37 @@ function main {
       return $err
     fi
   else
-    # FIXME(http://fxbug.dev/77146): The tunnel is currently hardcoded to port
-    # [::1]:8085.
-    if [[ ! -z "${addr}" ]]; then
-      fx-error "Flag '--addr' is not yet supported by ffx repository serving"
-      fx-error "See http://fxbug.dev/77146 for more details."
-      return 1
-    fi
-
     if [[ -z "${port}" ]]; then
-      port=8085
+      port="8085"
     fi
 
-    config_addr=$(fx-command-run ffx config get repository.server.listen)
+    actual_addr=$(fx-command-run ffx config get repository.server.listen | sed 's/\"//g')
     err=$?
     if [[ $err -ne 0 ]]; then
       fx-error "Unable to get the configured repository server address."
       return "$err"
     fi
 
-    if [[ "$config_addr" = "null" ]]; then
+    if [[ "$actual_addr" = "null" ]]; then
       fx-error "Repository server is currently disabled. To re-enable, run:"
-      fx-error "$ ffx config set repository.server.listen \"[::1]:${port}\" && ffx doctor --restart-daemon"
+      fx-error "$ ffx config set repository.server.listen \"${config_ip}:${port}\" && ffx doctor --restart-daemon"
       return 1
     fi
 
-    if [[ "$config_addr" != "\"[::1]:$port\"" ]]; then
-      fx-error "The repository server is configured to use $config_addr."
+    config_ip="${actual_addr%]:*}"
+    config_port="${actual_addr#*]:}"
+
+    if [[ ! -z "${addr}" && "$config_ip" != "${addr}" ]]; then
+      fx-error "The repository server is configured to use ${actual_addr}, not ${addr}:${port}"
       fx-error "To switch to a different address, run:"
-      fx-error "$ ffx config set repository.server.listen \"[::1]:${port}\" && ffx doctor --restart-daemon"
+      fx-error "$ ffx config set repository.server.listen \"${addr}:${port}\" && ffx doctor --restart-daemon"
+      return 1
+    fi
+
+    if [[ "$config_port" != "$port" ]]; then
+      fx-error "The repository server is configured to use ${config_addr}, not ${config_ip}:${port}"
+      fx-error "To switch to a different address, run:"
+      fx-error "$ ffx config set repository.server.listen \"${config_ip}:${port}\" && ffx doctor --restart-daemon"
       return 1
     fi
 
