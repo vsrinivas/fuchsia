@@ -16,7 +16,9 @@ namespace CrOsEc {
 
 // Execute a version 3 command over LPC
 zx_status_t CommandLpc3(uint16_t command, uint8_t command_version, const void *outdata, size_t outsize,
-                        void *indata, size_t insize, size_t *actual);
+						void *indata, size_t insize, size_t *actual);
+zx_status_t CommandLpc3(uint16_t command, uint8_t version, uint16_t *result, const void *outdata,
+						size_t outsize, void *indata, size_t insize, size_t *actual);
 
 // Check if the version 3 LPC protocol is supported
 bool IsLpc3Supported();

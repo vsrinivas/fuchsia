@@ -1,0 +1,70 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":chromiumos-ec-lpc-tests" ]
+}
+
+driver_bind_rules("bind") {
+  rules = "chromiumos_ec_lpc.bind"
+  header_output = "chromiumos_ec_lpc_bind.h"
+  bind_output = "chromiumos_ec_lpc.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.acpi" ]
+}
+
+common_deps = [
+  ":bind",
+  "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
+  "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
+  "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_llcpp",
+  "//src/devices/lib/driver",
+  "//src/lib/ddktl",
+  "//zircon/system/ulib/async-loop:async-loop-cpp",
+  "//zircon/system/ulib/fbl",
+  "//zircon/system/ulib/inspect",
+  "//zircon/system/ulib/svc",
+  "//zircon/system/ulib/zx",
+  "//zircon/third_party/ulib/chromiumos-platform-ec",
+]
+
+fuchsia_driver("driver") {
+  output_name = "chromiumos-ec-lpc"
+  sources = [ "chromiumos_ec_lpc.cc" ]
+  deps = common_deps
+}
+
+fuchsia_driver_component("component") {
+  component_name = "chromiumos-ec-lpc"
+  deps = [ ":driver" ]
+}
+
+fuchsia_system_package("chromiumos-ec-lpc") {
+  deps = [ ":component" ]
+
+  # Remove the line below when this package is only used by the system image.
+  allowed_in_extra_deps = true
+}
+
+test("chromiumos-ec-lpc-unit-tests") {
+  sources = [
+    "chromiumos_ec_lpc.cc",
+    "chromiumos_ec_lpc.h",
+    "unit-tests.cc",
+  ]
+  deps = common_deps + [
+           "//sdk/lib/inspect/testing/cpp:zxtest",
+           "//src/devices/testing/mock-ddk",
+           "//zircon/system/ulib/zxtest",
+         ]
+}
+
+fuchsia_unittest_package("chromiumos-ec-lpc-tests") {
+  deps = [ ":chromiumos-ec-lpc-unit-tests" ]
+}

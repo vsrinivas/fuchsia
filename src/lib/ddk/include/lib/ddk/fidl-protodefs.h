@@ -17,5 +17,6 @@
 #error Internal use only. Do not include.
 #else
 DDK_FIDL_PROTOCOL_DEF(RPMB,           1, "fuchsia.rpmb.Rpmb")
+DDK_FIDL_PROTOCOL_DEF(CHROMEOS_EC,    2, "fuchsia.hardware.google.ec.Device")
 #undef DDK_FIDL_PROTOCOL_DEF
 #endif

@@ -10,10 +10,30 @@
 #include <sys/io.h>
 #include <sys/param.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 
 #define INITIAL_UDELAY 5     /* 5 us */
 #define MAXIMUM_UDELAY 10000 /* 10 ms */
+
+/* Weak symbols to allow testing I/O port operations. */
+uint8_t __WEAK WrappedInb(uint16_t addr) {
+#ifdef __x86_64__
+  return inb(addr);
+#else
+  ZX_ASSERT(false);
+#endif
+}
+void __WEAK WrappedOutb(uint8_t data, uint16_t addr) {
+#ifdef __x86_64__
+  return outb(data, addr);
+#else
+  ZX_ASSERT(false);
+#endif
+}
+
+#define inb WrappedInb
+#define outb WrappedOutb
 
 /*
  * Wait for the EC to be unbusy.  Returns 0 if unbusy, non-zero if
@@ -47,6 +67,12 @@ static int wait_for_ec(uint16_t status_addr, int timeout_usec)
 namespace CrOsEc {
 
 zx_status_t CommandLpc3(uint16_t command, uint8_t version,
+					   const void *outdata, size_t outsize,
+					   void *indata, size_t insize, size_t *actual) {
+	return CommandLpc3(command, version, nullptr, outdata, outsize, indata, insize, actual);
+}
+
+zx_status_t CommandLpc3(uint16_t command, uint8_t version, uint16_t *result,
 					   const void *outdata, size_t outsize,
 					   void *indata, size_t insize, size_t *actual)
 {
@@ -134,6 +160,10 @@ zx_status_t CommandLpc3(uint16_t command, uint8_t version,
 	/* Verify checksum */
 	if ((uint8_t)csum) {
 		return ZX_ERR_IO_DATA_INTEGRITY;
+	}
+
+	if (result) {
+		*result = rs.result;
 	}
 
 	/* Return actual amount of data received */
