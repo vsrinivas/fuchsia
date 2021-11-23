@@ -615,7 +615,16 @@ unsigned int arch_mmu_flags_to_vm_flags(unsigned int arch_mmu_flags) {
 // AspaceVmoEnumerator and so the template options exist to handle precisely those two cases.
 // IMPL is the object type that the Make* methods will be called on if the respective Enumerate*
 // options are true.
-template <typename ENTRY, typename IMPL, bool EnumerateVmar, bool EnumerateMapping,
+enum class MappingEnumeration {
+  // Skip mappings.
+  None,
+  // Only care about virtual ranges and can enumerate entire mappings even if they have different
+  // protection types.
+  Mapping,
+  // Enumerate every different protection block.
+  Protection,
+};
+template <typename ENTRY, typename IMPL, bool EnumerateVmar, MappingEnumeration EnumerateMapping,
           size_t FirstEntry>
 class RestartableVmEnumerator {
  public:
@@ -681,7 +690,7 @@ class RestartableVmEnumerator {
     bool OnVmMapping([[maybe_unused]] const VmMapping* map,
                      [[maybe_unused]] const VmAddressRegion* vmar, [[maybe_unused]] uint depth)
         TA_REQ(map->lock()) TA_REQ(vmar->lock()) override {
-      if constexpr (EnumerateMapping) {
+      if constexpr (EnumerateMapping == MappingEnumeration::Mapping) {
         return parent_->DoEntry(
             [map, vmar, depth, this]() {
               // These are true as they are required for calling OnVmMapping, but we cannot pass
@@ -691,6 +700,37 @@ class RestartableVmEnumerator {
               IMPL::MakeMappingEntry(map, vmar, depth, &parent_->entry_);
             },
             map->base(), depth);
+      } else if constexpr (EnumerateMapping == MappingEnumeration::Protection) {
+        struct {
+          const VmMapping* map;
+          const VmAddressRegion* vmar;
+          uint depth;
+        } state{map, vmar, depth};
+        zx_status_t result = map->EnumerateProtectionRangesLocked(
+            map->base(), map->size(), [&state, this](vaddr_t base, size_t size, uint flags) {
+              return parent_->DoEntry(
+                         [&state, base, size, flags, this] {
+                           // These are true as they are required for calling OnVmMapping, but we
+                           // cannot pass the capabilities easily via DoEntry to this callback.
+                           AssertHeld(state.map->lock_ref());
+                           AssertHeld(state.vmar->lock_ref());
+                           const uint64_t object_offset =
+                               state.map->object_offset_locked() + (base - state.map->base());
+                           IMPL::MakeMappingProtectionEntry(state.map, state.vmar, state.depth,
+                                                            base, size, flags, object_offset,
+                                                            &parent_->entry_);
+                         },
+                         base, state.depth)
+                         ? ZX_ERR_NEXT
+                         : ZX_ERR_BUFFER_TOO_SMALL;
+            });
+        // We expect to either complete enumeration or have an explicit early termination request
+        // due to needing to fault in more of the user buffer.
+        DEBUG_ASSERT_MSG(result == ZX_OK || result == ZX_ERR_BUFFER_TOO_SMALL,
+                         "Unexpected status %d\n", result);
+        return result == ZX_OK ? true : false;
+      } else {
+        static_assert(EnumerateMapping == MappingEnumeration::None);
       }
       return true;
     }
@@ -752,8 +792,8 @@ class RestartableVmEnumerator {
 
 // Builds a description of an apsace/vmar/mapping hierarchy. Entries start at 1 as the user must
 // write an entry for the root VmAspace at index 0.
-class VmMapBuilder final
-    : public RestartableVmEnumerator<zx_info_maps_t, VmMapBuilder, true, true, 1> {
+class VmMapBuilder final : public RestartableVmEnumerator<zx_info_maps_t, VmMapBuilder, true,
+                                                          MappingEnumeration::Protection, 1> {
  public:
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.
@@ -769,21 +809,22 @@ class VmMapBuilder final
     entry->type = ZX_INFO_MAPS_TYPE_VMAR;
   }
 
-  static void MakeMappingEntry(const VmMapping* map, const VmAddressRegion* vmar, uint depth,
-                               zx_info_maps_t* entry) TA_REQ(map->lock_ref())
+  static void MakeMappingProtectionEntry(const VmMapping* map, const VmAddressRegion* vmar,
+                                         uint depth, vaddr_t region_base, size_t region_size,
+                                         uint region_mmu_flags, uint64_t region_object_offset,
+                                         zx_info_maps_t* entry) TA_REQ(map->lock_ref())
       TA_REQ(vmar->lock_ref()) {
     *entry = {};
     auto vmo = map->vmo_locked();
     vmo->get_name(entry->name, sizeof(entry->name));
-    entry->base = map->base();
-    entry->size = map->size();
+    entry->base = region_base;
+    entry->size = region_size;
     entry->depth = depth + 1;  // The root aspace is depth 0.
     entry->type = ZX_INFO_MAPS_TYPE_MAPPING;
     zx_info_maps_mapping_t* u = &entry->u.mapping;
-    u->mmu_flags = arch_mmu_flags_to_vm_flags(map->arch_mmu_flags_locked());
-    u->vmo_koid = vmo->user_id();
-    u->committed_pages = vmo->AttributedPagesInRange(map->object_offset_locked(), map->size());
-    u->vmo_offset = map->object_offset_locked();
+    u->mmu_flags = arch_mmu_flags_to_vm_flags(region_mmu_flags), u->vmo_koid = vmo->user_id();
+    u->committed_pages = vmo->AttributedPagesInRange(region_object_offset, region_size);
+    u->vmo_offset = region_object_offset;
   }
 
  protected:
@@ -835,7 +876,8 @@ zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
 namespace {
 // Builds a list of all VMOs mapped into a VmAspace.
 class AspaceVmoEnumerator final
-    : public RestartableVmEnumerator<zx_info_vmo_t, AspaceVmoEnumerator, false, true, 0> {
+    : public RestartableVmEnumerator<zx_info_vmo_t, AspaceVmoEnumerator, false,
+                                     MappingEnumeration::Mapping, 0> {
  public:
   // NOTE: Code outside of the syscall layer should not typically know about
   // user_ptrs; do not use this pattern as an example.

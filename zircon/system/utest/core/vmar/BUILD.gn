@@ -6,7 +6,10 @@ source_set("vmar") {
   configs += [ "//build/unification/config:zircon-migrated" ]
 
   testonly = true
-  sources = [ "vmar.cc" ]
+  sources = [
+    "protect.cc",
+    "vmar.cc",
+  ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
