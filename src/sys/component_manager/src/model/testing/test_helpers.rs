@@ -291,6 +291,7 @@ pub struct TestModelResult {
     pub model: Arc<Model>,
     pub builtin_environment: Arc<Mutex<BuiltinEnvironment>>,
     pub mock_runner: Arc<MockRunner>,
+    pub mock_resolver: Box<MockResolver>,
 }
 
 pub struct TestEnvironmentBuilder {
@@ -359,9 +360,10 @@ impl TestEnvironmentBuilder {
         }));
         self.runtime_config.component_id_index_path = self.component_id_index_path;
 
+        let mock_resolver = Box::new(mock_resolver);
         let builtin_environment = Arc::new(Mutex::new(
             BuiltinEnvironmentBuilder::new()
-                .add_resolver("test".to_string(), Box::new(mock_resolver))
+                .add_resolver("test".to_string(), mock_resolver.clone())
                 .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
                 .set_runtime_config(self.runtime_config)
                 .enable_hub(self.enable_hub)
@@ -370,7 +372,7 @@ impl TestEnvironmentBuilder {
                 .expect("builtin environment setup failed"),
         ));
         let model = builtin_environment.lock().await.model.clone();
-        TestModelResult { model, builtin_environment, mock_runner }
+        TestModelResult { model, builtin_environment, mock_runner, mock_resolver }
     }
 }
 
@@ -381,6 +383,7 @@ pub struct ActionsTest {
     pub test_hook: Arc<TestHook>,
     pub realm_proxy: Option<fcomponent::RealmProxy>,
     pub runner: Arc<MockRunner>,
+    pub resolver: Box<MockResolver>,
 }
 
 impl ActionsTest {
@@ -398,7 +401,7 @@ impl ActionsTest {
         moniker: Option<PartialAbsoluteMoniker>,
         extra_hooks: Vec<HooksRegistration>,
     ) -> Self {
-        let TestModelResult { model, builtin_environment, mock_runner } =
+        let TestModelResult { model, builtin_environment, mock_runner, mock_resolver } =
             TestEnvironmentBuilder::new()
                 .set_root_component(root_component)
                 .set_components(components)
@@ -436,7 +439,14 @@ impl ActionsTest {
             None
         };
 
-        Self { model, builtin_environment, test_hook, realm_proxy, runner: mock_runner }
+        Self {
+            model,
+            builtin_environment,
+            test_hook,
+            realm_proxy,
+            runner: mock_runner,
+            resolver: mock_resolver,
+        }
     }
 
     pub async fn look_up(&self, moniker: PartialAbsoluteMoniker) -> Arc<ComponentInstance> {

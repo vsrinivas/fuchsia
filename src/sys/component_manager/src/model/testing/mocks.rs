@@ -143,6 +143,7 @@ fn new_proxy_routing_fn(ty: CapabilityType) -> RoutingFn {
     )
 }
 
+#[derive(Debug, Clone)]
 pub struct MockResolver {
     components: HashMap<String, ComponentDecl>,
 }
@@ -172,6 +173,10 @@ impl MockResolver {
 
     pub fn add_component(&mut self, name: &str, component: ComponentDecl) {
         self.components.insert(name.to_string(), component);
+    }
+
+    pub fn get_component_decl(&self, name: &str) -> Option<ComponentDecl> {
+        self.components.get(name).map(Clone::clone)
     }
 }
 

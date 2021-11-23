@@ -66,9 +66,9 @@ async fn do_start(
     component: &Arc<ComponentInstance>,
     bind_reason: &BindReason,
 ) -> Result<(), ModelError> {
-    // Pre-flight check: if the component is already started, or was shutd down, return now. Note
-    // that `bind_at` also performs this check before scheduling the action; here, we do it again
-    // while the action is registered so we avoid the risk of invoking the BeforeStart hook twice.
+    // Pre-flight check: if the component is already started, or was shut down, return now. Note
+    // that `bind_at` also performs this check before scheduling the action here. We do it again
+    // while the action is registered to avoid the risk of dispatching the Started event twice.
     {
         let state = component.lock_state().await;
         let execution = component.lock_execution().await;
@@ -279,8 +279,8 @@ async fn make_execution_runtime(
 mod tests {
     use {
         crate::model::{
-            actions::{ActionSet, ShutdownAction, StartAction},
-            component::{BindReason, ComponentInstance},
+            actions::{ActionSet, ShutdownAction, StartAction, StopAction},
+            component::{BindReason, ComponentInstance, InstanceState},
             error::ModelError,
             hooks::{Event, EventType, Hook, HooksRegistration},
             testing::{
@@ -289,11 +289,15 @@ mod tests {
             },
         },
         async_trait::async_trait,
-        cm_rust_testing::ComponentDeclBuilder,
-        fuchsia,
+        cm_rust::ComponentDecl,
+        cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder},
+        fuchsia, fuchsia_zircon as zx,
         moniker::PartialAbsoluteMoniker,
         std::sync::{Arc, Weak},
     };
+
+    // Child name for test child components instantiated during tests.
+    const TEST_CHILD_NAME: &str = "child";
 
     struct StartHook {
         component: Arc<ComponentInstance>,
@@ -308,19 +312,12 @@ mod tests {
             Ok(())
         }
     }
+
     #[fuchsia::test]
     /// Validate that if a start action is issued and the component stops
     /// the action completes we see a Stop event emitted.
     async fn start_issues_stop() {
-        let child_name = "child";
-        let root_name = "root";
-        let components = vec![
-            (root_name, ComponentDeclBuilder::new().add_lazy_child(child_name).build()),
-            (child_name, test_helpers::component_decl_with_test_runner()),
-        ];
-        let test_topology = ActionsTest::new(components[0].0.clone(), components, None).await;
-
-        let child = test_topology.look_up(vec![child_name].into()).await;
+        let (test_topology, child) = build_tree_with_single_child(TEST_CHILD_NAME).await;
         let start_hook = Arc::new(StartHook { component: child.clone() });
         child
             .hooks
@@ -333,7 +330,7 @@ mod tests {
 
         match ActionSet::register(child.clone(), StartAction::new(BindReason::Unsupported)).await {
             Err(ModelError::InstanceShutDown { moniker: m }) => {
-                assert_eq!(PartialAbsoluteMoniker::from(vec![child_name]), m);
+                assert_eq!(PartialAbsoluteMoniker::from(vec![TEST_CHILD_NAME]), m);
             }
             e => panic!("Unexpected result from component start: {:?}", e),
         }
@@ -350,9 +347,105 @@ mod tests {
         assert_eq!(
             events,
             vec![
-                Lifecycle::Bind(vec![format!("{}:0", child_name).as_str()].into()),
-                Lifecycle::Stop(vec![format!("{}:0", child_name).as_str()].into())
+                Lifecycle::Bind(vec![format!("{}:0", TEST_CHILD_NAME).as_str()].into()),
+                Lifecycle::Stop(vec![format!("{}:0", TEST_CHILD_NAME).as_str()].into())
             ]
         );
+    }
+
+    #[fuchsia::test]
+    async fn restart_set_execution_runtime() {
+        let (_test_harness, child) = build_tree_with_single_child(TEST_CHILD_NAME).await;
+
+        {
+            let timestamp = zx::Time::get_monotonic();
+            let () = ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+                .await
+                .expect("failed to start child");
+            let execution = child.lock_execution().await;
+            let runtime = execution.runtime.as_ref().expect("child runtime is unexpectedly empty");
+            assert!(runtime.timestamp > timestamp);
+        }
+
+        {
+            let () = ActionSet::register(child.clone(), StopAction::new(false, false))
+                .await
+                .expect("failed to stop child");
+            let execution = child.lock_execution().await;
+            assert!(execution.runtime.is_none());
+        }
+
+        {
+            let timestamp = zx::Time::get_monotonic();
+            let () = ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+                .await
+                .expect("failed to start child");
+            let execution = child.lock_execution().await;
+            let runtime = execution.runtime.as_ref().expect("child runtime is unexpectedly empty");
+            assert!(runtime.timestamp > timestamp);
+        }
+    }
+
+    #[fuchsia::test]
+    async fn restart_does_not_refresh_resolved_state() {
+        let (mut test_harness, child) = build_tree_with_single_child(TEST_CHILD_NAME).await;
+
+        {
+            let timestamp = zx::Time::get_monotonic();
+            let () = ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+                .await
+                .expect("failed to start child");
+            let execution = child.lock_execution().await;
+            let runtime = execution.runtime.as_ref().expect("child runtime is unexpectedly empty");
+            assert!(runtime.timestamp > timestamp);
+        }
+
+        {
+            let () = ActionSet::register(child.clone(), StopAction::new(false, false))
+                .await
+                .expect("failed to stop child");
+            let execution = child.lock_execution().await;
+            assert!(execution.runtime.is_none());
+        }
+
+        let resolver = test_harness.resolver.as_mut();
+        let original_decl =
+            resolver.get_component_decl(TEST_CHILD_NAME).expect("child decl not stored");
+        let mut modified_decl = original_decl.clone();
+        modified_decl.children.push(ChildDeclBuilder::new().name("foo").build());
+        resolver.add_component(TEST_CHILD_NAME, modified_decl.clone());
+
+        let () = ActionSet::register(child.clone(), StartAction::new(BindReason::Debug))
+            .await
+            .expect("failed to start child");
+
+        let resolved_decl = get_resolved_decl(&child).await;
+        assert_ne!(resolved_decl, modified_decl);
+        assert_eq!(resolved_decl, original_decl);
+    }
+
+    async fn build_tree_with_single_child(
+        child_name: &'static str,
+    ) -> (ActionsTest, Arc<ComponentInstance>) {
+        let root_name = "root";
+        let components = vec![
+            (root_name, ComponentDeclBuilder::new().add_lazy_child(child_name).build()),
+            (child_name, test_helpers::component_decl_with_test_runner()),
+        ];
+        let test_topology = ActionsTest::new(components[0].0.clone(), components, None).await;
+
+        let child = test_topology.look_up(vec![child_name].into()).await;
+
+        (test_topology, child)
+    }
+
+    async fn get_resolved_decl(component: &Arc<ComponentInstance>) -> ComponentDecl {
+        let state = component.lock_state().await;
+        let resolved_state = match &*state {
+            InstanceState::Resolved(resolve_state) => resolve_state,
+            _ => panic!("expected component to be resolved"),
+        };
+
+        resolved_state.decl().clone()
     }
 }
