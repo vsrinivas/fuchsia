@@ -16,13 +16,13 @@ use crate::{
 };
 use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder};
 use fidl::prelude::*;
-use fidl_fuchsia_diagnostics::{Interest, LogInterestSelector, StreamMode};
+use fidl_fuchsia_diagnostics::{Interest as FidlInterest, LogInterestSelector, StreamMode};
 use fidl_fuchsia_logger::{LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream};
 use fuchsia_async::Task;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, prelude::*};
 use parking_lot::Mutex;
-use std::sync::Arc;
+use std::{cmp::Ordering, collections::BTreeMap, sync::Arc};
 use tracing::{debug, error, warn};
 
 pub struct LogsArtifactsContainer {
@@ -58,7 +58,7 @@ struct ContainerState {
     num_active_channels: u64,
 
     /// Current interest for this component.
-    interest: Interest,
+    interests: BTreeMap<Interest, usize>,
 
     /// Control handles for connected clients.
     control_handles: Vec<LogSinkControlHandle>,
@@ -80,14 +80,14 @@ impl LogsArtifactsContainer {
                 num_active_channels: 0,
                 num_active_sockets: 0,
                 control_handles: vec![],
-                interest: Interest::EMPTY,
+                interests: BTreeMap::new(),
             }),
             stats: Arc::new(stats),
             event_timestamp: zx::Time::get_monotonic(),
         };
 
         // there are no control handles so this won't notify anyone
-        new.update_interest(interest_selectors);
+        new.update_interest(interest_selectors, &[]);
 
         new
     }
@@ -168,7 +168,7 @@ impl LogsArtifactsContainer {
         {
             let control = stream.control_handle();
             let mut state = self.state.lock();
-            control.send_on_register_interest(state.interest.clone()).ok();
+            control.send_on_register_interest(state.min_interest().clone().into()).ok();
             state.control_handles.push(control);
         }
 
@@ -237,9 +237,16 @@ impl LogsArtifactsContainer {
     }
 
     /// Set the `Interest` for this component, calling `LogSink/OnRegisterInterest` with all
-    /// control handles if it is a change from the previous interest.
-    pub fn update_interest(&self, interest_selectors: &[LogInterestSelector]) {
-        let mut new_interest = Interest::EMPTY;
+    /// control handles if it is a change from the previous interest. For any match that is also
+    /// contained in `previous_selectors`, the previous values will be removed from the set of
+    /// interests.
+    pub fn update_interest(
+        &self,
+        interest_selectors: &[LogInterestSelector],
+        previous_selectors: &[LogInterestSelector],
+    ) {
+        let mut new_interest = FidlInterest::EMPTY;
+        let mut remove_interest = FidlInterest::EMPTY;
         for selector in interest_selectors {
             if selectors::match_moniker_against_component_selector(
                 &self.identity.relative_moniker,
@@ -248,16 +255,72 @@ impl LogsArtifactsContainer {
             .unwrap_or_default()
             {
                 new_interest = selector.interest.clone();
+                // If there are more matches, ignore them, we'll pick the first match.
+                break;
             }
         }
 
+        if let Some(previous_selector) = previous_selectors.iter().find(|s| {
+            selectors::match_moniker_against_component_selector(
+                &self.identity.relative_moniker,
+                &s.selector,
+            )
+            .unwrap_or_default()
+        }) {
+            remove_interest = previous_selector.interest.clone();
+        }
+
         let mut state = self.state.lock();
-        if state.interest != new_interest {
-            debug!(%self.identity, ?new_interest, "Updating interest.");
-            state
-                .control_handles
-                .retain(|handle| handle.send_on_register_interest(new_interest.clone()).is_ok());
-            state.interest = new_interest;
+        // Unfortunately we cannot use a match statement since `FidlInterest` doesn't derive Eq.
+        // It does derive PartialEq though. All these branches will send an interest update if the
+        // minimum interest changes after performing the required actions.
+        if new_interest == FidlInterest::EMPTY && remove_interest != FidlInterest::EMPTY {
+            // Undo the previous interest. There's no new interest to add.
+            state.maybe_send_updates(
+                |state| {
+                    state.erase(&remove_interest);
+                },
+                &self.identity,
+            );
+        } else if new_interest != FidlInterest::EMPTY && remove_interest == FidlInterest::EMPTY {
+            // Apply the new interest. There's no previous interest to remove.
+            state.maybe_send_updates(
+                |state| {
+                    state.push_interest(new_interest);
+                },
+                &self.identity,
+            );
+        } else if new_interest != FidlInterest::EMPTY && remove_interest != FidlInterest::EMPTY {
+            // Remove the previous interest and insert the new one.
+            state.maybe_send_updates(
+                |state| {
+                    state.erase(&remove_interest);
+                    state.push_interest(new_interest);
+                },
+                &self.identity,
+            );
+        }
+    }
+
+    /// Resets the `Interest` for this component, calling `LogSink/OnRegisterInterest` with the
+    /// lowest interest found in the set of requested interests for all control handles.
+    pub fn reset_interest(&self, interest_selectors: &[LogInterestSelector]) {
+        for selector in interest_selectors {
+            if selectors::match_moniker_against_component_selector(
+                &self.identity.relative_moniker,
+                &selector.selector,
+            )
+            .unwrap_or_default()
+            {
+                let mut state = self.state.lock();
+                state.maybe_send_updates(
+                    |state| {
+                        state.erase(&selector.interest);
+                    },
+                    &self.identity,
+                );
+                return;
+            }
         }
     }
 
@@ -301,6 +364,99 @@ impl LogsArtifactsContainer {
     }
 }
 
+impl ContainerState {
+    /// Executes the given callback on the state. If the minimum interest before executing the given
+    /// actions and after isn't the same, then the new interest is sent to the registered listeners.
+    fn maybe_send_updates<F>(&mut self, action: F, identity: &ComponentIdentity)
+    where
+        F: FnOnce(&mut ContainerState),
+    {
+        let prev_min_interest = self.min_interest();
+        action(self);
+        let new_min_interest = self.min_interest();
+        if prev_min_interest == FidlInterest::EMPTY
+            || compare_fidl_interest(&new_min_interest, &prev_min_interest) != Ordering::Equal
+        {
+            debug!(%identity, ?new_min_interest, "Updating interest.");
+            self.control_handles.retain(|handle| {
+                handle.send_on_register_interest(new_min_interest.clone()).is_ok()
+            });
+        }
+    }
+
+    /// Pushes the given `interest` to the set.
+    fn push_interest(&mut self, interest: FidlInterest) {
+        if interest != FidlInterest::EMPTY {
+            let count = self.interests.entry(interest.into()).or_insert(0);
+            *count += 1;
+        }
+    }
+
+    /// Removes the given `interest` from the set
+    fn erase(&mut self, interest: &FidlInterest) {
+        let interest = interest.clone().into();
+        if let Some(count) = self.interests.get_mut(&interest) {
+            if *count <= 1 {
+                self.interests.remove(&interest);
+            } else {
+                *count -= 1;
+            }
+        }
+    }
+
+    /// Returns a copy of the lowest interest in the set. If the set is empty, an EMPTY interest is
+    /// returned.
+    fn min_interest(&self) -> FidlInterest {
+        // btreemap: keys are sorted and ascending.
+        self.interests.keys().next().map(|i| i.0.clone()).unwrap_or(FidlInterest::EMPTY)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+struct Interest(FidlInterest);
+
+impl From<FidlInterest> for Interest {
+    fn from(interest: FidlInterest) -> Interest {
+        Interest(interest)
+    }
+}
+
+impl std::ops::Deref for Interest {
+    type Target = FidlInterest;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Eq for Interest {}
+
+impl Ord for Interest {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self.min_severity, other.min_severity) {
+            (Some(_), None) => Ordering::Greater,
+            (None, Some(_)) => Ordering::Less,
+            (None, None) => Ordering::Equal,
+            (Some(a), Some(b)) => a.cmp(&b),
+        }
+    }
+}
+
+impl PartialOrd for Interest {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(&other))
+    }
+}
+
+/// Compares the minimum severity of two interests.
+fn compare_fidl_interest(a: &FidlInterest, b: &FidlInterest) -> Ordering {
+    match (a.min_severity, b.min_severity) {
+        (Some(_), None) => Ordering::Greater,
+        (None, Some(_)) => Ordering::Less,
+        (None, None) => Ordering::Equal,
+        (Some(a), Some(b)) => a.cmp(&b),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -309,25 +465,22 @@ mod tests {
         logs::budget::BudgetManager,
     };
     use fidl_fuchsia_diagnostics::{ComponentSelector, Severity, StringSelector};
-    use fidl_fuchsia_logger::LogSinkMarker;
+    use fidl_fuchsia_logger::{LogSinkEventStream, LogSinkMarker};
     use matches::assert_matches;
 
-    #[fuchsia::test]
-    async fn update_interest() {
-        let moniker_segment_1 = "foo".to_string();
-        let moniker_segment_2 = "bar".to_string();
+    async fn initialize_container() -> (Arc<LogsArtifactsContainer>, LogSinkEventStream) {
         // Initialize container
         let budget_manager = BudgetManager::new(0);
         let container = Arc::new(LogsArtifactsContainer::new(
             Arc::new(ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::Moniker(vec![
                     MonikerSegment {
-                        name: moniker_segment_1.clone(),
+                        name: "foo".to_string(),
                         collection: None,
                         instance_id: "0".to_string(),
                     },
                     MonikerSegment {
-                        name: moniker_segment_2.clone(),
+                        name: "bar".to_string(),
                         collection: None,
                         instance_id: "0".to_string(),
                     },
@@ -350,34 +503,116 @@ mod tests {
         let mut event_stream = log_sink.take_event_stream();
         assert_eq!(
             event_stream.next().await.unwrap().unwrap().into_on_register_interest().unwrap(),
-            Interest::EMPTY,
+            FidlInterest::EMPTY,
         );
+
+        (container, event_stream)
+    }
+
+    #[fuchsia::test]
+    async fn update_interest() {
+        let (container, mut event_stream) = initialize_container().await;
 
         // We shouldn't see this interest update since it doesn't match the
         // moniker.
-        container.update_interest(&[LogInterestSelector {
-            selector: ComponentSelector {
-                moniker_segments: Some(vec![StringSelector::ExactMatch("foo".to_string())]),
-                ..ComponentSelector::EMPTY
-            },
-            interest: Interest { min_severity: Some(Severity::Info), ..Interest::EMPTY },
-        }]);
+        container.update_interest(&[interest(&["foo"], Some(Severity::Info))], &[]);
 
         assert_matches!(event_stream.next().now_or_never(), None);
 
         // We should see this interest update.
-        container.update_interest(&[LogInterestSelector {
-            selector: ComponentSelector {
-                moniker_segments: Some(vec![
-                    StringSelector::ExactMatch(moniker_segment_1),
-                    StringSelector::ExactMatch(moniker_segment_2),
-                ]),
-                ..ComponentSelector::EMPTY
-            },
-            interest: Interest { min_severity: Some(Severity::Info), ..Interest::EMPTY },
-        }]);
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
 
         // Verify we see the last interest we set.
+        assert_severity(&mut event_stream, Severity::Info).await;
+    }
+
+    #[fuchsia::test]
+    async fn interest_serverity_semantics() {
+        let (container, mut event_stream) = initialize_container().await;
+
+        // Set some interest.
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
+        assert_severity(&mut event_stream, Severity::Info).await;
+        assert_matches!(event_stream.next().now_or_never(), None);
+        assert_interests(&container, [(Severity::Info, 1)]);
+
+        // Sending a higher interest (WARN > INFO) has no visible effect, even if the new interest
+        // (WARN) will be tracked internally until reset.
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))], &[]);
+        assert_matches!(event_stream.next().now_or_never(), None);
+        assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]);
+
+        // Sending a lower interest (DEBUG < INFO) updates the previous one.
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]);
+        assert_severity(&mut event_stream, Severity::Debug).await;
+        assert_interests(
+            &container,
+            [(Severity::Debug, 1), (Severity::Info, 1), (Severity::Warn, 1)],
+        );
+
+        // Sending the same interest leads to tracking it twice, but no updates are sent since it's
+        // the same minimum interest.
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]);
+        assert_matches!(event_stream.next().now_or_never(), None);
+        assert_interests(
+            &container,
+            [(Severity::Debug, 2), (Severity::Info, 1), (Severity::Warn, 1)],
+        );
+
+        // The first reset does nothing, since the new minimum interest remains the same (we had
+        // inserted twice, therefore we need to reset twice).
+        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]);
+        assert_matches!(event_stream.next().now_or_never(), None);
+        assert_interests(
+            &container,
+            [(Severity::Debug, 1), (Severity::Info, 1), (Severity::Warn, 1)],
+        );
+
+        // The second reset causes a change in minimum interest -> now INFO.
+        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]);
+        assert_severity(&mut event_stream, Severity::Info).await;
+        assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]);
+
+        // If we pass a previous severity (INFO), then we undo it and set the new one (ERROR).
+        // However, we get WARN since that's the minimum severity in the set.
+        container.update_interest(
+            &[interest(&["foo", "bar"], Some(Severity::Error))],
+            &[interest(&["foo", "bar"], Some(Severity::Info))],
+        );
+        assert_severity(&mut event_stream, Severity::Warn).await;
+        assert_interests(&container, [(Severity::Error, 1), (Severity::Warn, 1)]);
+
+        // When we reset warn, now we get ERROR since that's the minimum severity in the set.
+        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))]);
+        assert_severity(&mut event_stream, Severity::Error).await;
+        assert_interests(&container, [(Severity::Error, 1)]);
+
+        // When we reset ERROR , we get back to EMPTY since we have removed all interests from the
+        // set.
+        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Error))]);
+        assert_eq!(
+            event_stream.next().await.unwrap().unwrap().into_on_register_interest().unwrap(),
+            FidlInterest::EMPTY,
+        );
+        assert_interests(&container, []);
+    }
+
+    fn interest(moniker: &[&str], min_severity: Option<Severity>) -> LogInterestSelector {
+        LogInterestSelector {
+            selector: ComponentSelector {
+                moniker_segments: Some(
+                    moniker
+                        .into_iter()
+                        .map(|s| StringSelector::ExactMatch(s.to_string()))
+                        .collect(),
+                ),
+                ..ComponentSelector::EMPTY
+            },
+            interest: FidlInterest { min_severity, ..FidlInterest::EMPTY },
+        }
+    }
+
+    async fn assert_severity(event_stream: &mut LogSinkEventStream, severity: Severity) {
         assert_eq!(
             event_stream
                 .next()
@@ -386,8 +621,21 @@ mod tests {
                 .unwrap()
                 .into_on_register_interest()
                 .unwrap()
-                .min_severity,
-            Some(Severity::Info),
+                .min_severity
+                .unwrap(),
+            severity
         );
+    }
+
+    fn assert_interests<const N: usize>(
+        container: &LogsArtifactsContainer,
+        severities: [(Severity, usize); N],
+    ) {
+        let mut expected_map = BTreeMap::new();
+        expected_map.extend(std::array::IntoIter::new(severities).map(|(s, c)| {
+            let interest = FidlInterest { min_severity: Some(s), ..FidlInterest::EMPTY };
+            (interest.into(), c)
+        }));
+        assert_eq!(expected_map, container.state.lock().interests);
     }
 }

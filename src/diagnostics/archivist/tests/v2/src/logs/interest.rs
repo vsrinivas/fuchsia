@@ -70,6 +70,10 @@ async fn register_interest() {
 
     // 5. Assert logs
     assert_messages(&mut logs, &expected_logs[2..]).await;
+
+    // 6. Disconnecting the protocol, brings back an EMPTY interest, which defaults to INFO.
+    drop(log_settings);
+    assert_messages(&mut logs, &expected_logs[1..]).await;
 }
 
 async fn assert_messages<S>(mut logs: S, messages: &[(Severity, &str)])
