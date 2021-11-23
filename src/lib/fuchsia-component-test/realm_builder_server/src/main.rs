@@ -346,7 +346,7 @@ impl Realm {
         let mut child_path = self.realm_path.clone();
         child_path.push(name.clone());
         let child_realm_node = RealmNode2::new_from_decl(new_decl_with_program_entries(vec![
-            (runner::MOCK_ID_KEY.to_string(), local_component_id.into()),
+            (runner::LOCAL_COMPONENT_ID_KEY.to_string(), local_component_id.into()),
             (runner::LOCAL_COMPONENT_NAME_KEY.to_string(), child_path.join("/").to_string()),
         ]));
         self.realm_node.add_child(name.clone(), options, child_realm_node).await
@@ -1126,7 +1126,7 @@ impl RealmNode {
     async fn set_mock_component(
         &mut self,
         moniker: Moniker,
-        mock_id: runner::MockId,
+        mock_id: runner::LocalComponentId,
     ) -> Result<(), Error> {
         if let Some(parent_moniker) = moniker.parent() {
             let parent_node = self.get_node_mut(&parent_moniker, GetBehavior::CreateIfMissing)?;
@@ -1144,7 +1144,7 @@ impl RealmNode {
                 runner: Some(runner::RUNNER_NAME.try_into().unwrap()),
                 info: fdata::Dictionary {
                     entries: Some(vec![fdata::DictionaryEntry {
-                        key: runner::MOCK_ID_KEY.to_string(),
+                        key: runner::LOCAL_COMPONENT_ID_KEY.to_string(),
                         value: Some(Box::new(fdata::DictionaryValue::Str(mock_id.into()))),
                     }]),
                     ..fdata::Dictionary::EMPTY
@@ -2544,16 +2544,21 @@ mod tests {
             .expect("failed to call add_local_child")
             .expect("add_local_child returned an error");
 
-        // Confirm that the mocks runner has entries for the two children we just added
-        let mocks = realm_and_builder_task.runner.mocks().await;
-        assert!(mocks.contains_key(&"0".to_string())); // "a" was added first, so it gets 0
-        assert!(mocks.contains_key(&"1".to_string())); // "b" was added second, so it gets 1
+        // Confirm that the local component runner has entries for the two children we just added
+        let local_component_proxies = realm_and_builder_task.runner.local_component_proxies().await;
+        // "a" was added first, so it gets 0
+        assert!(local_component_proxies.contains_key(&"0".to_string()));
+        // "b" was added second, so it gets 1
+        assert!(local_component_proxies.contains_key(&"1".to_string()));
 
-        // Confirm that the entries in the mocks runner for these children does not have a
+        // Confirm that the entries in the local_components runner for these children does not have a
         // `fcrunner::ComponentRunnerProxy` for these children, as this value is supposed to be
         // populated with the channel provided by `Builder.Build`, and we haven't called that yet.
         let get_runner_proxy =
-            |mocks: &HashMap<_, _>, id: &str| match mocks.clone().remove(&id.to_string()) {
+            |local_component_proxies: &HashMap<_, _>, id: &str| match local_component_proxies
+                .clone()
+                .remove(&id.to_string())
+            {
                 Some(runner::ControlHandleOrRunnerProxy::RunnerProxy(rp)) => rp,
                 Some(runner::ControlHandleOrRunnerProxy::ControlHandle(_)) => {
                     panic!("unexpected control handle")
@@ -2561,15 +2566,15 @@ mod tests {
                 None => panic!("value unexpectedly missing"),
             };
 
-        assert!(get_runner_proxy(&mocks, "0").lock().await.is_none());
-        assert!(get_runner_proxy(&mocks, "1").lock().await.is_none());
+        assert!(get_runner_proxy(&local_component_proxies, "0").lock().await.is_none());
+        assert!(get_runner_proxy(&local_component_proxies, "1").lock().await.is_none());
 
-        // Call `Builder.Build`, and confirm that the entries for our local children in the mocks
-        // runner now has a `fcrunner::ComponentRunnerProxy`.
+        // Call `Builder.Build`, and confirm that the entries for our local children in the local
+        // component runner now has a `fcrunner::ComponentRunnerProxy`.
         let _ = realm_and_builder_task.call_build().await.expect("build failed");
 
-        assert!(get_runner_proxy(&mocks, "0").lock().await.is_some());
-        assert!(get_runner_proxy(&mocks, "1").lock().await.is_some());
+        assert!(get_runner_proxy(&local_component_proxies, "0").lock().await.is_some());
+        assert!(get_runner_proxy(&local_component_proxies, "1").lock().await.is_some());
 
         // Confirm that the `fcrunner::ComponentRunnerProxy` for one of the local children has the
         // value we expect, by writing a value into it and seeing the same value come out on the
@@ -2584,7 +2589,8 @@ mod tests {
 
         let (_controller_client_end, controller_server_end) =
             create_endpoints::<fcrunner::ComponentControllerMarker>().unwrap();
-        let runner_proxy_for_a = get_runner_proxy(&mocks, "0").lock().await.clone().unwrap();
+        let runner_proxy_for_a =
+            get_runner_proxy(&local_component_proxies, "0").lock().await.clone().unwrap();
         runner_proxy_for_a
             .start(
                 fcrunner::ComponentStartInfo {
@@ -3014,7 +3020,7 @@ mod tests {
                 info: fdata::Dictionary {
                     entries: Some(vec![
                         fdata::DictionaryEntry {
-                            key: runner::MOCK_ID_KEY.to_string(),
+                            key: runner::LOCAL_COMPONENT_ID_KEY.to_string(),
                             value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
                         },
                         fdata::DictionaryEntry {
@@ -3037,7 +3043,11 @@ mod tests {
         };
         expected_tree.add_binder_expose();
         assert_eq!(expected_tree, tree_from_resolver);
-        assert!(realm_and_builder_task.runner.mocks().await.contains_key(&"0".to_string()));
+        assert!(realm_and_builder_task
+            .runner
+            .local_component_proxies()
+            .await
+            .contains_key(&"0".to_string()));
     }
 
     #[fuchsia::test]

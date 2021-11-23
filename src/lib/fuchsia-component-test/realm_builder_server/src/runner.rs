@@ -21,16 +21,16 @@ use {
 };
 
 pub const RUNNER_NAME: &'static str = "realm_builder";
-pub const MOCK_ID_KEY: &'static str = "mock_id";
+pub const LOCAL_COMPONENT_ID_KEY: &'static str = "local_component_id";
 pub const LEGACY_URL_KEY: &'static str = "legacy_url";
 pub const LOCAL_COMPONENT_NAME_KEY: &'static str = "LOCAL_COMPONENT_NAME";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct MockId(String);
+pub struct LocalComponentId(String);
 
-impl From<MockId> for String {
-    fn from(mock_id: MockId) -> Self {
-        mock_id.0
+impl From<LocalComponentId> for String {
+    fn from(local_id: LocalComponentId) -> Self {
+        local_id.0
     }
 }
 
@@ -42,54 +42,64 @@ pub enum ControlHandleOrRunnerProxy {
 }
 
 pub struct Runner {
-    next_mock_id: Mutex<u64>,
-    mocks: Mutex<HashMap<String, ControlHandleOrRunnerProxy>>,
+    next_local_component_id: Mutex<u64>,
+    local_component_proxies: Mutex<HashMap<String, ControlHandleOrRunnerProxy>>,
 }
 
 impl Runner {
     pub fn new() -> Arc<Self> {
-        Arc::new(Self { next_mock_id: Mutex::new(0), mocks: Mutex::new(HashMap::new()) })
+        Arc::new(Self {
+            next_local_component_id: Mutex::new(0),
+            local_component_proxies: Mutex::new(HashMap::new()),
+        })
     }
 
     #[cfg(test)]
-    pub async fn mocks(self: &Arc<Self>) -> HashMap<String, ControlHandleOrRunnerProxy> {
-        self.mocks.lock().await.clone()
+    pub async fn local_component_proxies(
+        self: &Arc<Self>,
+    ) -> HashMap<String, ControlHandleOrRunnerProxy> {
+        self.local_component_proxies.lock().await.clone()
     }
 
     pub async fn register_mock(
         self: &Arc<Self>,
         control_handle: ftest::RealmBuilderControlHandle,
-    ) -> MockId {
-        let mut next_mock_id_guard = self.next_mock_id.lock().await;
-        let mut mocks_guard = self.mocks.lock().await;
+    ) -> LocalComponentId {
+        let mut next_local_component_id_guard = self.next_local_component_id.lock().await;
+        let mut local_component_proxies_guard = self.local_component_proxies.lock().await;
 
-        let mock_id = format!("{}", *next_mock_id_guard);
-        *next_mock_id_guard += 1;
+        let local_component_id = format!("{}", *next_local_component_id_guard);
+        *next_local_component_id_guard += 1;
 
-        mocks_guard
-            .insert(mock_id.clone(), ControlHandleOrRunnerProxy::ControlHandle(control_handle));
-        MockId(mock_id)
+        local_component_proxies_guard.insert(
+            local_component_id.clone(),
+            ControlHandleOrRunnerProxy::ControlHandle(control_handle),
+        );
+        LocalComponentId(local_component_id)
     }
 
     pub async fn register_local_component(
         self: &Arc<Self>,
         runner_proxy: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
-    ) -> MockId {
-        let mut next_mock_id_guard = self.next_mock_id.lock().await;
-        let mut mocks_guard = self.mocks.lock().await;
+    ) -> LocalComponentId {
+        let mut next_local_component_id_guard = self.next_local_component_id.lock().await;
+        let mut local_component_proxies_guard = self.local_component_proxies.lock().await;
 
-        let mock_id = format!("{}", *next_mock_id_guard);
-        *next_mock_id_guard += 1;
+        let local_component_id = format!("{}", *next_local_component_id_guard);
+        *next_local_component_id_guard += 1;
 
-        mocks_guard.insert(mock_id.clone(), ControlHandleOrRunnerProxy::RunnerProxy(runner_proxy));
-        MockId(mock_id)
+        local_component_proxies_guard.insert(
+            local_component_id.clone(),
+            ControlHandleOrRunnerProxy::RunnerProxy(runner_proxy),
+        );
+        LocalComponentId(local_component_id)
     }
 
     pub fn run_runner_service(self: &Arc<Self>, stream: fcrunner::ComponentRunnerRequestStream) {
         let self_ref = self.clone();
         fasync::Task::local(async move {
             if let Err(e) = self_ref.handle_runner_request_stream(stream).await {
-                warn!("error encountered while running runner service for mocks: {:?}", e);
+                warn!("error encountered while running realm builder runner service: {:?}", e);
             }
         })
         .detach();
@@ -114,11 +124,12 @@ impl Runner {
                         return Err(format_err!("missing runtime_dir"));
                     }
 
-                    match extract_mock_id_or_legacy_url(program)? {
-                        MockIdOrLegacyUrl::MockId(mock_id) => {
-                            self.launch_mock_component(mock_id, start_info, controller).await?;
+                    match extract_local_component_id_or_legacy_url(program)? {
+                        LocalComponentIdOrLegacyUrl::LocalComponentId(local_component_id) => {
+                            self.launch_local_component(local_component_id, start_info, controller)
+                                .await?;
                         }
-                        MockIdOrLegacyUrl::LegacyUrl(legacy_url) => {
+                        LocalComponentIdOrLegacyUrl::LegacyUrl(legacy_url) => {
                             Self::launch_v1_component(legacy_url, start_info, controller).await?;
                         }
                     }
@@ -128,20 +139,22 @@ impl Runner {
         Ok(())
     }
 
-    async fn launch_mock_component(
+    async fn launch_local_component(
         self: &Arc<Self>,
-        mock_id: String,
+        local_component_id: String,
         mut start_info: fcrunner::ComponentStartInfo,
         controller: ServerEnd<fcrunner::ComponentControllerMarker>,
     ) -> Result<(), Error> {
-        let mocks_guard = self.mocks.lock().await;
-        let mock_control_handle_or_runner_proxy =
-            mocks_guard.get(&mock_id).ok_or(format_err!("no such mock: {:?}", mock_id))?.clone();
+        let local_component_proxies_guard = self.local_component_proxies.lock().await;
+        let local_component_control_handle_or_runner_proxy = local_component_proxies_guard
+            .get(&local_component_id)
+            .ok_or(format_err!("no such local component: {:?}", local_component_id))?
+            .clone();
 
-        match mock_control_handle_or_runner_proxy {
+        match local_component_control_handle_or_runner_proxy {
             ControlHandleOrRunnerProxy::ControlHandle(mock_control_handle) => {
                 mock_control_handle.send_on_mock_run_request(
-                    &mock_id,
+                    &local_component_id,
                     ftest::MockComponentStartInfo {
                         ns: start_info.ns,
                         outgoing_dir: start_info.outgoing_dir,
@@ -151,7 +164,7 @@ impl Runner {
 
                 fasync::Task::local(run_mock_controller(
                     controller.into_stream()?,
-                    mock_id,
+                    local_component_id,
                     start_info.runtime_dir.unwrap(),
                     mock_control_handle.clone(),
                 ))
@@ -164,7 +177,7 @@ impl Runner {
                 }
                 let runner_proxy = runner_proxy_placeholder_guard.as_ref().unwrap();
                 if let Some(mut program) = start_info.program.as_mut() {
-                    remove_mock_id(&mut program);
+                    remove_local_component_id(&mut program);
                 }
                 runner_proxy
                     .start(start_info, controller)
@@ -208,25 +221,27 @@ impl Runner {
     }
 }
 
-enum MockIdOrLegacyUrl {
-    MockId(String),
+enum LocalComponentIdOrLegacyUrl {
+    LocalComponentId(String),
     LegacyUrl(String),
 }
 
-/// Extracts either the value for the `mock_id` key or the `legacy_url` key from the provided
+/// Extracts either the value for the `local_component_id` key or the `legacy_url` key from the provided
 /// dictionary. It is an error for both keys to be present at once, or for anything else to be
 /// present in the dictionary.
-fn extract_mock_id_or_legacy_url<'a>(dict: fdata::Dictionary) -> Result<MockIdOrLegacyUrl, Error> {
+fn extract_local_component_id_or_legacy_url<'a>(
+    dict: fdata::Dictionary,
+) -> Result<LocalComponentIdOrLegacyUrl, Error> {
     let entries = dict.entries.ok_or(format_err!("program section is empty"))?;
     for entry in entries.into_iter() {
         let entry_value =
             entry.value.map(|box_| *box_).ok_or(format_err!("program section is missing value"))?;
         match (entry.key.as_str(), entry_value) {
-            (MOCK_ID_KEY, fdata::DictionaryValue::Str(s)) => {
-                return Ok(MockIdOrLegacyUrl::MockId(s.clone()))
+            (LOCAL_COMPONENT_ID_KEY, fdata::DictionaryValue::Str(s)) => {
+                return Ok(LocalComponentIdOrLegacyUrl::LocalComponentId(s.clone()))
             }
             (LEGACY_URL_KEY, fdata::DictionaryValue::Str(s)) => {
-                return Ok(MockIdOrLegacyUrl::LegacyUrl(s.clone()))
+                return Ok(LocalComponentIdOrLegacyUrl::LegacyUrl(s.clone()))
             }
             _ => continue,
         }
@@ -234,9 +249,12 @@ fn extract_mock_id_or_legacy_url<'a>(dict: fdata::Dictionary) -> Result<MockIdOr
     return Err(format_err!("malformed program section"));
 }
 
-fn remove_mock_id(dict: &mut fdata::Dictionary) {
+fn remove_local_component_id(dict: &mut fdata::Dictionary) {
     if let Some(entries) = &mut dict.entries {
-        *entries = entries.drain(..).filter(|entry| entry.key.as_str() != MOCK_ID_KEY).collect();
+        *entries = entries
+            .drain(..)
+            .filter(|entry| entry.key.as_str() != LOCAL_COMPONENT_ID_KEY)
+            .collect();
     }
 }
 
@@ -297,7 +315,7 @@ mod tests {
 
         let (client_runner_proxy, mut client_runner_request_stream) =
             create_proxy_and_stream::<fcrunner::ComponentRunnerMarker>().unwrap();
-        let MockId(mock_id) =
+        let LocalComponentId(local_component_id) =
             runner.register_local_component(Arc::new(Mutex::new(Some(client_runner_proxy)))).await;
 
         let (server_runner_proxy, server_runner_request_stream) =
@@ -317,8 +335,8 @@ mod tests {
                     value: Some(Box::new(fdata::DictionaryValue::Str("rule!".to_string()))),
                 },
                 fdata::DictionaryEntry {
-                    key: MOCK_ID_KEY.to_string(),
-                    value: Some(Box::new(fdata::DictionaryValue::Str(mock_id))),
+                    key: LOCAL_COMPONENT_ID_KEY.to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str(local_component_id))),
                 },
             ]),
             ..fdata::Dictionary::EMPTY
@@ -351,9 +369,9 @@ mod tests {
                 .expect("failed to read from client_runner_request_stream"),
             Some(fcrunner::ComponentRunnerRequest::Start { start_info, .. })
                 if start_info.program == Some(fdata::Dictionary {
-                    // The `MOCK_ID_KEY` entry gets removed from the program section before sending
-                    // it off to the client, as this value is only used for bookkeeping internal to
-                    // the realm builder runner.
+                    // The `LOCAL_COMPONENT_ID_KEY` entry gets removed from the program section
+                    // before sending it off to the client, as this value is only used for
+                    // bookkeeping internal to the realm builder runner.
                     entries: Some(vec![
                         fdata::DictionaryEntry {
                             key: "hippos".to_string(),

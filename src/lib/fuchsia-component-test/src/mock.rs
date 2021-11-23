@@ -13,7 +13,7 @@ use {
     std::{collections::HashMap, path::Path, sync::Arc},
 };
 
-pub const MOCK_ID_KEY: &'static str = "mock_id";
+pub const MOCK_ID_KEY: &'static str = "local_component_id";
 pub const RUNNER_NAME: &'static str = "realm_builder";
 
 // [START mock_interface_rust]
