@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK composite driver V1 test driver",
+    "short_description": "Driver Framework composite driver V1 test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

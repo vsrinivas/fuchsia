@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK inspect test driver",
+    "short_description": "Driver Framework inspect test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

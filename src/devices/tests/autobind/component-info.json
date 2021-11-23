@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK autobind test driver",
+    "short_description": "Driver Framework autobind test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

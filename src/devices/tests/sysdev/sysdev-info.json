@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK sysdev test driver",
+    "short_description": "Driver Framework sysdev test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

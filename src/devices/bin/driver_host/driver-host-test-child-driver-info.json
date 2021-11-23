@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK driver-host test driver",
+    "short_description": "Driver Framework driver-host test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

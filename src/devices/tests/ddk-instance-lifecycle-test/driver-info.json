@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK instance lifecycle test driver",
+    "short_description": "Driver Framework instance lifecycle test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

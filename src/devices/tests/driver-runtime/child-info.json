@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK driver runtime test driver",
+    "short_description": "Driver Framework driver runtime test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

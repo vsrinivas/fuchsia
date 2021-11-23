@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK power test driver",
+    "short_description": "Driver Framework power test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

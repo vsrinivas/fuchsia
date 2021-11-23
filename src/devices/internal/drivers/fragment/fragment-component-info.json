@@ -1,9 +1,9 @@
 {
-    "short_description": "Driver SDK fragment driver",
+    "short_description": "Driver Framework fragment driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
-        "Misc"
+        "DriverFramework"
     ]
 }

@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK isolated device manager test driver",
+    "short_description": "Driver Framework isolated device manager test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

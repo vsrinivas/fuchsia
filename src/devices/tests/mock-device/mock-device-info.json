@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK mock device test driver",
+    "short_description": "Driver Framework mock device test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

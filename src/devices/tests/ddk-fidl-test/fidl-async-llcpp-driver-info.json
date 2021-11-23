@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK FIDL test driver",
+    "short_description": "Driver Framework FIDL test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }

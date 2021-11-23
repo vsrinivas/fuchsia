@@ -8,7 +8,7 @@ Camera
 Connectivity
 Clock
 Display
-Dma
+DriverFramework
 Ethernet
 Firmware
 Gpio

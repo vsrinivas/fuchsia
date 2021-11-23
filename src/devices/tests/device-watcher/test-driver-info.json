@@ -1,9 +1,10 @@
 {
-    "short_description": "Driver SDK device watcher test driver",
+    "short_description": "Driver Framework device watcher test driver",
     "manufacturer": "",
     "families": [],
     "models": [],
     "areas": [
+        "DriverFramework",
         "Test"
     ]
 }
