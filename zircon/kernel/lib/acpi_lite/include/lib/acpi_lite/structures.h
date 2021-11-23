@@ -204,6 +204,8 @@ struct AcpiFadt {
   // Not included here to avoid acpi_lite from refusing to read a too-short
   // struct on platforms that don't include the fields.
   //
+  // TODO(fxbug.dev/89248): Add these fields once optional entries are handled
+  //
   // AcpiGenericAddress sleep_control_reg; // optional
   // AcpiGenericAddress sleep_status_reg;  // optional
   // uint64_t hypervisor_vendor_identity;  // optional
