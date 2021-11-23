@@ -9,7 +9,7 @@ declare_args() {
   # configurations. Once it is enabled, we want the board to run all instances
   # of minfs, including # data and all minfs created to run test, should enable
   # dirty cache. This ensures that we run what we test.
-  minfs_enable_dirty_cache = false
+  minfs_enable_dirty_cache = true
 }
 
 static_library("minfs") {
