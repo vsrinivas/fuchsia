@@ -7,9 +7,14 @@
 #![deny(missing_docs)]
 
 use fuchsia_async as fasync;
-use fuchsia_zircon::{self as zx, assoc_values};
+use fuchsia_zircon_status::{self as zx, assoc_values};
 
-use fdio::fdio_sys;
+#[cfg(target_os = "fuchsia")]
+use fuchsia_zircon::{Channel as RawChannel, MessageBuf};
+
+#[cfg(not(target_os = "fuchsia"))]
+use fasync::emulated_handle::{Channel as RawChannel, MessageBuf};
+
 use fidl_fuchsia_io::WATCH_MASK_ALL;
 use futures::stream::{FusedStream, Stream};
 use std::ffi::OsStr;
@@ -52,7 +57,7 @@ pub struct WatchMessage {
 pub struct Watcher {
     ch: fasync::Channel,
     // If idx >= buf.bytes().len(), you must call reset_buf() before get_next_msg().
-    buf: zx::MessageBuf,
+    buf: MessageBuf,
     idx: usize,
 }
 
@@ -61,11 +66,11 @@ impl Unpin for Watcher {}
 impl Watcher {
     /// Creates a new `Watcher` for the directory given by `dir`.
     pub async fn new(dir: fidl_fuchsia_io::DirectoryProxy) -> Result<Watcher, anyhow::Error> {
-        let (h0, h1) = zx::Channel::create()?;
+        let (h0, h1) = RawChannel::create()?;
         let options = 0u32;
         let status = dir.watch(WATCH_MASK_ALL, options, h1).await?;
         zx::Status::ok(status)?;
-        let mut buf = zx::MessageBuf::new();
+        let mut buf = MessageBuf::new();
         buf.ensure_capacity_bytes(fidl_fuchsia_io::MAX_BUF as usize);
         Ok(Watcher { ch: fasync::Channel::from_channel(h0)?, buf, idx: 0 })
     }
@@ -116,11 +121,30 @@ impl Stream for Watcher {
 }
 
 #[repr(C)]
+#[derive(Default)]
+struct IncompleteArrayField<T>(::std::marker::PhantomData<T>);
+impl<T> IncompleteArrayField<T> {
+    #[inline]
+    pub unsafe fn as_ptr(&self) -> *const T {
+        ::std::mem::transmute(self)
+    }
+    #[inline]
+    pub unsafe fn as_slice(&self, len: usize) -> &[T] {
+        ::std::slice::from_raw_parts(self.as_ptr(), len)
+    }
+}
+impl<T> ::std::fmt::Debug for IncompleteArrayField<T> {
+    fn fmt(&self, fmt: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
+        fmt.write_str("IncompleteArrayField")
+    }
+}
+
+#[repr(C)]
 #[derive(Debug)]
 struct vfs_watch_msg_t {
     event: u8,
     len: u8,
-    name: fdio_sys::__IncompleteArrayField<u8>,
+    name: IncompleteArrayField<u8>,
 }
 
 #[derive(Debug)]
