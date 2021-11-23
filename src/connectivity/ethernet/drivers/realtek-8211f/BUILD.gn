@@ -34,6 +34,7 @@ fuchsia_driver("realtek-8211f-driver") {
 fuchsia_driver_component("realtek-8211f") {
   component_name = "realtek-8211f"
   deps = [ ":realtek-8211f-driver" ]
+  info = "realtek-8211f-info.json"
 }
 
 group("tests") {

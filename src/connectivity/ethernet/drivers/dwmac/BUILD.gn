@@ -50,6 +50,7 @@ fuchsia_driver("dwmac-driver") {
 fuchsia_driver_component("dwmac") {
   component_name = "dwmac"
   deps = [ ":dwmac-driver" ]
+  info = "dwmac-info.json"
 }
 
 group("tests") {

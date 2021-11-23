@@ -1,0 +1,14 @@
+{
+    "short_description": "USB ASIX AX88179 ethernet driver",
+    "manufacturer": "ASIX",
+    "families": [],
+    "models": [
+        "AX88179"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet",
+        "Networking",
+        "Usb"
+    ]
+}

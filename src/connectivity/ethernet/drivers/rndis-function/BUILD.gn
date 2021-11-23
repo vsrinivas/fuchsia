@@ -60,6 +60,7 @@ fuchsia_driver("rndis-function-driver") {
 fuchsia_driver_component("rndis-function") {
   component_name = "rndis-function"
   deps = [ ":rndis-function-driver" ]
+  info = "rndis-function-info.json"
 }
 
 test("rndis-function-test") {

@@ -40,6 +40,7 @@ fuchsia_driver("usb-cdc-function-driver") {
 fuchsia_driver_component("usb-cdc-function") {
   component_name = "usb-cdc-function"
   deps = [ ":usb-cdc-function-driver" ]
+  info = "usb-cdc-function-info.json"
 }
 
 group("tests") {

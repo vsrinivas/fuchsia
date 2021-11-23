@@ -42,6 +42,7 @@ fuchsia_driver("network-device-driver") {
 fuchsia_driver_component("network-device") {
   component_name = "network-device"
   deps = [ ":network-device-driver" ]
+  info = "network-device-info.json"
 }
 
 group("tests") {

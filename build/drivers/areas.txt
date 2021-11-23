@@ -19,6 +19,7 @@ Kernel
 Media
 Misc
 Nand
+Networking
 Openthread
 Pci
 Platform

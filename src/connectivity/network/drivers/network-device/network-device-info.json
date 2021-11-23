@@ -1,0 +1,14 @@
+{
+    "short_description": "Core network device driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Connectivity",
+        "Networking"
+    ]
+}

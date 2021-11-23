@@ -1,0 +1,13 @@
+{
+    "short_description": "Realtek 8211f ethernet driver",
+    "manufacturer": "Realtek",
+    "families": [],
+    "models": [
+        "8211f"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet",
+        "Networking"
+    ]
+}

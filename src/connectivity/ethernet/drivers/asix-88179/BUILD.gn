@@ -54,6 +54,7 @@ fuchsia_driver("asix-88179-driver") {
 fuchsia_driver_component("asix-88179") {
   component_name = "asix-88179"
   deps = [ ":asix-88179-driver" ]
+  info = "asix-88179-info.json"
 }
 
 fidl("asix-88179-test-helper") {
@@ -92,6 +93,7 @@ fuchsia_driver("fake-asix-88179-driver") {
 fuchsia_driver_component("fake-asix-88179") {
   component_name = "fake-asix-88179"
   deps = [ ":fake-asix-88179-driver" ]
+  info = "fake-asix-88179-info.json"
 }
 
 test("asix-88179-integration") {

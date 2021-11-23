@@ -1,0 +1,12 @@
+{
+    "short_description": "FreeBSD Intel ethernet driver",
+    "manufacturer": "Intel",
+    "families": [],
+    "models": [
+        "e1000"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet"
+    ]
+}

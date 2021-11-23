@@ -34,6 +34,7 @@ if (current_cpu == "x64") {
   fuchsia_driver_component("realtek-8111") {
     component_name = "realtek-8111"
     deps = [ ":realtek-8111-driver" ]
+    info = "realtek-8111-info.json"
   }
 }
 

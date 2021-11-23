@@ -1,0 +1,15 @@
+{
+    "short_description": "USB ASIX AX88179 ethernet test driver",
+    "manufacturer": "ASIX",
+    "families": [],
+    "models": [
+        "AX88179"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet",
+        "Networking",
+        "Test",
+        "Usb"
+    ]
+}

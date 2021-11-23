@@ -1,0 +1,15 @@
+{
+    "short_description": "Shim driver for migration from core ethernet to core network",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet",
+        "Networking"
+    ]
+}

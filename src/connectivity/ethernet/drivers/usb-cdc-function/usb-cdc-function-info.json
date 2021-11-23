@@ -1,0 +1,16 @@
+{
+    "short_description": "USB CDC function ethernet driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet",
+        "Networking",
+        "Usb"
+    ]
+}

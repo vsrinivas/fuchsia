@@ -1,0 +1,16 @@
+{
+    "short_description": "USB RNDIS miscellaneous ethernet driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet",
+        "Networking",
+        "Usb"
+    ]
+}

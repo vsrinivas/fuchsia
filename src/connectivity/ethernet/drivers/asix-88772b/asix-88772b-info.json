@@ -1,0 +1,14 @@
+{
+    "short_description": "USB ASIX 88772b ethernet adapter driver",
+    "manufacturer": "ASIX",
+    "families": [],
+    "models": [
+        "88772b"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet",
+        "Networking",
+        "Usb"
+    ]
+}

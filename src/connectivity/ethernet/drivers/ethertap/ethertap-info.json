@@ -1,0 +1,16 @@
+{
+    "short_description": "Ethernet TAP test driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet",
+        "Networking",
+        "Test"
+    ]
+}

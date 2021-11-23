@@ -43,6 +43,7 @@ fuchsia_driver("ethernet-driver") {
 fuchsia_driver_component("ethernet") {
   component_name = "ethernet"
   deps = [ ":ethernet-driver" ]
+  info = "ethernet-info.json"
 }
 
 source_set("test_util") {

@@ -50,6 +50,7 @@ fuchsia_driver("fuchsia_driver") {
 fuchsia_driver_component("driver") {
   component_name = "rndis-host"
   deps = [ ":fuchsia_driver" ]
+  info = "driver-info.json"
 }
 
 fuchsia_system_package("rndis-host") {

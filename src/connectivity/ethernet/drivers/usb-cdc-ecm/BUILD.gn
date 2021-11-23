@@ -40,6 +40,7 @@ fuchsia_driver("usb-cdc-ecm-driver") {
 fuchsia_driver_component("usb-cdc-ecm") {
   component_name = "usb-cdc-ecm"
   deps = [ ":usb-cdc-ecm-driver" ]
+  info = "usb-cdc-ecm-info.json"
 }
 
 source_set("usb-cdc-ecm-lib") {
