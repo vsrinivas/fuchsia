@@ -111,35 +111,27 @@ async fn handle_realm_builder_factory_stream(
                 builder_server_end,
                 responder,
             } => {
-                let registry = registry.clone();
-                let runner = runner.clone();
-                let registry_clone = registry.clone();
-                let runner_clone = runner.clone();
-
                 let new_realm = RealmNode2::new();
-                let new_realm_clone = new_realm.clone();
                 let pkg_dir = pkg_dir_handle
                     .into_proxy()
                     .context("failed to convert pkg_dir ClientEnd to proxy")?;
-                let pkg_dir_clone = Clone::clone(&pkg_dir);
 
                 let runner_proxy_placeholder = Arc::new(Mutex::new(None));
-                let runner_proxy_placeholder_clone = runner_proxy_placeholder.clone();
 
                 let realm_stream = realm_server_end
                     .into_stream()
                     .context("failed to convert realm_server_end to stream")?;
+
+                let realm = Realm {
+                    pkg_dir: Clone::clone(&pkg_dir),
+                    realm_node: new_realm.clone(),
+                    registry: registry.clone(),
+                    runner: runner.clone(),
+                    runner_proxy_placeholder: runner_proxy_placeholder.clone(),
+                };
+
                 execution_scope.spawn(async move {
-                    if let Err(e) = handle_realm_stream(
-                        realm_stream,
-                        pkg_dir_clone,
-                        new_realm_clone,
-                        registry_clone,
-                        runner_clone,
-                        runner_proxy_placeholder_clone,
-                    )
-                    .await
-                    {
+                    if let Err(e) = realm.handle_stream(realm_stream).await {
                         error!("error encountered while handling Realm requests: {:?}", e);
                     }
                 });
@@ -147,16 +139,15 @@ async fn handle_realm_builder_factory_stream(
                 let builder_stream = builder_server_end
                     .into_stream()
                     .context("failed to convert builder_server_end to stream")?;
+
+                let builder = Builder {
+                    pkg_dir: Clone::clone(&pkg_dir),
+                    realm_node: new_realm.clone(),
+                    registry: registry.clone(),
+                    runner_proxy_placeholder: runner_proxy_placeholder.clone(),
+                };
                 execution_scope.spawn(async move {
-                    if let Err(e) = handle_builder_stream(
-                        builder_stream,
-                        pkg_dir,
-                        new_realm,
-                        registry,
-                        runner_proxy_placeholder,
-                    )
-                    .await
-                    {
+                    if let Err(e) = builder.handle_stream(builder_stream).await {
                         error!("error encountered while handling Builder requests: {:?}", e);
                     }
                 });
@@ -167,124 +158,149 @@ async fn handle_realm_builder_factory_stream(
     Ok(())
 }
 
-async fn handle_builder_stream(
-    mut stream: ftest::BuilderRequestStream,
+struct Builder {
     pkg_dir: fio::DirectoryProxy,
     realm_node: RealmNode2,
     registry: Arc<resolver::Registry>,
     runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
-) -> Result<(), anyhow::Error> {
-    while let Some(req) = stream.try_next().await? {
-        match req {
-            ftest::BuilderRequest::Build { runner, responder } => {
-                let runner_proxy =
-                    runner.into_proxy().context("failed to convert runner ClientEnd into proxy")?;
-                *runner_proxy_placeholder.lock().await = Some(runner_proxy);
-                let res = realm_node.build(registry.clone(), vec![], Clone::clone(&pkg_dir)).await;
-                match res {
-                    Ok(url) => responder.send(&mut Ok(url))?,
-                    Err(e) => {
-                        warn!("unable to build the realm the client requested: {:?}", e);
-                        responder.send(&mut Err(e.into()))?;
-                    }
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
-async fn handle_realm_stream(
-    mut stream: ftest::RealmRequestStream,
-    pkg_dir: fio::DirectoryProxy,
-    realm_node: RealmNode2,
-    _registry: Arc<resolver::Registry>,
-    _runner: Arc<runner::Runner>,
-    _runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
-) -> Result<(), anyhow::Error> {
-    while let Some(req) = stream.try_next().await? {
-        match req {
-            ftest::RealmRequest::AddChild { name, url, options, responder } => {
-                if is_relative_url(&url) {
-                    let child_realm_node =
-                        match RealmNode2::load_from_pkg(url, Clone::clone(&pkg_dir)).await {
-                            Ok(child_realm_node) => child_realm_node,
-                            Err(e) => {
-                                warn!("failed to load child {:?} from relative URL: {:?}", name, e);
-                                responder.send(&mut Err(e.into()))?;
-                                continue;
-                            }
-                        };
-                    match realm_node.add_child(name.clone(), options, child_realm_node).await {
-                        Ok(()) => responder.send(&mut Ok(()))?,
-                        Err(e) => {
-                            warn!("failed to add child {:?} to the realm: {:?}", name, e);
-                            responder.send(&mut Err(e.into()))?;
-                        }
-                    }
-                } else {
-                    let res = realm_node.add_child_decl(name, url, options).await;
+impl Builder {
+    async fn handle_stream(
+        &self,
+        mut stream: ftest::BuilderRequestStream,
+    ) -> Result<(), anyhow::Error> {
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                ftest::BuilderRequest::Build { runner, responder } => {
+                    let runner_proxy = runner
+                        .into_proxy()
+                        .context("failed to convert runner ClientEnd into proxy")?;
+                    *self.runner_proxy_placeholder.lock().await = Some(runner_proxy);
+                    let res = self
+                        .realm_node
+                        .build(self.registry.clone(), vec![], Clone::clone(&self.pkg_dir))
+                        .await;
                     match res {
-                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Ok(url) => responder.send(&mut Ok(url))?,
                         Err(e) => {
-                            warn!("unable to add child: {:?}", e);
+                            warn!("unable to build the realm the client requested: {:?}", e);
                             responder.send(&mut Err(e.into()))?;
                         }
                     }
                 }
-            }
-            // TODO(88417)
-            ftest::RealmRequest::AddLegacyChild { .. } => {
-                unimplemented!();
-            }
-            ftest::RealmRequest::AddChildFromDecl { .. } => {
-                unimplemented!();
-            }
-            // TODO(88417, 88423)
-            ftest::RealmRequest::AddLocalChild { .. } => {
-                unimplemented!();
-            }
-            // TODO(88429)
-            ftest::RealmRequest::AddChildRealm { .. } => {
-                unimplemented!();
-            }
-            // TODO(dgonyeo): add a test for this
-            ftest::RealmRequest::GetComponentDecl { name, responder } => {
-                let res: Result<cm_rust::ComponentDecl, RealmBuilderError> = async {
-                    let child_node = realm_node.get_sub_realm(&name).await?;
-                    Ok(child_node.get_decl().await)
-                }
-                .await;
-                match res {
-                    Ok(decl) => responder.send(&mut Ok(decl.native_into_fidl()))?,
-                    Err(e) => {
-                        warn!("unable to get component decl: {:?}", e);
-                        responder.send(&mut Err(e.into()))?;
-                    }
-                }
-            }
-            // TODO(dgonyeo): add a test for this
-            ftest::RealmRequest::ReplaceComponentDecl { name, component_decl, responder } => {
-                let res: Result<(), RealmBuilderError> = async {
-                    let child_node = realm_node.get_sub_realm(&name).await?;
-                    child_node.replace_decl(component_decl.fidl_into_native()).await
-                }
-                .await;
-                match res {
-                    Ok(()) => responder.send(&mut Ok(()))?,
-                    Err(e) => {
-                        warn!("unable to get component decl: {:?}", e);
-                        responder.send(&mut Err(e.into()))?;
-                    }
-                }
-            }
-            // TODO(88426)
-            ftest::RealmRequest::AddRoute { .. } => {
-                unimplemented!();
             }
         }
+        Ok(())
     }
-    Ok(())
+}
+
+#[allow(unused)]
+struct Realm {
+    pkg_dir: fio::DirectoryProxy,
+    realm_node: RealmNode2,
+    registry: Arc<resolver::Registry>,
+    runner: Arc<runner::Runner>,
+    runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
+}
+
+impl Realm {
+    async fn handle_stream(
+        &self,
+        mut stream: ftest::RealmRequestStream,
+    ) -> Result<(), anyhow::Error> {
+        while let Some(req) = stream.try_next().await? {
+            match req {
+                ftest::RealmRequest::AddChild { name, url, options, responder } => {
+                    match self.add_child(name.clone(), url.clone(), options).await {
+                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Err(e) => {
+                            warn!(
+                                "unable to add child {:?} with url {:?} to realm: {:?}",
+                                name, url, e
+                            );
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
+                }
+                // TODO(88417)
+                ftest::RealmRequest::AddLegacyChild { .. } => {
+                    unimplemented!();
+                }
+                ftest::RealmRequest::AddChildFromDecl { .. } => {
+                    unimplemented!();
+                }
+                // TODO(88417, 88423)
+                ftest::RealmRequest::AddLocalChild { .. } => {
+                    unimplemented!();
+                }
+                // TODO(88429)
+                ftest::RealmRequest::AddChildRealm { .. } => {
+                    unimplemented!();
+                }
+                // TODO(dgonyeo): add a test for this
+                ftest::RealmRequest::GetComponentDecl { name, responder } => {
+                    match self.get_component_decl(name.clone()).await {
+                        Ok(decl) => responder.send(&mut Ok(decl))?,
+                        Err(e) => {
+                            warn!("unable to get component decl for child {:?}: {:?}", name, e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
+                }
+                // TODO(dgonyeo): add a test for this
+                ftest::RealmRequest::ReplaceComponentDecl { name, component_decl, responder } => {
+                    match self.replace_component_decl(name.clone(), component_decl).await {
+                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Err(e) => {
+                            warn!("unable to replace component decl for child {:?}: {:?}", name, e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
+                }
+                // TODO(88426)
+                ftest::RealmRequest::AddRoute { .. } => {
+                    unimplemented!();
+                }
+            }
+        }
+        Ok(())
+    }
+
+    async fn add_child(
+        &self,
+        name: String,
+        url: String,
+        options: ftest::ChildOptions,
+    ) -> Result<(), RealmBuilderError> {
+        if is_relative_url(&url) {
+            let child_realm_node =
+                RealmNode2::load_from_pkg(url, Clone::clone(&self.pkg_dir)).await?;
+            self.realm_node.add_child(name.clone(), options, child_realm_node).await
+        } else {
+            self.realm_node.add_child_decl(name, url, options).await
+        }
+    }
+
+    async fn get_component_decl(
+        &self,
+        name: String,
+    ) -> Result<fcdecl::Component, RealmBuilderError> {
+        let child_node = self.realm_node.get_sub_realm(&name).await?;
+        Ok(child_node.get_decl().await.native_into_fidl())
+    }
+
+    async fn replace_component_decl(
+        &self,
+        name: String,
+        component_decl: fcdecl::Component,
+    ) -> Result<(), RealmBuilderError> {
+        if let Err(e) = cm_fidl_validator::fdecl::validate(&component_decl) {
+            return Err(RealmBuilderError::InvalidComponentDecl(name, e));
+        }
+        let child_node = self.realm_node.get_sub_realm(&name).await?;
+        child_node.replace_decl(component_decl.fidl_into_native()).await
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -382,7 +398,6 @@ impl RealmNode2 {
         Ok(())
     }
 
-    #[allow(unused)]
     async fn add_child(
         &self,
         child_name: String,
@@ -397,6 +412,26 @@ impl RealmNode2 {
             return Err(RealmBuilderError::ChildAlreadyExists(child_name));
         }
         state_guard.mutable_children.insert(child_name, (child_options, node));
+        Ok(())
+    }
+
+    async fn add_child_decl(
+        &self,
+        child_name: String,
+        child_url: String,
+        child_options: ftest::ChildOptions,
+    ) -> Result<(), RealmBuilderError> {
+        if child_url.trim().ends_with(".cmx") {
+            return Err(RealmBuilderError::InvalidManifestExtension);
+        }
+        let mut state_guard = self.state.lock().await;
+        if state_guard.finalized {
+            return Err(RealmBuilderError::BuildAlreadyCalled);
+        }
+        if state_guard.contains_child(&child_name) {
+            return Err(RealmBuilderError::ChildAlreadyExists(child_name));
+        }
+        state_guard.add_child_decl(child_name, child_url, child_options);
         Ok(())
     }
 
@@ -458,26 +493,6 @@ impl RealmNode2 {
             Ok(self_)
         }
         .boxed()
-    }
-
-    async fn add_child_decl(
-        &self,
-        child_name: String,
-        child_url: String,
-        child_options: ftest::ChildOptions,
-    ) -> Result<(), RealmBuilderError> {
-        if child_url.trim().ends_with(".cmx") {
-            return Err(RealmBuilderError::InvalidManifestExtension);
-        }
-        let mut state_guard = self.state.lock().await;
-        if state_guard.finalized {
-            return Err(RealmBuilderError::BuildAlreadyCalled);
-        }
-        if state_guard.contains_child(&child_name) {
-            return Err(RealmBuilderError::ChildAlreadyExists(child_name));
-        }
-        state_guard.add_child_decl(child_name, child_url, child_options);
-        Ok(())
     }
 
     async fn get_sub_realm(&self, child_name: &String) -> Result<RealmNode2, RealmBuilderError> {
@@ -2012,22 +2027,16 @@ mod tests {
     ) -> (ftest::BuilderProxy, fasync::Task<()>) {
         let runner_proxy_placeholder = Arc::new(Mutex::new(None));
 
+        let (pkg_dir, pkg_dir_stream) = create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
+        drop(pkg_dir_stream);
+
+        let builder = Builder { pkg_dir, realm_node, registry, runner_proxy_placeholder };
+
         let (builder_proxy, builder_stream) =
             create_proxy_and_stream::<ftest::BuilderMarker>().unwrap();
-        let (pkg_dir_proxy, pkg_dir_stream) =
-            create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
-        drop(pkg_dir_stream);
-        let registry_clone = registry.clone();
+
         let builder_stream_task = fasync::Task::local(async move {
-            handle_builder_stream(
-                builder_stream,
-                pkg_dir_proxy,
-                realm_node,
-                registry_clone,
-                runner_proxy_placeholder.clone(),
-            )
-            .await
-            .expect("failed to handle builder stream");
+            builder.handle_stream(builder_stream).await.expect("failed to handle builder stream");
         });
         (builder_proxy, builder_stream_task)
     }
@@ -2080,19 +2089,16 @@ mod tests {
             let (builder_proxy, builder_task) =
                 launch_builder_task(realm_root.clone(), registry.clone());
 
-            let registry_clone = registry.clone();
-            let runner_clone = runner.clone();
+            let realm = Realm {
+                pkg_dir,
+                realm_node: realm_root,
+                registry: registry.clone(),
+                runner: runner.clone(),
+                runner_proxy_placeholder,
+            };
+
             let realm_and_builder_task = fasync::Task::local(async move {
-                handle_realm_stream(
-                    realm_strealm,
-                    pkg_dir,
-                    realm_root,
-                    registry_clone,
-                    runner_clone,
-                    runner_proxy_placeholder,
-                )
-                .await
-                .expect("failed to handle realm stream");
+                realm.handle_stream(realm_strealm).await.expect("failed to handle realm stream");
                 builder_task.await;
             });
             Self {
