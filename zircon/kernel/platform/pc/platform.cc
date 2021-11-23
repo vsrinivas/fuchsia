@@ -342,16 +342,6 @@ zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
                         "bootloader.uart in impossible ktl::variant state???");
   }
 
-  if (bootloader.nvram.base) {
-    auto result =
-        image.Append(zbi_header_t{.type = ZBI_TYPE_NVRAM}, zbitl::AsBytes(bootloader.nvram));
-    if (result.is_error()) {
-      printf("mexec: failed to append NVRAM data to data ZBI: ");
-      zbitl::PrintViewError(result.error_value());
-      return error(result.error_value());
-    }
-  }
-
   return ZX_OK;
 }
 
