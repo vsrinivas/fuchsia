@@ -39,16 +39,22 @@ KCOUNTER(vm_mappings_merged, "vm.aspace.mapping.merged_neighbors")
 }  // namespace
 
 VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
-                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags,
-                     Mergeable mergeable)
+                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset,
+                     MappingProtectionRanges&& ranges, Mergeable mergeable)
     : VmAddressRegionOrMapping(base, size, vmar_flags, parent.aspace_.get(), &parent, true),
       object_(ktl::move(vmo)),
       object_offset_(vmo_offset),
-      arch_mmu_flags_(arch_mmu_flags),
+      protection_ranges_(ktl::move(ranges)),
       mergeable_(mergeable) {
   LTRACEF("%p aspace %p base %#" PRIxPTR " size %#zx offset %#" PRIx64 "\n", this, aspace_.get(),
           base_, size_, vmo_offset);
 }
+
+VmMapping::VmMapping(VmAddressRegion& parent, vaddr_t base, size_t size, uint32_t vmar_flags,
+                     fbl::RefPtr<VmObject> vmo, uint64_t vmo_offset, uint arch_mmu_flags,
+                     Mergeable mergeable)
+    : VmMapping(parent, base, size, vmar_flags, vmo, vmo_offset,
+                MappingProtectionRanges(arch_mmu_flags), mergeable) {}
 
 VmMapping::~VmMapping() {
   canary_.Assert();
@@ -106,9 +112,15 @@ void VmMapping::DumpLocked(uint depth, bool verbose) const {
   }
   char vmo_name[32];
   object_->get_name(vmo_name, sizeof(vmo_name));
-  printf("map %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx mmufl %#x state %d mergeable %s\n", this,
-         base_, base_ + size_ - 1, size_, arch_mmu_flags_locked(), (int)state_,
-         mergeable_ == Mergeable::YES ? "true" : "false");
+  printf("map %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx state %d mergeable %s\n", this, base_,
+         base_ + size_ - 1, size_, (int)state_, mergeable_ == Mergeable::YES ? "true" : "false");
+  EnumerateProtectionRangesLocked(base_, size_, [depth](vaddr_t base, size_t len, uint mmu_flags) {
+    for (uint i = 0; i < depth + 1; ++i) {
+      printf("  ");
+    }
+    printf(" [%#" PRIxPTR " %#" PRIxPTR "] mmufl %#x\n", base, base + len - 1, mmu_flags);
+    return ZX_ERR_NEXT;
+  });
   for (uint i = 0; i < depth + 1; ++i) {
     printf("  ");
   }
@@ -181,100 +193,30 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
   // grab the lock for the vmo
   Guard<Mutex> guard{object_->lock()};
 
-  // Persist our current caching mode
-  new_arch_mmu_flags |= (arch_mmu_flags_locked() & ARCH_MMU_FLAG_CACHE_MASK);
+  // Persist our current caching mode. Every protect region will have the same caching mode so we
+  // can acquire this from any region.
+  new_arch_mmu_flags |= (protection_ranges_.FirstRegionMmuFlags() & ARCH_MMU_FLAG_CACHE_MASK);
 
   // If we're not actually changing permissions, return fast.
-  if (new_arch_mmu_flags == arch_mmu_flags_) {
+  if (protection_ranges_.IsSingleProtection(new_arch_mmu_flags)) {
     return ZX_OK;
   }
 
+  zx_status_t status =
+      protection_ranges_.UpdateProtectionRange(base_, size_, base, size, new_arch_mmu_flags);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  // Finally do the actual protect.
+  // TODO: Depending on the exact existing protection nodes this protect might be for a larger than
+  // needed range and could potentially be minimized.
+  // TODO(fxbug.dev/63989) Ensure dirty tracked regions do not get write permissions added to their
+  // hardware mappings.
   // TODO(teisenbe): deal with error mapping on arch_mmu_protect fail
-
-  // If we're changing the whole mapping, just make the change.
-  if (base_ == base && size_ == size) {
-    zx_status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
-    LTRACEF("arch_mmu_protect returns %d\n", status);
-    arch_mmu_flags_ = new_arch_mmu_flags;
-    return ZX_OK;
-  }
-
-  // Handle changing from the left
-  if (base_ == base) {
-    // Create a new mapping for the right half (has old perms)
-    fbl::AllocChecker ac;
-    fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(
-        new (&ac) VmMapping(*parent_, base + size, size_ - size, flags_, object_,
-                            object_offset_ + size, arch_mmu_flags_locked(), Mergeable::YES)));
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    zx_status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
-    LTRACEF("arch_mmu_protect returns %d\n", status);
-    arch_mmu_flags_ = new_arch_mmu_flags;
-
-    set_size_locked(size);
-    AssertHeld(mapping->lock_ref());
-    AssertHeld(*mapping->object_lock());
-    mapping->ActivateLocked();
-    return ZX_OK;
-  }
-
-  // Handle changing from the right
-  if (base_ + size_ == base + size) {
-    // Create a new mapping for the right half (has new perms)
-    fbl::AllocChecker ac;
-
-    fbl::RefPtr<VmMapping> mapping(fbl::AdoptRef(
-        new (&ac) VmMapping(*parent_, base, size, flags_, object_, object_offset_ + base - base_,
-                            new_arch_mmu_flags, Mergeable::YES)));
-    if (!ac.check()) {
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    zx_status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
-    LTRACEF("arch_mmu_protect returns %d\n", status);
-
-    set_size_locked(size_ - size);
-    AssertHeld(mapping->lock_ref());
-    AssertHeld(*mapping->object_lock());
-    mapping->ActivateLocked();
-    return ZX_OK;
-  }
-
-  // We're unmapping from the center, so we need to create two new mappings
-  const size_t left_size = base - base_;
-  const size_t right_size = (base_ + size_) - (base + size);
-  const uint64_t center_vmo_offset = object_offset_ + base - base_;
-  const uint64_t right_vmo_offset = center_vmo_offset + size;
-
-  fbl::AllocChecker ac;
-  fbl::RefPtr<VmMapping> center_mapping(
-      fbl::AdoptRef(new (&ac) VmMapping(*parent_, base, size, flags_, object_, center_vmo_offset,
-                                        new_arch_mmu_flags, Mergeable::YES)));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  fbl::RefPtr<VmMapping> right_mapping(
-      fbl::AdoptRef(new (&ac) VmMapping(*parent_, base + size, right_size, flags_, object_,
-                                        right_vmo_offset, arch_mmu_flags_, Mergeable::YES)));
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  zx_status_t status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
+  status = ProtectOrUnmap(aspace_, base, size, new_arch_mmu_flags);
   LTRACEF("arch_mmu_protect returns %d\n", status);
 
-  // Turn us into the left half
-  set_size_locked(left_size);
-
-  AssertHeld(center_mapping->lock_ref());
-  AssertHeld(*center_mapping->object_lock());
-  center_mapping->ActivateLocked();
-  AssertHeld(right_mapping->lock_ref());
-  AssertHeld(*right_mapping->object_lock());
-  right_mapping->ActivateLocked();
   return ZX_OK;
 }
 
@@ -340,6 +282,9 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
 
     if (base_ == base) {
       DEBUG_ASSERT(size != size_);
+      // First remove any protect regions we will no longer need.
+      protection_ranges_.DiscardBelow(base_ + size);
+
       // We need to remove ourselves from tree before updating base_,
       // since base_ is the tree key.
       AssertHeld(parent_->lock_ref());
@@ -347,9 +292,13 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
       base_ += size;
       object_offset_ += size;
       parent_->subregions_.InsertRegion(ktl::move(ref));
+    } else {
+      // Resize the protection range, will also cause it to discard any protection ranges that are
+      // outside the new size.
+      protection_ranges_.DiscardAbove(base);
     }
-    set_size_locked(size_ - size);
 
+    set_size_locked(size_ - size);
     return ZX_OK;
   }
 
@@ -360,10 +309,13 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   const vaddr_t new_base = base + size;
   const size_t new_size = (base_ + size_) - new_base;
 
+  // Split off any protection information for the new mapping.
+  MappingProtectionRanges new_protect = protection_ranges_.SplitAt(new_base);
+
   fbl::AllocChecker ac;
   fbl::RefPtr<VmMapping> mapping(
       fbl::AdoptRef(new (&ac) VmMapping(*parent_, new_base, new_size, flags_, object_, vmo_offset,
-                                        arch_mmu_flags_locked(), Mergeable::YES)));
+                                        ktl::move(new_protect), Mergeable::YES)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -376,11 +328,11 @@ zx_status_t VmMapping::UnmapLocked(vaddr_t base, size_t size) {
   }
 
   // Turn us into the left half
+  protection_ranges_.DiscardAbove(base);
   set_size_locked(base - base_);
   AssertHeld(mapping->lock_ref());
   AssertHeld(*mapping->object_lock());
   mapping->ActivateLocked();
-
   return ZX_OK;
 }
 
@@ -477,8 +429,7 @@ zx_status_t VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t
   DEBUG_ASSERT(object_);
 
   // If this doesn't support writing then nothing to be done, as we know we have no write mappings.
-  if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE) ||
-      !(arch_mmu_flags_locked_object() & ARCH_MMU_FLAG_PERM_WRITE)) {
+  if (!(flags_ & VMAR_FLAG_CAN_MAP_WRITE)) {
     return ZX_OK;
   }
 
@@ -489,10 +440,22 @@ zx_status_t VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t
     return ZX_OK;
   }
 
-  // Build new mmu flags without writing.
-  uint mmu_flags = arch_mmu_flags_locked_object() & ~(ARCH_MMU_FLAG_PERM_WRITE);
+  return ProtectRangesLockedObject().EnumerateProtectionRanges(
+      base_, size_, base, new_len, [this](vaddr_t region_base, size_t region_len, uint mmu_flags) {
+        // If this range doesn't currently support being writable then we can skip.
+        if (!(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE)) {
+          return ZX_ERR_NEXT;
+        }
 
-  return ProtectOrUnmap(aspace_, base, new_len, mmu_flags);
+        // Build new mmu flags without writing.
+        mmu_flags &= ~(ARCH_MMU_FLAG_PERM_WRITE);
+
+        zx_status_t result = ProtectOrUnmap(aspace_, region_base, region_len, mmu_flags);
+        if (result == ZX_OK) {
+          return ZX_ERR_NEXT;
+        }
+        return result;
+      });
 }
 
 namespace {
@@ -596,19 +559,8 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // precompute the flags we'll pass LookupPagesLocked
-  uint pf_flags = (arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_WRITE) ? VMM_PF_FLAG_WRITE : 0;
-  // if committing, then tell it to soft fault in a page
-  if (commit) {
-    pf_flags |= VMM_PF_FLAG_SW_FAULT;
-  }
-
-  // Compute mmu flags to use.
-  // Remove the write permission if this maps a vmo that supports dirty tracking, in order to
-  // trigger write permission faults when writes occur, enabling us to track when pages are dirtied.
-  const uint mmu_flags = (object_->is_dirty_tracked())
-                             ? (arch_mmu_flags_locked() & ~ARCH_MMU_FLAG_PERM_WRITE)
-                             : arch_mmu_flags_locked();
+  // Cache whether the object is dirty tracked, we need to know this when computing mmu flags later.
+  const bool dirty_tracked = object_->is_dirty_tracked();
 
   // grab the lock for the vmo
   Guard<Mutex> object_guard{object_->lock()};
@@ -621,56 +573,77 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
     currently_faulting_ = false;
   });
 
-  // In the scenario where we are committing, and are setting the SW_FAULT flag, we are supposed to
-  // pass in a non-null LazyPageRequest to LookupPagesLocked. Technically we could get away with not
-  // passing in a PageRequest since:
-  //  * Only internal kernel VMOs will have the 'commit' flag passed in for their mappings
-  //  * Only pager backed VMOs need to fill out a PageRequest
-  //  * Internal kernel VMOs are never pager backed.
-  // However, should these assumptions ever get violated it's better to catch this gracefully than
-  // have LookupPagesLocked error/crash internally, and it costs nothing to create and pass in.
-  __UNINITIALIZED LazyPageRequest page_request;
+  // The region to map could have multiple different current arch mmu flags, so we need to iterate
+  // over them to ensure we install mappings with the correct permissions.
+  return EnumerateProtectionRangesLocked(
+      base_ + offset, len, [this, commit, dirty_tracked](vaddr_t base, size_t len, uint mmu_flags) {
+        AssertHeld(object_->lock_ref());
+        AssertHeld(aspace_->lock_ref());
+        // Remove the write permission if this maps a vmo that supports dirty tracking, in order to
+        // trigger write permission faults when writes occur, enabling us to track when pages are
+        // dirtied.
+        if (dirty_tracked) {
+          mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
+        }
+        // precompute the flags we'll pass LookupPagesLocked
+        uint pf_flags = (mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ? VMM_PF_FLAG_WRITE : 0;
+        // if committing, then tell it to soft fault in a page
+        if (commit) {
+          pf_flags |= VMM_PF_FLAG_SW_FAULT;
+        }
 
-  // iterate through the range, grabbing a page from the underlying object and
-  // mapping it in
-  size_t o;
-  VmMappingCoalescer coalescer(this, base_ + offset, mmu_flags);
-  __UNINITIALIZED VmObject::LookupInfo pages;
-  for (o = offset; o < offset + len;) {
-    uint64_t vmo_offset = object_offset_ + o;
+        // In the scenario where we are committing, and are setting the SW_FAULT flag, we are
+        // supposed to pass in a non-null LazyPageRequest to LookupPagesLocked. Technically we could
+        // get away with not passing in a PageRequest since:
+        //  * Only internal kernel VMOs will have the 'commit' flag passed in for their mappings
+        //  * Only pager backed VMOs need to fill out a PageRequest
+        //  * Internal kernel VMOs are never pager backed.
+        // However, should these assumptions ever get violated it's better to catch this gracefully
+        // than have LookupPagesLocked error/crash internally, and it costs nothing to create and
+        // pass in.
+        __UNINITIALIZED LazyPageRequest page_request;
 
-    zx_status_t status;
-    status = object_->LookupPagesLocked(
-        vmo_offset, pf_flags, VmObject::DirtyTrackingAction::None,
-        ktl::min((offset + len - o) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages), nullptr,
-        &page_request, &pages);
-    if (status != ZX_OK) {
-      // As per the comment above page_request definition, there should never be SW_FAULT + pager
-      // backed VMO and so we should never end up with a PageRequest needing to be waited on.
-      ASSERT(status != ZX_ERR_SHOULD_WAIT);
-      // no page to map
-      if (commit) {
-        // fail when we can't commit every requested page
-        coalescer.Abort();
-        return status;
-      }
+        // iterate through the range, grabbing a page from the underlying object and
+        // mapping it in
+        VmMappingCoalescer coalescer(this, base, mmu_flags);
+        __UNINITIALIZED VmObject::LookupInfo pages;
+        for (size_t offset = 0; offset < len;) {
+          const uint64_t vmo_offset = object_offset_ + (base - base_) + offset;
 
-      // skip ahead
-      o += PAGE_SIZE;
-      continue;
-    }
-    DEBUG_ASSERT(pages.num_pages > 0);
+          zx_status_t status;
+          status = object_->LookupPagesLocked(
+              vmo_offset, pf_flags, VmObject::DirtyTrackingAction::None,
+              ktl::min((len - offset) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages), nullptr,
+              &page_request, &pages);
+          if (status != ZX_OK) {
+            // As per the comment above page_request definition, there should never be SW_FAULT +
+            // pager backed VMO and so we should never end up with a PageRequest needing to be
+            // waited on.
+            ASSERT(status != ZX_ERR_SHOULD_WAIT);
+            // no page to map
+            if (commit) {
+              // fail when we can't commit every requested page
+              coalescer.Abort();
+              return status;
+            }
 
-    vaddr_t va = base_ + o;
-    for (uint32_t i = 0; i < pages.num_pages; i++, va += PAGE_SIZE, o += PAGE_SIZE) {
-      LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pages.paddrs[i], va);
-      status = coalescer.Append(va, pages.paddrs[i]);
-      if (status != ZX_OK) {
-        return status;
-      }
-    }
-  }
-  return coalescer.Flush();
+            // skip ahead
+            offset += PAGE_SIZE;
+            continue;
+          }
+          DEBUG_ASSERT(pages.num_pages > 0);
+
+          vaddr_t va = base + offset;
+          for (uint32_t i = 0; i < pages.num_pages; i++, va += PAGE_SIZE, offset += PAGE_SIZE) {
+            LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pages.paddrs[i], va);
+            status = coalescer.Append(va, pages.paddrs[i]);
+            if (status != ZX_OK) {
+              return status;
+            }
+          }
+        }
+        return coalescer.Flush();
+      });
 }
 
 zx_status_t VmMapping::DecommitRange(size_t offset, size_t len) {
@@ -723,6 +696,7 @@ zx_status_t VmMapping::DestroyLocked() {
     if (status != ZX_OK) {
       return status;
     }
+    protection_ranges_.clear();
     set_size_locked(0);
     object_->RemoveMappingLocked(this);
   }
@@ -767,24 +741,28 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
   LTRACEF("%p va %#" PRIxPTR " vmo_offset %#" PRIx64 ", pf_flags %#x (%s)\n", this, va, vmo_offset,
           pf_flags, vmm_pf_flags_to_string(pf_flags, pf_string));
 
+  // Need to look up the mmu flags for this virtual address, as well as how large a region those
+  // flags are for so we can cap the extra mappings we create.
+  MappingProtectionRanges::FlagsRange range =
+      ProtectRangesLocked().FlagsRangeAtAddr(base_, size_, va);
+
   // make sure we have permission to continue
-  if ((pf_flags & VMM_PF_FLAG_USER) && !(arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_USER)) {
+  if ((pf_flags & VMM_PF_FLAG_USER) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_USER)) {
     // user page fault on non user mapped region
     LTRACEF("permission failure: user fault on non user region\n");
     return ZX_ERR_ACCESS_DENIED;
   }
-  if ((pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_WRITE)) {
+  if ((pf_flags & VMM_PF_FLAG_WRITE) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_WRITE)) {
     // write to a non-writeable region
     LTRACEF("permission failure: write fault on non-writable region\n");
     return ZX_ERR_ACCESS_DENIED;
   }
-  if (!(pf_flags & VMM_PF_FLAG_WRITE) && !(arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_READ)) {
+  if (!(pf_flags & VMM_PF_FLAG_WRITE) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_READ)) {
     // read to a non-readable region
     LTRACEF("permission failure: read fault on non-readable region\n");
     return ZX_ERR_ACCESS_DENIED;
   }
-  if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) &&
-      !(arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_EXECUTE)) {
+  if ((pf_flags & VMM_PF_FLAG_INSTRUCTION) && !(range.mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
     // instruction fetch from a no execute region
     LTRACEF("permission failure: execute fault on no execute region\n");
     return ZX_ERR_ACCESS_DENIED;
@@ -792,8 +770,8 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
 
   // Determine how far to the end of the page table so we do not cause extra allocations.
   const uint64_t next_pt_base = ArchVmAspace::NextUserPageTableOffset(va);
-  // Find the minimum between the size of this mapping and the end of the page table.
-  const uint64_t max_map = ktl::min(next_pt_base, base_ + size_);
+  // Find the minimum between the size of this protection range and the end of the page table.
+  const uint64_t max_map = ktl::min(next_pt_base, range.region_top);
   // Convert this into a number of pages, limited by the max lookup window.
   //
   // If this is a write fault and the VMO supports dirty tracking, only lookup 1 page. The pages
@@ -845,10 +823,9 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
   // the page without any write permissions. This ensures we will fault again if a write is
   // attempted so we can potentially replace this page with a copy or a new one, or update the
   // page's dirty state.
-  uint mmu_flags = arch_mmu_flags_;
   if (!(pf_flags & VMM_PF_FLAG_WRITE) && !lookup_info.writable) {
     // we read faulted, so only map with read permissions
-    mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
+    range.mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
   }
 
   // If we are faulting a page into a guest, clean the caches.
@@ -897,10 +874,11 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
       // ensure the fault is resolved.
 
       // assert that we're not accidentally marking the zero page writable
-      DEBUG_ASSERT((pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
+      DEBUG_ASSERT((pa != vm_get_zero_page_paddr()) ||
+                   !(range.mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
 
       // same page, different permission
-      status = aspace_->arch_aspace().Protect(va, 1, mmu_flags);
+      status = aspace_->arch_aspace().Protect(va, 1, range.mmu_flags);
       if (unlikely(status != ZX_OK)) {
         // ZX_ERR_NO_MEMORY is the only legitimate reason for Protect to fail.
         DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from protect: %d\n",
@@ -915,7 +893,7 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
               Thread::Current::Get()->name(), va);
 
       // assert that we're not accidentally mapping the zero page writable
-      DEBUG_ASSERT(!(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
+      DEBUG_ASSERT(!(range.mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
                    ktl::all_of(lookup_info.paddrs, &lookup_info.paddrs[lookup_info.num_pages],
                                [](paddr_t p) { return p != vm_get_zero_page_paddr(); }));
 
@@ -927,8 +905,9 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
       }
 
       size_t mapped;
-      status = aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, mmu_flags,
-                                          ArchVmAspace::ExistingEntryAction::Skip, &mapped);
+      status =
+          aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, range.mmu_flags,
+                                     ArchVmAspace::ExistingEntryAction::Skip, &mapped);
       if (status != ZX_OK) {
         TRACEF("failed to map replacement page\n");
         return ZX_ERR_NO_MEMORY;
@@ -941,15 +920,16 @@ zx_status_t VmMapping::PageFaultWithVmoCallback(
     // nothing was mapped there before, map it now
 
     // assert that we're not accidentally mapping the zero page writable
-    DEBUG_ASSERT(!(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
+    DEBUG_ASSERT(!(range.mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
                  ktl::all_of(lookup_info.paddrs, &lookup_info.paddrs[lookup_info.num_pages],
                              [](paddr_t p) { return p != vm_get_zero_page_paddr(); }));
 
     size_t mapped;
-    status = aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, mmu_flags,
-                                        ArchVmAspace::ExistingEntryAction::Skip, &mapped);
+    status =
+        aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, range.mmu_flags,
+                                   ArchVmAspace::ExistingEntryAction::Skip, &mapped);
     if (status != ZX_OK) {
-      TRACEF("failed to map page\n");
+      TRACEF("failed to map page %d\n", status);
       return ZX_ERR_NO_MEMORY;
     }
     DEBUG_ASSERT(mapped >= 1);
@@ -1001,9 +981,17 @@ void VmMapping::TryMergeRightNeighborLocked(VmMapping* right_candidate) {
   if (flags_ != right_candidate->flags_) {
     return;
   }
-  if (arch_mmu_flags_locked() != right_candidate->arch_mmu_flags_locked()) {
+  // Although we can combine the protect_region_list_rest_ of the two mappings, we require that they
+  // be of the same cacheability, as this is an assumption that mapping has a single cacheability
+  // type. Since all protection regions have the same cacheability we can check any arbitrary one in
+  // each of the mappings. Note that this check is technically redundant, since a VMO can only have
+  // one kind of cacheability and we already know this is the same VMO, but some extra paranoia here
+  // does not hurt.
+  if ((ProtectRangesLocked().FirstRegionMmuFlags() & ARCH_MMU_FLAG_CACHE_MASK) !=
+      (right_candidate->ProtectRangesLocked().FirstRegionMmuFlags() & ARCH_MMU_FLAG_CACHE_MASK)) {
     return;
   }
+
   // Only merge live mappings.
   if (state_ != LifeCycleState::ALIVE || right_candidate->state_ != LifeCycleState::ALIVE) {
     return;
@@ -1021,6 +1009,16 @@ void VmMapping::TryMergeRightNeighborLocked(VmMapping* right_candidate) {
     // perform changes.
     Guard<Mutex> guard{right_candidate->object_->lock()};
     AssertHeld(object_->lock_ref());
+
+    // Attempt to merge the protection region lists first. This is done first as a node allocation
+    // might be needed, which could fail. If it fails we can still abort now without needing to roll
+    // back any changes.
+    zx_status_t status = protection_ranges_.MergeRightNeighbor(right_candidate->protection_ranges_,
+                                                               right_candidate->base_);
+    if (status != ZX_OK) {
+      ASSERT(status == ZX_ERR_NO_MEMORY);
+      return;
+    }
 
     set_size_locked(size_ + right_candidate->size_);
     right_candidate->set_size_locked(0);
@@ -1099,4 +1097,269 @@ void VmMapping::MarkMergeable(fbl::RefPtr<VmMapping>&& mapping) {
   }
   mapping->mergeable_ = Mergeable::YES;
   mapping->TryMergeNeighborsLocked();
+}
+
+zx_status_t MappingProtectionRanges::EnumerateProtectionRanges(
+    vaddr_t mapping_base, size_t mapping_size, vaddr_t base, size_t size,
+    fbl::Function<zx_status_t(vaddr_t region_base, size_t region_len, uint mmu_flags)>&& func)
+    const {
+  DEBUG_ASSERT(size > 0);
+
+  // Have a short circuit for the single protect region case to avoid wavl tree processing in the
+  // common case.
+  if (protect_region_list_rest_.is_empty()) {
+    zx_status_t result = func(base, size, first_region_arch_mmu_flags_);
+    if (result == ZX_ERR_NEXT || result == ZX_ERR_STOP) {
+      return ZX_OK;
+    }
+    return result;
+  }
+
+  // See comments in the loop that explain what next and current represent.
+  auto next = protect_region_list_rest_.upper_bound(base);
+  auto current = next;
+  current--;
+  const vaddr_t range_top = base + (size - 1);
+  do {
+    // The region starting from 'current' and ending at 'next' represents a single protection
+    // domain. We first work that, remembering that either of these could be an invalid node,
+    // meaning the start or end of the mapping respectively.
+    const vaddr_t protect_region_base = current.IsValid() ? current->region_start : mapping_base;
+    const vaddr_t protect_region_top =
+        next.IsValid() ? (next->region_start - 1) : (mapping_base + (mapping_size - 1));
+    // We should only be iterating nodes that are actually part of the requested range.
+    DEBUG_ASSERT(base <= protect_region_top);
+    DEBUG_ASSERT(range_top >= protect_region_base);
+    // The region found is of an entire protection block, and could extend outside the requested
+    // range, so trim if necessary.
+    const vaddr_t region_base = ktl::max(protect_region_base, base);
+    const size_t region_len = ktl::min(protect_region_top, range_top) - region_base + 1;
+    zx_status_t result =
+        func(region_base, region_len,
+             current.IsValid() ? current->arch_mmu_flags : first_region_arch_mmu_flags_);
+    if (result != ZX_ERR_NEXT) {
+      if (result == ZX_ERR_STOP) {
+        return ZX_OK;
+      }
+      return result;
+    }
+    // Move to the next block.
+    current = next;
+    next++;
+    // Continue looping as long we operating on nodes that overlap with the requested range.
+  } while (current.IsValid() && current->region_start <= range_top);
+
+  return ZX_OK;
+}
+
+zx_status_t MappingProtectionRanges::UpdateProtectionRange(vaddr_t mapping_base,
+                                                           size_t mapping_size, vaddr_t base,
+                                                           size_t size, uint new_arch_mmu_flags) {
+  // If we're changing the whole mapping, just make the change.
+  if (mapping_base == base && mapping_size == size) {
+    protect_region_list_rest_.clear();
+    first_region_arch_mmu_flags_ = new_arch_mmu_flags;
+    return ZX_OK;
+  }
+
+  // Find the range of nodes that will need deleting.
+  auto first = protect_region_list_rest_.lower_bound(base);
+  auto last = protect_region_list_rest_.upper_bound(base + (size - 1));
+
+  // Work the flags in the regions before the first/last nodes. We need to cache these flags so that
+  // once we are inserting the new protection nodes, we do not insert nodes such that we would cause
+  // two regions to have the same flags (which would be redundant).
+  const uint start_carry_flags = FlagsForPreviousRegion(first);
+  const uint end_carry_flags = FlagsForPreviousRegion(last);
+
+  // Determine how many new nodes we are going to need so we can allocate up front. This ensures
+  // that after we have deleted nodes from the tree (and destroyed information) we do not have to
+  // do an allocation that might fail and leave us in an unrecoverable state. However, we would
+  // like to avoid actually performing allocations as far as possible, so do the following
+  // 1. Count how many nodes will be needed to represent the new protection range (after the nodes
+  //    between first,last have been deleted. As a protection range has two points, a start and an
+  //    end, the most nodes we can ever possibly need is two.
+  // 2. Of these new nodes we will need, work out how many we can reuse from deletion.
+  // 3. Allocate the remainder.
+  ktl::optional<ktl::unique_ptr<ProtectNode>> protect_nodes[2];
+  const uint total_nodes_needed = NodeAllocationsForRange(mapping_base, mapping_size, base, size,
+                                                          first, last, new_arch_mmu_flags);
+  uint nodes_needed = total_nodes_needed;
+  // First see how many of the nodes we will be able to get by erasing and can reuse.
+  for (auto it = first; nodes_needed > 0 && it != last; it++) {
+    nodes_needed--;
+  }
+  // If there are any nodes_needed still, allocate them so that they are available.
+  uint nodes_available = 0;
+  // Allocate any remaining nodes_needed that we will not fulfill from deletions.
+  while (nodes_available < nodes_needed) {
+    fbl::AllocChecker ac;
+    ktl::unique_ptr<ProtectNode> new_node(ktl::make_unique<ProtectNode>(&ac));
+    if (!ac.check()) {
+      return ZX_ERR_NO_MEMORY;
+    }
+    protect_nodes[nodes_available++].emplace(ktl::move(new_node));
+  }
+
+  // Now that we have done all memory allocations and know that we cannot fail start the destructive
+  // part and erase any nodes in the the range.
+  while (first != last) {
+    auto node = protect_region_list_rest_.erase(first++);
+    if (nodes_available < total_nodes_needed) {
+      protect_nodes[nodes_available++].emplace(ktl::move(node));
+    }
+  }
+
+  // At this point we should now have all the nodes.
+  DEBUG_ASSERT(total_nodes_needed == nodes_available);
+
+  // Check if we are updating the implicit first node, which just involves changing
+  // first_region_arch_mmu_flags_, or if there's a protection change that requires a node insertion.
+  if (base == mapping_base) {
+    first_region_arch_mmu_flags_ = new_arch_mmu_flags;
+  } else if (start_carry_flags != new_arch_mmu_flags) {
+    ASSERT(nodes_available > 0);
+    auto node = ktl::move(protect_nodes[--nodes_available].value());
+    node->region_start = base;
+    node->arch_mmu_flags = new_arch_mmu_flags;
+    protect_region_list_rest_.insert(ktl::move(node));
+  }
+
+  // To create the end of the region we first check if there is a gap between the end of this region
+  // and the start of the next region. Additionally this needs to handle the case where there is no
+  // next node in the tree, and so we have to check against mapping limit of mapping_base +
+  // mapping_size.
+  const uint64_t next_region_start =
+      last.IsValid() ? last->region_start : (mapping_base + mapping_size);
+  if (next_region_start != base + size) {
+    // There is a gap to the next node so we need to make sure it keeps its old protection value,
+    // end_carry_flags. However, it could have ended up that these flags are what we are protecting
+    // to, in which case a new node isn't needed as we can just effectively merge the gap into this
+    // protection range.
+    if (end_carry_flags != new_arch_mmu_flags) {
+      ASSERT(nodes_available > 0);
+      auto node = ktl::move(protect_nodes[--nodes_available].value());
+      node->region_start = base + size;
+      node->arch_mmu_flags = end_carry_flags;
+      protect_region_list_rest_.insert(ktl::move(node));
+      // Since we are essentially moving forward a node that we previously deleted, to essentially
+      // shrink the previous protection range, we know that there is no merging needed with the next
+      // node.
+      DEBUG_ASSERT(!last.IsValid() || last->arch_mmu_flags != end_carry_flags);
+    }
+  } else if (last.IsValid() && last->arch_mmu_flags == new_arch_mmu_flags) {
+    // From the previous `if` block we know that if last.IsValid is true, then the end of the region
+    // being protected is last->region_start. If this next region happens to have the same flags as
+    // what we just protected, then we need to drop this node.
+    protect_region_list_rest_.erase(last);
+  }
+
+  // We should not have allocated more nodes than we needed, this indicates a bug in the calculation
+  // logic.
+  DEBUG_ASSERT(nodes_available == 0);
+  return ZX_OK;
+}
+
+uint MappingProtectionRanges::MmuFlagsForWavlRegion(vaddr_t vaddr) const {
+  DEBUG_ASSERT(!protect_region_list_rest_.is_empty());
+  auto it = --protect_region_list_rest_.upper_bound(vaddr);
+  if (it.IsValid()) {
+    DEBUG_ASSERT(it->region_start <= vaddr);
+    return it->arch_mmu_flags;
+  } else {
+    DEBUG_ASSERT(protect_region_list_rest_.begin()->region_start > vaddr);
+    return first_region_arch_mmu_flags_;
+  }
+}
+
+// Counts how many nodes would need to be allocated for a protection range. This calculation is
+// based of whether there are actually changes in the protection type that require a node to be
+// added.
+uint MappingProtectionRanges::NodeAllocationsForRange(vaddr_t mapping_base, size_t mapping_size,
+                                                      vaddr_t base, size_t size,
+                                                      RegionList::iterator removal_start,
+                                                      RegionList::iterator removal_end,
+                                                      uint new_mmu_flags) const {
+  uint nodes_needed = 0;
+  // Check if we will need a node at the start. if base==base_ then we will just be changing the
+  // first_region_arch_mmu_flags_, otherwise we need a node if we're actually causing a protection
+  // change.
+  if (base != mapping_base && FlagsForPreviousRegion(removal_start) != new_mmu_flags) {
+    nodes_needed++;
+  }
+  // The node for the end of the region is needed under two conditions
+  // 1. There will be a non-zero gap between the end of our new region and the start of the next
+  //    existing region.
+  // 2. This non-zero sized gap is of a different protection type.
+  const uint64_t next_region_start =
+      removal_end.IsValid() ? removal_end->region_start : (mapping_base + mapping_size);
+  if (next_region_start != base + size && FlagsForPreviousRegion(removal_end) != new_mmu_flags) {
+    nodes_needed++;
+  }
+  return nodes_needed;
+}
+
+zx_status_t MappingProtectionRanges::MergeRightNeighbor(MappingProtectionRanges& right,
+                                                        vaddr_t merge_addr) {
+  // We need to insert a node if the protection type of the end of the left mapping is not the
+  // same as the protection type of the start of the right mapping.
+  if (FlagsForPreviousRegion(protect_region_list_rest_.end()) !=
+      right.first_region_arch_mmu_flags_) {
+    fbl::AllocChecker ac;
+    ktl::unique_ptr<ProtectNode> region =
+        ktl::make_unique<ProtectNode>(&ac, merge_addr, right.first_region_arch_mmu_flags_);
+    if (!ac.check()) {
+      // No state has changed yet, so even though we do not forward up an error it is safe to just
+      // not merge.
+      TRACEF("Aborted region merge due to out of memory\n");
+      return ZX_ERR_NO_MEMORY;
+    }
+    protect_region_list_rest_.insert(ktl::move(region));
+  }
+  // Carry over any remaining regions.
+  while (!right.protect_region_list_rest_.is_empty()) {
+    protect_region_list_rest_.insert(right.protect_region_list_rest_.pop_front());
+  }
+  return ZX_OK;
+}
+
+MappingProtectionRanges MappingProtectionRanges::SplitAt(vaddr_t split) {
+  // Determine the mmu flags the right most mapping would start at.
+  auto right_nodes = protect_region_list_rest_.upper_bound(split);
+  const uint right_mmu_flags = FlagsForPreviousRegion(right_nodes);
+
+  MappingProtectionRanges ranges(right_mmu_flags);
+
+  // Move any protect regions into the right half.
+  while (right_nodes != protect_region_list_rest_.end()) {
+    ranges.protect_region_list_rest_.insert(protect_region_list_rest_.erase(right_nodes++));
+  }
+  return ranges;
+}
+
+void MappingProtectionRanges::DiscardBelow(vaddr_t addr) {
+  auto last = protect_region_list_rest_.upper_bound(addr);
+  while (protect_region_list_rest_.begin() != last) {
+    first_region_arch_mmu_flags_ = protect_region_list_rest_.pop_front()->arch_mmu_flags;
+  }
+}
+
+void MappingProtectionRanges::DiscardAbove(vaddr_t addr) {
+  for (auto it = protect_region_list_rest_.lower_bound(addr);
+       it != protect_region_list_rest_.end();) {
+    protect_region_list_rest_.erase(it++);
+  }
+}
+
+bool MappingProtectionRanges::DebugNodesWithinRange(vaddr_t mapping_base, size_t mapping_size) {
+  if (protect_region_list_rest_.is_empty()) {
+    return true;
+  }
+  if (protect_region_list_rest_.begin()->region_start < mapping_base) {
+    return false;
+  }
+  if ((--protect_region_list_rest_.end())->region_start >= mapping_base + mapping_size) {
+    return false;
+  }
+  return true;
 }
