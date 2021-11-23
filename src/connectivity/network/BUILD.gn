@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 fuchsia_component("component") {
   component_name = "network"
@@ -19,6 +20,16 @@ fuchsia_component("component") {
 
 fuchsia_package("network") {
   deps = [ ":component" ]
+}
+
+# TODO(https://fxbug.dev/87819): Introduce a network-basic component and include
+# it here instead of the regular network realm.
+fuchsia_package("network-basic") {
+  deps = [ ":component" ]
+}
+
+core_shard("virtualization-core-shard") {
+  shard_file = "meta/virtualization.core_shard.cml"
 }
 
 # TODO(https://fxbug.dev/85821): Remove once out-of-tree users no longer
