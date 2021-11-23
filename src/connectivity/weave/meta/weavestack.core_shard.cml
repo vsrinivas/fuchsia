@@ -14,6 +14,16 @@
             environment: "#full-resolver-env",
         },
     ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.weave.Bootstrap",
+                "fuchsia.weave.Stack",
+                "fuchsia.weave.StackProvider",
+            ],
+            from: "#weavestack",
+        },
+    ],
     offer: [
         {
             directory: "config-data",
@@ -25,6 +35,19 @@
             storage: "data",
             from: "self",
             to: [ "#weavestack" ],
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.factory.WeaveFactoryStoreProvider",
+                "fuchsia.lowpan.device.Lookup",
+                "fuchsia.weave.FactoryDataManager",
+                "fuchsia.weave.Signer",
+            ],
+            from: "self",
+            to: [ "#weavestack" ],
+            dependency: "weak_for_migration",
         },
         {
             protocol: [

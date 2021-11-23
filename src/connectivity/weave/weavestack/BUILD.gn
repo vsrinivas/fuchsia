@@ -75,10 +75,6 @@ weavestack_package_v2("weavestack") {
       "//src/connectivity/weave/meta/weavestack.core_shard.cml"
 }
 
-core_shard("weavestack-core-appmgr-shard") {
-  shard_file = "//src/connectivity/weave/meta/weavestack_appmgr.core_shard.cml"
-}
-
 config_data("config") {
   for_pkg = "weavestack"
   sources = [
