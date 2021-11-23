@@ -7,12 +7,13 @@
 
 mod femu;
 mod qemu;
-mod serialization;
+pub mod serialization;
 
 use femu::FemuEngine;
 use qemu::QemuEngine;
+use serialization::SERIALIZE_FILE_NAME;
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use ffx_emulator_common::config::{FfxConfigWrapper, EMU_INSTANCE_ROOT_DIR};
 use ffx_emulator_config::{
     DeviceConfig, EmulatorConfiguration, EmulatorEngine, EngineType, GuestConfig, HostConfig,
@@ -55,6 +56,7 @@ pub struct EngineBuilder {
 }
 
 impl EngineBuilder {
+    /// Create a new EngineBuilder, populated with default values for all configuration.
     pub fn new() -> Self {
         Self {
             emulator_configuration: EmulatorConfiguration::default(),
@@ -63,61 +65,128 @@ impl EngineBuilder {
         }
     }
 
+    /// Set the configuration to use when building a new engine.
     pub fn config(mut self, config: EmulatorConfiguration) -> EngineBuilder {
         self.emulator_configuration = config;
         self
     }
 
+    /// Set the engine's virtual device configuration.
     pub fn device(mut self, device_config: DeviceConfig) -> EngineBuilder {
         self.emulator_configuration.device = device_config;
         self
     }
 
+    /// Set the type of the engine to be built.
     pub fn engine_type(mut self, engine_type: EngineType) -> EngineBuilder {
         self.engine_type = engine_type;
         self
     }
 
+    /// Set the FfxConfigWrapper to be used when building this engine.
     pub fn ffx_config(mut self, ffx_config: FfxConfigWrapper) -> EngineBuilder {
         self.ffx_config = ffx_config;
         self
     }
 
+    /// Set the engine's guest configuration.
     pub fn guest(mut self, guest_config: GuestConfig) -> EngineBuilder {
         self.emulator_configuration.guest = guest_config;
         self
     }
 
+    /// Set the engine's host configuration.
     pub fn host(mut self, host_config: HostConfig) -> EngineBuilder {
         self.emulator_configuration.host = host_config;
         self
     }
 
+    /// Set the engine's runtime configuration.
     pub fn runtime(mut self, runtime_config: RuntimeConfig) -> EngineBuilder {
         self.emulator_configuration.runtime = runtime_config;
         self
     }
 
+    /// Finalize and validate the configuration, set up the engine's instance directory, and return the built engine.
     pub async fn build(mut self) -> Result<Box<dyn EmulatorEngine>> {
         // Set up the instance directory, now that we have enough information.
-        let mut path = PathBuf::from(self.ffx_config.get(EMU_INSTANCE_ROOT_DIR).await?);
-        path.push(&self.emulator_configuration.runtime.name);
-        create_dir_all(&path.as_path())?;
-        self.emulator_configuration.runtime.instance_directory = path;
+        self.emulator_configuration.runtime.instance_directory =
+            get_instance_dir(&self.ffx_config, &self.emulator_configuration.runtime.name, true)
+                .await?;
 
+        // Make sure we don't overwrite an existing instance.
+        let filepath =
+            self.emulator_configuration.runtime.instance_directory.join(SERIALIZE_FILE_NAME);
+        if filepath.exists() {
+            return Err(anyhow!(
+                "Serialized engine file {:?} already exists. \
+                    Use a different name, or run `ffx emu shutdown {}` to clean up the old instance.",
+                filepath,
+                self.emulator_configuration.runtime.name
+            ));
+        } else {
+            log::debug!("Serialized engine file will be created at {:?}", filepath);
+        }
+
+        // Build and validate the engine, then pass it back to the caller.
         let engine: Box<dyn EmulatorEngine> = match self.engine_type {
             EngineType::Femu => Box::new(FemuEngine {
                 emulator_configuration: self.emulator_configuration,
                 ffx_config: self.ffx_config,
+                engine_type: self.engine_type,
                 ..Default::default()
             }),
             EngineType::Qemu => Box::new(QemuEngine {
                 emulator_configuration: self.emulator_configuration,
                 ffx_config: self.ffx_config,
+                engine_type: self.engine_type,
                 ..Default::default()
             }),
         };
         engine.validate()?;
         Ok(engine)
     }
+}
+
+/// Return a PathBuf with the path to the instance directory for this engine. If the "create" flag
+/// is set, the directory and its ancestors will be created if it doesn't already exist.
+pub async fn get_instance_dir(
+    ffx_config: &FfxConfigWrapper,
+    instance_name: &str,
+    create: bool,
+) -> Result<PathBuf> {
+    let path = PathBuf::from(ffx_config.get(EMU_INSTANCE_ROOT_DIR).await?).join(&instance_name);
+    if !path.exists() {
+        if create {
+            log::debug!("Creating {:?} for {}", path, instance_name);
+            create_dir_all(&path.as_path())?;
+        } else {
+            log::debug!(
+                "Path {} doesn't exist. Check the spelling of the instance name.",
+                instance_name
+            );
+        }
+    }
+    Ok(path)
+}
+
+/// Given an instance name, empty and remove the instance directory associated with that name.
+/// Fails if the directory can't be removed; returns Ok(()) if the directory doesn't exist.
+pub async fn clean_up_instance_dir(
+    ffx_config: &FfxConfigWrapper,
+    instance_name: &str,
+) -> Result<()> {
+    let path = get_instance_dir(ffx_config, instance_name, false).await?;
+    if path.exists() {
+        log::debug!("Removing {:?} for {}", path, instance_name);
+        std::fs::remove_dir_all(&path.as_path()).context("Request to remove directory failed")
+    } else {
+        // It's already gone, so just return Ok(()).
+        Ok(())
+    }
+}
+
+/// Retrieve a list of all of the names of instances currently present on the local system.
+pub fn get_all_instances() -> Vec<String> {
+    todo!("The --all flag is not yet supported.")
 }

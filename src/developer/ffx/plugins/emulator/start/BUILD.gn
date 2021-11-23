@@ -11,11 +11,8 @@ if (is_host) {
     with_unit_tests = true
     args_deps = [
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
     ]
     deps = [
-      "//build/sdk/meta:rust",
       "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",

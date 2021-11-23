@@ -9,18 +9,19 @@ use crate::serialization::SerializingEngine;
 use anyhow::Result;
 use async_trait::async_trait;
 use ffx_emulator_common::config::FfxConfigWrapper;
-use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine};
+use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
 use serde::{Deserialize, Serialize};
 
 use crate::qemu::qemu_base::QemuBasedEngine;
 
-#[derive(Default, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct FemuEngine {
     #[serde(skip)]
     pub(crate) ffx_config: FfxConfigWrapper,
 
     pub(crate) emulator_configuration: EmulatorConfiguration,
     pub(crate) _pid: i32,
+    pub(crate) engine_type: EngineType,
 }
 
 #[async_trait]
@@ -35,11 +36,9 @@ impl EmulatorEngine for FemuEngine {
             )
             .await
             .expect("could not stage image files");
-        self.write_to_disk(
-            &self.emulator_configuration.runtime.instance_directory,
-            &self.emulator_configuration.runtime.log_level,
-        )
-        .await?;
+
+        let instance_directory = self.emulator_configuration.runtime.instance_directory.clone();
+        self.write_to_disk(&instance_directory).await?;
         todo!()
     }
     fn show(&mut self) -> Result<()> {
@@ -52,8 +51,12 @@ impl EmulatorEngine for FemuEngine {
         self.check_required_files(&self.emulator_configuration.guest)?;
         Ok(())
     }
+    fn engine_type(&self) -> EngineType {
+        self.engine_type
+    }
 }
 
 #[async_trait]
 impl SerializingEngine for FemuEngine {}
+
 impl QemuBasedEngine for FemuEngine {}

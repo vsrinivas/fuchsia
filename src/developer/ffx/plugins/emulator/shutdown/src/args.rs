@@ -10,13 +10,12 @@ use ffx_core::ffx_command;
 #[argh(subcommand, name = "shutdown")]
 /// Shutdown running Fuchsia emulator.
 pub struct ShutdownCommand {
-    /// device_launcher binary location. Defaults to looking in prebuilt/vdl/device_launcher
-    #[argh(option, short = 'd')]
-    pub vdl_path: Option<String>,
-    /// required, file containing device_launcher process artifact location.
-    #[argh(option)]
-    pub launched_proto: Option<String>,
-    /// running in fuchsia sdk (not inside the fuchsia code repository)
+    /// shutdown and clean up all emulator instances running on the device.
     #[argh(switch)]
-    pub sdk: bool,
+    pub all: bool,
+
+    /// name of the instance to shutdown, as specified to the start command.
+    /// See a list of available instances by running `ffx emu list`.
+    #[argh(positional, default = "\"fuchsia-emulator\".to_string()")]
+    pub name: String,
 }

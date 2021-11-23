@@ -69,7 +69,7 @@ macro_rules! missing_key_message {
 /// ffx_config.
 ///
 /// TODO(fxbug.dev/86958): Support injecting configuration for tests into ffx::config.
-#[derive(Default)]
+#[derive(Clone, Default, Debug, PartialEq)]
 pub struct FfxConfigWrapper {
     pub overrides: std::collections::HashMap<&'static str, String>,
 }

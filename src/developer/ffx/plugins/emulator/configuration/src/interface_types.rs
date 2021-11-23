@@ -8,7 +8,7 @@
 //! runtime.
 
 use crate::enumerations::{
-    AccelerationMode, ConsoleType, GpuType, LogLevel, NetworkingMode, VirtualCpu,
+    AccelerationMode, ConsoleType, EngineType, GpuType, LogLevel, NetworkingMode, VirtualCpu,
 };
 use anyhow::Result;
 use async_trait::async_trait;
@@ -48,10 +48,14 @@ pub trait EmulatorEngine {
     /// type, this function will return an error indicating which field(s) and why. It also returns
     /// an error if the engine has already been started. Otherwise, this returns Ok(()).
     fn validate(&self) -> Result<()>;
+
+    /// Returns the EngineType used when building this engine. Each engine implementation should
+    /// always return the same EngineType.
+    fn engine_type(&self) -> EngineType;
 }
 
 /// Collects the specific configurations into a single struct for ease of passing around.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct EmulatorConfiguration {
     pub host: HostConfig,
     pub device: DeviceConfig,
@@ -60,7 +64,7 @@ pub struct EmulatorConfiguration {
 }
 
 /// Specifications of the virtual device to be emulated.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct DeviceConfig {
     /// The model of audio device being emulated, if any.
     pub audio: AudioDevice,
@@ -101,7 +105,7 @@ pub struct GuestConfig {
 }
 
 /// Host-side configuration data, such as physical hardware and host OS details.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct HostConfig {
     /// Determines the type of hardware acceleration to use for emulation, such as KVM.
     pub acceleration: AccelerationMode,
@@ -120,7 +124,7 @@ pub struct HostConfig {
 /// execution of an emulator instance. These are different from the
 /// DeviceConfig and GuestConfig which defines the hardware configuration
 /// and behavior of Fuchsia running within the emulator instance.
-#[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct RuntimeConfig {
     /// The emulator's output, which might come from the serial console, the guest, or nothing.
     pub console: ConsoleType,

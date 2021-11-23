@@ -21,6 +21,7 @@ if (is_host) {
       "configuration:tests",
       "engines:tests",
       "list:tests",
+      "shutdown:tests",
       "start:tests",
     ]
   }

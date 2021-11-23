@@ -2,32 +2,51 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::{FemuEngine, QemuEngine};
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use ffx_emulator_config::LogLevel;
-use serde::Serialize;
+use ffx_emulator_config::EmulatorEngine;
+use serde::{Deserialize, Serialize};
 use std::{fs::File, path::PathBuf};
 
-const SERIALIZE_FILE_NAME: &str = "engine.json";
+pub(crate) const SERIALIZE_FILE_NAME: &str = "engine.json";
+
+pub async fn read_from_disk(instance_directory: &PathBuf) -> Result<Box<dyn EmulatorEngine>> {
+    // Get the engine's location, which is in the instance directory.
+    let filepath = instance_directory.join(SERIALIZE_FILE_NAME);
+
+    // Read the engine.json file and deserialize it from disk into a new TypedEngine instance
+    if filepath.exists() {
+        let file = File::open(&filepath)
+            .expect(&format!("Unable to open file {:?} for deserialization", filepath));
+        let value: serde_json::Value = serde_json::from_reader(file)?;
+        if let Some(engine_type) = value.get("engine_type") {
+            match engine_type.as_str() {
+                Some("femu") => Ok(Box::new(<FemuEngine as Deserialize>::deserialize(value)?)
+                    as Box<dyn EmulatorEngine>),
+                Some("qemu") => Ok(Box::new(<QemuEngine as Deserialize>::deserialize(value)?)
+                    as Box<dyn EmulatorEngine>),
+                _ => Err(anyhow!("Not a valid engine type.")),
+            }
+        } else {
+            Err(anyhow!("Deserialized data doesn't contain an engine type value."))
+        }
+    } else {
+        Err(anyhow!("Engine file doesn't exist at {:?}", filepath))
+    }
+}
 
 #[async_trait]
 pub trait SerializingEngine: Serialize {
-    async fn write_to_disk(
-        &self,
-        instance_directory: &PathBuf,
-        log_level: &LogLevel,
-    ) -> Result<()> {
+    async fn write_to_disk(&self, instance_directory: &PathBuf) -> Result<()> {
         // The engine's serialized form will be saved in ${EMU_INSTANCE_ROOT_DIR}/${runtime.name}.
         // This is the path set up by the EngineBuilder, so it's expected to already exist.
-        let mut filepath = instance_directory.clone();
+        let filepath = instance_directory.join(SERIALIZE_FILE_NAME);
 
         // Create the engine.json file to hold the serialized data, and write it out to disk,
-        filepath.push(SERIALIZE_FILE_NAME);
-        if log_level == &LogLevel::Verbose {
-            println!("Writing serialized engine out to {}", filepath.to_string_lossy());
-        }
         let file = File::create(&filepath)
             .expect(&format!("Unable to create file {:?} for serialization", filepath));
+        log::debug!("Writing serialized engine out to {:?}", filepath);
         match serde_json::to_writer(file, self) {
             Ok(_) => Ok(()),
             Err(e) => Err(anyhow!(e)),
@@ -38,43 +57,33 @@ pub trait SerializingEngine: Serialize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::qemu::QemuEngine;
+    use ffx_emulator_config::EngineType;
     use futures::executor::block_on;
-    use serde::Deserialize;
-    use std::{
-        fs::{create_dir_all, remove_file},
-        io::BufReader,
-    };
+    use std::fs::{create_dir_all, remove_file};
     use tempfile::tempdir;
 
-    #[derive(Debug, Deserialize, Serialize, PartialEq)]
-    struct FakeEngine {
-        data: String,
-        number: usize,
-    }
-    impl SerializingEngine for FakeEngine {}
-
     #[test]
-    fn test_write_to_disk() -> Result<()> {
+    fn test_write_then_read() -> Result<()> {
         // Create a test directory in TempFile::tempdir
-        let mut temp_dir = PathBuf::from(tempdir().unwrap().path());
-        temp_dir.push("test_to_disk");
-        create_dir_all(&temp_dir)?;
+        let name = "test_write_then_read";
+        let mut temp_path = PathBuf::from(tempdir().unwrap().path()).join(name);
+        create_dir_all(&temp_path)?;
 
         // Set up some test data.
-        let engine = FakeEngine { data: "Here's some stuff to serialize".to_string(), number: 42 };
+        let engine = QemuEngine { engine_type: EngineType::Qemu, ..Default::default() };
 
-        // Serialize the FakeEngine to disk.
-        block_on(engine.write_to_disk(&temp_dir, &LogLevel::Info))?;
+        // Serialize the engine to disk.
+        block_on(engine.write_to_disk(&temp_path)).expect("Problem serializing engine to disk.");
 
         // Deserialize it from the expected file location.
-        let mut filename = temp_dir;
-        filename.push(SERIALIZE_FILE_NAME);
-        let engine_copy: FakeEngine =
-            serde_json::from_reader(BufReader::new(File::open(&filename)?))?;
-
-        // Verify the two copies are identical and clean up the file.
+        temp_path.push(SERIALIZE_FILE_NAME);
+        let file = File::open(&temp_path)
+            .expect(&format!("Unable to open file {:?} for deserialization", temp_path));
+        let engine_copy: QemuEngine = serde_json::from_reader(file)?;
         assert_eq!(engine_copy, engine);
-        remove_file(&filename)?;
+
+        remove_file(&temp_path).expect("Problem removing serialized file during test.");
         Ok(())
     }
 }

@@ -17,8 +17,14 @@ pub async fn start(cmd: StartCommand, _daemon_proxy: bridge::DaemonProxy) -> Res
         make_configs(&cmd).await.context("making configuration from metadata")?;
 
     // Initialize an engine of the requested type with the configuration defined in the manifest.
-    let mut engine =
-        EngineBuilder::new().config(emulator_configuration).engine_type(cmd.engine).build().await?;
+    let result =
+        EngineBuilder::new().config(emulator_configuration).engine_type(cmd.engine).build().await;
 
-    std::process::exit(engine.start().await?)
+    std::process::exit(match result {
+        Ok(mut engine) => engine.start().await?,
+        Err(e) => {
+            println!("{:?}", e);
+            1
+        }
+    });
 }
