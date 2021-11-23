@@ -235,9 +235,14 @@ impl Realm {
                         }
                     }
                 }
-                // TODO(88417)
-                ftest::RealmRequest::AddChildFromDecl { .. } => {
-                    unimplemented!();
+                ftest::RealmRequest::AddChildFromDecl { name, decl, options, responder } => {
+                    match self.add_child_from_decl(name.clone(), decl, options).await {
+                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Err(e) => {
+                            warn!("unable to add child {:?} from decl to realm: {:?}", name, e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
                 }
                 // TODO(88417, 88423)
                 ftest::RealmRequest::AddLocalChild { .. } => {
@@ -316,6 +321,19 @@ impl Realm {
             }),
             ..cm_rust::ComponentDecl::default()
         });
+        self.realm_node.add_child(name.clone(), options, child_realm_node).await
+    }
+
+    async fn add_child_from_decl(
+        &self,
+        name: String,
+        component_decl: fcdecl::Component,
+        options: ftest::ChildOptions,
+    ) -> Result<(), RealmBuilderError> {
+        if let Err(e) = cm_fidl_validator::fdecl::validate(&component_decl) {
+            return Err(RealmBuilderError::InvalidComponentDecl(name, e));
+        }
+        let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native());
         self.realm_node.add_child(name.clone(), options, child_realm_node).await
     }
 
@@ -2778,6 +2796,78 @@ mod tests {
             .expect("failed to call add_child")
             .expect_err("add_legacy_child was supposed to error");
         assert_eq!(err, ftest::RealmBuilderError2::InvalidManifestExtension);
+    }
+
+    #[fuchsia::test]
+    async fn add_child_from_decl() {
+        let a_decl = cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some("hippo".try_into().unwrap()),
+                info: fdata::Dictionary::EMPTY,
+            }),
+            uses: vec![cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name: "example.Hippo".into(),
+                target_path: "/svc/example.Hippo".try_into().unwrap(),
+                dependency_type: cm_rust::DependencyType::Strong,
+            })],
+            ..cm_rust::ComponentDecl::default()
+        };
+
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child_from_decl("a", a_decl.clone().native_into_fidl(), ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child_from_decl returned an error");
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl::default(),
+            children: vec![(
+                "a".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree { decl: a_decl, children: vec![] },
+            )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_child_from_decl_that_conflicts_with_child_decl() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_child_from_decl("a", fcdecl::Component::EMPTY, ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_legacy_child was supposed to error");
+        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+    }
+
+    #[fuchsia::test]
+    async fn add_child_from_decl_that_conflicts_with_mutable_child() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child("a", "#meta/realm_builder_server_unit_tests.cm", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_child_from_decl("a", fcdecl::Component::EMPTY, ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect_err("add_legacy_child was supposed to error");
+        assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
     }
 
     // Everything below this line are tests for the old fuchsia.component.test.RealmBuilder logic,
