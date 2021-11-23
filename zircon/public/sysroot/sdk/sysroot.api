@@ -184,7 +184,7 @@
   "include/zircon/availability.h": "ad0b855a7ca0565d6ca1b6766231a569",
   "include/zircon/boot/bootfs.h": "f8a7694dc47df09b132c78bafb5e188f",
   "include/zircon/boot/crash-reason.h": "bc3e234ad14b75ec8e479e94147509f8",
-  "include/zircon/boot/driver-config.h": "d30d46534a242b0b7f97c8b1538b62a6",
+  "include/zircon/boot/driver-config.h": "c3dde151b634076ca9b946585e4bef7b",
   "include/zircon/boot/e820.h": "675a646e1f48b6b472ba2e2ebf9f7b12",
   "include/zircon/boot/image.h": "a5dbff04b423057347df5f0b81e6c7ce",
   "include/zircon/boot/multiboot.h": "75c4ffa342d5ca0da1d261796e91a990",

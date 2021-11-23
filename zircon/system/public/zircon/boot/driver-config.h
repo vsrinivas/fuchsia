@@ -16,7 +16,6 @@
 #define KDRV_ARM_GENERIC_TIMER 0x4D495441       // 'ATIM'
 #define KDRV_PL011_UART 0x55304C50              // 'PL0U'
 #define KDRV_AMLOGIC_UART 0x554C4D41            // 'AMLU'
-#define KDRV_NXP_IMX_UART 0x55584D49            // 'IMXU'
 #define KDRV_AMLOGIC_HDCP 0x484C4D41            // 'AMLH'
 #define KDRV_DW8250_UART 0x44573855             // 'DW8U'
 #define KDRV_AMLOGIC_RNG 0x484C4D52             // 'AMLR'
@@ -26,8 +25,7 @@
 #define KDRV_MOTMOT_UART 0x4d4d5455             // 'MMTU'
 
 // Kernel driver struct that can be used for simple drivers.
-// Used by KDRV_PL011_UART, KDRV_AMLOGIC_UART, KDRV_NXP_IMX_UART,
-// and KDRV_I8250_MMIO_UART.
+// Used by KDRV_PL011_UART, KDRV_AMLOGIC_UART, and KDRV_I8250_MMIO_UART.
 typedef struct {
   uint64_t mmio_phys;
   uint32_t irq;
