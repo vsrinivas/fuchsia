@@ -6,6 +6,10 @@ config("headers_config") {
   include_dirs = [ "include" ]
 }
 
+group("cpp") {
+  public_deps = [ ":ramdevice-client" ]
+}
+
 shared_library("ramdevice-client") {
   public_configs = [ ":headers_config" ]
   public = [

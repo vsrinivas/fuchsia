@@ -84,7 +84,7 @@ foreach(testpkg, go_test_packages) {
     deps = [ ":pmd" ]
     non_go_deps = [
       "//sdk/lib/fdio",
-      "//src/lib/storage/ramdevice_client/cpp:ramdevice-client",
+      "//src/lib/storage/ramdevice_client/cpp",
     ]
     include_dirs =
         [ rebase_path("//src/lib/storage/ramdevice_client/cpp/include") ]
