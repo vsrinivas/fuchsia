@@ -91,7 +91,12 @@ executable("virtmagma_conformance_tests") {
 executable("virtmagma_no_cpp_test") {
   testonly = true
 
-  ldflags = [ "-nostdlib++" ]
+  # TODO(fxbug.dev/89257) - use configs to set -no-stdlib++ in a way that doesn't
+  # conflict with -static-libstdc++.
+  ldflags = [
+    "-nostdlib++",
+    "-Wno-unused-command-line-argument",
+  ]
 
   sources = [
     "main.c",
