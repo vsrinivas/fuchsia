@@ -24,6 +24,7 @@ import (
 
 type fakeSubprocessRunner struct {
 	commandsRun [][]string
+	run         func(cmd []string, stdout io.Writer) error
 	mockStdout  []byte
 	fail        bool
 }
@@ -36,6 +37,9 @@ func (r *fakeSubprocessRunner) Run(ctx context.Context, cmd []string, stdout, st
 
 func (r *fakeSubprocessRunner) RunWithStdin(_ context.Context, cmd []string, stdout, _ io.Writer, _ io.Reader) error {
 	r.commandsRun = append(r.commandsRun, cmd)
+	if r.run != nil {
+		return r.run(cmd, stdout)
+	}
 	stdout.Write(r.mockStdout)
 	if r.fail {
 		return errSubprocessFailure

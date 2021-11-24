@@ -61,6 +61,7 @@ if (is_host) {
       ":proto_lib",
       "//third_party/golibs:github.com/google/go-cmp",
       "//third_party/golibs:github.com/google/subcommands",
+      "//third_party/golibs:github.com/kr/pretty",
       "//third_party/golibs:google.golang.org/protobuf",
       "//tools/build",
       "//tools/lib/color",

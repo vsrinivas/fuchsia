@@ -7,6 +7,7 @@ package hostplatform
 import (
 	"fmt"
 	"runtime"
+	"strings"
 )
 
 // Name returns the name of the current platform, in the form "<os>-<cpu_arch>".
@@ -43,7 +44,7 @@ func name(goOS, goArch string) (string, error) {
 	return MakeName(os, arch), nil
 }
 
-// IsMac determines whether the code is running on a Mac.
-func IsMac() bool {
-	return runtime.GOOS == "darwin"
+// IsMac determines whether the platform corresponds to a Mac platform.
+func IsMac(platform string) bool {
+	return strings.HasPrefix(platform, "mac-")
 }

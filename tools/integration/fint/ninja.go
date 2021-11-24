@@ -247,6 +247,7 @@ func (p *ninjaParser) failureMessage() string {
 	return strings.Join(lines, "\n")
 }
 
+// runNinja runs ninja as a subprocess to build the specified targets.
 func runNinja(
 	ctx context.Context,
 	r ninjaRunner,

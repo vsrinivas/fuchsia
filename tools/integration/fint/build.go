@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net/url"
 	"os"
@@ -25,6 +24,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/hostplatform"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
@@ -123,7 +123,7 @@ func buildImpl(
 	} else {
 		var explainSink io.Writer
 		if staticSpec.Incremental {
-			f, err := ioutil.TempFile(contextSpec.ArtifactDir, "")
+			f, err := os.Create(filepath.Join(contextSpec.ArtifactDir, "explain_output.txt"))
 			if err != nil {
 				return nil, err
 			}
@@ -149,21 +149,21 @@ func buildImpl(
 	if contextSpec.ArtifactDir != "" {
 		graph := filepath.Join(contextSpec.ArtifactDir, "ninja-graph.dot")
 		if err := ninjaGraph(ctx, r, targets, graph); err != nil {
-			// TODO(olivernewman): Add a test to enforce that the original
-			// `ninjaErr` is returned if `ninjaGraph()` fails.
 			if ninjaErr == nil {
 				return nil, err
 			}
+		} else {
+			artifacts.NinjaGraphPath = graph
 		}
-		artifacts.NinjaGraphPath = graph
 
 		compdb := filepath.Join(contextSpec.ArtifactDir, "compile-commands.json")
 		if err := ninjaCompdb(ctx, r, compdb); err != nil {
 			if ninjaErr == nil {
 				return nil, err
 			}
+		} else {
+			artifacts.NinjaCompdbPath = compdb
 		}
-		artifacts.NinjaCompdbPath = compdb
 	}
 
 	if ninjaErr != nil {
@@ -186,7 +186,10 @@ func buildImpl(
 			return nil
 		}
 		for name, contents := range logs {
-			f, err := ioutil.TempFile(contextSpec.ArtifactDir, url.QueryEscape(name))
+			dest := filepath.Join(
+				contextSpec.ArtifactDir,
+				url.QueryEscape(strings.ReplaceAll(name, " ", "_")))
+			f, err := osmisc.CreateFile(dest)
 			if err != nil {
 				return err
 			}
@@ -200,7 +203,7 @@ func buildImpl(
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
-		noop, logs, err := checkNinjaNoop(ctx, r, targets, hostplatform.IsMac())
+		noop, logs, err := checkNinjaNoop(ctx, r, targets, hostplatform.IsMac(platform))
 		if err != nil {
 			return nil, err
 		}
@@ -208,20 +211,7 @@ func buildImpl(
 			return nil, err
 		}
 		if !noop {
-			summaryLines := []string{
-				"Ninja build did not converge to no-op.",
-				"See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op",
-			}
-			if hostplatform.IsMac() {
-				summaryLines = append(
-					summaryLines,
-					"If this failure is specific to Mac, confirm that it's not related to fxbug.dev/61784.",
-				)
-			}
-			artifacts.FailureSummary = strings.Join(
-				summaryLines,
-				"\n",
-			)
+			artifacts.FailureSummary = ninjaNoopFailureMessage(platform)
 			return artifacts, fmt.Errorf("ninja build did not converge to no-op")
 		}
 	}
@@ -254,6 +244,20 @@ func buildImpl(
 	}
 
 	return artifacts, nil
+}
+
+func ninjaNoopFailureMessage(platform string) string {
+	summaryLines := []string{
+		"Ninja build did not converge to no-op.",
+		"See: https://fuchsia.dev/fuchsia-src/development/build/ninja_no_op",
+	}
+	if hostplatform.IsMac(platform) {
+		summaryLines = append(
+			summaryLines,
+			"If this failure is specific to Mac, confirm that it's not related to fxbug.dev/61784.",
+		)
+	}
+	return strings.Join(summaryLines, "\n")
 }
 
 // constructNinjaTargets determines which targets to build based on the static

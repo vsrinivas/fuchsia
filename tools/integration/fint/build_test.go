@@ -7,12 +7,16 @@ package fint
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/kr/pretty"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -53,11 +57,24 @@ func TestBuild(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+
 	testCases := []struct {
-		name              string
-		staticSpec        *fintpb.Static
-		contextSpec       *fintpb.Context
-		modules           fakeBuildModules
+		name        string
+		staticSpec  *fintpb.Static
+		contextSpec *fintpb.Context
+		// We want to skip the ninja no-op check in most tests because it
+		// requires complicated mocking, but without setting
+		// `SkipNinjaNoopCheck` on every test's context spec. This effectively
+		// makes `SkipNinjaNoopCheck` default to true.
+		ninjaNoopCheck bool
+		modules        fakeBuildModules
+		// Callback that is called by the fake runner whenever it starts
+		// "running" a command, allowing each test to fake the result and output
+		// of any subprocess.
+		runnerFunc func(cmd []string, stdout io.Writer) error
+		// List of regex strings, where each string corresponds to a subprocess
+		// that must have been run by the runner.
+		mustRun           []string
 		expectedArtifacts *fintpb.BuildArtifacts
 		expectErr         bool
 	}{
@@ -65,15 +82,142 @@ func TestBuild(t *testing.T) {
 			name:              "empty spec produces no ninja targets",
 			staticSpec:        &fintpb.Static{},
 			expectedArtifacts: &fintpb.BuildArtifacts{},
+			mustRun:           []string{`ninja -C .*out/default$`},
+		},
+		{
+			name:       "artifact dir set",
+			staticSpec: &fintpb.Static{},
+			contextSpec: &fintpb.Context{
+				ArtifactDir: artifactDir,
+			},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				NinjaCompdbPath: filepath.Join(artifactDir, "compile-commands.json"),
+				NinjaGraphPath:  filepath.Join(artifactDir, "ninja-graph.dot"),
+			},
+			mustRun: []string{`ninja .*-t graph`, `ninja .*-t compdb`},
+		},
+		{
+			name:       "affected tests",
+			staticSpec: &fintpb.Static{},
+			contextSpec: &fintpb.Context{
+				ArtifactDir: artifactDir,
+				ChangedFiles: []*fintpb.Context_ChangedFile{
+					{Path: "src/foo.py"},
+				},
+			},
+			modules: fakeBuildModules{
+				testSpecs: []build.TestSpec{
+					{Test: build.Test{Name: "foo"}},
+				},
+			},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				NinjaCompdbPath: filepath.Join(artifactDir, "compile-commands.json"),
+				NinjaGraphPath:  filepath.Join(artifactDir, "ninja-graph.dot"),
+				LogFiles: map[string]string{
+					"ninja dry run output": filepath.Join(artifactDir, "ninja_dry_run_output"),
+				},
+			},
+		},
+		{
+			name: "incremental build",
+			staticSpec: &fintpb.Static{
+				Incremental: true,
+			},
+			contextSpec: &fintpb.Context{
+				ArtifactDir: artifactDir,
+			},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				NinjaCompdbPath: filepath.Join(artifactDir, "compile-commands.json"),
+				NinjaGraphPath:  filepath.Join(artifactDir, "ninja-graph.dot"),
+				LogFiles: map[string]string{
+					"explain_output.txt": filepath.Join(artifactDir, "explain_output.txt"),
+				},
+			},
+		},
+		{
+			name:           "failed ninja no-op check",
+			staticSpec:     &fintpb.Static{},
+			ninjaNoopCheck: true,
+			expectErr:      true,
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				FailureSummary: ninjaNoopFailureMessage(platform),
+			},
+		},
+		{
+			name:           "passed ninja no-op check",
+			staticSpec:     &fintpb.Static{},
+			ninjaNoopCheck: true,
+			runnerFunc: func(cmd []string, stdout io.Writer) error {
+				if contains(cmd, "-n") { // -n indicates ninja dry run.
+					stdout.Write([]byte(noWorkString))
+				}
+				return nil
+			},
+			expectedArtifacts: &fintpb.BuildArtifacts{},
+		},
+		{
+			name:       "ninja graph fails",
+			staticSpec: &fintpb.Static{},
+			contextSpec: &fintpb.Context{
+				ArtifactDir: artifactDir,
+			},
+			runnerFunc: func(cmd []string, stdout io.Writer) error {
+				if contains(cmd, "graph") {
+					return fmt.Errorf("failed to run command: %s", cmd)
+				}
+				return nil
+			},
+			expectErr: true,
+		},
+		{
+			name:       "ninja compdb fails",
+			staticSpec: &fintpb.Static{},
+			contextSpec: &fintpb.Context{
+				ArtifactDir: artifactDir,
+			},
+			runnerFunc: func(cmd []string, stdout io.Writer) error {
+				if contains(cmd, "compdb") {
+					return fmt.Errorf("failed to run command: %s", cmd)
+				}
+				return nil
+			},
+			expectErr: true,
+		},
+		{
+			name:       "ninja graph and compdb fail after failed build",
+			staticSpec: &fintpb.Static{},
+			contextSpec: &fintpb.Context{
+				ArtifactDir: artifactDir,
+			},
+			// This will cause the main ninja build to fail, along with `ninja
+			// compdb` and `ninja graph`.
+			runnerFunc: func(cmd []string, stdout io.Writer) error {
+				if strings.HasSuffix(cmd[0], "ninja") {
+					if !contains(cmd, "-t") {
+						stdout.Write([]byte("[0/1] CXX c.o d.o\nFAILED: c.o d.o\nsomeoutput\n"))
+					}
+					return fmt.Errorf("failed to run command: %s", cmd)
+				}
+				return nil
+			},
+			expectErr: true,
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				// Even if post-processing steps like `ninja graph` fail, the
+				// failure summary should still attribute the failure to the
+				// original ninja build error.
+				FailureSummary: "[0/1] CXX c.o d.o\nFAILED: c.o d.o\nsomeoutput\n",
+			},
+			mustRun: []string{`ninja .*-t graph`, `ninja .*-t compdb`},
 		},
 		{
 			name: "extra ad-hoc ninja targets",
 			staticSpec: &fintpb.Static{
-				NinjaTargets: []string{"foo", "bar"},
+				NinjaTargets: []string{"bar", "foo"},
 			},
 			expectedArtifacts: &fintpb.BuildArtifacts{
-				BuiltTargets: []string{"foo", "bar"},
+				BuiltTargets: []string{"bar", "foo"},
 			},
+			mustRun: []string{`ninja .* bar foo`},
 		},
 		{
 			name: "duplicate targets",
@@ -308,13 +452,13 @@ func TestBuild(t *testing.T) {
 			buildDir := filepath.Join(t.TempDir(), "out", "default")
 
 			defaultContextSpec := &fintpb.Context{
-				SkipNinjaNoopCheck: true,
+				SkipNinjaNoopCheck: !tc.ninjaNoopCheck,
 				CheckoutDir:        checkoutDir,
 				BuildDir:           buildDir,
 			}
 			proto.Merge(defaultContextSpec, tc.contextSpec)
 			tc.contextSpec = defaultContextSpec
-			runner := &fakeSubprocessRunner{}
+			runner := &fakeSubprocessRunner{run: tc.runnerFunc}
 			tc.modules.tools = append(tc.modules.tools, makeTools(
 				map[string][]string{
 					"gn":    {"linux", "mac"},
@@ -342,6 +486,23 @@ func TestBuild(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.expectedArtifacts, artifacts, opts...); diff != "" {
 				t.Errorf("Got wrong artifacts (-want +got):\n%s", diff)
+			}
+
+			for _, s := range tc.mustRun {
+				re, err := regexp.Compile(s)
+				if err != nil {
+					t.Fatal(err)
+				}
+				found := false
+				for _, cmd := range runner.commandsRun {
+					if re.MatchString(strings.Join(cmd, " ")) {
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Errorf("No command was run matching %q. Commands run: %s", s, pretty.Sprint(runner.commandsRun))
+				}
 			}
 		})
 	}
