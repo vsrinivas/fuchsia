@@ -1,6 +1,6 @@
 [
     {
-        "moniker": "feedback_agent.cmx",
+        "moniker": "foo_agent.cmx",
         "payload": {
             "root": {
                 "current_num_connections": 1,
@@ -9,7 +9,7 @@
         }
     },
     {
-        "moniker": "bootstrap/fshost",
+        "moniker": "bootstrap/bar",
         "payload": {
             "root": {
                 "data_stats": {

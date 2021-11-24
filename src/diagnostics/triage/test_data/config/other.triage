@@ -1,6 +1,6 @@
 {
     select: {
-        m: "INSPECT:feedback_agent.cmx:root:current_num_connections",
+        m: "INSPECT:foo_agent.cmx:root:current_num_connections",
     },
     eval: {},
     act: {
