@@ -23,7 +23,7 @@ base_package_labels += [
   "//src/ui/bin/text:ime_service",
   "//src/ui/bin/text:text_manager",
 ]
-base_package_labels -= [ "//src/intl/intl_services:small" ]
+base_package_labels -= [ "//src/intl/intl_services/config:sysmgr_small" ]
 
 # Add build type config data
 base_package_labels += [ "//src/fonts:build_type_eng" ]
