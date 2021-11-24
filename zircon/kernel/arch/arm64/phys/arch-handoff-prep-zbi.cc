@@ -31,10 +31,6 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
               *reinterpret_cast<const dcfg_amlogic_hdcp_driver_t*>(payload.data());
           break;
         case KDRV_AMLOGIC_RNG:
-          ZX_ASSERT(payload.size() >= sizeof(dcfg_amlogic_rng_driver_t));
-          arch_handoff.amlogic_rng_driver =
-              *reinterpret_cast<const dcfg_amlogic_rng_driver_t*>(payload.data());
-          break;
         case KDRV_ARM_GENERIC_TIMER:
         case KDRV_ARM_GIC_V2:
         case KDRV_ARM_GIC_V3:

@@ -13,11 +13,10 @@
 #include <fbl/algorithm.h>
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
+#include <pdev/driver.h>
 
 // Mask for the bit indicating RNG status.
 #define AML_RNG_READY 1
-
-namespace {
 
 // Register for RNG data
 static vaddr_t rng_data = 0;
@@ -31,7 +30,7 @@ constexpr size_t kRngDrawSize = 4;
 // Max number of retry
 constexpr size_t kMaxRetry = 10000;
 
-size_t amlogic_hw_rng_get_entropy(void* buf, size_t len) {
+static size_t amlogic_hw_rng_get_entropy(void* buf, size_t len) {
   if (buf == nullptr) {
     return 0;
   }
@@ -72,15 +71,14 @@ static struct hw_rng_ops ops = {
     .hw_rng_get_entropy = amlogic_hw_rng_get_entropy,
 };
 
-}  // namespace
+static void amlogic_rng_init(const void* driver_data, uint32_t length) {
+  ASSERT(length >= sizeof(dcfg_amlogic_rng_driver_t));
+  auto driver = static_cast<const dcfg_amlogic_rng_driver_t*>(driver_data);
+  ASSERT(driver->rng_data_phys && driver->rng_status_phys);
 
-void AmlogicRngInit(const dcfg_amlogic_rng_driver_t& config) {
-  ASSERT(config.rng_data_phys);
-  ASSERT(config.rng_status_phys);
-
-  rng_data = periph_paddr_to_vaddr(config.rng_data_phys);
-  rng_status = periph_paddr_to_vaddr(config.rng_status_phys);
-  rng_refresh_interval_usec = config.rng_refresh_interval_usec;
+  rng_data = periph_paddr_to_vaddr(driver->rng_data_phys);
+  rng_status = periph_paddr_to_vaddr(driver->rng_status_phys);
+  rng_refresh_interval_usec = driver->rng_refresh_interval_usec;
 
   ASSERT(rng_data);
   ASSERT(rng_status);
@@ -88,3 +86,5 @@ void AmlogicRngInit(const dcfg_amlogic_rng_driver_t& config) {
 
   hw_rng_register(&ops);
 }
+
+LK_PDEV_INIT(amlogic_rng_init, KDRV_AMLOGIC_RNG, amlogic_rng_init, LK_INIT_LEVEL_PLATFORM)
