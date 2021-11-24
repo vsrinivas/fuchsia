@@ -12,6 +12,7 @@ rustc_test("tests_bin") {
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
+    "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//src/connectivity/bluetooth/lib/bt-rfcomm",
@@ -67,6 +68,9 @@ fuchsia_test_package("bt-hfp-audio-gateway-integration-tests") {
 
     # The RFCOMM component that is the intermediary for HFP and test driven peers.
     "//src/connectivity/bluetooth/profiles/bt-rfcomm:component-v2",
+
+    # The component mock for the `fuchsia.bluetooth.internal.a2dp.Controller` capability.
+    "//src/connectivity/bluetooth/testing/mock-a2dp-controller:mock-a2dp-controller",
 
     # Mock Piconet Server
     "//src/connectivity/bluetooth/testing/mock-piconet-server",

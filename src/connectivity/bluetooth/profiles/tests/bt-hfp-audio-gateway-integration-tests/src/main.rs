@@ -9,6 +9,7 @@ use {
     fidl::{encoding::Decodable, endpoints::DiscoverableProtocolMarker},
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::HfpMarker,
+    fidl_fuchsia_bluetooth_internal_a2dp::ControllerMarker,
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, AudioDeviceEnumeratorRequest},
     fixture::fixture,
@@ -33,6 +34,9 @@ const HFP_AG_URL_V2: &str =
 /// RFCOMM component v2 URL.
 const RFCOMM_URL_V2: &str =
     "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-integration-tests#meta/bt-rfcomm.cm";
+/// Mock A2DP Controller component v2 URL.
+const MOCK_A2DP_CONTROLLER_URL: &str =
+    "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-integration-tests#meta/mock-a2dp-controller.cm";
 
 /// The moniker for the Hands Free Profile Audio Gateway component under test.
 const HFP_AG_MONIKER: &str = "bt-hfp-ag-profile";
@@ -40,6 +44,10 @@ const HFP_AG_MONIKER: &str = "bt-hfp-ag-profile";
 const MOCK_DEV_MONIKER: &str = "mock-dev";
 /// The moniker for a mock piconet member.
 const MOCK_PICONET_MEMBER_MONIKER: &str = "mock-peer";
+/// The moniker for the audio device mock component.
+const MOCK_AUDIO_DEVICE_MONIKER: &str = "mock-audio-device-provider";
+/// The moniker for the A2DP Controller mock component.
+const MOCK_A2DP_CONTROLLER_MONIKER: &str = "mock-a2dp-controller";
 
 /// Timeout for data received over a Channel.
 ///
@@ -139,6 +147,7 @@ impl HfpAgIntegrationTest {
             )
             .await
             .expect("failed to add HFP profile");
+        add_mock_a2dp_controller(&test_harness.builder).await;
         add_mock_dai_devices(&test_harness.builder).await;
         add_mock_audio_device_enumerator_provider(&test_harness.builder).await;
 
@@ -154,12 +163,31 @@ impl HfpAgIntegrationTest {
     }
 }
 
+async fn add_mock_a2dp_controller(builder: &RealmBuilder) {
+    let _ = builder
+        .add_child(
+            MOCK_A2DP_CONTROLLER_MONIKER,
+            MOCK_A2DP_CONTROLLER_URL.to_string(),
+            ChildProperties::new().eager(),
+        )
+        .await
+        .expect("Failed adding Mock A2DP Controller to topology");
+
+    let _ = builder
+        .add_route(
+            RouteBuilder::protocol_marker::<ControllerMarker>()
+                .source(RouteEndpoint::component(MOCK_A2DP_CONTROLLER_MONIKER))
+                .targets(vec![RouteEndpoint::component(HFP_AG_MONIKER)]),
+        )
+        .await
+        .expect("Failed adding route for a2dp.Controller capability");
+}
+
 /// Adds a mock component to the `builder` that provides the `AudioDeviceEnumerator` capability.
 /// Note: This implementation consumes but does not handle the FIDL requests. This is sufficient
 /// for the current integration tests. We should consider injecting a v2 component that implements
 /// this capability once it has been migrated to v2.
 async fn add_mock_audio_device_enumerator_provider(builder: &RealmBuilder) {
-    const MOCK_AUDIO_DEVICE_MONIKER: &str = "mock-audio-device-provider";
     let (sender, mut receiver) = mpsc::channel(0);
     fasync::Task::spawn(async move {
         while let Some(req) = receiver.next().await {
