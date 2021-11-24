@@ -643,6 +643,113 @@ static bool vm_mapping_attribution_commit_decommit_test() {
 }
 
 // Tests that page attribution caching at the VmMapping layer behaves as expected under
+// changes to the mapping's mmu permissions (some of which could also result in an unmap).
+static bool vm_mapping_attribution_protect_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  // Create a test VmAspace to temporarily switch to for creating test mappings.
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  ASSERT_NONNULL(aspace);
+
+  // Create a VMO to map.
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status =
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 16 * PAGE_SIZE, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  uint64_t expected_vmo_gen_count = 1;
+  uint64_t expected_mapping_gen_count = 1;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+
+  // Map the left half of the VMO.
+  fbl::RefPtr<VmMapping> mapping;
+  EXPECT_EQ(aspace->is_user(), true);
+  status = aspace->RootVmar()->CreateVmMapping(0, 8 * PAGE_SIZE, 0, 0, vmo, 0, kArchRwUserFlags,
+                                               "test-mapping", &mapping);
+  EXPECT_EQ(ZX_OK, status);
+
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 0u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 0u));
+
+  // Commit some pages in the VMO, such that it covers the mapping.
+  // Should increment the vmo generation count, but not the mapping generation count.
+  status = vmo->CommitRange(0, 10 * PAGE_SIZE);
+  ASSERT_EQ(ZX_OK, status);
+  expected_vmo_gen_count += 10;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Remove write permissions for the entire range.
+  // Should not change the mapping generation count.
+  static constexpr uint kReadOnlyFlags = kArchRwUserFlags & ~ARCH_MMU_FLAG_PERM_WRITE;
+  status = mapping->Protect(mapping->base(), mapping->size(), kReadOnlyFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Clear permission flags for the entire mapping.
+  // Should not change the mapping generation count.
+  status = mapping->Protect(mapping->base(), mapping->size(), 0);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Restore permission flags for the entire mapping.
+  // Should not change the mapping generation count.
+  status = mapping->Protect(mapping->base(), mapping->size(), kArchRwUserFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 8u));
+
+  // Remove write permission flags from the right end of the mapping.
+  // Should increment the mapping generation count.
+  auto old_base = mapping->base();
+  status =
+      mapping->Protect(mapping->base() + mapping->size() - PAGE_SIZE, PAGE_SIZE, kReadOnlyFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_base, mapping->base());
+  EXPECT_EQ(7ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 7u));
+
+  // Remove write permission flags from the center of the mapping.
+  // Should increment the mapping generation count.
+  status = mapping->Protect(mapping->base() + 4 * PAGE_SIZE, PAGE_SIZE, kReadOnlyFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_base, mapping->base());
+  EXPECT_EQ(4ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 4u));
+
+  // Remove write permission flags from the left end of the mapping.
+  // Should increment the mapping generation count.
+  status = mapping->Protect(mapping->base(), PAGE_SIZE, kReadOnlyFlags);
+  ASSERT_EQ(ZX_OK, status);
+  EXPECT_EQ(old_base, mapping->base());
+  EXPECT_EQ(1ul * PAGE_SIZE, mapping->size());
+  ++expected_mapping_gen_count;
+  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_vmo_gen_count, 10u));
+  EXPECT_EQ(true, verify_mapping_page_attribution(mapping.get(), expected_mapping_gen_count,
+                                                  expected_vmo_gen_count, 1u));
+
+  // Free the test address space.
+  status = aspace->Destroy();
+  EXPECT_EQ(ZX_OK, status);
+
+  END_TEST;
+}
+
+// Tests that page attribution caching at the VmMapping layer behaves as expected under
 // map and unmap operations on the mapping.
 static bool vm_mapping_attribution_map_unmap_test() {
   BEGIN_TEST;
@@ -1028,8 +1135,7 @@ static bool vm_kernel_region_test() {
         EXPECT_NE(region.get(), nullptr);
         EXPECT_TRUE(region->is_mapping());
         Guard<Mutex> guard{region->as_vm_mapping()->lock()};
-        EXPECT_EQ(kernel_region.arch_mmu_flags,
-                  region->as_vm_mapping()->arch_mmu_flags_locked(base));
+        EXPECT_EQ(kernel_region.arch_mmu_flags, region->as_vm_mapping()->arch_mmu_flags_locked());
         break;
       }
     }
@@ -1268,6 +1374,7 @@ VM_UNITTEST(vmaspace_usercopy_accessed_fault_test)
 VM_UNITTEST(vmaspace_free_unaccessed_page_tables_test)
 VM_UNITTEST(vmaspace_merge_mapping_test)
 VM_UNITTEST(vm_mapping_attribution_commit_decommit_test)
+VM_UNITTEST(vm_mapping_attribution_protect_test)
 VM_UNITTEST(vm_mapping_attribution_map_unmap_test)
 VM_UNITTEST(vm_mapping_attribution_merge_test)
 VM_UNITTEST(arch_noncontiguous_map)

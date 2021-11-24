@@ -4,10 +4,7 @@
 
 source_set("vmar") {
   testonly = true
-  sources = [
-    "protect.cc",
-    "vmar.cc",
-  ]
+  sources = [ "vmar.cc" ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",

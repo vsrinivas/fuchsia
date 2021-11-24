@@ -123,11 +123,10 @@ zx_status_t GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
   // page with the maximum allowable permissions of the mapping.
   Guard<Mutex> guard{mapping->lock()};
   uint pf_flags = VMM_PF_FLAG_GUEST | VMM_PF_FLAG_HW_FAULT;
-  uint mmu_flags = mapping->arch_mmu_flags_locked(guest_paddr);
-  if (mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
+  if (mapping->arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_WRITE) {
     pf_flags |= VMM_PF_FLAG_WRITE;
   }
-  if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+  if (mapping->arch_mmu_flags_locked() & ARCH_MMU_FLAG_PERM_EXECUTE) {
     pf_flags |= VMM_PF_FLAG_INSTRUCTION;
   }
   return mapping->PageFault(guest_paddr, pf_flags, nullptr);
