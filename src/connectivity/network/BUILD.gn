@@ -25,6 +25,7 @@ fuchsia_package("network") {
 # TODO(https://fxbug.dev/87819): Introduce a network-basic component and include
 # it here instead of the regular network realm.
 fuchsia_package("network-basic") {
+  package_name = "network"
   deps = [ ":component" ]
 }
 
