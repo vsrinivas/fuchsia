@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Add documentation to README.md if updating this file with
+# more configurations.
+
 import("//build/components.gni")
 import("//build/dist/renamed_binary.gni")
 
