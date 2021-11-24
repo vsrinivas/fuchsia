@@ -37,6 +37,10 @@
             url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cm",
             on_terminate: "reboot",
         },
+        {
+            name: "bt-init",
+            url: "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cm",
+        },
 
         // Children below this line may be present on some but not all product configurations.
         // Children above this line are expected to be present on all configs that include
@@ -261,7 +265,10 @@
         {
             protocol: [ "fuchsia.device.NameProvider" ],
             from: "parent",
-            to: [ "#network" ],
+            to: [
+                "#bt-init",
+                "#network",
+            ],
         },
         {
             protocol: [ "fuchsia.net.http.Loader" ],
@@ -296,7 +303,10 @@
         {
             protocol: "fuchsia.stash.SecureStore",
             from: "#stash_secure",
-            to: [ "#network" ],
+            to: [
+                "#bt-init",
+                "#network",
+            ],
         },
         {
             directory: "config-data",
@@ -441,6 +451,7 @@
                 "#activity",
                 "#brightness_manager",
                 "#bt-avrcp",
+                "#bt-init",
                 "#cobalt",
                 "#debug_serial",
                 "#detect",
@@ -861,8 +872,18 @@
         },
         {
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
-            from: "self",
+            from: "#bt-init",
             to: "#bt-avrcp",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#bt-init",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
+            from: "self",
+            to: "#bt-init",
             dependency: "weak_for_migration",
         },
         {

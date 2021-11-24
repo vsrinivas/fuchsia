@@ -2,8 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/72960): Make the below true, once associated code is ready for migration.
 // The fuchsia.bluetooth.sys.Bootstrap service is not relevant to all configurations, so products
 // that require it should include this shard. Because all of `core`'s `use`s are routed to `appmgr`
 // automatically, this shard exposes the Bootstrap protocol to the CFv1 world.
-{}
+{
+    use: [
+        {
+            protocol: "fuchsia.bluetooth.sys.Bootstrap",
+            from: "#bt-init",
+        },
+    ],
+}

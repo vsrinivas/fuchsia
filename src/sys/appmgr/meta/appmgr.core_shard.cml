@@ -27,6 +27,7 @@
                 "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.bluetooth.gatt.Server",
                 "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.bluetooth.snoop.Snoop",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.factory.MiscFactoryStoreProvider",
@@ -261,6 +262,21 @@
                 "fuchsia.bluetooth.avrcp.test.PeerManagerExt",
             ],
             from: "#bt-avrcp",
+        },
+
+        // Used by SL4F in appmgr
+        {
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Central",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.bluetooth.rfcomm.test.RfcommTest",
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.Configuration",
+                "fuchsia.bluetooth.sys.HostWatcher",
+            ],
+            from: "#bt-init",
         },
         {
             protocol: [

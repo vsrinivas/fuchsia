@@ -35,13 +35,15 @@
             subdir: "class/dai",
         },
         {
-            protocol: [
-                "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.media.AudioDeviceEnumerator",
-            ],
+            protocol: [ "fuchsia.media.AudioDeviceEnumerator" ],
             from: "self",
             to: [ "#bt-hfp-audio-gateway" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "#bt-init",
+            to: [ "#bt-hfp-audio-gateway" ],
         },
     ],
 }

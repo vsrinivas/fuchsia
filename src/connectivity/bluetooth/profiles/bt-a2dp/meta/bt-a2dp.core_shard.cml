@@ -29,7 +29,6 @@
     offer: [
         {
             protocol: [
-                "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.Discovery",
@@ -41,6 +40,11 @@
             from: "self",
             to: [ "#bt-a2dp" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "#bt-init",
+            to: [ "#bt-a2dp" ],
         },
         {
             protocol: "fuchsia.cobalt.LoggerFactory",

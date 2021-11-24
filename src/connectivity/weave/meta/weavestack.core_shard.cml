@@ -32,14 +32,20 @@
             subdir: "weavestack",
         },
         {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Peripheral",
+            ],
+            from: "#bt-init",
+            to: [ "#weavestack" ],
+        },
+        {
             storage: "data",
             from: "self",
             to: [ "#weavestack" ],
         },
         {
             protocol: [
-                "fuchsia.bluetooth.gatt.Server",
-                "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.factory.WeaveFactoryStoreProvider",
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.weave.FactoryDataManager",

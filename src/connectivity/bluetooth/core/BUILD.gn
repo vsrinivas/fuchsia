@@ -7,9 +7,13 @@ group("core") {
     "bt-gap",
     "bt-host",
     "bt-init",
-    "bt-init:bt-init-v2",
     "//src/connectivity/bluetooth/profiles/bt-rfcomm",
   ]
+}
+
+# Legacy v1 components that are maintained in the build until all their dependents are removed.
+group("legacy-core") {
+  deps = [ "bt-init:bt-init-legacy" ]
 }
 
 group("tests") {

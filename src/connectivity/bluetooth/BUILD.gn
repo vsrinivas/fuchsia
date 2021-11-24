@@ -9,6 +9,7 @@ group("bluetooth") {
   deps = [
     ":tests",
     "core",
+    "core:legacy-core",
     "examples",
     "hci",
     "lib",
