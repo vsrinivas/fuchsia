@@ -276,13 +276,25 @@ pub struct Intl {
     clear_locales: bool,
 }
 
-#[derive(FromArgs, Debug)]
+#[derive(FromArgs, Debug, PartialEq, Clone, Copy)]
 #[argh(subcommand, name = "keyboard")]
 /// get or set keyboard settings
 pub struct Keyboard {
     /// keymap selection for the keyboard. Valid options are UsQwerty, FrAzerty, and UsDvorak.
     #[argh(option, short = 'k', from_str_fn(str_to_keymap))]
     keymap: Option<fidl_fuchsia_input::KeymapId>,
+
+    /// delay value of autorepeat values for the keyboard. Values should be a positive integer. If
+    /// this value and autorepeat_period are zero, the autorepeat field of KeyboardSettings will be
+    /// cleaned as None.
+    #[argh(option, short = 'd')]
+    autorepeat_delay: i64,
+
+    /// period value of autorepeat values for the keyboard. Values should be a positive integer. If
+    /// this value and autorepeat_delay are zero, the autorepeat field of KeyboardSettings will be
+    /// cleaned as None.
+    #[argh(option, short = 'p')]
+    autorepeat_period: i64,
 }
 
 #[derive(FromArgs, Debug, Clone)]
@@ -576,12 +588,12 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClientSubcommands::Keyboard(Keyboard { keymap }) => {
+        SettingClientSubcommands::Keyboard(keyboard) => {
             let keyboard_service = connect_to_protocol::<fidl_fuchsia_settings::KeyboardMarker>()
                 .context("Failed to connect to keyboard service")?;
             utils::handle_mixed_result(
                 "Keyboard",
-                keyboard::command(keyboard_service, keymap).await,
+                keyboard::command(keyboard_service, keyboard).await,
             )
             .await?;
         }

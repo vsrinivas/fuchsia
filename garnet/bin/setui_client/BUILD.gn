@@ -51,6 +51,8 @@ rustc_library("lib") {
     "//third_party/rust_crates:uuid",
   ]
 
+  test_deps = [ "//third_party/rust_crates:test-case" ]
+
   sources = [
     "src/accessibility.rs",
     "src/audio.rs",
