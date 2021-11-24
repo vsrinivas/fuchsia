@@ -397,7 +397,26 @@ void ProcessZbiEarly() {
     bool is_mexec_data = false;
     switch (header->type) {
       case ZBI_TYPE_KERNEL_DRIVER:
-        is_mexec_data = true;
+        // TODO(fxbug.dev/88112): This case list is being burned down as driver
+        // initialization logic is migrated to ArchDriverHandoff(Early|Late).
+        is_mexec_data = false;
+        switch (header->extra) {
+          case KDRV_AMLOGIC_HDCP:
+          case KDRV_AMLOGIC_RNG:
+          case KDRV_AMLOGIC_UART:
+          case KDRV_ARM_GENERIC_TIMER:
+          case KDRV_ARM_GIC_V2:
+          case KDRV_ARM_GIC_V3:
+          case KDRV_ARM_PSCI:
+          case KDRV_DW8250_UART:
+          case KDRV_GENERIC_32BIT_WATCHDOG:
+          case KDRV_I8250_MMIO_UART:
+          case KDRV_I8250_PIO_UART:
+          case KDRV_MOTMOT_UART:
+          case KDRV_PL011_UART:
+            is_mexec_data = true;
+            break;
+        }
         break;
       case ZBI_TYPE_CMDLINE: {
         if (payload.empty()) {

@@ -15,6 +15,7 @@ source_set("top") {
   ]
   deps = [
     "//zircon/kernel/arch/$zircon_cpu",
+    "//zircon/kernel/dev:init",
     "//zircon/kernel/dev/hw_rng",
     "//zircon/kernel/kernel",
     "//zircon/kernel/lib/backtrace",

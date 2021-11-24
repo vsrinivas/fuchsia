@@ -23,6 +23,7 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <dev/init.h>
 #include <kernel/cpu.h>
 #include <kernel/init.h>
 #include <kernel/mutex.h>
@@ -107,8 +108,10 @@ void lk_main(paddr_t handoff_paddr) {
 
   // At this point the physmap is available.
   HandoffFromPhys(handoff_paddr);
+  ZX_DEBUG_ASSERT(gPhysHandoff != nullptr);
 
   platform_early_init();
+  DriverHandoffEarly(*gPhysHandoff);
   lk_primary_cpu_init_level(LK_INIT_LEVEL_PLATFORM_EARLY, LK_INIT_LEVEL_ARCH_PREVM - 1);
 
   // At this point, the kernel command line and serial are set up.
@@ -180,6 +183,7 @@ static int bootstrap2(void*) {
   dprintf(SPEW, "initializing platform\n");
   lk_primary_cpu_init_level(LK_INIT_LEVEL_ARCH, LK_INIT_LEVEL_PLATFORM - 1);
   platform_init();
+  DriverHandoffLate(*gPhysHandoff);
 
   // At this point, other cores in the system have been started (though may
   // not yet be online).

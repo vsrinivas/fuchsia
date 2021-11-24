@@ -134,6 +134,7 @@ if (toolchain_environment == "physmem" ||
     ]
     deps = [
       ":boot-mmu",
+      ":dev-init",
       ":tests",
       "code-patches:headers",
       "//sdk/lib/fit",
@@ -173,6 +174,12 @@ if (toolchain_environment == "physmem" ||
     # Everything in this file runs too early to use the full ABI.  Per-function
     # attribute suppression of sanitizer modes doesn't work for C++ lambda.
     configs += [ "//build/config/zircon:no_sanitizers" ]
+  }
+
+  source_set("dev-init") {
+    visibility = [ ":*" ]
+    sources = [ "dev-init.cc" ]
+    deps = [ "//zircon/kernel/phys:handoff" ]
   }
 
   source_set("tests") {
