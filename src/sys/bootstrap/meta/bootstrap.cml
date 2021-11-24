@@ -88,8 +88,8 @@
             url: "fuchsia-boot:///#meta/sysinfo.cm",
         },
         {
-            name: "tpm-cr50",
-            url: "fuchsia-boot:///#meta/tpm-cr50.cm",
+            name: "cr50_agent",
+            url: "fuchsia-boot:///#meta/cr50_agent.cm",
         },
         {
             name: "vboot-fwparam",
@@ -473,7 +473,7 @@
             directory: "dev",
             from: "#driver_manager",
             as: "dev-class-tpm",
-            to: "#tpm-cr50",
+            to: "#cr50_agent",
             subdir: "class/tpm",
         },
         {
@@ -700,6 +700,7 @@
                 "#base_resolver",
                 "#boot-drivers",
                 "#console-launcher",
+                "#cr50_agent",
                 "#decompressor",
                 "#device_name_provider",
                 "#driver-hosts",
@@ -713,7 +714,6 @@
                 "#power_manager",
                 "#pwrbtn-monitor",
                 "#svchost",
-                "#tpm-cr50",
                 "#vboot-fwparam",
             ],
         },
@@ -728,7 +728,7 @@
         {
             protocol: [ "fuchsia.power.button.Monitor" ],
             from: "#pwrbtn-monitor",
-            to: "#tpm-cr50",
+            to: "#cr50_agent",
         },
         {
             protocol: [ "fuchsia.fshost.BlockWatcher" ],
@@ -746,7 +746,7 @@
         },
         {
             protocol: [ "fuchsia.tpm.cr50.Cr50" ],
-            from: "#tpm-cr50",
+            from: "#cr50_agent",
             to: [
                 "#console-launcher",
                 "#miscsvc",
@@ -926,7 +926,7 @@
         },
         {
             protocol: [ "fuchsia.tpm.cr50.Cr50" ],
-            from: "#tpm-cr50",
+            from: "#cr50_agent",
         },
         {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",

@@ -8,7 +8,7 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/tpm-cr50",
+        binary: "bin/cr50_agent",
     },
     capabilities: [
         { protocol: "fuchsia.tpm.cr50.Cr50" },

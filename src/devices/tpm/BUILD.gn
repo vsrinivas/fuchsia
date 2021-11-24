@@ -14,7 +14,6 @@ group("drivers") {
 group("tests") {
   testonly = true
   deps = [
-    "bin/tpm-cr50:tests",
     "drivers/cr50-spi:tests",
     "drivers/tpm:tests",
   ]

@@ -9,13 +9,13 @@ import("//build/rust/rustc_binary.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":tpm-cr50-unittests",
+    ":cr50_agent_unittests",
     "client:tests",
   ]
 }
 
 rustc_binary("bin") {
-  output_name = "tpm-cr50"
+  output_name = "cr50_agent"
   with_unit_tests = true
 
   configs += [ "//build/config/rust:bootfs" ]
@@ -61,17 +61,17 @@ rustc_binary("bin") {
 }
 
 component_manifest_resources("manifest") {
-  sources = [ "meta/tpm-cr50.cml" ]
+  sources = [ "meta/cr50_agent.cml" ]
 }
 
 fuchsia_component("component") {
-  component_name = "tpm-cr50"
-  manifest = "meta/tpm-cr50.cml"
+  component_name = "cr50_agent"
+  manifest = "meta/cr50_agent.cml"
   deps = [ ":bin" ]
 }
 
-fuchsia_package("tpm-cr50") {
-  package_name = "tpm-cr50"
+fuchsia_package("cr50_agent") {
+  package_name = "cr50_agent"
   deps = [ ":component" ]
 }
 
@@ -83,6 +83,6 @@ group("bootfs") {
   ]
 }
 
-fuchsia_unittest_package("tpm-cr50-unittests") {
+fuchsia_unittest_package("cr50_agent_unittests") {
   deps = [ ":bin_test" ]
 }
