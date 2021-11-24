@@ -68,6 +68,7 @@ type ContextFeatureFlags = strict bits : uint64 {
 
     /// Enables audio input and output. Requires the following services:
     /// - [`fuchsia.media/Audio`]
+    /// - [`fuchsia.media/AudioDeviceEnumerator`]
     /// - [`fuchsia.media/SessionAudioConsumerFactory`]
     AUDIO = 0x2;
 
