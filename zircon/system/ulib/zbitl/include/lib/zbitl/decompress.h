@@ -11,7 +11,7 @@
 #include <memory>
 #include <string_view>
 
-#include "storage_traits.h"
+#include "storage-traits.h"
 
 namespace zbitl::decompress {
 

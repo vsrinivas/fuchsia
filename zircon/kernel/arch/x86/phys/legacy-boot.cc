@@ -9,7 +9,7 @@
 #include <inttypes.h>
 #include <lib/memalloc/pool.h>
 #include <lib/memalloc/range.h>
-#include <lib/zbitl/items/mem_config.h>
+#include <lib/zbitl/items/mem-config.h>
 #include <zircon/assert.h>
 
 #include <array>

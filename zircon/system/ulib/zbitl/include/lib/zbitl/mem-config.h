@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ZBITL_ITEMS_MEM_CONFIG_H_
-#define LIB_ZBITL_ITEMS_MEM_CONFIG_H_
+#ifndef LIB_ZBITL_MEM_CONFIG_H_
+#define LIB_ZBITL_MEM_CONFIG_H_
 
 #include <lib/fitx/result.h>
-#include <lib/zbitl/items/internal/mem_range_types.h>
 #include <lib/zbitl/view.h>
 #include <zircon/boot/image.h>
 
 #include <iterator>
 #include <variant>
+
+#include "internal/mem-range-types.h"
 
 namespace zbitl {
 
@@ -204,4 +205,4 @@ std::string_view MemRangeTypeName(uint32_t type);
 
 }  // namespace zbitl
 
-#endif  // LIB_ZBITL_ITEMS_MEM_CONFIG_H_
+#endif  // LIB_ZBITL_MEM_CONFIG_H_

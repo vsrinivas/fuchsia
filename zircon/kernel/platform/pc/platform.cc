@@ -9,9 +9,9 @@
 
 #include <assert.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
-#include <lib/zbitl/items/mem_config.h>
+#include <lib/zbitl/items/mem-config.h>
 #include <lib/zbitl/memory.h>
 #include <lib/zircon-internal/macros.h>
 

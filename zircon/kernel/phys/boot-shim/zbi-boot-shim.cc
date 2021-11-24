@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <stdio.h>
 #include <stdlib.h>
 

@@ -9,7 +9,7 @@
 #include <lib/arch/x86/standard-segments.h>
 #include <lib/arch/zbi-boot.h>
 #include <lib/memalloc/pool.h>
-#include <lib/zbitl/items/mem_config.h>
+#include <lib/zbitl/items/mem-config.h>
 
 #include <cstddef>
 #include <cstring>

@@ -6,7 +6,7 @@
 
 #include "bootfs.h"
 
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <stdarg.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/types.h>

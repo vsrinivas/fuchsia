@@ -6,7 +6,7 @@
 #define ZIRCON_SYSTEM_ULIB_ZBITL_TESTING_TRAITS_H_
 
 #include <lib/zbitl/memory.h>
-#include <lib/zbitl/storage_traits.h>
+#include <lib/zbitl/storage-traits.h>
 
 #include <cstddef>
 

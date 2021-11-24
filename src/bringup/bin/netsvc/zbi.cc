@@ -4,7 +4,7 @@
 
 #include "zbi.h"
 
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/vmo.h>
 #include <stdio.h>

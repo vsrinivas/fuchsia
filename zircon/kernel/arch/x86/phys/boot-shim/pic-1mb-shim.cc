@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/assert.h>

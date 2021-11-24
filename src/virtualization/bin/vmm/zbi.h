@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_ZBI_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_ZBI_H_
 
-#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/error-string.h>
 #include <zircon/errors.h>
 
 #include <string_view>

@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/stdcompat/string_view.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/items/bootfs.h>
 #include <lib/zbitl/vmo.h>
 #include <lib/zx/event.h>

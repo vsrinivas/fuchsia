@@ -7,7 +7,7 @@
 #include <lib/arch/nop.h>
 #include <lib/code-patching/code-patching.h>
 #include <lib/fitx/result.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 
 #include <ktl/string_view.h>
 

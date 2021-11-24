@@ -92,7 +92,7 @@ test("zbitl-unittests") {
     "checking-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
-    "mem_config_test.cc",
+    "mem-config-test.cc",
     "span-tests.cc",
     "stdio-tests.cc",
     "tests.cc",

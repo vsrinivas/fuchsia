@@ -12,7 +12,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "storage_traits.h"
+#include "storage-traits.h"
 
 namespace zbitl {
 

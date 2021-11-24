@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
 #define ZIRCON_SYSTEM_ULIB_ZBITL_TEST_TESTS_H_
 
-#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/error-string.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/item.h>
 #include <lib/zbitl/json.h>

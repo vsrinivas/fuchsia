@@ -63,7 +63,7 @@
 #include <kernel/thread.h>
 #endif
 
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/memory.h>
 #include <zircon/boot/image.h>

@@ -14,7 +14,7 @@ zx_library("zbitl") {
   sources = [
     "checking.cc",
     "item.cc",
-    "mem_config.cc",
+    "mem-config.cc",
   ]
   deps = [
     ":internal.decompress-zstd",

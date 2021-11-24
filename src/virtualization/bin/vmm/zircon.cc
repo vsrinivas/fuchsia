@@ -8,7 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/error-string.h>
 #include <lib/zbitl/fd.h>
 #include <lib/zbitl/image.h>
 #include <limits.h>

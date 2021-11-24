@@ -8,7 +8,7 @@
 #include <lib/fitx/result.h>
 #include <lib/stdcompat/span.h>
 #include <lib/stdcompat/string_view.h>
-#include <lib/zbitl/storage_traits.h>
+#include <lib/zbitl/storage-traits.h>
 #include <zircon/assert.h>
 #include <zircon/boot/bootfs.h>
 

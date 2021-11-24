@@ -7,7 +7,7 @@
 #include <endian.h>
 #include <fcntl.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/error-string.h>
 #include <lib/zbitl/image.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/driver-config.h>

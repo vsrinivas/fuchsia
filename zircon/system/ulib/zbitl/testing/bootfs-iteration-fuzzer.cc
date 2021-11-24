@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/error-string.h>
 #include <lib/zbitl/items/bootfs.h>
 #include <zircon/assert.h>
 #include <zircon/boot/bootfs.h>

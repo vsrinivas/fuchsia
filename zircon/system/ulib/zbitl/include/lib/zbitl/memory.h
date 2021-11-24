@@ -13,7 +13,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 
-#include "storage_traits.h"
+#include "storage-traits.h"
 
 namespace zbitl {
 

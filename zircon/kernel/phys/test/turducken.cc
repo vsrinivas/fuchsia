@@ -8,7 +8,7 @@
 
 #include <lib/boot-options/word-view.h>
 #include <lib/memalloc/range.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 

@@ -12,7 +12,7 @@
 #include <optional>
 #include <utility>
 
-#include "storage_traits.h"
+#include "storage-traits.h"
 
 namespace zbitl {
 

@@ -5,7 +5,7 @@
 #include "src/virtualization/bin/vmm/arch/x64/i8250.h"
 
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/error-string.h>
 #include <lib/zbitl/image.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>

@@ -20,7 +20,7 @@
 #include "checking.h"
 #include "decompress.h"
 #include "item.h"
-#include "storage_traits.h"
+#include "storage-traits.h"
 
 namespace zbitl {
 
@@ -208,7 +208,7 @@ class View {
   /// The Error type is returned by take_error() after begin() or an iterator
   /// operator encountered an error.  There is always a string description of
   /// the error.  Errors arising from Storage access also provide an error
-  /// value defined via StorageTraits; see <lib/zbitl/storage_traits.h>.
+  /// value defined via StorageTraits; see <lib/zbitl/storage-traits.h>.
   struct Error {
     static auto storage_error_string(typename Traits::error_type error) {
       return Traits::error_string(error);

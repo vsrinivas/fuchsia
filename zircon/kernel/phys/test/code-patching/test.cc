@@ -8,7 +8,7 @@
 
 #include <lib/code-patching/code-patching.h>
 #include <lib/memalloc/range.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/items/bootfs.h>
 #include <lib/zbitl/view.h>
 #include <stdio.h>

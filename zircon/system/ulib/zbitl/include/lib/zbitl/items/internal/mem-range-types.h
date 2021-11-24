@@ -6,7 +6,7 @@
 #define LIB_ZBITL_ITEMS_INTERNAL_MEM_RANGE_TYPES_H_
 
 #include <lib/stdcompat/span.h>
-#include <lib/zbitl/storage_traits.h>
+#include <lib/zbitl/storage-traits.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 

@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/boot-shim/boot-shim.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <stdio.h>
 
 #include <pretty/cpp/sizes.h>

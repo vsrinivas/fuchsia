@@ -9,7 +9,7 @@
 #include <lib/code-patching/code-patches.h>
 #include <lib/code-patching/code-patching.h>
 #include <lib/memalloc/range.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 

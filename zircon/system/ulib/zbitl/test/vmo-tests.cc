@@ -4,7 +4,7 @@
 
 #include "vmo-tests.h"
 
-#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/error-string.h>
 
 #include <algorithm>
 

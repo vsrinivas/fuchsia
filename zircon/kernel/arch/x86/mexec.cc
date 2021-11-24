@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/fitx/result.h>
-#include <lib/zbitl/error_stdio.h>
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/memory.h>
 #include <mexec.h>

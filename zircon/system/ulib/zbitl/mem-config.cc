@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mem_config.h"
+#include "mem-config.h"
 
 #include <inttypes.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zbitl/items/mem_config.h>
+#include <lib/zbitl/items/mem-config.h>
 #include <lib/zbitl/view.h>
 #include <lib/zx/status.h>
 #include <stdio.h>

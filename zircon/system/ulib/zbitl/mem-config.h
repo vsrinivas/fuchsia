@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_ZBITL_MEM_CONFIG_H_
 #define ZIRCON_SYSTEM_ULIB_ZBITL_MEM_CONFIG_H_
 
-#include <lib/zbitl/items/mem_config.h>
+#include <lib/zbitl/items/mem-config.h>
 #include <zircon/boot/e820.h>
 
 #include <efi/boot-services.h>

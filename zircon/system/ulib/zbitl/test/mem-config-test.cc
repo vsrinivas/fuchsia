@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "../mem_config.h"
+#include "../mem-config.h"
 
-#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/error-string.h>
 #include <lib/zbitl/image.h>
-#include <lib/zbitl/items/mem_config.h>
+#include <lib/zbitl/items/mem-config.h>
 #include <lib/zbitl/memory.h>
-#include <lib/zbitl/storage_traits.h>
+#include <lib/zbitl/storage-traits.h>
 #include <lib/zbitl/view.h>
 #include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
