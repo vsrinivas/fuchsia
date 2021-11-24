@@ -884,7 +884,7 @@ test "$status" -ne 0 || test "$compare" = 0 || {
   done
 
   # Run locally.
-  "${rustc_command[@]}" || {
+  "${local_trace_prefix[@]}" "${rustc_command[@]}" || {
     status=$?
     echo "Local command failed for comparison: ${rustc_command[@]}"
     exit "$status"
@@ -959,8 +959,8 @@ test "$status" -ne 0 || test "$compare" = 0 || {
       echo "Comparing local (-) vs. remote (+) file access traces."
       # Use sed to normalize absolute paths.
       diff -u \
-        <(sed -e "s|$project_root/||" "$output.fsatrace") \
-        <(sed -e "s|$remote_project_root/||" "$output.remote-fsatrace")
+        <(sed -e "s|$project_root/||g" "$output.fsatrace") \
+        <(sed -e "s|$remote_project_root/||g" "$output.remote-fsatrace")
     }
     status=1
   }
