@@ -49,6 +49,9 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
               *reinterpret_cast<const dcfg_arm_psci_driver_t*>(payload.data());
           break;
         case KDRV_GENERIC_32BIT_WATCHDOG:
+          ZX_ASSERT(payload.size() >= sizeof(dcfg_generic_32bit_watchdog_t));
+          arch_handoff.generic_32bit_watchdog_driver =
+              *reinterpret_cast<const dcfg_generic_32bit_watchdog_t*>(payload.data());
           break;
       }
       break;
