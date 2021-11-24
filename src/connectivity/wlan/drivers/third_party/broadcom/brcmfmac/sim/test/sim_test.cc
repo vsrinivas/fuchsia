@@ -474,8 +474,7 @@ zx_status_t SimTest::StartInterface(wlan_info_mac_role_t role, SimInterface* sim
   }
 
   sim_ifc->if_impl_ctx_ = device->DevArgs().ctx;
-  sim_ifc->if_impl_ops_ =
-      static_cast<wlanif_impl_protocol_ops_t*>(device->DevArgs().proto_ops);
+  sim_ifc->if_impl_ops_ = static_cast<wlanif_impl_protocol_ops_t*>(device->DevArgs().proto_ops);
 
   zx_handle_t sme_ch;
   if (!sme_protocol) {
