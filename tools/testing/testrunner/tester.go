@@ -287,9 +287,6 @@ func (s *serialSocket) runDiagnostics(ctx context.Context) error {
 // for testability
 type FFXTester interface {
 	SetStdoutStderr(stdout, stderr io.Writer)
-	List(ctx context.Context, args ...string) error
-	TargetWait(ctx context.Context) error
-	GetConfig(ctx context.Context) error
 	Test(ctx context.Context, test string, args ...string) error
 	Snapshot(ctx context.Context, outDir string, snapshotFilename string) error
 	Stop() error
@@ -310,17 +307,6 @@ type FuchsiaSSHTester struct {
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
 func NewFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, ffx FFXTester) (Tester, error) {
-	if ffx != nil {
-		if err := ffx.List(ctx); err != nil {
-			return nil, err
-		}
-		if err := ffx.TargetWait(ctx); err != nil {
-			return nil, err
-		}
-		if err := ffx.GetConfig(ctx); err != nil {
-			return nil, err
-		}
-	}
 	key, err := ioutil.ReadFile(sshKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSH key file: %w", err)

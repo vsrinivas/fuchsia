@@ -21,18 +21,6 @@ func (f *MockFFXTester) run(cmd string) error {
 	return nil
 }
 
-func (f *MockFFXTester) List(_ context.Context, _ ...string) error {
-	return f.run("list")
-}
-
-func (f *MockFFXTester) TargetWait(_ context.Context) error {
-	return f.run("target wait")
-}
-
-func (f *MockFFXTester) GetConfig(_ context.Context) error {
-	return f.run("config")
-}
-
 func (f *MockFFXTester) Test(_ context.Context, _ string, _ ...string) error {
 	return f.run("test")
 }

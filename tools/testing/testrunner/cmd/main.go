@@ -224,10 +224,37 @@ var (
 	serialTester = testrunner.NewFuchsiaSerialTester
 )
 
-var ffxInstance = func(ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (testrunner.FFXTester, error) {
-	ffx, err := ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
-	if ffx == nil {
-		return nil, err
+var ffxInstance = func(ctx context.Context, ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (testrunner.FFXTester, error) {
+	ffx, err := func() (testrunner.FFXTester, error) {
+		ffx, err := ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
+		if ffx == nil {
+			// Return nil instead of ffx so that the returned FFXTester
+			// will be the nil interface instead of an interface holding
+			// a nil value. In the latter case, checking ffx == nil will
+			// return false.
+			return nil, err
+		}
+		if err != nil {
+			return ffx, err
+		}
+		// Print the list of available targets for debugging purposes.
+		// TODO(ihuh): Remove when not needed.
+		if err := ffx.List(ctx); err != nil {
+			return ffx, err
+		}
+		// Wait for the target to be available to interact with ffx.
+		if err := ffx.TargetWait(ctx); err != nil {
+			return ffx, err
+		}
+		// Print the config for debugging purposes.
+		// TODO(ihuh): Remove when not needed.
+		if err := ffx.GetConfig(ctx); err != nil {
+			return ffx, err
+		}
+		return ffx, nil
+	}()
+	if err != nil && ffx != nil {
+		ffx.Stop()
 	}
 	return ffx, err
 }
@@ -251,6 +278,19 @@ func execute(
 		"RUST_BACKTRACE=1",
 	)
 
+	var err error
+	if sshKeyFile != "" {
+		ffx, err = ffxInstance(
+			ctx, flags.ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
+			sshKeyFile, outputs.OutDir)
+		if err != nil {
+			return err
+		}
+		if ffx != nil {
+			defer ffx.Stop()
+		}
+	}
+
 	// Function to select the tester to use for a test, along with destination
 	// for the test to write any data sinks. This logic is not easily testable
 	// because it requires a lot of network requests and environment inspection,
@@ -262,12 +302,6 @@ func execute(
 			if fuchsiaTester == nil {
 				var err error
 				if sshKeyFile != "" {
-					ffx, err = ffxInstance(
-						flags.ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
-						os.Getenv(botanistconstants.SSHKeyEnvKey), outputs.OutDir)
-					if err != nil {
-						return nil, nil, err
-					}
 					fuchsiaTester, err = sshTester(
 						ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests, ffx)
 				} else {
@@ -291,13 +325,6 @@ func execute(
 			// Initialize the fuchsia SSH tester to run the snapshot at the end in case
 			// we ran any host-target interaction tests.
 			if fuchsiaTester == nil && sshKeyFile != "" {
-				var err error
-				ffx, err = ffxInstance(
-					flags.ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
-					os.Getenv(botanistconstants.SSHKeyEnvKey), outputs.OutDir)
-				if err != nil {
-					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
-				}
 				fuchsiaTester, err = sshTester(
 					ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests, ffx)
 				if err != nil {

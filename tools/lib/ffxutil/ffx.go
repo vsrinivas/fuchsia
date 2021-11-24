@@ -7,14 +7,11 @@ package ffxutil
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"time"
 
-	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
@@ -26,68 +23,6 @@ const (
 
 func runCommand(ctx context.Context, runner *subprocess.Runner, stdout, stderr io.Writer, args ...string) error {
 	return runner.RunWithStdin(ctx, args, stdout, stderr, nil)
-}
-
-// FFXConfig describes a config to run ffx with.
-type FFXConfig struct {
-	socket string
-	config map[string]interface{}
-	env    []string
-}
-
-// NewIsolatedFFXConfig creates a config that provides an isolated environment to run ffx in.
-func NewIsolatedFFXConfig(logDir, testOutputDir string) (*FFXConfig, error) {
-	socketPath := filepath.Join(os.TempDir(), "ffx_socket")
-	// TODO(fxbug.dev/64499): Stop setting environment variables once bug is fixed.
-	// The env vars to set come from //src/developer/ffx/plugins/self-test/src/test/mod.rs.
-	// TEMP, TMP, HOME, and XDG_CONFIG_HOME are set in //tools/lib/environment/environment.go
-	// with a call to environment.Ensure().
-	envMap := map[string]string{
-		"ASCENDD": socketPath,
-	}
-	var env []string
-	for k, v := range envMap {
-		env = append(env, fmt.Sprintf("%s=%s", k, v))
-	}
-	config := &FFXConfig{
-		socket: socketPath,
-		config: make(map[string]interface{}),
-		env:    env,
-	}
-	config.Set("overnet", map[string]string{"socket": socketPath})
-	config.Set("log", map[string][]string{"dir": {logDir}})
-	config.Set("test", map[string][]string{"output_path": {testOutputDir}})
-	return config, nil
-}
-
-// Set sets values in the config.
-func (c *FFXConfig) Set(key string, value interface{}) {
-	c.config[key] = value
-}
-
-// ToFile writes the config to a file.
-func (c *FFXConfig) ToFile(configPath string) error {
-	bytes, err := json.MarshalIndent(c.config, "", "\t")
-	if err != nil {
-		return fmt.Errorf("failed to convert ffx config to bytes: %w", err)
-	}
-	configFile, err := osmisc.CreateFile(configPath)
-	if err != nil {
-		return fmt.Errorf("failed to create config file: %w", err)
-	}
-	defer configFile.Close()
-	if _, err := configFile.Write(bytes); err != nil {
-		return fmt.Errorf("failed to write ffx config to a file: %w", err)
-	}
-	return nil
-}
-
-// Close removes the socket if it hasn't been removed by `ffx daemon stop`.
-func (c *FFXConfig) Close() error {
-	if _, err := os.Stat(c.socket); !os.IsNotExist(err) {
-		return os.Remove(c.socket)
-	}
-	return nil
 }
 
 // FFXInstance takes in a path to the ffx tool and runs ffx commands with the provided config.
@@ -107,18 +42,18 @@ func NewFFXInstance(ffxPath string, dir string, env []string, target, sshKey str
 	if ffxPath == "" {
 		return nil, nil
 	}
-	config, err := NewIsolatedFFXConfig(filepath.Join(outputDir, "logs"), filepath.Join(outputDir, "saved_test_runs"))
-	if err != nil {
-		return nil, err
-	}
+	config := NewIsolatedFFXConfig(outputDir)
 	config.Set("target", map[string]string{"default": target})
-	sshKey, err = filepath.Abs(sshKey)
+	sshKey, err := filepath.Abs(sshKey)
 	if err != nil {
 		config.Close()
 		return nil, err
 	}
 	config.Set("ssh", map[string][]string{"priv": {sshKey}})
-	config.Set("test", map[string]bool{"experimental_structured_output": true})
+	config.Set("test", map[string]bool{
+		"experimental_structured_output": true,
+		"experimental_json_input":        true,
+	})
 	configPath := filepath.Join(outputDir, "ffx_config.json")
 	if err := config.ToFile(configPath); err != nil {
 		config.Close()

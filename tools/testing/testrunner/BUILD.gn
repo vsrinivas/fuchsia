@@ -23,6 +23,7 @@ go_library("lib") {
     "//tools/debug/elflib",
     "//tools/integration/testsharder:testsharder_lib",
     "//tools/lib/clock",
+    "//tools/lib/ffxutil",
     "//tools/lib/iomisc",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
@@ -54,7 +55,6 @@ go_library("main") {
     "//tools/botanist:target",
     "//tools/lib/color",
     "//tools/lib/environment",
-    "//tools/lib/ffxutil",
     "//tools/lib/streams",
     "//tools/testing/testparser",
   ]

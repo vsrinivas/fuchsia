@@ -886,7 +886,7 @@ func TestExecute(t *testing.T) {
 				return fuchsiaTester, nil
 			}
 			ffx := &testrunner.MockFFXTester{}
-			ffxInstance = func(_, _ string, _ []string, _, _, _ string) (testrunner.FFXTester, error) {
+			ffxInstance = func(_ context.Context, _, _ string, _ []string, _, _, _ string) (testrunner.FFXTester, error) {
 				if c.useFFX {
 					return ffx, nil
 				}

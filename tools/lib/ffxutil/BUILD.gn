@@ -7,11 +7,13 @@ import("//build/go/go_test.gni")
 
 go_library("ffxutil") {
   sources = [
+    "config.go",
+    "config_test.go",
     "ffx.go",
     "ffx_test.go",
   ]
   deps = [
-    "//tools/lib/osmisc",
+    "//tools/lib/jsonutil",
     "//tools/lib/subprocess",
   ]
 }
@@ -19,5 +21,8 @@ go_library("ffxutil") {
 go_test("tests") {
   output_name = "ffxutil_tests"
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/lib/ffxutil" ]
-  deps = [ ":ffxutil" ]
+  deps = [
+    ":ffxutil",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
 }
