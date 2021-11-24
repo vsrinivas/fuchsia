@@ -20,3 +20,12 @@ type subprocessRunner interface {
 func thirdPartyPrebuilt(checkoutDir, platform, name string) string {
 	return filepath.Join(checkoutDir, "prebuilt", "third_party", name, platform, name)
 }
+
+func contains(items []string, target string) bool {
+	for _, item := range items {
+		if item == target {
+			return true
+		}
+	}
+	return false
+}

@@ -34,13 +34,12 @@ func Set(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Con
 	if err != nil {
 		return nil, err
 	}
-
-	return runSteps(ctx, &subprocess.Runner{}, staticSpec, contextSpec, platform)
+	return setImpl(ctx, &subprocess.Runner{}, staticSpec, contextSpec, platform)
 }
 
-// runSteps runs `gn gen` along with any post-processing steps, and returns a
+// setImpl runs `gn gen` along with any post-processing steps, and returns a
 // SetArtifacts object containing metadata produced by GN and post-processing.
-func runSteps(
+func setImpl(
 	ctx context.Context,
 	runner subprocessRunner,
 	staticSpec *fintpb.Static,
@@ -375,13 +374,4 @@ func toGNValue(x interface{}) string {
 	default:
 		panic(fmt.Sprintf("unsupported arg value type %T", val))
 	}
-}
-
-func contains(items []string, target string) bool {
-	for _, item := range items {
-		if item == target {
-			return true
-		}
-	}
-	return false
 }

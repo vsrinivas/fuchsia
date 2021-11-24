@@ -5,6 +5,8 @@
 package build
 
 import (
+	"fmt"
+
 	"go.fuchsia.dev/fuchsia/tools/lib/hostplatform"
 )
 
@@ -25,14 +27,16 @@ type Tool struct {
 
 type Tools []Tool
 
-// AsMap returns a mapping from tool name to tool for every tool supported on
-// the specified platform.
-func (t Tools) AsMap(platform string) map[string]Tool {
-	m := make(map[string]Tool)
+// LookupPath returns the path (relative to the build directory) of the named tool
+// built for the specified platform. It will return an error if the
+// platform/tool combination cannot be found, generally because the platform is
+// not supported or because the tool is not listed in tool_paths.json.
+func (t Tools) LookupPath(platform, name string) (string, error) {
 	for _, tool := range t {
-		if hostplatform.MakeName(tool.OS, tool.CPU) == platform {
-			m[tool.Name] = tool
+		toolPlatform := hostplatform.MakeName(tool.OS, tool.CPU)
+		if name == tool.Name && platform == toolPlatform {
+			return tool.Path, nil
 		}
 	}
-	return m
+	return "", fmt.Errorf("no tool with platform %q and name %q", platform, name)
 }

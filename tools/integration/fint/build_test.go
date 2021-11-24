@@ -7,10 +7,13 @@ package fint
 import (
 	"context"
 	"fmt"
-	"sort"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -36,33 +39,50 @@ func (m fakeBuildModules) TestSpecs() []build.TestSpec                   { retur
 func (m fakeBuildModules) Tools() build.Tools                            { return m.tools }
 func (m fakeBuildModules) ZBITests() []build.ZBITest                     { return m.zbiTests }
 
-func TestConstructNinjaTargets(t *testing.T) {
+func TestBuild(t *testing.T) {
+	platform := "linux-x64"
+	artifactDir := filepath.Join(t.TempDir(), "artifacts")
+	resetArtifactDir := func(t *testing.T) {
+		// `artifactDir` is in the top-level tempdir so it can be referenced
+		// in the `testCases` table, but that means it doesn't get cleared
+		// between sub-tests so we need to clear it explicitly.
+		if err := os.RemoveAll(artifactDir); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(artifactDir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
 	testCases := []struct {
 		name              string
 		staticSpec        *fintpb.Static
+		contextSpec       *fintpb.Context
 		modules           fakeBuildModules
-		expectedTargets   []string
 		expectedArtifacts *fintpb.BuildArtifacts
 		expectErr         bool
 	}{
 		{
-			name:            "empty spec produces no ninja targets",
-			staticSpec:      &fintpb.Static{},
-			expectedTargets: nil,
+			name:              "empty spec produces no ninja targets",
+			staticSpec:        &fintpb.Static{},
+			expectedArtifacts: &fintpb.BuildArtifacts{},
 		},
 		{
 			name: "extra ad-hoc ninja targets",
 			staticSpec: &fintpb.Static{
 				NinjaTargets: []string{"foo", "bar"},
 			},
-			expectedTargets: []string{"foo", "bar"},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{"foo", "bar"},
+			},
 		},
 		{
 			name: "duplicate targets",
 			staticSpec: &fintpb.Static{
 				NinjaTargets: []string{"foo", "foo"},
 			},
-			expectedTargets: []string{"foo"},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{"foo"},
+			},
 		},
 		{
 			name: "images for testing included",
@@ -75,11 +95,11 @@ func TestConstructNinjaTargets(t *testing.T) {
 					{Name: "should-be-ignored", Path: "different_path"},
 				},
 			},
-			expectedTargets: append(extraTargetsForImages, "qemu_image_path", "build/images:updates"),
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltImages: []*structpb.Struct{
 					mustStructPB(t, build.Image{Name: qemuImageNames[0], Path: "qemu_image_path"}),
 				},
+				BuiltTargets: append(extraTargetsForImages, "build/images:updates", "qemu_image_path"),
 			},
 		},
 		{
@@ -96,12 +116,12 @@ func TestConstructNinjaTargets(t *testing.T) {
 					{Name: "other", Path: "other.tgz", Type: "tgz"},
 				},
 			},
-			expectedTargets: append(extraTargetsForImages, "p.tar.gz", "b.tgz"),
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltArchives: []*structpb.Struct{
 					mustStructPB(t, build.Archive{Name: "packages", Path: "p.tar.gz", Type: "tgz"}),
 					mustStructPB(t, build.Archive{Name: "archive", Path: "b.tgz", Type: "tgz"}),
 				},
+				BuiltTargets: append(extraTargetsForImages, "p.tar.gz", "b.tgz"),
 			},
 		},
 		{
@@ -118,11 +138,11 @@ func TestConstructNinjaTargets(t *testing.T) {
 					{Name: "foo", Path: "foo.sh", Type: "script"},
 				},
 			},
-			expectedTargets: append(extraTargetsForImages, "foo.sh"),
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltImages: []*structpb.Struct{
 					mustStructPB(t, build.Image{Name: "foo", Path: "foo.sh", Type: "script"}),
 				},
+				BuiltTargets: append(extraTargetsForImages, "foo.sh"),
 			},
 		},
 		{
@@ -130,7 +150,9 @@ func TestConstructNinjaTargets(t *testing.T) {
 			staticSpec: &fintpb.Static{
 				IncludeDefaultNinjaTarget: true,
 			},
-			expectedTargets: []string{":default"},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{":default"},
+			},
 		},
 		{
 			name: "host tests included",
@@ -144,7 +166,9 @@ func TestConstructNinjaTargets(t *testing.T) {
 					{Test: build.Test{OS: "mac", Path: "mac_path"}},
 				},
 			},
-			expectedTargets: []string{"linux_path", "mac_path"},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{"linux_path", "mac_path"},
+			},
 		},
 		{
 			name: "generated sources included",
@@ -154,7 +178,9 @@ func TestConstructNinjaTargets(t *testing.T) {
 			modules: fakeBuildModules{
 				generatedSources: []string{"foo.h", "bar.h"},
 			},
-			expectedTargets: []string{"foo.h", "bar.h"},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{"foo.h", "bar.h"},
+			},
 		},
 		{
 			name: "prebuilt binary manifests included",
@@ -167,7 +193,9 @@ func TestConstructNinjaTargets(t *testing.T) {
 					{Manifest: "manifest2.json"},
 				},
 			},
-			expectedTargets: []string{"manifest1.json", "manifest2.json"},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{"manifest1.json", "manifest2.json"},
+			},
 		},
 		{
 			name: "tools included",
@@ -181,7 +209,9 @@ func TestConstructNinjaTargets(t *testing.T) {
 					"tool3": {"linux", "mac"},
 				}),
 			},
-			expectedTargets: []string{"linux_x64/tool1", "linux_x64/tool2"},
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltTargets: []string{"linux_x64/tool1", "linux_x64/tool2"},
+			},
 		},
 		{
 			name: "nonexistent tool",
@@ -245,7 +275,6 @@ func TestConstructNinjaTargets(t *testing.T) {
 					},
 				},
 			},
-			expectedTargets: []string{"foo.zbi", "bar.zbi", "foo-qemu-kernel", "zircona", "zirconr"},
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltZedbootImages: []*structpb.Struct{
 					mustStructPB(t, build.Image{
@@ -259,6 +288,7 @@ func TestConstructNinjaTargets(t *testing.T) {
 						Path:            "zirconr",
 					}),
 				},
+				BuiltTargets: []string{"foo.zbi", "bar.zbi", "foo-qemu-kernel", "zircona", "zirconr"},
 				ZbiTestQemuKernelImages: map[string]*structpb.Struct{
 					"foo": mustStructPB(t, build.Image{
 						Name:  qemuKernelImageName,
@@ -270,28 +300,47 @@ func TestConstructNinjaTargets(t *testing.T) {
 			},
 		},
 	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// Normalize expected data so tests are less painful to write.
-			sort.Strings(tc.expectedTargets)
-			if tc.expectedArtifacts == nil {
-				tc.expectedArtifacts = &fintpb.BuildArtifacts{}
+			resetArtifactDir(t)
+
+			checkoutDir := t.TempDir()
+			buildDir := filepath.Join(t.TempDir(), "out", "default")
+
+			defaultContextSpec := &fintpb.Context{
+				SkipNinjaNoopCheck: true,
+				CheckoutDir:        checkoutDir,
+				BuildDir:           buildDir,
+			}
+			proto.Merge(defaultContextSpec, tc.contextSpec)
+			tc.contextSpec = defaultContextSpec
+			runner := &fakeSubprocessRunner{}
+			tc.modules.tools = append(tc.modules.tools, makeTools(
+				map[string][]string{
+					"gn":    {"linux", "mac"},
+					"ninja": {"linux", "mac"},
+				},
+			)...)
+			ctx := context.Background()
+			artifacts, err := buildImpl(
+				ctx, runner, tc.staticSpec, tc.contextSpec, tc.modules, platform)
+			if err != nil {
+				if !tc.expectErr {
+					t.Fatalf("Got unexpected error: %s", err)
+				}
+			} else if tc.expectErr {
+				t.Fatal("Expected an error but got nil")
 			}
 
-			targets, artifacts, err := constructNinjaTargets(tc.modules, tc.staticSpec, "linux-x64")
-			if err != nil {
-				if tc.expectErr {
-					return
-				}
-				t.Fatal(err)
-			} else if tc.expectErr {
-				t.Fatalf("Expected an error, but got nil")
+			if tc.expectedArtifacts != nil {
+				tc.expectedArtifacts.NinjaLogPath = filepath.Join(buildDir, ninjaLogPath)
 			}
-			if diff := cmp.Diff(tc.expectedTargets, targets); diff != "" {
-				t.Errorf("Got wrong targets (-want +got):\n%s", diff)
+			opts := cmp.Options{
+				protocmp.Transform(),
+				// Ordering of the repeated artifact fields doesn't matter.
+				cmpopts.SortSlices(func(a, b string) bool { return a < b }),
 			}
-			if diff := cmp.Diff(tc.expectedArtifacts, artifacts, protocmp.Transform()); diff != "" {
+			if diff := cmp.Diff(tc.expectedArtifacts, artifacts, opts...); diff != "" {
 				t.Errorf("Got wrong artifacts (-want +got):\n%s", diff)
 			}
 		})

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,6 +20,7 @@ import (
 	"unicode"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 )
 
@@ -575,33 +575,27 @@ func dirtyLineForPackageLabel(label string) (string, error) {
 	return "ninja explain: " + filepath.Join("obj", filepath.FromSlash(packagePath), "meta", "contents") + " is dirty", nil
 }
 
-// ninjaGraph runs the ninja graph tool and pipes its stdout to a temporary
-// file, returning the path to the resulting file.
-func ninjaGraph(ctx context.Context, r ninjaRunner, targets []string) (string, error) {
-	graphFile, err := ioutil.TempFile("", "*-graph.dot")
+// ninjaGraph runs the ninja graph tool and pipes its stdout to the file at the
+// given path.
+func ninjaGraph(ctx context.Context, r ninjaRunner, targets []string, graphPath string) error {
+	f, err := osmisc.CreateFile(graphPath)
 	if err != nil {
-		return "", err
+		return err
 	}
-	defer graphFile.Close()
+	defer f.Close()
 	args := append([]string{"-t", "graph"}, targets...)
-	if err := r.run(ctx, args, graphFile, os.Stderr); err != nil {
-		return "", err
-	}
-	return graphFile.Name(), nil
+	return r.run(ctx, args, f, os.Stderr)
 }
 
-// ninjaCompdb runs the ninja compdb tool and pipes its stdout to a temporary
-// file, returning the path to the resulting file.
-func ninjaCompdb(ctx context.Context, r ninjaRunner) (string, error) {
-	compdbFile, err := ioutil.TempFile("", "*-compile-commands.json")
+// ninjaCompdb runs the ninja compdb tool and pipes its stdout to the file at
+// the given path.
+func ninjaCompdb(ctx context.Context, r ninjaRunner, compdbPath string) error {
+	f, err := osmisc.CreateFile(compdbPath)
 	if err != nil {
-		return "", err
+		return err
 	}
-	defer compdbFile.Close()
+	defer f.Close()
 	// Don't specify targets, as we want all build edges to be generated.
 	args := []string{"-t", "compdb"}
-	if err := r.run(ctx, args, compdbFile, os.Stderr); err != nil {
-		return "", err
-	}
-	return compdbFile.Name(), nil
+	return r.run(ctx, args, f, os.Stderr)
 }

@@ -62,19 +62,29 @@ type buildModules interface {
 
 // Build runs `ninja` given a static and context spec. It's intended to be
 // consumed as a library function.
-// TODO(olivernewman): Add tests for this function.
 func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Context) (*fintpb.BuildArtifacts, error) {
 	platform, err := hostplatform.Name()
 	if err != nil {
 		return nil, err
 	}
-
-	artifacts := &fintpb.BuildArtifacts{}
-
 	modules, err := build.NewModules(contextSpec.BuildDir)
 	if err != nil {
 		return nil, err
 	}
+	return buildImpl(ctx, &subprocess.Runner{}, staticSpec, contextSpec, modules, platform)
+}
+
+// buildImpl contains the business logic of `fint build`, extracted into a more
+// easily testable layer.
+func buildImpl(
+	ctx context.Context,
+	runner subprocessRunner,
+	staticSpec *fintpb.Static,
+	contextSpec *fintpb.Context,
+	modules buildModules,
+	platform string,
+) (*fintpb.BuildArtifacts, error) {
+	artifacts := &fintpb.BuildArtifacts{}
 
 	targets, targetArtifacts, err := constructNinjaTargets(modules, staticSpec, platform)
 	if err != nil {
@@ -90,9 +100,13 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	// will fail.
 	artifacts.LogFiles = make(map[string]string)
 
-	runner := ninjaRunner{
-		runner:    &subprocess.Runner{},
-		ninjaPath: thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja"),
+	ninjaPath, err := toolAbsPath(modules, contextSpec.BuildDir, platform, "ninja")
+	if err != nil {
+		return nil, err
+	}
+	r := ninjaRunner{
+		runner:    runner,
+		ninjaPath: ninjaPath,
 		buildDir:  contextSpec.BuildDir,
 		jobCount:  int(contextSpec.GomaJobCount),
 	}
@@ -105,7 +119,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		// stdout to get the failure message. So let Ninja print directly to
 		// stdout, so it will nicely buffer output when running in a terminal
 		// instead of printing each log on a new line.
-		ninjaErr = runner.run(ctx, targets, os.Stdout, os.Stderr)
+		ninjaErr = r.run(ctx, targets, os.Stdout, os.Stderr)
 	} else {
 		var explainSink io.Writer
 		if staticSpec.Incremental {
@@ -119,7 +133,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		}
 		artifacts.FailureSummary, ninjaErr = runNinja(
 			ctx,
-			runner,
+			r,
 			targets,
 			// Add -d explain to incremental builds.
 			staticSpec.Incremental,
@@ -133,22 +147,34 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	// have a way to return it to the caller. We want to collect this data even
 	// when the build failed.
 	if contextSpec.ArtifactDir != "" {
-		artifacts.NinjaGraphPath, err = ninjaGraph(ctx, runner, targets)
-		if err != nil && ninjaErr == nil {
-			return nil, err
+		graph := filepath.Join(contextSpec.ArtifactDir, "ninja-graph.dot")
+		if err := ninjaGraph(ctx, r, targets, graph); err != nil {
+			// TODO(olivernewman): Add a test to enforce that the original
+			// `ninjaErr` is returned if `ninjaGraph()` fails.
+			if ninjaErr == nil {
+				return nil, err
+			}
 		}
-		artifacts.NinjaCompdbPath, err = ninjaCompdb(ctx, runner)
-		if err != nil && ninjaErr == nil {
-			return nil, err
+		artifacts.NinjaGraphPath = graph
+
+		compdb := filepath.Join(contextSpec.ArtifactDir, "compile-commands.json")
+		if err := ninjaCompdb(ctx, r, compdb); err != nil {
+			if ninjaErr == nil {
+				return nil, err
+			}
 		}
+		artifacts.NinjaCompdbPath = compdb
 	}
 
 	if ninjaErr != nil {
 		return artifacts, ninjaErr
 	}
 
-	gn := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "gn")
-	if output, err := gnCheckGenerated(ctx, runner.runner, gn, contextSpec.CheckoutDir, contextSpec.BuildDir); err != nil {
+	gnPath, err := toolAbsPath(modules, contextSpec.BuildDir, platform, "gn")
+	if err != nil {
+		return nil, err
+	}
+	if output, err := gnCheckGenerated(ctx, runner, gnPath, contextSpec.CheckoutDir, contextSpec.BuildDir); err != nil {
 		artifacts.FailureSummary = output
 		return artifacts, err
 	}
@@ -174,7 +200,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	}
 
 	if !contextSpec.SkipNinjaNoopCheck {
-		noop, logs, err := checkNinjaNoop(ctx, runner, targets, hostplatform.IsMac())
+		noop, logs, err := checkNinjaNoop(ctx, r, targets, hostplatform.IsMac())
 		if err != nil {
 			return nil, err
 		}
@@ -216,7 +242,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 			absPath := filepath.Join(contextSpec.CheckoutDir, f.Path)
 			affectedFiles = append(affectedFiles, absPath)
 		}
-		result, err := affectedTestsNoWork(ctx, runner, tests, affectedFiles, targets)
+		result, err := affectedTestsNoWork(ctx, r, tests, affectedFiles, targets)
 		if err != nil {
 			return nil, err
 		}
@@ -349,18 +375,15 @@ func constructNinjaTargets(
 		}
 	}
 
-	if len(staticSpec.Tools) != 0 {
-		// We only support specifying tools for the current platform. Tools
-		// needed for other platforms can be included in the build indirectly
-		// via higher-level targets.
-		availableTools := modules.Tools().AsMap(platform)
-		for _, toolName := range staticSpec.Tools {
-			tool, ok := availableTools[toolName]
-			if !ok {
-				return nil, nil, fmt.Errorf("tool %q with platform %q does not exist", toolName, platform)
-			}
-			targets = append(targets, tool.Path)
+	// We only support specifying tools for the current platform. Tools
+	// needed for other platforms can be included in the build indirectly
+	// via higher-level targets.
+	for _, tool := range staticSpec.Tools {
+		path, err := modules.Tools().LookupPath(platform, tool)
+		if err != nil {
+			return nil, nil, err
 		}
+		targets = append(targets, path)
 	}
 
 	targets = append(targets, staticSpec.NinjaTargets...)
@@ -403,6 +426,19 @@ func isTestingImage(image build.Image, pave bool) bool {
 	default:
 		return false
 	}
+}
+
+// toolAbsPath returns the absolute path to a tool specified in tool_paths.json.
+//
+// Note that not all tools in tool_paths.json can be assumed to be present in
+// the build directory prior to `fint build` running because only a subset of
+// them are prebuilts, and the rest are built from source.
+func toolAbsPath(modules buildModules, buildDir, platform, tool string) (string, error) {
+	path, err := modules.Tools().LookupPath(platform, tool)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Abs(filepath.Join(buildDir, path))
 }
 
 // getQEMUKernelImage iterates through images.json to find the QEMU kernel image

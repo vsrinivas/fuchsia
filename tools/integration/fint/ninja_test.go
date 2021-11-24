@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -24,6 +25,10 @@ import (
 
 func TestRunNinja(t *testing.T) {
 	ctx := context.Background()
+	// Don't emit the mock ninja logs to stdio while running tests, because
+	// they're noisy.
+	ctx = streams.ContextWithStdout(ctx, io.Discard)
+	ctx = streams.ContextWithStderr(ctx, io.Discard)
 
 	testCases := []struct {
 		name string
@@ -669,8 +674,8 @@ func TestNinjaGraph(t *testing.T) {
 		ninjaPath: "ninja",
 		buildDir:  t.TempDir(),
 	}
-	path, err := ninjaGraph(ctx, r, []string{"foo", "bar"})
-	if err != nil {
+	path := filepath.Join(t.TempDir(), "foo.txt")
+	if err := ninjaGraph(ctx, r, []string{"foo", "bar"}, path); err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(path)
@@ -695,8 +700,8 @@ func TestNinjaCompdb(t *testing.T) {
 		ninjaPath: "ninja",
 		buildDir:  t.TempDir(),
 	}
-	path, err := ninjaCompdb(ctx, r)
-	if err != nil {
+	path := filepath.Join(t.TempDir(), "foo.txt")
+	if err := ninjaCompdb(ctx, r, path); err != nil {
 		t.Fatal(err)
 	}
 	defer os.Remove(path)

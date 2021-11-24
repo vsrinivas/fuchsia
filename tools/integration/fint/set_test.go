@@ -43,7 +43,7 @@ func (r *fakeSubprocessRunner) RunWithStdin(_ context.Context, cmd []string, std
 	return nil
 }
 
-func TestRunSteps(t *testing.T) {
+func TestSet(t *testing.T) {
 	ctx := context.Background()
 
 	contextSpec := &fintpb.Context{
@@ -61,9 +61,9 @@ func TestRunSteps(t *testing.T) {
 
 	t.Run("sets artifacts metadata fields", func(t *testing.T) {
 		runner := &fakeSubprocessRunner{}
-		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		artifacts, err := setImpl(ctx, runner, staticSpec, contextSpec, "linux-x64")
 		if err != nil {
-			t.Fatalf("Unexpected error from runSteps: %s", err)
+			t.Fatalf("Unexpected error from setImpl: %s", err)
 		}
 		expectedMetadata := &fintpb.SetArtifacts_Metadata{
 			Board:      staticSpec.Board,
@@ -83,12 +83,12 @@ func TestRunSteps(t *testing.T) {
 			mockStdout: []byte("some stdout"),
 			fail:       true,
 		}
-		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		artifacts, err := setImpl(ctx, runner, staticSpec, contextSpec, "linux-x64")
 		if !errors.Is(err, errSubprocessFailure) {
-			t.Fatalf("Unexpected error from runSteps: %s", err)
+			t.Fatalf("Unexpected error from setImpl: %s", err)
 		}
 		if artifacts.FailureSummary != string(runner.mockStdout) {
-			t.Errorf("Expected runSteps to propagate GN stdout to failure summary: %q != %q", runner.mockStdout, artifacts.FailureSummary)
+			t.Errorf("Expected setImpl to propagate GN stdout to failure summary: %q != %q", runner.mockStdout, artifacts.FailureSummary)
 		}
 	})
 
@@ -99,19 +99,19 @@ func TestRunSteps(t *testing.T) {
 		runner := &fakeSubprocessRunner{
 			mockStdout: []byte("some stdout"),
 		}
-		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		artifacts, err := setImpl(ctx, runner, staticSpec, contextSpec, "linux-x64")
 		if err != nil {
-			t.Fatalf("Unexpected error from runSteps: %s", err)
+			t.Fatalf("Unexpected error from setImpl: %s", err)
 		}
 		if !strings.HasPrefix(artifacts.GnTracePath, contextSpec.ArtifactDir) {
-			t.Errorf("Expected runSteps to set a gn_trace_path in the artifact dir (%q) but got: %q",
+			t.Errorf("Expected setImpl to set a gn_trace_path in the artifact dir (%q) but got: %q",
 				contextSpec.ArtifactDir, artifacts.GnTracePath)
 		}
 		if !artifacts.UseGoma {
-			t.Errorf("Expected runSteps to set use_goma")
+			t.Errorf("Expected setImpl to set use_goma")
 		}
 		if !artifacts.EnableRbe {
-			t.Errorf("Expected runSteps to set enable_rbe")
+			t.Errorf("Expected setImpl to set enable_rbe")
 		}
 	})
 
@@ -119,12 +119,12 @@ func TestRunSteps(t *testing.T) {
 		runner := &fakeSubprocessRunner{
 			mockStdout: []byte("some stdout"),
 		}
-		artifacts, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		artifacts, err := setImpl(ctx, runner, staticSpec, contextSpec, "linux-x64")
 		if err != nil {
-			t.Fatalf("Unexpected error from runSteps: %s", err)
+			t.Fatalf("Unexpected error from setImpl: %s", err)
 		}
 		if artifacts.FailureSummary != "" {
-			t.Errorf("Expected runSteps to leave failure summary empty but got: %q", artifacts.FailureSummary)
+			t.Errorf("Expected setImpl to leave failure summary empty but got: %q", artifacts.FailureSummary)
 		}
 	})
 
@@ -133,9 +133,9 @@ func TestRunSteps(t *testing.T) {
 		contextSpec := proto.Clone(contextSpec).(*fintpb.Context)
 		staticSpec.Incremental = true
 
-		_, err := runSteps(ctx, runner, staticSpec, contextSpec, "linux-x64")
+		_, err := setImpl(ctx, runner, staticSpec, contextSpec, "linux-x64")
 		if err != nil {
-			t.Fatalf("Unexpected error from runSteps: %s", err)
+			t.Fatalf("Unexpected error from setImpl: %s", err)
 		}
 		cmd := runner.commandsRun[0]
 		expectedTouchPath := filepath.Join(append([]string{contextSpec.CheckoutDir}, rebuildNonHermeticActionsPath...)...)
@@ -524,7 +524,7 @@ func TestGenArgs(t *testing.T) {
 				// The temporary gocache dir is dynamically generated so we
 				// don't care about its exact name, we just want to make sure
 				// that it is a temporary directory.
-				prefix := fmt.Sprintf(`gocache_dir="%s/`, os.TempDir())
+				prefix := fmt.Sprintf(`gocache_dir="%s`, os.TempDir())
 				for _, arg := range args {
 					if strings.HasPrefix(arg, prefix) {
 						return
