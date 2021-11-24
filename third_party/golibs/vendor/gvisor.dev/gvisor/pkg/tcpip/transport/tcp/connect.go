@@ -51,6 +51,13 @@ const (
 	handshakeCompleted
 )
 
+// The following are used to set up sleepers.
+const (
+	wakerForNotification = iota
+	wakerForNewSegment
+	wakerForResend
+)
+
 const (
 	// Maximum space available for options.
 	maxOptionSize = 40
@@ -523,9 +530,9 @@ func (h *handshake) complete() tcpip.Error {
 	// Set up the wakers.
 	var s sleep.Sleeper
 	resendWaker := sleep.Waker{}
-	s.AddWaker(&resendWaker)
-	s.AddWaker(&h.ep.notificationWaker)
-	s.AddWaker(&h.ep.newSegmentWaker)
+	s.AddWaker(&resendWaker, wakerForResend)
+	s.AddWaker(&h.ep.notificationWaker, wakerForNotification)
+	s.AddWaker(&h.ep.newSegmentWaker, wakerForNewSegment)
 	defer s.Done()
 
 	// Initialize the resend timer.
@@ -538,10 +545,11 @@ func (h *handshake) complete() tcpip.Error {
 		// Unlock before blocking, and reacquire again afterwards (h.ep.mu is held
 		// throughout handshake processing).
 		h.ep.mu.Unlock()
-		w := s.Fetch(true /* block */)
+		index, _ := s.Fetch(true /* block */)
 		h.ep.mu.Lock()
-		switch w {
-		case &resendWaker:
+		switch index {
+
+		case wakerForResend:
 			if err := timer.reset(); err != nil {
 				return err
 			}
@@ -569,7 +577,7 @@ func (h *handshake) complete() tcpip.Error {
 				h.sampleRTTWithTSOnly = true
 			}
 
-		case &h.ep.notificationWaker:
+		case wakerForNotification:
 			n := h.ep.fetchNotifications()
 			if (n&notifyClose)|(n&notifyAbort) != 0 {
 				return &tcpip.ErrAborted{}
@@ -603,7 +611,7 @@ func (h *handshake) complete() tcpip.Error {
 				// cleared because of a socket layer call.
 				return &tcpip.ErrConnectionAborted{}
 			}
-		case &h.ep.newSegmentWaker:
+		case wakerForNewSegment:
 			if err := h.processSegments(); err != nil {
 				return err
 			}
@@ -850,7 +858,6 @@ func sendTCPBatch(r *stack.Route, tf tcpFields, data buffer.VectorisedView, gso 
 		pkt.GSOOptions = gso
 		pkts.PushBack(pkt)
 	}
-	defer pkts.DecRef()
 
 	if tf.ttl == 0 {
 		tf.ttl = r.DefaultTTL()
@@ -879,7 +886,6 @@ func sendTCP(r *stack.Route, tf tcpFields, data buffer.VectorisedView, gso stack
 		ReserveHeaderBytes: header.TCPMinimumSize + int(r.MaxHeaderLength()) + optLen,
 		Data:               data,
 	})
-	defer pkt.DecRef()
 	pkt.GSOOptions = gso
 	pkt.Hash = tf.txHash
 	pkt.Owner = owner
@@ -1340,103 +1346,6 @@ func (e *endpoint) protocolMainLoopDone(closeTimer tcpip.Timer) {
 	e.waiterQueue.Notify(waiter.EventHUp | waiter.EventErr | waiter.ReadableEvents | waiter.WritableEvents)
 }
 
-// handleWakeup handles a wakeup event while connected.
-//
-// +checklocks:e.mu
-func (e *endpoint) handleWakeup(w, closeWaker *sleep.Waker, closeTimer *tcpip.Timer) tcpip.Error {
-	switch w {
-	case &e.sndQueueInfo.sndWaker:
-		e.sendData(nil /* next */)
-	case &e.newSegmentWaker:
-		return e.handleSegmentsLocked(false /* fastPath */)
-	case &e.snd.resendWaker:
-		if !e.snd.retransmitTimerExpired() {
-			e.stack.Stats().TCP.EstablishedTimedout.Increment()
-			return &tcpip.ErrTimeout{}
-		}
-	case closeWaker:
-		// This means the socket is being closed due to the
-		// TCP-FIN-WAIT2 timeout was hit. Just mark the socket as
-		// closed.
-		e.transitionToStateCloseLocked()
-		e.workerCleanup = true
-	case &e.snd.probeWaker:
-		return e.snd.probeTimerExpired()
-	case &e.keepalive.waker:
-		return e.keepaliveTimerExpired()
-	case &e.notificationWaker:
-		n := e.fetchNotifications()
-		if n&notifyNonZeroReceiveWindow != 0 {
-			e.rcv.nonZeroWindow()
-		}
-
-		if n&notifyMTUChanged != 0 {
-			e.sndQueueInfo.sndQueueMu.Lock()
-			count := e.sndQueueInfo.PacketTooBigCount
-			e.sndQueueInfo.PacketTooBigCount = 0
-			mtu := e.sndQueueInfo.SndMTU
-			e.sndQueueInfo.sndQueueMu.Unlock()
-
-			e.snd.updateMaxPayloadSize(mtu, count)
-		}
-
-		if n&notifyReset != 0 || n&notifyAbort != 0 {
-			return &tcpip.ErrConnectionAborted{}
-		}
-
-		if n&notifyResetByPeer != 0 {
-			return &tcpip.ErrConnectionReset{}
-		}
-
-		if n&notifyClose != 0 && e.closed {
-			switch e.EndpointState() {
-			case StateEstablished:
-				// Perform full shutdown if the endpoint is
-				// still established. This can occur when
-				// notifyClose was asserted just before
-				// becoming established.
-				e.shutdownLocked(tcpip.ShutdownWrite | tcpip.ShutdownRead)
-			case StateFinWait2:
-				// The socket has been closed and we are in
-				// FIN_WAIT2 so start the FIN_WAIT2 timer.
-				if *closeTimer == nil {
-					*closeTimer = e.stack.Clock().AfterFunc(e.tcpLingerTimeout, closeWaker.Assert)
-				}
-			}
-		}
-
-		if n&notifyKeepaliveChanged != 0 {
-			// The timer could fire in background when the endpoint
-			// is drained. That's OK. See above.
-			e.resetKeepaliveTimer(true)
-		}
-
-		if n&notifyDrain != 0 {
-			for !e.segmentQueue.empty() {
-				if err := e.handleSegmentsLocked(false /* fastPath */); err != nil {
-					return err
-				}
-			}
-			if !e.EndpointState().closed() {
-				// Only block the worker if the endpoint
-				// is not in closed state or error state.
-				close(e.drainDone)
-				e.mu.Unlock()
-				<-e.undrain
-				e.mu.Lock()
-			}
-		}
-
-		// N.B. notifyTickleWorker may be set, but there is no action
-		// to take in this case.
-	case &e.snd.reorderWaker:
-		return e.snd.rc.reorderTimerExpired()
-	default:
-		panic("unknown waker") // Shouldn't happen.
-	}
-	return nil
-}
-
 // protocolMainLoop is the main loop of the TCP protocol. It runs in its own
 // goroutine and is responsible for sending segments and handling received
 // segments.
@@ -1494,16 +1403,139 @@ func (e *endpoint) protocolMainLoop(handshake bool, wakerInitDone chan<- struct{
 		e.mu.Lock()
 	}
 
-	// Add all wakers.
+	// Set up the functions that will be called when the main protocol loop
+	// wakes up.
+	funcs := []struct {
+		w *sleep.Waker
+		f func() tcpip.Error
+	}{
+		{
+			w: &e.sndQueueInfo.sndWaker,
+			f: func() tcpip.Error {
+				e.sendData(nil /* next */)
+				return nil
+			},
+		},
+		{
+			w: &closeWaker,
+			f: func() tcpip.Error {
+				// This means the socket is being closed due
+				// to the TCP-FIN-WAIT2 timeout was hit. Just
+				// mark the socket as closed.
+				e.transitionToStateCloseLocked()
+				e.workerCleanup = true
+				return nil
+			},
+		},
+		{
+			w: &e.snd.resendWaker,
+			f: func() tcpip.Error {
+				if !e.snd.retransmitTimerExpired() {
+					e.stack.Stats().TCP.EstablishedTimedout.Increment()
+					return &tcpip.ErrTimeout{}
+				}
+				return nil
+			},
+		},
+		{
+			w: &e.snd.probeWaker,
+			f: e.snd.probeTimerExpired,
+		},
+		{
+			w: &e.newSegmentWaker,
+			f: func() tcpip.Error {
+				return e.handleSegmentsLocked(false /* fastPath */)
+			},
+		},
+		{
+			w: &e.keepalive.waker,
+			f: e.keepaliveTimerExpired,
+		},
+		{
+			w: &e.notificationWaker,
+			f: func() tcpip.Error {
+				n := e.fetchNotifications()
+				if n&notifyNonZeroReceiveWindow != 0 {
+					e.rcv.nonZeroWindow()
+				}
+
+				if n&notifyMTUChanged != 0 {
+					e.sndQueueInfo.sndQueueMu.Lock()
+					count := e.sndQueueInfo.PacketTooBigCount
+					e.sndQueueInfo.PacketTooBigCount = 0
+					mtu := e.sndQueueInfo.SndMTU
+					e.sndQueueInfo.sndQueueMu.Unlock()
+
+					e.snd.updateMaxPayloadSize(mtu, count)
+				}
+
+				if n&notifyReset != 0 || n&notifyAbort != 0 {
+					return &tcpip.ErrConnectionAborted{}
+				}
+
+				if n&notifyResetByPeer != 0 {
+					return &tcpip.ErrConnectionReset{}
+				}
+
+				if n&notifyClose != 0 && e.closed {
+					switch e.EndpointState() {
+					case StateEstablished:
+						// Perform full shutdown if the endpoint is still
+						// established. This can occur when notifyClose
+						// was asserted just before becoming established.
+						e.shutdownLocked(tcpip.ShutdownWrite | tcpip.ShutdownRead)
+					case StateFinWait2:
+						// The socket has been closed and we are in FIN_WAIT2
+						// so start the FIN_WAIT2 timer.
+						if closeTimer == nil {
+							closeTimer = e.stack.Clock().AfterFunc(e.tcpLingerTimeout, closeWaker.Assert)
+						}
+					}
+				}
+
+				if n&notifyKeepaliveChanged != 0 {
+					// The timer could fire in background
+					// when the endpoint is drained. That's
+					// OK. See above.
+					e.resetKeepaliveTimer(true)
+				}
+
+				if n&notifyDrain != 0 {
+					for !e.segmentQueue.empty() {
+						if err := e.handleSegmentsLocked(false /* fastPath */); err != nil {
+							return err
+						}
+					}
+					if !e.EndpointState().closed() {
+						// Only block the worker if the endpoint
+						// is not in closed state or error state.
+						close(e.drainDone)
+						e.mu.Unlock() // +checklocksforce
+						<-e.undrain
+						e.mu.Lock()
+					}
+				}
+
+				if n&notifyTickleWorker != 0 {
+					// Just a tickle notification. No need to do
+					// anything.
+					return nil
+				}
+
+				return nil
+			},
+		},
+		{
+			w: &e.snd.reorderWaker,
+			f: e.snd.rc.reorderTimerExpired,
+		},
+	}
+
+	// Initialize the sleeper based on the wakers in funcs.
 	var s sleep.Sleeper
-	s.AddWaker(&e.sndQueueInfo.sndWaker)
-	s.AddWaker(&e.newSegmentWaker)
-	s.AddWaker(&e.snd.resendWaker)
-	s.AddWaker(&e.snd.probeWaker)
-	s.AddWaker(&closeWaker)
-	s.AddWaker(&e.keepalive.waker)
-	s.AddWaker(&e.notificationWaker)
-	s.AddWaker(&e.snd.reorderWaker)
+	for i := range funcs {
+		s.AddWaker(funcs[i].w, i)
+	}
 
 	// Notify the caller that the waker initialization is complete and the
 	// endpoint is ready.
@@ -1549,7 +1581,7 @@ loop:
 		}
 
 		e.mu.Unlock()
-		w := s.Fetch(true /* block */)
+		v, _ := s.Fetch(true /* block */)
 		e.mu.Lock()
 
 		// We need to double check here because the notification may be
@@ -1569,7 +1601,7 @@ loop:
 		case StateClose:
 			break loop
 		default:
-			if err := e.handleWakeup(w, &closeWaker, &closeTimer); err != nil {
+			if err := funcs[v].f(); err != nil {
 				cleanupOnError(err)
 				e.protocolMainLoopDone(closeTimer)
 				return
@@ -1682,22 +1714,26 @@ func (e *endpoint) doTimeWait() (twReuse func()) {
 		timeWaitDuration = time.Duration(tcpTW)
 	}
 
+	const newSegment = 1
+	const notification = 2
+	const timeWaitDone = 3
+
 	var s sleep.Sleeper
 	defer s.Done()
-	s.AddWaker(&e.newSegmentWaker)
-	s.AddWaker(&e.notificationWaker)
+	s.AddWaker(&e.newSegmentWaker, newSegment)
+	s.AddWaker(&e.notificationWaker, notification)
 
 	var timeWaitWaker sleep.Waker
-	s.AddWaker(&timeWaitWaker)
+	s.AddWaker(&timeWaitWaker, timeWaitDone)
 	timeWaitTimer := e.stack.Clock().AfterFunc(timeWaitDuration, timeWaitWaker.Assert)
 	defer timeWaitTimer.Stop()
 
 	for {
 		e.mu.Unlock()
-		w := s.Fetch(true /* block */)
+		v, _ := s.Fetch(true /* block */)
 		e.mu.Lock()
-		switch w {
-		case &e.newSegmentWaker:
+		switch v {
+		case newSegment:
 			extendTimeWait, reuseTW := e.handleTimeWaitSegments()
 			if reuseTW != nil {
 				return reuseTW
@@ -1705,7 +1741,7 @@ func (e *endpoint) doTimeWait() (twReuse func()) {
 			if extendTimeWait {
 				timeWaitTimer.Reset(timeWaitDuration)
 			}
-		case &e.notificationWaker:
+		case notification:
 			n := e.fetchNotifications()
 			if n&notifyAbort != 0 {
 				return nil
@@ -1723,7 +1759,7 @@ func (e *endpoint) doTimeWait() (twReuse func()) {
 				e.mu.Lock()
 				return nil
 			}
-		case &timeWaitWaker:
+		case timeWaitDone:
 			return nil
 		}
 	}

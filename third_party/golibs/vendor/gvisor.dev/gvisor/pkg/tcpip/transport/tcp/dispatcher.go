@@ -94,10 +94,9 @@ func (p *processor) start(wg *sync.WaitGroup) {
 	defer p.sleeper.Done()
 
 	for {
-		if w := p.sleeper.Fetch(true); w == &p.closeWaker {
+		if id, _ := p.sleeper.Fetch(true); id == closeWaker {
 			break
 		}
-		// If not the closeWaker, it must be &p.newEndpointWaker.
 		for {
 			ep := p.epQ.dequeue()
 			if ep == nil {
@@ -155,8 +154,8 @@ func (d *dispatcher) init(rng *rand.Rand, nProcessors int) {
 	d.seed = rng.Uint32()
 	for i := range d.processors {
 		p := &d.processors[i]
-		p.sleeper.AddWaker(&p.newEndpointWaker)
-		p.sleeper.AddWaker(&p.closeWaker)
+		p.sleeper.AddWaker(&p.newEndpointWaker, newEndpointWaker)
+		p.sleeper.AddWaker(&p.closeWaker, closeWaker)
 		d.wg.Add(1)
 		// NB: sleeper-waker registration must happen synchronously to avoid races
 		// with `close`.  It's possible to pull all this logic into `start`, but

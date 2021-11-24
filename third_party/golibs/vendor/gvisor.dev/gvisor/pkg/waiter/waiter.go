@@ -107,16 +107,16 @@ type Waitable interface {
 	// EventRegister registers the given waiter entry to receive
 	// notifications when an event occurs that makes the object ready for
 	// at least one of the events in mask.
-	EventRegister(e *Entry)
+	EventRegister(e *Entry, mask EventMask)
 
 	// EventUnregister unregisters a waiter entry previously registered with
 	// EventRegister().
 	EventUnregister(e *Entry)
 }
 
-// EventListener provides a notify callback.
-type EventListener interface {
-	// NotifyEvent is the function to be called when the waiter entry is
+// EntryCallback provides a notify callback.
+type EntryCallback interface {
+	// Callback is the function to be called when the waiter entry is
 	// notified. It is responsible for doing whatever is needed to wake up
 	// the waiter.
 	//
@@ -126,7 +126,7 @@ type EventListener interface {
 	//
 	// The mask indicates the events that occurred and that the entry is
 	// interested in.
-	NotifyEvent(mask EventMask)
+	Callback(e *Entry, mask EventMask)
 }
 
 // Entry represents a waiter that can be add to the a wait queue. It can
@@ -135,44 +135,21 @@ type EventListener interface {
 //
 // +stateify savable
 type Entry struct {
-	waiterEntry
+	Callback EntryCallback
 
-	// eventListener receives the notification.
-	eventListener EventListener
-
-	// mask should be immutable once queued.
+	// The following fields are protected by the queue lock.
 	mask EventMask
+	waiterEntry
 }
 
-// Init initializes the Entry.
-//
-// This must only be called when unregistered.
-func (e *Entry) Init(eventListener EventListener, mask EventMask) {
-	e.eventListener = eventListener
-	e.mask = mask
+type channelCallback struct {
+	ch chan struct{}
 }
 
-// Mask returns the entry mask.
-func (e *Entry) Mask() EventMask {
-	return e.mask
-}
-
-// NotifyEvent notifies the event listener.
-//
-// Mask should be the full set of active events.
-func (e *Entry) NotifyEvent(mask EventMask) {
-	if m := mask & e.mask; m != 0 {
-		e.eventListener.NotifyEvent(m)
-	}
-}
-
-// ChannelNotifier is a simple channel-based notification.
-type ChannelNotifier chan struct{}
-
-// NotifyEvent implements waiter.EventListener.NotifyEvent.
-func (c ChannelNotifier) NotifyEvent(EventMask) {
+// Callback implements EntryCallback.Callback.
+func (c *channelCallback) Callback(*Entry, EventMask) {
 	select {
-	case c <- struct{}{}:
+	case c.ch <- struct{}{}:
 	default:
 	}
 }
@@ -180,23 +157,15 @@ func (c ChannelNotifier) NotifyEvent(EventMask) {
 // NewChannelEntry initializes a new Entry that does a non-blocking write to a
 // struct{} channel when the callback is called. It returns the new Entry
 // instance and the channel being used.
-func NewChannelEntry(mask EventMask) (e Entry, ch chan struct{}) {
-	ch = make(chan struct{}, 1)
-	e.Init(ChannelNotifier(ch), mask)
-	return e, ch
-}
+//
+// If a channel isn't specified (i.e., if "c" is nil), then NewChannelEntry
+// allocates a new channel.
+func NewChannelEntry(c chan struct{}) (Entry, chan struct{}) {
+	if c == nil {
+		c = make(chan struct{}, 1)
+	}
 
-type functionNotifier func(EventMask)
-
-// NotifyEvent implements waiter.EventListener.NotifyEvent.
-func (f functionNotifier) NotifyEvent(mask EventMask) {
-	f(mask)
-}
-
-// NewFunctionEntry initializes a new Entry that calls the given function.
-func NewFunctionEntry(mask EventMask, fn func(EventMask)) (e Entry) {
-	e.Init(functionNotifier(fn), mask)
-	return e
+	return Entry{Callback: &channelCallback{ch: c}}, c
 }
 
 // Queue represents the wait queue where waiters can be added and
@@ -210,9 +179,11 @@ type Queue struct {
 	mu   sync.RWMutex `state:"nosave"`
 }
 
-// EventRegister adds a waiter to the wait queue.
-func (q *Queue) EventRegister(e *Entry) {
+// EventRegister adds a waiter to the wait queue; the waiter will be notified
+// when at least one of the events specified in mask happens.
+func (q *Queue) EventRegister(e *Entry, mask EventMask) {
 	q.mu.Lock()
+	e.mask = mask
 	q.list.PushBack(e)
 	q.mu.Unlock()
 }
@@ -229,11 +200,9 @@ func (q *Queue) EventUnregister(e *Entry) {
 func (q *Queue) Notify(mask EventMask) {
 	q.mu.RLock()
 	for e := q.list.Front(); e != nil; e = e.Next() {
-		m := mask & e.mask
-		if m == 0 {
-			continue
+		if m := mask & e.mask; m != 0 {
+			e.Callback.Callback(e, m)
 		}
-		e.eventListener.NotifyEvent(m) // Skip intermediate call.
 	}
 	q.mu.RUnlock()
 }
@@ -273,7 +242,7 @@ func (*AlwaysReady) Readiness(mask EventMask) EventMask {
 
 // EventRegister doesn't do anything because this object doesn't need to issue
 // notifications because its readiness never changes.
-func (*AlwaysReady) EventRegister(e *Entry) {
+func (*AlwaysReady) EventRegister(*Entry, EventMask) {
 }
 
 // EventUnregister doesn't do anything because this object doesn't need to issue
