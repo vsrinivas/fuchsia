@@ -2,8 +2,10 @@
 
 Fuchsia drivers are shared libraries that are dynamically loaded in driver host
 processes in user space. The process of loading a driver is controlled by the
-driver manager. See [Device Model](/docs/concepts/drivers/device_driver_model/device-model.md)
-for more information on driver hosts, driver manager and the driver and device lifecycles.
+driver manager. See
+[Device Model](/docs/concepts/drivers/device_driver_model/device-model.md) for
+more information on driver hosts, driver manager and the driver and device
+lifecycles.
 
 ## Directory structure
 
@@ -20,13 +22,13 @@ implements an ethernet protocol. However, drivers that implement the USB stack
 are in [//src/devices/usb/drivers/](/src/devices/usb/drivers) because they
 implement USB protocols.
 
-In the driver's `BUILD.gn`, there should be a `fuchsia_driver_component` target. In order
-to get a driver to show up under `/boot/driver`, it should be included as under
-the `board_bootfs_labels` list in the relevant board file(s) under //boards. In
-order to get it to show up inside of `/system/driver` it should be added to the
-system package with a `driver_package` build target, which should then be
-referenced by relevant boardfile(s) under `//boards`. The driver manager looks
-first in `/boot/driver`, then `/system/driver/` for loadable drivers.
+In the driver's `BUILD.gn`, there should be a `fuchsia_driver_component` target.
+In order to get a driver to show up under `/boot/driver`, it should be included
+as under the `board_bootfs_labels` list in the relevant board file(s) under
+//boards. In order to get it to show up inside of `/system/driver` it should be
+added to the system package with a `driver_package` build target, which should
+then be referenced by relevant boardfile(s) under `//boards`. The driver manager
+looks first in `/boot/driver`, then `/system/driver/` for loadable drivers.
 
 ## Creating a new driver
 
@@ -41,20 +43,21 @@ This will create the directory `<PATH>` containing an empty driver where the
 last segment of `<PATH>` is the driver name and GN target name. After this
 command is run, the following steps need to be followed:
 
-1. Include the `fuchsia_driver_component` or `driver_package` build target in the correct
-place to get your driver included into the system.
-- For packaged drivers the
-`driver_package` build target should be added to the relevant board file in
-`//boards` or `//vendor/<foo>/boards` to a `xx_package_labels` GN argument.
-- For boot drivers the `fuchsia_driver_component` build target should be added to the
-relevant board file in `//boards` or `//vendor/<foo>/boards` to the
-`board_bootfs_labels` GN argument.
-1. Include the `tests` build target in the
-`<PATH>:tests` build target to get your tests included in CQ.
-1. Add proper bind rules in `<NAME>.bind`.
-1. Add driver information in `<NAME>-info.json`. The file must include a `short_description` and
-`areas` matching at least one of the areas listed at `//build/drivers/areas.txt`.
-1. Write the functionality for the driver.
+1.  Include the `fuchsia_driver_component` or `driver_package` build target in
+    the correct place to get your driver included into the system.
+2.  For packaged drivers the `driver_package` build target should be added to
+    the relevant board file in `//boards` or `//vendor/<foo>/boards` to a
+    `xx_package_labels` GN argument.
+3.  For boot drivers the `fuchsia_driver_component` build target should be added
+    to the relevant board file in `//boards` or `//vendor/<foo>/boards` to the
+    `board_bootfs_labels` GN argument.
+4.  Include the `tests` build target in the `<PATH>:tests` build target to get
+    your tests included in CQ.
+5.  Add proper bind rules in `<NAME>.bind`.
+6.  Add driver information in `<NAME>-info.json`. The file must include a
+    `short_description` and `areas` matching at least one of the areas listed at
+    `//build/drivers/areas.txt`.
+7.  Write the functionality for the driver.
 
 ## Declaring a driver
 
@@ -107,8 +110,8 @@ following macro. `"zircon"` is the vendor id and `"0.1"` is the driver version.
 ZIRCON_DRIVER(ahci, ahci_driver_ops, "zircon", "0.1");
 ```
 
-The [PCI driver](/src/devices/bus/drivers/pci/kpci.cc) publishes the
-matching device with the following properties:
+The [PCI driver](/src/devices/bus/drivers/pci/kpci.cc) publishes the matching
+device with the following properties:
 
 ```c
 zx_device_prop_t device_props[] = {
@@ -125,10 +128,10 @@ zx_device_prop_t device_props[] = {
 ```
 
 For now, binding variables and macros are defined in
-[lib/ddk/binding.h](/src/lib/ddk/include/lib/ddk/binding.h). In the near future, all
-bind properties will be defined by bind libraries like the `fuchsia.pci` library
-imported above. If you are introducing a new device class, you may need to
-introduce new bind properties to the binding header as well as the
+[lib/ddk/binding.h](/src/lib/ddk/include/lib/ddk/binding.h). In the near future,
+all bind properties will be defined by bind libraries like the `fuchsia.pci`
+library imported above. If you are introducing a new device class, you may need
+to introduce new bind properties to the binding header as well as the
 [bind libraries](/src/devices/bind/).
 
 Bind properties are 32-bit values. If your variable value requires greater than
@@ -147,14 +150,14 @@ a device using `fuchsia.device.Controller/Bind` FIDL call.
 A driver's `bind()` function is called when it is matched to a device. Generally
 a driver will initialize any data structures needed for the device and
 initialize hardware in this function. It should not perform any time-consuming
-tasks or block in this function, because it is invoked from the driver host's RPC
-thread and it will not be able to service other requests in the meantime.
+tasks or block in this function, because it is invoked from the driver host's
+RPC thread and it will not be able to service other requests in the meantime.
 Instead, it should spawn a new thread to perform lengthy tasks.
 
 The driver should make no assumptions about the state of the hardware in
 `bind()`, resetting the hardware or otherwise ensuring it is in a known state.
-Because the system recovers from a driver crash by re-spawning the driver host, the
-hardware may be in an unknown state when `bind()` is invoked.
+Because the system recovers from a driver crash by re-spawning the driver host,
+the hardware may be in an unknown state when `bind()` is invoked.
 
 A driver is required to publish a `zx_device_t` in `bind()` by calling
 `device_add()`. This is necessary for the driver manager to keep track of the
@@ -165,8 +168,8 @@ call `device_init_reply()` once initialization is complete.
 `device_init_reply()` does not necessarily need to be called from the `init()`
 hook. For example, it may be called from another worker thread. The device is
 also guaranteed not to be removed until the reply is received. See `init()` in
-[src/lib/ddk/include/lib/ddk/device.h](/src/lib/ddk/include/lib/ddk/device.h) and
-`device_init_reply()` in
+[src/lib/ddk/include/lib/ddk/device.h](/src/lib/ddk/include/lib/ddk/device.h)
+and `device_init_reply()` in
 [src/lib/ddk/include/lib/ddk/driver.h](/src/lib/ddk/include/lib/ddk/driver.h).
 
 There are generally four outcomes from `bind()`:
@@ -212,8 +215,8 @@ the device is published under in devfs.
 
 A driver generally operates by servicing client requests from children drivers
 or other processes. It fulfills those requests either by communicating directly
-with hardware (for example, through MMIO) or by communicating with its parent device
-(for example, queueing a USB transaction).
+with hardware (for example, through MMIO) or by communicating with its parent
+device (for example, queueing a USB transaction).
 
 External client requests from processes outside the driver host are fulfilled by
 children drivers, generally in the same process, are fulfilled by banjo
@@ -249,38 +252,36 @@ necessary to shut down the interrupt thread during driver clean up.
 
 ## FIDL Messages
 
+## Non-driver processes
+
 Messages for each device class are defined in the
 [FIDL](/docs/development/languages/fidl/README.md) language. Each device
 implements zero or more FIDL protocols, multiplexed over a single channel per
-client. The driver is given the opportunity to interpret FIDL messages through the
-`message()` hook.
+client. The driver is given the opportunity to interpret FIDL messages through
+the `message()` hook. These are only accessible to non-driver components by
+means of devfs.
+
+## Drivers in other processes
+
+If a driver needs to communicate with a driver in a separate process, rather
+than define protocol ops, it must instead host an outgoing directory, similar to
+components, which should host all FIDL protocols the child driver would access
+on bind.
 
 ## Protocol ops vs. FIDL messages
 
 Protocol ops define the in-process API for a device. FIDL messages define the
-external API. Define a protocol op if the function is meant to be called by
-other drivers in the same process. A driver should call a protocol op on its
-parent to make use of those functions.
+API for communicating out of process. Define a protocol op if the function is
+meant to be called by other drivers in the same process. A driver should call a
+protocol op on its parent to make use of those functions.
 
 ## Isolate devices
 
-Devices that are added with `DEVICE_ADD_MUST_ISOLATE` spawn a new driver host
-with a proxy device. The device exists in both the parent driver host and as the
-root of the new driver host. Devmgr attempts to load **driver**`.proxy.so` into
-the new driver host. For example, PCI is supplied by `libpci.so` so devmgr would
-look to load `libpci.proxy.so`. The driver is provided a channel in `create()`
-when it creates the proxy device (the "bottom half" that runs in the new driver
-host). The proxy device should cache this channel for when it needs to
-communicate with the top half (e.g. if it needs to call API on the parent
-device).
-
-`rxrpc()` is invoked on the top half when this channel is written to by the
-bottom half. There is no common wire protocol for this channel. For an example,
-refer to the [PCI driver](/src/devices/bus/drivers/pci).
-
-Note: Proxying is currently deprecated in favor of using FIDL between drivers in
-different driver hosts. Please talk to the driver framework team before
-implementing new proxies.
+Devices that are added with `DEVICE_ADD_MUST_ISOLATE` spawn a new driver host.
+The device must have an accompanying outgoing directory which hosts FIDL
+protocols. A driver which is bound to the device will be loaded into the new
+driver host and provided the ability to connect FIDL protocols exported in the
+outgoing directory provided by the parent driver.
 
 ## Driver rights
 
@@ -307,13 +308,14 @@ associated to the child device.
 
 ## Taking a long time to initialize
 
-What if your device takes a long time to initialize?
-When we discussed the **null_bind()** function above, we indicated that a successful
-return told the driver manager that the driver is now associated with the device.
-We can't spend a lot of time in the bind function; we're basically expected to initialize
-our device, publish it, and be done.
+What if your device takes a long time to initialize? When we discussed the
+**null_bind()** function above, we indicated that a successful return told the
+driver manager that the driver is now associated with the device. We can't spend
+a lot of time in the bind function; we're basically expected to initialize our
+device, publish it, and be done.
 
-But your device might need to perform a lengthy initialization operation, such as:
+But your device might need to perform a lengthy initialization operation, such
+as:
 
 *   enumerate hardware points
 *   load firmware
@@ -321,39 +323,46 @@ But your device might need to perform a lengthy initialization operation, such a
 
 and so on, which might take a long time to do.
 
-You can publish your device as "invisible" by implementing the device `init()` hook.
-The `init()` hook is run after the device is added through **device_add()**, and may be
-used to safely access the device state and to spawn a worker thread. The device will
-remain invisible and is guaranteed not to be removed until **device_init_reply()** is called,
-which may be done from any thread. This meets the requirements for the binding function,
-but nobody is able to use your device (because nobody knows about it yet, because it's
-not visible). Now your device can perform the long operations with a background thread.
+You can publish your device as "invisible" by implementing the device `init()`
+hook. The `init()` hook is run after the device is added through
+**device_add()**, and may be used to safely access the device state and to spawn
+a worker thread. The device will remain invisible and is guaranteed not to be
+removed until **device_init_reply()** is called, which may be done from any
+thread. This meets the requirements for the binding function, but nobody is able
+to use your device (because nobody knows about it yet, because it's not
+visible). Now your device can perform the long operations with a background
+thread.
 
 When your device is ready to service client requests, call
-**device_init_reply()**
-which will cause it to appear in the pathname space.
+**device_init_reply()** which will cause it to appear in the pathname space.
 
 ### Power savings
 
 Two callouts, **suspend()** and **resume()**, are available for your device in
 order to support power or other resource saving features.
 
-Both take a device context pointer and a flags argument, but the flags argument is
-used only in the suspend case.
+Both take a device context pointer and a flags argument, but the flags argument
+is used only in the suspend case.
 
-Flag                                | Meaning
-------------------------------------|------------------------------------------------------------
-`DEVICE_SUSPEND_FLAG_REBOOT`        | The driver should shut itself down in preparation for a reboot or shutdown of the machine
-`DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER` | ?
-`DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY`   | ?
-`DEVICE_SUSPEND_FLAG_POWEROFF`      | The driver should shut itself down in preparation for power off
-`DEVICE_SUSPEND_FLAG_MEXEC`         | @@@ almost nobody uses this except for a graphics controller, what does it do? @@@
-`DEVICE_SUSPEND_FLAG_SUSPEND_RAM`   | The driver should arrange so that it can be restarted from RAM
+| Flag                                    | Meaning                            |
+| --------------------------------------- | ---------------------------------- |
+| `DEVICE_SUSPEND_FLAG_REBOOT`            | The driver should shut itself down |
+:                                         : in preparation for a reboot or     :
+:                                         : shutdown of the machine            :
+| `DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER` | ?                                  |
+| `DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY`   | ?                                  |
+| `DEVICE_SUSPEND_FLAG_POWEROFF`          | The driver should shut itself down |
+:                                         : in preparation for power off       :
+| `DEVICE_SUSPEND_FLAG_MEXEC`             | @@@ almost nobody uses this except |
+:                                         : for a graphics controller, what    :
+:                                         : does it do? @@@                    :
+| `DEVICE_SUSPEND_FLAG_SUSPEND_RAM`       | The driver should arrange so that  |
+:                                         : it can be restarted from RAM       :
 
 <!--- Yeah, I'm just guessing on the flags; they're used so little...-->
 
-For documentation purposes, what should I write?
-That they are just hints, or that you *must* do something because of a given flag, or ... ?
+For documentation purposes, what should I write? That they are just hints, or
+that you *must* do something because of a given flag, or ... ?
 
 ## Reference: Support functions
 
@@ -361,22 +370,23 @@ This section lists support functions that are provided for your driver to use.
 
 ### Accessor functions
 
-The context block that's passed as the first argument to your driver's protocol functions
-is an opaque data structure.
-This means that in order to access the data elements, you need to call an accessor function:
+The context block that's passed as the first argument to your driver's protocol
+functions is an opaque data structure. This means that in order to access the
+data elements, you need to call an accessor function:
 
-Function                | Purpose
-------------------------|-------------------------------------------
-**device_get_name()**        | Retrieves the name of the device
+Function              | Purpose
+--------------------- | --------------------------------
+**device_get_name()** | Retrieves the name of the device
 
 ### Administrative functions
 
 The following functions are used to administer the device:
 
-Function                    | Purpose
-----------------------------|-------------------------------------------
-**device_add()**                 | Adds a device to a parent
-**device_async_remove()**        | Schedules the removal of a device and all its children
+| Function                  | Purpose                                       |
+| ------------------------- | --------------------------------------------- |
+| **device_add()**          | Adds a device to a parent                     |
+| **device_async_remove()** | Schedules the removal of a device and all its |
+:                           : children                                      :
 
 <!---
 @@@ Notes only @@@
