@@ -27,9 +27,6 @@ struct ArchPhysHandoff {
 
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI) payload.
   ktl::optional<dcfg_arm_psci_driver_t> psci_driver;
-
-  // (ZBI_TYPE_KERNEL_DRIVER, KDRV_GENERIC_32BIT_WATCHDOG) payload.
-  ktl::optional<dcfg_generic_32bit_watchdog_t> generic_32bit_watchdog_driver;
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_PHYS_INCLUDE_PHYS_ARCH_ARCH_HANDOFF_H_
