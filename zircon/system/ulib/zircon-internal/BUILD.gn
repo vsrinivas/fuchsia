@@ -44,11 +44,10 @@ test("zircon-internal-unittests") {
   sources = [ "unique-backtrace-tests.cc" ]
 
   # Ensure aggressive ICF is enabled regardless of optimization defaults.
-  configs += [ "//build/config/zircon:default_icf" ]
-  configs -= [ "//build/config/zircon:default_icf" ]
-  configs += [ "//build/config:icf" ]
-  configs -= [ "//build/config:icf" ]
-  configs += [ "//build/config:icf" ]
+  _icf = [ "//build/config:icf" ]
+  if (configs + _icf - _icf == configs) {
+    configs += [ "//build/config:icf" ]
+  }
 
   # The code-generation switches required for linker GC are also required for
   # ICF, so make sure those are also enabled.
