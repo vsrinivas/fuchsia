@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/profile.h>
 #include <threads.h>
 #include <zircon/threads.h>
@@ -208,6 +209,11 @@ zx_status_t Gt6853Device::Init() {
   root_ = inspector_.GetRoot().CreateChild("gt6853");
   firmware_status_ = root_.CreateString("firmware_status", "initialization failed");
   config_status_ = root_.CreateString("config_status", "initialization failed");
+
+  // These names must match the strings in //src/diagnostics/config/sampler/input.json.
+  metrics_root_ = inspector_.GetRoot().CreateChild("hid-input-report-touch");
+  average_latency_usecs_ = metrics_root_.CreateUint("average_latency_usecs", 0);
+  max_latency_usecs_ = metrics_root_.CreateUint("max_latency_usecs", 0);
 
   zx_status_t status = interrupt_gpio_.ConfigIn(GPIO_NO_PULL);
   if (status != ZX_OK) {
@@ -1015,6 +1021,17 @@ int Gt6853Device::Thread() {
     }
 
     input_report_readers_.SendReportToAllReaders(report);
+
+    const zx::duration latency = zx::clock::get_monotonic() - timestamp;
+
+    total_latency_ += latency;
+    report_count_++;
+    average_latency_usecs_.Set(total_latency_.to_usecs() / report_count_);
+
+    if (latency > max_latency_) {
+      max_latency_ = latency;
+      max_latency_usecs_.Set(max_latency_.to_usecs());
+    }
   }
 
   return thrd_success;

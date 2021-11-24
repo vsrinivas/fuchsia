@@ -177,6 +177,14 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
   inspect::StringProperty panel_type_;
   inspect::StringProperty firmware_status_;
   inspect::StringProperty config_status_;
+
+  inspect::Node metrics_root_;
+  inspect::UintProperty average_latency_usecs_;
+  inspect::UintProperty max_latency_usecs_;
+
+  uint64_t report_count_ = 0;
+  zx::duration total_latency_ = {};
+  zx::duration max_latency_ = {};
 };
 
 }  // namespace touch

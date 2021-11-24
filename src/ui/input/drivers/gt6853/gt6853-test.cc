@@ -10,6 +10,7 @@
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-i2c/fake-i2c.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <lib/zx/clock.h>
 
 #include <array>
@@ -52,6 +53,24 @@ zx_status_t load_firmware_from_driver(zx_driver_t* drv, zx_device_t* device, con
 }
 
 namespace touch {
+
+class SaveInspectVmoBind : public fake_ddk::Bind {
+ public:
+  zx::vmo TakeInspectVmo() { return std::move(inspect_vmo_); }
+
+ protected:
+  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                        zx_device_t** out) override {
+    if (args) {
+      inspect_vmo_.reset(args->inspect_vmo);
+      args->inspect_vmo = ZX_HANDLE_INVALID;
+    }
+    return fake_ddk::Bind::DeviceAdd(drv, parent, args, out);
+  }
+
+ private:
+  zx::vmo inspect_vmo_;
+};
 
 class FakeTouchDevice : public fake_i2c::FakeI2c {
  public:
@@ -364,7 +383,7 @@ class Gt6853Test : public zxtest::Test {
     fake_i2c_.set_sensor_id(0);
   }
 
-  fake_ddk::Bind ddk_;
+  SaveInspectVmoBind ddk_;
   FakeTouchDevice fake_i2c_;
   zx::interrupt gpio_interrupt_;
   Gt6853Device* device_ = nullptr;
@@ -686,6 +705,52 @@ TEST_F(Gt6853Test, FirmwareDownloadNoIspEntry) {
   ASSERT_OK(WriteFirmwareData({0x00}, 27));
 
   EXPECT_NOT_OK(Init());
+}
+
+TEST_F(Gt6853Test, LatencyMeasurements) {
+  AddDefaultConfig();
+  ASSERT_OK(Init());
+
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client(
+      ddk_.FidlClient<fuchsia_input_report::InputDevice>());
+
+  auto reader_endpoints = fidl::CreateEndpoints<fuchsia_input_report::InputReportsReader>();
+  ASSERT_TRUE(reader_endpoints.is_ok());
+  auto [reader_client, reader_server] = std::move(reader_endpoints.value());
+  client->GetInputReportsReader(std::move(reader_server));
+  fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> reader(std::move(reader_client));
+  device_->WaitForNextReader();
+
+  for (int i = 0; i < 5; i++) {
+    EXPECT_OK(gpio_interrupt_.trigger(0, zx::clock::get_monotonic()));
+    fake_i2c_.WaitForTouchDataRead();
+  }
+
+  for (size_t reports = 0; reports < 5;) {
+    const auto response = reader->ReadInputReports();
+    if (response.ok() && response->result.is_response()) {
+      reports += response->result.response().reports.count();
+    }
+  }
+
+  const zx::vmo inspect_vmo = ddk_.TakeInspectVmo();
+  ASSERT_TRUE(inspect_vmo.is_valid());
+
+  inspect::InspectTestHelper inspector;
+  inspector.ReadInspect(inspect_vmo);
+
+  const inspect::Hierarchy* root = inspector.hierarchy().GetByPath({"hid-input-report-touch"});
+  ASSERT_NOT_NULL(root);
+
+  const auto* average_latency =
+      root->node().get_property<inspect::UintPropertyValue>("average_latency_usecs");
+  ASSERT_NOT_NULL(average_latency);
+
+  const auto* max_latency =
+      root->node().get_property<inspect::UintPropertyValue>("max_latency_usecs");
+  ASSERT_NOT_NULL(max_latency);
+
+  EXPECT_GE(max_latency->value(), average_latency->value());
 }
 
 }  // namespace touch

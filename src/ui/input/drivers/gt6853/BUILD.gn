@@ -116,6 +116,7 @@ test("gt6853-test") {
   deps = [
     ":common",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/mock-function",
