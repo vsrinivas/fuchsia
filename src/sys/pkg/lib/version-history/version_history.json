@@ -1,0 +1,14 @@
+{
+	"_comment": "This file exists solely to satisfy go:embed when using the Go build system. //sdk/version_history.json is used in real builds",
+    "data": {
+        "name": "Platform version map",
+        "type": "version_history",
+        "versions": [
+            {
+                "abi_revision": "0xDEADBEEF",
+                "api_level": "1"
+            }
+        ]
+    },
+    "schema_id": "https://fuchsia.dev/schema/version_history-038fa854.json"
+}
