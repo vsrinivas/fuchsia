@@ -513,6 +513,7 @@ config("default_warnings") {
     "-Wwrite-strings",
     "-Wno-sign-conversion",
     "-Wno-unused-parameter",
+    "-Wnonportable-system-include-path",
   ]
 }
 
