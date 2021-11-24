@@ -37,6 +37,20 @@ protocol Frobinator {
 };
 // [END errors]
 
+// [START empty-error-enum]
+type MyEmptyErrorCode = flexible enum {};
+
+protocol Frobinator2 {
+    Frobinate() -> (struct {
+        value SuccessValue;
+    }) error MyEmptyErrorCode;
+
+    BadFrobinate() -> (struct {
+        value SuccessValue;
+    }) error flexible enum {}; // avoid anonymous enum
+};
+// [END empty-error-enum]
+
 // [START optional-error]
 type MyStatusCode = strict enum {
     OK = 0; // The success value should be 0,
@@ -44,7 +58,7 @@ type MyStatusCode = strict enum {
     NO_BAR = 2;
 };
 
-protocol Frobinator2 {
+protocol Frobinator3 {
     Frobinate() -> (struct {
         value box<SuccessValue>;
         err MyStatusCode;

@@ -236,6 +236,43 @@ through the data can be represented using a primitive:
 In performance-critical target languages, structs are represented in line, which
 reduces the cost of using structs to name important concepts.
 
+### Use anonynmous types judiciously {#anonymous-types}
+
+Anonymous types are very useful to describe an API more fluently. In particular,
+anonymous types are well suited for cases where you have a priori knowledge that
+a sub-element of a named type is inherently tied to that named type, and will
+not be useful or meaningful when used outside of the context of the containing
+named container.
+
+Consider for instance a union variant, which aggregates together a few things.
+It is exceedingly rare for the union variant to be used by itself, i.e. we know
+a priori that the union variant has meaning only in the context of its specific
+use. As a result, using anonymous types for union variants is appropriate and
+recommended.
+
+Ideally, types should both map one-to-one to key concepts of an API, and no two
+types should have the same definition. Achieving both is however not always
+possible, especially in cases where the naming of type — which introduces a
+different concept[^named-types] — is meaningful beyond its use as an API surface
+element. Consider for instance named identifiers `type EntityId = struct { id
+uint64; };` and `type OtherEntityId = struct { id uint64; };` which represent
+different concepts, yet have the same type definition except for their names.
+
+Using anonymous types creates multiple types, all incompatible with each
+other. As such, if multiple anonymous types are used to represent the same
+concept, this will lead to an overly complex API, and prevent generic handling
+in most target languages.
+
+When using anonymous types, you must therefore avoid multiple anonymous types
+representing the same concept. For instance, you must not use anonymous types in
+cases where evolution of the API will likely lead to multiple anonymous types
+representing the same concept.
+
+[^named-types]: While the FIDL type system is a structural type system when it
+    comes to ABI, i.e. names have no bearing, only the structure of types
+    matters, the FIDL type system has named types semantics when it comes to
+    API.
+
 ### Consider using Virtual Memory Objects (VMOs)
 
 A Virtual Memory Object (VMO) is a kernel object that represents a contiguous
@@ -387,64 +424,75 @@ The enum may then be extended with `JPEG = 2` if required.
 Select the appropriate error type for your use case and be consistent about how
 you report errors.
 
-Use the `status` type for errors related to kernel objects or IO.  For example,
-`fuchsia.process` uses `status` because the library is largely concerned with
-manipulating kernel objects.  As another example, `fuchsia.io` uses `status`
-extensively because the library is concerned with IO.
+Use the [`error` syntax](#error-syntax) to clearly document and convey a
+possible erroneous return, and take advantage of tailored target language
+bindings.
 
-Use a domain-specific enum error type for other domains.  For example, use an
-enum when you expect clients to receive the error and then stop rather than
-propagate the error to another system.
+(The use of the [optional value with error
+enum](#using-optional-value-with-error-enum) pattern is deprecated.)
 
-There are two patterns for methods that can return a result or an error:
-
- * Prefer using the `error` syntax to clearly document and convey a
-   possible erroneous return, and take advantage of tailored target language
-   bindings;
-
- * Use the
-   [optional value with error enum](#using-optional-value-with-error-enum)
-   for cases when you need maximal performance.
-
-The performance differences between the [error syntax](#using-the-error-syntax)
-vs [optional value with error enum](#using-optional-value-with-error-enum) are
-small:
-
-  * Slightly bigger payload (8 extra bytes for values, 16 extra bytes for
-    errors);
-  * Since the value and error will be in an envelope, there is additional work
-    to record/verify the number of bytes and number of handles;
-  * Both will represent the value out-of-line, and therefore require a pointer
-    indirection.
-
-#### Using the error syntax
+#### Using the error syntax {#error-syntax}
 
 Methods can take an optional `error <type>` specifier to indicate that they
 return a value, or error out and produce `<type>`. Here is an example:
 
 ```fidl
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="errors" %}
-
 ```
 
 When using this pattern, you can either use an `int32`, `uint32`, or an enum
 thereof to represent the kind of error returned. In most cases, returning an
-enum is the preferred approach. As noted in the [enum](#enum) section, it is best
-to avoid using the value `0`.
+enum is the [preferred approach](#prefer-domain-specific-enum-for-errors).
 
-#### Using optional value with error enum
+It is preferred to have a single error type across all methods of a protocol.
 
-When maximal performance is required, defining a method with two returns, an
-optional value and an error code, is common practice. See for instance:
+#### Prefer domain-specific enum {#prefer-domain-specific-enum-for-errors}
+
+Use a purpose built enum error type when you define and control the domain. For
+example, define an enum when the protocol is purpose built, and conveying the
+semantics of the error is the only design constraint. As noted in the
+[enum](#enum) section, it is best to avoid using the value `0`.
+
+In some cases, it may be appropriate to start by using an empty flexible enum:
+
+```fidl
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="empty-error-enum" %}
+```
+
+Flexible enums have a [default unknown member][bindings-spec-unknown-enums]. An
+empty flexible enum is therefore a typed placeholder providing affordances for
+evolvability. When using this pattern, it is recommended to define a standalone
+type to be reused by multiple methods within a protocol (or a library) [rather
+than using an anonymous enum](#anonymous-types). Using an anonymous enum creates
+multiple types, all incompatible with each other, which will lead to an overly
+complex API, and prevent generic handling of errors in most target languages.
+
+Use a domain-specific enum error type when you are following a well defined
+specification (say HTTP error codes), and the enum is meant to be an ergonomic
+way to represent the raw value dictated by the specification.
+
+In particular, use the `zx.status` type for errors related to kernel objects or
+IO. For example, `fuchsia.process` uses `zx.status` because the library is
+largely concerned with manipulating kernel objects. As another example,
+`fuchsia.io` uses `zx.status` extensively because the library is concerned with
+IO.
+
+#### Using optional value with error enum {#using-optional-value-with-error-enum}
+
+Note: This pattern is deprecated.
+
+In the past, there was a slight performance benefit to defining a method with
+two returns, an optional value and an error code. See for instance:
 
 ```fidl
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="optional-error" %}
 
 ```
 
-When using this pattern, returning an enum is the preferred approach. Here,
-defining the `0` value as the "success" is best. For further details, refer
-to the [enum](#enum) section.
+However, this pattern is now deprecated in favor of the [error
+syntax](#error-syntax): the performance benefits which existed have been
+obsoleted by [inlining small values in envelopes][rfc-0114], and low-level
+support for extensible unions is now prevalent.
 
 #### Avoid messages and descriptions in errors
 
@@ -1457,7 +1505,9 @@ protocol.
 <!-- xrefs -->
 [api-council]: /docs/contribute/governance/api_council.md
 [api-council-membership]: /docs/contribute/governance/api_council.md#membership
+[bindings-spec-unknown-enums]: /docs/reference/fidl/language/bindings-spec.md#unknown-enums
 [rfc-0025]: /docs/contribute/governance/rfcs/0025_bit_flags.md
+[rfc-0114]: /docs/contribute/governance/rfcs/0114_fidl_envelope_inlining.md
 [locale-passing-example]: /examples/intl/wisdom/
 [rust-hanging-get]: /docs/development/languages/fidl/guides/rust-hanging-get.md
 [resource-lang]: /docs/reference/fidl/language/language.md#value-vs-resource
