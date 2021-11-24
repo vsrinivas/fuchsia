@@ -24,6 +24,10 @@ group("argh") {
   deps = [ ":argh-v0_1_5" ]
 }
 
+group("arrayvec") {
+  deps = [ ":arrayvec-v0_7_1" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("async-broadcast") {
     deps = [ ":async-broadcast-v0_2_0" ]
@@ -1243,6 +1247,29 @@ rust_library("argh_shared-v0_1_5") {
     "--edition=2018",
     "-Cmetadata=4c1414e720ac7a0f",
     "-Cextra-filename=-4c1414e720ac7a0f",
+  ]
+}
+
+rust_library("arrayvec-v0_7_1") {
+  crate_name = "arrayvec"
+  crate_root = "//third_party/rust_crates/vendor/arrayvec/src/lib.rs"
+  output_name = "arrayvec-2b25e26ec4c0a472"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=2b25e26ec4c0a472",
+    "-Cextra-filename=-2b25e26ec4c0a472",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
   ]
 }
 
