@@ -7,6 +7,7 @@ use {
     anyhow::{Context as _, Result},
     async_trait::async_trait,
     async_utils::async_once::Once,
+    buildid,
     errors::{ffx_bail, ffx_error, FfxError, ResultExt as _},
     ffx_core::metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
     ffx_core::Injector,
@@ -22,11 +23,8 @@ use {
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::{futures::select, TimeoutExt},
     futures::FutureExt,
-    ring::digest::{Context as ShaContext, Digest, SHA256},
     std::default::Default,
-    std::fs::File,
     std::future::Future,
-    std::io::{BufReader, Read},
     std::path::PathBuf,
     std::time::{Duration, Instant},
     timeout::timeout,
@@ -35,7 +33,7 @@ use {
 // Config key for event timeout.
 const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
 
-const CURRENT_EXE_HASH: &str = "current.hash";
+const CURRENT_EXE_BUILDID: &str = "current.buildid";
 
 struct Injection {
     daemon_once: Once<DaemonProxy>,
@@ -193,7 +191,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
     let hash: String = "testcurrenthash".to_owned();
     #[cfg(not(test))]
     let hash: String =
-        match ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await {
+        match ffx_config::get((CURRENT_EXE_BUILDID, ffx_config::ConfigLevel::Runtime)).await {
             Ok(str) => str,
             Err(err) => {
                 log::error!("BUG: ffx version information is missing! {:?}", err);
@@ -257,12 +255,8 @@ fn is_schema(subcommand: &Option<Subcommand>) -> bool {
     matches!(subcommand, Some(Subcommand::FfxSchema(_)))
 }
 
-fn set_hash_config(overrides: Option<String>) -> Result<Option<String>> {
-    let input = std::env::current_exe()?;
-    let reader = BufReader::new(File::open(input)?);
-    let digest = sha256_digest(reader)?;
-
-    let runtime = format!("{}={}", CURRENT_EXE_HASH, hex::encode(digest.as_ref()));
+fn set_buildid_config(overrides: Option<String>) -> Result<Option<String>> {
+    let runtime = format!("{}={}", CURRENT_EXE_BUILDID, buildid::get_build_id()?);
     match overrides {
         Some(s) => {
             if s.is_empty() {
@@ -276,28 +270,13 @@ fn set_hash_config(overrides: Option<String>) -> Result<Option<String>> {
     }
 }
 
-fn sha256_digest<R: Read>(mut reader: R) -> Result<Digest> {
-    let mut context = ShaContext::new(&SHA256);
-    let mut buffer = [0; 1024];
-
-    loop {
-        let count = reader.read(&mut buffer)?;
-        if count == 0 {
-            break;
-        }
-        context.update(&buffer[..count]);
-    }
-
-    Ok(context.finish())
-}
-
 async fn run() -> Result<i32> {
     hoist::disable_autoconnect();
     let app: Ffx = from_env();
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
-    let overrides = set_hash_config(app.runtime_config_overrides())?;
+    let overrides = set_buildid_config(app.runtime_config_overrides())?;
 
     let env = match app.env {
         Some(ref env) => PathBuf::from(env),

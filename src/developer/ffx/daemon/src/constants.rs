@@ -26,4 +26,4 @@ pub async fn get_socket() -> String {
     DEFAULT_SOCKET.with(|k| k.clone())
 }
 
-pub(crate) const CURRENT_EXE_HASH: &str = "current.hash";
+pub(crate) const CURRENT_EXE_BUILDID: &str = "current.buildid";

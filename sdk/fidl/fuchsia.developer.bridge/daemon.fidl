@@ -66,7 +66,9 @@ protocol Daemon {
         info VersionInfo;
     });
 
-    // Retrieves a hash of the current binary.
+    // Retrieves a hash of the current binary. This may be the binary BuildID,
+    // which may not be exactly a hash of the binary as on-disk.
+    // TODO(89081): rename to GetBuildID
     GetHash() -> (struct {
         response string:64;
     });

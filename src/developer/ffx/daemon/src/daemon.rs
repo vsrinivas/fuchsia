@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{get_socket, CURRENT_EXE_HASH},
+    crate::constants::{get_socket, CURRENT_EXE_BUILDID},
     anyhow::{anyhow, bail, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
@@ -306,7 +306,7 @@ impl Daemon {
     async fn log_startup_info(&self) -> Result<()> {
         let pid = std::process::id();
         let hash: String =
-            ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await?;
+            ffx_config::get((CURRENT_EXE_BUILDID, ffx_config::ConfigLevel::Runtime)).await?;
         let version_info = build_info();
         let commit_hash = version_info.commit_hash.as_deref().unwrap_or("<unknown>");
         let commit_timestamp =
@@ -573,7 +573,8 @@ impl Daemon {
             }
             DaemonRequest::GetHash { responder } => {
                 let hash: String =
-                    ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await?;
+                    ffx_config::get((CURRENT_EXE_BUILDID, ffx_config::ConfigLevel::Runtime))
+                        .await?;
                 responder.send(&hash).context("error sending response")?;
             }
             DaemonRequest::ConnectToService { name, server_channel, responder } => {
