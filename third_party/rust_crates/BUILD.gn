@@ -8360,7 +8360,7 @@ rust_library("rouille-v3_0_0") {
   deps += [ ":term-v0_5_1" ]
   deps += [ ":threadpool-v1_7_1" ]
   deps += [ ":time-v0_1_42" ]
-  deps += [ ":tiny_http-v0_6_2" ]
+  deps += [ ":tiny_http-v0_6_4" ]
   deps += [ ":url-v1_7_2" ]
 
   rustenv = []
@@ -10377,10 +10377,10 @@ rust_library("time-v0_1_42") {
   }
 }
 
-rust_library("tiny_http-v0_6_2") {
+rust_library("tiny_http-v0_6_4") {
   crate_name = "tiny_http"
   crate_root = "//third_party/rust_crates/vendor/tiny_http/src/lib.rs"
-  output_name = "tiny_http-c62ae95a2a7c45ea"
+  output_name = "tiny_http-57f33ebabb505e73"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -10398,8 +10398,8 @@ rust_library("tiny_http-v0_6_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=c62ae95a2a7c45ea",
-    "-Cextra-filename=-c62ae95a2a7c45ea",
+    "-Cmetadata=57f33ebabb505e73",
+    "-Cextra-filename=-57f33ebabb505e73",
     "--cfg=feature=\"default\"",
   ]
 }

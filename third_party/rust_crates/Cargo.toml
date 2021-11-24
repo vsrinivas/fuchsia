@@ -480,7 +480,7 @@ rustflags = ["--cfg=underscore_consts"]
 [gn.package.signal-hook."0.3.8"]
 rustflags = []
 
-[gn.package.tiny_http."0.6.2"]
+[gn.package.tiny_http."0.6.4"]
 # TODO(61282): Fix the leaks and remove this.
 deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 

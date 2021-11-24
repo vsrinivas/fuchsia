@@ -112,15 +112,25 @@ fn write_message_header<W>(mut writer: W, http_version: &HTTPVersion,
     Ok(())
 }
 
-fn choose_transfer_encoding(request_headers: &[Header], http_version: &HTTPVersion,
-                            entity_length: &Option<usize>, has_additional_headers: bool,
-                            chunked_threshold: usize)
-    -> TransferEncoding
-{
+fn choose_transfer_encoding(
+    status_code: StatusCode,
+    request_headers: &[Header],
+    http_version: &HTTPVersion,
+    entity_length: &Option<usize>,
+    has_additional_headers: bool,
+    chunked_threshold: usize,
+) -> TransferEncoding {
     use util;
 
     // HTTP 1.0 doesn't support other encoding
     if *http_version <= (1, 0) {
+        return TransferEncoding::Identity;
+    }
+
+    // Per section 3.3.1 of RFC7230:
+    // A server MUST NOT send a Transfer-Encoding header field in any response with a status code
+    // of 1xx (Informational) or 204 (No Content).
+    if status_code.0 < 200 || status_code.0 == 204 {
         return TransferEncoding::Identity;
     }
 
@@ -291,14 +301,22 @@ impl<R> Response<R> where R: Read {
     ///  decide which features (most notably, encoding) to use.
     ///
     /// Note: does not flush the writer.
-    pub fn raw_print<W: Write>(mut self, mut writer: W, http_version: HTTPVersion,
-                               request_headers: &[Header], do_not_send_body: bool,
-                               upgrade: Option<&str>)
-                               -> IoResult<()>
-    {
-        let mut transfer_encoding = Some(choose_transfer_encoding(request_headers,
-                                    &http_version, &self.data_length, false /* TODO */,
-                                    self.chunked_threshold()));
+    pub fn raw_print<W: Write>(
+        mut self,
+        mut writer: W,
+        http_version: HTTPVersion,
+        request_headers: &[Header],
+        do_not_send_body: bool,
+        upgrade: Option<&str>,
+    ) -> IoResult<()> {
+        let mut transfer_encoding = Some(choose_transfer_encoding(
+            self.status_code,
+            request_headers,
+            &http_version,
+            &self.data_length,
+            false, /* TODO */
+            self.chunked_threshold(),
+        ));
 
         // add `Date` if not in the headers
         if self.headers.iter().find(|h| h.field.equiv(&"Date")).is_none() {
