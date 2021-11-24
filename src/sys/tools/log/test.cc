@@ -14,7 +14,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/sys/tools/log/log.h"
 
-namespace log {
+namespace {
 
 class FakeLogSink : public fuchsia::logger::LogSink {
  public:
@@ -95,4 +95,4 @@ TEST_F(LogTest, SimpleLog) {
   EXPECT_EQ(time_out, time.get());
 }
 
-}  // namespace log
+}  // namespace
