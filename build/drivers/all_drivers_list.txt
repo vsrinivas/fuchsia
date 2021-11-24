@@ -129,6 +129,7 @@
 //src/devices/light-sensor/drivers/ams-light:ams-light-driver
 //src/devices/light-sensor/drivers/lite-on:lite-on-driver
 //src/devices/mcu/drivers/chromiumos-ec-lpc:driver
+//src/devices/mcu/drivers/chromiumos-ec-core:driver
 //src/devices/mcu/drivers/vim3-mcu:vim3-mcu-driver
 //src/devices/misc/drivers/builtin:builtin-driver
 //src/devices/misc/drivers/chromeos-acpi:driver

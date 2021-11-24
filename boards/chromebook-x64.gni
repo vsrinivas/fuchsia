@@ -55,7 +55,10 @@ board_package_labels += [
   "//src/media/audio/config:chromebook",
 ]
 
-board_system_image_deps += [ "//src/devices/mcu/drivers/chromiumos-ec-lpc" ]
+board_system_image_deps += [
+  "//src/devices/mcu/drivers/chromiumos-ec-core",
+  "//src/devices/mcu/drivers/chromiumos-ec-lpc",
+]
 
 # Partitions for fx flash to flash.
 zircon_a_partition = "zircon_a"
