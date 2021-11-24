@@ -181,6 +181,7 @@ if (toolchain_environment == "physmem" ||
     sources = [ "dev-init.cc" ]
     deps = [
       "//zircon/kernel/dev/hdcp/amlogic_s912",
+      "//zircon/kernel/dev/hw_rng/amlogic_rng",
       "//zircon/kernel/dev/psci",
       "//zircon/kernel/phys:handoff",
     ]
