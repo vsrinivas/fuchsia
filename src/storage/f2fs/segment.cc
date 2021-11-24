@@ -66,9 +66,7 @@ void SegmentManager::SetFree(uint32_t segno) {
   uint32_t start_segno = secno * superblock_info_->GetSegsPerSec();
   uint32_t next;
 
-#ifdef __Fuchsia__
   std::lock_guard segmap_lock(free_info_->segmap_lock);
-#endif  // __Fuchsia__
   ClearBit(segno, free_info_->free_segmap.get());
   ++free_info_->free_segments;
 
@@ -93,9 +91,7 @@ void SegmentManager::SetTestAndFree(uint32_t segno) {
   uint32_t start_segno = secno * superblock_info_->GetSegsPerSec();
   uint32_t next;
 
-#ifdef __Fuchsia__
   std::lock_guard segmap_lock(free_info_->segmap_lock);
-#endif  // __Fuchsia__
   if (TestAndClearBit(segno, free_info_->free_segmap.get())) {
     ++free_info_->free_segments;
 
@@ -109,9 +105,7 @@ void SegmentManager::SetTestAndFree(uint32_t segno) {
 
 void SegmentManager::SetTestAndInuse(uint32_t segno) {
   uint32_t secno = segno / superblock_info_->GetSegsPerSec();
-#ifdef __Fuchsia__
   std::lock_guard segmap_lock(free_info_->segmap_lock);
-#endif  // __Fuchsia__
   if (!TestAndSetBit(segno, free_info_->free_segmap.get())) {
     --free_info_->free_segments;
     if (!TestAndSetBit(secno, free_info_->free_secmap.get())) {
@@ -403,9 +397,7 @@ void SegmentManager::LocateDirtySegment(uint32_t segno) {
   if (segno == kNullSegNo || IsCurSeg(segno))
     return;
 
-#ifdef __Fuchsia__
-  fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
-#endif  // __Fuchsia__
+  std::lock_guard seglist_lock(dirty_info_->seglist_lock);
 
   valid_blocks = GetValidBlocks(segno, 0);
 
@@ -425,9 +417,7 @@ void SegmentManager::SetPrefreeAsFreeSegments() {
   uint32_t segno, offset = 0;
   uint32_t total_segs = TotalSegs();
 
-#ifdef __Fuchsia__
-  fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
-#endif  // __Fuchsia__
+  std::lock_guard seglist_lock(dirty_info_->seglist_lock);
 
   while (true) {
     segno = FindNextBit(dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(),
@@ -443,9 +433,7 @@ void SegmentManager::ClearPrefreeSegments() {
   uint32_t segno, offset = 0;
   uint32_t total_segs = TotalSegs();
 
-#ifdef __Fuchsia__
-  fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
-#endif  // __Fuchsia__
+  std::lock_guard seglist_lock(dirty_info_->seglist_lock);
   while (true) {
     segno = FindNextBit(dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(),
                         total_segs, offset);
@@ -524,9 +512,7 @@ void SegmentManager::InvalidateBlocks(block_t addr) {
   if (addr == kNewAddr)
     return;
 
-#ifdef __Fuchsia__
-  fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
-#endif  // __Fuchsia__
+  std::lock_guard sentry_lock(sit_info_->sentry_lock);
 
   // add it into sit main buffer
   UpdateSitEntry(addr, -1);
@@ -599,9 +585,7 @@ void SegmentManager::GetNewSegment(uint32_t *newseg, bool new_sec, int dir) {
   int i;
   bool got_it = false;
 
-#ifdef __Fuchsia__
   std::lock_guard segmap_lock(free_info_->segmap_lock);
-#endif  // __Fuchsia__
 
   auto find_other_zone = [&]() -> bool {
     secno = FindNextZeroBit(free_info_->free_secmap.get(), total_secs, hint);
@@ -762,9 +746,7 @@ void SegmentManager::ChangeCurseg(CursegType type, bool reuse) {
   SetTestAndInuse(new_segno);
 
   {
-#ifdef __Fuchsia__
-    fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
-#endif  // __Fuchsia__
+    std::lock_guard seglist_lock(dirty_info_->seglist_lock);
     RemoveDirtySegment(new_segno, DirtyType::kPre);
     RemoveDirtySegment(new_segno, DirtyType::kDirty);
   }
@@ -1024,9 +1006,7 @@ void SegmentManager::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_b
   curseg = CURSEG_I(type);
 
   {
-#ifdef __Fuchsia__
-    fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-#endif  // __Fuchsia__
+    std::lock_guard curseg_lock(curseg->curseg_mutex);
     *new_blkaddr = NextFreeBlkAddr(type);
 
     // AddSumEntry should be resided under the curseg_mutex
@@ -1035,9 +1015,7 @@ void SegmentManager::DoWritePage(Page *page, block_t old_blkaddr, block_t *new_b
     AddSumEntry(type, sum, curseg->next_blkoff);
 
     {
-#ifdef __Fuchsia__
-      fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
-#endif  // __Fuchsia__
+      std::lock_guard sentry_lock(sit_info_->sentry_lock);
       RefreshNextBlkoff(curseg);
       superblock_info_->IncBlockCount(curseg->alloc_type);
 
@@ -1113,10 +1091,8 @@ void SegmentManager::RecoverDataPage(Page *page, Summary *sum, block_t old_blkad
   }
   curseg = CURSEG_I(type);
 
-#ifdef __Fuchsia__
-  fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-  fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
-#endif  // __Fuchsia__
+  std::lock_guard curseg_lock(curseg->curseg_mutex);
+  std::lock_guard sentry_lock(sit_info_->sentry_lock);
 
   old_cursegno = curseg->segno;
 
@@ -1147,10 +1123,8 @@ void SegmentManager::RewriteNodePage(Page *page, Summary *sum, block_t old_blkad
 
   curseg = CURSEG_I(type);
 
-#ifdef __Fuchsia__
-  fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-  fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
-#endif  // __Fuchsia__
+  std::lock_guard curseg_lock(curseg->curseg_mutex);
+  std::lock_guard sentry_lock(sit_info_->sentry_lock);
 
   segno = GetSegmentNumber(new_blkaddr);
   old_cursegno = curseg->segno;
@@ -1291,9 +1265,7 @@ int SegmentManager::ReadNormalSummaries(int type) {
   // set uncompleted segment to curseg
   curseg = CURSEG_I(static_cast<CursegType>(type));
   {
-#ifdef __Fuchsia__
-    fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-#endif  // __Fuchsia__
+    std::lock_guard curseg_lock(curseg->curseg_mutex);
     memcpy(curseg->sum_blk, sum, kPageCacheSize);
     curseg->next_segno = segno;
     ResetCurseg(static_cast<CursegType>(type), 0);
@@ -1391,9 +1363,7 @@ void SegmentManager::WriteNormalSummaries(block_t blkaddr, CursegType type) {
 
   for (int i = static_cast<int>(type); i < end; ++i) {
     CursegInfo *sum = CURSEG_I(static_cast<CursegType>(i));
-#ifdef __Fuchsia__
-    fbl::AutoLock curseg_lock(&sum->curseg_mutex);
-#endif  // __Fuchsia__
+    std::lock_guard curseg_lock(sum->curseg_mutex);
     WriteSumPage(sum->sum_blk, blkaddr + (i - static_cast<int>(type)));
   }
 }
@@ -1503,10 +1473,8 @@ void SegmentManager::FlushSitEntries() {
   bool flushed;
 
   {
-#ifdef __Fuchsia__
-    fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-    fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
-#endif  // __Fuchsia__
+    std::lock_guard curseg_lock(curseg->curseg_mutex);
+    std::lock_guard sentry_lock(sit_info_->sentry_lock);
 
     // "flushed" indicates whether sit entries in journal are flushed
     // to the SIT area or not.
@@ -1665,9 +1633,7 @@ void SegmentManager::BuildSitEntries() {
     Page *page = nullptr;
     bool got_it = false;
     {
-#ifdef __Fuchsia__
-      fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-#endif  // __Fuchsia__
+      std::lock_guard curseg_lock(curseg->curseg_mutex);
       for (int i = 0; i < SitsInCursum(sum); ++i) {
         if (LeToCpu(SegnoInJournal(sum, i)) == start) {
           sit = SitInJournal(sum, i);
@@ -1722,9 +1688,7 @@ void SegmentManager::InitDirtySegmap() {
       ++full_block_cnt;
       continue;
     }
-#ifdef __Fuchsia__
-    fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
-#endif  // __Fuchsia__
+    std::lock_guard seglist_lock(dirty_info_->seglist_lock);
     LocateDirtySegment(segno, DirtyType::kDirty);
     ++dirty_block_cnt;
   }
@@ -1757,9 +1721,7 @@ zx_status_t SegmentManager::BuildDirtySegmap() {
 
 // Update min, max modified time for cost-benefit GC algorithm
 void SegmentManager::InitMinMaxMtime() {
-#ifdef __Fuchsia__
-  fbl::AutoLock sentry_lock(&sit_info_->sentry_lock);
-#endif  // __Fuchsia__
+  std::lock_guard sentry_lock(sit_info_->sentry_lock);
 
   sit_info_->min_mtime = LLONG_MAX;
 
@@ -1817,9 +1779,7 @@ zx_status_t SegmentManager::BuildSegmentManager() {
 }
 
 void SegmentManager::DiscardDirtySegmap(DirtyType dirty_type) {
-#ifdef __Fuchsia__
-  fbl::AutoLock seglist_lock(&dirty_info_->seglist_lock);
-#endif  // __Fuchsia__
+  std::lock_guard seglist_lock(dirty_info_->seglist_lock);
   dirty_info_->dirty_segmap[static_cast<int>(dirty_type)].reset();
   dirty_info_->nr_dirty[static_cast<int>(dirty_type)] = 0;
 }

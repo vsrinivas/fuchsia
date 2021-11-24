@@ -168,15 +168,11 @@ void DoWriteSit(F2fs *fs, block_t *new_blkaddr, CursegType type, uint32_t exp_se
   if (exp_segno != kNullSegNo)
     ASSERT_EQ(curseg->segno, exp_segno);
 
-#ifdef __Fuchsia__
-  fbl::AutoLock curseg_lock(&curseg->curseg_mutex);
-#endif  // __Fuchsia__
+  std::lock_guard curseg_lock(curseg->curseg_mutex);
   *new_blkaddr = fs->GetSegmentManager().NextFreeBlkAddr(type);
   uint32_t old_cursegno = curseg->segno;
 
-#ifdef __Fuchsia__
-  fbl::AutoLock sentry_lock(&sit_i.sentry_lock);
-#endif  // __Fuchsia__
+  std::lock_guard sentry_lock(sit_i.sentry_lock);
   fs->GetSegmentManager().RefreshNextBlkoff(curseg);
   superblock_info.IncBlockCount(curseg->alloc_type);
 

@@ -20,9 +20,7 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
   VnodeF2fs *vnode = nullptr;
 
   do {
-#ifdef __Fuchsia__
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
-#endif  // __Fuchsia__
     if (!Vfs()->GetNodeManager().AllocNid(ino)) {
       return ZX_ERR_NO_SPACE;
     }
@@ -107,9 +105,7 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
 
   vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
-#ifdef __Fuchsia__
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
-#endif  // __Fuchsia__
     if (zx_status_t err = AddLink(name, vnode); err != ZX_OK) {
       vnode->ClearNlink();
       vnode->UnlockNewInode();
@@ -152,9 +148,7 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
   target->SetCTime(cur_time);
 
   {
-#ifdef __Fuchsia__
     fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
-#endif  // __Fuchsia__
     target->SetFlag(InodeInfoFlag::kIncLink);
     if (zx_status_t err = AddLink(name, target); err != ZX_OK) {
       target->ClearFlag(InodeInfoFlag::kIncLink);
@@ -221,9 +215,7 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
   }
 
   {
-#ifdef __Fuchsia__
     fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
-#endif  // __Fuchsia__
     if (zx_status_t err = Vfs()->CheckOrphanSpace(); err != ZX_OK) {
 #if 0  // porting needed
     // if (!f2fs_has_inline_dentry(dir))
@@ -293,10 +285,8 @@ zx_status_t Dir::Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vno
 
   vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
-#ifdef __Fuchsia__
     SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
-#endif  // __Fuchsia__
     if (zx_status_t err = AddLink(name, vnode); err != ZX_OK) {
       vnode->ClearFlag(InodeInfoFlag::kIncLink);
       vnode->ClearNlink();
@@ -454,9 +444,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
   }
 
   do {
-#ifdef __Fuchsia__
     fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
-#endif  // __Fuchsia__
 
     new_entry = new_dir->FindEntry(newname, &new_page);
     if (new_entry) {

@@ -137,8 +137,7 @@ class SuperblockInfo {
     checkpoint_trailer_ = std::move(checkpoint_trailer);
   }
 
-#ifdef __Fuchsia__
-  fbl::Mutex &GetCheckpointMutex() { return checkpoint_mutex_; }
+  std::mutex &GetCheckpointMutex() { return checkpoint_mutex_; }
 
   fs::SharedMutex &GetFsLock(LockType type) { return fs_lock_[static_cast<int>(type)]; }
 
@@ -149,7 +148,6 @@ class SuperblockInfo {
   void mutex_unlock_op(LockType t) __TA_RELEASE(&fs_lock_[static_cast<int>(t)]) {
     fs_lock_[static_cast<int>(t)].unlock();
   }
-#endif  // __Fuchsia__
 
   bool IsOnRecovery() const { return on_recovery_; }
 
@@ -272,9 +270,7 @@ class SuperblockInfo {
   const std::vector<std::string> &GetExtensionList() const { return extension_list_; }
   void SetExtensionList(std::vector<std::string> list) { extension_list_ = std::move(list); }
 
-#ifdef __Fuchsia__
-  fbl::Mutex &GetStatLock() { return stat_lock_; }
-#endif  // __Fuchsia__
+  std::mutex &GetStatLock() { return stat_lock_; }
 
   void AddPageCount(CountType count_type) {
     atomic_fetch_add_explicit(&nr_pages_[static_cast<int>(count_type)], 1,
@@ -353,13 +349,11 @@ class SuperblockInfo {
 
   std::vector<FsBlock> checkpoint_trailer_;
 
-#ifdef __Fuchsia__
-  fbl::Mutex checkpoint_mutex_;                                       // for checkpoint procedure
-#endif                                                                // __Fuchsia__
+  std::mutex checkpoint_mutex_;                                       // for checkpoint procedure
   fs::SharedMutex fs_lock_[static_cast<int>(LockType::kNrLockType)];  // for blocking FS operations
 
 #if 0  // porting needed
-  // fbl::Mutex writepages;                                             // mutex for writepages()
+  // std::mutex writepages;                                             // mutex for writepages()
 #endif
   bool on_recovery_ = false;  // recovery is doing or not
 
@@ -371,14 +365,10 @@ class SuperblockInfo {
 #if 0  // porting needed
   // for directory management
   list_node_t dir_inode_list_;  // dir inode list
-#ifdef __Fuchsia__
-  fbl::Mutex dir_inode_lock_;  // for dir inode list lock
-#endif  // __Fuchsia__
+  std::mutex dir_inode_lock_;  // for dir inode list lock
   // uint64_t n_dirty_dirs = 0;   // # of dir inodes
   list_node_t &GetDirInodeList() { return dir_inode_list_; }
-#ifdef __Fuchsia__
-  fbl::Mutex &GetDirInodeLock() { return dir_inode_lock_; };
-#endif  // __Fuchsia__
+  std::mutex &GetDirInodeLock() { return dir_inode_lock_; };
 #endif
 
   block_t log_sectors_per_block_ = 0;  // log2 sectors per block
@@ -420,9 +410,7 @@ class SuperblockInfo {
 
   std::vector<std::string> extension_list_;
 
-#ifdef __Fuchsia__
-  fbl::Mutex stat_lock_;  // lock for stat operations
-#endif                    // __Fuchsia__
+  std::mutex stat_lock_;  // lock for stat operations
 };
 
 constexpr uint32_t kDefaultAllocatedBlocks = 1;

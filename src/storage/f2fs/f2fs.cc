@@ -196,9 +196,7 @@ void F2fs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
 #endif  // __Fuchsia__
 
 void F2fs::DecValidBlockCount(VnodeF2fs* vnode, block_t count) {
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&superblock_info_->GetStatLock());
-#endif  // __Fuchsia__
+  std::lock_guard lock(superblock_info_->GetStatLock());
   ZX_ASSERT(superblock_info_->GetTotalValidBlockCount() >= count);
   vnode->DecBlocks(count);
   superblock_info_->SetTotalValidBlockCount(superblock_info_->GetTotalValidBlockCount() - count);
@@ -206,9 +204,7 @@ void F2fs::DecValidBlockCount(VnodeF2fs* vnode, block_t count) {
 
 zx_status_t F2fs::IncValidBlockCount(VnodeF2fs* vnode, block_t count) {
   block_t valid_block_count;
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&superblock_info_->GetStatLock());
-#endif  // __Fuchsia__
+  std::lock_guard lock(superblock_info_->GetStatLock());
   valid_block_count = superblock_info_->GetTotalValidBlockCount() + count;
   if (valid_block_count > superblock_info_->GetUserBlockCount()) {
     return ZX_ERR_NO_SPACE;
@@ -220,39 +216,29 @@ zx_status_t F2fs::IncValidBlockCount(VnodeF2fs* vnode, block_t count) {
 }
 
 block_t F2fs::ValidUserBlocks() {
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&superblock_info_->GetStatLock());
-#endif  // __Fuchsia__
+  std::lock_guard lock(superblock_info_->GetStatLock());
   return superblock_info_->GetTotalValidBlockCount();
 }
 
 uint32_t F2fs::ValidNodeCount() {
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&superblock_info_->GetStatLock());
-#endif  // __Fuchsia__
+  std::lock_guard lock(superblock_info_->GetStatLock());
   return superblock_info_->GetTotalValidNodeCount();
 }
 
 void F2fs::IncValidInodeCount() {
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&superblock_info_->GetStatLock());
-#endif  // __Fuchsia__
+  std::lock_guard lock(superblock_info_->GetStatLock());
   ZX_ASSERT(superblock_info_->GetTotalValidInodeCount() != superblock_info_->GetTotalNodeCount());
   superblock_info_->SetTotalValidInodeCount(superblock_info_->GetTotalValidInodeCount() + 1);
 }
 
 void F2fs::DecValidInodeCount() {
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&superblock_info_->GetStatLock());
-#endif  // __Fuchsia__
+  std::lock_guard lock(superblock_info_->GetStatLock());
   ZX_ASSERT(superblock_info_->GetTotalValidInodeCount());
   superblock_info_->SetTotalValidInodeCount(superblock_info_->GetTotalValidInodeCount() - 1);
 }
 
 uint32_t F2fs::ValidInodeCount() {
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&superblock_info_->GetStatLock());
-#endif  // __Fuchsia__
+  std::lock_guard lock(superblock_info_->GetStatLock());
   return superblock_info_->GetTotalValidInodeCount();
 }
 

@@ -98,9 +98,7 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, DnodeOfData *dn) {
   SetDataBlkaddr(dn, blk_addr);
 
   do {
-#ifdef __Fuchsia__
     std::lock_guard ext_lock(fi->ext.ext_lock);
-#endif  // __Fuchsia__
 
     start_fofs = fi->ext.fofs;
     end_fofs = fi->ext.fofs + fi->ext.len - 1;
@@ -505,9 +503,8 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 #endif
 
   do {
-#ifdef __Fuchsia__
     fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
-#endif  // __Fuchsia__
+
     if (IsDir()) {
       superblock_info.SubtractPageCount(CountType::kDirtyDents);
       RemoveDirtyDentry();
@@ -589,10 +586,9 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
     return ZX_ERR_NO_MEMORY;
 #endif
 
-#ifdef __Fuchsia__
   fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
   std::lock_guard write_lock(io_lock_);
-#endif  // __Fuchsia__
+
   do {
     NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
     if (zx_status_t err = Vfs()->GetNodeManager().GetDnodeOfData(dn, index, 0); err != ZX_OK) {

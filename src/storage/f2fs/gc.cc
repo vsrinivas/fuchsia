@@ -55,9 +55,7 @@ bool SegmentManager::GetVictimByDefault(GcType gc_type, CursegType type, AllocMo
   p.min_segno = kNullSegNo;
   p.min_cost = GetMaxCost(&p);
 
-#ifdef __Fuchsia__
-  fbl::AutoLock lock(&dirty_info_->seglist_lock);
-#endif  // __Fuchsia__
+  std::lock_guard lock(dirty_info_->seglist_lock);
 
 #if 0  // porting needed
 	if (p.alloc_mode == AllocMode::kLFS && gc_type == GcType::kFgGC) {

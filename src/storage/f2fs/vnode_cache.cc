@@ -10,10 +10,8 @@ VnodeCache::VnodeCache() = default;
 
 VnodeCache::~VnodeCache() {
   {
-#ifdef __Fuchsia__
     std::lock_guard list_lock(list_lock_);
     std::lock_guard table_lock(table_lock_);
-#endif  // __Fuchsia__
     ZX_ASSERT(dirty_list_.is_empty());
     ZX_ASSERT(vnode_table_.is_empty());
     ZX_ASSERT(ndirty_ == 0);
@@ -23,9 +21,7 @@ VnodeCache::~VnodeCache() {
 
 void VnodeCache::Reset() {
   {
-#ifdef __Fuchsia__
     std::lock_guard list_lock(list_lock_);
-#endif  // __Fuchsia__
     ZX_ASSERT(dirty_list_.is_empty());
   }
 
@@ -43,9 +39,7 @@ zx_status_t VnodeCache::ForAllVnodes(Callback callback) {
     // Scope the lock to prevent letting fbl::RefPtr<VnodeF2fs> destructors from running while
     // it is held.
     {
-#ifdef __Fuchsia__
       std::lock_guard lock(table_lock_);
-#endif  // __Fuchsia__
       if (vnode_table_.is_empty()) {
         return ZX_OK;
       }
@@ -99,9 +93,7 @@ zx_status_t VnodeCache::ForDirtyVnodesIf(Callback cb, Callback cb_if) {
   std::vector<fbl::RefPtr<VnodeF2fs>> dirty_vnodes(0);
   int count = 0;
   {
-#ifdef __Fuchsia__
     std::lock_guard lock(list_lock_);
-#endif  // __Fuchsia__
     dirty_vnodes.resize(ndirty_);
     for (auto iter = dirty_list_.begin(); iter != dirty_list_.end(); ++iter) {
       fbl::RefPtr<VnodeF2fs> vn = iter.CopyPointer();
@@ -135,9 +127,7 @@ zx_status_t VnodeCache::ForDirtyVnodesIf(Callback cb, Callback cb_if) {
 }
 
 void VnodeCache::Downgrade(VnodeF2fs* raw_vnode) {
-#ifdef __Fuchsia__
   std::lock_guard lock(table_lock_);
-#endif  // __Fuchsia__
   // We resurrect it, so it can be used without strong references in the inactive state
   raw_vnode->ResurrectRef();
   fbl::RefPtr<VnodeF2fs> vnode = fbl::ImportFromRawPtr(raw_vnode);
@@ -159,9 +149,7 @@ void VnodeCache::Downgrade(VnodeF2fs* raw_vnode) {
 zx_status_t VnodeCache::Lookup(const ino_t& ino, fbl::RefPtr<VnodeF2fs>* out) {
   fbl::RefPtr<VnodeF2fs> vnode = nullptr;
   {
-#ifdef __Fuchsia__
     std::lock_guard lock(table_lock_);
-#endif  // __Fuchsia__
     if (zx_status_t status = LookupUnsafe(ino, &vnode); status != ZX_OK) {
       return status;
     }
@@ -197,9 +185,7 @@ zx_status_t VnodeCache::LookupUnsafe(const ino_t& ino, fbl::RefPtr<VnodeF2fs>* o
 
 zx_status_t VnodeCache::Evict(VnodeF2fs* vnode) {
   ZX_ASSERT(!(*vnode).fbl::DoublyLinkedListable<fbl::RefPtr<VnodeF2fs>>::InContainer());
-#ifdef __Fuchsia__
   std::lock_guard lock(table_lock_);
-#endif  // __Fuchsia__
   return EvictUnsafe(vnode);
 }
 
@@ -215,9 +201,7 @@ zx_status_t VnodeCache::EvictUnsafe(VnodeF2fs* vnode) {
 
 zx_status_t VnodeCache::Add(VnodeF2fs* vnode) {
   {
-#ifdef __Fuchsia__
     std::lock_guard lock(table_lock_);
-#endif  // __Fuchsia__
     if ((*vnode).fbl::WAVLTreeContainable<VnodeF2fs*>::InContainer()) {
       return ZX_ERR_ALREADY_EXISTS;
     }
@@ -228,9 +212,7 @@ zx_status_t VnodeCache::Add(VnodeF2fs* vnode) {
 
 zx_status_t VnodeCache::AddDirty(VnodeF2fs* vnode) {
   {
-#ifdef __Fuchsia__
     std::lock_guard lock(list_lock_);
-#endif  // __Fuchsia__
     ZX_ASSERT(vnode != nullptr);
     if ((*vnode).fbl::DoublyLinkedListable<fbl::RefPtr<VnodeF2fs>>::InContainer()) {
       return ZX_ERR_ALREADY_EXISTS;
@@ -249,9 +231,7 @@ zx_status_t VnodeCache::AddDirty(VnodeF2fs* vnode) {
 }
 
 zx_status_t VnodeCache::RemoveDirty(VnodeF2fs* vnode) {
-#ifdef __Fuchsia__
   std::lock_guard lock(list_lock_);
-#endif  // __Fuchsia__
   return RemoveDirtyUnsafe(vnode);
 }
 

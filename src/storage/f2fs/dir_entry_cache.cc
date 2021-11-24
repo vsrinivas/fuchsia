@@ -8,7 +8,7 @@
 namespace f2fs {
 
 DirEntryCache::DirEntryCache() {
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
 
   slab_allocator_ = std::make_unique<ElementAllocator>(kDirEntryCacheSlabCount, true);
 }
@@ -16,7 +16,7 @@ DirEntryCache::DirEntryCache() {
 DirEntryCache::~DirEntryCache() { Reset(); }
 
 void DirEntryCache::Reset() {
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
 
   map_.clear();
   element_lru_list_.clear();
@@ -86,7 +86,7 @@ zx::status<DirEntry> DirEntryCache::LookupDirEntry(ino_t parent_ino, std::string
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
 
   DirEntryCacheElement *element = FindElement(parent_ino, child_name);
   if (element == nullptr) {
@@ -104,7 +104,7 @@ zx::status<pgoff_t> DirEntryCache::LookupDataPageIndex(ino_t parent_ino,
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
 
   DirEntryCacheElement *element = FindElement(parent_ino, child_name);
   if (element == nullptr) {
@@ -128,7 +128,7 @@ void DirEntryCache::UpdateDirEntry(ino_t parent_ino, std::string_view child_name
     return;
   }
 
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
 
   DirEntryCacheElement *element = FindElement(parent_ino, child_name);
   if (element == nullptr) {
@@ -145,7 +145,7 @@ void DirEntryCache::RemoveDirEntry(ino_t parent_ino, std::string_view child_name
     return;
   }
 
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
 
   ElementRefPtr element = FindElementRefPtr(parent_ino, child_name);
   if (element != nullptr) {
@@ -154,7 +154,7 @@ void DirEntryCache::RemoveDirEntry(ino_t parent_ino, std::string_view child_name
 }
 
 bool DirEntryCache::IsElementInCache(ino_t parent_ino, std::string_view child_name) const {
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
   auto search = map_.find(DirEntryCache::GenerateKey(parent_ino, child_name));
   if (search == map_.end()) {
     return false;
@@ -163,7 +163,7 @@ bool DirEntryCache::IsElementInCache(ino_t parent_ino, std::string_view child_na
 }
 
 bool DirEntryCache::IsElementAtHead(ino_t parent_ino, std::string_view child_name) const {
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
   if (element_lru_list_.is_empty()) {
     return false;
   }
@@ -173,7 +173,7 @@ bool DirEntryCache::IsElementAtHead(ino_t parent_ino, std::string_view child_nam
 }
 
 const std::map<EntryKey, ElementRefPtr> &DirEntryCache::GetMap() const {
-  fbl::AutoLock lock(&lock_);
+  std::lock_guard lock(lock_);
   return map_;
 }
 

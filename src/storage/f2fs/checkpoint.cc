@@ -162,9 +162,7 @@ zx_status_t F2fs::CheckOrphanSpace() {
    * for cp pack we can have max 1020*507 orphan entries
    */
   max_orphans = (superblock_info.GetBlocksPerSeg() - 5) * kOrphansPerBlock;
-#ifdef __Fuchsia__
   std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
-#endif  // __Fuchsia__
   if (superblock_info.GetOrphanCount() >= max_orphans)
     err = ZX_ERR_NO_SPACE;
   return err;
@@ -186,9 +184,7 @@ void F2fs::AddOrphanInode(nid_t ino) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   OrphanInodeEntry *new_entry = nullptr, *orphan = nullptr;
 
-#ifdef __Fuchsia__
   std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
-#endif  // __Fuchsia__
   list_node_t *head = &superblock_info.GetOrphanInodeList(), *this_node;
   list_for_every(head, this_node) {
     orphan = containerof(this_node, OrphanInodeEntry, list);
@@ -229,9 +225,7 @@ void F2fs::RemoveOrphanInode(nid_t ino) {
   list_node_t *this_node, *next, *head;
   OrphanInodeEntry *orphan;
 
-#ifdef __Fuchsia__
   std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
-#endif  // __Fuchsia__
   head = &superblock_info.GetOrphanInodeList();
   list_for_every_safe(head, this_node, next) {
     orphan = containerof(this_node, OrphanInodeEntry, list);
@@ -298,9 +292,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
   orphan_blocks = static_cast<uint16_t>(
       (superblock_info.GetOrphanCount() + (kOrphansPerBlock - 1)) / kOrphansPerBlock);
 
-#ifdef __Fuchsia__
   std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
-#endif  // __Fuchsia__
   head = &superblock_info.GetOrphanInodeList();
 
   /* loop for each orphan inode entry and write them in Jornal block */
@@ -545,9 +537,7 @@ void F2fs::SyncDirtyDirInodes() {
   fbl::RefPtr<VnodeF2fs> vnode;
 
   while (true) {
-#ifdef __Fuchsia__
-		fbl::AutoLock lock(&superblock_info.GetDirInodeLock());
-#endif  // __Fuchsia__
+    std::lock_guard lock(superblock_info.GetDirInodeLock());
     if (list_is_empty(head)) {
       break;
     }
@@ -572,11 +562,7 @@ void F2fs::SyncDirtyDirInodes() {
 /**
  * Freeze all the FS-operations for checkpoint.
  */
-#ifdef __Fuchsia__
-void F2fs::BlockOperations() TA_NO_THREAD_SAFETY_ANALYSIS {
-#else   // __Fuchsia__
-void F2fs::BlockOperations() {
-#endif  // __Fuchsia__
+void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   struct WritebackControl wbc = {
 #if 0  // porting needed
@@ -592,13 +578,9 @@ void F2fs::BlockOperations() {
     SyncDirtyDirInodes();
 
     // Stop file operation
-#ifdef __Fuchsia__
     superblock_info.mutex_lock_op(LockType::kFileOp);
-#endif  // __Fuchsia__
     if (superblock_info.GetPageCount(CountType::kDirtyDents)) {
-#ifdef __Fuchsia__
       superblock_info.mutex_unlock_op(LockType::kFileOp);
-#endif  // __Fuchsia__
     } else {
       break;
     }
@@ -609,28 +591,20 @@ void F2fs::BlockOperations() {
   while (true) {
     GetNodeManager().SyncNodePages(0, &wbc);
 
-#ifdef __Fuchsia__
     superblock_info.mutex_lock_op(LockType::kNodeOp);
-#endif  // __Fuchsia__
     if (superblock_info.GetPageCount(CountType::kDirtyNodes)) {
-#ifdef __Fuchsia__
       superblock_info.mutex_unlock_op(LockType::kNodeOp);
-#endif  // __Fuchsia__
     } else {
       break;
     }
   }
 }
 
-#ifdef __Fuchsia__
-void F2fs::UnblockOperations() TA_NO_THREAD_SAFETY_ANALYSIS {
+void F2fs::UnblockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   superblock_info.mutex_unlock_op(LockType::kNodeOp);
   superblock_info.mutex_unlock_op(LockType::kFileOp);
 }
-#else   // __Fuchsia__
-void F2fs::UnblockOperations() {}
-#endif  // __Fuchsia__
 
 void F2fs::DoCheckpoint(bool is_umount) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
@@ -792,9 +766,7 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   Checkpoint &ckpt = superblock_info.GetCheckpoint();
   uint64_t ckpt_ver;
 
-#ifdef __Fuchsia__
-  fbl::AutoLock cp_lock(&superblock_info.GetCheckpointMutex());
-#endif  // __Fuchsia__
+  std::lock_guard cp_lock(superblock_info.GetCheckpointMutex());
   BlockOperations();
 
 #if 0  // porting needed (bio[type] is empty)

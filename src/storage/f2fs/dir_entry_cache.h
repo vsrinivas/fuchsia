@@ -107,7 +107,7 @@ class DirEntryCache {
   std::map<EntryKey, ElementRefPtr> map_ __TA_GUARDED(lock_);
   ElementList element_lru_list_ __TA_GUARDED(lock_);
   // Since LRU list needs modification even for lookup, using mutex rather than shared mutex
-  mutable fbl::Mutex lock_;
+  mutable std::mutex lock_;
 };
 
 }  // namespace f2fs

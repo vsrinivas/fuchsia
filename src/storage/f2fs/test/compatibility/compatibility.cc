@@ -162,6 +162,7 @@ void TargetOperator::Mount(MountOptions opt) {
 
 void TargetOperator::Unmount() {
   ASSERT_EQ(root_->Close(), ZX_OK);
+  root_.reset();
   fs_->PutSuper();
   fs_->ResetBc(&bcache_);
 }
