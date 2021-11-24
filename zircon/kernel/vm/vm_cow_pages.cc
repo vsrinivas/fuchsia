@@ -69,6 +69,7 @@ void InitializeVmPage(vm_page_t* p) {
   p->object.cow_left_split = 0;
   p->object.cow_right_split = 0;
   p->object.always_need = 0;
+  p->object.dirty = 0;
 }
 
 // Allocates a new page and populates it with the data at |parent_paddr|.
@@ -1562,21 +1563,64 @@ VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCowP
   return page;
 }
 
-zx_status_t VmCowPages::MarkDirtyOnWriteLocked(LazyPageRequest* page_request, uint64_t offset,
-                                               uint64_t len) {
-  // If the VMO does not require us to trap dirty transitions, simply proceed with the write.
-  if (!page_source_ || !page_source_->ShouldTrapDirtyTransitions()) {
-    // TODO: Mark pages dirty if page_source_ is not null.
+zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset,
+                                              uint64_t len) {
+  DEBUG_ASSERT(page_source_);
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+  DEBUG_ASSERT(InRange(offset, len, size_));
+
+  // TODO(rashaeqbal): If the VMO does not require us to trap dirty transitions, simply mark the
+  // pages dirty. And move it to the dirty page queue once implemented. Do this once MapRange and
+  // commit are handled correctly to not imply dirty.
+  if (!page_source_->ShouldTrapDirtyTransitions()) {
     return ZX_OK;
   }
-  // Otherwise, generate a DIRTY page request.
-  // TODO: Generate requests only for clean pages when the dirty bit is supported. For now just
-  // cover the entire range.
+
+  // Otherwise, generate a DIRTY page request for clean pages in the range. Find a contiguous run
+  // of committed clean pages. The caller is expected to only pass in a committed range with no gaps
+  // or markers.
+  uint64_t clean_pages_start = offset;
+  uint64_t clean_pages_len = 0;
+  zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+      [&clean_pages_start, &clean_pages_len](const VmPageOrMarker* p, uint64_t off) {
+        if (p->IsMarker()) {
+          return ZX_ERR_BAD_STATE;
+        }
+        // Page is already dirty.
+        if (p->Page()->object.dirty) {
+          // Bail if we were tracking a non-zero run of clean pages.
+          if (clean_pages_len > 0) {
+            return ZX_ERR_STOP;
+          } else {
+            // Otherwise advance clean_pages_start to track a potential clean pages run later.
+            clean_pages_start = off + PAGE_SIZE;
+            return ZX_ERR_NEXT;
+          }
+        }
+        // This is a clean committed page. Increment clean_pages_len.
+        clean_pages_len += PAGE_SIZE;
+        return ZX_ERR_NEXT;
+      },
+      [](uint64_t start, uint64_t end) { return ZX_ERR_BAD_STATE; }, offset, offset + len);
+  // No gaps and markers were encountered.
+  // TODO(rashaeqbal): Consider relaxing this restriction. Currently this assumption works as we can
+  // only come in here after collecting committed pages in LookupPagesLocked.
+  ASSERT(status == ZX_OK);
+
+  // No pages need to transition from clean -> dirty.
+  if (clean_pages_len == 0) {
+    return ZX_OK;
+  }
+
+  // Found a contiguous run of clean pages. There might be more clean pages later in the range, but
+  // we will come into this call again for them via another LookupPagesLocked after the waiting
+  // caller is unblocked for this range.
   AssertHeld(paged_ref_->lock_ref());
   VmoDebugInfo vmo_debug_info = {.vmo_ptr = reinterpret_cast<uintptr_t>(paged_ref_),
                                  .vmo_id = paged_ref_->user_id_locked()};
-  zx_status_t status =
-      page_source_->RequestDirtyTransition(page_request->get(), offset, len, vmo_debug_info);
+  status = page_source_->RequestDirtyTransition(page_request->get(), clean_pages_start,
+                                                clean_pages_len, vmo_debug_info);
   // The page source will never succeed synchronously.
   DEBUG_ASSERT(status != ZX_OK);
   return status;
@@ -1707,7 +1751,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64
     // was not present, we would have already blocked on a read request the first time, and ended up
     // here when unblocked, at which point the page would be present.
     if (pf_flags & VMM_PF_FLAG_WRITE && page_source_) {
-      zx_status_t status = MarkDirtyOnWriteLocked(page_request, offset, out->num_pages * PAGE_SIZE);
+      zx_status_t status = PrepareForWriteLocked(page_request, offset, out->num_pages * PAGE_SIZE);
       if (status != ZX_OK) {
         // No pages to return.
         out->num_pages = 0;
@@ -3124,6 +3168,61 @@ zx_status_t VmCowPages::FailPageRequestsLocked(uint64_t offset, uint64_t len,
   }
 
   page_source_->OnPagesFailed(offset, len, error_status);
+  return ZX_OK;
+}
+
+zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+
+  ASSERT(page_source_);
+
+  if (!InRange(offset, len, size_)) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  if (!page_source_->ShouldTrapDirtyTransitions()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  uint64_t new_dirty_start = offset;
+  uint64_t new_dirty_len = 0;
+  page_list_.ForEveryPageAndGapInRange(
+      [&new_dirty_start, &new_dirty_len, this](const VmPageOrMarker* p, uint64_t off) {
+        // This is a clean page which is transitioning to dirty.
+        if (p->IsPage() && !p->Page()->object.dirty) {
+          p->Page()->object.dirty = 1;
+          new_dirty_len += PAGE_SIZE;
+          return ZX_ERR_NEXT;
+        }
+        // This is a marker or a page that is already dirty. End the run of new dirty pages (if
+        // any), and signal the page source. Reset the range trackers.
+        if (new_dirty_len > 0) {
+          page_source_->OnPagesDirtied(new_dirty_start, new_dirty_len);
+        }
+        new_dirty_start = off + PAGE_SIZE;
+        new_dirty_len = 0;
+        return ZX_ERR_NEXT;
+      },
+      [&new_dirty_start, &new_dirty_len, this](uint64_t start, uint64_t end) {
+        // End the run of new dirty pages (if any), and signal the page source. Reset the range
+        // trackers.
+        if (new_dirty_len > 0) {
+          page_source_->OnPagesDirtied(new_dirty_start, new_dirty_len);
+        }
+        new_dirty_start = end;
+        new_dirty_len = 0;
+        return ZX_ERR_NEXT;
+      },
+      offset, offset + len);
+
+  // Signal the last run of new dirty pages, if any.
+  if (new_dirty_len > 0) {
+    page_source_->OnPagesDirtied(new_dirty_start, new_dirty_len);
+  }
+
   return ZX_OK;
 }
 

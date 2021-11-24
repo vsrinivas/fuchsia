@@ -373,6 +373,9 @@ class VmObject : public VmHierarchyBase,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // Dirties pages in the vmo in the range [offset, offset + len).
+  virtual zx_status_t DirtyPages(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
+
   enum EvictionHint {
     DontNeed,
     AlwaysNeed,

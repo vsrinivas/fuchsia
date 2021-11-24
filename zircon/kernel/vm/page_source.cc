@@ -75,11 +75,20 @@ void PageSource::Close() {
 }
 
 void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
+  ResolveRequests(page_request_type::READ, offset, len);
+}
+
+void PageSource::OnPagesDirtied(uint64_t offset, uint64_t len) {
+  ResolveRequests(page_request_type::DIRTY, offset, len);
+}
+
+void PageSource::ResolveRequests(page_request_type type, uint64_t offset, uint64_t len) {
   canary_.Assert();
   LTRACEF_LEVEL(2, "%p offset %lx, len %lx\n", this, offset, len);
   uint64_t end;
   bool overflow = add_overflow(offset, len, &end);
   DEBUG_ASSERT(!overflow);  // vmobject should have already validated overflow
+  DEBUG_ASSERT(type < page_request_type::COUNT);
 
   Guard<Mutex> guard{&page_source_mtx_};
   if (detached_) {
@@ -88,13 +97,13 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
 
   // The first possible request we could fulfill is the one with the smallest
   // end address that is greater than offset. Then keep looking as long as the
-  // target request's start offset is less than the supply end.
-  auto start = outstanding_requests_[page_request_type::READ].upper_bound(offset);
+  // target request's start offset is less than the end.
+  auto start = outstanding_requests_[type].upper_bound(offset);
   while (start.IsValid() && start->offset_ < end) {
     auto cur = start;
     ++start;
 
-    // Calculate how many pages were supplied to this request by finding the start and
+    // Calculate how many pages were resolved in this request by finding the start and
     // end offsets of the operation in this request.
     uint64_t req_offset, req_end;
     if (offset >= cur->offset_) {
@@ -118,7 +127,7 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(req_end >= req_offset);
     uint64_t fulfill = req_end - req_offset;
 
-    // If we're not done, continue to the next request
+    // If we're not done, continue to the next request.
     if (fulfill < cur->pending_size_) {
       cur->pending_size_ -= fulfill;
       continue;
@@ -130,8 +139,8 @@ void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
 
     LTRACEF_LEVEL(2, "%p, signaling %lx\n", this, cur->offset_);
 
-    // Notify anything waiting on this page
-    CompleteRequestLocked(outstanding_requests_[page_request_type::READ].erase(cur));
+    // Notify anything waiting on this range.
+    CompleteRequestLocked(outstanding_requests_[type].erase(cur));
   }
 }
 

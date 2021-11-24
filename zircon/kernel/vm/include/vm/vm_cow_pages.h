@@ -142,6 +142,9 @@ class VmCowPages final
   zx_status_t FailPageRequestsLocked(uint64_t offset, uint64_t len, zx_status_t error_status)
       TA_REQ(lock_);
 
+  // See VmObject::DirtyPages
+  zx_status_t DirtyPagesLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
   using LookupInfo = VmObject::LookupInfo;
   // See VmObject::GetPage
   // The pages returned from this are assumed to be used in the following ways.
@@ -498,11 +501,13 @@ class VmCowPages final
   // terms of functional correctness this never has to be called.
   void UpdateOnAccessLocked(vm_page_t* page, uint pf_flags) TA_REQ(lock_);
 
-  // Attempts to dirty pages in the specified range, forwarding a DIRTY page request to the page
-  // source if pages are clean, in which case ZX_ERR_SHOULD_WAIT will be returned and the caller
-  // should wait on |page_request|. If no page requests need to be generated, i.e. the pages are
-  // already dirty, or if they do not require the dirty transition to be trapped, ZX_OK is returned.
-  zx_status_t MarkDirtyOnWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len)
+  // Prepares the specified range for a write, forwarding a DIRTY page request to the page source if
+  // pages are clean and need to transition to dirty, in which case ZX_ERR_SHOULD_WAIT will be
+  // returned and the caller should wait on |page_request|. If no page requests need to be
+  // generated, i.e. the pages are already dirty, or if they do not require the dirty transition to
+  // be trapped, ZX_OK is returned. |offset| and |len| should be page-aligned, and pages in the
+  // range should be committed.
+  zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len)
       TA_REQ(lock_);
 
   // Initializes and adds as a child the given VmCowPages as a full clone of this one such that the

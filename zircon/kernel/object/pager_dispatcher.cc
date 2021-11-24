@@ -122,6 +122,12 @@ zx_status_t PagerDispatcher::RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uin
       }
       return vmo->FailPageRequests(offset, length, error_status);
     }
+    case ZX_PAGER_OP_DIRTY: {
+      if (data != 0) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      return vmo->DirtyPages(offset, length);
+    }
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

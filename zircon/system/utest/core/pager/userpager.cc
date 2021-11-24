@@ -297,10 +297,20 @@ bool UserPager::WaitForRequest(uint64_t key, const zx_packet_page_request& req,
 
 bool UserPager::GetPageReadRequest(Vmo* vmo, zx_time_t deadline, uint64_t* offset,
                                    uint64_t* length) {
+  return GetPageRequest(vmo, ZX_PAGER_VMO_READ, deadline, offset, length);
+}
+
+bool UserPager::GetPageDirtyRequest(Vmo* vmo, zx_time_t deadline, uint64_t* offset,
+                                    uint64_t* length) {
+  return GetPageRequest(vmo, ZX_PAGER_VMO_DIRTY, deadline, offset, length);
+}
+
+bool UserPager::GetPageRequest(Vmo* vmo, uint16_t command, zx_time_t deadline, uint64_t* offset,
+                               uint64_t* length) {
   return WaitForRequest(
-      [vmo, offset, length](const zx_port_packet& packet) -> bool {
+      [vmo, command, offset, length](const zx_port_packet& packet) -> bool {
         if (packet.key == vmo->base_val_ && packet.type == ZX_PKT_TYPE_PAGE_REQUEST &&
-            packet.page_request.command == ZX_PAGER_VMO_READ) {
+            packet.page_request.command == command) {
           *offset = packet.page_request.offset / zx_system_get_page_size();
           *length = packet.page_request.length / zx_system_get_page_size();
           return true;
@@ -389,7 +399,18 @@ bool UserPager::FailPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_co
   if ((status = pager_.op_range(ZX_PAGER_OP_FAIL, paged_vmo->vmo_,
                                 page_offset * zx_system_get_page_size(),
                                 page_count * zx_system_get_page_size(), error_status)) != ZX_OK) {
-    fprintf(stderr, "pager op_range failed with %s\n", zx_status_get_string(status));
+    fprintf(stderr, "pager op_range FAIL failed with %s\n", zx_status_get_string(status));
+    return false;
+  }
+  return true;
+}
+
+bool UserPager::DirtyPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_count) {
+  zx_status_t status;
+  if ((status = pager_.op_range(ZX_PAGER_OP_DIRTY, paged_vmo->vmo_,
+                                page_offset * zx_system_get_page_size(),
+                                page_count * zx_system_get_page_size(), 0)) != ZX_OK) {
+    fprintf(stderr, "pager op_range DIRTY failed with %s\n", zx_status_get_string(status));
     return false;
   }
   return true;

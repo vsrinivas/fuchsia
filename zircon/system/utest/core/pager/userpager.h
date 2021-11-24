@@ -113,6 +113,9 @@ class UserPager {
   bool FailPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count,
                  zx_status_t error_status = ZX_ERR_IO);
 
+  // Signals that pages in the specified range can be marked dirty.
+  bool DirtyPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count);
+
   // Checks if there is a request for the range [page_offset, length). Will
   // wait until |deadline|.
   bool WaitForPageRead(Vmo* vmo, uint64_t page_offset, uint64_t page_count, zx_time_t deadline);
@@ -122,6 +125,12 @@ class UserPager {
   // Gets the first page read request. Blocks until |deadline|.
   bool GetPageReadRequest(Vmo* vmo, zx_time_t deadline, uint64_t* page_offset,
                           uint64_t* page_count);
+  // Gets the first page dirty request. Blocks until |deadline|.
+  bool GetPageDirtyRequest(Vmo* vmo, zx_time_t deadline, uint64_t* page_offset,
+                           uint64_t* page_count);
+  // Gets the first page request with |command|. Blocks until |deadline|.
+  bool GetPageRequest(Vmo* vmo, uint16_t command, zx_time_t deadline, uint64_t* page_offset,
+                      uint64_t* page_count);
 
   // Starts a thread to handle any page faults. Faulted in pages are initialized with the default
   // page tagged data as per SupplyPages. This function is not thread safe, and should only be
