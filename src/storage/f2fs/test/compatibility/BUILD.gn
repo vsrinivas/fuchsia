@@ -12,8 +12,9 @@ group("f2fs-compatibility-tests") {
 if (is_linux) {
   test("f2fs-compatibility-test") {
     sources = [
-      "basic.cc",
       "compatibility.cc",
+      "dir.cc",
+      "file.cc",
       "mkfs_fsck_test.cc",
     ]
     deps = [

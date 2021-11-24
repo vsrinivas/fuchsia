@@ -4,6 +4,8 @@
 
 #include "src/storage/f2fs/test/compatibility/compatibility.h"
 
+#include <filesystem>
+
 namespace f2fs {
 
 std::string GenerateTestPath(std::string_view format) {
@@ -23,23 +25,17 @@ int HostTestFile::Fstat(struct stat *file_stat) { return fstat(fd_.get(), file_s
 
 int HostTestFile::Ftruncate(off_t len) { return ftruncate(fd_.get(), len); }
 
-void HostOperator::Mkfs(std::variant<std::monostate, std::string_view, MkfsOptions> opt) {
-  ASSERT_FALSE(std::holds_alternative<MkfsOptions>(opt));
-  if (std::holds_alternative<std::monostate>(opt)) {
-    opt = std::string_view{};
-  }
-  ASSERT_EQ(system(std::string("mkfs.f2fs ")
-                       .append(std::get<std::string_view>(opt))
-                       .append(" ")
-                       .append(test_image_path_)
-                       .c_str()),
-            0);
+void HostOperator::Mkfs(std::string_view opt) {
+  ASSERT_EQ(
+      system(std::string("mkfs.f2fs ").append(opt).append(" ").append(test_image_path_).c_str()),
+      0);
 }
 
-void HostOperator::Mount() {
-  // TODO: changeable option
+void HostOperator::Mount(std::string_view opt) {
   ASSERT_EQ(system(std::string("mount -t f2fs ")
                        .append(test_image_path_)
+                       .append(" ")
+                       .append(opt)
                        .append(" -o noinline_data,noinline_xattr ")
                        .append(mount_directory_)
                        .c_str()),
@@ -58,10 +54,16 @@ void HostOperator::Mkdir(std::string_view path, mode_t mode) {
   ASSERT_EQ(mkdir(GetAbsolutePath(path).c_str(), mode), 0);
 }
 
+int HostOperator::Rmdir(std::string_view path) { return rmdir(GetAbsolutePath(path).c_str()); }
+
 std::unique_ptr<TestFile> HostOperator::Open(std::string_view path, int flags, mode_t mode) {
   std::unique_ptr<TestFile> ret =
       std::make_unique<HostTestFile>(open(GetAbsolutePath(path).c_str(), flags, mode));
   return ret;
+}
+
+void HostOperator::Rename(std::string_view oldpath, std::string_view newpath) {
+  ASSERT_EQ(rename(GetAbsolutePath(oldpath).c_str(), GetAbsolutePath(newpath).c_str()), 0);
 }
 
 bool TargetTestFile::is_valid() const { return (vnode_ != nullptr); }
@@ -135,29 +137,24 @@ int TargetTestFile::Ftruncate(off_t len) {
   return 0;
 }
 
-void TargetOperator::Mkfs(std::variant<std::monostate, std::string_view, MkfsOptions> opt) {
-  ASSERT_FALSE(std::holds_alternative<std::string_view>(opt));
-  if (std::holds_alternative<std::monostate>(opt)) {
-    opt = MkfsOptions{};
-  }
+void TargetOperator::Mkfs(MkfsOptions opt) {
   if (bcache_ == nullptr) {
     ASSERT_EQ(Bcache::Create(std::move(test_image_fd_), block_count_, &bcache_), ZX_OK);
   }
 
-  MkfsWorker mkfs(std::move(bcache_), std::get<MkfsOptions>(opt));
+  MkfsWorker mkfs(std::move(bcache_), opt);
   auto ret = mkfs.DoMkfs();
   ASSERT_EQ(ret.is_error(), false);
 
   bcache_ = std::move(*ret);
 }
 
-void TargetOperator::Mount() {
+void TargetOperator::Mount(MountOptions opt) {
   if (bcache_ == nullptr) {
     ASSERT_EQ(Bcache::Create(std::move(test_image_fd_), block_count_, &bcache_), ZX_OK);
   }
 
-  // TODO: changeable option
-  ASSERT_EQ(F2fs::Create(std::move(bcache_), MountOptions{}, &fs_), ZX_OK);
+  ASSERT_EQ(F2fs::Create(std::move(bcache_), opt, &fs_), ZX_OK);
   ASSERT_EQ(VnodeF2fs::Vget(fs_.get(), fs_->RawSb().root_ino, &root_), ZX_OK);
   ASSERT_EQ(root_->Open(root_->ValidateOptions(fs::VnodeConnectionOptions()).value(), nullptr),
             ZX_OK);
@@ -182,6 +179,21 @@ void TargetOperator::Fsck() {
 void TargetOperator::Mkdir(std::string_view path, mode_t mode) {
   auto new_dir = Open(path, O_CREAT | O_EXCL, S_IFDIR | mode);
   ASSERT_TRUE(new_dir->is_valid());
+}
+
+int TargetOperator::Rmdir(std::string_view path) {
+  auto r = GetLastDirVnodeAndFileName(path);
+  if (!r.is_ok()) {
+    // TODO: convert |status| to errno
+    return -1;
+  }
+  auto [parent_vn, child_name] = r.value();
+
+  if (zx_status_t status = fs_->Unlink(parent_vn, child_name, true); status != ZX_OK) {
+    // TODO: convert |status| to errno
+    return -1;
+  }
+  return 0;
 }
 
 fs::VnodeConnectionOptions ConvertFlag(int flags) {
@@ -224,6 +236,34 @@ std::unique_ptr<TestFile> TargetOperator::Open(std::string_view path, int flags,
   std::unique_ptr<TestFile> ret = std::make_unique<TargetTestFile>(std::move(vnode));
 
   return ret;
+}
+
+void TargetOperator::Rename(std::string_view oldpath, std::string_view newpath) {
+  auto result = GetLastDirVnodeAndFileName(oldpath);
+  ASSERT_TRUE(result.is_ok());
+  auto [oldparent_vn, oldchild_name] = result.value();
+
+  result = GetLastDirVnodeAndFileName(newpath);
+  ASSERT_TRUE(result.is_ok());
+  auto [newparent_vn, newchild_name] = result.value();
+
+  ASSERT_EQ(oldparent_vn->Rename(newparent_vn, oldchild_name, newchild_name, false, false), ZX_OK);
+}
+
+zx::status<std::pair<fbl::RefPtr<fs::Vnode>, std::string>>
+TargetOperator::GetLastDirVnodeAndFileName(std::string_view absolute_path) {
+  std::filesystem::path path(absolute_path);
+  if (!path.has_root_directory() || !path.has_filename()) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  fbl::RefPtr<fs::Vnode> vn = root_;
+
+  for (auto token : path.parent_path().relative_path()) {
+    if (auto r = vn->Lookup(token.string(), &vn); r != ZX_OK) {
+      return zx::error(r);
+    }
+  }
+  return zx::ok(make_pair(std::move(vn), path.filename().string()));
 }
 
 }  // namespace f2fs

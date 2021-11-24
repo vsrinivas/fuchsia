@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 #include <lib/fit/defer.h>
+#include <stdlib.h>
+
+#include <vector>
 
 #include "src/storage/f2fs/test/compatibility/compatibility.h"
 
 namespace f2fs {
 namespace {
-
-constexpr uint64_t kBlockCount = 819200;  // 400MB
-const std::string kTestFileFormat = "f2fs_file.XXXXXX";
 
 void CompareStat(const struct stat &a, const struct stat &b) {
   EXPECT_EQ(a.st_ino, b.st_ino);
@@ -21,37 +21,9 @@ void CompareStat(const struct stat &a, const struct stat &b) {
   EXPECT_EQ(a.st_mtime, b.st_mtime);
 }
 
-class GeneralCompatibilityTest : public testing::Test {
- public:
-  GeneralCompatibilityTest() {
-    uint64_t kDiskSize = kBlockCount * kDefaultSectorSize;
+using FileCompatibilityTest = CompatibilityTest;
 
-    test_image_path_ = GenerateTestPath(kTestFileFormat);
-    fbl::unique_fd test_image_fd_ = fbl::unique_fd(mkstemp(test_image_path_.data()));
-    ftruncate(test_image_fd_.get(), kDiskSize);
-
-    mount_directory_ = GenerateTestPath(kTestFileFormat);
-    mkdtemp(mount_directory_.data());
-
-    host_operator_ = std::make_unique<HostOperator>(test_image_path_, mount_directory_);
-    target_operator_ =
-        std::make_unique<TargetOperator>(test_image_path_, std::move(test_image_fd_), kBlockCount);
-  }
-
-  ~GeneralCompatibilityTest() {
-    unlink(test_image_path_.c_str());
-    rmdir(mount_directory_.c_str());
-  }
-
- protected:
-  std::string test_image_path_;
-  std::string mount_directory_;
-
-  std::unique_ptr<HostOperator> host_operator_;
-  std::unique_ptr<TargetOperator> target_operator_;
-};
-
-TEST_F(GeneralCompatibilityTest, WriteVerifyHostToFuchsia) {
+TEST_F(FileCompatibilityTest, WriteVerifyHostToFuchsia) {
   constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
 
   std::string mkfs_option_list[] = {"-f",
@@ -105,7 +77,7 @@ TEST_F(GeneralCompatibilityTest, WriteVerifyHostToFuchsia) {
   }
 }
 
-TEST_F(GeneralCompatibilityTest, WriteVerifyFuchsiaToHost) {
+TEST_F(FileCompatibilityTest, WriteVerifyFuchsiaToHost) {
   constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
 
   {
@@ -150,7 +122,7 @@ TEST_F(GeneralCompatibilityTest, WriteVerifyFuchsiaToHost) {
   }
 }
 
-TEST_F(GeneralCompatibilityTest, VerifyAttributesHostToFuchsia) {
+TEST_F(FileCompatibilityTest, VerifyAttributesHostToFuchsia) {
   std::vector<std::pair<std::string, struct stat>> test_set{};
 
   {
@@ -195,7 +167,7 @@ TEST_F(GeneralCompatibilityTest, VerifyAttributesHostToFuchsia) {
   }
 }
 
-TEST_F(GeneralCompatibilityTest, TruncateHostToFuchsia) {
+TEST_F(FileCompatibilityTest, TruncateHostToFuchsia) {
   constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
   constexpr off_t kTruncateSize = 64 * 1024;                  // 64KB
 
@@ -270,7 +242,7 @@ TEST_F(GeneralCompatibilityTest, TruncateHostToFuchsia) {
   }
 }
 
-TEST_F(GeneralCompatibilityTest, TruncateFuchsiaToHost) {
+TEST_F(FileCompatibilityTest, TruncateFuchsiaToHost) {
   constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
   constexpr off_t kTruncateSize = 64 * 1024;                  // 64KB
 
@@ -341,6 +313,180 @@ TEST_F(GeneralCompatibilityTest, TruncateFuchsiaToHost) {
       for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
         ASSERT_EQ(buffer[j], LeToCpu(j));
       }
+    }
+  }
+}
+
+char GetRandomFileNameChar() {
+  // ascii number [0x21 ~ 0x7E except 0x2E('.') and 0x2F('/')] is availble for file name character.
+  constexpr char kLowerBound = 0x21;
+  constexpr char kUpperBound = 0x7E;
+  constexpr char kExcept1 = '.';
+  constexpr char kExcept2 = '/';
+
+  char random_char = rand() % (kUpperBound - kLowerBound + 1) + kLowerBound;
+  if (random_char == kExcept1)
+    --random_char;
+  if (random_char == kExcept2)
+    ++random_char;
+
+  return random_char;
+}
+
+std::vector<std::string> GetRandomFileNameSet() {
+  constexpr int kMaxFilenameLength = 255;
+  std::vector<std::string> file_name_set;
+
+  for (int len = 1; len <= kMaxFilenameLength; ++len) {
+    std::string file_name = "/";
+    for (int i = 0; i < len; ++i) {
+      file_name.push_back(GetRandomFileNameChar());
+    }
+    file_name_set.push_back(file_name);
+  }
+  return file_name_set;
+}
+
+TEST_F(FileCompatibilityTest, FileNameTestHostToFuchsia) {
+  auto file_name_set = GetRandomFileNameSet();
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    for (auto file_name : file_name_set) {
+      auto file = host_operator_->Open(file_name, O_RDWR | O_CREAT, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+  }
+
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    for (auto file_name : file_name_set) {
+      auto file = target_operator_->Open(file_name, O_RDONLY, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+  }
+}
+
+TEST_F(FileCompatibilityTest, FileNameTestFuchsiaToHost) {
+  auto file_name_set = GetRandomFileNameSet();
+  {
+    target_operator_->Mkfs();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    for (auto file_name : file_name_set) {
+      auto file = target_operator_->Open(file_name, O_RDWR | O_CREAT, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+  }
+
+  {
+    host_operator_->Fsck();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    for (auto file_name : file_name_set) {
+      auto file = host_operator_->Open(file_name, O_RDONLY, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+  }
+}
+
+TEST_F(FileCompatibilityTest, FileRenameTestHostToFuchsia) {
+  std::vector<std::string> dir_paths = {"/d_a", "/d_a/d_b", "/d_c"};
+  std::vector<std::pair<std::string, std::string>> rename_from_to = {
+      {"/f_0", "/f_0_"},
+      {"/f_1", "/d_c/f_1_"},
+      {"/d_a/f_a0", "/d_c/f_a0_"},
+      {"/d_a/d_b/f_ab0", "/d_c/f_ab0"}};
+  {
+    host_operator_->Mkfs();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    for (auto dir_name : dir_paths) {
+      host_operator_->Mkdir(dir_name, 0644);
+    }
+
+    // Create
+    for (auto [file_name_from, file_name_to] : rename_from_to) {
+      auto file = host_operator_->Open(file_name_from, O_RDWR | O_CREAT, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+
+    // Rename
+    for (auto [file_name_from, file_name_to] : rename_from_to) {
+      host_operator_->Rename(file_name_from, file_name_to);
+    }
+  }
+
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    for (auto [file_name_from, file_name_to] : rename_from_to) {
+      auto file = target_operator_->Open(file_name_from, O_RDONLY, 0644);
+      ASSERT_FALSE(file->is_valid());
+
+      file = target_operator_->Open(file_name_to, O_RDONLY, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+  }
+}
+
+TEST_F(FileCompatibilityTest, FileRenameTestFuchsiaToHost) {
+  std::vector<std::string> dir_paths = {"/d_a", "/d_a/d_b", "/d_c"};
+  std::vector<std::pair<std::string, std::string>> rename_from_to = {
+      {"/f_0", "/f_0_"},
+      {"/f_1", "/d_c/f_1_"},
+      {"/d_a/f_a0", "/d_c/f_a0_"},
+      {"/d_a/d_b/f_ab0", "/d_c/f_ab0"}};
+  {
+    target_operator_->Mkfs();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    for (auto dir_name : dir_paths) {
+      target_operator_->Mkdir(dir_name, 0644);
+    }
+
+    // Create
+    for (auto [file_name_from, file_name_to] : rename_from_to) {
+      auto file = target_operator_->Open(file_name_from, O_RDWR | O_CREAT, 0644);
+      ASSERT_TRUE(file->is_valid());
+    }
+
+    // Rename
+    for (auto [file_name_from, file_name_to] : rename_from_to) {
+      target_operator_->Rename(file_name_from, file_name_to);
+    }
+  }
+
+  {
+    host_operator_->Fsck();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    for (auto [file_name_from, file_name_to] : rename_from_to) {
+      auto file = host_operator_->Open(file_name_from, O_RDONLY, 0644);
+      ASSERT_FALSE(file->is_valid());
+
+      file = host_operator_->Open(file_name_to, O_RDONLY, 0644);
+      ASSERT_TRUE(file->is_valid());
     }
   }
 }

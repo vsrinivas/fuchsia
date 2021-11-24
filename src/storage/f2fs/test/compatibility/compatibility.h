@@ -78,14 +78,16 @@ class CompatibilityTestOperator {
       : test_image_path_(test_image_path) {}
   virtual ~CompatibilityTestOperator() = default;
 
-  virtual void Mkfs(
-      std::variant<std::monostate, std::string_view, MkfsOptions> opt = std::monostate{}) = 0;
+  virtual void Mkfs() = 0;
   virtual void Mount() = 0;
   virtual void Unmount() = 0;
   virtual void Fsck() = 0;
 
   virtual void Mkdir(std::string_view path, mode_t mode) = 0;
+  // Return value is 0 on success, -1 on error.
+  virtual int Rmdir(std::string_view path) = 0;
   virtual std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) = 0;
+  virtual void Rename(std::string_view oldpath, std::string_view newpath) = 0;
 
  protected:
   const std::string test_image_path_;
@@ -96,14 +98,17 @@ class HostOperator : public CompatibilityTestOperator {
   explicit HostOperator(std::string_view test_image_path, std::string_view mount_directory)
       : CompatibilityTestOperator(test_image_path), mount_directory_(mount_directory) {}
 
-  void Mkfs(
-      std::variant<std::monostate, std::string_view, MkfsOptions> opt = std::monostate{}) final;
-  void Mount() final;
+  void Mkfs() { Mkfs(std::string_view{}); }
+  void Mkfs(std::string_view opt);
+  void Mount() { Mount(std::string_view{}); }
+  void Mount(std::string_view opt);
   void Unmount() final;
   void Fsck() final;
 
   void Mkdir(std::string_view path, mode_t mode) final;
+  int Rmdir(std::string_view path) final;
   std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final;
+  void Rename(std::string_view oldpath, std::string_view newpath) final;
 
   std::string GetAbsolutePath(std::string_view path) {
     if (path[0] != '/') {
@@ -125,14 +130,21 @@ class TargetOperator : public CompatibilityTestOperator {
         test_image_fd_(std::move(test_image_fd)),
         block_count_(block_count) {}
 
-  void Mkfs(
-      std::variant<std::monostate, std::string_view, MkfsOptions> opt = std::monostate{}) final;
-  void Mount() final;
+  void Mkfs() final { Mkfs(MkfsOptions{}); }
+  void Mkfs(MkfsOptions opt);
+  void Mount() final { Mount(MountOptions{}); }
+  void Mount(MountOptions opt);
   void Unmount() final;
   void Fsck() final;
 
   void Mkdir(std::string_view path, mode_t mode) final;
+  int Rmdir(std::string_view path) final;
   std::unique_ptr<TestFile> Open(std::string_view path, int flags, mode_t mode) final;
+  void Rename(std::string_view oldpath, std::string_view newpath) final;
+
+ protected:
+  zx::status<std::pair<fbl::RefPtr<fs::Vnode>, std::string>> GetLastDirVnodeAndFileName(
+      std::string_view absolute_path);
 
  private:
   fbl::unique_fd test_image_fd_;
@@ -141,6 +153,39 @@ class TargetOperator : public CompatibilityTestOperator {
   std::unique_ptr<F2fs> fs_;
   std::unique_ptr<Bcache> bcache_;
   fbl::RefPtr<VnodeF2fs> root_;
+};
+
+inline constexpr std::string_view kTestFileFormat = "f2fs_file.XXXXXX";
+
+class CompatibilityTest : public testing::Test {
+ public:
+  CompatibilityTest() {
+    constexpr uint64_t kBlockCount = 819200;  // 400MB
+    constexpr uint64_t kDiskSize = kBlockCount * kDefaultSectorSize;
+
+    test_image_path_ = GenerateTestPath(kTestFileFormat);
+    fbl::unique_fd test_image_fd_ = fbl::unique_fd(mkstemp(test_image_path_.data()));
+    ftruncate(test_image_fd_.get(), kDiskSize);
+
+    mount_directory_ = GenerateTestPath(kTestFileFormat);
+    mkdtemp(mount_directory_.data());
+
+    host_operator_ = std::make_unique<HostOperator>(test_image_path_, mount_directory_);
+    target_operator_ =
+        std::make_unique<TargetOperator>(test_image_path_, std::move(test_image_fd_), kBlockCount);
+  }
+
+  ~CompatibilityTest() {
+    unlink(test_image_path_.c_str());
+    rmdir(mount_directory_.c_str());
+  }
+
+ protected:
+  std::string test_image_path_;
+  std::string mount_directory_;
+
+  std::unique_ptr<HostOperator> host_operator_;
+  std::unique_ptr<TargetOperator> target_operator_;
 };
 
 }  // namespace f2fs
