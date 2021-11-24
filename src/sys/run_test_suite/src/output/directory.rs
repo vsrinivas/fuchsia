@@ -45,7 +45,7 @@ struct EntityEntry {
     /// A list of artifacts by filename.
     artifacts: Vec<(String, directory::ArtifactMetadataV0)>,
     /// Most recently known outcome for the entity.
-    outcome: ReportedOutcome,
+    outcome: directory::Outcome,
     /// The approximate UTC start time as measured by the host.
     approximate_host_start_time: Option<std::time::SystemTime>,
     /// Timer used to measure durations as the difference between monotonic timestamps on
@@ -101,7 +101,7 @@ impl DirectoryReporter {
                 artifact_dir,
                 artifacts: vec![],
                 children: vec![],
-                outcome: ReportedOutcome::Inconclusive,
+                outcome: directory::Outcome::Inconclusive,
                 timer: MonotonicTimer::Unknown,
                 approximate_host_start_time: None,
             },
@@ -156,7 +156,7 @@ impl Reporter for DirectoryReporter {
                 artifact_dir,
                 artifacts: vec![],
                 children: vec![],
-                outcome: ReportedOutcome::Inconclusive,
+                outcome: directory::Outcome::Inconclusive,
                 timer: MonotonicTimer::Unknown,
                 approximate_host_start_time: None,
             },
@@ -188,7 +188,7 @@ impl Reporter for DirectoryReporter {
         let mut entries = self.entries.lock();
         let entry =
             entries.get_mut(entity).expect("Outcome reported for an entity that does not exist");
-        entry.outcome = *outcome;
+        entry.outcome = into_serializable_outcome(*outcome);
 
         if let (MonotonicTimer::Started { mono_start_time }, Timestamp::Given(mono_end_time)) =
             (&entry.timer, timestamp)
@@ -349,7 +349,7 @@ fn construct_serializable_run(run_entry: &EntityEntry) -> directory::TestRunResu
             .iter()
             .map(|(name, metadata)| (run_entry.artifact_dir.join(name), metadata.clone()))
             .collect(),
-        outcome: into_serializable_outcome(run_entry.outcome),
+        outcome: run_entry.outcome,
         suites,
         duration_milliseconds,
         start_time,
@@ -372,7 +372,7 @@ fn construct_serializable_suite(
                     .into_iter()
                     .map(|(name, metadata)| (artifact_dir.join(name), metadata))
                     .collect(),
-                outcome: into_serializable_outcome(outcome),
+                outcome,
                 duration_milliseconds,
                 start_time,
                 name,
@@ -387,7 +387,7 @@ fn construct_serializable_suite(
             .into_iter()
             .map(|(name, metadata)| (artifact_dir.join(name), metadata))
             .collect(),
-        outcome: into_serializable_outcome(outcome),
+        outcome,
         cases,
         duration_milliseconds,
         start_time,

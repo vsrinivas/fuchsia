@@ -11,7 +11,7 @@ use std::{collections::HashMap, path::PathBuf};
 pub const RUN_SUMMARY_NAME: &str = "run_summary.json";
 
 /// A serializable version of a test outcome.
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone, Copy)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum Outcome {
     Passed,
