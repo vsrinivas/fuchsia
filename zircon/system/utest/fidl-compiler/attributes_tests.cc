@@ -1842,4 +1842,152 @@ type MyStruct = struct {};
   EXPECT_EQ(example_struct->attributes->attributes[0]->args[0]->name, "foo");
 }
 
+// TODO(fxbug.dev/87614): Enable this test.
+TEST(AttributesTests, DISABLED_BadReferencesNonexistentConstWithoutSchema) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(nonexistent)
+type MyStruct = struct {};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveAttributeArg);
+}
+
+TEST(AttributesTests, BadReferencesNonexistentConstWithSchema) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(nonexistent)
+type MyStruct = struct {};
+
+)FIDL");
+  library.AddAttributeSchema("foo").AddArg(
+      "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveAttributeArg);
+}
+
+// TODO(fxbug.dev/87614): Enable this test.
+TEST(AttributesTests, DISABLED_BadReferencesInvalidConstWithoutSchema) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(BAD)
+type MyStruct = struct {};
+
+const BAD bool = "not a bool";
+
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 3);
+  EXPECT_ERR(library.errors()[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
+  EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveAttributeArg);
+}
+
+TEST(AttributesTests, BadReferencesInvalidConstWithSchema) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(BAD)
+type MyStruct = struct {};
+
+const BAD bool = "not a bool";
+
+)FIDL");
+  library.AddAttributeSchema("foo").AddArg(
+      "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
+  ASSERT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 3);
+  EXPECT_ERR(library.errors()[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
+  EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveAttributeArg);
+}
+
+// TODO(fxbug.dev/87521): Enable this test.
+TEST(AttributesTests, DISABLED_BadSelfReferenceWithoutSchemaBool) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(BAR)
+const BAR bool = true;
+
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
+                                      fidl::ErrCouldNotResolveAttributeArg);
+}
+
+// TODO(fxbug.dev/87521): Enable this test.
+TEST(AttributesTests, DISABLED_BadSelfReferenceWithoutSchemaString) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(BAR)
+const BAR string = "bar";
+
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
+                                      fidl::ErrCouldNotResolveAttributeArg);
+}
+
+TEST(AttributesTests, BadSelfReferenceWithSchema) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(BAR)
+const BAR bool = true;
+
+)FIDL");
+  library.AddAttributeSchema("foo").AddArg(
+      "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
+                                      fidl::ErrCouldNotResolveAttributeArg);
+}
+
+// TODO(fxbug.dev/87521): Enable this test.
+TEST(AttributesTests, DISABLED_BadMutualReferenceWithoutSchemaBool) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(SECOND)
+const FIRST bool = true;
+@foo(FIRST)
+const SECOND bool = false;
+
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
+                                      fidl::ErrCouldNotResolveAttributeArg);
+}
+
+// TODO(fxbug.dev/87521): Enable this test.
+TEST(AttributesTests, DISABLED_BadMutualReferenceWithoutSchemaString) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(SECOND)
+const FIRST string = "first";
+@foo(FIRST)
+const SECOND string = "second";
+
+)FIDL");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
+                                      fidl::ErrCouldNotResolveAttributeArg);
+}
+
+TEST(AttributesTests, BadMutualReferenceWithSchema) {
+  TestLibrary library(R"FIDL(
+library example;
+
+@foo(SECOND)
+const FIRST bool = true;
+@foo(FIRST)
+const SECOND bool = false;
+
+)FIDL");
+  library.AddAttributeSchema("foo").AddArg(
+      "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrIncludeCycle,
+                                      fidl::ErrCouldNotResolveAttributeArg);
+}
+
 }  // namespace
