@@ -14,9 +14,9 @@ use {
         task::{Context, Poll},
     },
     std::{
-        io,
+        io::{self, Write},
         marker::Unpin,
-        net::{self, SocketAddr},
+        net::{self, Shutdown, SocketAddr},
         ops::Deref,
         os::unix::io::FromRawFd as _,
         pin::Pin,
@@ -209,6 +209,16 @@ impl TcpStream {
         Ok(TcpConnector { need_write: true, stream })
     }
 
+    /// Shuts down the connection, see `std::net::TcpStream.shutdown`
+    pub fn shutdown(&self, how: Shutdown) -> io::Result<()> {
+        self.std().shutdown(how)
+    }
+
+    /// Flushes the connection, see `std::net::TcpStream.flush`
+    fn flush(&mut self) -> io::Result<()> {
+        self.std_mut().flush()
+    }
+
     /// Creates a new `fuchsia_async::net::TcpStream` from a `std::net::TcpStream`.
     fn from_std(stream: net::TcpStream) -> io::Result<TcpStream> {
         let stream: socket2::Socket = stream.into();
@@ -222,6 +232,10 @@ impl TcpStream {
     /// Returns a reference to the underlying `std::net::TcpStream`
     pub fn std(&self) -> &net::TcpStream {
         self.as_ref()
+    }
+
+    fn std_mut<'a>(&'a mut self) -> &'a mut net::TcpStream {
+        self.stream.as_mut()
     }
 }
 
@@ -247,11 +261,15 @@ impl AsyncWrite for TcpStream {
     }
 
     fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
+        match self.get_mut().flush() {
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => Poll::Pending,
+            Err(e) => Poll::Ready(Err(e)),
+            Ok(()) => Poll::Ready(Ok(())),
+        }
     }
 
     fn poll_close(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
+        Poll::Ready(self.as_ref().shutdown(Shutdown::Write))
     }
 
     // TODO: override poll_vectored_write and call writev on the underlying stream

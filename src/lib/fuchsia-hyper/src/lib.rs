@@ -15,6 +15,7 @@ use {
         },
         Body,
     },
+    std::net::Shutdown,
     std::pin::Pin,
 };
 
@@ -87,12 +88,12 @@ impl tokio::io::AsyncWrite for TcpStream {
         Pin::new(&mut self.stream).poll_write(cx, buf)
     }
 
-    fn poll_flush(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.get_mut().stream).poll_flush(cx)
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Poll::Ready(Ok(()))
+        Poll::Ready(self.get_mut().stream.shutdown(Shutdown::Write))
     }
 
     // TODO: override poll_write_buf and call writev on the underlying stream
