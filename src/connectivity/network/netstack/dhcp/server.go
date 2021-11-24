@@ -71,8 +71,8 @@ func newEPConn(ctx context.Context, wq *waiter.Queue, ep tcpip.Endpoint) *epConn
 		wq:  wq,
 		ep:  ep,
 	}
-	c.we, c.inCh = waiter.NewChannelEntry(waiter.EventIn)
-	wq.EventRegister(&c.we)
+	c.we, c.inCh = waiter.NewChannelEntry(nil)
+	wq.EventRegister(&c.we, waiter.EventIn)
 
 	go func() {
 		<-ctx.Done()
