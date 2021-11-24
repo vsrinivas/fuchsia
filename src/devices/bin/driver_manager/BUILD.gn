@@ -143,6 +143,11 @@ source_set("lib") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
 
+  deps = [
+    "//src/lib/fsl",
+    "//zircon/system/ulib/zbitl",
+  ]
+
   configs += [ "//build/config:all_source" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

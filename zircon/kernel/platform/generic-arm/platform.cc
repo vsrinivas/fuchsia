@@ -394,7 +394,7 @@ void ProcessZbiEarly() {
 
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
-    bool is_mexec_data = ZBI_TYPE_DRV_METADATA(header->type);
+    bool is_mexec_data = false;
     switch (header->type) {
       case ZBI_TYPE_KERNEL_DRIVER:
         is_mexec_data = true;

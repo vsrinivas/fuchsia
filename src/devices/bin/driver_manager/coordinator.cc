@@ -28,6 +28,10 @@
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/zbitl/error_string.h>
+#include <lib/zbitl/image.h>
+#include <lib/zbitl/item.h>
+#include <lib/zbitl/vmo.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
@@ -45,15 +49,19 @@
 #include <zircon/syscalls/policy.h>
 #include <zircon/syscalls/system.h>
 
+#include <array>
 #include <cstdint>
 #include <memory>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <driver-info/driver-info.h>
 #include <fbl/string_printf.h>
 #include <inspector/inspector.h>
 #include <src/bringup/lib/mexec/mexec.h>
+#include <src/lib/fsl/vmo/sized_vmo.h>
+#include <src/lib/fsl/vmo/vector.h>
 
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
@@ -1294,6 +1302,49 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
       status != ZX_OK) {
     LOGF(ERROR, "Failed to prepare mexec data ZBI: %s", zx_status_get_string(status));
     return status;
+  }
+
+  fidl::WireSyncClient<fuchsia_boot::Items> items;
+  if (auto result = service::Connect<fuchsia_boot::Items>(); result.is_error()) {
+    LOGF(ERROR, "Failed to connect to fuchsia.boot::Items: %s", result.status_string());
+    return result.error_value();
+  } else {
+    items = fidl::BindSyncClient(std::move(result).value());
+  }
+
+  // Driver metadata that the driver framework generally expects to be present.
+  constexpr std::array kItemsToAppend{ZBI_TYPE_DRV_MAC_ADDRESS, ZBI_TYPE_DRV_PARTITION_MAP,
+                                      ZBI_TYPE_DRV_BOARD_PRIVATE, ZBI_TYPE_DRV_BOARD_INFO};
+  zbitl::Image data_image{data_zbi.borrow()};
+  for (uint32_t type : kItemsToAppend) {
+    std::string_view name = zbitl::TypeName(type);
+
+    fsl::SizedVmo payload;
+    if (auto result = items->Get(type, 0); !result.ok()) {
+      return result.status();
+    } else if (!result->payload.is_valid()) {
+      // Absence is signified with an empty result value.
+      LOGF(INFO, "No %.*s item (%#xu) present to append to mexec data ZBI",
+           static_cast<int>(name.size()), name.data(), type);
+      continue;
+    } else {
+      payload = {std::move(result->payload), result->length};
+    }
+
+    std::vector<char> contents;
+    if (!fsl::VectorFromVmo(payload, &contents)) {
+      LOGF(ERROR, "Failed to read contents of %.*s item (%#xu)", static_cast<int>(name.size()),
+           name.data(), type);
+      return ZX_ERR_INTERNAL;
+    }
+
+    if (auto result = data_image.Append(zbi_header_t{.type = type}, zbitl::AsBytes(contents));
+        result.is_error()) {
+      LOGF(ERROR, "Failed to append %.*s item (%#xu) to mexec data ZBI: %s",
+           static_cast<int>(name.size()), name.data(), type,
+           zbitl::ViewErrorString(result.error_value()).c_str());
+      return ZX_ERR_INTERNAL;
+    }
   }
 
   mexec_kernel_zbi_ = std::move(kernel_zbi);
