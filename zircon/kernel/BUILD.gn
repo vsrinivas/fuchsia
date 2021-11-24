@@ -118,8 +118,7 @@ if (current_toolchain == default_toolchain) {
         # TODO(fxbug.dev/27321): x86 kernel can't be built without --gc-sections
         # because of crufty acpica code, and some compiler instrumentation
         # is broken wrt --gc-sections semantics.
-        exclude_variant_tags += [ "breaks-gc-sections" ]
-        remove_common_configs += [ "//build/config:default_linker_gc" ]
+        # Ensure that linker GC is enabled.
         configs += [ "//build/config:linker_gc" ]
       }
 

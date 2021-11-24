@@ -51,12 +51,11 @@ test("zircon-internal-unittests") {
   configs += [ "//build/config:icf" ]
 
   # The code-generation switches required for linker GC are also required for
-  # ICF, so make sure those are also enabled regardless of optimization.
-  configs += [ "//build/config:default_linker_gc" ]
-  configs -= [ "//build/config:default_linker_gc" ]
-  configs += [ "//build/config:linker_gc" ]
-  configs -= [ "//build/config:linker_gc" ]
-  configs += [ "//build/config:linker_gc" ]
+  # ICF, so make sure those are also enabled.
+  _linker_gc = [ "//build/config:linker_gc" ]
+  if (configs + _linker_gc - _linker_gc == configs) {
+    configs += [ "//build/config:linker_gc" ]
+  }
 
   # Instrumentation can prevent ICF that would otherwise happen in normal
   # compilation, so the test code needs to know whether to test that ICF

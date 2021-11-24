@@ -289,8 +289,12 @@ config("linker_gc") {
   }
 }
 
+config("default_linker_gc") {
+  configs = [ ":linker_gc" ]
+}
+
+# Implicit dependencies for linker_gc config.
 group("linker_gc_deps") {
-  # Implicit dependencies for linker_gc config.
 }
 
 config("linker_string_merging") {
@@ -306,9 +310,6 @@ config("linker_string_merging") {
 # optimize_$optimize for convenience, but individual targets can override their
 # optimization level by remove default_optimize and manually applying one of
 # the configs below.
-#
-# The linker_gc_$optimize configs are an exact parallel.  default_linker_gc
-# is separate from default_optimize so it can be removed separately.
 
 config("optimize_none") {
   cflags = [ "-O0" ]
@@ -417,47 +418,6 @@ config("optimize_coverage") {
 
 config("default_optimize") {
   configs = [ ":optimize_${optimize}" ]
-}
-
-config("linker_gc_none") {
-  # No linker GC when wholly unoptimized.
-}
-
-# Linker GC is a good default for most cases.
-config("linker_gc_debug") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_default") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_size") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_speed") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_sanitizer") {
-  configs = [ ":linker_gc" ]
-}
-
-config("linker_gc_profile") {
-  if (zircon_toolchain != false) {
-    # TODO(fxbug.dev/51509): See if we can enable linker GC for profile.
-  } else {
-    configs = [ ":linker_gc" ]
-  }
-}
-
-config("linker_gc_coverage") {
-  configs = [ ":linker_gc" ]
-}
-
-config("default_linker_gc") {
-  configs = [ ":linker_gc_$optimize" ]
 }
 
 # Each of the debuginfo_$debuginfo configs below corresponds to a single setting
