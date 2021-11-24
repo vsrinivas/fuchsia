@@ -18,6 +18,20 @@
 
 fitx::result<fitx::failed> ArchAppendMexecDataFromHandoff(MexecDataImage& image,
                                                           PhysHandoff& handoff) {
+  if (handoff.arch_handoff.amlogic_hdcp_driver) {
+    const zbi_header_t header = {
+        .type = ZBI_TYPE_KERNEL_DRIVER,
+        .extra = KDRV_AMLOGIC_HDCP,
+    };
+    auto result =
+        image.Append(header, zbitl::AsBytes(handoff.arch_handoff.amlogic_hdcp_driver.value()));
+    if (result.is_error()) {
+      printf("mexec: could not append AMLogic HDCP driver config: ");
+      zbitl::PrintViewError(result.error_value());
+      return fitx::failed();
+    }
+  }
+
   if (handoff.arch_handoff.psci_driver) {
     const zbi_header_t header = {
         .type = ZBI_TYPE_KERNEL_DRIVER,
@@ -30,5 +44,6 @@ fitx::result<fitx::failed> ArchAppendMexecDataFromHandoff(MexecDataImage& image,
       return fitx::failed();
     }
   }
+
   return fitx::ok();
 }

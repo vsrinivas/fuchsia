@@ -4,11 +4,17 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+config("includes") {
+  include_dirs = [ "include" ]
+}
+
 source_set("amlogic_s912") {
+  public = [ "include/dev/hdcp/amlogic_s912/init.h" ]
   sources = [ "hdcp.cc" ]
   deps = [
     "//zircon/kernel/dev/interrupt",
-    "//zircon/kernel/dev/pdev",
     "//zircon/kernel/lib/cbuf",
   ]
+
+  public_configs = [ ":includes" ]
 }

@@ -180,6 +180,7 @@ if (toolchain_environment == "physmem" ||
     visibility = [ ":*" ]
     sources = [ "dev-init.cc" ]
     deps = [
+      "//zircon/kernel/dev/hdcp/amlogic_s912",
       "//zircon/kernel/dev/psci",
       "//zircon/kernel/phys:handoff",
     ]

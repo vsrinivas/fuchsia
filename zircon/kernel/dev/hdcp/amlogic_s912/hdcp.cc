@@ -15,7 +15,6 @@
 #include <arch/arm64/smccc.h>
 #include <dev/interrupt.h>
 #include <kernel/thread.h>
-#include <pdev/driver.h>
 
 static vaddr_t preset_base;
 static vaddr_t hiu_base;
@@ -56,7 +55,9 @@ static vaddr_t hdmitx_base;
 #define HDMITX_DWC_A_VIDPOLCFG (DWC_OFFSET_MASK + 0x5009)
 #define HDMITX_DWC_A_OESSWCFG (DWC_OFFSET_MASK + 0x500A)
 
-static void hdmitx_writereg(uint32_t addr, uint32_t data) {
+namespace {
+
+void hdmitx_writereg(uint32_t addr, uint32_t data) {
   // determine if we are writing to HDMI TOP (AMLOGIC Wrapper) or HDMI IP
   uint32_t offset = (addr & DWC_OFFSET_MASK) >> 24;
   addr = addr & 0xffff;
@@ -65,16 +66,20 @@ static void hdmitx_writereg(uint32_t addr, uint32_t data) {
   WRITE32_HDMITX_REG(HDMITX_DATA_PORT + offset, data);
 }
 
-static void s912_hdcp_init(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_amlogic_hdcp_driver_t));
-  auto driver = static_cast<const dcfg_amlogic_hdcp_driver_t*>(driver_data);
-  ASSERT(driver->preset_phys && driver->hiu_phys && driver->hdmitx_phys);
+}  // namespace
+
+void AmlogicS912HdcpInit(const dcfg_amlogic_hdcp_driver_t& config) {
+  ASSERT(config.preset_phys);
+  ASSERT(config.hiu_phys);
+  ASSERT(config.hdmitx_phys);
 
   // get virtual addresses of our peripheral bases
-  preset_base = periph_paddr_to_vaddr(driver->preset_phys);
-  hiu_base = periph_paddr_to_vaddr(driver->hiu_phys);
-  hdmitx_base = periph_paddr_to_vaddr(driver->hdmitx_phys);
-  ASSERT(preset_base && hiu_base && hdmitx_base);
+  preset_base = periph_paddr_to_vaddr(config.preset_phys);
+  hiu_base = periph_paddr_to_vaddr(config.hiu_phys);
+  hdmitx_base = periph_paddr_to_vaddr(config.hdmitx_phys);
+  ASSERT(preset_base);
+  ASSERT(hiu_base);
+  ASSERT(hdmitx_base);
 
   // enable clocks
   SET_BIT32(HHI, HHI_HDMI_CLK_CNTL, 0x0100, 16, 0);
@@ -119,5 +124,3 @@ static void s912_hdcp_init(const void* driver_data, uint32_t length) {
 
   arm_smccc_smc(0x82000012, 0, 0, 0, 0, 0, 0, 0);
 }
-
-LK_PDEV_INIT(s912_hdcp_init, KDRV_AMLOGIC_HDCP, s912_hdcp_init, LK_INIT_LEVEL_PLATFORM)

@@ -16,6 +16,9 @@
 //
 // TODO(fxbug.dev/88059): Populate me.
 struct ArchPhysHandoff {
+  // (ZBI_TYPE_KERNEL_DRIVER, KDRV_AMLOGIC_HDCP) payload.
+  ktl::optional<dcfg_amlogic_hdcp_driver_t> amlogic_hdcp_driver;
+
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI) payload.
   ktl::optional<dcfg_arm_psci_driver_t> psci_driver;
 };
