@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingInfo;
+use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
@@ -19,7 +19,7 @@ impl DeviceStorageCompatible for KeyboardInfo {
 
     fn default_value() -> Self {
         // The US_QWERTY keymap is the default if no settings are ever applied.
-        KeyboardInfo { keymap: Some(KeymapId::UsQwerty) }
+        KeyboardInfo { keymap: Some(KeymapId::UsQwerty), autorepeat: None }
     }
 }
 
@@ -52,9 +52,24 @@ impl controller::Handle for KeyboardController {
                 let nonce = fuchsia_trace::generate_nonce();
                 trace!(nonce, "set keyboard");
                 let mut current = self.client.read_setting::<KeyboardInfo>(nonce).await;
-
+                if !keyboard_info.is_valid() {
+                    return Some(Err(ControllerError::InvalidArgument(
+                        SettingType::Keyboard,
+                        "keyboard".into(),
+                        format!("{:?}", keyboard_info).into(),
+                    )));
+                }
                 // Save the value locally.
                 current.keymap = keyboard_info.keymap.or(current.keymap);
+                current.autorepeat =
+                    keyboard_info.autorepeat.or(current.autorepeat).map_or(None, |value| {
+                        if value.delay == 0 && value.period == 0 {
+                            // Clean up Autorepeat when delay and period are set to zero.
+                            None
+                        } else {
+                            Some(value)
+                        }
+                    });
                 Some(
                     self.client
                         .write_setting(current.into(), false, nonce)

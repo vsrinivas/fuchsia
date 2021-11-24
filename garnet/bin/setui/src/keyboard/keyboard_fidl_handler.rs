@@ -8,7 +8,7 @@ use crate::handler::base::Request;
 use crate::ingress::{request, watch, Scoped};
 use crate::job::source::{Error as JobError, ErrorResponder};
 use crate::job::Job;
-use crate::keyboard::types::{KeyboardInfo, KeymapId};
+use crate::keyboard::types::{Autorepeat, KeyboardInfo, KeymapId};
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
     KeyboardMarker, KeyboardRequest, KeyboardSetResponder, KeyboardSetSetResult, KeyboardSettings,
@@ -83,6 +83,7 @@ impl From<SettingInfo> for KeyboardSettings {
         if let SettingInfo::Keyboard(info) = response {
             return KeyboardSettings {
                 keymap: info.keymap.map(KeymapId::into),
+                autorepeat: info.autorepeat.map(Autorepeat::into),
                 ..KeyboardSettings::EMPTY
             };
         }
@@ -92,16 +93,9 @@ impl From<SettingInfo> for KeyboardSettings {
 }
 
 fn to_request(settings: KeyboardSettings) -> Result<Request, String> {
-    settings.keymap.map_or(Ok(Request::SetKeyboardInfo(KeyboardInfo { keymap: None })), |id| {
-        match KeymapId::try_from(id) {
-            Ok(value) => {
-                return Ok(Request::SetKeyboardInfo(KeyboardInfo { keymap: Some(value) }));
-            }
-            Err(e) => {
-                return Err(e);
-            }
-        }
-    })
+    let autorepeat: Option<Autorepeat> = settings.autorepeat.map(|src| src.into());
+    let keymap = settings.keymap.map(KeymapId::try_from).transpose()?;
+    Ok(Request::SetKeyboardInfo(KeyboardInfo { keymap, autorepeat }))
 }
 
 #[cfg(test)]
@@ -116,7 +110,10 @@ mod tests {
     fn test_request_from_settings_empty() {
         let request = to_request(KeyboardSettings::EMPTY).unwrap();
 
-        assert_eq!(request, Request::SetKeyboardInfo(KeyboardInfo { keymap: None }));
+        assert_eq!(
+            request,
+            Request::SetKeyboardInfo(KeyboardInfo { keymap: None, autorepeat: None })
+        );
     }
 
     #[test]
@@ -130,16 +127,26 @@ mod tests {
 
     #[test]
     fn test_request_from_settings() {
+        use crate::keyboard::types::Autorepeat;
+
         const KEYMAP_ID: fidl_fuchsia_input::KeymapId = fidl_fuchsia_input::KeymapId::FrAzerty;
+        const DELAY: i64 = 1;
+        const PERIOD: i64 = 2;
+        const AUTOREPEAT: fidl_fuchsia_settings::Autorepeat =
+            fidl_fuchsia_settings::Autorepeat { delay: DELAY, period: PERIOD };
 
         let mut keyboard_settings = KeyboardSettings::EMPTY;
         keyboard_settings.keymap = Some(KEYMAP_ID);
+        keyboard_settings.autorepeat = Some(AUTOREPEAT);
 
         let request = to_request(keyboard_settings).unwrap();
 
         assert_eq!(
             request,
-            Request::SetKeyboardInfo(KeyboardInfo { keymap: Some(KeymapId::FrAzerty) })
+            Request::SetKeyboardInfo(KeyboardInfo {
+                keymap: Some(KeymapId::FrAzerty),
+                autorepeat: Some(Autorepeat { delay: DELAY, period: PERIOD }),
+            })
         );
     }
 

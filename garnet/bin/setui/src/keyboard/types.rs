@@ -8,6 +8,13 @@ use std::convert::TryFrom;
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct KeyboardInfo {
     pub(crate) keymap: Option<KeymapId>,
+    pub(crate) autorepeat: Option<Autorepeat>,
+}
+
+impl KeyboardInfo {
+    pub(crate) fn is_valid(&self) -> bool {
+        self.autorepeat.map_or(true, |x| x.is_valid())
+    }
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -43,6 +50,38 @@ impl From<KeymapId> for fidl_fuchsia_input::KeymapId {
             KeymapId::FrAzerty => fidl_fuchsia_input::KeymapId::FrAzerty,
             KeymapId::UsDvorak => fidl_fuchsia_input::KeymapId::UsDvorak,
         }
+    }
+}
+
+#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub(crate) struct Autorepeat {
+    /// The delay between key actuation and autorepeat actuation. Meaningful values are positive
+    /// integers. Zero means the field has been cleared.
+    pub delay: i64,
+    /// The period between two successive autorepeat actuations (1/rate). Meaningful values are
+    /// positive integers. Zero means the field has been cleared.
+    pub period: i64,
+}
+
+impl Autorepeat {
+    pub(crate) fn is_valid(&self) -> bool {
+        if self.delay >= 0 && self.period >= 0 {
+            true
+        } else {
+            false
+        }
+    }
+}
+
+impl From<fidl_fuchsia_settings::Autorepeat> for Autorepeat {
+    fn from(src: fidl_fuchsia_settings::Autorepeat) -> Self {
+        Autorepeat { delay: src.delay, period: src.period }
+    }
+}
+
+impl From<Autorepeat> for fidl_fuchsia_settings::Autorepeat {
+    fn from(src: Autorepeat) -> Self {
+        fidl_fuchsia_settings::Autorepeat { delay: src.delay, period: src.period }
     }
 }
 
