@@ -183,7 +183,6 @@ if (toolchain_environment == "physmem" ||
       "//zircon/kernel/dev/hdcp/amlogic_s912",
       "//zircon/kernel/dev/hw_rng/amlogic_rng",
       "//zircon/kernel/dev/psci",
-      "//zircon/kernel/dev/timer/arm_generic",
       "//zircon/kernel/phys:handoff",
     ]
   }

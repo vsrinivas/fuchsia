@@ -401,6 +401,7 @@ void ProcessZbiEarly() {
         // initialization logic is migrated to ArchDriverHandoff(Early|Late).
         is_mexec_data = false;
         switch (header->extra) {
+          case KDRV_ARM_GENERIC_TIMER:
           case KDRV_ARM_GIC_V2:
           case KDRV_ARM_GIC_V3:
           case KDRV_DW8250_UART:
