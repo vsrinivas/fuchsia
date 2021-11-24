@@ -14,6 +14,8 @@ use fidl::endpoints::{create_endpoints, create_proxy};
 use fidl_fuchsia_hardware_network as fhwnet;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext as fnetext;
+use fidl_fuchsia_net_interfaces_admin as fnetifadmin;
+use fidl_fuchsia_net_interfaces_ext as fnetifext;
 use fidl_fuchsia_net_stack as fnetstack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_net_tun as ftun;
@@ -31,7 +33,7 @@ const TUN_PORT_ID: u8 = 0;
 pub struct TunNetworkInterface {
     tun_dev: ftun::DeviceProxy,
     tun_port: ftun::PortProxy,
-    stack: fnetstack::StackProxy,
+    control: fnetifext::admin::Control,
     stack_sync: Mutex<fnetstack::StackSynchronousProxy>,
     mcast_socket: UdpSocket,
     id: u64,
@@ -87,29 +89,47 @@ impl TunNetworkInterface {
 
         tun_dev.get_device(device_req).context("get device failed")?;
 
-        let stack = connect_to_protocol::<fnetstack::StackMarker>()?;
+        let control = {
+            let installer = connect_to_protocol::<fnetifadmin::InstallerMarker>()?;
+            let (device_control, server_end) = create_proxy::<fnetifadmin::DeviceControlMarker>()?;
+            installer.install_device(device, server_end).context("install_device failed")?;
+            // Interface lifetime is already tied to us because of tun device,
+            // no need to keep this extra channel around.
+            device_control.detach().context("device control detach failed")?;
 
-        let id = stack
-            .add_interface(
-                fnetstack::InterfaceConfig { name, ..fnetstack::InterfaceConfig::EMPTY },
-                &mut fnetstack::DeviceDefinition::Ip(device),
-            )
-            .await
-            .squash_result()
-            .context("Unable to add TUN interface to netstack")?;
+            let (port, server_end) = create_proxy::<fhwnet::PortMarker>()?;
+            tun_port.get_port(server_end).context("get_port failed")?;
+            let mut port_id = port
+                .get_info()
+                .await
+                .context("get_info failed")?
+                .id
+                .ok_or_else(|| anyhow::anyhow!("port id missing from info"))?;
 
-        stack
-            .enable_interface(id)
+            let (control, server_end) = fnetifext::admin::Control::create_endpoints()?;
+            device_control
+                .create_interface(
+                    &mut port_id,
+                    server_end,
+                    fnetifadmin::Options { name, ..fnetifadmin::Options::EMPTY },
+                )
+                .context("create_interface failed")?;
+            control
+        };
+
+        let id = control.get_id().await.context("get_id failed")?;
+        let _was_disabled: bool = control
+            .enable()
             .await
-            .squash_result()
-            .context("Unable to enable TUN interface")?;
+            .context("enable error")?
+            .map_err(|e| anyhow::anyhow!("enable failed {:?}", e))?;
 
         let (client, server) = zx::Channel::create()?;
         connect_channel_to_protocol::<fnetstack::StackMarker>(server)?;
         let stack_sync = Mutex::new(fnetstack::StackSynchronousProxy::new(client));
         let mcast_socket = UdpSocket::bind((Ipv6Addr::LOCALHOST, 0)).context("UdpSocket::bind")?;
 
-        Ok(TunNetworkInterface { tun_dev, tun_port, stack, stack_sync, mcast_socket, id })
+        Ok(TunNetworkInterface { tun_dev, tun_port, control, stack_sync, mcast_socket, id })
     }
 }
 
@@ -155,7 +175,12 @@ impl NetworkInterface for TunNetworkInterface {
 
         if online {
             self.tun_port.set_online(true).await?;
-            self.stack.enable_interface(self.id).await.squash_result()?;
+            let _was_disabled: bool = self
+                .control
+                .enable()
+                .await
+                .context("enable error")?
+                .map_err(|e| anyhow::anyhow!("enable failed {:?}", e))?;
         } else {
             self.tun_port.set_online(false).await?;
         }
@@ -166,9 +191,19 @@ impl NetworkInterface for TunNetworkInterface {
     async fn set_enabled(&self, enabled: bool) -> Result<(), Error> {
         fx_log_info!("TunNetworkInterface: Interface enabled: {:?}", enabled);
         if enabled {
-            self.stack.enable_interface(self.id).await.squash_result()?;
+            let _was_disabled: bool = self
+                .control
+                .enable()
+                .await
+                .context("enable error")?
+                .map_err(|e| anyhow::anyhow!("enable failed {:?}", e))?;
         } else {
-            self.stack.disable_interface(self.id).await.squash_result()?;
+            let _was_enabled: bool = self
+                .control
+                .disable()
+                .await
+                .context("disable error")?
+                .map_err(|e| anyhow::anyhow!("disable failed {:?}", e))?;
         }
         Ok(())
     }
