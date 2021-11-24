@@ -119,7 +119,9 @@ fuchsia_package("mock-piconet-server") {
 
 fuchsia_unittest_package("mock-piconet-server-tests") {
   package_deps = [
+    ":mock-piconet-server",
     "//src/connectivity/bluetooth/profiles/bt-a2dp:bt-a2dp",
+    "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_sbc",
   ]
   manifest = "meta/mock-piconet-server-tests.cmx"

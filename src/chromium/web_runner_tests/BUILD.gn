@@ -134,6 +134,11 @@ resource("resources") {
 }
 
 fuchsia_test_package("web_runner_tests") {
+  package_deps = [
+    "//src/chromium:web_engine",
+    "//src/chromium:web_runner",
+  ]
+
   test_components = [
     ":web_runner_integration_tests",
     # (TODO: fxbug.dev/72369) Temporary disable this test due to test flakes.

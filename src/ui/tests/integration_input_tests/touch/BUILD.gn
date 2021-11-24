@@ -80,11 +80,14 @@ fuchsia_component("touch-input-test-component") {
 
 fuchsia_test_package("touch-input-test") {
   package_deps = [
+    "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
+    "//src/ui/a11y/bin/a11y_manager:a11y-manager",
     "//src/ui/tests/integration_input_tests/touch/embedding-flutter:embedding-flutter",
     "//src/ui/tests/integration_input_tests/touch/one-chromium:package",
     "//src/ui/tests/integration_input_tests/touch/one-flutter:one-flutter",
     "//src/ui/tests/integration_input_tests/touch/touch-gfx-client:touch-gfx-client",
+    flutter_default_build_cfg.runner_dep,
   ]
   test_components = [ ":touch-input-test-component" ]
   deps = [
@@ -161,6 +164,8 @@ fuchsia_test_component("touch-input-test-ip-component") {
 
 fuchsia_test_package("touch-input-test-ip") {
   package_deps = [
+    "//src/chromium:web_engine",
+    "//src/ui/a11y/bin/a11y_manager:a11y-manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/tests/integration_input_tests/touch/embedding-flutter:embedding-flutter",
     "//src/ui/tests/integration_input_tests/touch/one-chromium:package",
