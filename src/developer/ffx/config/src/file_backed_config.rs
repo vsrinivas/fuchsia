@@ -10,7 +10,7 @@ use {
     serde_json::Value,
     std::{
         fmt,
-        fs::{File, OpenOptions},
+        fs::File,
         io::{BufReader, BufWriter},
         path::Path,
     },
@@ -33,19 +33,23 @@ impl FileBacked {
         }
     }
 
-    fn writer<P>(path: &Option<P>) -> Result<Option<BufWriter<File>>>
+    /// Atomically write to the file by creating a temporary file and passing it
+    /// to the closure, and atomically rename it to the destination file.
+    fn with_writer<F>(&self, path: Option<&str>, f: F) -> Result<()>
     where
-        P: AsRef<Path>,
+        F: FnOnce(Option<BufWriter<&mut tempfile::NamedTempFile>>) -> Result<()>,
     {
-        match path {
-            Some(p) => OpenOptions::new()
-                .write(true)
-                .truncate(true)
-                .create(true)
-                .open(&p)
-                .map(|f| Some(BufWriter::new(f)))
-                .context("opening write buffer"),
-            None => Ok(None),
+        if let Some(path) = path {
+            let parent = Path::new(path).parent().unwrap_or_else(|| Path::new("."));
+            let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
+
+            f(Some(BufWriter::new(&mut tmp)))?;
+
+            tmp.persist(path)?;
+
+            Ok(())
+        } else {
+            f(None)
         }
     }
 
@@ -71,11 +75,16 @@ impl FileBacked {
         build: &Option<&String>,
         user: &Option<String>,
     ) -> Result<()> {
-        self.data.save(
-            FileBacked::writer(global)?,
-            FileBacked::writer(build)?,
-            FileBacked::writer(user)?,
-        )
+        // First save the config to a temp file in the same location as the file, then atomically
+        // rename the file to the final location to avoid partially written files.
+
+        self.with_writer(global.as_ref().map(|s| s.as_str()), |global| {
+            self.with_writer(build.as_ref().map(|s| s.as_str()), |build| {
+                self.with_writer(user.as_ref().map(|s| s.as_str()), |user| {
+                    self.data.save(global, build, user)
+                })
+            })
+        })
     }
 
     pub(crate) fn new(
