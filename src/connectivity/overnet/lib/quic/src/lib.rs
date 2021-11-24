@@ -131,11 +131,11 @@ impl ConnState {
     fn wake_stream_io(&mut self) {
         if !self.seen_established && self.conn.is_established() {
             self.seen_established = true;
-            self.stream_recv.all_ready();
             self.stream_send.all_ready();
+            self.stream_recv.all_ready();
         } else {
-            self.stream_recv.ready_iter(self.conn.readable());
             self.stream_send.ready_iter(self.conn.writable());
+            self.stream_recv.ready_iter(self.conn.readable());
         }
     }
 
@@ -249,8 +249,8 @@ impl AsyncConnection {
         log::trace!("{:?} close()", self.debug_id());
         io.closed = true;
         let _ = io.conn.close(false, 0, b"");
-        io.stream_recv.all_ready();
         io.stream_send.all_ready();
+        io.stream_recv.all_ready();
         io.conn_send.ready();
     }
 
