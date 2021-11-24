@@ -222,7 +222,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   // We want to fill up to be HighWaterNsec ahead of the current safe write
   // pointer position.  Add HighWaterNsec to our concept of "now" and run it
   // through our transformation to figure out what frame number this.
-  int64_t fill_target = RefTimeToSafeWriteFrame(ref_time + kDefaultHighWaterNsec);
+  int64_t fill_target = RefTimeToSafeWriteFrame(ref_time + kDefaultHighWaterDuration);
 
   // Are we in the middle of an underflow cooldown? If so, check whether we have recovered yet.
   if (underflow_start_time_mono_.get()) {
@@ -398,7 +398,7 @@ void DriverOutput::OnDriverInfoFetched() {
   uint32_t pref_chan = static_cast<uint32_t>(pipeline_format.channels());
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
   zx::duration min_rb_duration =
-      kDefaultHighWaterNsec + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
+      kDefaultHighWaterDuration + kDefaultMaxRetentionNsec + kDefaultRetentionGapNsec;
 
   res = driver()->SelectBestFormat(&pref_fps, &pref_chan, &pref_fmt);
 
@@ -523,7 +523,7 @@ void DriverOutput::OnDriverConfigComplete() {
   // Driver is configured, we have all the needed info to compute the presentation
   // delay for this output.
   SetPresentationDelay(driver()->external_delay() + driver()->fifo_depth_duration() +
-                       kDefaultHighWaterNsec);
+                       kDefaultHighWaterDuration);
 
   // Fill our brand new ring buffer with silence
   FX_DCHECK(driver_writable_ring_buffer() != nullptr);
@@ -591,7 +591,7 @@ void DriverOutput::OnDriverStartComplete() {
   // the point where we are only this number of frames ahead of the safe write
   // position, we need to wake up and fill up to our high water mark.
   const TimelineRate rate = FramesPerRefTick();
-  low_water_frames_ = rate.Scale(kDefaultLowWaterNsec.get());
+  low_water_frames_ = rate.Scale(kDefaultLowWaterDuration.get());
 
   // We started with a buffer full of silence.  Set up our bookkeeping so we
   // consider ourselves to have generated and sent up to our low-water mark's

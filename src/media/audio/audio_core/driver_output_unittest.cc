@@ -28,7 +28,7 @@ using testing::FloatEq;
 namespace media::audio {
 namespace {
 constexpr zx::duration kExpectedMixInterval =
-    DriverOutput::kDefaultHighWaterNsec - DriverOutput::kDefaultLowWaterNsec;
+    DriverOutput::kDefaultHighWaterDuration - DriverOutput::kDefaultLowWaterDuration;
 constexpr zx::duration kBeyondSubmittedPackets = zx::sec(1);
 
 int64_t RingBufferSizeBytes() { return 8 * zx_system_get_page_size(); }
