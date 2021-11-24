@@ -41,8 +41,8 @@ impl EmulatorEngine for FemuEngine {
         self.write_to_disk(&instance_directory).await?;
         todo!()
     }
-    fn show(&mut self) -> Result<()> {
-        todo!()
+    fn show(&self) {
+        println!("{:#?}", self.emulator_configuration);
     }
     fn shutdown(&mut self) -> Result<()> {
         todo!()

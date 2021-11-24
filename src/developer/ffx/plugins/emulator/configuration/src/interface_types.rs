@@ -37,10 +37,7 @@ pub trait EmulatorEngine {
     /// instantiated from a saved and serialized instance, so no additional initialization should be
     /// needed. This function will output text to the terminal describing the instance, its status,
     /// and its configuration. This is an engine-specific output with more detail than `ffx list`.
-    /// There shouldn't be a case where this fails, since the engine has already been deserialized,
-    /// but it returns a Result to allow for things like ffx_bail if its not implemented yet. We
-    /// might adjust this later if we find a use case for failing during the show command.
-    fn show(&mut self) -> Result<()>;
+    fn show(&self);
 
     /// Validate the configuration parameters that have been provided to this engine, according to
     /// the requirements for this engine type. If there are fields which are required, mutually
