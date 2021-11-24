@@ -15,6 +15,7 @@ if (is_linux) {
       "compatibility.cc",
       "dir.cc",
       "file.cc",
+      "inline.cc",
       "mkfs_fsck_test.cc",
     ]
     deps = [

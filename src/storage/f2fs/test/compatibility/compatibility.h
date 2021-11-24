@@ -66,6 +66,8 @@ class TargetTestFile : public TestFile {
   int Fstat(struct stat *file_stat) final;
   int Ftruncate(off_t len) final;
 
+  VnodeF2fs *GetRawVnodePtr() { return vnode_.get(); }
+
  private:
   fbl::RefPtr<VnodeF2fs> vnode_;
   // TODO: Add Lseek to adjust |offset_|
