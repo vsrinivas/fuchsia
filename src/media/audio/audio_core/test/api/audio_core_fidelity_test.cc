@@ -114,7 +114,7 @@ TEST_F(AudioCoreSourceFormatFidelityTest, DISABLED_Uint8PassThru) {
       .renderer_clock_mode = ClockMode::Default,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 48000,
+      .single_frequency_to_test = 1000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -141,7 +141,7 @@ TEST_F(AudioCoreSourceFormatFidelityTest, Int16PassThru) {
       .renderer_clock_mode = ClockMode::Default,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 48000,
+      .single_frequency_to_test = 1000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -168,7 +168,7 @@ TEST_F(AudioCoreSourceFormatFidelityTest, DISABLED_Int24PassThru) {
       .renderer_clock_mode = ClockMode::Default,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 48000,
+      .single_frequency_to_test = 1000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -195,7 +195,7 @@ TEST_F(AudioCoreSourceFormatFidelityTest, DISABLED_Float32PassThru) {
       .renderer_clock_mode = ClockMode::Default,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 48000,
+      .single_frequency_to_test = 1000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -242,7 +242,6 @@ TEST_F(AudioCore48kFidelityTest, DISABLED_48kMicro48k) {
       .renderer_clock_mode = ClockMode::Offset,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 24000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -273,7 +272,6 @@ TEST_F(AudioCore48kFidelityTest, DISABLED_44100To48k) {
       .renderer_clock_mode = ClockMode::Monotonic,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 22050,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -301,7 +299,6 @@ TEST_F(AudioCore48kFidelityTest, DISABLED_44100Micro48k) {
       .renderer_clock_mode = ClockMode::Offset,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 22050,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -328,7 +325,6 @@ TEST_F(AudioCore48kFidelityTest, 96kMicro48k) {
       .renderer_clock_mode = ClockMode::Offset,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 24000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -356,7 +352,6 @@ TEST_F(AudioCore96kFidelityTest, DISABLED_Ultrasound) {
       .channels_to_play{0},
 
       .pipeline = pipeline_constants(kDeviceFrameRate),
-      .low_pass_frequency = 48000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -392,7 +387,6 @@ TEST_F(AudioCore96kFidelityTest, DISABLED_48kTo96k) {
       .renderer_clock_mode = ClockMode::Default,
 
       .pipeline = pipeline_constants(kSourceRate),
-      .low_pass_frequency = 24000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),
@@ -423,7 +417,6 @@ TEST_F(AudioCore48k96kFidelityTest, DISABLED_24kTo48kTo96k) {
       .renderer_clock_mode = ClockMode::Monotonic,
 
       .pipeline = pipeline_constants(kSourceRate, 2),
-      .low_pass_frequency = 12000,
 
       .device_id = kOutputDeviceId,
       .output_format = Format::Create<ASF::FLOAT>(kDeviceChannels, kDeviceFrameRate).take_value(),

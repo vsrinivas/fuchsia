@@ -25,14 +25,14 @@ class FidelityResults {
 
   //
   // Rate-conversion-specific fidelity thresholds (these reflect low-pass filtering)
-  static const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> k96kMicro48kLimitsDb,
-      k96kMicro48kSinadLimitsDb;
   static const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> k44100To48kLimitsDb,
       k44100To48kSinadLimitsDb, k44100Micro48kSinadLimitsDb;
-  static const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> k24kTo48kTo96kLimitsDb,
-      k24kTo48kTo96kSinadLimitsDb;
+  static const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> k96kMicro48kLimitsDb,
+      k96kMicro48kSinadLimitsDb;
   static const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> k48kTo96kLimitsDb,
       k48kTo96kSinadLimitsDb;
+  static const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> k24kTo48kTo96kLimitsDb,
+      k24kTo48kTo96kSinadLimitsDb;
   static const std::array<double, HermeticFidelityTest::kNumReferenceFreqs> k96kTo48kTo96kLimitsDb,
       k96kTo48kTo96kSinadLimitsDb;
 };
