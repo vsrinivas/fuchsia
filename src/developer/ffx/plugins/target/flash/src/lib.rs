@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        boot::flash_boot,
         common::{file::EmptyResolver, prepare},
         lock::flash_lock,
         manifest::{from_path, from_sdk},
@@ -14,8 +15,8 @@ use {
     ffx_config::{file, sdk::SdkVersion},
     ffx_core::ffx_plugin,
     ffx_flash_args::{
-        FlashCommand, OemFile,
-        Subcommand::{Lock, Unlock},
+        BootCommand, FlashCommand, OemFile,
+        Subcommand::{Boot, Lock, Unlock},
         UnlockCommand,
     },
     fidl_fuchsia_developer_bridge::FastbootProxy,
@@ -23,6 +24,7 @@ use {
     std::path::Path,
 };
 
+mod boot;
 mod common;
 mod lock;
 mod manifest;
@@ -32,6 +34,8 @@ const SSH_OEM_COMMAND: &str = "add-staged-bootloader-file ssh.authorized_keys";
 
 const WARNING: &str = "WARNING: ALL SETTINGS USER CONTENT WILL BE ERASED!\n\
                         Do you want to continue? [yN]";
+
+const MISSING_ZBI: &str = "Error: vbmeta parameter must be used with zbi parameter";
 
 #[ffx_plugin()]
 pub async fn flash(fastboot_proxy: FastbootProxy, cmd: FlashCommand) -> Result<()> {
@@ -69,6 +73,25 @@ pub async fn flash_plugin_impl<W: Write>(
                         writer,
                         &mut EmptyResolver::new()?,
                         &vec![cred_file.to_string()],
+                        &fastboot_proxy,
+                    )
+                    .await;
+                }
+                _ => {}
+            }
+        }
+        Some(Boot(BootCommand { zbi, vbmeta, .. })) => {
+            if vbmeta.is_some() && zbi.is_none() {
+                ffx_bail!("{}", MISSING_ZBI)
+            }
+            match zbi {
+                Some(z) => {
+                    prepare(writer, &fastboot_proxy).await?;
+                    return flash_boot(
+                        writer,
+                        &mut EmptyResolver::new()?,
+                        z.to_owned(),
+                        vbmeta.to_owned(),
                         &fastboot_proxy,
                     )
                     .await;
@@ -144,6 +167,7 @@ pub async fn flash_plugin_impl<W: Write>(
 mod test {
     use super::*;
     use crate::common::file::FileResolver;
+    use ffx_flash_args::LockCommand;
     use fidl_fuchsia_developer_bridge::FastbootRequest;
     use std::default::Default;
     use std::path::PathBuf;
@@ -156,6 +180,7 @@ mod test {
         pub(crate) oem_commands: Vec<String>,
         pub(crate) variables: Vec<String>,
         pub(crate) bootloader_reboots: usize,
+        pub(crate) boots: usize,
     }
 
     pub(crate) struct TestResolver {
@@ -206,6 +231,11 @@ mod test {
                     responder.send(&mut Ok(())).unwrap();
                 }
                 FastbootRequest::Erase { responder, .. } => {
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                FastbootRequest::Boot { responder } => {
+                    let mut state = state.lock().unwrap();
+                    state.boots += 1;
                     responder.send(&mut Ok(())).unwrap();
                 }
                 FastbootRequest::Reboot { responder } => {
@@ -264,5 +294,99 @@ mod test {
         )
         .await
         .is_err())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_boot_stages_file_and_calls_boot() -> Result<()> {
+        let zbi_file = NamedTempFile::new().expect("tmp access failed");
+        let zbi_file_name = zbi_file.path().to_string_lossy().to_string();
+        let vbmeta_file = NamedTempFile::new().expect("tmp access failed");
+        let vbmeta_file_name = vbmeta_file.path().to_string_lossy().to_string();
+        let (state, proxy) = setup();
+        flash(
+            proxy,
+            FlashCommand {
+                manifest: None,
+                subcommand: Some(Boot(BootCommand {
+                    zbi: Some(zbi_file_name),
+                    vbmeta: Some(vbmeta_file_name),
+                    slot: "a".to_string(),
+                })),
+                ..Default::default()
+            },
+        )
+        .await?;
+        let state = state.lock().unwrap();
+        assert_eq!(1, state.staged_files.len());
+        assert_eq!(1, state.boots);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_boot_stages_file_and_calls_boot_with_just_zbi() -> Result<()> {
+        let zbi_file = NamedTempFile::new().expect("tmp access failed");
+        let zbi_file_name = zbi_file.path().to_string_lossy().to_string();
+        let (state, proxy) = setup();
+        flash(
+            proxy,
+            FlashCommand {
+                manifest: None,
+                subcommand: Some(Boot(BootCommand {
+                    zbi: Some(zbi_file_name),
+                    vbmeta: None,
+                    slot: "a".to_string(),
+                })),
+                ..Default::default()
+            },
+        )
+        .await?;
+        let state = state.lock().unwrap();
+        assert_eq!(1, state.staged_files.len());
+        assert_eq!(1, state.boots);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_boot_fails_with_just_vbmeta() {
+        let vbmeta_file = NamedTempFile::new().expect("tmp access failed");
+        let vbmeta_file_name = vbmeta_file.path().to_string_lossy().to_string();
+        let (_, proxy) = setup();
+        assert!(flash(
+            proxy,
+            FlashCommand {
+                manifest: None,
+                subcommand: Some(Boot(BootCommand {
+                    zbi: None,
+                    vbmeta: Some(vbmeta_file_name),
+                    slot: "a".to_string(),
+                })),
+                ..Default::default()
+            },
+        )
+        .await
+        .is_err());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_lock_calls_oem_command() -> Result<()> {
+        let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            // is_locked
+            state.variables.push("no".to_string());
+        }
+        flash(
+            proxy,
+            FlashCommand {
+                manifest: None,
+                subcommand: Some(Lock(LockCommand {})),
+                ..Default::default()
+            },
+        )
+        .await?;
+        let state = state.lock().unwrap();
+        assert_eq!(1, state.oem_commands.len());
+        assert_eq!("vx-lock".to_string(), state.oem_commands[0]);
+        Ok(())
     }
 }

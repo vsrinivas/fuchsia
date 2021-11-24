@@ -74,6 +74,7 @@ protocol Fastboot {
     Erase(struct {
         partition_name string:64;
     }) -> (struct {}) error FastbootError;
+    Boot() -> (struct {}) error FastbootError;
     Reboot() -> (struct {}) error FastbootError;
     RebootBootloader(resource struct {
         listener client_end:RebootListener;

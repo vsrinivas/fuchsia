@@ -3,9 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::common::{
-        file::FileResolver, flash_and_reboot, is_locked, Flash, Partition as PartitionTrait,
-        Product as ProductTrait, Unlock, MISSING_PRODUCT, UNLOCK_ERR,
+    crate::{
+        boot::flash_boot,
+        common::{
+            file::FileResolver, flash_and_reboot, is_locked, Boot, Flash,
+            Partition as PartitionTrait, Product as ProductTrait, Unlock, MISSING_PRODUCT,
+            UNLOCK_ERR,
+        },
     },
     anyhow::Result,
     async_trait::async_trait,
@@ -106,6 +110,40 @@ impl Flash for FlashManifest {
 
 #[async_trait(?Send)]
 impl Unlock for FlashManifest {}
+
+#[async_trait(?Send)]
+impl Boot for FlashManifest {
+    async fn boot<W, F>(
+        &self,
+        writer: &mut W,
+        file_resolver: &mut F,
+        slot: String,
+        fastboot_proxy: FastbootProxy,
+        cmd: FlashCommand,
+    ) -> Result<()>
+    where
+        W: Write,
+        F: FileResolver + Sync,
+    {
+        let product = match self.0.iter().find(|product| product.name == cmd.product) {
+            Some(res) => res,
+            None => ffx_bail!("{} {}", MISSING_PRODUCT, cmd.product),
+        };
+        let partitions: Vec<&Partition> = product
+            .partitions
+            .iter()
+            .filter(|p| p.name().ends_with(&format!("_{}", slot)))
+            .collect();
+        let zbi =
+            partitions.iter().find(|p| p.name().contains("zircon")).map(|p| p.file().to_string());
+        let vbmeta =
+            partitions.iter().find(|p| p.name().contains("vbmeta")).map(|p| p.file().to_string());
+        match zbi {
+            Some(z) => flash_boot(writer, file_resolver, z, vbmeta, &fastboot_proxy).await,
+            None => ffx_bail!("Could not find matching partitions for slot {}", slot),
+        }
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 // tests

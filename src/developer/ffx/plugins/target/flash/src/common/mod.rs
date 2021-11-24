@@ -76,6 +76,21 @@ pub(crate) trait Unlock {
     }
 }
 
+#[async_trait(?Send)]
+pub(crate) trait Boot {
+    async fn boot<W, F>(
+        &self,
+        _writer: &mut W,
+        _file_resolver: &mut F,
+        _slot: String,
+        _fastboot_proxy: FastbootProxy,
+        _cmd: FlashCommand,
+    ) -> Result<()>
+    where
+        W: Write,
+        F: FileResolver + Sync;
+}
+
 pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
 
 const REBOOT_ERR: &str = "Failed to reboot your device. \

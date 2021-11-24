@@ -39,6 +39,7 @@ ffx_plugin("ffx_flash") {
   args_sources = [ "src/args.rs" ]
 
   sources = [
+    "src/boot/mod.rs",
     "src/common/crypto.rs",
     "src/common/file.rs",
     "src/common/mod.rs",

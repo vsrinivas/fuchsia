@@ -6,7 +6,7 @@ use {
     crate::{
         common::{
             crypto::unlock_device, file::FileResolver, finish, flash_bootloader, flash_product,
-            is_locked, lock_device, verify_hardware, Flash, Unlock, MISSING_CREDENTIALS,
+            is_locked, lock_device, verify_hardware, Boot, Flash, Unlock, MISSING_CREDENTIALS,
             MISSING_PRODUCT,
         },
         manifest::v1::FlashManifest as FlashManifestV1,
@@ -82,6 +82,24 @@ impl Unlock for FlashManifest {
     }
 }
 
+#[async_trait(?Send)]
+impl Boot for FlashManifest {
+    async fn boot<W, F>(
+        &self,
+        writer: &mut W,
+        file_resolver: &mut F,
+        slot: String,
+        fastboot_proxy: FastbootProxy,
+        cmd: FlashCommand,
+    ) -> Result<()>
+    where
+        W: Write,
+        F: FileResolver + Sync,
+    {
+        self.v1.boot(writer, file_resolver, slot, fastboot_proxy, cmd).await
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 
@@ -89,6 +107,7 @@ impl Unlock for FlashManifest {
 mod test {
     use super::*;
     use crate::test::{setup, TestResolver};
+    use ffx_flash_args::{BootCommand, Subcommand::Boot};
     use serde_json::from_str;
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
@@ -142,6 +161,24 @@ mod test {
                     ["test3", "path3"],
                     ["test4", "path4"],
                     ["test5", "path5"]
+                ],
+                "oem_files": []
+            }
+        ]
+    }"#;
+
+    const BOOTABLE_MANIFEST: &'static str = r#"{
+        "hw_revision": "zedboot",
+        "products": [
+            {
+                "name": "zedboot",
+                "requires_unlock": false,
+                "bootloader_partitions": [],
+                "partitions": [
+                    ["zircon_a", "path1"],
+                    ["zircon_b", "path2"],
+                    ["vbmeta_a", "path3"],
+                    ["vbmeta_b", "path4"]
                 ],
                 "oem_files": []
             }
@@ -213,5 +250,31 @@ mod test {
             .await
             .is_err());
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_boot_should_succeed() -> Result<()> {
+        let v: FlashManifest = from_str(BOOTABLE_MANIFEST)?;
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+        let (state, proxy) = setup();
+        state.lock().unwrap().variables.push("zedboot".to_string());
+        let mut writer = Vec::<u8>::new();
+        v.flash(
+            &mut writer,
+            &mut TestResolver::new(),
+            proxy,
+            FlashCommand {
+                manifest: Some(PathBuf::from(tmp_file_name)),
+                product: "zedboot".to_string(),
+                subcommand: Some(Boot(BootCommand {
+                    zbi: None,
+                    vbmeta: None,
+                    slot: "a".to_string(),
+                })),
+                ..Default::default()
+            },
+        )
+        .await
     }
 }

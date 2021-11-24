@@ -379,6 +379,18 @@ pub async fn erase<T: AsyncRead + AsyncWrite + Unpin>(
     }
 }
 
+pub async fn boot<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Result<()> {
+    let reply = send(Command::Boot, interface).await.context("sending boot")?;
+    match reply {
+        Reply::Okay(_) => {
+            log::debug!("Successfully sent boot");
+            Ok(())
+        }
+        Reply::Fail(s) => bail!("Failed to boot: {}", s),
+        _ => bail!("Unexpected reply from fastboot device for boot command: {:?}", reply),
+    }
+}
+
 pub async fn reboot<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Result<()> {
     let reply = send(Command::Reboot, interface).await.context("sending reboot")?;
     match reply {

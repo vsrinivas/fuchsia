@@ -10,7 +10,7 @@ use {
                 Condition as ConditionV3, ExplicitOemFile as OemFileV3,
                 FlashManifest as FlashManifestV3, Partition as PartitionV3, Product as ProductV3,
             },
-            Flash, Unlock,
+            Boot, Flash, Unlock,
         },
     },
     anyhow::{bail, Result},
@@ -121,5 +121,24 @@ impl Unlock for SdkEntries {
     {
         let v3: FlashManifestV3 = self.try_into()?;
         v3.unlock(writer, file_resolver, fastboot_proxy).await
+    }
+}
+
+#[async_trait(?Send)]
+impl Boot for SdkEntries {
+    async fn boot<W, F>(
+        &self,
+        writer: &mut W,
+        file_resolver: &mut F,
+        slot: String,
+        fastboot_proxy: FastbootProxy,
+        cmd: FlashCommand,
+    ) -> Result<()>
+    where
+        W: Write,
+        F: FileResolver + Sync,
+    {
+        let v3: FlashManifestV3 = self.try_into()?;
+        v3.boot(writer, file_resolver, slot, fastboot_proxy, cmd).await
     }
 }

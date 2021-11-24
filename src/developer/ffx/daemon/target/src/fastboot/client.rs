@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::fastboot::{
-        continue_boot, erase, flash, get_all_vars, get_staged, get_var, oem, reboot,
+        boot, continue_boot, erase, flash, get_all_vars, get_staged, get_var, oem, reboot,
         reboot_bootloader, set_active, stage, UploadProgressListener, VariableListener,
     },
     crate::target::Target,
@@ -206,6 +206,15 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                     }
                 }
             }
+            FastbootRequest::Boot { responder } => match boot(self.interface().await?).await {
+                Ok(_) => responder.send(&mut Ok(()))?,
+                Err(e) => {
+                    log::error!("Error booting: {:?}", e);
+                    responder
+                        .send(&mut Err(FastbootError::ProtocolError))
+                        .context("sending error response")?;
+                }
+            },
             FastbootRequest::Reboot { responder } => match reboot(self.interface().await?).await {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {

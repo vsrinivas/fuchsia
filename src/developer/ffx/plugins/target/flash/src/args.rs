@@ -92,7 +92,7 @@ pub struct FlashCommand {
 pub enum Subcommand {
     Lock(LockCommand),
     Unlock(UnlockCommand),
-    //TODO Boot,
+    Boot(BootCommand),
 }
 
 #[derive(FromArgs, Clone, PartialEq, Debug)]
@@ -101,7 +101,7 @@ pub enum Subcommand {
 pub struct LockCommand {}
 
 #[derive(FromArgs, Clone, PartialEq, Debug)]
-/// Locks a fastboot target.
+/// Unlocks a fastboot target.
 #[argh(subcommand, name = "unlock")]
 pub struct UnlockCommand {
     #[argh(
@@ -113,6 +113,26 @@ pub struct UnlockCommand {
 
     #[argh(switch, description = "skips the warning message that this command is dangerous")]
     pub force: bool,
+}
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+/// RAM boots a fastboot target.
+#[argh(subcommand, name = "boot")]
+pub struct BootCommand {
+    #[argh(option, short = 'z', description = "optional zbi image file path to use")]
+    pub zbi: Option<String>,
+
+    #[argh(option, short = 'v', description = "optional vbmeta image file path to use")]
+    pub vbmeta: Option<String>,
+
+    #[argh(
+        option,
+        short = 's',
+        description = "slot corresponding to partitions in the flash manifest - \n\
+        only used if zbi and vbmeta files are not present",
+        default = "String::from(\"a\")"
+    )]
+    pub slot: String,
 }
 
 #[derive(Default, Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]

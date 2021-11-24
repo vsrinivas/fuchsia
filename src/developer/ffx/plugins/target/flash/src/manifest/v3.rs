@@ -10,7 +10,7 @@ use {
                 FlashManifest as FlashManifestV1, Partition as PartitionV1, Product as ProductV1,
             },
             v2::FlashManifest as FlashManifestV2,
-            Flash, Unlock,
+            Boot, Flash, Unlock,
         },
     },
     anyhow::Result,
@@ -133,6 +133,25 @@ impl Unlock for FlashManifest {
     {
         let v2: FlashManifestV2 = self.into();
         v2.unlock(writer, file_resolver, fastboot_proxy).await
+    }
+}
+
+#[async_trait(?Send)]
+impl Boot for FlashManifest {
+    async fn boot<W, F>(
+        &self,
+        writer: &mut W,
+        file_resolver: &mut F,
+        slot: String,
+        fastboot_proxy: FastbootProxy,
+        cmd: FlashCommand,
+    ) -> Result<()>
+    where
+        W: Write,
+        F: FileResolver + Sync,
+    {
+        let v2: FlashManifestV2 = self.into();
+        v2.boot(writer, file_resolver, slot, fastboot_proxy, cmd).await
     }
 }
 
