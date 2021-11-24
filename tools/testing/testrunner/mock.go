@@ -7,6 +7,8 @@ package testrunner
 import (
 	"context"
 	"io"
+
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 )
 
 type MockFFXTester struct {
@@ -21,8 +23,9 @@ func (f *MockFFXTester) run(cmd string) error {
 	return nil
 }
 
-func (f *MockFFXTester) Test(_ context.Context, _ string, _ ...string) error {
-	return f.run("test")
+func (f *MockFFXTester) Test(_ context.Context, _ []ffxutil.TestDef, _ string, _ ...string) (*ffxutil.TestRunResult, error) {
+	f.run("test")
+	return &ffxutil.TestRunResult{Outcome: ffxutil.TestPassed}, nil
 }
 
 func (f *MockFFXTester) Snapshot(_ context.Context, _, _ string) error {

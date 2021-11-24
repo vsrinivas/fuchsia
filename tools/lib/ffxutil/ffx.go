@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/subprocess"
 )
 
@@ -27,14 +28,13 @@ func runCommand(ctx context.Context, runner *subprocess.Runner, stdout, stderr i
 
 // FFXInstance takes in a path to the ffx tool and runs ffx commands with the provided config.
 type FFXInstance struct {
-	ffxPath       string
-	config        *FFXConfig
-	configPath    string
-	runner        *subprocess.Runner
-	stdout        io.Writer
-	stderr        io.Writer
-	target        string
-	testOutputDir string
+	ffxPath    string
+	config     *FFXConfig
+	configPath string
+	runner     *subprocess.Runner
+	stdout     io.Writer
+	stderr     io.Writer
+	target     string
 }
 
 // NewFFXInstance creates an isolated FFXInstance.
@@ -61,14 +61,13 @@ func NewFFXInstance(ffxPath string, dir string, env []string, target, sshKey str
 	}
 	env = append(env, config.env...)
 	ffx := &FFXInstance{
-		ffxPath:       ffxPath,
-		config:        config,
-		configPath:    configPath,
-		runner:        &subprocess.Runner{Dir: dir, Env: env},
-		stdout:        os.Stdout,
-		stderr:        os.Stderr,
-		target:        target,
-		testOutputDir: filepath.Join(outputDir, "test_outputs"),
+		ffxPath:    ffxPath,
+		config:     config,
+		configPath: configPath,
+		runner:     &subprocess.Runner{Dir: dir, Env: env},
+		stdout:     os.Stdout,
+		stderr:     os.Stderr,
+		target:     target,
 	}
 	return ffx, nil
 }
@@ -114,8 +113,20 @@ func (f *FFXInstance) TargetWait(ctx context.Context) error {
 }
 
 // Test runs a test suite.
-func (f *FFXInstance) Test(ctx context.Context, test string, args ...string) error {
-	return f.RunWithTarget(ctx, append([]string{"test", "run", test, "--output-directory", f.testOutputDir}, args...)...)
+func (f *FFXInstance) Test(ctx context.Context, tests []TestDef, outDir string, args ...string) (*TestRunResult, error) {
+	// Write the test def to a file and store in the outDir to upload with the test outputs.
+	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
+		return nil, err
+	}
+	testFile := filepath.Join(outDir, "test-file.json")
+	if err := jsonutil.WriteToFile(testFile, tests); err != nil {
+		return nil, err
+	}
+	// Create a new subdirectory within outDir to pass to --output-directory which is expected to be empty.
+	testOutputDir := filepath.Join(outDir, "test-outputs")
+	f.RunWithTarget(ctx, append([]string{"test", "run", "--continue-on-timeout", "--test-file", testFile, "--output-directory", testOutputDir}, args...)...)
+
+	return getRunResult(testOutputDir)
 }
 
 // Snapshot takes a snapshot of the target's state and saves it to outDir/snapshotFilename.

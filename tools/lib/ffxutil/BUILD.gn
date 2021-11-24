@@ -11,6 +11,7 @@ go_library("ffxutil") {
     "config_test.go",
     "ffx.go",
     "ffx_test.go",
+    "test.go",
   ]
   deps = [
     "//tools/lib/jsonutil",

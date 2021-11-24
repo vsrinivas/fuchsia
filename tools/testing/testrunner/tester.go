@@ -25,6 +25,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/debug/elflib"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/iomisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
@@ -287,7 +288,7 @@ func (s *serialSocket) runDiagnostics(ctx context.Context) error {
 // for testability
 type FFXTester interface {
 	SetStdoutStderr(stdout, stderr io.Writer)
-	Test(ctx context.Context, test string, args ...string) error
+	Test(ctx context.Context, tests []ffxutil.TestDef, outDir string, args ...string) (*ffxutil.TestRunResult, error)
 	Snapshot(ctx context.Context, outDir string, snapshotFilename string) error
 	Stop() error
 }
@@ -396,13 +397,23 @@ func (t *FuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 }
 
 // Test runs a test over SSH.
-func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
+func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
 	sinks := runtests.DataSinkReference{}
 	isComponentV2 := strings.HasSuffix(test.PackageURL, componentV2Suffix)
 	if isComponentV2 && t.ffx != nil {
+		testDef := ffxutil.TestDef{
+			TestUrl:         test.PackageURL,
+			Timeout:         int(test.Timeout.Seconds()),
+			Parallel:        test.Parallel,
+			MaxSeverityLogs: test.LogSettings.MaxSeverity,
+		}
 		t.ffx.SetStdoutStderr(stdout, stderr)
 		defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
-		return sinks, t.ffx.Test(ctx, test.Name, "-t", fmt.Sprintf("%d", int(test.Timeout.Seconds())))
+		testResult, err := t.ffx.Test(ctx, []ffxutil.TestDef{testDef}, outDir, "--filter-ansi")
+		if err == nil && testResult.Outcome != ffxutil.TestPassed {
+			err = fmt.Errorf("test failed with status: %s", testResult.Outcome)
+		}
+		return sinks, err
 	}
 	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, test.Timeout)
 	if err != nil {

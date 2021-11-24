@@ -42,11 +42,21 @@ func TestFFXInstance(t *testing.T) {
 
 	assertRunsExpectedCmd(ffx.TargetWait(ctx), "--target target target wait")
 
+	// Test expects a run_summary.json to be written in the test output directory.
+	outDir := filepath.Join(tmpDir, "out")
+	testOutputDir := filepath.Join(outDir, "test-outputs")
+	if err := os.MkdirAll(testOutputDir, os.ModePerm); err != nil {
+		t.Errorf("failed to create test outputs dir: %s", err)
+	}
+	if err := ioutil.WriteFile(filepath.Join(testOutputDir, runSummaryFilename), []byte("{}"), os.ModePerm); err != nil {
+		t.Errorf("failed to write run_summary.json: %s", err)
+	}
+	_, err := ffx.Test(ctx, []TestDef{{TestUrl: "test1", Timeout: 30}}, outDir)
 	assertRunsExpectedCmd(
-		ffx.Test(ctx, "test1", "-t", "30"),
+		err,
 		fmt.Sprintf(
-			"--target target test run test1 --output-directory %s -t 30",
-			filepath.Join(tmpDir, "out", "test_outputs"),
+			"--target target test run --continue-on-timeout --test-file %s --output-directory %s",
+			filepath.Join(outDir, "test-file.json"), testOutputDir,
 		),
 	)
 
