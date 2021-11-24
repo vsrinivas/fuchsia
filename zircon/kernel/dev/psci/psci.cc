@@ -72,15 +72,12 @@ void psci_system_reset(enum reboot_flags flags) {
   do_psci_call(reset_command, args[0], args[1], args[2]);
 }
 
-static void arm_psci_init(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_arm_psci_driver_t));
-  auto driver = static_cast<const dcfg_arm_psci_driver_t*>(driver_data);
-
-  do_psci_call = driver->use_hvc ? psci_hvc_call : psci_smc_call;
-  memcpy(shutdown_args, driver->shutdown_args, sizeof(shutdown_args));
-  memcpy(reboot_args, driver->reboot_args, sizeof(reboot_args));
-  memcpy(reboot_bootloader_args, driver->reboot_bootloader_args, sizeof(reboot_bootloader_args));
-  memcpy(reboot_recovery_args, driver->reboot_recovery_args, sizeof(reboot_recovery_args));
+void PsciInit(const dcfg_arm_psci_driver_t& config) {
+  do_psci_call = config.use_hvc ? psci_hvc_call : psci_smc_call;
+  memcpy(shutdown_args, config.shutdown_args, sizeof(shutdown_args));
+  memcpy(reboot_args, config.reboot_args, sizeof(reboot_args));
+  memcpy(reboot_bootloader_args, config.reboot_bootloader_args, sizeof(reboot_bootloader_args));
+  memcpy(reboot_recovery_args, config.reboot_recovery_args, sizeof(reboot_recovery_args));
 
   // read information about the psci implementation
   uint32_t result = psci_get_version();
@@ -108,8 +105,6 @@ static void arm_psci_init(const void* driver_data, uint32_t length) {
     dprintf(INFO, "\tPSCI64_CPU_OFF %#x\n", result);
   }
 }
-
-LK_PDEV_INIT(arm_psci_init, KDRV_ARM_PSCI, arm_psci_init, LK_INIT_LEVEL_PLATFORM_EARLY)
 
 #include <lib/console.h>
 

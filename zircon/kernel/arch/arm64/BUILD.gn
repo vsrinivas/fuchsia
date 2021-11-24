@@ -179,7 +179,10 @@ if (toolchain_environment == "physmem" ||
   source_set("dev-init") {
     visibility = [ ":*" ]
     sources = [ "dev-init.cc" ]
-    deps = [ "//zircon/kernel/phys:handoff" ]
+    deps = [
+      "//zircon/kernel/dev/psci",
+      "//zircon/kernel/phys:handoff",
+    ]
   }
 
   source_set("tests") {

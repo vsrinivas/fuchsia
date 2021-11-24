@@ -21,16 +21,20 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
   ArchPhysHandoff& arch_handoff = handoff_->arch_handoff;
 
   // TODO(fxbug.dev/88059): Handle all cases below.
-  static_cast<void>(arch_handoff);
   switch (header.type) {
     case ZBI_TYPE_KERNEL_DRIVER: {
       switch (header.extra) {
         case KDRV_AMLOGIC_HDCP:
         case KDRV_AMLOGIC_RNG:
+        case KDRV_ARM_GENERIC_TIMER:
         case KDRV_ARM_GIC_V2:
         case KDRV_ARM_GIC_V3:
+          break;
         case KDRV_ARM_PSCI:
-        case KDRV_ARM_GENERIC_TIMER:
+          ZX_ASSERT(payload.size() >= sizeof(dcfg_arm_psci_driver_t));
+          arch_handoff.psci_driver =
+              *reinterpret_cast<const dcfg_arm_psci_driver_t*>(payload.data());
+          break;
         case KDRV_GENERIC_32BIT_WATCHDOG:
           break;
       }

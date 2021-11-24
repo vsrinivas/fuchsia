@@ -4,8 +4,13 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <dev/psci.h>
 #include <phys/arch/arch-handoff.h>
 
-void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {}
+void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
+  if (arch_handoff.psci_driver) {
+    PsciInit(arch_handoff.psci_driver.value());
+  }
+}
 
 void ArchDriverHandoffLate(const ArchPhysHandoff& arch_handoff) {}

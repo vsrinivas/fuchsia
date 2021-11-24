@@ -407,7 +407,6 @@ void ProcessZbiEarly() {
           case KDRV_ARM_GENERIC_TIMER:
           case KDRV_ARM_GIC_V2:
           case KDRV_ARM_GIC_V3:
-          case KDRV_ARM_PSCI:
           case KDRV_DW8250_UART:
           case KDRV_GENERIC_32BIT_WATCHDOG:
           case KDRV_I8250_MMIO_UART:

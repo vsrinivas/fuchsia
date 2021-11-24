@@ -9,6 +9,7 @@
 #define ZIRCON_KERNEL_DEV_PSCI_INCLUDE_DEV_PSCI_H_
 
 #include <arch.h>
+#include <zircon/boot/driver-config.h>
 
 #include <arch/arm64/mp.h>
 #include <dev/power.h>
@@ -55,6 +56,9 @@
    AFF1. If a system is architected such that AFF2 or AFF3 are non-zero then this code will need to
    be revisited
 */
+
+// Initializes the PSCI driver.
+void PsciInit(const dcfg_arm_psci_driver_t& config);
 
 uint32_t psci_get_version();
 
