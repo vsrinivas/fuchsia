@@ -4,6 +4,6 @@
 
 library fuchsia.rpmb;
 
-extend uint fuchsia.BIND_PROTOCOL {
-  DEVICE = 139,
+extend uint fuchsia.BIND_FIDL_PROTOCOL {
+  DEVICE = 1,
 };

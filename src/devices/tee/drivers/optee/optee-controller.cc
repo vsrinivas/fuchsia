@@ -518,9 +518,6 @@ zx_status_t OpteeController::Bind() {
     return status;
   }
 
-  // Optional protocol
-  rpmb_protocol_client_ = ddk::RpmbProtocolClient(parent(), "rpmb");
-
   static constexpr uint32_t kTrustedOsSmcIndex = 0;
   status = pdev_.GetSmc(kTrustedOsSmcIndex, &secure_monitor_);
   if (status != ZX_OK) {

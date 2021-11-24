@@ -99,7 +99,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     }
   }
 
-  void AddDevice() {
+  void AddDevice(bool rpmb = false) {
     EXPECT_OK(dut_->ProbeMmc());
 
     EXPECT_OK(dut_->AddDevice());
@@ -108,11 +108,10 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     user_ = GetBlockClient(USER_DATA_PARTITION);
     boot1_ = GetBlockClient(BOOT_PARTITION_1);
     boot2_ = GetBlockClient(BOOT_PARTITION_2);
-    rpmb_ = GetRpmbClient(RPMB_PARTITION);
 
     ASSERT_TRUE(user_.is_valid());
 
-    if (rpmb_.is_valid()) {
+    if (rpmb) {
       auto iter = dut_->zxdev()->children().begin();
       std::advance(iter, RPMB_PARTITION);
 
@@ -122,7 +121,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
       binding_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
                                   (*iter)->GetDeviceContext<RpmbDevice>());
       ASSERT_OK(loop_.StartThread("rpmb-client-thread"));
-      rpmb_fidl_.Bind(std::move(endpoints->client), loop_.dispatcher());
+      rpmb_client_.Bind(std::move(endpoints->client), loop_.dispatcher());
     }
   }
 
@@ -214,25 +213,13 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     return GetBlockClient(dut_->zxdev(), index);
   }
 
-  ddk::RpmbProtocolClient GetRpmbClient(size_t index) {
-    auto partition = dut_->zxdev()->children().begin();
-    std::advance(partition, index);
-    if (partition == dut_->zxdev()->children().end()) {
-      return ddk::RpmbProtocolClient();
-    }
-    rpmb_protocol_t proto = {};
-    device_get_protocol(partition->get(), ZX_PROTOCOL_RPMB, &proto);
-    return ddk::RpmbProtocolClient(&proto);
-  }
-
   FakeSdmmcDevice sdmmc_;
   std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   std::unique_ptr<SdmmcBlockDevice> dut_;
   ddk::BlockImplProtocolClient user_;
   ddk::BlockImplProtocolClient boot1_;
   ddk::BlockImplProtocolClient boot2_;
-  ddk::RpmbProtocolClient rpmb_;
-  fidl::WireSharedClient<fuchsia_hardware_rpmb::Rpmb> rpmb_fidl_;
+  fidl::WireSharedClient<fuchsia_hardware_rpmb::Rpmb> rpmb_client_;
   std::atomic<bool> run_threads_ = true;
   async::Loop loop_;
   bool added_ = false;
@@ -708,7 +695,7 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootAndRpmbPartitions) {
     ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
   });
 
-  AddDevice();
+  AddDevice(true);
 
   dut_->DdkAsyncRemove();
   EXPECT_EQ(parent_->descendant_count(), 5);
@@ -1182,10 +1169,10 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
     ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
   });
 
-  AddDevice();
+  AddDevice(true);
 
   sync_completion_t completion;
-  rpmb_fidl_->GetDeviceInfo(
+  rpmb_client_->GetDeviceInfo(
       [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::GetDeviceInfo>* response) {
         EXPECT_TRUE(response->info.is_emmc_info());
         EXPECT_EQ(response->info.emmc_info().rpmb_size, 0x74);
@@ -1229,11 +1216,11 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
     EXPECT_EQ(value, 0xa8 | RPMB_PARTITION);
   });
 
-  rpmb_fidl_->Request(std::move(write_read_request),
-                      [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
-                        EXPECT_FALSE(response->result.is_err());
-                        sync_completion_signal(&completion);
-                      });
+  rpmb_client_->Request(std::move(write_read_request),
+                        [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
+                          EXPECT_FALSE(response->result.is_err());
+                          sync_completion_signal(&completion);
+                        });
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
   sync_completion_reset(&completion);
@@ -1257,11 +1244,11 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
     EXPECT_TRUE(req->arg & MMC_SET_BLOCK_COUNT_RELIABLE_WRITE);
   });
 
-  rpmb_fidl_->Request(std::move(write_request),
-                      [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
-                        EXPECT_FALSE(response->result.is_err());
-                        sync_completion_signal(&completion);
-                      });
+  rpmb_client_->Request(std::move(write_request),
+                        [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
+                          EXPECT_FALSE(response->result.is_err());
+                          sync_completion_signal(&completion);
+                        });
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
   sync_completion_reset(&completion);
@@ -1279,7 +1266,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
     ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
   });
 
-  AddDevice();
+  AddDevice(true);
   dut_->StopWorkerThread();
 
   zx::vmo tx_frames;
@@ -1290,7 +1277,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
     ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
-    rpmb_fidl_->Request(
+    rpmb_client_->Request(
         std::move(request),
         [&](__UNUSED fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {});
   }
@@ -1301,11 +1288,11 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
   error_request.tx_frames.size = 512;
 
   sync_completion_t error_completion;
-  rpmb_fidl_->Request(std::move(error_request),
-                      [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
-                        EXPECT_TRUE(response->result.is_err());
-                        sync_completion_signal(&error_completion);
-                      });
+  rpmb_client_->Request(std::move(error_request),
+                        [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
+                          EXPECT_TRUE(response->result.is_err());
+                          sync_completion_signal(&error_completion);
+                        });
 
   sync_completion_wait(&error_completion, zx::duration::infinite().get());
 }
@@ -1380,13 +1367,14 @@ void SdmmcBlockDeviceTest::QueueRpmbRequests() {
       request.tx_frames.offset = 0;
       request.tx_frames.size = 512;
 
-      rpmb_fidl_->Request(std::move(request),
-                          [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
-                            EXPECT_FALSE(response->result.is_err());
-                            if (outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
-                              sync_completion_signal(&completion);
-                            }
-                          });
+      rpmb_client_->Request(
+          std::move(request),
+          [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
+            EXPECT_FALSE(response->result.is_err());
+            if (outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
+              sync_completion_signal(&completion);
+            }
+          });
     }
 
     sync_completion_wait(&completion, zx::duration::infinite().get());
@@ -1409,7 +1397,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestsGetToRun) {
     ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
   });
 
-  AddDevice();
+  AddDevice(true);
 
   ASSERT_TRUE(boot1_.is_valid());
   ASSERT_TRUE(boot2_.is_valid());
@@ -1436,13 +1424,13 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestsGetToRun) {
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
 
-    rpmb_fidl_->Request(std::move(request),
-                        [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
-                          EXPECT_FALSE(response->result.is_err());
-                          if ((ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
-                            sync_completion_signal(&completion);
-                          }
-                        });
+    rpmb_client_->Request(std::move(request),
+                          [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::Request>* response) {
+                            EXPECT_FALSE(response->result.is_err());
+                            if ((ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
+                              sync_completion_signal(&completion);
+                            }
+                          });
   }
 
   sync_completion_wait(&completion, zx::duration::infinite().get());
@@ -1463,7 +1451,7 @@ TEST_F(SdmmcBlockDeviceTest, BlockOpsGetToRun) {
     ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
   });
 
-  AddDevice();
+  AddDevice(true);
 
   ASSERT_TRUE(boot1_.is_valid());
   ASSERT_TRUE(boot2_.is_valid());
@@ -1527,18 +1515,13 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
     ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
   });
 
-  AddDevice();
-
-  ASSERT_TRUE(rpmb_.is_valid());
+  AddDevice(true);
 
   zx::status rpmb_ends = fidl::CreateEndpoints<fuchsia_hardware_rpmb::Rpmb>();
   ASSERT_OK(rpmb_ends.status_value());
-  rpmb_.ConnectServer(rpmb_ends->server.TakeChannel());
-
-  fidl::WireSharedClient rpmb_client(std::move(rpmb_ends->client), loop_.dispatcher());
 
   sync_completion_t completion;
-  rpmb_client->GetDeviceInfo(
+  rpmb_client_->GetDeviceInfo(
       [&](fidl::WireResponse<fuchsia_hardware_rpmb::Rpmb::GetDeviceInfo>* response) {
         EXPECT_TRUE(response->info.is_emmc_info());
         EXPECT_EQ(response->info.emmc_info().rpmb_size, 0x74);

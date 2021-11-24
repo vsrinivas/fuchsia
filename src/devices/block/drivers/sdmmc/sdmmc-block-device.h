@@ -8,13 +8,13 @@
 #include <fidl/fuchsia.hardware.rpmb/cpp/wire.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
-#include <fuchsia/hardware/rpmb/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/operation/block.h>
 #include <lib/sdmmc/hw.h>
+#include <lib/svc/outgoing.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 
@@ -93,8 +93,11 @@ class RpmbDevice;
 using RpmbDeviceType =
     ddk::Device<RpmbDevice, ddk::Messageable<fuchsia_hardware_rpmb::Rpmb>::Mixin>;
 
-class RpmbDevice : public RpmbDeviceType, public ddk::RpmbProtocol<RpmbDevice, ddk::base_protocol> {
+class RpmbDevice : public RpmbDeviceType {
  public:
+  static zx_status_t Create(zx_device_t* parent, SdmmcBlockDevice* sdmmc,
+                            const std::array<uint8_t, SDMMC_CID_SIZE>& cid,
+                            const std::array<uint8_t, MMC_EXT_CSD_SIZE>& ext_csd);
   // sdmmc_parent is owned by the SDMMC root device when the RpmbDevice object is created. Ownership
   // is transferred to devmgr shortly after, meaning it will outlive this object due to the
   // parent/child device relationship.
@@ -110,8 +113,6 @@ class RpmbDevice : public RpmbDeviceType, public ddk::RpmbProtocol<RpmbDevice, d
 
   void DdkRelease() { delete this; }
 
-  void RpmbConnectServer(zx::channel server);
-
   void GetDeviceInfo(GetDeviceInfoRequestView request,
                      GetDeviceInfoCompleter::Sync& completer) override;
   void Request(RequestRequestView request, RequestCompleter::Sync& completer) override;
@@ -121,8 +122,8 @@ class RpmbDevice : public RpmbDeviceType, public ddk::RpmbProtocol<RpmbDevice, d
   const std::array<uint8_t, SDMMC_CID_SIZE> cid_;
   const uint8_t rpmb_size_;
   const uint8_t reliable_write_sector_count_;
+  std::optional<svc::Outgoing> outgoing_;
   async::Loop loop_;
-  bool loop_started_ = false;
 };
 
 class SdmmcBlockDevice;
@@ -228,7 +229,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
 
   inspect::Inspector inspector_;
   inspect::Node root_;
-  inspect::UintProperty io_errors_;  // Only updated from the worker thread.
+  inspect::UintProperty io_errors_;   // Only updated from the worker thread.
   inspect::UintProperty io_retries_;  // Only updated from the worker thread.
 };
 

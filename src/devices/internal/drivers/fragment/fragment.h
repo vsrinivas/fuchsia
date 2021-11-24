@@ -30,7 +30,6 @@
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
-#include <fuchsia/hardware/rpmb/cpp/banjo.h>
 #include <fuchsia/hardware/scpi/cpp/banjo.h>
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <fuchsia/hardware/shareddma/cpp/banjo.h>
@@ -108,7 +107,6 @@ class Fragment : public FragmentBase {
         gdc_client_(parent, ZX_PROTOCOL_GDC),
         ge2d_client_(parent, ZX_PROTOCOL_GE2D),
         scpi_client_(parent, ZX_PROTOCOL_SCPI),
-        rpmb_client_(parent, ZX_PROTOCOL_RPMB),
         registers_client_(parent, ZX_PROTOCOL_REGISTERS),
         vreg_client_(parent, ZX_PROTOCOL_VREG),
         dsi_client_(parent, ZX_PROTOCOL_DSI),
@@ -195,9 +193,6 @@ class Fragment : public FragmentBase {
   zx_status_t RpcDai(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                      uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                      zx::handle* resp_handles, uint32_t* resp_handle_count);
-  zx_status_t RpcRpmb(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                      uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
-                      zx::handle* resp_handles, uint32_t* resp_handle_count);
   zx_status_t RpcRegisters(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                            uint32_t* out_resp_size, zx::handle* req_handles,
                            uint32_t req_handle_count, zx::handle* resp_handles,
@@ -252,7 +247,6 @@ class Fragment : public FragmentBase {
   ProtocolClient<ddk::GdcProtocolClient, gdc_protocol_t> gdc_client_;
   ProtocolClient<ddk::Ge2dProtocolClient, ge2d_protocol_t> ge2d_client_;
   ProtocolClient<ddk::ScpiProtocolClient, scpi_protocol_t> scpi_client_;
-  ProtocolClient<ddk::RpmbProtocolClient, rpmb_protocol_t> rpmb_client_;
   ProtocolClient<ddk::RegistersProtocolClient, registers_protocol_t> registers_client_;
   ProtocolClient<ddk::VregProtocolClient, vreg_protocol_t> vreg_client_;
   ProtocolClient<ddk::DsiProtocolClient, dsi_protocol_t> dsi_client_;

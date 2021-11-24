@@ -3,7 +3,7 @@
   "pkg/ddk/include/lib/ddk/debug.h": "736b21b5fa9bcaacb5ee83789cd7ee4e",
   "pkg/ddk/include/lib/ddk/device.h": "d6fd9d5e2fc939eadb5c1588ba1c5506",
   "pkg/ddk/include/lib/ddk/driver.h": "5b51bc458c6e516ffa3d5e088a317d80",
-  "pkg/ddk/include/lib/ddk/fidl-protodefs.h": "3a33e6742fe13ceb1815c91542bed4b4",
+  "pkg/ddk/include/lib/ddk/fidl-protodefs.h": "5b1769eebf05ab5d3c8852443b0f4a22",
   "pkg/ddk/include/lib/ddk/fragment-device.h": "fcbfff749bc40f5b9de20763e1174c03",
   "pkg/ddk/include/lib/ddk/hw/arch_ops.h": "ef8c3cb79d2112918bf853ff82cd7f0e",
   "pkg/ddk/include/lib/ddk/hw/inout.h": "c642e13fad48e9de276f39a7128d778d",
@@ -12,6 +12,6 @@
   "pkg/ddk/include/lib/ddk/metadata.h": "e8505823645a5f9cc053216ab48566f7",
   "pkg/ddk/include/lib/ddk/mmio-buffer.h": "c367b69b7d7339ee0216b9297921eefe",
   "pkg/ddk/include/lib/ddk/phys-iter.h": "d39773b5ab2a3175193afaf0ed41f2e0",
-  "pkg/ddk/include/lib/ddk/protodefs.h": "f2be13cd9f50cbb04b19e83c7d6fac00",
+  "pkg/ddk/include/lib/ddk/protodefs.h": "845142fac95bb52c4dff7fe3fec0a2db",
   "pkg/ddk/include/lib/ddk/trace/event.h": "e538e7ff5318c397e0cd1dca545eadca"
 }

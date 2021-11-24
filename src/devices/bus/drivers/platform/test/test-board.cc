@@ -83,11 +83,6 @@ int TestBoard::Thread() {
     zxlogf(ERROR, "%s: PwmInit failed: %d", __func__, status);
   }
 
-  status = RpmbInit();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: RpmbInit failed: %d", __func__, status);
-  }
-
   status = VregInit();
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: VregInit failed: %d", __func__, status);
@@ -180,9 +175,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
       BI_MATCH_IF(EQ, BIND_PWM_ID, 0),
   };
-  const zx_bind_inst_t rpmb_match[] = {
-      BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RPMB),
-  };
   const zx_bind_inst_t vreg_match[] = {
       BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_VREG),
   };
@@ -218,9 +210,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
   };
   device_fragment_part_t pwm_fragment[] = {
       {std::size(pwm_match), pwm_match},
-  };
-  device_fragment_part_t rpmb_fragment[] = {
-      {std::size(rpmb_match), rpmb_match},
   };
   device_fragment_part_t vreg_fragment[] = {
       {std::size(vreg_match), vreg_match},
@@ -293,7 +282,6 @@ zx_status_t TestBoard::Create(zx_device_t* parent) {
       {"child4", std::size(child4_fragment), child4_fragment},
       {"spi", std::size(spi_fragment), spi_fragment},
       {"pwm", std::size(pwm_fragment), pwm_fragment},
-      {"rpmb", std::size(rpmb_fragment), rpmb_fragment},
       {"vreg", std::size(vreg_fragment), vreg_fragment},
       {"pci", std::size(pci_fragment), pci_fragment},
       {"power-sensor", std::size(power_sensor_fragment), power_sensor_fragment},

@@ -22,5 +22,5 @@ node "sysmem" {
 }
 
 node "rpmb" {
-  fuchsia.BIND_PROTOCOL == fuchsia.rpmb.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_FIDL_PROTOCOL == fuchsia.rpmb.BIND_FIDL_PROTOCOL.DEVICE;
 }

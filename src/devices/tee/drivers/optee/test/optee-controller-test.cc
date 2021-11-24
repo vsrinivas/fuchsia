@@ -25,6 +25,7 @@
 
 #include "../optee-smc.h"
 #include "../tee-smc.h"
+#include "lib/fidl/llcpp/connect_service.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 struct SharedMemoryInfo {
@@ -167,21 +168,6 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
   zx_status_t SysmemUnregisterSecureMem() { return ZX_ERR_NOT_SUPPORTED; }
 };
 
-class FakeRpmb : public ddk::RpmbProtocol<FakeRpmb> {
- public:
-  FakeRpmb() {}
-
-  const rpmb_protocol_ops_t* proto_ops() const { return &rpmb_protocol_ops_; }
-  void RpmbConnectServer(zx::channel server) { call_cnt++; }
-
-  int get_call_count() const { return call_cnt; }
-
-  void reset() { call_cnt = 0; }
-
- private:
-  int call_cnt = 0;
-};
-
 class FakeDdkOptee : public zxtest::Test {
  public:
   FakeDdkOptee() : clients_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
@@ -190,7 +176,9 @@ class FakeDdkOptee : public zxtest::Test {
     ASSERT_OK(clients_loop_.StartThread());
     parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto_ops(), &pdev_, "pdev");
     parent_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_.proto_ops(), &sysmem_, "sysmem");
-    parent_->AddProtocol(ZX_PROTOCOL_RPMB, rpmb_.proto_ops(), &rpmb_, "rpmb");
+    parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
+        [](zx::channel) { return ZX_OK; }, "rpmb");
 
     EXPECT_OK(OpteeController::Create(nullptr, parent_.get()));
     optee_ = parent_->GetLatestChild()->GetDeviceContext<OpteeController>();
@@ -200,7 +188,6 @@ class FakeDdkOptee : public zxtest::Test {
  protected:
   FakePDev pdev_;
   FakeSysmem sysmem_;
-  FakeRpmb rpmb_;
 
   std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   OpteeController* optee_ = nullptr;
@@ -220,19 +207,15 @@ TEST_F(FakeDdkOptee, PmtUnpinned) {
 }
 
 TEST_F(FakeDdkOptee, RpmbTest) {
-  rpmb_.reset();
-
   using Rpmb = fuchsia_hardware_rpmb::Rpmb;
 
   EXPECT_EQ(optee_->RpmbConnectServer(fidl::ServerEnd<Rpmb>()), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(rpmb_.get_call_count(), 0);
 
   auto endpoints = fidl::CreateEndpoints<Rpmb>();
   ASSERT_TRUE(endpoints.is_ok());
   auto [client_end, server_end] = std::move(endpoints.value());
 
   EXPECT_EQ(optee_->RpmbConnectServer(std::move(server_end)), ZX_OK);
-  EXPECT_EQ(rpmb_.get_call_count(), 1);
 }
 
 TEST_F(FakeDdkOptee, MultiThreadTest) {

@@ -13,7 +13,6 @@
 #include <fuchsia/hardware/power/c/banjo.h>
 #include <fuchsia/hardware/power/sensor/c/banjo.h>
 #include <fuchsia/hardware/pwm/c/banjo.h>
-#include <fuchsia/hardware/rpmb/c/banjo.h>
 #include <fuchsia/hardware/spi/c/banjo.h>
 #include <fuchsia/hardware/vreg/c/banjo.h>
 #include <lib/ddk/debug.h>
@@ -53,7 +52,6 @@ enum Fragments_2 {
   FRAGMENT_CHILD4_2,
   FRAGMENT_SPI_2,
   FRAGMENT_PWM_2,
-  FRAGMENT_RPMB_2,
   FRAGMENT_VREG_2,
   FRAGMENT_PCI_2,
   FRAGMENT_POWER_SENSOR_2,
@@ -481,17 +479,6 @@ static zx_status_t test_pwm(pwm_protocol_t* pwm) {
   return ZX_OK;
 }
 
-static zx_status_t test_rpmb(rpmb_protocol_t* rpmb) {
-  zx_handle_t client, server;
-  zx_status_t status = zx_channel_create(0, &client, &server);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  rpmb_connect_server(rpmb, server);
-  return zx_handle_close(client);
-}
-
 static zx_status_t test_vreg(vreg_protocol_t* vreg) {
   zx_status_t st = ZX_OK;
 
@@ -588,7 +575,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
   i2c_protocol_t i2c;
   spi_protocol_t spi;
   pwm_protocol_t pwm;
-  rpmb_protocol_t rpmb;
   vreg_protocol_t vreg;
   goldfish_address_space_protocol_t goldfish_address_space;
   goldfish_pipe_protocol_t goldfish_pipe;
@@ -717,15 +703,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
       zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_PWM", DRIVER_NAME);
       return status;
     }
-    if (strncmp(fragments[FRAGMENT_RPMB_2].name, "rpmb", 32)) {
-      zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_RPMB_2].name);
-      return ZX_ERR_INTERNAL;
-    }
-    status = device_get_protocol(fragments[FRAGMENT_RPMB_2].device, ZX_PROTOCOL_RPMB, &rpmb);
-    if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: could not get protocol ZX_PROTOCOL_RPMB", DRIVER_NAME);
-      return status;
-    }
     if (strncmp(fragments[FRAGMENT_VREG_2].name, "vreg", 32)) {
       zxlogf(ERROR, "%s: Unexpected name: %s", DRIVER_NAME, fragments[FRAGMENT_VREG_2].name);
       return ZX_ERR_INTERNAL;
@@ -770,10 +747,6 @@ static zx_status_t test_bind(void* ctx, zx_device_t* parent) {
     }
     if ((status = test_pwm(&pwm)) != ZX_OK) {
       zxlogf(ERROR, "%s: test_pwm failed: %d", DRIVER_NAME, status);
-      return status;
-    }
-    if ((status = test_rpmb(&rpmb)) != ZX_OK) {
-      zxlogf(ERROR, "%s: test_rpmb failed: %d", DRIVER_NAME, status);
       return status;
     }
     if ((status = test_vreg(&vreg)) != ZX_OK) {

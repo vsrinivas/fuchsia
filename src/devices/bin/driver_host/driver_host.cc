@@ -76,7 +76,7 @@ std::optional<fdm::wire::DeviceProperty> fidl_offer_to_device_prop(const char* f
   static const std::unordered_map<std::string_view, uint32_t> kPropMap = {
 #define DDK_FIDL_PROTOCOL_DEF(tag, val, name) \
   {                                           \
-      #name,                                  \
+      name,                                   \
       val,                                    \
   },
 #include <lib/ddk/fidl-protodefs.h>

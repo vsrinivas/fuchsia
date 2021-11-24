@@ -22,7 +22,6 @@
 #include <fuchsia/hardware/power/sensor/cpp/banjo.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
-#include <fuchsia/hardware/rpmb/cpp/banjo.h>
 #include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/hardware/tee/cpp/banjo.h>
@@ -57,7 +56,6 @@ class FragmentProxy : public FragmentProxyBase,
                       public ddk::PowerProtocol<FragmentProxy>,
                       public ddk::PwmProtocol<FragmentProxy>,
                       public ddk::RegistersProtocol<FragmentProxy>,
-                      public ddk::RpmbProtocol<FragmentProxy>,
                       public ddk::SpiProtocol<FragmentProxy>,
                       public ddk::SysmemProtocol<FragmentProxy>,
                       public ddk::TeeProtocol<FragmentProxy>,
@@ -166,7 +164,6 @@ class FragmentProxy : public FragmentProxyBase,
   zx_status_t PwmEnable();
   zx_status_t PwmDisable();
   void RegistersConnect(zx::channel chan);
-  void RpmbConnectServer(zx::channel server);
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
                          size_t* out_rxdata_actual);

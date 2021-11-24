@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.hardware.rpmb/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.tee.manager/cpp/wire.h>
-#include <fuchsia/hardware/rpmb/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/coding.h>

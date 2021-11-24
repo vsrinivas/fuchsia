@@ -26,7 +26,6 @@ source_set("optee_lib") {
 
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.tee:fuchsia.hardware.tee_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.rpmb:fuchsia.hardware.rpmb_llcpp",
     "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",

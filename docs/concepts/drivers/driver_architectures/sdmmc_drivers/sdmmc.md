@@ -26,7 +26,7 @@ The SD/eMMC block driver creates a device that implements
 [fuchsia.hardware.block.partition](/sdk/banjo/fuchsia.hardware.block.partition/partition.fidl)
 for the user data partition, as well as devices for the boot0 and boot1
 partitions if enabled (eMMC only). A device implementing
-[fuchsia.hardware.rpmb](/sdk/banjo/fuchsia.hardware.rpmb/rpmb.fidl) is created if the
+[fuchsia.hardware.rpmb](/sdk/fidl/fuchsia.hardware.rpmb/rpmb.fidl) is created if the
 device supports it (eMMC only, based on JEDEC standard JESD84-B51 section 6.6.22).
 
 ## SDIO core driver

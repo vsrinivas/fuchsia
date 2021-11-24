@@ -4,6 +4,7 @@
 
 #include "sdmmc-block-device.h"
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -119,18 +120,55 @@ zx_status_t PartitionDevice::BlockPartitionGetName(char* out_name, size_t capaci
   return ZX_OK;
 }
 
-void RpmbDevice::RpmbConnectServer(zx::channel server) {
-  zx_status_t status;
-  if (!loop_started_ && (status = loop_.StartThread("sdmmc-rpmb-thread")) != ZX_OK) {
+zx_status_t RpmbDevice::Create(zx_device_t* parent, SdmmcBlockDevice* sdmmc,
+                               const std::array<uint8_t, SDMMC_CID_SIZE>& cid,
+                               const std::array<uint8_t, MMC_EXT_CSD_SIZE>& ext_csd) {
+  auto device = std::make_unique<RpmbDevice>(parent, sdmmc, cid, ext_csd);
+
+  if (auto status = device->loop_.StartThread("sdmmc-rpmb-thread"); status != ZX_OK) {
     zxlogf(ERROR, "failed to start RPMB thread: %d", status);
+    return status;
+  }
+  device->outgoing_.emplace(device->loop_.dispatcher());
+  device->outgoing_->svc_dir()->AddEntry(
+      fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
+      fbl::MakeRefCounted<fs::Service>(
+          [device = device.get()](fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> request) mutable {
+            auto status = fidl::BindSingleInFlightOnly(device->loop_.dispatcher(),
+                                                       std::move(request), device);
+            if (status != ZX_OK) {
+              zxlogf(ERROR, "failed to bind channel: %d", status);
+            }
+            return status;
+          }));
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
   }
 
-  loop_started_ = true;
-
-  status = fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), this);
+  auto status = device->outgoing_->Serve(std::move(endpoints->server));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to bind channel: %d", status);
+    zxlogf(ERROR, "Failed to service the outoing directory");
+    return status;
   }
+
+  std::array offers = {
+      fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
+  };
+
+  status = device->DdkAdd(ddk::DeviceAddArgs("rpmb")
+                              .set_flags(DEVICE_ADD_MUST_ISOLATE)
+                              .set_fidl_protocol_offers(offers)
+                              .set_outgoing_dir(endpoints->client.TakeChannel()));
+
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "failed to add RPMB partition device: %d", status);
+    return status;
+  }
+
+  __UNUSED auto* dummy1 = device.release();
+  return ZX_OK;
 }
 
 void RpmbDevice::GetDeviceInfo(GetDeviceInfoRequestView request,
@@ -269,19 +307,10 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   }
 
   if (!is_sd_ && raw_ext_csd_[MMC_EXT_CSD_RPMB_SIZE_MULT] > 0) {
-    std::unique_ptr<RpmbDevice> rpmb_partition(
-        new (&ac) RpmbDevice(zxdev(), this, raw_cid_, raw_ext_csd_));
-    if (!ac.check()) {
-      zxlogf(ERROR, "failed to allocate device memory");
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    if ((st = rpmb_partition->DdkAdd("rpmb")) != ZX_OK) {
-      zxlogf(ERROR, "failed to add RPMB partition device: %d", st);
+    st = RpmbDevice::Create(zxdev(), this, raw_cid_, raw_ext_csd_);
+    if (st != ZX_OK) {
       return st;
     }
-
-    __UNUSED auto* dummy1 = rpmb_partition.release();
   }
 
   remove_device_on_error.cancel();
@@ -448,8 +477,7 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
     return status;
   }
   if (discard_start.response[0] & kEraseErrorFlags) {
-    zxlogf(ERROR, "card reported discard group start error: 0x%08x",
-           discard_start.response[0]);
+    zxlogf(ERROR, "card reported discard group start error: 0x%08x", discard_start.response[0]);
     io_errors_.Add(1);
     return ZX_ERR_IO;
   }

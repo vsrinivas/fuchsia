@@ -44,6 +44,7 @@ type Request = resource struct {
     rx_frames box<fuchsia.mem.Range>;
 };
 
+@discoverable
 protocol Rpmb {
     GetDeviceInfo() -> (struct {
         info DeviceInfo;

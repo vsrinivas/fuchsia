@@ -108,7 +108,6 @@
 //src/devices/bus/drivers/platform/test:test-power-driver
 //src/devices/bus/drivers/platform/test:test-power-sensor-driver
 //src/devices/bus/drivers/platform/test:test-pwm-driver
-//src/devices/bus/drivers/platform/test:test-rpmb-driver
 //src/devices/bus/drivers/platform/test:test-spi-driver
 //src/devices/bus/drivers/platform/test:test-vreg-driver
 //src/devices/bus/drivers/platform:platform-bus-driver

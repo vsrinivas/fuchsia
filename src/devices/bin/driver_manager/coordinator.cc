@@ -281,6 +281,10 @@ void Coordinator::DumpDevice(VmoWriter* vmo, const Device* dev, size_t indent) c
     indent++;
     DumpDevice(vmo, dev->proxy().get(), indent);
   }
+  if (dev->new_proxy()) {
+    indent++;
+    DumpDevice(vmo, dev->new_proxy().get(), indent);
+  }
   for (const auto& child : dev->children()) {
     DumpDevice(vmo, &child, indent + 1);
   }
@@ -349,6 +353,9 @@ void Coordinator::DumpDeviceProps(VmoWriter* vmo, const Device* dev) const {
 
   if (dev->proxy()) {
     DumpDeviceProps(vmo, dev->proxy().get());
+  }
+  if (dev->new_proxy()) {
+    DumpDeviceProps(vmo, dev->new_proxy().get());
   }
   for (const auto& child : dev->children()) {
     DumpDeviceProps(vmo, &child);
@@ -555,7 +562,8 @@ zx_status_t Coordinator::AddDevice(
   // fragment.
   if (dev->libname() == GetFragmentDriverUrl()) {
     for (auto& cur_fragment : dev->parent()->fragments()) {
-      if (cur_fragment.fragment_device() == nullptr) {
+      if (cur_fragment.fragment_device() == nullptr &&
+          !cur_fragment.bound_device()->has_outgoing_directory()) {
         // Pick the first fragment that does not have a device added by the fragment
         // driver.
         cur_fragment.set_fragment_device(dev);
@@ -667,6 +675,9 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
     // For non-forced removals, the unbind task will handle scheduling the proxy removal.
     if (dev->proxy()) {
       ScheduleRemove(dev->proxy());
+    }
+    if (dev->new_proxy()) {
+      ScheduleRemove(dev->new_proxy());
     }
   } else {
     // We should not be removing a device while the unbind task is still running.

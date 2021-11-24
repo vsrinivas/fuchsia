@@ -858,37 +858,6 @@ zx_status_t Fragment::RpcDai(const uint8_t* req_buf, uint32_t req_size, uint8_t*
   }
 }
 
-zx_status_t Fragment::RpcRpmb(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                              uint32_t* out_resp_size, zx::handle* req_handles,
-                              uint32_t req_handle_count, zx::handle* resp_handles,
-                              uint32_t* resp_handle_count) {
-  if (!rpmb_client_.proto_client().is_valid()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  auto* req = reinterpret_cast<const RpmbProxyRequest*>(req_buf);
-  if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu", __func__, req_size, sizeof(*req));
-    return ZX_ERR_INTERNAL;
-  }
-
-  auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
-  *out_resp_size = sizeof(*resp);
-
-  switch (req->op) {
-    case RpmbOp::CONNECT_SERVER:
-      if (req_handle_count != 1) {
-        zxlogf(ERROR, "%s: expected one handle for %u", __func__, static_cast<uint32_t>(req->op));
-        return ZX_ERR_INVALID_ARGS;
-      }
-
-      rpmb_client_.proto_client().ConnectServer(zx::channel(req_handles[0].release()));
-      return ZX_OK;
-    default:
-      zxlogf(ERROR, "%s: unknown rpmb op %u", __func__, static_cast<uint32_t>(req->op));
-      return ZX_ERR_INTERNAL;
-  }
-}
-
 zx_status_t Fragment::RpcRegisters(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                                    uint32_t* out_resp_size, zx::handle* req_handles,
                                    uint32_t req_handle_count, zx::handle* resp_handles,
@@ -972,7 +941,7 @@ zx_status_t Fragment::RpcDsi(const uint8_t* req_buf, uint32_t req_size, uint8_t*
       }
       return dsi_client_.proto_client().Connect(zx::channel(req_handles[0].release()));
     default:
-      zxlogf(ERROR, "%s: unknown rpmb op %u", __func__, static_cast<uint32_t>(req->op));
+      zxlogf(ERROR, "%s: unknown dsi op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;
   }
 }
@@ -1124,10 +1093,6 @@ zx_status_t Fragment::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_DAI:
       status = RpcDai(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                       resp_handles, &resp_handle_count);
-      break;
-    case ZX_PROTOCOL_RPMB:
-      status = RpcRpmb(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
-                       resp_handles, &resp_handle_count);
       break;
     case ZX_PROTOCOL_REGISTERS:
       status = RpcRegisters(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
@@ -1400,14 +1365,6 @@ zx_status_t Fragment::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
         return ZX_ERR_NOT_SUPPORTED;
       }
       ge2d_client_.proto_client().GetProto(static_cast<ge2d_protocol_t*>(out_protocol));
-      return ZX_OK;
-    }
-
-    case ZX_PROTOCOL_RPMB: {
-      if (!rpmb_client_.proto_client().is_valid()) {
-        return ZX_ERR_NOT_SUPPORTED;
-      }
-      rpmb_client_.proto_client().GetProto(static_cast<rpmb_protocol_t*>(out_protocol));
       return ZX_OK;
     }
 

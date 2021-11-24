@@ -366,20 +366,6 @@ struct UsbModeSwitchProxyRequest {
   usb_mode_t mode;
 };
 
-// ZX_PROTOCOL_RPMB proxy supprot.
-enum class RpmbOp {
-  CONNECT_SERVER,
-};
-
-struct RpmbProxyRequest {
-  ProxyRequest header;
-  RpmbOp op;
-};
-
-struct RpmbProxyResponse {
-  ProxyResponse header;
-};
-
 // ZX_PROTOCOL_REGISTERS proxy supprot.
 enum class RegistersOp {
   CONNECT,

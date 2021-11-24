@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.hardware.rpmb/cpp/wire.h>
 #include <fidl/fuchsia.hardware.tee/cpp/wire.h>
 #include <fidl/fuchsia.tee.manager/cpp/wire.h>
-#include <fuchsia/hardware/rpmb/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -166,12 +165,7 @@ class OpteeController : public OpteeControllerBase,
       return ZX_ERR_INVALID_ARGS;
     }
 
-    if (!rpmb_protocol_client_.is_valid()) {
-      return ZX_ERR_UNAVAILABLE;
-    }
-
-    rpmb_protocol_client_.ConnectServer(server.TakeChannel());
-    return ZX_OK;
+    return DdkConnectFragmentFidlProtocol("rpmb", std::move(server));
   }
 
   const GetOsRevisionResult& os_revision() const { return os_revision_; }
@@ -205,7 +199,6 @@ class OpteeController : public OpteeControllerBase,
   std::map<Uuid, std::list<async::Loop>::iterator> uuid_config_;
 
   ddk::SysmemProtocolClient sysmem_;
-  ddk::RpmbProtocolClient rpmb_protocol_client_ = {};
   zx::resource secure_monitor_;
   uint32_t secure_world_capabilities_ = 0;
   GetOsRevisionResult os_revision_;
