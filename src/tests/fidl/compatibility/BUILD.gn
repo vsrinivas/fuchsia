@@ -240,6 +240,7 @@ fuchsia_component("fidl_compatibility_test_component") {
 }
 
 fuchsia_test_package("fidl_compatibility_test_package") {
+  package_deps = [ dart_default_build_cfg.runner_dep ]
   package_name = "fidl-compatibility-test"
   deps = [
     ":dart-server",

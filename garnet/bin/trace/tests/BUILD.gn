@@ -483,7 +483,10 @@ fuchsia_component("two_providers_two_engines_test_app_component") {
 }
 
 fuchsia_test_package("trace_tests") {
-  package_deps = [ "//garnet/bin/trace:trace" ]
+  package_deps = [
+    "//garnet/bin/trace:trace",
+    "//garnet/bin/trace_manager",
+  ]
   test_components = [
     ":detach_tests_component",
     ":ktrace_integration_tests_component",

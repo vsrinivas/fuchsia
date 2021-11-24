@@ -28,8 +28,10 @@ fuchsia_component("getifaddrs-netemul-test") {
 }
 
 fuchsia_test_package("getifaddrs-tests") {
-  package_deps =
-      [ "//src/connectivity/network/testing/netemul/runner:netemul-sandbox" ]
+  package_deps = [
+    "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
+    "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
+  ]
   test_components = [ ":getifaddrs-netemul-test" ]
   deps = [
     "//src/connectivity/network/netstack:component-debug-legacy",
