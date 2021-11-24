@@ -61,6 +61,10 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   void GetHealthState(::fuchsia::hardware::audio::Dai::GetHealthStateCallback callback) override {
     callback({});
   }
+  void GetProcessingElements(
+      ::fuchsia::hardware::audio::Dai::GetProcessingElementsCallback callback) override {
+    callback({});
+  }
   void GetRingBufferFormats(GetRingBufferFormatsCallback callback) override;
   void GetDaiFormats(GetDaiFormatsCallback callback) override;
   void CreateRingBuffer(

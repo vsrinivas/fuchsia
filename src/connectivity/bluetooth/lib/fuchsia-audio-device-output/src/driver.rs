@@ -275,6 +275,9 @@ impl SoftPcmOutput {
             StreamConfigRequest::GetHealthState { responder } => {
                 responder.send(HealthState::EMPTY)?;
             }
+            StreamConfigRequest::GetProcessingElements { responder } => {
+                responder.send(&mut Ok(vec![ProcessingElement::EMPTY]))?;
+            }
             StreamConfigRequest::GetProperties { responder } => {
                 #[rustfmt::skip]
                 let prop = StreamProperties {

@@ -126,6 +126,10 @@ class UsbAudioStream : public UsbAudioStreamBase,
                         GetHealthStateCompleter::Sync& completer) override {
       completer.Reply({});
     }
+    void GetProcessingElements(GetProcessingElementsRequestView request,
+                               GetProcessingElementsCompleter::Sync& completer) override {
+      completer.Reply({});
+    }
     void GetSupportedFormats(GetSupportedFormatsRequestView request,
                              GetSupportedFormatsCompleter::Sync& completer) override {
       stream_.GetSupportedFormats(completer);

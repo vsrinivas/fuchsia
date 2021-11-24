@@ -10,6 +10,7 @@ protocol/member fuchsia.hardware.audio/Codec.GetGainFormat() -> (fuchsia.hardwar
 protocol/member fuchsia.hardware.audio/Codec.GetHealthState() -> (fuchsia.hardware.audio/HealthState state)
 protocol/member fuchsia.hardware.audio/Codec.GetInfo() -> (fuchsia.hardware.audio/CodecInfo info)
 protocol/member fuchsia.hardware.audio/Codec.GetPlugDetectCapabilities() -> (fuchsia.hardware.audio/PlugDetectCapabilities plug_detect_capabilities)
+protocol/member fuchsia.hardware.audio/Codec.GetProcessingElements() -> (fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Result result)
 protocol/member fuchsia.hardware.audio/Codec.IsBridgeable() -> (bool supports_bridged_mode)
 protocol/member fuchsia.hardware.audio/Codec.Reset() -> ()
 protocol/member fuchsia.hardware.audio/Codec.SetBridgedMode(bool enable_bridged_mode)
@@ -43,6 +44,7 @@ strict union fuchsia.hardware.audio/Codec_SetDaiFormat_Result
 protocol/member fuchsia.hardware.audio/Dai.CreateRingBuffer(fuchsia.hardware.audio/DaiFormat dai_format,fuchsia.hardware.audio/Format ring_buffer_format,server_end:fuchsia.hardware.audio/RingBuffer ring_buffer)
 protocol/member fuchsia.hardware.audio/Dai.GetDaiFormats() -> (fuchsia.hardware.audio/Dai_GetDaiFormats_Result result)
 protocol/member fuchsia.hardware.audio/Dai.GetHealthState() -> (fuchsia.hardware.audio/HealthState state)
+protocol/member fuchsia.hardware.audio/Dai.GetProcessingElements() -> (fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Result result)
 protocol/member fuchsia.hardware.audio/Dai.GetProperties() -> (fuchsia.hardware.audio/DaiProperties properties)
 protocol/member fuchsia.hardware.audio/Dai.GetRingBufferFormats() -> (fuchsia.hardware.audio/Dai_GetRingBufferFormats_Result result)
 protocol/member fuchsia.hardware.audio/Dai.Reset() -> ()
@@ -133,6 +135,7 @@ const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_NUMBER_OF_CHANNELS uint32 6
 const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_RATES uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_DAI_SUPPORTED_SAMPLE_FORMATS uint32 4
 const fuchsia.hardware.audio/MAX_COUNT_FORMATS uint32 64
+const fuchsia.hardware.audio/MAX_COUNT_PROCESSING_ELEMENTS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_BYTES_PER_SAMPLE uint32 8
 const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_NUMBER_OF_CHANNELS uint32 64
 const fuchsia.hardware.audio/MAX_COUNT_SUPPORTED_RATES uint32 64
@@ -159,6 +162,7 @@ strict enum fuchsia.hardware.audio/PlugDetectCapabilities uint32
 table/member fuchsia.hardware.audio/PlugState.plug_state_time int64
 table/member fuchsia.hardware.audio/PlugState.plugged bool
 table fuchsia.hardware.audio/PlugState
+table fuchsia.hardware.audio/ProcessingElement
 protocol/member fuchsia.hardware.audio/RingBuffer.GetProperties() -> (fuchsia.hardware.audio/RingBufferProperties properties)
 protocol/member fuchsia.hardware.audio/RingBuffer.GetVmo(uint32 min_frames,uint32 clock_recovery_notifications_per_ring) -> (fuchsia.hardware.audio/RingBuffer_GetVmo_Result result)
 protocol/member fuchsia.hardware.audio/RingBuffer.SetActiveChannels(uint64 active_channels_bitmask) -> (fuchsia.hardware.audio/RingBuffer_SetActiveChannels_Result result)
@@ -189,8 +193,16 @@ enum/member fuchsia.hardware.audio/SampleFormat.PCM_FLOAT 3
 enum/member fuchsia.hardware.audio/SampleFormat.PCM_SIGNED 1
 enum/member fuchsia.hardware.audio/SampleFormat.PCM_UNSIGNED 2
 strict enum fuchsia.hardware.audio/SampleFormat uint8
+protocol/member fuchsia.hardware.audio/SignalProcessing.GetProcessingElements() -> (fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Result result)
+protocol fuchsia.hardware.audio/SignalProcessing
+struct/member fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Response.processing_elements vector<fuchsia.hardware.audio/ProcessingElement>:64
+struct fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Response
+union/member fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Result.err int32
+union/member fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Result.response fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Response
+strict union fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Result
 protocol/member fuchsia.hardware.audio/StreamConfig.CreateRingBuffer(fuchsia.hardware.audio/Format format,server_end:fuchsia.hardware.audio/RingBuffer ring_buffer)
 protocol/member fuchsia.hardware.audio/StreamConfig.GetHealthState() -> (fuchsia.hardware.audio/HealthState state)
+protocol/member fuchsia.hardware.audio/StreamConfig.GetProcessingElements() -> (fuchsia.hardware.audio/SignalProcessing_GetProcessingElements_Result result)
 protocol/member fuchsia.hardware.audio/StreamConfig.GetProperties() -> (fuchsia.hardware.audio/StreamProperties properties)
 protocol/member fuchsia.hardware.audio/StreamConfig.GetSupportedFormats() -> (vector<fuchsia.hardware.audio/SupportedFormats>:64 supported_formats)
 protocol/member fuchsia.hardware.audio/StreamConfig.SetGain(fuchsia.hardware.audio/GainState target_state)

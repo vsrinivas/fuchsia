@@ -221,10 +221,6 @@ TODO(fxbug.dev/63522).
 
 TODO(fxbug.dev/64878).
 
-### Signal Processing Control {#signal-processing-control}
-
-TODO(fxbug.dev/64877).
-
 ### Content Protection {#content-protection}
 
 TODO(fxbug.dev/63523).

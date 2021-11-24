@@ -16,3 +16,5 @@ toc:
   path: /docs/concepts/drivers/driver_architectures/audio_drivers/audio_dai.md
 - title: "Audio codec"
   path: /docs/concepts/drivers/driver_architectures/audio_drivers/audio_codec.md
+- title: "Audio Signal Processing"
+  path: /docs/concepts/drivers/driver_architectures/audio_drivers/audio_signal_processing.md

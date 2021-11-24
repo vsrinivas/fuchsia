@@ -206,6 +206,9 @@ protocol StreamConfig {
     /// Allows providing driver health state.
     compose Health;
 
+    /// Allows providing signal processing capabilities.
+    compose SignalProcessing;
+
     /// Retrieves top level static properties.
     GetProperties() -> (struct {
         properties StreamProperties;

@@ -358,6 +358,10 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
                         GetHealthStateCompleter::Sync& completer) override {
       completer.Reply({});
     }
+    void GetProcessingElements(GetProcessingElementsRequestView request,
+                               GetProcessingElementsCompleter::Sync& completer) override {
+      completer.Reply({});
+    }
 
     void GetSupportedFormats(GetSupportedFormatsRequestView request,
                              GetSupportedFormatsCompleter::Sync& completer) override {

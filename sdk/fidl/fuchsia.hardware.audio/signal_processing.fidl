@@ -1,0 +1,19 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.audio;
+
+using zx;
+
+const MAX_COUNT_PROCESSING_ELEMENTS uint32 = 64;
+
+type ProcessingElement = table {};
+
+/// For an overview see
+/// [[Signal Processing Interface]](https://fuchsia.dev/fuchsia-src/concepts/drivers/driver_architectures/audio_drivers/signal_processing).
+protocol SignalProcessing {
+    /// Returns a vector of supported Processing Elements.
+    GetProcessingElements() -> (struct {
+        processing_elements vector<ProcessingElement>:MAX_COUNT_PROCESSING_ELEMENTS;
+    }) error zx.status;
+};

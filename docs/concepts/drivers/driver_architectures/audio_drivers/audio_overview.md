@@ -6,3 +6,4 @@ These files describe the audio driver interfaces in Fuchsia.
 * [Audio Driver Streaming Interface](audio_streaming.md)
 * [Audio DAI Interface](audio_dai.md)
 * [Audio Codec Interface](audio_codec.md)
+* [Audio Signal Processing](audio_signal_processing.md)

@@ -97,6 +97,10 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                         GetHealthStateCompleter::Sync& completer) override {
       completer.Reply({});
     }
+    void GetProcessingElements(GetProcessingElementsRequestView request,
+                               GetProcessingElementsCompleter::Sync& completer) override {
+      completer.Reply({});
+    }
     void GetSupportedFormats(GetSupportedFormatsRequestView request,
                              GetSupportedFormatsCompleter::Sync& completer) override {
       fbl::AutoLock obj_lock(stream_.obj_lock());

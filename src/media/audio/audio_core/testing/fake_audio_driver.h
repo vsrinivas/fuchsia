@@ -73,6 +73,10 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
       fuchsia::hardware::audio::StreamConfig::GetHealthStateCallback callback) override {
     callback({});
   }
+  void GetProcessingElements(
+      fuchsia::hardware::audio::StreamConfig::GetProcessingElementsCallback callback) override {
+    callback({});
+  }
   void GetSupportedFormats(
       fuchsia::hardware::audio::StreamConfig::GetSupportedFormatsCallback callback) final;
   void CreateRingBuffer(

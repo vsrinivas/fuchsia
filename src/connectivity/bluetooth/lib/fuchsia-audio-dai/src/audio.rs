@@ -127,6 +127,9 @@ async fn process_audio_requests(
             StreamConfigRequest::GetHealthState { responder } => {
                 responder.send(HealthState::EMPTY)?;
             }
+            StreamConfigRequest::GetProcessingElements { responder } => {
+                responder.send(&mut Ok(vec![ProcessingElement::EMPTY]))?;
+            }
             StreamConfigRequest::GetProperties { responder } => {
                 let prop = StreamProperties {
                     unique_id: Some(unique_id.clone()),

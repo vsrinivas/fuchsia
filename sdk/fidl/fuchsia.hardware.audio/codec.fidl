@@ -80,6 +80,9 @@ protocol Codec {
     /// Allows providing driver health state.
     compose Health;
 
+    /// Allows providing signal processing capabilities.
+    compose SignalProcessing;
+
     /// Resets the codec.
     /// `Reset` returns when the reset is completed. If the driver can't successfully reset the
     /// codec it will close the codec protocol channel, in this case the client may obtain a new

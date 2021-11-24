@@ -42,6 +42,7 @@ class SimpleCodecServerInternal {
   void Start(Codec::StartCallback callback, SimpleCodecServerInstance<T>* instance);
   void GetInfo(Codec::GetInfoCallback callback);
   void GetHealthState(Codec::GetHealthStateCallback callback) { callback({}); }
+  void GetProcessingElements(Codec::GetProcessingElementsCallback callback) { callback({}); }
   void IsBridgeable(Codec::IsBridgeableCallback callback);
   virtual void SetBridgedMode(bool enable_bridged_mode) = 0;
   void GetDaiFormats(Codec::GetDaiFormatsCallback callback);
@@ -86,6 +87,9 @@ class SimpleCodecServerInstance
   void GetInfo(GetInfoCallback callback) override { parent_->GetInfo(std::move(callback)); }
   void GetHealthState(GetHealthStateCallback callback) override {
     parent_->GetHealthState(std::move(callback));
+  }
+  void GetProcessingElements(GetProcessingElementsCallback callback) override {
+    parent_->GetProcessingElements(std::move(callback));
   }
   void IsBridgeable(IsBridgeableCallback callback) override {
     parent_->IsBridgeable(std::move(callback));
