@@ -3,7 +3,8 @@
 # found in the LICENSE file.
 
 if (is_debug) {
-  default_optimize = "debug"
+  # TODO(fxbug.dev/89149): consider "debug"
+  default_optimize = "none"
 } else {
   default_optimize = "size"
 }

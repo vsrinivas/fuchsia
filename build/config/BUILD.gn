@@ -318,24 +318,12 @@ config("optimize_none") {
 }
 
 config("optimize_debug") {
-  if (false) {
-    # TODO(phosek): consider different settings to improve performance.
-    # -Og is what the compiler documents as "optimize the debugging
-    # experience", but zxdb team has reported Clang's -Og is problematic.
-    # This should have a bug# for a detailed bug about -Og and/or Rust-O1
-    # making debugging difficult in known specific reproducible ways.
-    cflags = [ "-Og" ]
-    ldflags = cflags
+  cflags = [ "-Og" ]
+  ldflags = cflags
 
-    # Rust doesn't recognize opt level "g", the closest is "1".
-    # See: https://doc.rust-lang.org/rustc/codegen-options/index.html#opt-level
-    rustflags = [ "-Copt-level=1" ]
-  } else if (zircon_toolchain != false) {
-    cflags = [ "-Og" ]
-    ldflags = cflags
-  } else {
-    configs = [ ":optimize_none" ]
-  }
+  # Rust doesn't recognize opt level "g", the closest is "1".
+  # See: https://doc.rust-lang.org/rustc/codegen-options/index.html#opt-level
+  rustflags = [ "-Copt-level=1" ]
 }
 
 config("optimize_default") {
