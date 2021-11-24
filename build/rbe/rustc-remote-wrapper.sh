@@ -14,6 +14,11 @@ script_dir="$(dirname "$script")"
 # The value is an absolute path.
 project_root="$(readlink -f "$script_dir"/../..)"
 
+# This is where the working directory happens to be in remote execution.
+# This assumed constant is only needed for a few workarounds elsewhere
+# in this script.
+remote_project_root="/b/f/w"
+
 function usage() {
 cat <<EOF
 This wrapper script helps dispatch a remote Rust compilation action by inferring
@@ -786,7 +791,7 @@ then
   #   https://github.com/pest-parser/pest/pull/522
   # Rewrite the depfile if it contains any absolute paths from the remote
   # build; paths should be relative to the root_build_dir.
-  sed -i -e 's|/b/f/w/out/[^/]*/||g' "$depfile"
+  sed -i -e "s|$remote_project_root/out/[^/]*/||g" "$depfile"
 
   mapfile -t remote_depfile_inputs < <(depfile_inputs_by_line "$depfile")
   for f in "${remote_depfile_inputs[@]}"
@@ -803,6 +808,12 @@ then
   done
   test "${#abs_deps[@]}" = 0 || status=1
   # error message below
+fi
+
+# Workaround https://fxbug.dev/89245: relative-ize absolute path of current
+# working directory in linker map files.
+if test -f "$map_output"
+then sed -i -e "s|$remote_project_root/|$project_root_rel/|g" "$map_output"
 fi
 
 test "$status" = 0 || {
@@ -879,6 +890,12 @@ test "$status" -ne 0 || test "$compare" = 0 || {
     exit "$status"
   }
 
+  # Workaround https://fxbug.dev/89245: relative-ize absolute path of current
+  # working directory in linker map files.
+  if test -f "$map_output"
+  then sed -i -e "s|$project_root/|$project_root_rel/|g" "$map_output"
+  fi
+
   # TEMPORARY WORKAROUND until upstream fix lands:
   #   https://github.com/pest-parser/pest/pull/522
   # Remove redundant occurences of the current working dir absolute path.
@@ -943,7 +960,7 @@ test "$status" -ne 0 || test "$compare" = 0 || {
       # Use sed to normalize absolute paths.
       diff -u \
         <(sed -e "s|$project_root/||" "$output.fsatrace") \
-        <(sed -e 's|/b/f/w/||' "$output.remote-fsatrace")
+        <(sed -e "s|$remote_project_root/||" "$output.remote-fsatrace")
     }
     status=1
   }
