@@ -32,10 +32,8 @@ pub async fn wait_for_component_stopped_event(
     status_match: ExitStatusMatcher,
     event_stream: &mut EventStream,
 ) {
-    let moniker_for_match = format!(
-        "./fuchsia_component_test_collection:{}:\\d+/test:\\d+/{}:\\d+",
-        instance_child_name, component
-    );
+    let moniker_for_match =
+        format!("./fuchsia_component_test_collection:{}/test/{}", instance_child_name, component);
     EventMatcher::ok()
         .stop(Some(status_match))
         .moniker_regex(moniker_for_match)

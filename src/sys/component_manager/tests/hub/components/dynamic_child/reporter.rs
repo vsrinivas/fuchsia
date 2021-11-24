@@ -61,7 +61,7 @@ async fn main() {
     .expect("failed to connect to fuchsia.component.Binder");
 
     let _ = EventMatcher::ok()
-        .moniker_regex("./coll:simple_instance:1")
+        .moniker_regex("./coll:simple_instance")
         .wait::<Started>(&mut event_stream)
         .await
         .expect("failed to wait for simple_instance to start");
@@ -84,7 +84,7 @@ async fn main() {
 
     // Wait for the dynamic child to stop
     let event = EventMatcher::ok()
-        .moniker_regex("./coll:simple_instance:1")
+        .moniker_regex("./coll:simple_instance")
         .expect_match::<Stopped>(&mut event_stream)
         .await;
 
@@ -98,7 +98,7 @@ async fn main() {
 
     // Wait for the dynamic child to begin deletion
     let event = EventMatcher::ok()
-        .moniker_regex("./coll:simple_instance:1")
+        .moniker_regex("./coll:simple_instance")
         .expect_match::<Destroyed>(&mut event_stream)
         .await;
 
@@ -114,7 +114,7 @@ async fn main() {
 
     // Wait for the dynamic child's static child to begin deletion
     let event = EventMatcher::ok()
-        .moniker_regex("./coll:simple_instance:1/child:0")
+        .moniker_regex("./coll:simple_instance/child")
         .expect_match::<Destroyed>(&mut event_stream)
         .await;
 
@@ -125,7 +125,7 @@ async fn main() {
 
     // Wait for the dynamic child's static child to be purged
     let event = EventMatcher::ok()
-        .moniker_regex("./coll:simple_instance:1/child:0")
+        .moniker_regex("./coll:simple_instance/child")
         .expect_match::<Purged>(&mut event_stream)
         .await;
 
@@ -137,7 +137,7 @@ async fn main() {
 
     // Wait for the dynamic child to be purged
     let event = EventMatcher::ok()
-        .moniker_regex("./coll:simple_instance:1")
+        .moniker_regex("./coll:simple_instance")
         .expect_match::<Purged>(&mut event_stream)
         .await;
 

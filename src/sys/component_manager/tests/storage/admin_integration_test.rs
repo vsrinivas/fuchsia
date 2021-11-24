@@ -217,7 +217,6 @@ async fn purged_storage_user() {
     let instance = builder.build().await.unwrap();
     let instance_moniker = format!("./{}:{}", DEFAULT_COLLECTION_NAME, instance.root.child_name());
     let storage_user_moniker = format!("{}/storage-user", &instance_moniker);
-    let storage_user_moniker_regex = format!("{}:.*/storage-user:.*", &instance_moniker);
 
     done_signal.await;
 
@@ -241,7 +240,7 @@ async fn purged_storage_user() {
     instance.destroy().await.unwrap();
 
     EventMatcher::ok()
-        .moniker_regex(storage_user_moniker_regex)
+        .moniker_regex(storage_user_moniker)
         .wait::<Purged>(&mut event_stream)
         .await
         .unwrap();

@@ -943,12 +943,12 @@ mod tests {
         let repo = DataRepo::default();
         let foo_container =
             repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
-                ComponentIdentifier::parse_from_moniker("./foo:0").unwrap(),
+                ComponentIdentifier::parse_from_moniker("./foo").unwrap(),
                 "fuchsia-pkg://foo",
             ));
         let bar_container =
             repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
-                ComponentIdentifier::parse_from_moniker("./bar:0").unwrap(),
+                ComponentIdentifier::parse_from_moniker("./bar").unwrap(),
                 "fuchsia-pkg://bar",
             ));
 

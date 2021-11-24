@@ -69,9 +69,9 @@ async fn test_stop_timeouts() {
         // is no contract around this and the validation logic does not accept
         // generic regexes.
         let child_name = instance.child_name().to_string();
-        let moniker_stem = format!("./{}:{}:", collection_name, child_name);
-        let custom_timeout_child = format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem);
-        let inherited_timeout_child = format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem);
+        let moniker_stem = format!("./{}:{}", collection_name, child_name);
+        let custom_timeout_child = format!("{}/custom-timeout-child$", moniker_stem);
+        let inherited_timeout_child = format!("{}/inherited-timeout-child$", moniker_stem);
         let target_monikers =
             [moniker_stem.clone(), custom_timeout_child.clone(), inherited_timeout_child.clone()];
 

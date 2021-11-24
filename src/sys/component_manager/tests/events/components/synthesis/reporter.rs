@@ -100,7 +100,7 @@ async fn main() {
     assert_eq!(directory_ready.len(), 1);
     assert_eq!(running[0], ".");
 
-    let re = Regex::new(r"./coll:auto-\d+:\d").unwrap();
+    let re = Regex::new(r"./coll:auto-\d+").unwrap();
     assert!(running[1..].iter().all(|m| re.is_match(m)));
 
     assert_eq!(BTreeSet::from_iter::<Vec<String>>(running).len(), 4);

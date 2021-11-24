@@ -35,8 +35,7 @@ async fn test_normal_behavior() {
 
         let _ = instance.connect_to_binder().unwrap();
 
-        let moniker_stem = format!("./{}:{}:", collection_name, instance.child_name());
-        let moniker = format!("^{}\\d+$", moniker_stem);
+        let moniker = format!("^./{}:{}$", collection_name, instance.child_name());
 
         let _ = EventMatcher::ok()
             .moniker_regex(moniker.clone())
