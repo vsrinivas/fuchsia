@@ -42,6 +42,14 @@ mod constants {
         pub const MONIKER: &str = "mock-snoop";
     }
 }
+
+/// The CoreRealm represents a hermetic, fully-functional instance of the Fuchsia Bluetooth core
+/// stack, complete with all components (bt-init, bt-gap, bt-rfcomm), the bt-host driver responsible
+/// for the majority of the Bluetooth Host Subsystem, and a bt-hci emulator. Clients should use the
+/// `create` method to construct an instance, and the `instance` method to access the various
+/// production capabilities and test interfaces (e.g. from the bt-hci emulator) exposed from the
+/// core stack. Clients of the CoreRealm must route the `tmp` storage capability from the test
+/// manager to the "#fuchsia_component_test_collection" underlying the RealmInstance.
 pub struct CoreRealm {
     realm: RealmInstance,
 }
