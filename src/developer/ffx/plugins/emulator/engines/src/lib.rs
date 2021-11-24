@@ -172,13 +172,9 @@ pub async fn get_instance_dir(
 
 /// Given an instance name, empty and remove the instance directory associated with that name.
 /// Fails if the directory can't be removed; returns Ok(()) if the directory doesn't exist.
-pub async fn clean_up_instance_dir(
-    ffx_config: &FfxConfigWrapper,
-    instance_name: &str,
-) -> Result<()> {
-    let path = get_instance_dir(ffx_config, instance_name, false).await?;
+pub async fn clean_up_instance_dir(path: &PathBuf) -> Result<()> {
     if path.exists() {
-        log::debug!("Removing {:?} for {}", path, instance_name);
+        log::debug!("Removing {:?} for {:?}", path, path.as_path().file_name().unwrap());
         std::fs::remove_dir_all(&path.as_path()).context("Request to remove directory failed")
     } else {
         // It's already gone, so just return Ok(()).
@@ -187,6 +183,16 @@ pub async fn clean_up_instance_dir(
 }
 
 /// Retrieve a list of all of the names of instances currently present on the local system.
-pub fn get_all_instances() -> Vec<String> {
-    todo!("The --all flag is not yet supported.")
+pub async fn get_all_instances(ffx_config: &FfxConfigWrapper) -> Result<Vec<PathBuf>> {
+    let mut result = Vec::new();
+    let buf = PathBuf::from(ffx_config.file(EMU_INSTANCE_ROOT_DIR).await?);
+    let root = buf.as_path();
+    if root.is_dir() {
+        for entry in root.read_dir()? {
+            if let Ok(entry) = entry {
+                result.push(entry.path());
+            }
+        }
+    }
+    return Ok(result);
 }

@@ -10,7 +10,10 @@ if (is_host) {
     edition = "2018"
     with_unit_tests = true
     args_deps = []
-    deps = []
+    deps = [
+      "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
+      "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
+    ]
     args_sources = [ "src/args.rs" ]
     sources = [ "src/lib.rs" ]
   }
