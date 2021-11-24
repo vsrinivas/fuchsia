@@ -346,7 +346,7 @@ void PageQueues::MruThread() {
     // Currently this is redundant since we will explicitly harvest just after aging, however once
     // there are additional aging triggers and harvesting is more asynchronous, this will serve as
     // a synchronization point.
-    scanner_wait_for_accessed_scan(last_age_time_);
+    scanner_wait_for_accessed_scan(last_age_time_, true);
 
     RotatePagerBackedQueues(age_reason);
 

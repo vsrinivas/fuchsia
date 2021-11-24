@@ -51,9 +51,10 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) override;
 
-  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction action) override;
+  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction non_terminal_action,
+                              TerminalAction terminal_action) override;
 
-  bool ActiveSinceLastCheck() override;
+  bool ActiveSinceLastCheck(bool clear) override;
 
   paddr_t arch_table_phys() const override { return tt_phys_; }
   uint16_t arch_asid() const { return asid_; }
@@ -99,7 +100,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   size_t HarvestAccessedPageTable(size_t* entry_limit, vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
                                   size_t size_in, uint index_shift, uint page_size_shift,
-                                  NonTerminalAction action, volatile pte_t* page_table,
+                                  NonTerminalAction non_terminal_action,
+                                  TerminalAction terminal_action, volatile pte_t* page_table,
                                   ConsistencyManager& cm, bool* unmapped_out) TA_REQ(lock_);
 
   void MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size, uint index_shift,

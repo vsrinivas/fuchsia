@@ -732,21 +732,23 @@ zx_status_t X86ArchVmAspace::Query(vaddr_t vaddr, paddr_t* paddr, uint* mmu_flag
 }
 
 zx_status_t X86ArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
-                                             NonTerminalAction action) {
+                                             NonTerminalAction non_terminal_action,
+                                             TerminalAction terminal_action) {
   if (!IsValidVaddr(vaddr)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return pt_->HarvestAccessed(vaddr, count, action);
+  return pt_->HarvestAccessed(vaddr, count, non_terminal_action, terminal_action);
 }
 
-bool X86ArchVmAspace::ActiveSinceLastCheck() {
+bool X86ArchVmAspace::ActiveSinceLastCheck(bool clear) {
   // Read whether any CPUs are presently executing.
   bool currently_active = active_cpus_.load(ktl::memory_order_relaxed) != 0;
   // Exchange the current notion of active, with the previously active information. This is the only
   // time a |false| value can potentially be written to active_since_last_check_, and doing an
   // exchange means we can never 'lose' a |true| value.
   bool previously_active =
-      active_since_last_check_.exchange(currently_active, ktl::memory_order_relaxed);
+      clear ? active_since_last_check_.exchange(currently_active, ktl::memory_order_relaxed)
+            : active_since_last_check_.load(ktl::memory_order_relaxed);
   // Return whether we had previously been active. It is not necessary to also consider whether we
   // are currently active, since activating would also have active_since_last_check_ to true. In the
   // scenario where we race and currently_active is true, but we observe previously_active to be

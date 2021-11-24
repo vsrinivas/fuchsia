@@ -99,7 +99,9 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // used lock this function should still only be called infrequently to avoid monopolizing the
   // lock.
   using NonTerminalAction = ArchVmAspace::NonTerminalAction;
-  static void HarvestAllUserAccessedBits(NonTerminalAction action);
+  using TerminalAction = ArchVmAspace::TerminalAction;
+  static void HarvestAllUserAccessedBits(NonTerminalAction non_terminal_action,
+                                         TerminalAction terminal_action);
 
   // Traverses the VM tree rooted at this node, in depth-first pre-order. If
   // any methods of |ve| return false, the traversal stops and this method

@@ -11,10 +11,11 @@
 namespace vm_unittest {
 
 // Wrapper for harvesting access bits that informs the page queues
-static void harvest_access_bits(VmAspace::NonTerminalAction action) {
+static void harvest_access_bits(VmAspace::NonTerminalAction non_terminal_action,
+                                VmAspace::TerminalAction terminal_action) {
   AutoVmScannerDisable scanner_disable;
   pmm_page_queues()->BeginAccessScan();
-  VmAspace::HarvestAllUserAccessedBits(action);
+  VmAspace::HarvestAllUserAccessedBits(non_terminal_action, terminal_action);
   pmm_page_queues()->EndAccessScan();
 }
 
@@ -213,7 +214,8 @@ static bool vmaspace_accessed_test() {
   ASSERT_EQ(ZX_OK, mem->CommitAndMap(PAGE_SIZE));
 
   // Initial accessed state is undefined, so harvest it away.
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
 
   // Grab the current queue for the page and then rotate the page queues. This means any future,
   // correct, access harvesting should result in a new page queue.
@@ -223,20 +225,37 @@ static bool vmaspace_accessed_test() {
   // Read from the mapping to (hopefully) set the accessed bit.
   asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
   // Harvest it to move it in the page queue.
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
 
   EXPECT_NE(current_queue, page->object.get_page_queue_ref().load());
   current_queue = page->object.get_page_queue_ref().load();
 
   // Rotating and harvesting again should not make the queue change since we have not accessed it.
   pmm_page_queues()->RotatePagerBackedQueues();
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
   EXPECT_EQ(current_queue, page->object.get_page_queue_ref().load());
 
   // Set the accessed bit again, and make sure it does now harvest.
   pmm_page_queues()->RotatePagerBackedQueues();
   asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
+  EXPECT_NE(current_queue, page->object.get_page_queue_ref().load());
+
+  // Set the accessed bit and update age without harvesting.
+  asm volatile("" ::"r"(mem->get<int>(0)) : "memory");
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain, VmAspace::TerminalAction::UpdateAge);
+  current_queue = page->object.get_page_queue_ref().load();
+
+  // Now if we rotate and update again, we should re-age the page.
+  pmm_page_queues()->RotatePagerBackedQueues();
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain, VmAspace::TerminalAction::UpdateAge);
+  EXPECT_NE(current_queue, page->object.get_page_queue_ref().load());
+  current_queue = page->object.get_page_queue_ref().load();
+  pmm_page_queues()->RotatePagerBackedQueues();
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain, VmAspace::TerminalAction::UpdateAge);
   EXPECT_NE(current_queue, page->object.get_page_queue_ref().load());
 
   END_TEST;
@@ -268,7 +287,8 @@ static bool vmaspace_usercopy_accessed_fault_test() {
   mem->put<char>(42);
 
   // Harvest any accessed bits.
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
 
   // Read from the VMO into the mapping that has been harvested.
   status = vmo->ReadUser(Thread::Current::Get()->aspace(), mem->user_out<char>(), 0, sizeof(char));
@@ -351,35 +371,45 @@ static bool vmaspace_free_unaccessed_page_tables_test() {
 
   touch();
   // Harvest the accessed information, this should not actually unmap it, even if we ask it to.
-  harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed);
+  harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
   touch();
   // Harvest the accessed information, then attempt to do it again so that it gets unmapped.
-  harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed);
-  harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed);
+  harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
+  harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
   EXPECT_OK(mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
   // Touch the mapping to ensure its accessed.
   touch();
 
   // Harvest the page accessed information, but retain the non-terminals.
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
   // We can do this a few times.
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
   // Now if we attempt to free unaccessed the non-terminal should still be accessed and so nothing
   // should get unmapped.
-  harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed);
+  harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
   // If we are not requesting a free, then we should be able to harvest repeatedly.
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
-  harvest_access_bits(VmAspace::NonTerminalAction::Retain);
+  harvest_access_bits(VmAspace::NonTerminalAction::Retain,
+                      VmAspace::TerminalAction::UpdateAgeAndHarvest);
 
   END_TEST;
 }

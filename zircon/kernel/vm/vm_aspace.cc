@@ -764,7 +764,8 @@ void VmAspace::MarkAsLatencySensitive() {
   }
 }
 
-void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
+void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction non_terminal_action,
+                                          TerminalAction terminal_action) {
   VM_KTRACE_DURATION(2, "VmAspace::HarvestAllUserAccessedBits");
   Guard<Mutex> guard{AspaceListLock::Get()};
 
@@ -772,7 +773,8 @@ void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
     if (a.is_user()) {
       // TODO(fxb/85056): Formalize this.
       // Forbid PT reclamation on latency sensitive aspaces.
-      NonTerminalAction apply_action = a.IsLatencySensitive() ? NonTerminalAction::Retain : action;
+      NonTerminalAction apply_action =
+          a.IsLatencySensitive() ? NonTerminalAction::Retain : non_terminal_action;
       // The arch_aspace is only destroyed in the VmAspace destructor *after* the aspace is removed
       // from the aspaces list. As we presently hold the AspaceListLock::Get() we know that this
       // destructor has not completed, and so the arch_aspace has not been destroyed. Even if the
@@ -781,7 +783,8 @@ void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
       // First we always check ActiveSinceLastCheck (even if we could separately infer that we have
       // to do a harvest) in order to clear the state from it.
       bool harvest = true;
-      if (a.arch_aspace().ActiveSinceLastCheck()) {
+      if (a.arch_aspace().ActiveSinceLastCheck(
+              terminal_action == TerminalAction::UpdateAgeAndHarvest ? true : false)) {
         // The aspace has been active since some kind of harvest last happened, so we must do a new
         // one. Reset our counter of how many pt reclamations we've done based on what kind scan
         // this is.
@@ -807,8 +810,8 @@ void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
         harvest = false;
       }
       if (harvest) {
-        zx_status_t __UNUSED result =
-            a.arch_aspace().HarvestAccessed(a.base(), a.size() / PAGE_SIZE, apply_action);
+        zx_status_t __UNUSED result = a.arch_aspace().HarvestAccessed(
+            a.base(), a.size() / PAGE_SIZE, apply_action, terminal_action);
         DEBUG_ASSERT(result == ZX_OK);
         vm_aspace_accessed_harvests_performed.Add(1);
       } else {

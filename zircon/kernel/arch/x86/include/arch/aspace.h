@@ -103,9 +103,10 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   // fault method.
   zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) override { return ZX_ERR_NOT_SUPPORTED; }
 
-  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction action) override;
+  zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction non_terminal_action,
+                              TerminalAction terminal_action) override;
 
-  bool ActiveSinceLastCheck() override;
+  bool ActiveSinceLastCheck(bool clear) override;
 
   paddr_t arch_table_phys() const override { return pt_->phys(); }
   paddr_t pt_phys() const { return pt_->phys(); }

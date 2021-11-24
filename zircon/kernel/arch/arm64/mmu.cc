@@ -955,7 +955,8 @@ zx_status_t ArmArchVmAspace::ProtectPageTable(vaddr_t vaddr_in, vaddr_t vaddr_re
 size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t vaddr,
                                                  vaddr_t vaddr_rel_in, size_t size,
                                                  const uint index_shift, const uint page_size_shift,
-                                                 NonTerminalAction action,
+                                                 NonTerminalAction non_terminal_action,
+                                                 TerminalAction terminal_action,
                                                  volatile pte_t* page_table, ConsistencyManager& cm,
                                                  bool* unmapped_out) {
   const vaddr_t block_size = 1UL << index_shift;
@@ -990,15 +991,15 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
           static_cast<volatile pte_t*>(paddr_to_physmap(page_table_paddr));
 
       // Start with the assumption that we will unmap if we can.
-      bool do_unmap = action == NonTerminalAction::FreeUnaccessed;
+      bool do_unmap = non_terminal_action == NonTerminalAction::FreeUnaccessed;
       // Check for our emulated non-terminal AF so we can potentially skip the recursion.
       // TODO: make this optional when hardware AF is supported (see todo on
       // MMU_PTE_ATTR_RES_SOFTWARE_AF for details)
       if (pte & MMU_PTE_ATTR_RES_SOFTWARE_AF) {
         bool unmapped = false;
-        chunk_size = HarvestAccessedPageTable(entry_limit, vaddr, vaddr_rem, chunk_size,
-                                              index_shift - (page_size_shift - 3), page_size_shift,
-                                              action, next_page_table, cm, &unmapped);
+        chunk_size = HarvestAccessedPageTable(
+            entry_limit, vaddr, vaddr_rem, chunk_size, index_shift - (page_size_shift - 3),
+            page_size_shift, non_terminal_action, terminal_action, next_page_table, cm, &unmapped);
         // This was accessed so we don't necessarily want to unmap it, unless our recursive call
         // caused the page table to be empty, in which case we are obligated to.
         do_unmap = (unmapped && page_table_is_clear(next_page_table, page_size_shift));
@@ -1006,7 +1007,7 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
         // then we can clear the AF as we know we will not have to process entries from this one
         // again.
         if (!do_unmap && (vaddr_rel + chunk_size) >> index_shift != index &&
-            action != NonTerminalAction::Retain) {
+            non_terminal_action != NonTerminalAction::Retain) {
           pte &= ~MMU_PTE_ATTR_RES_SOFTWARE_AF;
           update_pte(&page_table[index], pte);
         }
@@ -1034,16 +1035,18 @@ size_t ArmArchVmAspace::HarvestAccessedPageTable(size_t* entry_limit, vaddr_t va
       // to update on an access.
       if (likely(page)) {
         pmm_page_queues()->MarkAccessedDeferredCount(page);
+
+        if (terminal_action == TerminalAction::UpdateAgeAndHarvest) {
+          // Modifying the access flag does not require break-before-make for correctness and as we
+          // do not support hardware access flag setting at the moment we do not have to deal with
+          // potential concurrent modifications.
+          pte = (pte & ~MMU_PTE_ATTR_AF);
+          LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
+          update_pte(&page_table[index], pte);
+
+          cm.FlushEntry(vaddr, true);
+        }
       }
-
-      // Modifying the access flag does not require break-before-make for correctness and as we
-      // do not support hardware access flag setting at the moment we do not have to deal with
-      // potential concurrent modifications.
-      pte = (pte & ~MMU_PTE_ATTR_AF);
-      LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, index, pte);
-      update_pte(&page_table[index], pte);
-
-      cm.FlushEntry(vaddr, true);
     }
     vaddr += chunk_size;
     vaddr_rel += chunk_size;
@@ -1473,7 +1476,8 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
 }
 
 zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
-                                             NonTerminalAction action) {
+                                             NonTerminalAction non_terminal_action,
+                                             TerminalAction terminal_action) {
   VM_KTRACE_DURATION(2, "ArmArchVmAspace::HarvestAccessed", vaddr, count);
   canary_.Assert();
 
@@ -1535,9 +1539,9 @@ zx_status_t ArmArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
   while (remaining_size) {
     LocalTraceDuration trace{"harvest_loop"_stringref};
     size_t entry_limit = kMaxEntriesPerIteration;
-    const size_t harvested_size =
-        HarvestAccessedPageTable(&entry_limit, current_vaddr, current_vaddr_rel, remaining_size,
-                                 top_index_shift, page_size_shift, action, tt_virt_, cm, nullptr);
+    const size_t harvested_size = HarvestAccessedPageTable(
+        &entry_limit, current_vaddr, current_vaddr_rel, remaining_size, top_index_shift,
+        page_size_shift, non_terminal_action, terminal_action, tt_virt_, cm, nullptr);
     DEBUG_ASSERT(harvested_size > 0);
     DEBUG_ASSERT(harvested_size <= remaining_size);
 
@@ -1590,14 +1594,15 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
   return ZX_OK;
 }
 
-bool ArmArchVmAspace::ActiveSinceLastCheck() {
+bool ArmArchVmAspace::ActiveSinceLastCheck(bool clear) {
   // Read whether any CPUs are presently executing.
   bool currently_active = num_active_cpus_.load(ktl::memory_order_relaxed) != 0;
   // Exchange the current notion of active, with the previously active information. This is the only
   // time a |false| value can potentially be written to active_since_last_check_, and doing an
   // exchange means we can never 'lose' a |true| value.
   bool previously_active =
-      active_since_last_check_.exchange(currently_active, ktl::memory_order_relaxed);
+      clear ? active_since_last_check_.exchange(currently_active, ktl::memory_order_relaxed)
+            : active_since_last_check_.load(ktl::memory_order_relaxed);
   // Return whether we had previously been active. It is not necessary to also consider whether we
   // are currently active, since activating would also have active_since_last_check_ to true. In the
   // scenario where we race and currently_active is true, but we observe previously_active to be
