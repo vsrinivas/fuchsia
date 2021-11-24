@@ -379,9 +379,12 @@ impl SamplerConfig {
         project_configs.append(&mut load_many(legacy_sampler_config_paths)?);
         if let Some(fire_dir) = fire_dir {
             let fire_project_paths = paths_matching_name(&fire_dir, "*/projects/*.json5")?;
+            // TODO(fxbug.dev/89288): Switch back to just json5 as soon as everything supports JSON5.
             let fire_component_paths = paths_matching_name(&fire_dir, "*/components.json5")?;
+            let fire_component_json_paths = paths_matching_name(&fire_dir, "*/components.json")?;
             let fire_project_templates = load_many(fire_project_paths)?;
-            let fire_components = load_many::<ComponentIdInfoList>(fire_component_paths)?;
+            let mut fire_components = load_many::<ComponentIdInfoList>(fire_component_paths)?;
+            fire_components.extend(load_many::<ComponentIdInfoList>(fire_component_json_paths)?);
             let fire_components =
                 fire_components.into_iter().flatten().collect::<Vec<ComponentIdInfo>>();
             project_configs
@@ -610,8 +613,10 @@ mod tests {
         let fire_load_path = fire_dir.path();
         let sampler_config_path = sampler_load_path.join("config");
         let fire_config_path = fire_load_path.join("config");
+        let fire_json_config_path = fire_load_path.join("config_json");
         fs::create_dir(&sampler_config_path).unwrap();
         fs::create_dir(&fire_config_path).unwrap();
+        fs::create_dir(&fire_json_config_path).unwrap();
         fs::write(
             sampler_config_path.join("some_name.json"),
             r#"{
@@ -631,12 +636,18 @@ mod tests {
         )
         .unwrap();
         fs::write(
-            fire_config_path.join("components.json5"),
+            fire_json_config_path.join("components.json"),
             r#"[
                 {
-                    id: 42,
-                    moniker: "core/foo42",
-                },
+                    "id": 42,
+                    "moniker": "core/foo42"
+                }
+            ]"#,
+        )
+        .unwrap();
+        fs::write(
+            fire_config_path.join("components.json5"),
+            r#"[
                 {
                     id: 43,
                     moniker: "bar43.cmx",

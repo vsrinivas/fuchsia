@@ -8,7 +8,7 @@ import("//build/config.gni")
 
 config_data("fire_config_component_list") {
   for_pkg = "sampler"
-  sources = [ "components.json5" ]
+  sources = [ "components.json" ]
   outputs = [ "fire/fuchsia/{{source_file_part}}" ]
 }
 
@@ -22,9 +22,9 @@ group("fire_config_data") {
 # Validate FIRE config
 
 resource("config-validation-resources") {
-  sources = [ "components.json5" ]
+  sources = [ "components.json" ]
 
-  # The component will see this as /pkg/config/fire/fuchsia/components.json5
+  # The component will see this as /pkg/config/fire/fuchsia/components.json
   outputs = [ "config/fire/fuchsia/{{source_file_part}}" ]
 }
 
