@@ -11,8 +11,7 @@
 
 namespace fshost {
 
-fbl::RefPtr<fs::Service> AdminServer::Create(FsManager* fs_manager,
-                                             async_dispatcher* dispatcher) {
+fbl::RefPtr<fs::Service> AdminServer::Create(FsManager* fs_manager, async_dispatcher* dispatcher) {
   return fbl::MakeRefCounted<fs::Service>(
       [dispatcher, fs_manager](fidl::ServerEnd<fuchsia_fshost::Admin> chan) {
         zx_status_t status = fidl::BindSingleInFlightOnly(
@@ -30,9 +29,10 @@ void AdminServer::Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync&
   fs_manager_->Shutdown([completer = completer.ToAsync()](zx_status_t status) mutable {
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "filesystem shutdown failed: " << zx_status_get_string(status);
+      completer.Close(status);
     } else {
-      completer.Reply();
       FX_LOGS(INFO) << "shutdown complete";
+      completer.Reply();
     }
   });
 }
