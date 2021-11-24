@@ -137,10 +137,7 @@ func (e *endpoint) WritePacket(r stack.RouteInfo, protocol tcpip.NetworkProtocol
 	//
 	// TODO(gvisor.dev/issue/5289): don't use a new goroutine once we support
 	// send and receive queues.
-	pkt.IncRef()
 	go func() {
-		defer pkt.DecRef()
-
 		for _, remote := range e.remote {
 			if !remote.IsAttached() {
 				panic(fmt.Sprintf("ep: %+v remote endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, remote))

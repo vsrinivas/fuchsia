@@ -372,7 +372,7 @@ func (n *nic) WritePacketToRemote(remoteLinkAddr tcpip.LinkAddress, protocol tcp
 }
 
 func (n *nic) writePacket(r RouteInfo, protocol tcpip.NetworkProtocolNumber, pkt *PacketBuffer) tcpip.Error {
-	// WritePacket modifies pkt, calculate numBytes first.
+	// WritePacket takes ownership of pkt, calculate numBytes first.
 	numBytes := pkt.Size()
 
 	pkt.EgressRoute = r
@@ -740,11 +740,6 @@ func (n *nic) DeliverNetworkPacket(remote, local tcpip.LinkAddress, protocol tcp
 
 	// Deliver to interested packet endpoints without holding NIC lock.
 	var packetEPPkt *PacketBuffer
-	defer func() {
-		if packetEPPkt != nil {
-			packetEPPkt.DecRef()
-		}
-	}()
 	deliverPacketEPs := func(ep PacketEndpoint) {
 		if packetEPPkt == nil {
 			// Packet endpoints hold the full packet.
@@ -766,9 +761,7 @@ func (n *nic) DeliverNetworkPacket(remote, local tcpip.LinkAddress, protocol tcp
 			packetEPPkt.PktType = tcpip.PacketHost
 		}
 
-		clone := packetEPPkt.Clone()
-		defer clone.DecRef()
-		ep.HandlePacket(n.id, local, protocol, clone)
+		ep.HandlePacket(n.id, local, protocol, packetEPPkt.Clone())
 	}
 
 	n.packetEPs.mu.Lock()
@@ -803,11 +796,6 @@ func (n *nic) deliverOutboundPacket(remote tcpip.LinkAddress, pkt *PacketBuffer)
 	local := n.LinkAddress()
 
 	var packetEPPkt *PacketBuffer
-	defer func() {
-		if packetEPPkt != nil {
-			packetEPPkt.DecRef()
-		}
-	}()
 	eps.forEach(func(ep PacketEndpoint) {
 		if packetEPPkt == nil {
 			// Packet endpoints hold the full packet.
@@ -829,9 +817,8 @@ func (n *nic) deliverOutboundPacket(remote tcpip.LinkAddress, pkt *PacketBuffer)
 			n.LinkEndpoint.AddHeader(local, remote, pkt.NetworkProtocolNumber, packetEPPkt)
 			packetEPPkt.PktType = tcpip.PacketOutgoing
 		}
-		clone := packetEPPkt.Clone()
-		defer clone.DecRef()
-		ep.HandlePacket(n.id, local, pkt.NetworkProtocolNumber, clone)
+
+		ep.HandlePacket(n.id, local, pkt.NetworkProtocolNumber, packetEPPkt.Clone())
 	})
 }
 
