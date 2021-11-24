@@ -9,12 +9,11 @@
 
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
+#include <fuchsia/hardware/wlanphyinfo/cpp/banjo.h>
 #include <fuchsia/wlan/common/cpp/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/cpp/banjo.h>
 #include <lib/ddk/device.h>
-
-#include <ddk/hw/wlan/wlaninfo/cpp/banjo.h>
 
 #if defined(__cplusplus)
 extern "C" {

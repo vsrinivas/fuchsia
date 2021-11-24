@@ -106,12 +106,12 @@ protocol/member fuchsia.hardware.wlan.mac/WlanmacIfc.Recv(uint32 flags,vector<ui
 protocol/member fuchsia.hardware.wlan.mac/WlanmacIfc.ReportTxStatus(fuchsia.hardware.wlan.mac/WlanTxStatus tx_status)
 protocol/member fuchsia.hardware.wlan.mac/WlanmacIfc.Status(uint32 status) -> ()
 protocol fuchsia.hardware.wlan.mac/WlanmacIfc
-struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.bands array<ddk.hw.wlan.wlaninfo/WlanInfoBandInfo,2>
+struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.bands array<fuchsia.hardware.wlanphyinfo/WlanInfoBandInfo,2>
 struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.bands_count uint32
-struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.caps ddk.hw.wlan.wlaninfo/WlanInfoHardwareCapability
-struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.driver_features ddk.hw.wlan.wlaninfo/WlanInfoDriverFeature
+struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.caps fuchsia.hardware.wlanphyinfo/WlanInfoHardwareCapability
+struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.driver_features fuchsia.hardware.wlanphyinfo/WlanInfoDriverFeature
 struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.mac_addr array<uint8,6>
-struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.mac_role ddk.hw.wlan.wlaninfo/WlanInfoMacRole
-struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.supported_phys ddk.hw.wlan.wlaninfo/WlanInfoPhyType
+struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.mac_role fuchsia.hardware.wlanphyinfo/WlanInfoMacRole
+struct/member fuchsia.hardware.wlan.mac/WlanmacInfo.supported_phys fuchsia.hardware.wlanphyinfo/WlanInfoPhyType
 struct fuchsia.hardware.wlan.mac/WlanmacInfo
 library fuchsia.hardware.wlan.mac

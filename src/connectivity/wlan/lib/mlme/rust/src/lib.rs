@@ -22,7 +22,8 @@ pub use {ddk_converter::*, wlan_common as common};
 
 use {
     anyhow::{anyhow, bail, Error},
-    banjo_ddk_hw_wlan_wlaninfo as ddk_wlaninfo, banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlanphyinfo as ddk_wlaninfo,
     device::{Device, DeviceInterface},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{

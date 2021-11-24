@@ -38,11 +38,10 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <threads.h>
 #include <zircon/types.h>
-
-#include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 /* for IWL_MAX_TID_COUNT */
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
