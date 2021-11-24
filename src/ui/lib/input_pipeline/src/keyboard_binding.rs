@@ -51,13 +51,27 @@ pub struct KeyboardEvent {
     /// meaning is added in the input pipeline by the appropriate
     /// keymap-aware input handlers.
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
+
+    /// If this keyboard event has been generated as a result of a repeated
+    /// generation of the same key, then this will be a nonzero. A nonzero
+    /// value N here means that this is Nth generated autorepeat for this
+    /// keyboard event.  The counter is reset for each new autorepeat key
+    /// span.
+    repeat_sequence: u64,
 }
 
 impl KeyboardEvent {
     /// Creates a new KeyboardEvent, with required fields filled out.  Use the
     /// `into_with_*` methods to add optional information.
     pub fn new(key: fidl_fuchsia_input::Key, event_type: KeyEventType) -> Self {
-        KeyboardEvent { key, event_type, modifiers: None, keymap: None, key_meaning: None }
+        KeyboardEvent {
+            key,
+            event_type,
+            modifiers: None,
+            keymap: None,
+            key_meaning: None,
+            repeat_sequence: 0,
+        }
     }
 
     pub fn get_key(&self) -> fidl_fuchsia_input::Key {
@@ -100,6 +114,26 @@ impl KeyboardEvent {
     /// Returns the currently valid key meaning.
     pub fn get_key_meaning(&self) -> Option<fidl_fuchsia_ui_input3::KeyMeaning> {
         self.key_meaning
+    }
+
+    /// Returns the repeat sequence number.  If a nonzero number N is returned,
+    /// that means this [KeyboardEvent] is the N-th generated autorepeat event.
+    /// A zero means this is an event that came from the keyboard driver.
+    pub fn get_repeat_sequence(&self) -> u64 {
+        self.repeat_sequence
+    }
+
+    /// Converts [KeyboardEvent] into the same one, but with the repeat sequence
+    /// changed.
+    pub fn into_with_repeat_sequence(self, repeat_sequence: u64) -> Self {
+        Self { repeat_sequence, ..self }
+    }
+}
+
+impl KeyboardEvent {
+    /// Returns true if the two keyboard events are about the same key.
+    pub fn same_key(this: &KeyboardEvent, that: &KeyboardEvent) -> bool {
+        this.get_key() == that.get_key()
     }
 }
 

@@ -50,6 +50,40 @@ pub fn create_keyboard_input_report(
 }
 
 /// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys and meaning.
+/// a repeat sequence.
+///
+/// # Parameters
+/// - `key`: The input3 key which changed state.
+/// - `event_type`: The input3 key event type (e.g. pressed, released).
+/// - `modifiers`: The input3 modifiers that are to be included as pressed.
+/// - `event_time`: The timestamp in nanoseconds when the event was recorded.
+/// - `device_descriptor`: The device descriptor to add to the event.
+/// - `repeat_sequence`: The sequence of this key event in the autorepeat process.
+#[cfg(test)]
+pub fn create_keyboard_event_with_key_meaning_and_repeat_sequence(
+    key: fidl_fuchsia_input::Key,
+    event_type: fidl_fuchsia_ui_input3::KeyEventType,
+    modifiers: Option<fidl_ui_input3::Modifiers>,
+    event_time: input_device::EventTime,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+    keymap: Option<String>,
+    key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
+    repeat_sequence: u64,
+) -> input_device::InputEvent {
+    let device_event = keyboard_binding::KeyboardEvent::new(key, event_type)
+        .into_with_modifiers(modifiers)
+        .into_with_key_meaning(key_meaning)
+        .into_with_keymap(keymap)
+        .into_with_repeat_sequence(repeat_sequence);
+    input_device::InputEvent {
+        device_event: input_device::InputDeviceEvent::Keyboard(device_event),
+        device_descriptor: device_descriptor.clone(),
+        event_time,
+        handled: false,
+    }
+}
+
+/// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys and meaning.
 ///
 /// # Parameters
 /// - `key`: The input3 key which changed state.
@@ -67,16 +101,16 @@ pub fn create_keyboard_event_with_key_meaning(
     keymap: Option<String>,
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
 ) -> input_device::InputEvent {
-    let keyboard_event = keyboard_binding::KeyboardEvent::new(key, event_type)
-        .into_with_modifiers(modifiers)
-        .into_with_keymap(keymap)
-        .into_with_key_meaning(key_meaning);
-    input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
-        device_descriptor: device_descriptor.clone(),
+    create_keyboard_event_with_key_meaning_and_repeat_sequence(
+        key,
+        event_type,
+        modifiers,
         event_time,
-        handled: false,
-    }
+        device_descriptor,
+        keymap,
+        key_meaning,
+        0,
+    )
 }
 
 /// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys.

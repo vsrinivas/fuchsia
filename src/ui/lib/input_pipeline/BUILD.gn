@@ -68,6 +68,7 @@ rustc_library("input_pipeline") {
   ]
 
   sources = [
+    "src/autorepeater.rs",
     "src/consumer_controls_binding.rs",
     "src/dead_keys_handler.rs",
     "src/factory_reset_handler.rs",
