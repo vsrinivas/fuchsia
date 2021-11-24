@@ -125,15 +125,9 @@ template("golden_test") {
       # comparing stale goldens.
       deps = invoker.deps
 
-      script = "/bin/sh"
+      script = "//build/testing/reformat_goldens.py"
       sources = rebase_path(goldens_list, ".", invoker.goldens_dir)
       inputs = []
-      reformat_goldens_bin = "/bin/cat"
-      if (defined(invoker.reformat_goldens_bin)) {
-        inputs += [ invoker.reformat_goldens_bin ]
-        reformat_goldens_bin =
-            rebase_path(invoker.reformat_goldens_bin, root_build_dir)
-      }
       if (defined(invoker.reformat_goldens_inputs)) {
         inputs += invoker.reformat_goldens_inputs
       }
@@ -141,17 +135,26 @@ template("golden_test") {
       outputs = [ "${copied_goldens_dir}/{{source_file_part}}" ]
       output_dir = rebase_path(copied_goldens_dir, root_build_dir)
 
-      fmt_args = ""
-      if (defined(invoker.reformat_goldens_args)) {
-        fmt_args = string_join(" ", invoker.reformat_goldens_args)
-      }
       args = [
-        "-c",
-
-        # Combine formatter invocation in one arg so it's escaped properly,
-        # otherwise redirects won't work.
-        "${reformat_goldens_bin} ${fmt_args} < {{source}} > ${output_dir}/{{source_file_part}}",
+        "--source",
+        "{{source}}",
+        "--output",
+        "${output_dir}/{{source_file_part}}",
       ]
+      if (defined(invoker.reformat_goldens_bin)) {
+        inputs += [ invoker.reformat_goldens_bin ]
+        args += [
+          "--formatter",
+          rebase_path(invoker.reformat_goldens_bin, root_build_dir),
+        ]
+        if (defined(invoker.reformat_goldens_args)) {
+          args += [ "--" ] + invoker.reformat_goldens_args
+        }
+      } else {
+        assert(
+            !defined(invoker.reformat_goldens_args),
+            "reformat_golden_args is only valid if a reformat_goldens_bin is specified")
+      }
     }
   }
 
