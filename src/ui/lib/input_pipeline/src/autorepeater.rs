@@ -10,7 +10,9 @@
 //! This handler does not implement [input_pipeline::InputHandler], as it requires a different
 //! approach to event processing.
 
-use crate::input_device::{self, EventTime, InputDeviceDescriptor, InputDeviceEvent, InputEvent};
+use crate::input_device::{
+    self, EventTime, Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent,
+};
 use crate::keyboard_binding::KeyboardEvent;
 use anyhow::{anyhow, Context, Result};
 use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
@@ -71,7 +73,7 @@ fn repeatability(key_meaning: Option<KeyMeaning>) -> Repeatability {
 #[derive(Debug, Clone)]
 enum AnyEvent {
     // A keyboard input event.
-    Keyboard(KeyboardEvent, InputDeviceDescriptor, EventTime, bool),
+    Keyboard(KeyboardEvent, InputDeviceDescriptor, EventTime, Handled),
     // An input event other than keyboard.
     NonKeyboard(InputEvent),
     // A timer event.
@@ -186,7 +188,7 @@ impl Autorepeater {
                             device_descriptor,
                             event_time,
                             handled,
-                        } if !handled => unbounded_send_logged(
+                        } if handled == Handled::No => unbounded_send_logged(
                             &event_sink,
                             AnyEvent::Keyboard(k, device_descriptor, event_time, handled),
                         )
@@ -352,12 +354,8 @@ impl Autorepeater {
                     _delay_timer,
                 });
                 // Generate a new autorepeat event and ship it out.
-                let autorepeat_event = AnyEvent::Keyboard(
-                    new_event,
-                    armed_descriptor,
-                    new_event_time,
-                    false, /* not handled */
-                );
+                let autorepeat_event =
+                    AnyEvent::Keyboard(new_event, armed_descriptor, new_event_time, Handled::No);
                 unbounded_send_logged(&output, autorepeat_event.try_into()?)?;
             }
 
@@ -408,7 +406,7 @@ mod tests {
     ) -> InputEvent {
         let event = new_event(key, event_type, key_meaning, repeat_sequence);
         // Somewhat surprisingly, this works.
-        InputEvent { handled: true, ..event }
+        InputEvent { handled: Handled::Yes, ..event }
     }
 
     // A shorthand for blocking the specified number of milliseconds, asynchronously.

@@ -472,7 +472,7 @@ mod tests {
             device_event,
             device_descriptor: create_input_device_descriptor(),
             event_time: Time::now().into_nanos() as u64,
-            handled: false,
+            handled: input_device::Handled::No,
         }
     }
 
@@ -485,7 +485,7 @@ mod tests {
             device_event,
             device_descriptor: create_input_device_descriptor(),
             event_time: Time::now().into_nanos() as u64,
-            handled: false,
+            handled: input_device::Handled::No,
         }
     }
 

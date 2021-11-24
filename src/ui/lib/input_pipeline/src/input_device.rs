@@ -38,8 +38,8 @@ pub struct InputEvent {
     /// The time in nanoseconds when the event was first recorded.
     pub event_time: EventTime,
 
-    /// Indicates whether the event has been consumed.
-    pub handled: bool,
+    /// The handled state of the event.
+    pub handled: Handled,
 }
 
 /// An [`InputDeviceEvent`] represents an input event from an input device.
@@ -85,6 +85,15 @@ pub enum InputDeviceType {
     ConsumerControls,
     Mouse,
     Touch,
+}
+
+// Whether the event is consumed by an [`InputHandler`].
+#[derive(Clone, Debug, PartialEq)]
+pub enum Handled {
+    // The event has been handled.
+    Yes,
+    // The event has not been handled.
+    No,
 }
 
 /// An [`InputDeviceBinding`] represents a binding to an input device (e.g., a mouse).

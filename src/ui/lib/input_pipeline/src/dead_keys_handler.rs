@@ -35,7 +35,9 @@
 //!
 //! See the documentation for [Handler] for some more detail.
 
-use crate::input_device::{EventTime, InputDeviceDescriptor, InputDeviceEvent, InputEvent};
+use crate::input_device::{
+    EventTime, Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent,
+};
 use crate::input_handler::InputHandler;
 use crate::keyboard_binding::KeyboardEvent;
 use async_trait::async_trait;
@@ -101,7 +103,7 @@ impl Into<InputEvent> for StoredEvent {
             device_event: InputDeviceEvent::Keyboard(self.event),
             device_descriptor: self.device_descriptor,
             event_time: self.event_time,
-            handled: false,
+            handled: Handled::No,
         }
     }
 }

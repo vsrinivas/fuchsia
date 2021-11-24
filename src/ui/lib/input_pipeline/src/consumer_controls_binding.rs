@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device::{self, InputDeviceBinding},
+    crate::input_device::{self, Handled, InputDeviceBinding},
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_input_report as fidl_input_report,
@@ -196,7 +196,7 @@ fn send_consumer_controls_event(
         )),
         device_descriptor: device_descriptor.clone(),
         event_time,
-        handled: false,
+        handled: Handled::No,
     }) {
         fx_log_err!("Failed to send ConsumerControlsEvent with error: {:?}", e);
     }

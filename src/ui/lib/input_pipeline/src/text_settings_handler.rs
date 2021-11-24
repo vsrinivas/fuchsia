@@ -58,7 +58,7 @@ impl InputHandler for TextSettingsHandler {
                     device_event: input_device::InputDeviceEvent::Keyboard(event),
                     device_descriptor,
                     event_time,
-                    handled: false,
+                    handled: input_device::Handled::No,
                 }]
             }
             // Pass a non-keyboard event through.

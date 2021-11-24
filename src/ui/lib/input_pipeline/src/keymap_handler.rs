@@ -81,7 +81,7 @@ impl KeymapHandler {
             ),
             device_descriptor,
             event_time,
-            handled: false,
+            handled: input_device::Handled::No,
         }]
     }
 }

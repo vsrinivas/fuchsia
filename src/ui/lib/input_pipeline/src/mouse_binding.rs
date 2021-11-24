@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device::{self, InputDeviceBinding},
+    crate::input_device::{self, Handled, InputDeviceBinding},
     crate::utils::Position,
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -295,7 +295,7 @@ fn send_mouse_event(
         )),
         device_descriptor: device_descriptor.clone(),
         event_time,
-        handled: false,
+        handled: Handled::No,
     }) {
         Err(e) => fx_log_err!("Failed to send MouseEvent with error: {:?}", e),
         _ => {}

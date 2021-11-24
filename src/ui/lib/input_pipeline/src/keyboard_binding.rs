@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::input_device::{self, InputDeviceBinding},
+    crate::input_device::{self, Handled, InputDeviceBinding},
     anyhow::{format_err, Error, Result},
     async_trait::async_trait,
     fidl_fuchsia_input,
@@ -365,7 +365,7 @@ impl KeyboardBinding {
                             ),
                             device_descriptor: device_descriptor.clone(),
                             event_time: event_time_ns,
-                            handled: false,
+                            handled: Handled::No,
                         })
                         .await
                     {
