@@ -66,7 +66,7 @@ To create a server implementation:
    This enables the code to publish the echo protocol on each test case given
    a new instance of the test component context.
 
-## Implement the text fixture class
+## Implement the test fixture class
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="fixture" %}
@@ -82,7 +82,7 @@ The test fixture does the following:
 
 ## Add tests
 
-This is an example test that can you can write with the text fixture:
+This is an example test that can you can write with the test fixture:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="test" %}
