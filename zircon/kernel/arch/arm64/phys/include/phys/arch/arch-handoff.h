@@ -22,6 +22,9 @@ struct ArchPhysHandoff {
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_AMLOGIC_RNG) payload.
   ktl::optional<dcfg_amlogic_rng_driver_t> amlogic_rng_driver;
 
+  // (ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER) payload.
+  ktl::optional<dcfg_arm_generic_timer_driver_t> generic_timer_driver;
+
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI) payload.
   ktl::optional<dcfg_arm_psci_driver_t> psci_driver;
 };

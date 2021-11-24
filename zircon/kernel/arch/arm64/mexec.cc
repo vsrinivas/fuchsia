@@ -46,6 +46,20 @@ fitx::result<fitx::failed> ArchAppendMexecDataFromHandoff(MexecDataImage& image,
     }
   }
 
+  if (handoff.arch_handoff.generic_timer_driver) {
+    const zbi_header_t header = {
+        .type = ZBI_TYPE_KERNEL_DRIVER,
+        .extra = KDRV_ARM_GENERIC_TIMER,
+    };
+    auto result =
+        image.Append(header, zbitl::AsBytes(handoff.arch_handoff.generic_timer_driver.value()));
+    if (result.is_error()) {
+      printf("mexec: could not append generic ARM timer driver config: ");
+      zbitl::PrintViewError(result.error_value());
+      return fitx::failed();
+    }
+  }
+
   if (handoff.arch_handoff.psci_driver) {
     const zbi_header_t header = {
         .type = ZBI_TYPE_KERNEL_DRIVER,

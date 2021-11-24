@@ -28,7 +28,6 @@
 #include <ktl/atomic.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
-#include <pdev/driver.h>
 #include <phys/handoff.h>
 #include <platform/timer.h>
 
@@ -426,12 +425,10 @@ static void arm_generic_timer_resume_cpu(uint level) {
 LK_INIT_HOOK_FLAGS(arm_generic_timer_resume_cpu, arm_generic_timer_resume_cpu,
                    LK_INIT_LEVEL_PLATFORM, LK_INIT_FLAG_CPU_RESUME)
 
-static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_arm_generic_timer_driver_t));
-  auto driver = static_cast<const dcfg_arm_generic_timer_driver_t*>(driver_data);
-  uint32_t irq_phys = driver->irq_phys;
-  uint32_t irq_virt = driver->irq_virt;
-  uint32_t irq_sphys = driver->irq_sphys;
+void ArmGenericTimerInit(const dcfg_arm_generic_timer_driver_t& config) {
+  uint32_t irq_phys = config.irq_phys;
+  uint32_t irq_virt = config.irq_virt;
+  uint32_t irq_sphys = config.irq_sphys;
 
   if (irq_phys && irq_virt && arm64_get_boot_el() < 2) {
     // If we did not boot at EL2 or above, prefer the virtual timer.
@@ -462,7 +459,7 @@ static void arm_generic_timer_pdev_init(const void* driver_data, uint32_t length
 
   dprintf(INFO, "arm generic timer using %s timer, irq %d\n", timer_str, timer_irq);
 
-  arm_generic_timer_init(driver->freq_override);
+  arm_generic_timer_init(config.freq_override);
 }
 
 // Called once per cpu in the system post cpu detection.
@@ -490,9 +487,6 @@ static void late_update_reg_procs(uint) {
     dprintf(INFO, "arm generic timer applying A73 workaround\n");
   }
 }
-
-LK_PDEV_INIT(arm_generic_timer_pdev_init, KDRV_ARM_GENERIC_TIMER, arm_generic_timer_pdev_init,
-             LK_INIT_LEVEL_PLATFORM_EARLY)
 
 LK_INIT_HOOK_FLAGS(late_update_reg_procs, &late_update_reg_procs, LK_INIT_LEVEL_PLATFORM_EARLY + 1,
                    LK_INIT_FLAG_ALL_CPUS)
