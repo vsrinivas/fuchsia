@@ -2637,7 +2637,7 @@ rust_library("crossbeam-v0_8_0") {
   deps = []
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":crossbeam-channel-v0_5_1" ]
-  deps += [ ":crossbeam-deque-v0_8_0" ]
+  deps += [ ":crossbeam-deque-v0_8_1" ]
   deps += [ ":crossbeam-epoch-v0_9_4" ]
   deps += [ ":crossbeam-queue-v0_3_1" ]
   deps += [ ":crossbeam-utils-v0_8_4" ]
@@ -2685,11 +2685,11 @@ rust_library("crossbeam-channel-v0_5_1") {
   ]
 }
 
-rust_library("crossbeam-deque-v0_7_3") {
+rust_library("crossbeam-deque-v0_7_4") {
   crate_name = "crossbeam_deque"
   crate_root =
-      "//third_party/rust_crates/vendor/crossbeam-deque-0.7.3/src/lib.rs"
-  output_name = "crossbeam_deque-1b8ed12e68dce902"
+      "//third_party/rust_crates/vendor/crossbeam-deque-0.7.4/src/lib.rs"
+  output_name = "crossbeam_deque-bd42bcf5aa8a0ab0"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -2705,15 +2705,15 @@ rust_library("crossbeam-deque-v0_7_3") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=1b8ed12e68dce902",
-    "-Cextra-filename=-1b8ed12e68dce902",
+    "-Cmetadata=bd42bcf5aa8a0ab0",
+    "-Cextra-filename=-bd42bcf5aa8a0ab0",
   ]
 }
 
-rust_library("crossbeam-deque-v0_8_0") {
+rust_library("crossbeam-deque-v0_8_1") {
   crate_name = "crossbeam_deque"
   crate_root = "//third_party/rust_crates/vendor/crossbeam-deque/src/lib.rs"
-  output_name = "crossbeam_deque-4640cf1a9043276e"
+  output_name = "crossbeam_deque-6f0af594d373cabc"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -2729,8 +2729,8 @@ rust_library("crossbeam-deque-v0_8_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=4640cf1a9043276e",
-    "-Cextra-filename=-4640cf1a9043276e",
+    "-Cmetadata=6f0af594d373cabc",
+    "-Cextra-filename=-6f0af594d373cabc",
     "--cfg=feature=\"crossbeam-epoch\"",
     "--cfg=feature=\"crossbeam-utils\"",
     "--cfg=feature=\"std\"",
@@ -8040,7 +8040,7 @@ rust_library("rayon-v1_3_0") {
   ]
 
   deps = []
-  deps += [ ":crossbeam-deque-v0_7_3" ]
+  deps += [ ":crossbeam-deque-v0_7_4" ]
   deps += [ ":either-v1_5_0" ]
   deps += [ ":rayon-core-v1_7_0" ]
 
@@ -8064,7 +8064,7 @@ rust_library("rayon-core-v1_7_0") {
   ]
 
   deps = []
-  deps += [ ":crossbeam-deque-v0_7_3" ]
+  deps += [ ":crossbeam-deque-v0_7_4" ]
   deps += [ ":crossbeam-queue-v0_2_1" ]
   deps += [ ":crossbeam-utils-v0_7_2" ]
   deps += [ ":lazy_static-v1_4_0" ]

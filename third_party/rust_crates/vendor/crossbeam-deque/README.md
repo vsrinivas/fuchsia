@@ -2,7 +2,7 @@
 
 [![Build Status](https://github.com/crossbeam-rs/crossbeam/workflows/CI/badge.svg)](
 https://github.com/crossbeam-rs/crossbeam/actions)
-[![License](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](
+[![License](https://img.shields.io/badge/license-MIT_OR_Apache--2.0-blue.svg)](
 https://github.com/crossbeam-rs/crossbeam/tree/master/crossbeam-deque#license)
 [![Cargo](https://img.shields.io/crates/v/crossbeam-deque.svg)](
 https://crates.io/crates/crossbeam-deque)
@@ -10,7 +10,7 @@ https://crates.io/crates/crossbeam-deque)
 https://docs.rs/crossbeam-deque)
 [![Rust 1.36+](https://img.shields.io/badge/rust-1.36+-lightgray.svg)](
 https://www.rust-lang.org)
-[![chat](https://img.shields.io/discord/569610676205781012.svg?logo=discord)](https://discord.gg/BBYwKq)
+[![chat](https://img.shields.io/discord/569610676205781012.svg?logo=discord)](https://discord.com/invite/JXYwgWZ)
 
 This crate provides work-stealing deques, which are primarily intended for
 building task schedulers.
@@ -21,7 +21,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-crossbeam-deque = "0.7"
+crossbeam-deque = "0.8"
 ```
 
 ## Compatibility
