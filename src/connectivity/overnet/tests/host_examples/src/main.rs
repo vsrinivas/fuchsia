@@ -125,7 +125,9 @@ impl Daemon {
 
 impl Drop for Daemon {
     fn drop(&mut self) {
-        self.child.kill().expect(&format!("'{}' wasn't running", self.details.name));
+        if let Err(e) = self.child.kill() {
+            eprintln!("'{}' wasn't killable: {:?}", self.details.name, e);
+        }
         let _ = self.child.wait();
     }
 }
