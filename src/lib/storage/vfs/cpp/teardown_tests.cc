@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.io.admin/cpp/markers.h>
+#include <fidl/fuchsia.io.admin/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -10,12 +13,16 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
+#include <zircon/compiler.h>
+#include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <map>
 #include <memory>
 #include <thread>
 #include <utility>
 
+#include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
@@ -329,6 +336,132 @@ TEST(Teardown, SynchronousTeardown) {
     // Tear down the VFS with no active connections.
     auto vfs = std::make_unique<fs::SynchronousVfs>(loop.dispatcher());
   }
+}
+
+class FakeDirectoryImpl : public fuchsia_io_admin::testing::DirectoryAdmin_TestBase {
+ public:
+  explicit FakeDirectoryImpl(zx_status_t unmount_status) : unmount_status_(unmount_status) {}
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    ZX_ASSERT_MSG(false, "Unexpected call: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Unmount(UnmountRequestView _request, UnmountCompleter::Sync& completer) override {
+    completer.Reply(unmount_status_);
+  }
+
+ private:
+  zx_status_t unmount_status_;
+};
+
+class FakeVnodeDir : public fs::Vnode {
+ public:
+  explicit FakeVnodeDir(PlatformVfs* vfs) : Vnode(vfs) {}
+  zx_status_t Create(std::string_view name, uint32_t _mode, fbl::RefPtr<Vnode>* out) override {
+    std::lock_guard l(mutex_);
+    auto created = fbl::AdoptRef(new FakeVnodeDir(vfs()));
+    *out = created;
+    children_[std::string(name)] = std::move(created);
+
+    return ZX_OK;
+  }
+
+  fs::VnodeProtocolSet GetProtocols() const override { return fs::VnodeProtocol::kDirectory; }
+
+  zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol _protocol, fs::Rights _rights,
+                                     fs::VnodeRepresentation* info) override {
+    *info = fs::VnodeRepresentation::Directory();
+    return ZX_OK;
+  }
+
+  zx_status_t Lookup(std::string_view name, fbl::RefPtr<Vnode>* out) override {
+    std::lock_guard l(mutex_);
+    auto location = children_.find(std::string(name));
+    if (location == children_.end()) {
+      return ZX_ERR_NOT_FOUND;
+    }
+    *out = location->second;
+    return ZX_OK;
+  }
+
+  zx_status_t AttachRemote(fs::MountChannel h) override {
+    std::lock_guard l(remote_lock_);
+    if (IsRemote()) {
+      return ZX_ERR_ALREADY_BOUND;
+    }
+    SetRemote(std::move(h.client_end()));
+    return ZX_OK;
+  }
+
+  bool IsRemote() const override __TA_REQUIRES(remote_lock_) { return remote_.is_valid(); }
+
+  fidl::ClientEnd<fuchsia_io::Directory> DetachRemote() override {
+    std::lock_guard l(remote_lock_);
+    return std::move(remote_);
+  }
+
+  fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const override {
+    std::lock_guard l(remote_lock_);
+    return remote_.borrow();
+  }
+
+  void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote)
+      __TA_REQUIRES(remote_lock_) override {
+    remote_ = std::move(remote);
+  }
+
+ private:
+  mutable std::mutex remote_lock_;
+  std::map<std::string, fbl::RefPtr<Vnode>> children_ __TA_GUARDED(mutex_);
+  fidl::ClientEnd<fuchsia_io::Directory> remote_ __TA_GUARDED(remote_lock_);
+};
+
+void NestedFilesystemUnmount(zx_status_t on_remote_unmount) {
+  // Create outer filesystem
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  std::unique_ptr<fs::ManagedVfs> vfs = std::make_unique<fs::ManagedVfs>(loop.dispatcher());
+  ASSERT_OK(loop.StartThread());
+  auto vn = fbl::AdoptRef(new FakeVnodeDir(vfs.get()));
+  zx::channel client, server;
+  ASSERT_OK(zx::channel::create(0, &client, &server));
+  auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
+  ASSERT_TRUE(validated_options.is_ok());
+  ASSERT_OK(vn->Open(validated_options.value(), nullptr));
+  ASSERT_OK(vfs->Serve(vn, std::move(server), validated_options.value()));
+
+  // Set up remote filesystem
+  async::Loop remote_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  remote_loop.StartThread("remote-filesystem-loop");
+  zx::status create_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(create_endpoints.status_value());
+  auto [remote_client_end, remote_server_end] = std::move(create_endpoints.value());
+  fidl::BindServer(
+      remote_loop.dispatcher(),
+      fidl::ServerEnd<fuchsia_io_admin::DirectoryAdmin>(remote_server_end.TakeChannel()),
+      std::make_unique<FakeDirectoryImpl>(on_remote_unmount));
+
+  // Attach the remote
+  ASSERT_OK(
+      vfs->MountMkdir(vn, "foo", fs::MountChannel(std::move(remote_client_end)),
+                      fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightAdmin));
+
+  sync_completion_t shutdown_done;
+  zx_status_t result;
+  ASSERT_OK(async::PostTask(loop.dispatcher(), [&]() {
+    vfs->Shutdown([&shutdown_done, &result](zx_status_t status) {
+      result = status;
+      sync_completion_signal(&shutdown_done);
+    });
+  }));
+  ASSERT_OK(sync_completion_wait(&shutdown_done, ZX_SEC(3)));
+  ASSERT_EQ(result, on_remote_unmount);
+}
+
+TEST(Teardown, NestedFilesystemCleanUnmount) { ASSERT_NO_FAILURES(NestedFilesystemUnmount(ZX_OK)); }
+
+TEST(Teardown, NestedFilesystemFailUnmount) {
+  ASSERT_NO_FAILURES(NestedFilesystemUnmount(ZX_ERR_ACCESS_DENIED));
 }
 
 }  // namespace

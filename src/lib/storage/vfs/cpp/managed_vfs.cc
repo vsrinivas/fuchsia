@@ -19,7 +19,7 @@ ManagedVfs::ManagedVfs(async_dispatcher_t* dispatcher) : FuchsiaVfs(dispatcher) 
 
 ManagedVfs::~ManagedVfs() { ZX_DEBUG_ASSERT(connections_.is_empty()); }
 
-bool ManagedVfs::IsTerminated() const {
+bool ManagedVfs::NoMoreClients() const {
   return is_shutting_down_.load() && connections_.is_empty();
 }
 
@@ -33,15 +33,13 @@ void ManagedVfs::Shutdown(ShutdownCallback handler) {
         shutdown_handler_ = std::move(closure);
         is_shutting_down_.store(true);
 
-        UninstallAll(zx::time::infinite());
-
         // Signal the teardown on channels in a way that doesn't potentially pull them out from
         // underneath async callbacks.
         for (auto& c : connections_) {
           c.AsyncTeardown();
         }
 
-        CheckForShutdownComplete();
+        MaybeAsyncFinishShutdown();
       });
   ZX_DEBUG_ASSERT(status == ZX_OK);
 }
@@ -70,25 +68,26 @@ void ManagedVfs::CloseAllConnectionsForVnode(const Vnode& node,
 }
 
 // Trigger "OnShutdownComplete" if all preconditions have been met.
-void ManagedVfs::CheckForShutdownComplete() {
-  if (IsTerminated()) {
+void ManagedVfs::MaybeAsyncFinishShutdown() {
+  if (NoMoreClients()) {
     shutdown_task_.Post(dispatcher());
   }
 }
 
-void ManagedVfs::OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status) {
+void ManagedVfs::FinishShutdown(async_dispatcher_t*, async::TaskBase*,
+                                zx_status_t dispatcher_status) {
   // Call the shutdown function outside of the lock since it can cause |this| to be deleted which
   // will in turn delete the lock object itself.
   ShutdownCallback handler;
   {
     std::lock_guard lock(lock_);
-    ZX_ASSERT_MSG(IsTerminated(), "Failed to complete VFS shutdown: dispatcher status = %d\n",
-                  status);
+    ZX_ASSERT_MSG(NoMoreClients(), "Failed to complete VFS shutdown: dispatcher status = %d\n",
+                  dispatcher_status);
     ZX_DEBUG_ASSERT(shutdown_handler_);
     handler = std::move(shutdown_handler_);
   }
 
-  handler(status);
+  handler(UninstallAll(zx::time::infinite()));
   // |this| can be deleted at this point!
 }
 
@@ -118,7 +117,7 @@ void ManagedVfs::UnregisterConnection(internal::Connection* connection) {
   // We drop the result of |erase| on the floor, effectively destroying the connection when all
   // other references (like async callbacks) have completed.
   connections_.erase(*connection);
-  CheckForShutdownComplete();
+  MaybeAsyncFinishShutdown();
 
   // |closer| will call the callback here if it's the last connection to be closed.
 }

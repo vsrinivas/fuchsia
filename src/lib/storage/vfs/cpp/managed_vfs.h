@@ -52,16 +52,16 @@ class ManagedVfs : public FuchsiaVfs {
   bool IsTerminating() const final;
 
  private:
-  // Posts the task for OnShutdownComplete if it is safe to do so.
-  void CheckForShutdownComplete() __TA_REQUIRES(lock_);
+  // Posts the task for FinishShutdown if it is safe to do so.
+  void MaybeAsyncFinishShutdown() __TA_REQUIRES(lock_);
 
-  // Identifies if the filesystem has fully terminated, and is ready for "OnShutdownComplete" to
-  // execute.
-  bool IsTerminated() const __TA_REQUIRES(lock_);
+  // Identifies if the filesystem has closed existing connections and prevents news ones. This will
+  // allow use to call FinishShutdown and terminate.
+  bool NoMoreClients() const __TA_REQUIRES(lock_);
 
-  // Invokes the handler from |Shutdown| once all connections have been released. Additionally,
-  // unmounts all sub-mounted filesystems, if any exist.
-  void OnShutdownComplete(async_dispatcher_t*, async::TaskBase*, zx_status_t status)
+  // Invokes the handler from |Shutdown| once all connections have been released and remotes have
+  // been unmounted.
+  void FinishShutdown(async_dispatcher_t*, async::TaskBase*, zx_status_t status)
       __TA_EXCLUDES(lock_);
 
   zx_status_t RegisterConnection(std::unique_ptr<internal::Connection> connection,
@@ -74,7 +74,7 @@ class ManagedVfs : public FuchsiaVfs {
   fbl::DoublyLinkedList<std::unique_ptr<internal::Connection>> connections_ __TA_GUARDED(lock_);
 
   std::atomic_bool is_shutting_down_ = false;
-  async::TaskMethod<ManagedVfs, &ManagedVfs::OnShutdownComplete> shutdown_task_ __TA_GUARDED(lock_){
+  async::TaskMethod<ManagedVfs, &ManagedVfs::FinishShutdown> shutdown_task_ __TA_GUARDED(lock_){
       this};
   ShutdownCallback shutdown_handler_ __TA_GUARDED(lock_);
 

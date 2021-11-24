@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.io.admin/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.io2/cpp/wire.h>
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
@@ -13,6 +14,7 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>
+#include <zircon/errors.h>
 #include <zircon/fidl.h>
 
 #include <memory>
@@ -140,53 +142,24 @@ TEST(FsManagerTestCase, LifecycleStop) {
   EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 }
 
-class MockDirectoryAdminOpener : public fidl::WireServer<fuchsia_io_admin::DirectoryAdmin> {
+class MockDirectoryAdminOpener : public fuchsia_io_admin::testing::DirectoryAdmin_TestBase {
  public:
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    ADD_FAILURE("Unexpected call to MockDirectoryAdminOpener: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) override {
     saved_open_flags = request->flags;
     saved_open_count += 1;
     saved_path = request->path.get();
   }
 
-  // Below here are a pile of stubs that aren't called in this test. Only Open() above is used.
-
-  // fuchsia.io/Node:
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {}
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {}
-  void Close2(Close2RequestView request, Close2Completer::Sync& completer) override {}
-  void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {}
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {}
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {}
-  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {}
-  void NodeGetFlags(NodeGetFlagsRequestView request,
-                    NodeGetFlagsCompleter::Sync& completer) override {}
-  void NodeSetFlags(NodeSetFlagsRequestView request,
-                    NodeSetFlagsCompleter::Sync& completer) override {}
-
-  // fuchsia.io/Directory:
-  void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {}
-  void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override {
+  void Unmount(UnmountRequestView _request, UnmountCompleter::Sync& completer) override {
+    completer.Reply(unmount_status_);
   }
-  void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override {}
-  void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) override {}
-  void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) override {}
-  void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {}
-  void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {}
-  void AddInotifyFilter(AddInotifyFilterRequestView request,
-                        AddInotifyFilterCompleter::Sync& completer) override {}
 
-  // fuchsia.io/DirectoryAdmin:
-  void Mount(MountRequestView request, MountCompleter::Sync& completer) override {}
-  void MountAndCreate(MountAndCreateRequestView request,
-                      MountAndCreateCompleter::Sync& completer) override {}
-  void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) override {}
-  void UnmountNode(UnmountNodeRequestView request, UnmountNodeCompleter::Sync& completer) override {
-  }
-  void QueryFilesystem(QueryFilesystemRequestView request,
-                       QueryFilesystemCompleter::Sync& completer) override {}
-  void GetDevicePath(GetDevicePathRequestView request,
-                     GetDevicePathCompleter::Sync& completer) override {}
-
+  zx_status_t unmount_status_ = ZX_OK;
   // Test fields used for validation.
   uint32_t saved_open_flags = 0;
   uint32_t saved_open_count = 0;
@@ -259,6 +232,37 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
 
   EXPECT_STATUS(manager.InstallFs(FsManager::MountPoint::kData, admin->client.TakeChannel()),
                 ZX_ERR_BAD_STATE);
+}
+
+TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+  FakeDriverManagerAdmin driver_admin;
+  auto admin_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
+  ASSERT_TRUE(admin_endpoints.is_ok());
+  fidl::BindServer(loop.dispatcher(), std::move(admin_endpoints->server), &driver_admin);
+
+  zx::channel dir_request, lifecycle_request;
+  FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
+  Config config;
+  BlockWatcher watcher(manager, &config);
+  ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                               std::move(admin_endpoints->client), nullptr, watcher));
+
+  auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
+  ASSERT_OK(admin.status_value());
+  auto server = std::make_shared<MockDirectoryAdminOpener>();
+  server->unmount_status_ = ZX_ERR_ACCESS_DENIED;
+  fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
+
+  manager.InstallFs(FsManager::MountPoint::kData, admin->client.TakeChannel());
+
+  zx_status_t shutdown_status = ZX_OK;
+  manager.Shutdown([&shutdown_status](zx_status_t status) { shutdown_status = status; });
+  manager.WaitForShutdown();
+
+  ASSERT_STATUS(shutdown_status, ZX_ERR_ACCESS_DENIED);
 }
 
 }  // namespace

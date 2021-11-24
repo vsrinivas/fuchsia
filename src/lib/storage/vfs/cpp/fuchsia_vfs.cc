@@ -515,21 +515,26 @@ zx_status_t FuchsiaVfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd
 // Uninstall all remote filesystems. Acts like 'UninstallRemote' for all known remotes.
 zx_status_t FuchsiaVfs::UninstallAll(zx::time deadline) {
   std::unique_ptr<MountNode> mount_point;
+  zx_status_t result = ZX_OK;
   for (;;) {
     {
       std::lock_guard lock(vfs_lock_);
       mount_point = remote_list_.pop_front();
     }
-    if (mount_point) {
-      // Note: this is best-effort, and would fail if the remote endpoint does not speak the
-      // |fuchsia.io/DirectoryAdmin| protocol.
-      fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> mount_admin(
-          mount_point->ReleaseRemote().TakeChannel());
-      FuchsiaVfs::UnmountHandle(std::move(mount_admin), deadline);
-    } else {
-      return ZX_OK;
+    if (!mount_point) {
+      break;
+    }
+    fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> mount_admin(
+        mount_point->ReleaseRemote().TakeChannel());
+    zx_status_t status = FuchsiaVfs::UnmountHandle(std::move(mount_admin), deadline);
+    // Return the first failure status, we're only going to return one anyway. Keep trying to close
+    // the others as well. We see failure if the remote endpoint does not speak the
+    // |fuchsia.io/DirectoryAdmin| protocol, we can't report a clean unmount if that's the case.
+    if (status != ZX_OK && result == ZX_OK) {
+      result = status;
     }
   }
+  return result;
 }
 
 zx_status_t FuchsiaVfs::UnmountHandle(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> handle,
