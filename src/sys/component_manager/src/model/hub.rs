@@ -18,7 +18,7 @@ use {
     },
     ::routing::capability_source::InternalCapability,
     async_trait::async_trait,
-    cm_rust::{CapabilityPath, ComponentDecl},
+    cm_rust::{CapabilityPath, ComponentDecl, ConfigDecl},
     cm_task_scope::TaskScope,
     cm_util::channel,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
@@ -291,6 +291,30 @@ impl Hub {
         Ok(())
     }
 
+    fn add_config(
+        directory: Directory,
+        component_decl: &ComponentDecl,
+        abs_moniker: &AbsoluteMoniker,
+    ) -> Result<(), ModelError> {
+        if let Some(ConfigDecl { fields, .. }) = &component_decl.config {
+            if fields.is_empty() {
+                return Ok(());
+            }
+
+            let config_dir = pfs::simple();
+            for field in fields {
+                let value_type = format!("{:?}", field.value_type);
+                config_dir.add_node(
+                    &field.key,
+                    read_only_static(value_type.into_bytes()),
+                    &abs_moniker,
+                )?;
+            }
+            directory.add_node("config", config_dir, &abs_moniker)?;
+        }
+        Ok(())
+    }
+
     fn add_use_directory(
         directory: Directory,
         component_decl: ComponentDecl,
@@ -451,6 +475,7 @@ impl Hub {
         )?;
 
         Self::add_instance_id_file(resolved_directory.clone(), target_moniker, target.clone())?;
+        Self::add_config(resolved_directory.clone(), &component_decl, target_moniker)?;
 
         instance.directory.add_node("resolved", resolved_directory, &target_moniker)?;
 
@@ -699,10 +724,12 @@ mod tests {
             },
         },
         cm_rust::{
-            self, CapabilityName, CapabilityPath, ComponentDecl, DependencyType, DirectoryDecl,
-            EventMode, EventSubscription, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
-            ExposeSource, ExposeTarget, ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl,
-            UseEventStreamDecl, UseProtocolDecl, UseSource,
+            self, CapabilityName, CapabilityPath, ComponentDecl, ConfigBooleanType, ConfigDecl,
+            ConfigField, ConfigStringType, ConfigValueType, ConfigVectorElementType,
+            ConfigVectorType, DependencyType, DirectoryDecl, EventMode, EventSubscription,
+            ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
+            ProtocolDecl, UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl,
+            UseProtocolDecl, UseSource,
         },
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::ServerEnd,
@@ -944,6 +971,67 @@ mod tests {
         assert_eq!(
             vec!["expose", "in", "out", "resolved_url", "runtime"],
             list_directory(&old_hub_dir_proxy).await
+        );
+    }
+
+    #[fuchsia::test]
+    async fn hub_config_dir_in_resolved() {
+        let root_component_url = "test:///root".to_string();
+        let (_model, _builtin_environment, hub_proxy) = start_component_manager_with_hub(
+            root_component_url.clone(),
+            vec![ComponentDescriptor {
+                name: "root",
+                decl: ComponentDeclBuilder::new()
+                    .add_config(ConfigDecl {
+                        fields: vec![
+                            ConfigField {
+                                key: "logging".to_string(),
+                                value_type: ConfigValueType::Bool(ConfigBooleanType {}),
+                            },
+                            ConfigField {
+                                key: "verbosity".to_string(),
+                                value_type: ConfigValueType::String(ConfigStringType {
+                                    max_size: 10,
+                                }),
+                            },
+                            ConfigField {
+                                key: "tags".to_string(),
+                                value_type: ConfigValueType::Vector(ConfigVectorType {
+                                    max_count: 10,
+                                    element_type: ConfigVectorElementType::String(
+                                        ConfigStringType { max_size: 20 },
+                                    ),
+                                }),
+                            },
+                        ],
+                        declaration_checksum: vec![
+                            0x07, 0xA8, 0xE6, 0x85, 0xC8, 0x79, 0xA9, 0x79, 0xC3, 0x26, 0x17, 0xDC,
+                            0x4E, 0x74, 0x65, 0x7F, 0xF1, 0xF7, 0x73, 0xE7, 0x12, 0xEE, 0x51, 0xFD,
+                            0xF6, 0x57, 0x43, 0x07, 0xA7, 0xAF, 0x2E, 0x64,
+                        ],
+                    })
+                    .build(),
+                host_fn: None,
+                runtime_host_fn: None,
+            }],
+        )
+        .await;
+
+        let config_dir = io_util::open_directory(
+            &hub_proxy,
+            &Path::new("resolved/config"),
+            OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+        )
+        .expect("Failed to open directory");
+        assert_eq!(vec!["logging", "tags", "verbosity"], list_directory(&config_dir).await);
+        assert_eq!("Bool(ConfigBooleanType)", read_file(&config_dir, "logging").await);
+        assert_eq!(
+            "String(ConfigStringType { max_size: 10 })",
+            read_file(&config_dir, "verbosity").await
+        );
+        assert_eq!(
+            "Vector(ConfigVectorType { max_count: 10, element_type: String(ConfigStringType { max_size: 20 }) })",
+            read_file(&config_dir, "tags").await
         );
     }
 

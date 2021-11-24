@@ -65,4 +65,5 @@ async fn main() {
         vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
     )
     .await;
+    expect_dir_listing("/hub/resolved/config", vec!["logging", "tags", "verbosity"]).await;
 }

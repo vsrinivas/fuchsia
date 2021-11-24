@@ -66,6 +66,7 @@ fuchsia_component("resolver") {
   testonly = true
   deps = [ "components:resolver_bin" ]
   manifest = "components/resolver/meta/resolver.cml"
+  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_component("child") {

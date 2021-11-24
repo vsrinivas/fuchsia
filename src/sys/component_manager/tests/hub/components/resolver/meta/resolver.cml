@@ -22,4 +22,19 @@
             path: "/hub",
         },
     ],
+    config: {
+        logging: { type: "bool" },
+        verbosity: {
+            type: "string",
+            max_size: 10,
+        },
+        tags: {
+            type: "vector",
+            max_count: 20,
+            element: {
+                type: "string",
+                max_size: 10,
+            },
+        },
+    },
 }
