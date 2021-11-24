@@ -112,7 +112,11 @@ class ProcessFixture : public zxtest::Test {
                              info_.vmar_size, &sub_vmar, &info_.vmar_base));
 
     zx::vmo vmo;
-    const size_t kVmoSize = zx_system_get_page_size() * kNumMappings;
+    // Create the VMO twice as large as needed, so that we can map in every second page. Mapping in
+    // every second page ensures that mappings cannot get merged in the kernel, and so we will have
+    // the exact number of mappings we made reported back to us, without needing to perform
+    // additional processing to notice the merge.
+    const size_t kVmoSize = zx_system_get_page_size() * kNumMappings * 2;
     ASSERT_OK(zx::vmo::create(kVmoSize, 0u, &vmo), "Failed to create vmo.");
 
     zx_koid_t vmo_koid = ZX_KOID_INVALID;
@@ -154,7 +158,8 @@ class ProcessFixture : public zxtest::Test {
         m.flags |= ZX_VM_PERM_EXECUTE;
       }
 
-      ASSERT_OK(sub_vmar.map(m.flags, 0, vmo, i * zx_system_get_page_size(),
+      // Map in every second page of the VMO to ensure mappings do not get merged internally.
+      ASSERT_OK(sub_vmar.map(m.flags, 0, vmo, (i * 2) * zx_system_get_page_size(),
                              zx_system_get_page_size(), &m.base),
                 "zx::vmar::map [%zd]", i);
     }
