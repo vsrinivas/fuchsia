@@ -48,7 +48,7 @@ fn main() {
 
     let mut file_tokens = TokenStream::new();
     file_tokens.extend(quote! {
-        use dynfidl::{Field, Structure};
+        use dynfidl::{BasicField, Field, Structure, VectorField};
         use fidl::encoding::{decode_persistent, encode_persistent, Persistable};
         use std::{cmp::PartialEq, fmt::Debug};
 
@@ -72,6 +72,16 @@ fn main() {
                 "domain value from dynamic encoding must match original",
             );
         }
+
+        trait AllIntoBytes {
+            fn into_bytes_for_each(self) -> Vec<Vec<u8>>;
+        }
+
+        impl AllIntoBytes for Vec<String> {
+            fn into_bytes_for_each(self) -> Vec<Vec<u8>> {
+                self.into_iter().map(String::into_bytes).collect()
+            }
+        }
     });
 
     let mut declarations = struct_declarations
@@ -82,7 +92,8 @@ fn main() {
 
     // emit a test case for each requested type
     for name in types {
-        let to_roundtrip = declarations.remove(&name).expect("provided type names must be in IR");
+        eprintln!("emitting test for {}", name);
+        let to_roundtrip = declarations.remove(&name).unwrap();
         to_roundtrip.emit_roundtrip_test(&mut file_tokens);
     }
 
@@ -252,8 +263,12 @@ impl StructMember {
 
     fn dynfidl_field(&self, tokens: &mut TokenStream) {
         let field_variant = self.r#type.field_variant();
+        let inner_variant = self.r#type.inner_variant();
+        let field_converter = self.r#type.dynfidl_field_converter();
         let field_name = self.field_name();
-        tokens.extend(quote! { .field(Field::#field_variant(#field_name)) });
+        tokens.extend(quote! {
+            .field(Field::#field_variant(#inner_variant( #field_name #field_converter)))
+        });
     }
 }
 
@@ -304,11 +319,17 @@ impl MemberType {
     fn can_be_encoded_by_dynfidl(&self) -> bool {
         match self {
             Self::Array { .. }
-            | Self::Vector { .. }
-            | Self::String { .. }
             | Self::Handle { .. }
             | Self::Request { .. }
             | Self::Identifier { .. } => false,
+            Self::Vector { element_type, nullable, .. } => {
+                // we don't support nullable values yet
+                if *nullable {
+                    return false;
+                }
+                element_type.can_be_encoded_by_dynfidl()
+            }
+            Self::String { nullable, .. } => !nullable,
             Self::Basic { subtype, nullable, .. } => {
                 // we don't support nullable basics yet
                 if nullable.unwrap_or_default() {
@@ -323,12 +344,23 @@ impl MemberType {
     fn initializer(&self) -> TokenStream {
         match self {
             Self::Array { .. }
-            | Self::Vector { .. }
-            | Self::String { .. }
             | Self::Handle { .. }
             | Self::Request { .. }
             | Self::Identifier { .. } => {
-                unimplemented!("only basic values are currently supported")
+                unimplemented!("only basic values and vectors are currently supported")
+            }
+            Self::String { .. } => quote!(String::from("hello, world!")),
+            Self::Vector { element_type, .. } => {
+                let mut elements = TokenStream::default();
+                for _ in 0..5 {
+                    let init = element_type.initializer();
+                    elements.extend(quote!(_vec_.push(#init);));
+                }
+                quote! {{
+                    let mut _vec_ = vec![];
+                    #elements
+                    _vec_
+                }}
             }
             Self::Basic { subtype, .. } => subtype.initializer(),
         }
@@ -337,14 +369,65 @@ impl MemberType {
     fn field_variant(&self) -> TokenStream {
         match self {
             Self::Array { .. }
-            | Self::Vector { .. }
-            | Self::String { .. }
             | Self::Handle { .. }
             | Self::Request { .. }
             | Self::Identifier { .. } => {
-                unimplemented!("only basic values are currently supported")
+                unimplemented!("only basic values and vectors are currently supported")
             }
-            Self::Basic { subtype, .. } => subtype.field_variant(),
+            Self::Basic { .. } => quote!(Basic),
+            Self::String { .. } | Self::Vector { .. } => quote!(Vector),
+        }
+    }
+
+    fn inner_variant(&self) -> TokenStream {
+        match self {
+            Self::Array { .. }
+            | Self::Handle { .. }
+            | Self::Request { .. }
+            | Self::Identifier { .. } => {
+                unimplemented!("only basic values and vectors are currently supported")
+            }
+            Self::Vector { element_type, .. } => match &**element_type {
+                Self::Array { .. }
+                | Self::Handle { .. }
+                | Self::Request { .. }
+                | Self::Identifier { .. } => unimplemented!("not supported"),
+                Self::String { .. } => quote!(VectorField::UInt8VectorVector),
+                Self::Vector { element_type, .. } => match &**element_type {
+                    Self::Basic { subtype, .. } => match subtype {
+                        BasicSubtype::UInt8 => quote!(VectorField::UInt8VectorVector),
+                        _ => todo!("nested vectors of non-bytes are not yet supported"),
+                    },
+                    _ => todo!("nested vectors of non-bytes are not yet supported"),
+                },
+                Self::Basic { subtype, .. } => match &*subtype {
+                    BasicSubtype::UInt8 => quote!(VectorField::UInt8Vector),
+                    BasicSubtype::Bool => quote!(VectorField::BoolVector),
+                    BasicSubtype::UInt16 => quote!(VectorField::UInt16Vector),
+                    BasicSubtype::UInt32 => quote!(VectorField::UInt32Vector),
+                    BasicSubtype::UInt64 => quote!(VectorField::UInt64Vector),
+                    BasicSubtype::Int8 => quote!(VectorField::Int8Vector),
+                    BasicSubtype::Int16 => quote!(VectorField::Int16Vector),
+                    BasicSubtype::Int32 => quote!(VectorField::Int32Vector),
+                    BasicSubtype::Int64 => quote!(VectorField::Int64Vector),
+                    BasicSubtype::Float32 | BasicSubtype::Float64 => {
+                        unimplemented!("floats not supported")
+                    }
+                },
+            },
+            Self::String { .. } => quote!(VectorField::UInt8Vector),
+            Self::Basic { subtype, .. } => subtype.inner_variant(),
+        }
+    }
+
+    fn dynfidl_field_converter(&self) -> TokenStream {
+        match self {
+            Self::String { .. } => quote!(.into_bytes()),
+            Self::Vector { element_type, .. } => match &**element_type {
+                Self::String { .. } => quote!(.into_bytes_for_each()),
+                _ => quote!(),
+            },
+            _ => quote!(),
         }
     }
 }
@@ -388,17 +471,17 @@ impl BasicSubtype {
         }
     }
 
-    fn field_variant(&self) -> TokenStream {
+    fn inner_variant(&self) -> TokenStream {
         match self {
-            Self::Bool => quote!(Bool),
-            Self::UInt8 => quote!(UInt8),
-            Self::UInt16 => quote!(UInt16),
-            Self::UInt32 => quote!(UInt32),
-            Self::UInt64 => quote!(UInt64),
-            Self::Int8 => quote!(Int8),
-            Self::Int16 => quote!(Int16),
-            Self::Int32 => quote!(Int32),
-            Self::Int64 => quote!(Int64),
+            Self::Bool => quote!(BasicField::Bool),
+            Self::UInt8 => quote!(BasicField::UInt8),
+            Self::UInt16 => quote!(BasicField::UInt16),
+            Self::UInt32 => quote!(BasicField::UInt32),
+            Self::UInt64 => quote!(BasicField::UInt64),
+            Self::Int8 => quote!(BasicField::Int8),
+            Self::Int16 => quote!(BasicField::Int16),
+            Self::Int32 => quote!(BasicField::Int32),
+            Self::Int64 => quote!(BasicField::Int64),
             _ => unimplemented!(),
         }
     }

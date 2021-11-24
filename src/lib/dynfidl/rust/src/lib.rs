@@ -42,11 +42,15 @@ impl Structure {
             // * empty — it has no fields. Such a structure is 1 byte in size, with an alignment of
             // 1 byte, and is exactly equivalent to a structure containing a uint8 with the value
             // zero.
-            Field::UInt8(0).encode_inline(&mut buf);
+            BasicField::UInt8(0).encode_inline(&mut buf);
         } else {
             // encode primary objects first
             for field in &self.fields {
                 field.encode_inline(&mut buf);
+            }
+
+            for field in &self.fields {
+                field.encode_out_of_line(&mut buf);
             }
         }
 
@@ -60,6 +64,39 @@ impl Structure {
 
 /// A field of a FIDL struct.
 pub enum Field {
+    Basic(BasicField),
+    Vector(VectorField),
+}
+
+impl Field {
+    fn alignment(&self) -> usize {
+        match self {
+            Self::Basic(b) => b.alignment(),
+            Self::Vector(l) => l.alignment(),
+        }
+    }
+
+    fn encode_inline(&self, buf: &mut Vec<u8>) {
+        buf.pad_to(self.alignment());
+        match self {
+            Self::Basic(b) => b.encode_inline(buf),
+            Self::Vector(l) => l.encode_inline(buf),
+        }
+    }
+
+    fn encode_out_of_line(&self, buf: &mut Vec<u8>) {
+        match self {
+            Self::Basic(_) => (),
+            Self::Vector(l) => {
+                // each secondary object must be padded to 8 bytes, as well as the primary
+                buf.pad_to(8);
+                l.encode_out_of_line(buf);
+            }
+        }
+    }
+}
+
+pub enum BasicField {
     Bool(bool),
     UInt8(u8),
     UInt16(u16),
@@ -71,10 +108,8 @@ pub enum Field {
     Int64(i64),
 }
 
-impl Field {
+impl BasicField {
     fn encode_inline(&self, buf: &mut Vec<u8>) {
-        buf.pad_to(self.alignment());
-
         match self {
             Self::Bool(b) => buf.push(if *b { 1u8 } else { 0u8 }),
             Self::UInt8(n) => buf.push(*n),
@@ -93,7 +128,111 @@ impl Field {
             Self::Bool(_) | Self::UInt8(_) | Self::Int8(_) => 1,
             Self::UInt16(_) | Self::Int16(_) => 2,
             Self::UInt32(_) | Self::Int32(_) => 4,
-            Self::UInt64(_) | Self::Int64(_) => 8,
+            _ => 8,
+        }
+    }
+}
+
+pub enum VectorField {
+    BoolVector(Vec<bool>),
+    UInt8Vector(Vec<u8>),
+    UInt16Vector(Vec<u16>),
+    UInt32Vector(Vec<u32>),
+    UInt64Vector(Vec<u64>),
+    Int8Vector(Vec<i8>),
+    Int16Vector(Vec<i16>),
+    Int32Vector(Vec<i32>),
+    Int64Vector(Vec<i64>),
+    // TODO(https://fxbug.dev/88174) figure out a better api for nested vectors
+    UInt8VectorVector(Vec<Vec<u8>>),
+}
+
+impl VectorField {
+    fn alignment(&self) -> usize {
+        8
+    }
+
+    fn encode_inline(&self, buf: &mut Vec<u8>) {
+        // Stored as a 16 byte record consisting of:
+        //   * `size`: 64-bit unsigned number of elements
+        //   * `data`: 64-bit presence indication or pointer to out-of-line element data
+        let size = match self {
+            Self::BoolVector(v) => v.len(),
+            Self::UInt8Vector(v) => v.len(),
+            Self::UInt16Vector(v) => v.len(),
+            Self::UInt32Vector(v) => v.len(),
+            Self::UInt64Vector(v) => v.len(),
+            Self::Int8Vector(v) => v.len(),
+            Self::Int16Vector(v) => v.len(),
+            Self::Int32Vector(v) => v.len(),
+            Self::Int64Vector(v) => v.len(),
+            Self::UInt8VectorVector(v) => v.len(),
+        } as u64;
+        buf.extend(size.to_le_bytes());
+
+        // When encoded for transfer, `data` indicates presence of content:
+        //   * `0`: vector is absent
+        //   * `UINTPTR_MAX`: vector is present, data is the next out-of-line object */
+        // (we always encode UINTPTR_MAX because we don't support nullable vectors)
+        buf.extend(u64::MAX.to_le_bytes());
+    }
+
+    fn encode_out_of_line(&self, buf: &mut Vec<u8>) {
+        match self {
+            Self::BoolVector(v) => {
+                for b in v {
+                    BasicField::Bool(*b).encode_inline(buf);
+                }
+            }
+            Self::UInt8Vector(v) => buf.extend(v),
+            Self::UInt16Vector(v) => {
+                for n in v {
+                    BasicField::UInt16(*n).encode_inline(buf);
+                }
+            }
+            Self::UInt32Vector(v) => {
+                for n in v {
+                    BasicField::UInt32(*n).encode_inline(buf);
+                }
+            }
+            Self::UInt64Vector(v) => {
+                for n in v {
+                    BasicField::UInt64(*n).encode_inline(buf);
+                }
+            }
+            Self::Int8Vector(v) => {
+                for n in v {
+                    BasicField::Int8(*n).encode_inline(buf);
+                }
+            }
+            Self::Int16Vector(v) => {
+                for n in v {
+                    BasicField::Int16(*n).encode_inline(buf);
+                }
+            }
+            Self::Int32Vector(v) => {
+                for n in v {
+                    BasicField::Int32(*n).encode_inline(buf);
+                }
+            }
+            Self::Int64Vector(v) => {
+                for n in v {
+                    BasicField::Int64(*n).encode_inline(buf);
+                }
+            }
+            Self::UInt8VectorVector(outer) => {
+                let as_fields = outer
+                    .iter()
+                    .map(|v| Field::Vector(VectorField::UInt8Vector(v.clone())))
+                    .collect::<Vec<_>>();
+
+                for field in &as_fields {
+                    field.encode_inline(buf);
+                }
+                for field in &as_fields {
+                    field.encode_out_of_line(buf);
+                }
+            }
         }
     }
 }

@@ -28,14 +28,25 @@ fx-command-run build host_x64/dynfidl_conformance_test_from_fidl_ir || ( \
   --input "$CONFORMANCE_IR" \
   --output "$GENERATED_TEST" \
   --rustfmt "$RUSTFMT" \
+  conformance/Bounded32NonnullableString \
+  conformance/Bounded32NonnullableVectorOfUint32s \
   conformance/EmptyStruct \
   conformance/FidlvizStruct1 \
   conformance/FidlvizStruct2 \
   conformance/FiveByte \
   conformance/GoldenBoolStruct \
+  conformance/GoldenByteVectorStruct \
   conformance/GoldenIntStruct \
+  conformance/GoldenStringStruct \
+  conformance/GoldenStringWithMaxSize2 \
   conformance/GoldenUintStruct \
   conformance/Int64Struct \
+  conformance/Length2StringWrapper \
+  conformance/LotsOfVectors \
+  conformance/MultipleNonnullableStrings \
+  conformance/MultipleNonnullableVectorsOfUint32s \
+  conformance/MultipleShortNonnullableStrings \
+  conformance/MultipleShortNullableStrings \
   conformance/MyBool \
   conformance/MyByte \
   conformance/MyInt16 \
@@ -56,6 +67,7 @@ fx-command-run build host_x64/dynfidl_conformance_test_from_fidl_ir || ( \
   conformance/Regression1 \
   conformance/Size5Alignment4 \
   conformance/Size8Align8 \
+  conformance/StringWrapper \
   conformance/Struct1Byte \
   conformance/Struct2Byte \
   conformance/Struct3Byte \
@@ -74,4 +86,10 @@ fx-command-run build host_x64/dynfidl_conformance_test_from_fidl_ir || ( \
   conformance/Uint64Struct \
   conformance/Uint64Uint32Uint16Uint8 \
   conformance/Uint8Struct \
-  conformance/Uint8Uint16Uint32Uint64)
+  conformance/Uint8Uint16Uint32Uint64 \
+  conformance/UnboundedNonnullableString \
+  conformance/UnboundedNonnullableVectorOfUint32s \
+  conformance/UpdatePolicy \
+  conformance/VectorOfStrings \
+  conformance/VectorWithLimit \
+  conformance/VectorWrapper)

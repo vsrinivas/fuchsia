@@ -6,9 +6,11 @@ import("//build/rust/rustc_binary.gni")
 
 if (is_host) {
   rustc_binary("test_from_ir") {
+    testonly = true
     output_name = "dynfidl_conformance_test_from_fidl_ir"
     sources = [ "src/main.rs" ]
     deps = [
+      "//src/tests/fidl/conformance_suite:conformance_fidl-rustc",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:heck",
       "//third_party/rust_crates:proc-macro2",
