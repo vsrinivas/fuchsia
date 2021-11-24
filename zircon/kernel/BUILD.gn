@@ -136,11 +136,11 @@ if (current_toolchain == default_toolchain) {
       }
       configs += [ "//build/config/zircon:assert_level_$kernel_assert_level" ]
 
-      # As a special case, never build the kernel with -O0, since it will
-      # crash immediately on boot. Use -Og instead, which allows debugging the
-      # kernel through QEMU. TODO(fxbug.dev/71321): Find a better way to deal with this.
-      if (optimize == "none") {
-        optimize_override = "debug"
+      # TODO(fxbug.dev/71321): the kernel crashes on boot if built with -O0.
+      _optimize_none = [ "//build/config:optimize_none" ]
+      if (configs + _optimize_none - _optimize_none != configs) {
+        configs -= _optimize_none
+        configs += [ "//build/config:optimize_debug" ]
       }
     }
   }

@@ -111,10 +111,6 @@ _buildidtool =
 #     that will appear in as `zircon_toolchain.environment` and can be checked
 #     in build rules, as requested by several Zircon artefacts.
 #
-#   optimize_override
-#     Optional: If defined, override the value of the 'optimize' and
-#     'zircon_optimize' build arguments.
-#
 # The following parameters from the original Zircon builds are NOT SUPPORTED
 # and documented here for historical reasons!
 #
@@ -637,54 +633,15 @@ template("zircon_toolchain") {
     # IMPORTANT: The toolchain_args variables in the Fuchsia and Zircon builds
     # are very distinct.
 
-    # Set the default optimization level. If invoker.optimize is defined use this,
-    # otherwise use zircon_optimize unless specific values of `optimize` are used.
-    # This behaviour is a remnant of ZN/GN build unification and will be fixed
-    # in the future (https://fxbug.dev/71321).
-    #
-    # TODO(fxbug.dev/71321): Remove these special cases.
-    # TODO(fxbug.dev/51585): Keep this in sync with the corresponding code in //BUILD.gn
-    if (defined(invoker.optimize_override)) {
-      # NOTE: This parameter cannot be simply called 'optimize' because for some reason,
-      # just reading a build argument inside a template() call will add it to the invoker
-      # scope. In other words, something like:
-      #
-      #    zircon_toolchain_suite(...) {
-      #       ...
-      #       if (optimize == "none") {
-      #         optimize = "debug"
-      #       }
-      #    }
-      #
-      # will _always_ define 'invoker.optimize' here. Hence the name 'optimize_override'
-      # to differentiate it.
-      #
-      _zircon_optimize = invoker.optimize_override
-    } else if (optimize == "none" || optimize == "sanitizer" ||
-               optimize == "profile") {
+    _zircon_optimize = zircon_optimize
+    if (optimize == "sanitizer" || optimize == "profile") {
       _zircon_optimize = optimize
-    } else {
-      _zircon_optimize = zircon_optimize
     }
 
     toolchain_args = {
       current_cpu = invoker.cpu
       current_os = invoker.os
 
-      # NOTE: The Zircon build uses "default" for the default optimization
-      # level, but the Fuchsia one uses different levels if not set explicitly,
-      # depending on 'is_debug'.
-      #
-      # Until both defaults are unified, overwrite the Fuchsia value with
-      # the zircon one. This can also be overriden by a specific Zircon
-      # toolchain by setting it in its own toolchain_args scope.
-      #
-      # Note: when invoking the Zircon build, the Fuchsia build will set
-      # the 'optimize' build variable in the following cases:
-      #  'none', 'sanitizer', 'profile' and 'size'.
-      #
-      # Otherwise the default is used. Try to replicate this here.
-      #
       optimize = _zircon_optimize
 
       if (defined(invoker.toolchain_args)) {
