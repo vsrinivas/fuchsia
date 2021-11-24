@@ -46,7 +46,8 @@ base_package_labels += [
   "//build/info:build-info",
   "//garnet/bin/log_listener:log_listener",
   "//garnet/bin/log_listener:log_listener_shell",
-  "//src/intl/intl_services:small",
+  "//src/intl/intl_services:pkg_small",
+  "//src/intl/intl_services/config:sysmgr_small",
   "//garnet/bin/setui:setui_service",
   "//garnet/bin/sshd-host",
   "//garnet/bin/sshd-host:config",
@@ -65,6 +66,10 @@ base_package_labels += [
   "//src/connectivity/network/mdns/bundles:config",
   "//src/connectivity/network/mdns/bundles:services",
   "//src/connectivity/network",
+
+  # Serve fuchsia.intl.TimeZones through intl_services by default. This is
+  # needed in core.gni for tests that use the core image.
+  "//src/intl/intl_services/config:sysmgr_small_timezones",
 
   # TODO(https://fxbug.dev/85821): remove once out-of-tree users no longer
   # reference v1 components.
