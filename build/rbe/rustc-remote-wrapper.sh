@@ -145,6 +145,13 @@ envvar_files=()
 
 rust_lld=()
 
+# Remove these temporary files on exit.
+cleanup_files=()
+function cleanup() {
+  rm -f "${cleanup_files[@]}"
+}
+trap cleanup EXIT
+
 print_var() {
   # Prints variable values to stdout.
   # $1 is name of variable to display.
@@ -710,7 +717,13 @@ remote_inputs=(
   "${sysroot_files[@]}"
   "${extra_inputs_rel_project_root[@]}"
 )
-remote_inputs_joined="$(IFS=, ; echo "${remote_inputs[*]}")"
+
+# List inputs in a file to avoid exceeding shell limit.
+inputs_file_list="$output".inputs
+for f in "${remote_inputs[@]}"
+do echo "$f"
+done > "$inputs_file_list"
+cleanup_files+=("$inputs_file_list")
 
 # Outputs include the declared output file and a depfile.
 outputs=("$build_subdir/$output")
@@ -764,7 +777,7 @@ remote_rustc_command=(
   "$script_dir"/fuchsia-rbe-action.sh
   --exec_root="$project_root"
   "${remote_trace_flags[@]}"
-  --inputs="$remote_inputs_joined"
+  --input_list_paths="$inputs_file_list"
   --output_files="$outputs_joined"
   "${rewrapper_options[@]}"
   --
