@@ -51,7 +51,7 @@ func TestAddImageDeps(t *testing.T) {
 			name:  "emulator image deps",
 			pave:  false,
 			isEmu: true,
-			want:  []string{"images.json", "multiboot.bin", "obj/build/images/fuchsia/fuchsia/fvm.blk"},
+			want:  []string{"fuchsia.zbi", "images.json", "multiboot.bin", "obj/build/images/fuchsia/fuchsia/fvm.blk"},
 		},
 		{
 			name:  "paving image deps",
