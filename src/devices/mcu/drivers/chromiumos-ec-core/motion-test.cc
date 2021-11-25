@@ -75,9 +75,6 @@ class ChromiumosEcMotionTest : public ChromiumosEcTestBase {
           MotionsenseCommand(reinterpret_cast<const ec_params_motion_sense*>(data), completer);
         });
 
-    fake_acpi_.SetInstallNotifyHandler(
-        [](auto request, auto& completer) { completer.ReplySuccess(); });
-
     // Calls DdkInit on the cros-ec-core device.
     ASSERT_NO_FATAL_FAILURES(InitDevice());
 

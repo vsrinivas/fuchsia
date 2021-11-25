@@ -4,6 +4,7 @@
 
 #include "src/devices/mcu/drivers/chromiumos-ec-core/chromiumos_ec_core.h"
 
+#include <fidl/fuchsia.hardware.acpi/cpp/wire_types.h>
 #include <fidl/fuchsia.hardware.google.ec/cpp/wire_types.h>
 #include <fidl/fuchsia.io/cpp/markers.h>
 #include <lib/ddk/debug.h>
@@ -120,7 +121,12 @@ void ChromiumosEcCore::DdkInit(ddk::InitTxn txn) {
   init_txn_ = std::move(txn);
   auto promise =
       BindFidlClients(std::move(ec_endpoints->client), std::move(acpi_endpoints->client))
-          .then([this](fpromise::result<void, void>&) {
+          .then([this](fpromise::result<void, zx_status_t>& result)
+                    -> fpromise::promise<CommandResult, zx_status_t> {
+            if (result.is_error()) {
+              return fpromise::make_result_promise<CommandResult, zx_status_t>(
+                  fpromise::error(result.error()));
+            }
             return IssueCommand(EC_CMD_GET_FEATURES, 0);
           })
           .and_then([this](CommandResult& result) mutable -> fpromise::result<void, zx_status_t> {
@@ -170,25 +176,56 @@ void ChromiumosEcCore::DdkUnbind(ddk::UnbindTxn txn) {
   } else {
     ec_teardown_.completer.complete_ok();
   }
+  if (notify_ref_.has_value()) {
+    notify_ref_->Close(ZX_ERR_CANCELED);
+  } else {
+    server_teardown_.completer.complete_ok();
+  }
   // Once both clients have been torn down, reply.
   executor_.schedule_task(
-      fpromise::join_promises(ec_teardown_.consumer.promise(), acpi_teardown_.consumer.promise())
+      fpromise::join_promises(ec_teardown_.consumer.promise(), acpi_teardown_.consumer.promise(),
+                              server_teardown_.consumer.promise())
           .discard_result()
           .then([unbind = std::move(txn)](fpromise::result<>& type) mutable { unbind.Reply(); }));
 }
 
-fpromise::promise<> ChromiumosEcCore::BindFidlClients(
+fpromise::promise<void, zx_status_t> ChromiumosEcCore::BindFidlClients(
     fidl::ClientEnd<fuchsia_hardware_google_ec::Device> ec_client,
     fidl::ClientEnd<fuchsia_hardware_acpi::Device> acpi_client) {
-  fpromise::bridge<> bridge;
+  fpromise::bridge<void, zx_status_t> bridge;
   async::PostTask(loop_.dispatcher(), [this, ec_client = std::move(ec_client),
                                        acpi_client = std::move(acpi_client),
                                        completer = std::move(bridge.completer)]() mutable {
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::NotifyHandler>();
+    if (!endpoints.is_ok()) {
+      completer.complete_error(endpoints.status_value());
+    }
+    notify_ref_ = fidl::BindServer<fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>>(
+        loop_.dispatcher(), std::move(endpoints->server), this,
+        [this](fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler>*, fidl::UnbindInfo,
+               fidl::ServerEnd<fuchsia_hardware_acpi::NotifyHandler>) {
+          server_teardown_.completer.complete_ok();
+        });
     ec_client_.Bind(std::move(ec_client), loop_.dispatcher(),
                     fidl::ObserveTeardown([this]() { ec_teardown_.completer.complete_ok(); }));
     acpi_client_.Bind(std::move(acpi_client), loop_.dispatcher(),
                       fidl::ObserveTeardown([this]() { acpi_teardown_.completer.complete_ok(); }));
-    completer.complete_ok();
+    acpi_client_->InstallNotifyHandler(
+        fuchsia_hardware_acpi::wire::NotificationMode::kDevice, std::move(endpoints->client),
+        [completer = std::move(completer)](
+            fidl::WireUnownedResult<fuchsia_hardware_acpi::Device::InstallNotifyHandler>&
+                result) mutable {
+          if (!result.ok()) {
+            zxlogf(ERROR, "Failed to install notify handler: %s",
+                   result.FormatDescription().data());
+            completer.complete_error(result.status());
+          } else if (result->result.is_err()) {
+            zxlogf(ERROR, "Failed to install notify handler: %u", int(result->result.err()));
+            completer.complete_error(ZX_ERR_INTERNAL);
+          } else {
+            completer.complete_ok();
+          }
+        });
   });
 
   return bridge.consumer.promise();
@@ -197,6 +234,15 @@ fpromise::promise<> ChromiumosEcCore::BindFidlClients(
 void ChromiumosEcCore::DdkRelease() {
   loop_.Shutdown();
   delete this;
+}
+
+void ChromiumosEcCore::Handle(HandleRequestView request, HandleCompleter::Sync& completer) {
+  std::scoped_lock lock(callback_lock_);
+  for (auto& callback : callbacks_) {
+    callback(request->value);
+  }
+
+  completer.Reply();
 }
 
 bool ChromiumosEcCore::HasFeature(size_t feature) {

@@ -18,6 +18,8 @@ namespace chromiumos_ec_core {
 void ChromiumosEcTestBase::SetUp() {
   fake_root_ = MockDevice::FakeRootParent();
   ASSERT_OK(loop_.StartThread("chromiumos-ec-core-test"));
+  fake_acpi_.SetInstallNotifyHandler(
+      [](auto request, auto& completer) { completer.ReplySuccess(); });
 }
 
 void ChromiumosEcTestBase::InitDevice() {

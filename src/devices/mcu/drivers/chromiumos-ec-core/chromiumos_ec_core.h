@@ -52,7 +52,7 @@ struct CommandResult {
 
 class ChromiumosEcCore;
 using DeviceType = ddk::Device<ChromiumosEcCore, ddk::Initializable, ddk::Unbindable>;
-class ChromiumosEcCore : public DeviceType {
+class ChromiumosEcCore : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
  public:
   explicit ChromiumosEcCore(zx_device_t* parent)
       : DeviceType(parent),
@@ -65,6 +65,9 @@ class ChromiumosEcCore : public DeviceType {
   void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
+
+  // FIDL NotifyHandler implementation
+  void Handle(HandleRequestView request, HandleCompleter::Sync& completer);
 
   // For inspect test.
   inspect::Inspector& inspect() { return inspect_; }
@@ -90,14 +93,60 @@ class ChromiumosEcCore : public DeviceType {
 
   fidl::WireSharedClient<fuchsia_hardware_acpi::Device>& acpi() { return acpi_client_; }
 
+  // RAII notify handler manager. Returned by AddNotifyHandler.
+  class NotifyHandlerDeleter {
+   public:
+    DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(NotifyHandlerDeleter);
+    NotifyHandlerDeleter(NotifyHandlerDeleter&& other) noexcept {
+      index_ = other.index_;
+      ec_ = other.ec_;
+      other.ec_ = nullptr;
+    }
+    NotifyHandlerDeleter& operator=(NotifyHandlerDeleter&& other) noexcept {
+      index_ = other.index_;
+      ec_ = other.ec_;
+      other.ec_ = nullptr;
+      return *this;
+    }
+    ~NotifyHandlerDeleter() {
+      if (ec_) {
+        ec_->RemoveNotifyHandler(index_);
+      }
+    }
+
+   private:
+    friend class ChromiumosEcCore;
+    NotifyHandlerDeleter(ChromiumosEcCore* ec, size_t index) : ec_(ec), index_(index) {}
+
+    ChromiumosEcCore* ec_;
+    size_t index_;
+  };
+  using NotifyHandlerCallback = std::function<void(uint32_t event)>;
+  // Add a NotifyHandler to be called when ACPI notifications occur.
+  NotifyHandlerDeleter AddNotifyHandler(NotifyHandlerCallback cb)
+      __TA_EXCLUDES(callback_lock_) __WARN_UNUSED_RESULT {
+    std::scoped_lock lock(callback_lock_);
+    ZX_ASSERT_MSG(callbacks_.size() <= std::numeric_limits<ssize_t>::max(),
+                  "index %zu out of bounds", callbacks_.size());
+    NotifyHandlerDeleter d(this, callbacks_.size());
+    callbacks_.emplace_back(std::move(cb));
+    return d;
+  }
+
  private:
+  void RemoveNotifyHandler(size_t index) __TA_EXCLUDES(callback_lock_) {
+    ZX_ASSERT_MSG(index <= std::numeric_limits<ssize_t>::max(), "index out of bounds");
+    std::scoped_lock lock(callback_lock_);
+    callbacks_.erase(callbacks_.begin() + static_cast<ssize_t>(index));
+  }
   fpromise::promise<CommandResult, zx_status_t> IssueRawCommand(uint16_t command, uint8_t version,
                                                                 cpp20::span<uint8_t> input);
 
   // Bind the FIDL client on the async dispatcher thread, which is necessary to obey the threading
   // constraints of fidl::WireClient.
-  fpromise::promise<> BindFidlClients(fidl::ClientEnd<fuchsia_hardware_google_ec::Device> ec_client,
-                                      fidl::ClientEnd<fuchsia_hardware_acpi::Device> acpi_client);
+  fpromise::promise<void, zx_status_t> BindFidlClients(
+      fidl::ClientEnd<fuchsia_hardware_google_ec::Device> ec_client,
+      fidl::ClientEnd<fuchsia_hardware_acpi::Device> acpi_client);
 
   // Run commands for populating inspect data.
   void ScheduleInspectCommands();
@@ -110,7 +159,14 @@ class ChromiumosEcCore : public DeviceType {
   fidl::WireSharedClient<fuchsia_hardware_google_ec::Device> ec_client_;
   fpromise::bridge<> acpi_teardown_;
   fpromise::bridge<> ec_teardown_;
+
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_acpi::NotifyHandler>> notify_ref_;
+  fpromise::bridge<> server_teardown_;
+
   std::optional<ddk::InitTxn> init_txn_;
+
+  std::mutex callback_lock_;
+  std::vector<NotifyHandlerCallback> callbacks_ __TA_GUARDED(callback_lock_);
 
   ec_response_get_features features_;
 };

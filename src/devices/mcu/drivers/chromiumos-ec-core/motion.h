@@ -44,10 +44,9 @@ struct SensorInfo {
 // CrOS EC protocol to HID protocol translator for device motion sensors
 class AcpiCrOsEcMotionDevice
     : public DeviceType,
-      public ddk::HidbusProtocol<AcpiCrOsEcMotionDevice, ddk::base_protocol>,
-      public fidl::WireServer<fuchsia_hardware_acpi::NotifyHandler> {
+      public ddk::HidbusProtocol<AcpiCrOsEcMotionDevice, ddk::base_protocol> {
  public:
-  ~AcpiCrOsEcMotionDevice() override = default;
+  ~AcpiCrOsEcMotionDevice() = default;
 
   // Create and bind the device.
   //
@@ -75,8 +74,8 @@ class AcpiCrOsEcMotionDevice
   zx_status_t HidbusGetProtocol(uint8_t* protocol);
   zx_status_t HidbusSetProtocol(uint8_t protocol);
 
-  // FIDL NotifyHandler implementation.
-  void Handle(HandleRequestView request, HandleCompleter::Sync& completer) override;
+  // ACPI Notifications
+  void HandleNotify(uint32_t event);
 
  private:
   AcpiCrOsEcMotionDevice(ChromiumosEcCore* ec, zx_device_t* parent);
@@ -108,6 +107,7 @@ class AcpiCrOsEcMotionDevice
 
   fbl::Array<uint8_t> hid_descriptor_ = fbl::Array<uint8_t>();
   std::optional<ddk::InitTxn> init_txn_;
+  std::optional<ChromiumosEcCore::NotifyHandlerDeleter> notify_deleter_;
 };
 
 // Build a HID descriptor reporting information about the given set of sensors.

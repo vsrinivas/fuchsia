@@ -61,15 +61,13 @@ uint8_t SensorIdToReportId(uint8_t sensor_id) {
 AcpiCrOsEcMotionDevice::AcpiCrOsEcMotionDevice(ChromiumosEcCore* ec, zx_device_t* parent)
     : DeviceType(parent), ec_(ec) {}
 
-void AcpiCrOsEcMotionDevice::Handle(HandleRequestView request, HandleCompleter::Sync& completer) {
-  zxlogf(TRACE, "acpi-cros-ec-motion: got event 0x%x", request->value);
-  switch (request->value) {
+void AcpiCrOsEcMotionDevice::HandleNotify(uint32_t event) {
+  zxlogf(TRACE, "acpi-cros-ec-motion: got event 0x%x", event);
+  switch (event) {
     case 0x80:
       ConsumeFifoAsync(/*enabling=*/false);
       break;
   }
-
-  completer.Reply();
 }
 
 void AcpiCrOsEcMotionDevice::ConsumeFifoAsync(bool enabling) {
@@ -458,6 +456,8 @@ zx_status_t AcpiCrOsEcMotionDevice::Bind(zx_device_t* parent, ChromiumosEcCore* 
 }
 
 void AcpiCrOsEcMotionDevice::DdkInit(ddk::InitTxn txn) {
+  // Install ACPI event handler
+  notify_deleter_.emplace(ec_->AddNotifyHandler([this](uint32_t event) { HandleNotify(event); }));
   init_txn_ = std::move(txn);
   auto populate_sensors = QueryNumSensors().and_then(
       [this](uint8_t& num_sensors) -> fpromise::promise<void, zx_status_t> {
@@ -532,27 +532,6 @@ void AcpiCrOsEcMotionDevice::DdkInit(ddk::InitTxn txn) {
       zxlogf(ERROR, "acpi-cros-ec-motion: failed to construct hid desc: %s",
              zx_status_get_string(status));
       return fpromise::error(status);
-    }
-
-    // Install ACPI event handler
-    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::NotifyHandler>();
-    if (endpoints.is_error()) {
-      return fpromise::error(endpoints.status_value());
-    }
-
-    fidl::BindServer(ec_->loop().dispatcher(), std::move(endpoints->server), this);
-
-    // TODO(simonshields): make this async.
-    auto response = ec_->acpi()->InstallNotifyHandler_Sync(
-        fuchsia_hardware_acpi::wire::NotificationMode::kDevice, std::move(endpoints->client));
-    if (!response.ok()) {
-      zxlogf(ERROR, "Send InstallNotifyHandler fidl message failed: %s",
-             response.FormatDescription().data());
-      return fpromise::error(response.status());
-    }
-    if (response->result.is_err()) {
-      zxlogf(ERROR, "Failed to install notify handler: %d", int(response->result.err()));
-      return fpromise::error(ZX_ERR_INTERNAL);
     }
 
     return fpromise::ok();
