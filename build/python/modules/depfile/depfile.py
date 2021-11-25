@@ -17,14 +17,26 @@ The simplest form is a single line for output and each inputs::
 
 paths are all relative to the root build dir (GN's root_build_dir)
 
+Ninja also supports a multiline format which uses backslashes as a continuation
+character::
+
+    path/to/an/output: \
+        path/to/input_a \
+        path/to/input_b \
+
+For readability, this is the format that is used by this module.
 
 Basic usage:
 
 >>> dep_file = DepFile("path/to/output")
 >>> dep_file.add_input("path/to/input_a")
 >>> dep_file.add_input("path/to/input_b")
->>> str(dep_file)
-"path/to/output: path/to/input_a path/to/input_b"
+>>> print(dep_file)
+path/to/output: \
+    path/to/input_a \
+    path/to/input_b \
+
+>>>
 
 By default, paths are made relative to the current working directory, but the
 paths can all be rebased (made relative from) a different absolute path:
@@ -36,8 +48,12 @@ output and inputs are relative
 >>> dep_file.add_input("baz/input_a")
 >>> dep_file.add_input("/foo/bar/baz/input_b")
 >>> dep_file.add_input("/foo/bar/monkey/panda/input_c")
->>> str(dep_file)
-"melon/output: input_a input_b ../monkey/panda/input/_c"
+>>> print(dep_file)
+melon/output: \
+    input_a input_b \
+    ../monkey/panda/input/_c \
+
+>>>
 """
 from os import PathLike
 import os
@@ -95,7 +111,8 @@ class DepFile:
         return dep_file
 
     def __repr__(self) -> str:
-        return "{}: {}\n".format(self.output, " ".join(sorted(self.deps)))
+        return "{}: \\\n  {}\n".format(
+            self.output, " \\\n  ".join(sorted(self.deps)))
 
     def write_to(self, file) -> None:
         """Write out the depfile contents to the given writeable `file-like` object.

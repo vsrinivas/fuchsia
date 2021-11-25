@@ -28,7 +28,7 @@ class DepFileTests(unittest.TestCase):
     Assume a CWD of /foo/bar
     """
 
-    expected = "baz/output: ../input_c things/input_a things/input_b\n"
+    expected = "baz/output: \\\n  ../input_c \\\n  things/input_a \\\n  things/input_b\n"
 
     def test_specified_cwd(self):
 
