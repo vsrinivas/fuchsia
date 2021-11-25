@@ -10,8 +10,6 @@ static_assert(false, "This file is not meant to be used on target");
 
 namespace minfs {
 
-bool Minfs::DirtyCacheEnabled() { return false; }
-
 [[nodiscard]] bool Minfs::IsJournalErrored() { return false; }
 
 std::vector<fbl::RefPtr<VnodeMinfs>> Minfs::GetDirtyVnodes() {

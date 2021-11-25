@@ -32,7 +32,7 @@ File::~File() {
                 "File being destroyed with pending updates to the inode size");
 }
 
-bool File::DirtyCacheEnabled() const { return Minfs::DirtyCacheEnabled(); }
+bool File::DirtyCacheEnabled() const { return true; }
 
 bool File::IsDirty() const {
   std::lock_guard lock(mutex_);

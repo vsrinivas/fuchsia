@@ -2,16 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # Set this to true when configuring gn args to enable minfs dirty cache.
-  # This is a compile time argument instead of mount time argument because
-  # we conditionally want to enable dirty cache only on specific
-  # configurations. Once it is enabled, we want the board to run all instances
-  # of minfs, including # data and all minfs created to run test, should enable
-  # dirty cache. This ensures that we run what we test.
-  minfs_enable_dirty_cache = true
-}
-
 static_library("minfs") {
   friend = [
     "test:*",
@@ -97,14 +87,6 @@ static_library("minfs") {
     "//zircon/third_party/ulib/safemath",
   ]
   if (is_fuchsia) {
-    if (minfs_enable_dirty_cache) {
-      defines = [
-        # Enable dirty cache only when we are running on fuchsia and gn config
-        # asks us to enable it.
-        "MINFS_ENABLE_DIRTY_CACHE",
-      ]
-    }
-
     public += [
       "command_handler.h",
       "minfs_inspector.h",

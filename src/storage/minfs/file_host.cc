@@ -16,10 +16,7 @@ namespace minfs {
 File::~File() = default;
 
 // We don't enable dirty cache on host.
-bool File::DirtyCacheEnabled() const {
-  ZX_ASSERT(!Minfs::DirtyCacheEnabled());
-  return false;
-}
+bool File::DirtyCacheEnabled() const { return false; }
 
 bool File::IsDirty() const { return false; }
 

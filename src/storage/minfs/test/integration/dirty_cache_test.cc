@@ -152,17 +152,11 @@ void CheckDirtyStats(std::string mount_path, uint64_t dirty_bytes) {
   ASSERT_TRUE(fd);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  const bool kExpectDirtyCacheEnabled = Minfs::DirtyCacheEnabled();
   auto mount_state_or = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel())->GetMountState();
   ASSERT_TRUE(mount_state_or.ok());
   ASSERT_EQ(mount_state_or.value().status, ZX_OK);
   ASSERT_NE(mount_state_or.value().mount_state, nullptr);
-  ASSERT_EQ(mount_state_or.value().mount_state->dirty_cache_enabled, kExpectDirtyCacheEnabled);
-
-  // If dirty cache is not enabled then we should not have any dirty bytes.
-  if (!kExpectDirtyCacheEnabled) {
-    dirty_bytes = 0;
-  }
+  ASSERT_EQ(mount_state_or.value().mount_state->dirty_cache_enabled, true);
 
   auto metrics_or = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel())->GetMetrics();
   ASSERT_TRUE(metrics_or.ok());
@@ -178,20 +172,6 @@ BufferedFile EnableStatsAndCreateFile(DirtyCacheTest* fs, size_t file_max_size, 
   EnableStats(fs);
   return BufferedFile(fs, fs->fs().mount_path() + file_name, file_max_size, bytes_to_write,
                       bytes_per_write, remount_verify);
-}
-
-TEST_P(DirtyCacheTest, DirtyCacheEnabled) {
-  fbl::unique_fd fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-  ASSERT_TRUE(fd);
-
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto mount_state_or = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel())->GetMountState();
-  ASSERT_TRUE(mount_state_or.ok());
-  ASSERT_EQ(mount_state_or.value().status, ZX_OK);
-  ASSERT_NE(mount_state_or.value().mount_state, nullptr);
-
-  // The mount state of dirty cache enabled should match what we have compiled with.
-  ASSERT_EQ(mount_state_or.value().mount_state->dirty_cache_enabled, Minfs::DirtyCacheEnabled());
 }
 
 constexpr size_t kBytesPerWrite = kMinfsBlockSize;

@@ -433,9 +433,6 @@ class Minfs :
 
   const MountOptions& mount_options() { return mount_options_; }
 
-  // Return true if dirty cache is enabled.
-  static bool DirtyCacheEnabled();
-
   // Logs mount time metrics such as the format version and oldest revision.
   void LogMountMetrics();
 

@@ -1275,7 +1275,7 @@ zx_status_t Minfs::Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<Bcache>
       .verbose = options.verbose,
       .repair_filesystem = options.repair_filesystem,
       .use_journal = true,
-      .dirty_cache_enabled = Minfs::DirtyCacheEnabled(),
+      .dirty_cache_enabled = true,
   };
 
   *out = std::move(fs);
@@ -1367,7 +1367,6 @@ zx::status<std::unique_ptr<Minfs>> Mount(FuchsiaDispatcher* dispatcher,
                                          const MountOptions& options,
                                          fbl::RefPtr<VnodeMinfs>* root_out) {
   TRACE_DURATION("minfs", "minfs_mount");
-  FX_LOGS(DEBUG) << "dirty cache is " << (Minfs::DirtyCacheEnabled() ? "enabled." : "disabled.");
 
   std::unique_ptr<Minfs> fs;
   zx_status_t status = Minfs::Create(dispatcher, std::move(bc), options, &fs);

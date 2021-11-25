@@ -12,14 +12,6 @@ static_assert(false, "This file is not meant to be used on host");
 
 namespace minfs {
 
-bool Minfs::DirtyCacheEnabled() {
-#ifdef MINFS_ENABLE_DIRTY_CACHE
-  return true;
-#else
-  return false;
-#endif  // MINFS_ENABLE_DIRTY_CACHE
-}
-
 [[nodiscard]] bool Minfs::IsJournalErrored() {
   return journal_ != nullptr && !journal_->IsWritebackEnabled();
 }
@@ -32,19 +24,18 @@ std::vector<fbl::RefPtr<VnodeMinfs>> Minfs::GetDirtyVnodes() {
   // reference and the vnode is clean then this block will end up releasing the vnode. To avoid
   // deadlock, we park clean vnodes in an array which will be released outside of the lock.
   std::vector<fbl::RefPtr<VnodeMinfs>> unused_clean_vnodes;
-  if (DirtyCacheEnabled()) {
-    // Avoid releasing a reference to |vn| while holding |hash_lock_|.
-    fbl::AutoLock lock(&hash_lock_);
-    for (auto& raw_vnode : vnode_hash_) {
-      vn = fbl::MakeRefPtrUpgradeFromRaw(&raw_vnode, hash_lock_);
-      if (vn == nullptr) {
-        continue;
-      }
-      if (vn->IsDirty()) {
-        vnodes.push_back(std::move(vn));
-      } else {
-        unused_clean_vnodes.push_back(std::move(vn));
-      }
+
+  // Avoid releasing a reference to |vn| while holding |hash_lock_|.
+  fbl::AutoLock lock(&hash_lock_);
+  for (auto& raw_vnode : vnode_hash_) {
+    vn = fbl::MakeRefPtrUpgradeFromRaw(&raw_vnode, hash_lock_);
+    if (vn == nullptr) {
+      continue;
+    }
+    if (vn->IsDirty()) {
+      vnodes.push_back(std::move(vn));
+    } else {
+      unused_clean_vnodes.push_back(std::move(vn));
     }
   }
   return vnodes;
@@ -53,7 +44,6 @@ std::vector<fbl::RefPtr<VnodeMinfs>> Minfs::GetDirtyVnodes() {
 zx_status_t Minfs::ContinueTransaction(size_t reserve_blocks,
                                        std::unique_ptr<CachedBlockTransaction> cached_transaction,
                                        std::unique_ptr<Transaction>* out) {
-  ZX_ASSERT(DirtyCacheEnabled());
   if (journal_ == nullptr) {
     return ZX_ERR_BAD_STATE;
   }
@@ -94,10 +84,6 @@ zx_status_t Minfs::ContinueTransaction(size_t reserve_blocks,
 }
 
 zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {
-  if (!DirtyCacheEnabled()) {
-    return zx::ok();
-  }
-
   if (!allocated) {
     fbl::AutoLock lock(&hash_lock_);
     // We need to allocate the block. Make sure that we have
@@ -120,10 +106,6 @@ zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {
 }
 
 void Minfs::SubtractDirtyBytes(uint64_t dirty_bytes, bool allocated) {
-  if (!DirtyCacheEnabled()) {
-    return;
-  }
-
   ZX_ASSERT(dirty_bytes <= metrics_.dirty_bytes.load());
   metrics_.dirty_bytes -= dirty_bytes;
 }

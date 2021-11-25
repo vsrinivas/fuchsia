@@ -176,7 +176,7 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
     for (int i = 0; i < write_count; i++) {
       EXPECT_EQ(write(fd, ch, sizeof(ch)), static_cast<ssize_t>(sizeof(ch)));
     }
-    FsProperties().AddWriteCost(0, bytes_per_write, write_count, DirtyCacheEnabled(), &computed);
+    FsProperties().AddWriteCost(0, bytes_per_write, write_count, &computed);
 
     SyncAndCompute(&computed, MinfsProperties::SyncKind::kTransactionWithData);
     CompareAndDump(computed);

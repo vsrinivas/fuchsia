@@ -44,11 +44,10 @@ class MinfsProperties {
   // Adds to |out| the cost to create a regular file in emtry root directory.
   void AddCreateCost(BlockFidlMetrics* out) const;
 
-  // Adds to |out| the cost to issue |write_count| write()s each of size
-  // |byte_per_write| bytes starting at |start_offset| to a zero sized
-  // regular file.
+  // Adds to |out| the cost to issue |write_count| write()s each of size |byte_per_write| bytes
+  // starting at |start_offset| to a zero sized regular file.
   void AddWriteCost(uint64_t start_offset, uint64_t bytes_per_write, int write_count,
-                    bool dirty_cache_enabled, BlockFidlMetrics* out) const;
+                    BlockFidlMetrics* out) const;
 
   const BlockDeviceSizes& DeviceSizes() const { return block_device_sizes_; }
   const disk_format_t& DiskFormat() const { return format_; }
@@ -89,16 +88,6 @@ class MinfsProperties {
   // Adds number of IOs issued and bytes transferred to read all the FS metadata
   // when filesystem is in clean state.
   void AddReadingCleanMetadataCosts(BlockFidlMetrics* out) const;
-
-  // When dirty cache is enabled, adds to |out| the cost to issue |write_count| write()s each of
-  // size |byte_per_write| bytes starting at |start_offset| to a zero sized regular file.
-  void AddCachedWriteCost(uint64_t start_offset, uint64_t bytes_per_write, int write_count,
-                          BlockFidlMetrics* out) const;
-
-  // When dirty cache is disabled, adds to |out| the cost to issue |write_count| write()s each of
-  // size |byte_per_write| bytes starting at |start_offset| to a zero sized regular file.
-  void AddUncachedWriteCost(uint64_t start_offset, uint64_t bytes_per_write, int write_count,
-                            BlockFidlMetrics* out) const;
 
   BlockDeviceSizes block_device_sizes_;
   disk_format_t format_;
