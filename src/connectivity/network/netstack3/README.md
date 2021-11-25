@@ -6,4 +6,4 @@ Netstack3 is the third netstack built for Fuchsia.
 
 See [Contributing to Netstack3].
 
-[Contributing to Netstack3]: https://fuchsia.dev/fuchsia-src/contribute/contributing_to_netstack3
+[Contributing to Netstack3]: https://fuchsia.dev/fuchsia-src/contribute/contributing-to-netstack/netstack3
