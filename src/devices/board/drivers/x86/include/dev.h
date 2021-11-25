@@ -32,7 +32,6 @@
 zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t pwrbtn_init(zx_device_t* parent);
 zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
-zx_status_t cros_ec_lpc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t lid_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_DEV_H_

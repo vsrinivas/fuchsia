@@ -87,12 +87,6 @@ fuchsia_driver("platform-bus-x86-driver") {
   }
 
   sources = [
-    "acpi-dev/dev-cros-ec/acpi.cc",
-    "acpi-dev/dev-cros-ec/dev.cc",
-    "acpi-dev/dev-cros-ec/motion.cc",
-    "acpi-dev/dev-cros-ec/motion.h",
-    "acpi-dev/dev-cros-ec/usb-pd.cc",
-    "acpi-dev/dev-cros-ec/usb-pd.h",
     "acpi-dev/dev-ec.cc",
     "acpi-dev/dev-lid.cc",
     "acpi-dev/dev-lid.h",
@@ -218,54 +212,10 @@ bootfs_test("x86-board-bootfs-test") {
   deps = [ ":x86-board-test" ]
 }
 
-test("x86-cros-ec-test") {
-  sources = [
-    "acpi-dev/dev-cros-ec/acpi.cc",
-    "acpi-dev/dev-cros-ec/acpi.h",
-    "acpi-dev/dev-cros-ec/dev.cc",
-    "acpi-dev/dev-cros-ec/dev.h",
-    "acpi-dev/dev-cros-ec/motion-test.cc",
-    "acpi-dev/dev-cros-ec/motion.cc",
-    "acpi-dev/dev-cros-ec/motion.h",
-    "acpi-dev/dev-cros-ec/usb-pd-test.cc",
-    "acpi-dev/dev-cros-ec/usb-pd.cc",
-    "acpi-dev/dev-cros-ec/usb-pd.h",
-  ]
-  configs += [ ":config" ]
-  deps = [
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
-    "//src/devices/testing/fake_ddk",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//src/ui/input/testing/mock-hidbus-ifc",
-    "//third_party/acpica",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/hid-parser",
-    "//zircon/system/ulib/service:service-llcpp",
-    "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/zircon-internal",
-    "//zircon/system/ulib/zxtest",
-    "//zircon/third_party/ulib/chromiumos-platform-ec",
-  ]
-}
-
 group("tests") {
   testonly = true
   deps = [
     ":x64-bind_test",
     "acpi:tests",
   ]
-  if (target_cpu == "x64") {
-    deps += [ ":x86-cros-ec-test-pkg" ]
-  }
-}
-
-fuchsia_unittest_package("x86-cros-ec-test-pkg") {
-  package_name = "x86-cros-ec-test"
-  deps = [ ":x86-cros-ec-test" ]
 }

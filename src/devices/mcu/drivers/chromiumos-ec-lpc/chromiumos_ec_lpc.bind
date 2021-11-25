@@ -4,8 +4,5 @@
 
 using fuchsia.acpi;
 
-// TODO(fxbug.dev/78349): enable this driver once it is feature equivalent to the x86 board driver.
-//fuchsia.BIND_PROTOCOL == fuchsia.acpi.BIND_PROTOCOL.DEVICE;
-//fuchsia.acpi.hid == "GOOG0004";
-
-false;
+fuchsia.BIND_PROTOCOL == fuchsia.acpi.BIND_PROTOCOL.DEVICE;
+fuchsia.acpi.hid == "GOOG0004";

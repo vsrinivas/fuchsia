@@ -246,8 +246,6 @@ zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_b
           ec_init(acpi_root, object);
         } else if (hid == GOOGLE_TBMC_HID_STRING) {
           tbmc_init(acpi_root, object);
-        } else if (hid == GOOGLE_CROS_EC_HID_STRING) {
-          cros_ec_lpc_init(acpi_root, object);
         }
         return acpi::ok();
       });
