@@ -1,0 +1,103 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//build/zircon/migrated_targets.gni")
+
+if (toolchain_variant.tags + [ "llvm-profdata" ] - [ "llvm-profdata" ] !=
+    toolchain_variant.tags) {
+  have_profdata = 1
+} else {
+  have_profdata = 0
+}
+
+zx_library("llvm-profdata") {
+  sdk = "source"
+  sdk_headers = [ "lib/llvm-profdata/llvm-profdata.h" ]
+
+  sources = [ "llvm-profdata.cc" ]
+  deps = []
+  public_deps = [ "//sdk/lib/stdcompat" ]
+
+  defines = [ "HAVE_PROFDATA=$have_profdata" ]
+
+  if (is_kernel) {
+    deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+}
+
+if (!is_kernel) {
+  group("tests") {
+    testonly = true
+    deps = [
+      ":llvm-profdata-tests",
+      ":llvm-profdata-unittests($host_toolchain)",
+    ]
+  }
+
+  # This one file is always compiled with relocatable coverage support,
+  # regardless of the prevailing variant.
+  source_set("coverage-example") {
+    testonly = true
+    public = [ "coverage-example.h" ]
+    sources = [ "coverage-example.cc" ]
+    configs += [ ":coverage" ]
+
+    # Make sure the LinkTimeDeadFunction is really dead at link time.
+    configs -= [ "//build/config:default_linker_gc" ]
+    configs += [ "//build/config:linker_gc" ]
+  }
+
+  config("coverage") {
+    visibility = [ ":*" ]
+    cflags = [
+      "-fprofile-instr-generate",
+      "-fcoverage-mapping",
+    ]
+    if (current_os != "mac") {
+      cflags += [
+        "-mllvm",
+        "-runtime-counter-relocation=true",
+      ]
+    }
+  }
+
+  # When built in a variant without the instrumentation, the library code is
+  # stubbed out.  For tests, use a separate compilation of its code that still
+  # lacks instrumentation itself but has the full runtime support enabled.  The
+  # coverage-example code's data will be the only instrumentation data it finds.
+  if (have_profdata == 0) {
+    source_set("llvm-profdata-for-test") {
+      sources = [ "llvm-profdata.cc" ]
+      defines = [ "HAVE_PROFDATA=1" ]
+      public_deps = [ ":llvm-profdata" ]
+    }
+  } else {
+    group("llvm-profdata-for-test") {
+      public_deps = [ ":llvm-profdata" ]
+    }
+  }
+
+  test("llvm-profdata-unittests") {
+    sources = [ "llvm-profdata-tests.cc" ]
+    deps = [
+      ":coverage-example",
+      ":llvm-profdata-for-test",
+      "//src/lib/elfldltl",
+      "//third_party/googletest:gtest_main",
+    ]
+
+    # Make sure the LinkTimeDeadFunction is really dead at link time.
+    configs -= [ "//build/config:default_linker_gc" ]
+    configs += [ "//build/config:linker_gc" ]
+  }
+
+  fuchsia_unittest_package("llvm-profdata-tests") {
+    deps = [ ":llvm-profdata-unittests" ]
+  }
+}

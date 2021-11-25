@@ -141,6 +141,7 @@ group("deprecated_zx_wrapper_allowlist") {
     "//src/lib/ddktl/*",
     "//src/lib/elfldltl/*",
     "//src/lib/framebuffer/*",
+    "//src/lib/llvm-profdata/*",
     "//src/lib/storage/fs_management/*",
     "//src/lib/storage/ramdevice_client/*",
     "//src/lib/trivial-allocator/*",
