@@ -22,6 +22,10 @@ constexpr struct DriverFeature {
         .bind = motion::RegisterMotionDriver,
         .feature = EC_FEATURE_MOTION_SENSE,
     },
+    {
+        .bind = usb_pd::RegisterUsbPdDriver,
+        .feature = EC_FEATURE_USB_PD,
+    },
 };
 
 }  // namespace
@@ -42,5 +46,6 @@ void BindSubdrivers(ChromiumosEcCore* ec) {
   }  // namespace ns
 
 WEAK_REGISTER_SYMBOL(motion, Motion)
+WEAK_REGISTER_SYMBOL(usb_pd, UsbPd)
 
 }  // namespace chromiumos_ec_core

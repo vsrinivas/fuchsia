@@ -13,4 +13,11 @@ namespace motion {
 void RegisterMotionDriver(ChromiumosEcCore* ec);
 
 }  // namespace motion
+
+namespace usb_pd {
+
+void RegisterUsbPdDriver(ChromiumosEcCore* ec);
+
+}
+
 }  // namespace chromiumos_ec_core

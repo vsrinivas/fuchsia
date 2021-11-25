@@ -12,6 +12,7 @@ group("tests") {
   deps = [
     ":chromiumos-ec-core-tests",
     ":chromiumos-ec-motion-tests",
+    ":chromiumos-ec-usb-pd-tests",
   ]
 }
 
@@ -76,11 +77,25 @@ source_set("motion") {
   ]
 }
 
+source_set("usb-pd") {
+  sources = [
+    "subdriver.h",
+    "usb_pd.cc",
+    "usb_pd.h",
+  ]
+
+  public_deps = [
+    ":core",
+    "//sdk/fidl/fuchsia.hardware.power:fuchsia.hardware.power_llcpp",
+  ]
+}
+
 fuchsia_driver("driver") {
   output_name = "chromiumos-ec-core"
   deps = [
     ":core",
     ":motion",
+    ":usb-pd",
   ]
 }
 
@@ -111,10 +126,22 @@ test("chromiumos-ec-motion-unit-tests") {
   ]
 }
 
+test("chromiumos-ec-usb-pd-unit-tests") {
+  sources = [ "usb_pd_test.cc" ]
+  deps = [
+    ":test-common",
+    ":usb-pd",
+  ]
+}
+
 fuchsia_unittest_package("chromiumos-ec-core-tests") {
   deps = [ ":chromiumos-ec-core-unit-tests" ]
 }
 
 fuchsia_unittest_package("chromiumos-ec-motion-tests") {
   deps = [ ":chromiumos-ec-motion-unit-tests" ]
+}
+
+fuchsia_unittest_package("chromiumos-ec-usb-pd-tests") {
+  deps = [ ":chromiumos-ec-usb-pd-unit-tests" ]
 }
