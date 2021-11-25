@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <dev/hdcp/amlogic_s912/init.h>
+#include <dev/hw_rng/amlogic_rng/init.h>
 #include <dev/hw_watchdog/generic32/init.h>
 #include <dev/psci.h>
 #include <phys/arch/arch-handoff.h>
@@ -22,6 +23,10 @@ void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
 void ArchDriverHandoffLate(const ArchPhysHandoff& arch_handoff) {
   if (arch_handoff.amlogic_hdcp_driver) {
     AmlogicS912HdcpInit(arch_handoff.amlogic_hdcp_driver.value());
+  }
+
+  if (arch_handoff.amlogic_rng_driver) {
+    AmlogicRngInit(arch_handoff.amlogic_rng_driver.value());
   }
 
   if (arch_handoff.generic_32bit_watchdog_driver) {

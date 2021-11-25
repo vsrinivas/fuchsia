@@ -4,11 +4,16 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+config("includes") {
+  include_dirs = [ "include" ]
+}
+
 source_set("amlogic_rng") {
+  public = [ "include/dev/hw_rng/amlogic_rng/init.h" ]
   sources = [ "amlogic-rng.cc" ]
   deps = [
     "//zircon/kernel/dev/hw_rng",
-    "//zircon/kernel/dev/pdev",
     "//zircon/system/ulib/explicit-memory",
   ]
+  public_configs = [ ":includes" ]
 }
