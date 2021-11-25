@@ -31,6 +31,7 @@ fuchsia_driver("usb-bus-driver") {
 }
 
 fuchsia_driver_component("usb-bus") {
+  info = "usb-bus-info.json"
   component_name = "usb-bus"
   deps = [ ":usb-bus-driver" ]
 }

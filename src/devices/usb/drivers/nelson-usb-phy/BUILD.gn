@@ -45,6 +45,7 @@ fuchsia_driver("nelson-usb-phy-driver") {
 }
 
 fuchsia_driver_component("nelson-usb-phy") {
+  info = "nelson-usb-phy-info.json"
   component_name = "nelson-usb-phy"
   deps = [ ":nelson-usb-phy-driver" ]
 }

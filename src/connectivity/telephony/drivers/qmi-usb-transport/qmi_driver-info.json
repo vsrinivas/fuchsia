@@ -6,7 +6,6 @@
         "EM7565"
     ],
     "areas": [
-        "Telephony",
-        "Usb"
+        "Telephony"
     ]
 }

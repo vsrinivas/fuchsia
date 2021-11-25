@@ -10,7 +10,6 @@
     "areas": [
         "Connectivity",
         "Ethernet",
-        "Networking",
-        "Usb"
+        "Networking"
     ]
 }

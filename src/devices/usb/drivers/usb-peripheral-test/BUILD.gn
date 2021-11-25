@@ -39,6 +39,7 @@ if (is_fuchsia) {
   }
 
   fuchsia_driver_component("usb-peripheral-test") {
+    info = "usb-peripheral-test-info.json"
     component_name = "usb-peripheral-test"
     deps = [ ":usb-peripheral-test-driver" ]
   }

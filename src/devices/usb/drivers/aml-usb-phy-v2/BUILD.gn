@@ -47,6 +47,7 @@ fuchsia_driver("aml-usb-phy-v2-driver") {
 }
 
 fuchsia_driver_component("aml-usb-phy-v2") {
+  info = "aml-usb-phy-v2-info.json"
   component_name = "aml-usb-phy-v2"
   deps = [ ":aml-usb-phy-v2-driver" ]
 }

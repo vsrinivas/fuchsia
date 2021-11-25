@@ -1,15 +1,11 @@
 {
     "short_description": "USB HID fake driver",
     "manufacturer": "",
-    "families": [
-        "generic"
-    ],
-    "models": [
-        "generic"
-    ],
+    "families": [],
+    "models": [],
     "areas": [
         "Input",
         "Test",
-        "Usb"
+        "USB"
     ]
 }

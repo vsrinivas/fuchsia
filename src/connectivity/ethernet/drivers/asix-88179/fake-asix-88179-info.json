@@ -9,7 +9,6 @@
         "Connectivity",
         "Ethernet",
         "Networking",
-        "Test",
-        "Usb"
+        "Test"
     ]
 }

@@ -48,6 +48,7 @@ fuchsia_driver("dwc2-driver") {
 }
 
 fuchsia_driver_component("dwc2") {
+  info = "dwc2-info.json"
   component_name = "dwc2"
   deps = [ ":dwc2-driver" ]
 }

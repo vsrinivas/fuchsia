@@ -1,0 +1,10 @@
+{
+    "short_description": "USB virtual test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "USB",
+        "Test"
+    ]
+}

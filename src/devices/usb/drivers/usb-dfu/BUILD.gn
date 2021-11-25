@@ -46,6 +46,7 @@ fuchsia_driver("usb-dfu-driver") {
 }
 
 fuchsia_driver_component("usb-dfu") {
+  info = "usb-dfu-info.json"
   component_name = "usb-dfu"
   deps = [ ":usb-dfu-driver" ]
 }

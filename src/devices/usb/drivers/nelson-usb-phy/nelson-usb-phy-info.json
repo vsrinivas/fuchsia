@@ -1,0 +1,11 @@
+{
+    "short_description": "AMLogic USB PHY driver for Nelson",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "S905D3"
+    ],
+    "areas": [
+        "USB"
+    ]
+}

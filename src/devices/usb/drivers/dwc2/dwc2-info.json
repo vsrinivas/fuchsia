@@ -1,0 +1,9 @@
+{
+    "short_description": "Designware USB DCI driver",
+    "manufacturer": "Designware",
+    "families": [],
+    "models": [],
+    "areas": [
+        "USB"
+    ]
+}

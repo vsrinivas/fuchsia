@@ -1,0 +1,10 @@
+{
+    "short_description": "USB peripheral test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "USB",
+        "Test"
+    ]
+}

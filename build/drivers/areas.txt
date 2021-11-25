@@ -30,5 +30,5 @@ Telephony
 Test
 Thermal
 Uart
-Usb
+USB
 Wlan

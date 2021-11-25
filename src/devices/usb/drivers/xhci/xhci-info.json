@@ -1,5 +1,5 @@
 {
-    "short_description": "PCI Virtio ethernet driver",
+    "short_description": "USB XHCI driver",
     "manufacturer": "",
     "families": [
         "generic"
@@ -8,8 +8,6 @@
         "generic"
     ],
     "areas": [
-        "Connectivity",
-        "Ethernet",
-        "Networking"
+        "USB"
     ]
 }
