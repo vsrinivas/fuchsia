@@ -1248,7 +1248,7 @@ mod tests {
     async fn test_reset() {
         const TEST_DATA: &[u8] = b"hello";
 
-        let device = DeviceHolder::new(FakeDevice::new(16384, TEST_DEVICE_BLOCK_SIZE));
+        let device = DeviceHolder::new(FakeDevice::new(32768, TEST_DEVICE_BLOCK_SIZE));
 
         let mut object_ids = Vec::new();
 
@@ -1296,7 +1296,6 @@ mod tests {
                 object_ids.push(handle.object_id());
             }
         }
-        fs.close().await.expect("close failed");
         let device = fs.take_device().await;
         device.reopen();
         let fs =
