@@ -70,4 +70,5 @@ fuchsia_driver("wlanphy-testdev-driver") {
 fuchsia_driver_component("wlanphy-testdev") {
   component_name = "wlanphy-testdev"
   deps = [ ":wlanphy-testdev-driver" ]
+  info = "wlanphy-testdev-info.json"
 }

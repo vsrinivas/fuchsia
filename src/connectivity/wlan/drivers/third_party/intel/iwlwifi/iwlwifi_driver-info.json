@@ -1,0 +1,16 @@
+{
+    "short_description": "Intel WLAN SoftMAC driver",
+    "manufacturer": "Intel",
+    "families": [
+        "iwlwifi"
+    ],
+    "models": [
+        "7265",
+        "8265",
+        "9260"
+    ],
+    "areas": [
+        "Connectivity",
+        "Wlan"
+    ]
+}

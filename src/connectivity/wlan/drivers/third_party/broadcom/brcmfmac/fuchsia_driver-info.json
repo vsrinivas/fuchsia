@@ -1,0 +1,14 @@
+{
+    "short_description": "Broadcom BCM43xx FullMAC WLAN driver",
+    "manufacturer": "Broadcom",
+    "families": [
+        "brcmfmac"
+    ],
+    "models": [
+        "BCM4329"
+    ],
+    "areas": [
+        "Connectivity",
+        "Wlan"
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "short_description": "WLAN FullMAC driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Connectivity",
+        "Wlan"
+    ]
+}

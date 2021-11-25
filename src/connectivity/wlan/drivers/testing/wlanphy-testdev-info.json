@@ -1,0 +1,15 @@
+{
+    "short_description": "WLAN PHY layer testing driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Connectivity",
+        "Test",
+        "Wlan"
+    ]
+}

@@ -68,6 +68,7 @@ fuchsia_driver("iwlwifi_driver-driver") {
 }
 
 fuchsia_driver_component("iwlwifi_driver") {
+  info = "iwlwifi_driver-info.json"
   component_name = "iwlwifi"
   deps = [ ":iwlwifi_driver-driver" ]
   visibility = []

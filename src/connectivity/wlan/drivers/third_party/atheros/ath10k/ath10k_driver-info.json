@@ -1,0 +1,12 @@
+{
+    "short_description": "Qualcomm Atheros ath10k WLAN driver",
+    "manufacturer": "Qualcomm",
+    "families": [],
+    "models": [
+        "ath10k"
+    ],
+    "areas": [
+        "Connectivity",
+        "Wlan"
+    ]
+}

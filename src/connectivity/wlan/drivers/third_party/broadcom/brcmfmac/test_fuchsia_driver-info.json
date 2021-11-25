@@ -1,0 +1,11 @@
+{
+    "short_description": "Broadcom BCM43xx FullMAC WLAN testing driver",
+    "manufacturer": "Broadcom",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Connectivity",
+        "Test",
+        "Wlan"
+    ]
+}
