@@ -1,0 +1,12 @@
+{
+    "short_description": "AMLogic secure memory driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [
+        "S950D2",
+        "T931"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}
