@@ -36,6 +36,7 @@ fuchsia_driver("root_driver") {
 }
 
 fuchsia_driver_component("root") {
+  info = "root-info.json"
   testonly = true
   manifest = "meta/root.cml"
   deps = [ ":root_driver" ]
