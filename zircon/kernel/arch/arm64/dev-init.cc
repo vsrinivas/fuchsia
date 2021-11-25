@@ -8,15 +8,20 @@
 #include <dev/hw_rng/amlogic_rng/init.h>
 #include <dev/hw_watchdog/generic32/init.h>
 #include <dev/psci.h>
+#include <dev/timer/arm_generic.h>
 #include <phys/arch/arch-handoff.h>
 
 void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
-  if (arch_handoff.psci_driver) {
-    PsciInit(arch_handoff.psci_driver.value());
-  }
-
   if (arch_handoff.generic_32bit_watchdog_driver) {
     Generic32BitWatchdogEarlyInit(arch_handoff.generic_32bit_watchdog_driver.value());
+  }
+
+  if (arch_handoff.generic_timer_driver) {
+    ArmGenericTimerInit(arch_handoff.generic_timer_driver.value());
+  }
+
+  if (arch_handoff.psci_driver) {
+    PsciInit(arch_handoff.psci_driver.value());
   }
 }
 

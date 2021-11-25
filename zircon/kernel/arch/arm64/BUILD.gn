@@ -184,6 +184,7 @@ if (toolchain_environment == "physmem" ||
       "//zircon/kernel/dev/hw_rng/amlogic_rng",
       "//zircon/kernel/dev/hw_watchdog/generic32",
       "//zircon/kernel/dev/psci",
+      "//zircon/kernel/dev/timer/arm_generic",
       "//zircon/kernel/phys:handoff",
     ]
   }
