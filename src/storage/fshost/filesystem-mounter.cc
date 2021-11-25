@@ -91,7 +91,8 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(
     return zx::error(status);
   }
 
-  uint32_t open_rights = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix;
+  uint32_t open_rights = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
+                         fio::wire::kOpenFlagPosixExecutable;
   if (options.admin) {
     open_rights |= fio::wire::kOpenRightAdmin;
   }

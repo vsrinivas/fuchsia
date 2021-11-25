@@ -1071,10 +1071,11 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   if (zx_status_t status = zx::channel::create(0, &root_client, &root_server); status != ZX_OK)
     return status;
 
-  if (auto resp =
-          fidl::WireCall(export_root_or->client)
-              ->Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagPosix, 0,
-                     fidl::StringView("root"), std::move(root_server));
+  if (auto resp = fidl::WireCall(export_root_or->client)
+                      ->Open(fuchsia_io::wire::kOpenRightReadable |
+                                 fuchsia_io::wire::kOpenFlagPosixWritable |
+                                 fuchsia_io::wire::kOpenFlagPosixExecutable,
+                             0, fidl::StringView("root"), std::move(root_server));
       !resp.ok()) {
     return resp.status();
   }
