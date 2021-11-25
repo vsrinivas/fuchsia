@@ -40,7 +40,6 @@ def main():
                 raise Exception(
                     "Driver info file: {}, must include a \"short_description\""
                     .format(args.doc_input))
-            print(len(doc_contents['short_description']))
             if len(doc_contents['short_description']) > 80:
                 raise Exception(
                     "Driver info file: {} \"short_description\" must be less than 80 characters"
