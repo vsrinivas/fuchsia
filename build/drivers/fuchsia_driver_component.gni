@@ -159,11 +159,12 @@ template("fuchsia_driver_component") {
       check_includes = false
       forward_variables_from(invoker,
                              [
-                               "visibility",
                                "component_name",
-                               "testonly",
-                               "manifest",
                                "deps",
+                               "manifest",
+                               "restricted_features",
+                               "testonly",
+                               "visibility",
                              ])
       if (!defined(deps)) {
         deps = []
