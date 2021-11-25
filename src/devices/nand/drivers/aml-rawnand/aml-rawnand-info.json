@@ -1,10 +1,10 @@
 {
-    "short_description": "AMLogic SDMMC block driver",
+    "short_description": "AMLogic raw NAND device driver",
     "manufacturer": "AMLogic",
     "families": [],
     "models": [],
     "areas": [
-        "Block",
+        "NAND",
         "Storage"
     ]
 }

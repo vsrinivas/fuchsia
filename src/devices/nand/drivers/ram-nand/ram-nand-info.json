@@ -1,5 +1,5 @@
 {
-    "short_description": "SDMMC driver",
+    "short_description": "RAM based testing raw NAND driver",
     "manufacturer": "",
     "families": [
         "generic"
@@ -8,7 +8,7 @@
         "generic"
     ],
     "areas": [
-        "Block",
-        "Storage"
+        "Storage",
+        "Test"
     ]
 }

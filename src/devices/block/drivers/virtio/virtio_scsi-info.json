@@ -4,6 +4,7 @@
     "families": [],
     "models": [],
     "areas": [
-        "Block"
+        "Block",
+        "Storage"
     ]
 }

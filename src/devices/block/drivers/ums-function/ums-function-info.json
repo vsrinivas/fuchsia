@@ -9,6 +9,7 @@
     ],
     "areas": [
         "Block",
+        "Storage",
         "USB"
     ]
 }

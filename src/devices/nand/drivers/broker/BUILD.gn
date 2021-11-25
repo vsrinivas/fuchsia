@@ -41,6 +41,7 @@ fuchsia_driver("nand-broker-driver") {
 }
 
 fuchsia_driver_component("nand-broker") {
+  info = "nand-broker-info.json"
   component_name = "nand-broker"
   deps = [ ":nand-broker-driver" ]
 }

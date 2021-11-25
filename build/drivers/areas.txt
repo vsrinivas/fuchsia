@@ -19,13 +19,14 @@ Light
 Kernel
 Media
 Misc
-Nand
+NAND
 Networking
 Openthread
 PCI
 Platform
 Power
 Spi
+Storage
 Telephony
 Test
 Thermal

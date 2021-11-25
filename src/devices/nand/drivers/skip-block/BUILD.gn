@@ -18,6 +18,7 @@ fuchsia_driver("skip-block-driver") {
 fuchsia_driver_component("skip-block") {
   component_name = "skip-block"
   deps = [ ":skip-block-driver" ]
+  info = "skip-block-info.json"
 }
 
 driver_bind_rules("skip-block-bind") {

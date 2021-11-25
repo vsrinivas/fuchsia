@@ -45,6 +45,7 @@ fuchsia_driver("ram-nand-driver") {
 fuchsia_driver_component("ram-nand") {
   component_name = "ram-nand"
   deps = [ ":ram-nand-driver" ]
+  info = "ram-nand-info.json"
 }
 
 source_set("common") {

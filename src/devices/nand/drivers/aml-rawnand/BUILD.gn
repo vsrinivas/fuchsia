@@ -14,6 +14,7 @@ fuchsia_driver("aml-rawnand-driver") {
 }
 
 fuchsia_driver_component("aml-rawnand") {
+  info = "aml-rawnand-info.json"
   component_name = "aml-rawnand"
   deps = [ ":aml-rawnand-driver" ]
 }

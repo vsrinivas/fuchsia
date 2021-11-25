@@ -1,0 +1,10 @@
+{
+    "short_description": "PCI Intel SPI flash driver",
+    "manufacturer": "Intel",
+    "families": [],
+    "models": [],
+    "areas": [
+        "NAND",
+        "Storage"
+    ]
+}
