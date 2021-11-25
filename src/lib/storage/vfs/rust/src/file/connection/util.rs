@@ -30,8 +30,9 @@ impl<T: 'static + File> OpenFile<T> {
 impl<T: 'static + File> Drop for OpenFile<T> {
     fn drop(&mut self) {
         if let Some(file) = self.file.take() {
-            let _ = self.scope.spawn(async move {
+            let _ = self.scope.spawn_with_shutdown(|shutdown| async move {
                 let _ = file.close().await;
+                std::mem::drop(shutdown);
             });
         }
     }

@@ -458,8 +458,7 @@ impl ObjectManager {
             }
             MetadataReservation::Reservation(txn_reservation) => {
                 // Transfer reserved space into the metadata reservation.
-                txn_reservation.hold(txn_space).unwrap().commit(txn_space);
-                reservation.add(txn_space);
+                txn_reservation.move_to(reservation, txn_space);
             }
         }
         // Check that our invariant holds true.

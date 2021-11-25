@@ -39,9 +39,11 @@ use {
     serde::{Deserialize, Serialize},
     std::{
         any::Any,
+        borrow::Borrow,
         cmp::min,
         collections::VecDeque,
         convert::TryInto,
+        marker::PhantomData,
         ops::{Bound, Range},
         sync::{Arc, Mutex, Weak},
     },
@@ -50,7 +52,7 @@ use {
 /// Allocators must implement this.  An allocator is responsible for allocating ranges on behalf of
 /// an object-store.
 #[async_trait]
-pub trait Allocator: Send + Sync {
+pub trait Allocator: ReservationOwner {
     /// Returns the object ID for the allocator.
     fn object_id(&self) -> u64;
 
@@ -99,9 +101,6 @@ pub trait Allocator: Send + Sync {
     /// could be zero bytes.
     fn reserve_at_most(self: Arc<Self>, amount: u64) -> Reservation;
 
-    /// Releases the reservation.
-    fn release_reservation(&self, amount: u64);
-
     /// Returns the number of allocated bytes.
     fn get_allocated_bytes(&self) -> u64;
 
@@ -119,11 +118,20 @@ pub trait Allocator: Send + Sync {
     ) -> Result<bool, Error>;
 }
 
+/// This trait is implemented by things that own reservations.
+pub trait ReservationOwner: Send + Sync {
+    fn release_reservation(&self, amount: u64);
+}
+
 /// A reservation guarantees that when it comes time to actually allocate, it will not fail due to
-/// lack of space.  A hold can be placed on some of the reservation, which can later be committed.
-pub struct Reservation {
-    allocator: Arc<dyn Allocator>,
+/// lack of space.  Sub-reservations (a.k.a. holds) are possible which effectively allows part of a
+/// reservation to be set aside until it's time to commit.  Reservations do offer some
+/// thread-safety, but some responsibility is born by the caller: e.g. calling `forget` and
+/// `reserve` at the same time from different threads is unsafe.
+pub struct ReservationImpl<T: Borrow<U>, U: ReservationOwner + ?Sized> {
+    owner: T,
     inner: Mutex<ReservationInner>,
+    phantom: PhantomData<U>,
 }
 
 #[derive(Debug, Default)]
@@ -131,19 +139,23 @@ struct ReservationInner {
     // Amount currently held by this reservation.
     amount: u64,
 
-    // The amount within this reservation that is held for some purpose.
-    held: u64,
+    // Amount reserved by sub-reservations.
+    reserved: u64,
 }
 
-impl std::fmt::Debug for Reservation {
+impl<T: Borrow<U>, U: ReservationOwner + ?Sized> std::fmt::Debug for ReservationImpl<T, U> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         self.inner.lock().unwrap().fmt(f)
     }
 }
 
-impl Reservation {
-    pub fn new(allocator: Arc<dyn Allocator>, amount: u64) -> Self {
-        Self { allocator, inner: Mutex::new(ReservationInner { amount, held: 0 }) }
+impl<T: Borrow<U> + Clone + Send + Sync, U: ReservationOwner + ?Sized> ReservationImpl<T, U> {
+    pub fn new(owner: T, amount: u64) -> Self {
+        Self {
+            owner,
+            inner: Mutex::new(ReservationInner { amount, reserved: 0 }),
+            phantom: PhantomData,
+        }
     }
 
     /// Returns the total amount of the reservation, not accounting for anything that might be held.
@@ -151,10 +163,10 @@ impl Reservation {
         self.inner.lock().unwrap().amount
     }
 
-    /// Returns the amount available after accounting for space that is held.
+    /// Returns the amount available after accounting for space that is reserved.
     pub fn avail(&self) -> u64 {
         let inner = self.inner.lock().unwrap();
-        inner.amount - inner.held
+        inner.amount - inner.reserved
     }
 
     /// Adds more to the reservation.
@@ -162,93 +174,100 @@ impl Reservation {
         self.inner.lock().unwrap().amount += amount;
     }
 
-    /// Places a hold an `amount` from the reservation.
-    pub fn hold(&self, amount: u64) -> Result<Hold<'_>, Error> {
+    /// Returns the entire amount of the reservation.  The caller is responsible for maintaining
+    /// consistency, i.e. updating counters, etc, and there can be no sub-reservations (an assert
+    /// will fire otherwise).
+    pub fn forget(&self) -> u64 {
         let mut inner = self.inner.lock().unwrap();
-        if amount > inner.amount - inner.held {
-            bail!(FxfsError::NoSpace);
+        assert_eq!(inner.reserved, 0);
+        std::mem::take(&mut inner.amount)
+    }
+
+    /// Takes some of the reservation.  The caller is responsible for maintaining consistency,
+    /// i.e. updating counters, etc.  This will assert that the amount being forgotten does not
+    /// exceed the available reservation amount; the caller should ensure that this is the case.
+    pub fn forget_some(&self, amount: u64) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.amount -= amount;
+        assert!(inner.reserved <= inner.amount);
+    }
+
+    /// Returns a partial amount of the reservation.  If the reservation is smaller than |amount|,
+    /// returns less than the requested amount, and this can be *zero*.
+    pub fn reserve_at_most(&self, amount: u64) -> ReservationImpl<&Self, Self> {
+        let mut inner = self.inner.lock().unwrap();
+        let taken = std::cmp::min(amount, inner.amount - inner.reserved);
+        inner.reserved += taken;
+        ReservationImpl::new(self, taken)
+    }
+
+    /// Reserves *exactly* amount if possible.
+    pub fn reserve(&self, amount: u64) -> Option<ReservationImpl<&Self, Self>> {
+        let mut inner = self.inner.lock().unwrap();
+        if inner.amount - inner.reserved < amount {
+            None
+        } else {
+            inner.reserved += amount;
+            Some(ReservationImpl::new(self, amount))
         }
-        inner.held += amount;
-        Ok(Hold { reservation: self, amount })
     }
 
-    /// Releases some previously held amount.
-    pub fn release(&self, amount: u64) {
-        self.inner.lock().unwrap().held -= amount;
-    }
-
-    /// Commits a previously held amount.
+    /// Commits a previously reserved amount from this reservation.  The caller is responsible for
+    /// ensuring the amount was reserved.
     pub fn commit(&self, amount: u64) {
         let mut inner = self.inner.lock().unwrap();
-        inner.amount = inner.amount.checked_sub(amount).unwrap();
-        inner.held = inner.held.checked_sub(amount).unwrap();
-    }
-
-    /// Returns the entire amount of the reservation.  The caller is responsible for maintaining
-    /// consistency, i.e. updating counters, etc.
-    pub fn take(&self) -> u64 {
-        std::mem::take(&mut *self.inner.lock().unwrap()).amount
-    }
-
-    /// Returns a partial amount of the reservation.  The caller is responsible for maintaining
-    /// consistency, i.e. updating counters, etc, on the bytes taken out by this.
-    /// If the reservation is smaller than |amount|, returns less than the requested amount.
-    pub fn take_some(&self, amount: u64) -> u64 {
-        let mut inner = self.inner.lock().unwrap();
-        let taken = std::cmp::min(amount, inner.amount);
-        inner.amount -= taken;
-        taken
+        inner.reserved -= amount;
+        inner.amount -= amount;
     }
 
     /// Returns the entire amount of the reservation.
-    pub fn take_reservation(&self) -> Self {
-        Self::new(self.allocator.clone(), self.take())
+    pub fn take(&self) -> Self {
+        let mut inner = self.inner.lock().unwrap();
+        assert_eq!(inner.reserved, 0);
+        Self::new(self.owner.clone(), std::mem::take(&mut inner.amount))
     }
 
-    /// Returns some of the reservation back to the allocator.  Asserts that the amount with a hold
-    /// is still valid afterwards.
+    /// Returns some of the reservation.
     pub fn give_back(&self, amount: u64) {
-        self.allocator.release_reservation(amount);
+        self.owner.borrow().release_reservation(amount);
         let mut inner = self.inner.lock().unwrap();
         inner.amount -= amount;
-        assert!(inner.held <= inner.amount);
+        assert!(inner.reserved <= inner.amount);
+    }
+
+    /// Moves `amount` from this reservation to another reservation.
+    pub fn move_to<V: Borrow<W> + Clone + Send + Sync, W: ReservationOwner + ?Sized>(
+        &self,
+        other: &ReservationImpl<V, W>,
+        amount: u64,
+    ) {
+        self.inner.lock().unwrap().amount -= amount;
+        other.add(amount);
     }
 }
 
-impl Drop for Reservation {
+impl<T: Borrow<U>, U: ReservationOwner + ?Sized> Drop for ReservationImpl<T, U> {
     fn drop(&mut self) {
-        self.allocator.release_reservation(self.inner.get_mut().unwrap().amount);
+        let inner = self.inner.get_mut().unwrap();
+        assert_eq!(inner.reserved, 0);
+        if inner.amount > 0 {
+            self.owner.borrow().release_reservation(std::mem::take(&mut inner.amount));
+        }
     }
 }
 
-#[must_use]
-pub struct Hold<'a> {
-    reservation: &'a Reservation,
-    amount: u64,
-}
-
-impl Hold<'_> {
-    pub fn take(&mut self) -> u64 {
-        let amount = self.amount;
-        self.amount = 0;
-        amount
-    }
-
-    pub fn take_some(&mut self, amount: u64) {
-        self.amount -= amount;
-    }
-
-    pub fn commit(&mut self, amount: u64) {
-        self.amount -= amount;
-        self.reservation.commit(amount);
+impl<T: Borrow<U> + Send + Sync, U: ReservationOwner + ?Sized> ReservationOwner
+    for ReservationImpl<T, U>
+{
+    fn release_reservation(&self, amount: u64) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.reserved -= amount;
     }
 }
 
-impl Drop for Hold<'_> {
-    fn drop(&mut self) {
-        self.reservation.release(self.amount);
-    }
-}
+pub type Reservation = ReservationImpl<Arc<dyn ReservationOwner>, dyn ReservationOwner>;
+
+pub type Hold<'a> = ReservationImpl<&'a Reservation, Reservation>;
 
 // Our allocator implementation tracks extents with a reference count.  At time of writing, these
 // reference counts should never exceed 1, but that might change with snapshots and clones.
@@ -508,22 +527,12 @@ impl Allocator for SimpleAllocator {
     ) -> Result<Range<u64>, Error> {
         assert_eq!(len % self.block_size, 0);
 
-        let hold = if let Some(reservation) = transaction.allocator_reservation {
-            Left(reservation.hold(len)?)
+        // Make sure we have space reserved before we try and find the space.
+        let reservation = if let Some(reservation) = transaction.allocator_reservation {
+            let r = reservation.reserve_at_most(len);
+            len = r.amount();
+            Left(r)
         } else {
-            // We can't use a Reservation here because it needs Arc<Self>, so we use a simple RAII
-            // object instead.
-            struct AllocatorHold<'a> {
-                allocator: &'a SimpleAllocator,
-                amount: u64,
-            }
-
-            impl Drop for AllocatorHold<'_> {
-                fn drop(&mut self) {
-                    self.allocator.release_reservation(self.amount);
-                }
-            }
-
             let mut inner = self.inner.lock().unwrap();
             assert!(inner.opened);
             // We must take care not to use up space that might be reserved.
@@ -531,10 +540,11 @@ impl Allocator for SimpleAllocator {
                 std::cmp::min(len, self.device_size - inner.taken_bytes()),
                 self.block_size,
             );
-            ensure!(len > 0, FxfsError::NoSpace);
             inner.reserved_bytes += len;
-            Right(AllocatorHold { allocator: self, amount: len })
+            Right(ReservationImpl::<_, Self>::new(self, len))
         };
+
+        ensure!(len > 0, FxfsError::NoSpace);
 
         let _guard = loop {
             {
@@ -609,11 +619,12 @@ impl Allocator for SimpleAllocator {
         log::debug!("allocate {:?}", result);
 
         let len = result.length();
-        hold.either(|mut h| h.take_some(len), |mut h| h.amount -= len);
+        reservation.either(|l| l.forget_some(len), |r| r.forget_some(len));
+
         {
             let mut inner = self.inner.lock().unwrap();
-            inner.reserved_bytes -= result.length();
-            inner.uncommitted_allocated_bytes += result.length();
+            inner.reserved_bytes -= len;
+            inner.uncommitted_allocated_bytes += len;
         }
 
         let item = AllocatorItem::new(
@@ -621,7 +632,7 @@ impl Allocator for SimpleAllocator {
             AllocatorValue { delta: 1 },
         );
         self.reserved_allocations.insert(item.clone()).await;
-        transaction.add(self.object_id(), Mutation::allocation(item));
+        assert!(transaction.add(self.object_id(), Mutation::allocation(item)).is_none());
 
         Ok(result)
     }
@@ -640,7 +651,7 @@ impl Allocator for SimpleAllocator {
             );
             if let Some(reservation) = &mut transaction.allocator_reservation {
                 // The transaction takes ownership of this hold.
-                reservation.hold(device_range.length())?.take();
+                reservation.reserve(device_range.length()).ok_or(FxfsError::NoSpace)?.forget();
             }
             inner.uncommitted_allocated_bytes += device_range.length();
         }
@@ -810,10 +821,6 @@ impl Allocator for SimpleAllocator {
         Reservation::new(self, amount)
     }
 
-    fn release_reservation(&self, amount: u64) {
-        self.inner.lock().unwrap().reserved_bytes -= amount;
-    }
-
     fn get_allocated_bytes(&self) -> u64 {
         self.inner.lock().unwrap().allocated_bytes as u64
     }
@@ -840,6 +847,13 @@ impl Allocator for SimpleAllocator {
             _ => {}
         }
         Ok(true)
+    }
+}
+
+impl ReservationOwner for SimpleAllocator {
+    fn release_reservation(&self, amount: u64) {
+        let mut inner = self.inner.lock().unwrap();
+        inner.reserved_bytes -= amount;
     }
 }
 
@@ -943,7 +957,7 @@ impl Mutations for SimpleAllocator {
                     let len = item.key.device_range.length();
                     inner.uncommitted_allocated_bytes -= len;
                     if let Some(reservation) = transaction.allocator_reservation {
-                        reservation.release(len);
+                        reservation.release_reservation(len);
                         inner.reserved_bytes += len;
                     }
                     inner.dropped_allocations.push(item);

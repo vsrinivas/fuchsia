@@ -498,14 +498,13 @@ impl<'a> Transaction<'a> {
         }
     }
 
-    /// Adds a mutation to this transaction.
-    pub fn add(&mut self, object_id: u64, mutation: Mutation) {
+    /// Adds a mutation to this transaction.  If the mutation already exists, it is replaced and the
+    /// old mutation is returned.
+    pub fn add(&mut self, object_id: u64, mutation: Mutation) -> Option<Mutation> {
         assert!(object_id != INVALID_OBJECT_ID);
-        self.mutations.replace(TxnMutation {
-            object_id,
-            mutation,
-            associated_object: AssocObj::None,
-        });
+        self.mutations
+            .replace(TxnMutation { object_id, mutation, associated_object: AssocObj::None })
+            .map(|m| m.mutation)
     }
 
     /// Removes a mutation that matches `mutation`.

@@ -7,7 +7,7 @@ use {
         debug_assert_not_too_long,
         errors::FxfsError,
         object_store::{
-            allocator::{Allocator, Hold, Reservation},
+            allocator::{Allocator, Hold, Reservation, ReservationOwner},
             crypt::Crypt,
             journal::{super_block::SuperBlock, Journal},
             object_manager::ObjectManager,
@@ -315,7 +315,11 @@ impl FxFilesystem {
         } else {
             match options.allocator_reservation {
                 Some(reservation) => {
-                    hold = Some(reservation.hold(TRANSACTION_METADATA_MAX_AMOUNT)?);
+                    hold = Some(
+                        reservation
+                            .reserve(TRANSACTION_METADATA_MAX_AMOUNT)
+                            .ok_or(FxfsError::NoSpace)?,
+                    );
                     MetadataReservation::Hold(TRANSACTION_METADATA_MAX_AMOUNT)
                 }
                 None => {
@@ -390,7 +394,7 @@ impl TransactionHandler for FxFilesystem {
             self.reservation_for_transaction(options).await?;
         let mut transaction =
             Transaction::new(self, metadata_reservation, &[LockKey::Filesystem], locks).await;
-        hold.map(|mut h| h.take()); // Transaction takes ownership from here on.
+        hold.map(|h| h.forget()); // Transaction takes ownership from here on.
         transaction.allocator_reservation = allocator_reservation;
         Ok(transaction)
     }
@@ -405,7 +409,7 @@ impl TransactionHandler for FxFilesystem {
         let mut transaction =
             Transaction::new_with_locks(self, metadata_reservation, &[LockKey::Filesystem], locks)
                 .await;
-        hold.map(|mut h| h.take()); // Transaction takes ownership from here on.
+        hold.map(|h| h.forget()); // Transaction takes ownership from here on.
         transaction.allocator_reservation = allocator_reservation;
         Ok(transaction)
     }
@@ -437,8 +441,10 @@ impl TransactionHandler for FxFilesystem {
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         // If we placed a hold for metadata space, return it now.
         if let MetadataReservation::Hold(hold_amount) = &mut transaction.metadata_reservation {
-            transaction.allocator_reservation.unwrap().release(*hold_amount);
-            *hold_amount = 0;
+            transaction
+                .allocator_reservation
+                .unwrap()
+                .release_reservation(std::mem::take(hold_amount));
         }
         self.objects.drop_transaction(transaction);
         self.lock_manager.drop_transaction(transaction);

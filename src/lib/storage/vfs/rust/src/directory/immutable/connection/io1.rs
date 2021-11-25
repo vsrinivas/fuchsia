@@ -87,12 +87,13 @@ impl DerivedConnection for ImmutableConnection {
 
         let connection = Self::new(scope.clone(), directory, flags);
 
-        let task = handle_requests::<Self>(requests, connection);
         // If we fail to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently).  So there is nothing
         // for us to do - the connection will be closed automatically when the connection object is
         // dropped.
-        let _ = scope.spawn(Box::pin(task));
+        let _ = scope.spawn_with_shutdown(|shutdown| {
+            handle_requests::<Self>(requests, connection, shutdown)
+        });
     }
 
     fn entry_not_found(

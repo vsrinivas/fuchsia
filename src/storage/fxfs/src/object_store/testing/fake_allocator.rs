@@ -4,7 +4,7 @@
 
 use {
     crate::object_store::{
-        allocator::{Allocator, Reservation},
+        allocator::{Allocator, Reservation, ReservationOwner},
         filesystem::{ApplyMode, Mutations},
         journal::checksum_list::ChecksumList,
         transaction::{AssocObj, Mutation, Transaction},
@@ -98,8 +98,6 @@ impl Allocator for FakeAllocator {
         Reservation::new(self, amount)
     }
 
-    fn release_reservation(&self, _amount: u64) {}
-
     fn get_allocated_bytes(&self) -> u64 {
         let inner = self.0.lock().unwrap();
         (inner.alloc_bytes - inner.dealloc_bytes) as u64
@@ -117,6 +115,10 @@ impl Allocator for FakeAllocator {
     ) -> Result<bool, Error> {
         Ok(true)
     }
+}
+
+impl ReservationOwner for FakeAllocator {
+    fn release_reservation(&self, _amount: u64) {}
 }
 
 #[async_trait]

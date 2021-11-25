@@ -27,7 +27,7 @@ use {
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
         Status,
     },
-    futures::{future::BoxFuture, stream::StreamExt},
+    futures::{channel::oneshot, future::BoxFuture, select, StreamExt},
     std::{default::Default, sync::Arc},
 };
 
@@ -116,10 +116,22 @@ where
 pub(in crate::directory) async fn handle_requests<Connection>(
     mut requests: DirectoryAdminRequestStream,
     mut connection: Connection,
+    mut shutdown: oneshot::Receiver<()>,
 ) where
     Connection: DerivedConnection,
 {
-    while let Some(request_or_err) = requests.next().await {
+    loop {
+        let request_or_err = select! {
+            r = requests.next() => {
+                if let Some(r) = r {
+                    r
+                } else {
+                    return;
+                }
+            },
+            _ = shutdown => return,
+        };
+
         match request_or_err {
             Err(_) => {
                 // FIDL level error, such as invalid message format and alike.  Close the

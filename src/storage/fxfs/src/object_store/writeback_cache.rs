@@ -156,7 +156,7 @@ impl Inner {
             self.dirty_bytes += dirty_bytes;
             let needed_reservation = data.reserver.reservation_needed(self.dirty_bytes);
             let delta = needed_reservation.checked_sub(reserved_before).unwrap();
-            assert_eq!(data.reservation.take_some(delta), delta);
+            data.reservation.forget_some(delta);
         }
     }
 
@@ -483,7 +483,9 @@ impl<B: DataBuffer> WritebackCache<B> {
         if dirtied_bytes > 0 {
             let before = reserver.reservation_needed(inner.dirty_bytes);
             inner.dirty_bytes += dirtied_bytes;
-            reservation.unwrap().take_some(reserver.reservation_needed(inner.dirty_bytes) - before);
+            reservation
+                .unwrap()
+                .forget_some(reserver.reservation_needed(inner.dirty_bytes) - before);
         }
         inner.modification_time = current_time;
         Ok(())
@@ -600,7 +602,7 @@ mod tests {
         super::{Flushable, FlushableData, StorageReservation, WritebackCache},
         crate::{
             object_store::{
-                allocator::{Allocator, Reservation},
+                allocator::{Allocator, Reservation, ReservationOwner},
                 data_buffer::MemDataBuffer,
                 filesystem::Mutations,
                 journal::checksum_list::ChecksumList,
@@ -748,12 +750,6 @@ mod tests {
             unreachable!();
         }
 
-        fn release_reservation(&self, amount: u64) {
-            let mut inner = self.amount.lock().unwrap();
-            *inner += amount;
-            assert!(*inner <= self.limit);
-        }
-
         fn get_allocated_bytes(&self) -> u64 {
             unreachable!();
         }
@@ -769,6 +765,14 @@ mod tests {
             _checksum_list: &mut ChecksumList,
         ) -> Result<bool, Error> {
             unreachable!()
+        }
+    }
+
+    impl ReservationOwner for FakeReserverInner {
+        fn release_reservation(&self, amount: u64) {
+            let mut inner = self.amount.lock().unwrap();
+            *inner += amount;
+            assert!(*inner <= self.limit);
         }
     }
 

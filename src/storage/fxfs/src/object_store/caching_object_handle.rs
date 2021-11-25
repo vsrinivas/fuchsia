@@ -112,7 +112,7 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
         let bs = self.block_size() as u64;
         let fs = self.store().filesystem();
         let store_object_id = self.store().store_object_id;
-        let reservation = allocator::Reservation::new(self.store().allocator(), 0);
+        let reservation = self.store().allocator().reserve_at_most(0);
 
         // Whilst we are calling take_flushable we need to guard against changes to the cache so
         // that we can grab a snapshot, so we take the cached_write lock and then we can drop it
@@ -271,7 +271,9 @@ impl<S: HandleOwner> StorageReservation for CachingObjectHandle<S> {
         self.store().allocator().reserve(amount).ok_or(anyhow!(FxfsError::NoSpace))
     }
     fn wrap_reservation(&self, amount: u64) -> allocator::Reservation {
-        allocator::Reservation::new(self.store().allocator(), amount)
+        let r = self.store().allocator().reserve_at_most(0);
+        r.add(amount);
+        r
     }
 }
 

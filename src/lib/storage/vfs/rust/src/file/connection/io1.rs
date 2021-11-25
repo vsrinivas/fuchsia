@@ -25,7 +25,7 @@ use {
         self as zx,
         sys::{ZX_ERR_NOT_SUPPORTED, ZX_OK},
     },
-    futures::stream::StreamExt,
+    futures::{channel::oneshot, select, stream::StreamExt},
     static_assertions::assert_eq_size,
     std::sync::Arc,
 };
@@ -88,19 +88,14 @@ impl<T: 'static + File> FileConnection<T> {
         writable: bool,
         executable: bool,
     ) {
-        let task = Self::create_connection_task(
-            scope.clone(),
-            file,
-            flags,
-            server_end,
-            readable,
-            writable,
-            executable,
-        );
         // If we failed to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently). `server_end` and the
         // file will be closed when they're dropped - there seems to be no error to report there.
-        let _ = scope.spawn(Box::pin(task));
+        let _ = scope.clone().spawn_with_shutdown(move |shutdown| {
+            Self::create_connection_task(
+                scope, file, flags, server_end, readable, writable, executable, shutdown,
+            )
+        });
     }
 
     async fn create_connection_task(
@@ -111,6 +106,7 @@ impl<T: 'static + File> FileConnection<T> {
         readable: bool,
         writable: bool,
         executable: bool,
+        shutdown: oneshot::Receiver<()>,
     ) {
         let flags = match new_connection_validate_flags(
             flags, readable, writable, executable, /*append_allowed=*/ true,
@@ -157,15 +153,25 @@ impl<T: 'static + File> FileConnection<T> {
             }
         }
 
-        let handle_requests =
-            FileConnection { scope: scope.clone(), file, requests, flags, seek: 0 }
-                .handle_requests();
-        handle_requests.await;
+        FileConnection { scope: scope.clone(), file, requests, flags, seek: 0 }
+            .handle_requests(shutdown)
+            .await;
     }
 
-    async fn handle_requests(mut self) {
-        while let Some(request_or_err) = self.requests.next().await {
-            let state = match request_or_err {
+    async fn handle_requests(mut self, mut shutdown: oneshot::Receiver<()>) {
+        loop {
+            let request = select! {
+                request = self.requests.next() => {
+                    if let Some(request) = request {
+                        request
+                    } else {
+                        return;
+                    }
+                },
+                _ = shutdown => return,
+            };
+
+            let state = match request {
                 Err(_) => {
                     // FIDL level error, such as invalid message format and alike.  Close the
                     // connection on any unexpected error.

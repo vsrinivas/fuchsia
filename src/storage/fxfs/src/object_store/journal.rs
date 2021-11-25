@@ -938,9 +938,10 @@ impl Journal {
                 inner.writer.write_mutations(transaction);
                 checkpoint
             };
-            // TODO(csuter): The call here probably isn't drop-safe.  If the future gets dropped, it
-            // will leave things in a bad state and subsequent threads might try and commit another
-            // transaction which has the potential to fire assertions.
+            // The call here isn't drop-safe.  If the future gets dropped, it will leave things in a
+            // bad state and subsequent threads might try and commit another transaction which has
+            // the potential to fire assertions.  With that said, this should only occur if there
+            // has been another panic, since we take care not to drop futures at other other times.
             let maybe_mutation =
                 self.objects.apply_transaction(transaction, &checkpoint_before).await;
             checkpoint_after = {
@@ -970,27 +971,13 @@ impl Journal {
     /// trigger compactions when short of journal space.  It will return after the terminate method
     /// has been called, or an error is encountered with either flushing or compaction.
     pub async fn flush_task(&self) {
-        // Clean up in case we're dropped.
-        struct Defer<'a>(&'a Journal);
-        impl Drop for Defer<'_> {
-            fn drop(&mut self) {
-                let mut inner = self.0.inner.lock().unwrap();
-                inner.terminate = true;
-                inner.compaction_running = false;
-                if let Some(waker) = inner.sync_waker.take() {
-                    waker.wake();
-                }
-                inner.reclaim_event = None;
-            }
-        }
-        let _defer = Defer(self);
-
         let mut flush_fut = None;
         let mut compact_fut = None;
+        let mut flush_error = false;
         poll_fn(|ctx| loop {
             {
                 let mut inner = self.inner.lock().unwrap();
-                if flush_fut.is_none() {
+                if flush_fut.is_none() && !flush_error {
                     if let Some(handle) = self.handle.get() {
                         if let Some((offset, buf)) = inner.writer.take_buffer(handle) {
                             flush_fut = Some(self.flush(offset, buf).boxed());
@@ -1020,7 +1007,8 @@ impl Journal {
                 if let Poll::Ready(result) = fut.poll_unpin(ctx) {
                     if let Err(e) = result {
                         log::info!("Flush error: {:?}", e);
-                        return Poll::Ready(());
+                        self.inner.lock().unwrap().terminate = true;
+                        flush_error = true;
                     }
                     flush_fut = None;
                     pending = false;
@@ -1028,12 +1016,12 @@ impl Journal {
             }
             if let Some(fut) = compact_fut.as_mut() {
                 if let Poll::Ready(result) = fut.poll_unpin(ctx) {
+                    let mut inner = self.inner.lock().unwrap();
                     if let Err(e) = result {
                         log::info!("Compaction error: {:?}", e);
-                        return Poll::Ready(());
+                        inner.terminate = true;
                     }
                     compact_fut = None;
-                    let mut inner = self.inner.lock().unwrap();
                     inner.compaction_running = false;
                     inner.reclaim_event = None;
                     pending = false;
