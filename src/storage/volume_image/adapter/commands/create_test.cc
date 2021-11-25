@@ -411,15 +411,17 @@ TEST(CreateCommandTest, CreateEmbeddedFvmImageIsOk) {
   auto output_file_or = TempFile::Create();
   ASSERT_TRUE(output_file_or.is_ok());
 
+  constexpr uint64_t kImageSize = 10 * (1 << 20);
+
   CreateParams params = MakeParams();
   params.output_path = output_file_or.value().path();
   params.format = FvmImageFormat::kBlockImage;
   params.fvm_options.compression.schema = CompressionSchema::kNone;
   params.is_output_embedded = true;
-  params.offset = kInitialImageSize / 2;
-  params.length = kInitialImageSize;
+  params.offset = kImageSize / 2;
+  params.length = kImageSize;
 
-  ASSERT_EQ(truncate(std::string(output_file_or.value().path()).c_str(), 2 * kInitialImageSize), 0);
+  ASSERT_EQ(truncate(std::string(output_file_or.value().path()).c_str(), 2 * kImageSize), 0);
 
   for (auto& partition_param : params.partitions) {
     if (partition_param.format == PartitionImageFormat::kBlobfs) {
@@ -456,7 +458,7 @@ TEST(CreateCommandTest, CreateEmbeddedFvmImageIsOk) {
 
   uint64_t current_offset = params.offset.value();
   std::vector<uint8_t> buffer;
-  buffer.resize(1 << 10, 0);
+  buffer.resize(1 << 20, 0);
 
   auto copy_file_or = TempFile::Create();
   ASSERT_TRUE(copy_file_or.is_ok());

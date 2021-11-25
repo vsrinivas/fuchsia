@@ -71,6 +71,7 @@ test("storage-volume-image-test") {
     "fvm:fvm-test",
     "serialization:tests",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/test_runners:tmp_storage",
   ]
 
   if (is_fuchsia) {
@@ -82,6 +83,7 @@ test("storage-volume-image-adapter-test") {
   deps = [
     "adapter:adapter-tests",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/test_runners:tmp_storage",
   ]
 
   if (is_fuchsia) {
@@ -93,6 +95,7 @@ test("storage-volume-image-utils-test") {
   deps = [
     "utils:tests",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/test_runners:tmp_storage",
   ]
 
   if (is_fuchsia) {
@@ -104,6 +107,7 @@ test("storage-volume-image-integration-test") {
   deps = [
     "ftl:integration-tests",
     "//src/lib/fxl/test:gtest_main",
+    "//src/sys/test_runners:tmp_storage",
   ]
 
   if (is_fuchsia) {
@@ -121,23 +125,18 @@ resource("serialization-schemas") {
   outputs = [ "data/schema/{{source_file_part}}" ]
 }
 
-fuchsia_component("storage-volume-image-test-component") {
-  manifest = "meta/storage-volume-image-test.cmx"
+fuchsia_unittest_component("storage-volume-image-test-component") {
   deps = [
     ":serialization-schemas",
     ":storage-volume-image-test",
   ]
-  testonly = true
 }
 
-fuchsia_component("storage-volume-image-integration-test-component") {
-  manifest = "meta/storage-volume-image-integration-test.cmx"
+fuchsia_unittest_component("storage-volume-image-integration-test-component") {
   deps = [ ":storage-volume-image-integration-test" ]
-  testonly = true
 }
 
 fuchsia_unittest_component("storage-volume-image-adapter-test-component") {
-  manifest = "meta/storage-volume-image-adapter-test.cmx"
   deps = [
     ":storage-volume-image-adapter-test",
     "adapter:adapter-test-images",
@@ -145,7 +144,6 @@ fuchsia_unittest_component("storage-volume-image-adapter-test-component") {
 }
 
 fuchsia_unittest_component("storage-volume-image-utils-test-component") {
-  manifest = "meta/storage-volume-image-utils-test.cmx"
   deps = [ ":storage-volume-image-utils-test" ]
 }
 
