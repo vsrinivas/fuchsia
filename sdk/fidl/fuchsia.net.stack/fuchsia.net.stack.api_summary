@@ -1,9 +1,6 @@
 enum/member fuchsia.net.stack/AdministrativeStatus.DISABLED 1
 enum/member fuchsia.net.stack/AdministrativeStatus.ENABLED 2
 strict enum fuchsia.net.stack/AdministrativeStatus uint32
-union/member fuchsia.net.stack/DeviceDefinition.ethernet fuchsia.net.stack/EthernetDeviceDefinition
-union/member fuchsia.net.stack/DeviceDefinition.ip fuchsia.hardware.network/Device
-resource strict union fuchsia.net.stack/DeviceDefinition
 enum/member fuchsia.net.stack/Error.ALREADY_EXISTS 7
 enum/member fuchsia.net.stack/Error.BAD_STATE 4
 enum/member fuchsia.net.stack/Error.INTERNAL 1
@@ -13,19 +10,12 @@ enum/member fuchsia.net.stack/Error.NOT_FOUND 6
 enum/member fuchsia.net.stack/Error.NOT_SUPPORTED 2
 enum/member fuchsia.net.stack/Error.TIME_OUT 5
 strict enum fuchsia.net.stack/Error uint32
-struct/member fuchsia.net.stack/EthernetDeviceDefinition.mac fuchsia.hardware.network/MacAddressing
-struct/member fuchsia.net.stack/EthernetDeviceDefinition.network_device fuchsia.hardware.network/Device
-resource struct fuchsia.net.stack/EthernetDeviceDefinition
 union/member fuchsia.net.stack/ForwardingDestination.device_id uint64
 union/member fuchsia.net.stack/ForwardingDestination.next_hop fuchsia.net/IpAddress
 strict union fuchsia.net.stack/ForwardingDestination
 struct/member fuchsia.net.stack/ForwardingEntry.destination fuchsia.net.stack/ForwardingDestination
 struct/member fuchsia.net.stack/ForwardingEntry.subnet fuchsia.net/Subnet
 struct fuchsia.net.stack/ForwardingEntry
-table/member fuchsia.net.stack/InterfaceConfig.metric uint32
-table/member fuchsia.net.stack/InterfaceConfig.name string:15
-table/member fuchsia.net.stack/InterfaceConfig.topopath string:255
-table fuchsia.net.stack/InterfaceConfig
 struct/member fuchsia.net.stack/InterfaceInfo.id uint64
 struct/member fuchsia.net.stack/InterfaceInfo.properties fuchsia.net.stack/InterfaceProperties
 struct fuchsia.net.stack/InterfaceInfo
@@ -46,7 +36,6 @@ enum/member fuchsia.net.stack/PhysicalStatus.UP 2
 strict enum fuchsia.net.stack/PhysicalStatus uint32
 protocol/member fuchsia.net.stack/Stack.AddEthernetInterface(string:255 topological_path,fuchsia.hardware.ethernet/Device device) -> (fuchsia.net.stack/Stack_AddEthernetInterface_Result result)
 protocol/member fuchsia.net.stack/Stack.AddForwardingEntry(fuchsia.net.stack/ForwardingEntry entry) -> (fuchsia.net.stack/Stack_AddForwardingEntry_Result result)
-protocol/member fuchsia.net.stack/Stack.AddInterface(fuchsia.net.stack/InterfaceConfig config,fuchsia.net.stack/DeviceDefinition device) -> (fuchsia.net.stack/Stack_AddInterface_Result result)
 protocol/member fuchsia.net.stack/Stack.AddInterfaceAddress(uint64 id,fuchsia.net/Subnet addr) -> (fuchsia.net.stack/Stack_AddInterfaceAddress_Result result)
 protocol/member fuchsia.net.stack/Stack.DelEthernetInterface(uint64 id) -> (fuchsia.net.stack/Stack_DelEthernetInterface_Result result)
 protocol/member fuchsia.net.stack/Stack.DelForwardingEntry(fuchsia.net/Subnet subnet) -> (fuchsia.net.stack/Stack_DelForwardingEntry_Result result)
@@ -75,11 +64,6 @@ struct fuchsia.net.stack/Stack_AddInterfaceAddress_Response
 union/member fuchsia.net.stack/Stack_AddInterfaceAddress_Result.err fuchsia.net.stack/Error
 union/member fuchsia.net.stack/Stack_AddInterfaceAddress_Result.response fuchsia.net.stack/Stack_AddInterfaceAddress_Response
 strict union fuchsia.net.stack/Stack_AddInterfaceAddress_Result
-struct/member fuchsia.net.stack/Stack_AddInterface_Response.id uint64
-struct fuchsia.net.stack/Stack_AddInterface_Response
-union/member fuchsia.net.stack/Stack_AddInterface_Result.err fuchsia.net.stack/Error
-union/member fuchsia.net.stack/Stack_AddInterface_Result.response fuchsia.net.stack/Stack_AddInterface_Response
-strict union fuchsia.net.stack/Stack_AddInterface_Result
 struct fuchsia.net.stack/Stack_DelEthernetInterface_Response
 union/member fuchsia.net.stack/Stack_DelEthernetInterface_Result.err fuchsia.net.stack/Error
 union/member fuchsia.net.stack/Stack_DelEthernetInterface_Result.response fuchsia.net.stack/Stack_DelEthernetInterface_Response

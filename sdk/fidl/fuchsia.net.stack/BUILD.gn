@@ -9,7 +9,6 @@ fidl("fuchsia.net.stack") {
   sources = [ "stack.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
-    "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.net.name",

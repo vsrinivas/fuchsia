@@ -4,7 +4,6 @@
 library fuchsia.net.stack;
 
 using fuchsia.hardware.ethernet;
-using fuchsia.hardware.network;
 using fuchsia.net.interfaces;
 using fuchsia.net.name;
 using fuchsia.net;
@@ -100,43 +99,6 @@ protocol Stack {
     AddEthernetInterface(resource struct {
         topological_path device_path;
         device client_end:fuchsia.hardware.ethernet.Device;
-    }) -> (struct {
-        id fuchsia.net.interface_id;
-    }) error Error;
-
-    /// Add a new interface to the network stack backed by the provided
-    /// `DeviceDefinition`. On success, returns the identifier assigned by the
-    /// stack for use in subsequent calls.
-    AddInterface(resource struct {
-        config @generated_name("InterfaceConfig") table {
-            /// Human-readable name of the interface. eg. eth001, wlanx35.
-            /// Will be set to a default generic name if not provided.
-            1: name fuchsia.net.interfaces.name;
-
-            /// The topological path to the device, representing a stable
-            /// identifier for the interface hardware.
-            2: topopath device_path;
-
-            /// The default metric value used for routes to this interface.
-            3: metric uint32;
-        };
-        device @generated_name("DeviceDefinition") strict resource union {
-            /// A `fuchsia.hardware.network.Device` that exchanges only IP
-            /// frames. It either doesn't have a layer 2 or its layer 2 is
-            /// irrelevant to the `Stack`.
-            1: ip client_end:fuchsia.hardware.network.Device;
-            /// An Ethernet device.
-            ///
-            /// The provided `network_device` is expected to support `Ethernet`
-            /// frames. Its MAC address and MAC filtering is controlled by
-            /// `mac`.
-            2: ethernet @generated_name("EthernetDeviceDefinition") resource struct {
-                /// The connection to the device's data plane.
-                network_device client_end:fuchsia.hardware.network.Device;
-                /// The connection to the device's addressing control plane.
-                mac client_end:fuchsia.hardware.network.MacAddressing;
-            };
-        };
     }) -> (struct {
         id fuchsia.net.interface_id;
     }) error Error;

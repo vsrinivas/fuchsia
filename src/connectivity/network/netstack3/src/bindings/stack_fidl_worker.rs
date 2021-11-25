@@ -54,9 +54,6 @@ where
         stream
             .try_fold(Self { ctx }, |worker, req| async {
                 match req {
-                    StackRequest::AddInterface { responder, .. } => {
-                        responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
-                    }
                     StackRequest::AddEthernetInterface { topological_path, device, responder } => {
                         responder_send!(
                             responder,

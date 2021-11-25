@@ -5,7 +5,6 @@
 #![cfg(test)]
 
 use anyhow::Context as _;
-use fidl::endpoints::Proxy as _;
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
@@ -139,9 +138,6 @@ async fn test_no_duplicate_interface_names() {
     let realm = sandbox
         .create_netstack_realm::<Netstack2, _>("no_duplicate_interface_names")
         .expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
     let netstack = realm
         .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .expect("connect to protocol");
@@ -152,10 +148,6 @@ async fn test_no_duplicate_interface_names() {
         .create_endpoint::<netemul::Ethernet, _>("eth-ep")
         .await
         .expect("create ethernet endpoint");
-    let netdev_ep = sandbox
-        .create_endpoint::<netemul::NetworkDevice, _>("netdev-ep")
-        .await
-        .expect("create netdevice endpoint");
 
     const IFNAME: &'static str = "testif";
     const TOPOPATH: &'static str = "/fake/topopath";
@@ -194,41 +186,6 @@ async fn test_no_duplicate_interface_names() {
         .expect("add_ethernet_device FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw);
     assert_eq!(result, Err(fuchsia_zircon::Status::ALREADY_EXISTS));
-
-    // Same for netdevice.
-    let (network_device, mut port_id) =
-        netdev_ep.get_netdevice().await.expect("connect to netdevice protocols");
-    let (network_device, mac) = {
-        let (port, server_end) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_hardware_network::PortMarker>()
-                .expect("create proxy");
-        let device = network_device.into_proxy().expect("get device proxy");
-        let () = device.get_port(&mut port_id, server_end).expect("get port");
-        let (mac, server_end) = fidl::endpoints::create_endpoints::<
-            fidl_fuchsia_hardware_network::MacAddressingMarker,
-        >()
-        .expect("create endpoints");
-        let () = port.get_mac(server_end).expect("get mac");
-        let device = fidl::endpoints::ClientEnd::new(
-            device.into_channel().expect("into_channel").into_zx_channel(),
-        );
-        (device, mac)
-    };
-    let result = stack
-        .add_interface(
-            fidl_fuchsia_net_stack::InterfaceConfig {
-                name: Some(IFNAME.to_string()),
-                topopath: None,
-                metric: None,
-                ..fidl_fuchsia_net_stack::InterfaceConfig::EMPTY
-            },
-            &mut fidl_fuchsia_net_stack::DeviceDefinition::Ethernet(
-                fidl_fuchsia_net_stack::EthernetDeviceDefinition { network_device, mac },
-            ),
-        )
-        .await
-        .expect("add_interface FIDL error");
-    assert_eq!(result, Err(fidl_fuchsia_net_stack::Error::AlreadyExists));
 }
 
 // TODO(https://fxbug.dev/75553): Remove this test when fuchsia.net.interfaces is supported in N3

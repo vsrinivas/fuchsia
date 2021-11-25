@@ -8,7 +8,6 @@
 package netstack
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -19,20 +18,16 @@ import (
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
-	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 
 	fidlethernet "fidl/fuchsia/hardware/ethernet"
-	"fidl/fuchsia/hardware/network"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/name"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
-	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
 	tcpipstack "gvisor.dev/gvisor/pkg/tcpip/stack"
@@ -112,147 +107,6 @@ func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 		return out[i].Id < out[j].Id
 	})
 	return out
-}
-
-var _ link.Observer = (*cancellingObserver)(nil)
-
-// TODO(https://fxbug.dev/85061): Remove this type once AddInterface is removed. It exists to
-// support the legacy API only.
-type cancellingObserver struct {
-	link.Observer
-	cancel context.CancelFunc
-}
-
-func (c *cancellingObserver) SetOnLinkClosed(f func()) {
-	c.Observer.SetOnLinkClosed(func() {
-		c.cancel()
-		f()
-	})
-}
-
-// TODO(https://fxbug.dev/85061): Delete this API once fuchsia.net.interfaces.admin can install
-// netdevices.
-func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.DeviceDefinition) stack.StackAddInterfaceResult {
-	var (
-		namePrefix string
-		dev        *network.DeviceWithCtxInterface
-	)
-
-	switch device.Which() {
-	case stack.DeviceDefinitionEthernet:
-		namePrefix = "eth"
-		dev = &device.Ethernet.NetworkDevice
-		// NB: Users are no longer required to provide a connection to MacAddressing, it's retrievable
-		// through the netdevice API. We can just dispose of it here, netdevice.Client will take care
-		// of connecting to it if needed.
-		_ = device.Ethernet.Mac.Close()
-	case stack.DeviceDefinitionIp:
-		namePrefix = "ip"
-		dev = &device.Ip
-	default:
-		_ = syslog.Errorf("unsupported device definition: %d", device.Which())
-		return stack.StackAddInterfaceResultWithErr(stack.ErrorInvalidArgs)
-	}
-
-	// This API is only compatible with devices with a single port, ensure that's
-	// the case and use the discovered port id.
-	portId, err := func() (network.PortId, error) {
-		watcherReq, watcher, err := network.NewPortWatcherWithCtxInterfaceRequest()
-		if err != nil {
-			return network.PortId{}, err
-		}
-		defer func() {
-			_ = watcher.Close()
-		}()
-		if err := dev.GetPortWatcher(context.Background(), watcherReq); err != nil {
-			return network.PortId{}, err
-		}
-		event, err := watcher.Watch(context.Background())
-		if err != nil {
-			return network.PortId{}, err
-		}
-		if got, want := event.Which(), network.I_devicePortEventTag(network.DevicePortEventExisting); got != want {
-			return network.PortId{}, fmt.Errorf("unexpected device event %d, want= %d", got, want)
-		}
-		portId := event.Existing
-		event, err = watcher.Watch(context.Background())
-		if err != nil {
-			return network.PortId{}, err
-		}
-		if got, want := event.Which(), network.I_devicePortEventTag(network.DevicePortEventIdle); got != want {
-			return network.PortId{}, fmt.Errorf("unexpected device event %d, want= %d", got, want)
-		}
-		return portId, nil
-	}()
-	if err != nil {
-		_ = dev.Close()
-		_ = syslog.Warnf("failed to discover device port for network device: %s", err)
-		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
-	}
-
-	client, err := netdevice.NewClient(context.Background(), dev, &netdevice.SimpleSessionConfigFactory{})
-	if err != nil {
-		_ = syslog.Warnf("failed to create network device client: %s", err)
-		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
-	}
-
-	defer func() {
-		if client != nil {
-			_ = client.Close()
-		}
-	}()
-
-	if err != nil {
-		_ = syslog.Errorf("failed to create watcher endpoints")
-	}
-	port, err := client.NewPort(context.Background(), portId)
-	if err != nil {
-		_ = syslog.Warnf("failed to create network device port: %s", err)
-		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
-	}
-
-	defer func() {
-		if port != nil {
-			_ = port.Close()
-		}
-	}()
-
-	var ep tcpipstack.LinkEndpoint
-	switch mode := port.Mode(); mode {
-	case netdevice.PortModeEthernet:
-		ep = ethernet.New(port)
-	case netdevice.PortModeIp:
-		ep = port
-	default:
-		panic(fmt.Sprintf("unknown port mode: %d", mode))
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	ifs, err := ns.addEndpoint(
-		makeEndpointName(namePrefix, config.GetNameWithDefault("")),
-		ep,
-		port,
-		&cancellingObserver{Observer: port, cancel: cancel},
-		routes.Metric(config.GetMetricWithDefault(0)),
-	)
-	if err != nil {
-		var tcpipError *TcpIpError
-		if errors.As(err, &tcpipError) {
-			return stack.StackAddInterfaceResultWithErr(tcpipError.ToStackError())
-		} else {
-			return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
-		}
-	}
-
-	// Run the device in a goroutine, cancellingObserver will cancel the context
-	// when the port reports a link down.
-	go client.Run(ctx)
-
-	// Prevent deferred functions from cleaning up.
-	client = nil
-	port = nil
-
-	return stack.StackAddInterfaceResultWithResponse(stack.StackAddInterfaceResponse{Id: uint64(ifs.nicid)})
 }
 
 func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResult {
@@ -481,10 +335,6 @@ func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string
 		})
 	}
 	return result, nil
-}
-
-func (ni *stackImpl) AddInterface(_ fidl.Context, config stack.InterfaceConfig, device stack.DeviceDefinition) (stack.StackAddInterfaceResult, error) {
-	return ni.ns.addInterface(config, device), nil
 }
 
 func (ni *stackImpl) DelEthernetInterface(_ fidl.Context, id uint64) (stack.StackDelEthernetInterfaceResult, error) {
