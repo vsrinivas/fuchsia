@@ -6,6 +6,7 @@ group("all") {
   deps = [
     "//src/session/examples/graphical-session",
     "//src/session/examples/hello-world-session",
+    "//src/session/examples/tiles-session",
   ]
 }
 

@@ -1,0 +1,31 @@
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/tiles-session",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.element.Manager",
+                "fuchsia.session.scene.Manager",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Flatland",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "self",
+        },
+    ],
+}

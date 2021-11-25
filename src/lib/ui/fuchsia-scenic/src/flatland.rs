@@ -10,7 +10,7 @@ pub use {
         ChildViewWatcherMarker, ContentId, FlatlandDisplayMarker, FlatlandDisplayProxy,
         FlatlandError, FlatlandEvent, FlatlandEventStream, FlatlandMarker, FlatlandProxy,
         LayoutInfo, ParentViewportWatcherMarker, ParentViewportWatcherProxy, PresentArgs,
-        TransformId, ViewportProperties,
+        TransformId, ViewBoundProtocols, ViewportProperties,
     },
     fidl_fuchsia_ui_views::{ViewCreationToken, ViewportCreationToken},
 };
