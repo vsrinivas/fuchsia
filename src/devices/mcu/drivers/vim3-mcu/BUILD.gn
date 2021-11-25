@@ -39,6 +39,7 @@ fuchsia_driver("vim3-mcu-driver") {
 fuchsia_driver_component("vim3-mcu") {
   component_name = "vim3-mcu"
   deps = [ ":vim3-mcu-driver" ]
+  info = "vim3-mcu-info.json"
 }
 
 test("vim3-mcu-test-bin") {

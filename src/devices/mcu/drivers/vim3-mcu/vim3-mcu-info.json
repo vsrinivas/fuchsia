@@ -1,0 +1,9 @@
+{
+    "short_description": "Khadas VIM3 MCU driver",
+    "manufacturer": "Khadas",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Misc"
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "short_description": "Chromium OS Embedded Controller LPC bus driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Misc"
+    ]
+}

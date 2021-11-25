@@ -1,0 +1,9 @@
+{
+    "short_description": "Chromium OS Embedded Controller transport independent driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Misc"
+    ]
+}
