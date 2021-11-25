@@ -35,6 +35,7 @@ fuchsia_driver("log-test-driver-driver") {
 }
 
 fuchsia_driver_component("log-test-driver") {
+  info = "log-test-driver-info.json"
   component_name = "log-test-driver"
   deps = [ ":log-test-driver-driver" ]
 }
