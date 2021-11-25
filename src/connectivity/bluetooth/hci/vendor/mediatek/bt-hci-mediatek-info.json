@@ -1,0 +1,12 @@
+{
+    "short_description": "Mediatek Bluetooth HCI driver",
+    "manufacturer": "Mediatek",
+    "families": [],
+    "models": [
+        "MT7668"
+    ],
+    "areas": [
+        "Bluetooth",
+        "Connectivity"
+    ]
+}

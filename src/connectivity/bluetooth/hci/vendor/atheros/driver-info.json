@@ -1,0 +1,10 @@
+{
+    "short_description": "Atheros Bluetooth USB HCI driver",
+    "manufacturer": "Atheros",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Bluetooth",
+        "Connectivity"
+    ]
+}

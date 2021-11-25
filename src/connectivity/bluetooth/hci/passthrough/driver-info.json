@@ -1,0 +1,14 @@
+{
+    "short_description": "Bluetooth HCI transport passthrough driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Bluetooth",
+        "Connectivity"
+    ]
+}

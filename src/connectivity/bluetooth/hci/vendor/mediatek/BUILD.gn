@@ -42,6 +42,7 @@ fuchsia_driver("bt-hci-mediatek-driver") {
 fuchsia_driver_component("bt-hci-mediatek") {
   component_name = "bt-hci-mediatek"
   deps = [ ":bt-hci-mediatek-driver" ]
+  info = "bt-hci-mediatek-info.json"
 }
 
 firmware("firmware") {

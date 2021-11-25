@@ -44,6 +44,7 @@ fuchsia_driver("bt-hci-broadcom-driver") {
 fuchsia_driver_component("bt-hci-broadcom") {
   component_name = "bt-hci-broadcom"
   deps = [ ":bt-hci-broadcom-driver" ]
+  info = "bt-hci-broadcom-info.json"
 }
 
 resource("broadcom-firmware") {

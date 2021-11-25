@@ -31,6 +31,7 @@ fuchsia_driver("bt-transport-usb-driver") {
 fuchsia_driver_component("bt-transport-usb") {
   component_name = "bt-transport-usb"
   deps = [ ":bt-transport-usb-driver" ]
+  info = "bt-transport-usb-info.json"
 }
 
 source_set("common") {

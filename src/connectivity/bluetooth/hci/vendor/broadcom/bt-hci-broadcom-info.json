@@ -1,0 +1,10 @@
+{
+    "short_description": "Broadcom Bluetooth HCI driver",
+    "manufacturer": "Broadcom",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Bluetooth",
+        "Connectivity"
+    ]
+}

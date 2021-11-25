@@ -1,0 +1,10 @@
+{
+    "short_description": "Intel Bluetooth USB HCI driver",
+    "manufacturer": "Intel",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Bluetooth",
+        "Connectivity"
+    ]
+}
