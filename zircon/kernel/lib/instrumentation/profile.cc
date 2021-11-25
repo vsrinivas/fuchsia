@@ -4,212 +4,86 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "private.h"
-
-#ifndef HAVE_PROFDATA
-#error "build system regression"
-#endif
-
-#if !HAVE_PROFDATA
-
-InstrumentationDataVmo LlvmProfileGetVmo() { return {}; }
-
-#else  // HAVE_PROFDATA
-
+#include <align.h>
+#include <lib/llvm-profdata/llvm-profdata.h>
 #include <lib/version.h>
 #include <stdint.h>
 #include <string.h>
 #include <zircon/assert.h>
 
 #include <ktl/byte.h>
+#include <ktl/move.h>
 #include <ktl/span.h>
-#include <lk/init.h>
-#include <object/vm_object_dispatcher.h>
+#include <ktl/string_view.h>
 #include <vm/vm_object_paged.h>
 
-#include <profile/InstrProfData.inc>
+#include "kernel-mapped-vmo.h"
+#include "private.h"
 
 namespace {
 
 constexpr ktl::string_view kVmoName = "data/zircon.elf.profraw";
 
-using IntPtrT = intptr_t;
-
-enum ValueKind {
-#define VALUE_PROF_KIND(Enumerator, Value, Descr) Enumerator = Value,
-#include <profile/InstrProfData.inc>
-};
-
-struct __llvm_profile_data {
-#define INSTR_PROF_DATA(Type, LLVMType, Name, Initializer) Type Name;
-#include <profile/InstrProfData.inc>
-};
-
-extern "C" {
-
-// This is sometimes emitted by the compiler with a different value.
-// The header is expected to use whichever value this had at link time.
-// This supplies the default value when the compiler doesn't supply it.
-[[gnu::weak]] extern const uint64_t INSTR_PROF_RAW_VERSION_VAR = INSTR_PROF_RAW_VERSION;
-
-// The compiler emits phantom references to this as a way to ensure
-// that the runtime is linked in.
-extern const int INSTR_PROF_PROFILE_RUNTIME_VAR = 0;
-
-}  // extern "C"
-
-// Here _WIN32 really means EFI (Gigaboot).  At link-time, it's Windows/x64
-// essentially.  InstrProfData.inc uses #ifdef _WIN32, so match that.
-#ifdef _WIN32
-
-// These magic section names don't have macros in InstrProfData.inc,
-// though their ".blah$M" counterparts do.
-
-// Merge read-write sections into .data.
-#pragma comment(linker, "/MERGE:.lprfc=.data")
-#pragma comment(linker, "/MERGE:.lprfd=.data")
-
-// Do not merge .lprfn and .lcovmap into .rdata.
-// `llvm-cov` must be able to find them after the fact.
-
-// Allocate read-only section bounds.
-#pragma section(".lprfn$A", read)
-#pragma section(".lprfn$Z", read)
-
-// Allocate read-write section bounds.
-#pragma section(".lprfd$A", read, write)
-#pragma section(".lprfd$Z", read, write)
-#pragma section(".lprfc$A", read, write)
-#pragma section(".lprfc$Z", read, write)
-
-// The ".blah$A" and ".blah$Z" dummy sections get magically sorted
-// with ".blah$M" in between them, so these symbols identify the
-// bounds of the compiler-emitted data at link time.  The all-zero
-// dummy records don't matter to `llvm-profdata`.
-
-// This data is morally `const`, i.e. it's a RELRO case in the ELF world.
-// But the compiler complains about a mismatch with the #pragma section
-// above if these are declared `const` in the PE-COFF case.
-[[gnu::section(".lprfd$A"), gnu::used]] __llvm_profile_data DataStart{};
-[[gnu::section(".lprfd$Z"), gnu::used]] __llvm_profile_data DataEnd{};
-
-[[gnu::section(".lprfn$A"), gnu::used]] const char NamesStart{};
-[[gnu::section(".lprfn$Z"), gnu::used]] const char NamesEnd{};
-
-[[gnu::section(".lprfc$A"), gnu::used]] uint64_t CountersStart{};
-[[gnu::section(".lprfc$Z"), gnu::used]] uint64_t CountersEnd{};
-
-#else  // !_WIN32
-
-extern "C" {
-
-extern const __llvm_profile_data DataStart __asm__(
-    INSTR_PROF_QUOTE(INSTR_PROF_SECT_START(INSTR_PROF_DATA_COMMON)));
-extern const __llvm_profile_data DataEnd __asm__(
-    INSTR_PROF_QUOTE(INSTR_PROF_SECT_STOP(INSTR_PROF_DATA_COMMON)));
-
-extern const char NamesStart __asm__(
-    INSTR_PROF_QUOTE(INSTR_PROF_SECT_START(INSTR_PROF_NAME_COMMON)));
-extern const char NamesEnd __asm__(INSTR_PROF_QUOTE(INSTR_PROF_SECT_STOP(INSTR_PROF_NAME_COMMON)));
-
-extern uint64_t CountersStart __asm__(
-    INSTR_PROF_QUOTE(INSTR_PROF_SECT_START(INSTR_PROF_CNTS_COMMON)));
-extern uint64_t CountersEnd __asm__(INSTR_PROF_QUOTE(INSTR_PROF_SECT_STOP(INSTR_PROF_CNTS_COMMON)));
-
-// These are defined by the linker script.  When there is no such
-// instrumentation data in this kernel build, they're equal.
-extern const uint8_t __llvm_profile_start[], __llvm_profile_end[];
-extern const uint8_t __llvm_profile_vmo_end[];
-
-}  // extern "C"
-
-#endif  // _WIN32
-
-// These are used by the INSTR_PROF_RAW_HEADER initializers.
-
-constexpr uint64_t __llvm_profile_get_magic() { return INSTR_PROF_RAW_MAGIC_64; }
-
-uint64_t __llvm_profile_get_version() { return INSTR_PROF_RAW_VERSION_VAR; }
-
-// TODO(fxbug.dev/81362): this is used by the InstrProfData.inc code in the new
-// version but not the old.  Remove this attribute after the new toolchain has
-// landed.
-[[gnu::unused]] uint64_t __llvm_write_binary_ids(void* ignored) {
-  return sizeof(uint64_t) + ElfBuildId().size();
-}
-
-#define DataSize (&DataEnd - &DataStart)
-#define PaddingBytesBeforeCounters 0
-#define CountersSize (&CountersEnd - &CountersStart)
-#define PaddingBytesAfterCounters 0
-#define NamesSize (&NamesEnd - &NamesStart)
-#define CountersBegin (reinterpret_cast<uint64_t>(&CountersStart))
-#define DataBegin (reinterpret_cast<uint64_t>(&DataStart))
-#define NamesBegin (reinterpret_cast<uint64_t>(&NamesStart))
-
-// The linker script places this at the start of a page-aligned region
-// where it's followed by the compiler-generated sections.
-[[gnu::section("__llvm_profile_header"), gnu::used]] struct {
-#define INSTR_PROF_RAW_HEADER(Type, Name, Initializer) Type Name##_ = Initializer;
-#include <profile/InstrProfData.inc>
-} __llvm_profile_header;
-
-// Defined by the kernel.ld linker script (which see).
-extern "C" const uint64_t __llvm_profile_build_id_size;
-extern "C" ktl::byte __llvm_profile_build_id_bytes[];
-
-// The build ID is embedded by the linker in one place, but we need it also
-// embedded in a second place to form part of the profdata format.  Even though
-// our profdata format layout is done at link time via the linker script, the
-// linker won't fill in the build ID contents in two places, only in the ELF
-// note.  So we have to update the profdata image in place.  The kernel.ld bits
-// that place the header already filled in the size of the build ID at link
-// time, right after the header, and then left a gap of that many bytes for the
-// build ID to be filled in.
-void InitLlvmProfileBuildId(unsigned int level) {
-  ktl::span<const ktl::byte> link_build_id = ElfBuildId();
-  ktl::span<ktl::byte> profdata_build_id{__llvm_profile_build_id_bytes,
-                                         __llvm_profile_build_id_size};
-  ZX_ASSERT(profdata_build_id.size_bytes() == link_build_id.size_bytes());
-  memcpy(profdata_build_id.data(), link_build_id.data(), link_build_id.size_bytes());
-}
-
-fbl::RefPtr<VmObjectPaged> gLlvmProfileVmo;
+// This holds the pinned mapping of the live-updated counters.
+KernelMappedVmo gProfdataCounters;
 
 }  // namespace
 
-LK_INIT_HOOK(InitLlvmProfileBuildId, InitLlvmProfileBuildId, LK_INIT_LEVEL_ARCH_LATE + 1)
-
 InstrumentationDataVmo LlvmProfileGetVmo() {
-  const size_t content_size = __llvm_profile_end - __llvm_profile_start;
-  const size_t vmo_size = __llvm_profile_vmo_end - __llvm_profile_start;
-  if (vmo_size == 0) {
+  LlvmProfdata profdata;
+  profdata.Init(ElfBuildId());
+  if (profdata.size_bytes() == 0) {
     return {};
   }
 
+  // Create a VMO to hold the whole profdata dump.
   fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status =
-      VmObjectPaged::CreateFromWiredPages(__llvm_profile_start, vmo_size, false, &vmo);
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, profdata.size_bytes(), &vmo);
   ZX_ASSERT(status == ZX_OK);
 
-  // This is kept alive forever to keep a permanent reference to the VMO so
-  // that the memory always remains valid, even if userspace closes the last
-  // handle.
-  gLlvmProfileVmo = vmo;
+  // First fill in just the fixed data, by mapping the whole VMO into the
+  // kernel address space.  Then let the mapping and pinning be cleaned up,
+  // since we don't need the whole thing mapped into the kernel at runtime.
+  {
+    KernelMappedVmo mapped_vmo;
+    status = mapped_vmo.Init(vmo, 0, profdata.size_bytes(), "llvm-profdata-setup");
+    ZX_ASSERT(status == ZX_OK);
+    ktl::span<ktl::byte> mapped_data{
+        reinterpret_cast<ktl::byte*>(mapped_vmo.base()),
+        mapped_vmo.size(),
+    };
+    profdata.WriteFixedData(mapped_data);
+  }
 
-  zx_rights_t rights;
-  KernelHandle<VmObjectDispatcher> handle;
-  status =
-      VmObjectDispatcher::Create(ktl::move(vmo), content_size,
-                                 VmObjectDispatcher::InitialMutability::kMutable, &handle, &rights);
+  // Now map in just the pages holding the counters.  This mapping will be kept
+  // alive permanently so the live counters can be updated through it.
+  const uint64_t map_offset = ROUNDDOWN(profdata.counters_offset(), ZX_PAGE_SIZE);
+  const size_t map_size =
+      ROUNDUP_PAGE_SIZE(profdata.counters_offset() + profdata.counters_size_bytes()) - map_offset;
+  status = gProfdataCounters.Init(ktl::move(vmo), map_offset, map_size, "llvm-profdata-counters");
   ZX_ASSERT(status == ZX_OK);
-  handle.dispatcher()->set_name(kVmoName.data(), kVmoName.size());
+  ktl::span<ktl::byte> counters{
+      reinterpret_cast<ktl::byte*>(profdata.counters_offset() - map_offset +
+                                   gProfdataCounters.base()),
+      profdata.counters_size_bytes(),
+  };
+
+  // Counts up to this point have collected in global variable space.
+  // Copy those counters into the mapped VMO data.
+  profdata.CopyCounters(counters);
+
+  // Switch instrumented code over to updating the mapped VMO data in place.
+  // From this point on, the kernel's VMO mapping is used by all instrumented
+  // code and must be kept valid and pinned.
+  //
+  // TODO(mcgrathr): We could theoretically decommit the global data pages
+  // after this to recover that RAM.  That part of the kernel's global data
+  // area should never be accessed again.
+  LlvmProfdata::UseCounters(counters);
 
   return {
       .announce = "LLVM Profile",
       .sink_name = "llvm-profdata",
-      .handle = Handle::Make(ktl::move(handle), rights & ~ZX_RIGHT_WRITE).release(),
+      .handle = gProfdataCounters.Publish(kVmoName, profdata.size_bytes()),
   };
 }
-
-#endif  // HAVE_PROFDATA

@@ -206,6 +206,21 @@ SECTIONS
     }
 
     /*
+     * When these instrumentation sections are emitted, they are
+     * read-only (possibly only after relocation).
+     */
+    __llvm_prf_data : ALIGN(8) {
+        PROVIDE_HIDDEN(__start___llvm_prf_data = .);
+        *(__llvm_prf_data)
+        PROVIDE_HIDDEN(__stop___llvm_prf_data = .);
+    }
+    __llvm_prf_names : {
+        PROVIDE_HIDDEN(__start___llvm_prf_names = .);
+        *(__llvm_prf_names)
+        PROVIDE_HIDDEN(__stop___llvm_prf_names = .);
+    }
+
+    /*
      * Any read-only data "orphan" sections will be inserted here.
      * Ideally we'd put those into the .rodata output section, but
      * there isn't a way to do that that guarantees all same-named
@@ -219,67 +234,10 @@ SECTIONS
      * exactly the end of the orphans rounded up to the next page.
      */
 
-    __llvm_profile_header : ALIGN(CONSTANT(MAXPAGESIZE)) {
+    .data : ALIGN(CONSTANT(MAXPAGESIZE)) {
         PROVIDE_HIDDEN(__rodata_end = .);
         PROVIDE_HIDDEN(__data_start = .);
 
-        /*
-         * Keep this page-aligned/rounded so it can be exported as a VMO.
-         * Unfortunately this means it all has to be writable, when really
-         * only the __lvm_prf_cnts portion needs to be writable.  But it
-         * would be wasteful to page-align and complicated to set up the
-         * mappings to have this be both contiguous in the VMO and only
-         * have the middle bit be writable in the kernel address space
-         * (either by alternating read-only and writable pages here instead
-         * of keeping the big rodata and data segments, or differently
-         * complicated by placing the read-only and writable portions
-         * discontiguously in the kernel's view but putting those physical
-         * pages into the VMO in a different order.
-         */
-        PROVIDE_HIDDEN(__llvm_profile_start = .);
-        KEEP(*(__llvm_profile_header))
-
-        /*
-         * Immediately after the header comes the build ID block.  This
-         * consists of a byte count (uint64_t) followed by build ID bytes.
-         * We emit the byte count directly here and leave space for the
-         * build ID bytes.  The runtime code will fill in the contents at
-         * __llvm_profile_build_id_bytes[] by copying bytes from the note
-         * payload the linker filled in at link time.
-         */
-        PROVIDE_HIDDEN(__llvm_profile_build_id_size = .);
-        QUAD(__build_id_size);
-        PROVIDE_HIDDEN(__llvm_profile_build_id_bytes = .);
-        . += __build_id_size;
-
-        . = ALIGN(8);
-        PROVIDE_HIDDEN(__start___llvm_prf_data = .);
-    } :data
-    __llvm_prf_data : {
-        KEEP(*(__llvm_prf_data))
-        PROVIDE_HIDDEN(__stop___llvm_prf_data = .);
-    }
-    __llvm_prf_cnts : {
-        PROVIDE_HIDDEN(__start___llvm_prf_cnts = .);
-        KEEP(*(__llvm_prf_cnts))
-        PROVIDE_HIDDEN(__stop___llvm_prf_cnts = .);
-    }
-    __llvm_prf_names : {
-        PROVIDE_HIDDEN(__start___llvm_prf_names = .);
-        KEEP(*(__llvm_prf_names))
-        PROVIDE_HIDDEN(__stop___llvm_prf_names = .);
-    }
-    PROVIDE_HIDDEN(__llvm_profile_end = .);
-    . = ALIGN(4096);
-    PROVIDE_HIDDEN(__llvm_profile_vmo_end = .);
-
-    __sancov_guards : {
-        PROVIDE_HIDDEN(__start___sancov_guards = .);
-        *(__sancov_guards)
-        PROVIDE_HIDDEN(__stop___sancov_guards = .);
-    }
-
-    .data : ALIGN(128) {
         /* Pull out any aligned data into a separate section to make sure
          * individual variables do not alias with any unaligned vars.
          */
@@ -296,6 +254,21 @@ SECTIONS
     }
     ASSERT(SIZEOF(BootCpuidData) ==  2 * SIZEOF(BootCpuidLeaf),
            "The BootCpuidLeaf and BootCpuidData sizes should precisely correlate: one holds CPUID leaf information and the other the associated values")
+
+    /*
+     * When these instrumentation sections are emitted, they are
+     * writable data that gets updated at runtime.
+     */
+    __llvm_prf_cnts : ALIGN(8) {
+        PROVIDE_HIDDEN(__start___llvm_prf_cnts = .);
+        *(__llvm_prf_cnts)
+        PROVIDE_HIDDEN(__stop___llvm_prf_cnts = .);
+    }
+    __sancov_guards : ALIGN(4) {
+        PROVIDE_HIDDEN(__start___sancov_guards = .);
+        *(__sancov_guards)
+        PROVIDE_HIDDEN(__stop___sancov_guards = .);
+    }
 
     /*
      * Note that this end size might not be aligned.  That's OK.  It's
