@@ -400,8 +400,7 @@ class SizeofExprNode : public ExprNode {
   SizeofExprNode(fxl::RefPtr<ExprNode> expr) : expr_(std::move(expr)) {}
   ~SizeofExprNode() override = default;
 
-  static void SizeofType(const fxl::RefPtr<EvalContext>& context, const Type* type,
-                         EvalCallback cb);
+  static ErrOrValue SizeofType(const fxl::RefPtr<EvalContext>& context, const Type* type);
 
   fxl::RefPtr<ExprNode> expr_;
 };

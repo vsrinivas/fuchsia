@@ -533,15 +533,15 @@ void MemberAccessExprNode::Print(std::ostream& out, int indent) const {
 void SizeofExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
   if (const TypeExprNode* type_node = const_cast<ExprNode*>(expr_.get())->AsType()) {
     // Types just get used directly.
-    SizeofType(context, type_node->type().get(), std::move(cb));
+    cb(SizeofType(context, type_node->type().get()));
   } else {
     // Everything else gets evaluated. Strictly C++ won't do this because it's statically typed, but
     // our expression system is not. This doesn't need to follow references because we only need the
-    // type and the
+    // type.
     expr_->Eval(context, [context, cb = std::move(cb)](ErrOrValue value) mutable {
       if (value.has_error())
         return cb(value);
-      SizeofType(context, value.value().type(), std::move(cb));
+      cb(SizeofType(context, value.value().type()));
     });
   }
 }
@@ -552,22 +552,22 @@ void SizeofExprNode::Print(std::ostream& out, int indent) const {
 }
 
 // static
-void SizeofExprNode::SizeofType(const fxl::RefPtr<EvalContext>& context, const Type* in_type,
-                                EvalCallback cb) {
+ErrOrValue SizeofExprNode::SizeofType(const fxl::RefPtr<EvalContext>& context,
+                                      const Type* in_type) {
   // References should get stripped (sizeof(char&) = 1).
   if (!in_type)
-    return cb(Err("Can't do sizeof on a null type."));
+    return Err("Can't do sizeof on a null type.");
 
   fxl::RefPtr<Type> type = context->GetConcreteType(in_type);
   if (type->is_declaration())
-    return cb(Err("Can't resolve forward declaration for '%s'.", in_type->GetFullName().c_str()));
+    return Err("Can't resolve forward declaration for '%s'.", in_type->GetFullName().c_str());
 
   if (DwarfTagIsEitherReference(type->tag()))
     type = RefPtrTo(type->As<ModifiedType>()->modified().Get()->As<Type>());
   if (!type)
-    return cb(Err("Symbol error for '%s'.", in_type->GetFullName().c_str()));
+    return Err("Symbol error for '%s'.", in_type->GetFullName().c_str());
 
-  cb(ExprValue(type->byte_size()));
+  return ExprValue(type->byte_size());
 }
 
 void TypeExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
