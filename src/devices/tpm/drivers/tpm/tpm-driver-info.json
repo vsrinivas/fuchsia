@@ -1,0 +1,13 @@
+{
+    "short_description": "TPM core driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}

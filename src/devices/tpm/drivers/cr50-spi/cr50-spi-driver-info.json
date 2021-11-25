@@ -1,0 +1,11 @@
+{
+    "short_description": "cr50 security chip driver",
+    "manufacturer": "Google",
+    "families": [],
+    "models": [
+        "cr50"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}
