@@ -14,6 +14,7 @@
 #include <chromiumos-platform-ec/ec_commands.h>
 
 #include "src/devices/mcu/drivers/chromiumos-ec-core/chromiumos_ec_core_bind.h"
+#include "src/devices/mcu/drivers/chromiumos-ec-core/subdriver.h"
 
 namespace chromiumos_ec_core {
 namespace {
@@ -142,6 +143,9 @@ void ChromiumosEcCore::DdkInit(ddk::InitTxn txn) {
             }
 
             core_.CreateString(kPropFeatures, feature_str, &inspect_);
+
+            // Bind child drivers.
+            BindSubdrivers(this);
 
             init_txn_->Reply(ZX_OK);
             return fpromise::ok();

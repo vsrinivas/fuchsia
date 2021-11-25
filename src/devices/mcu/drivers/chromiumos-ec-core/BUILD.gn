@@ -9,7 +9,10 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":chromiumos-ec-core-tests" ]
+  deps = [
+    ":chromiumos-ec-core-tests",
+    ":chromiumos-ec-motion-tests",
+  ]
 }
 
 driver_bind_rules("bind") {
@@ -23,6 +26,8 @@ source_set("core") {
   sources = [
     "chromiumos_ec_core.cc",
     "chromiumos_ec_core.h",
+    "subdriver.cc",
+    "subdriver.h",
   ]
   public_deps = [
     ":bind",
@@ -57,9 +62,26 @@ source_set("test-common") {
   testonly = true
 }
 
+source_set("motion") {
+  sources = [
+    "motion.cc",
+    "motion.h",
+    "subdriver.h",
+  ]
+
+  public_deps = [
+    ":core",
+    "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
+    "//zircon/system/ulib/hid",
+  ]
+}
+
 fuchsia_driver("driver") {
   output_name = "chromiumos-ec-core"
-  deps = [ ":core" ]
+  deps = [
+    ":core",
+    ":motion",
+  ]
 }
 
 fuchsia_driver_component("component") {
@@ -79,6 +101,19 @@ test("chromiumos-ec-core-unit-tests") {
   deps = [ ":test-common" ]
 }
 
+test("chromiumos-ec-motion-unit-tests") {
+  sources = [ "motion-test.cc" ]
+  deps = [
+    ":motion",
+    ":test-common",
+    "//zircon/system/ulib/hid-parser",
+  ]
+}
+
 fuchsia_unittest_package("chromiumos-ec-core-tests") {
   deps = [ ":chromiumos-ec-core-unit-tests" ]
+}
+
+fuchsia_unittest_package("chromiumos-ec-motion-tests") {
+  deps = [ ":chromiumos-ec-motion-unit-tests" ]
 }
