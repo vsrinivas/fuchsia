@@ -2463,18 +2463,6 @@ From //build/images/fvm.gni:76
 
 From //build/images/fvm.gni:63
 
-### minfs_enable_dirty_cache
-Set this to true when configuring gn args to enable minfs dirty cache.
-This is a compile time argument instead of mount time argument because
-we conditionally want to enable dirty cache only on specific
-configurations. Once it is enabled, we want the board to run all instances
-of minfs, including # data and all minfs created to run test, should enable
-dirty cache. This ensures that we run what we test.
-
-**Current value (from the default):** `true`
-
-From //src/storage/minfs/BUILD.gn:12
-
 ### minfs_maximum_runtime_bytes
 minfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
 can grow as needed if there are extra slices available in FVM. This limit prevents the minfs
