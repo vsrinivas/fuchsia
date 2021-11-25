@@ -14,7 +14,6 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
-// TODO: consider using std::mutex when multi-threaded compatibility test is needed
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
