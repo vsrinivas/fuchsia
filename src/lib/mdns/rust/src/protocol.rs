@@ -9,6 +9,7 @@ use std::collections::HashSet;
 use std::convert::{From, TryFrom, TryInto};
 use std::fmt::{Debug, Display, Formatter};
 use std::mem;
+use std::net::IpAddr;
 
 use byteorder::NetworkEndian;
 use packet::{BufferView, BufferViewMut, InnerPacketBuilder, ParsablePacket, ParseMetadata};
@@ -41,6 +42,15 @@ pub trait EmbeddedPacketBuilder {
     fn bytes_len(&self) -> usize;
 
     fn serialize<B: ByteSliceMut, BV: BufferViewMut<B>>(&self, bv: &mut BV);
+
+    /// Return the output of packet building as a Vec<u8>, useful for tests that don't care about
+    /// zerocopy resource constraints.
+    fn bytes(&self) -> Vec<u8> {
+        let mut vec = Vec::with_capacity(self.bytes_len());
+        vec.resize(self.bytes_len(), 0u8);
+        self.serialize(&mut &mut vec.as_mut_slice());
+        vec
+    }
 }
 
 struct BufferViewWrapper<B>(B);
@@ -286,6 +296,14 @@ impl EmbeddedPacketBuilder for QuestionBuilder {
     }
 }
 
+/// A parsed AAAA type record.
+#[derive(FromBytes)]
+pub struct Aaaa([u8; IPV6_SIZE]);
+
+/// A parsed A type record.
+#[derive(FromBytes)]
+pub struct A([u8; IPV4_SIZE]);
+
 /// A parsed SRV type record.
 pub struct SrvRecord<B: ByteSlice> {
     priority: u16,
@@ -320,9 +338,11 @@ impl<B: ByteSlice + Clone> SrvRecord<B> {
 /// will always be a `RData::Srv`, anything else, currently, will be converted
 /// into `RData::Bytes`.
 pub enum RData<B: ByteSlice> {
+    A(A),
+    Aaaa(Aaaa),
     Bytes(B),
-    Srv(SrvRecord<B>),
     Domain(Domain<B>),
+    Srv(SrvRecord<B>),
 }
 
 impl<B: ByteSlice> RData<B> {
@@ -344,11 +364,20 @@ impl<B: ByteSlice> RData<B> {
         }
     }
 
+    /// Returns a `IpAddr` if possible, `None` otherwise.
+    pub fn ip_addr(&self) -> Option<IpAddr> {
+        match self {
+            RData::Aaaa(aaaa) => Some(IpAddr::from(aaaa.0)),
+            RData::A(a) => Some(IpAddr::from(a.0)),
+            _ => None,
+        }
+    }
+
     // TODO(awdavies): This is used in tests, and will be useful for getting
     // strings out of Txt data later when there is an actual client
     // implementation.
     #[allow(unused)]
-    fn bytes(&self) -> Option<&B> {
+    pub fn bytes(&self) -> Option<&B> {
         match self {
             RData::Bytes(b) => Some(b),
             _ => None,
@@ -447,6 +476,14 @@ impl<B: ByteSlice + Clone> Record<B> {
                     return Err(ParseError::Malformed);
                 }
                 RData::Domain(ptr_domain)
+            }
+            Type::A => {
+                let buf = buffer.take_front(IPV4_SIZE).ok_or(ParseError::Malformed)?;
+                RData::A(A::read_from(buf).ok_or(ParseError::Malformed)?)
+            }
+            Type::Aaaa => {
+                let buf = buffer.take_front(IPV6_SIZE).ok_or(ParseError::Malformed)?;
+                RData::Aaaa(Aaaa::read_from(buf).ok_or(ParseError::Malformed)?)
             }
             _ => RData::Bytes(buffer.take_front(rdata_len.into()).ok_or(ParseError::Malformed)?),
         };
@@ -945,6 +982,14 @@ mod tests {
     }
 
     #[test]
+    fn test_embedded_packet_builder_bytes() {
+        assert_eq!(
+            &[3, 'f' as u8, 'o' as u8, 'o' as u8, 0][..],
+            DomainBuilder::from_str("foo").unwrap().bytes()
+        );
+    }
+
+    #[test]
     fn test_parse_type() {
         const TYPES: [Type; 5] = [Type::A, Type::Aaaa, Type::Ptr, Type::Srv, Type::Txt];
         for t in TYPES.iter() {
@@ -970,6 +1015,33 @@ mod tests {
     fn test_domain_parse() {
         let mut bv = BufferViewWrapper(&DOMAIN_BYTES[..]);
         let _ = Domain::parse(&mut bv, None).expect("Failed to parse");
+    }
+
+    #[test]
+    fn test_domain_roundtrip() {
+        for example in [DOMAIN_STRING, NODENAME_DOMAIN_STRING] {
+            let domain = DomainBuilder::from_str(example).unwrap();
+            let mut buf = make_buf(domain.bytes_len());
+            domain.serialize_to_buf(buf.as_mut_slice());
+
+            let mut bv = BufferViewWrapper(buf.as_slice());
+            let parsed = Domain::parse(&mut bv, None).unwrap();
+            assert_eq!(example, format!("{}", parsed));
+        }
+    }
+
+    #[test]
+    fn test_ipv4_parse() {
+        const ADDR: [u8; IPV4_SIZE] = [192, 168, 0, 2];
+        let a = RData::<&[u8]>::A(A::read_from(&ADDR[..]).unwrap());
+        assert_eq!(a.ip_addr(), Some(IpAddr::from(ADDR)));
+    }
+
+    #[test]
+    fn test_ipv6_parse() {
+        const ADDR: [u8; IPV6_SIZE] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1];
+        let aaaa = RData::<&[u8]>::Aaaa(Aaaa::read_from(&ADDR[..]).unwrap());
+        assert_eq!(aaaa.ip_addr(), Some(IpAddr::from(ADDR)));
     }
 
     #[test]
@@ -1105,7 +1177,20 @@ mod tests {
                     assert_eq!(srv.weight, 0x0304);
                     assert_eq!(srv.port, 0x0506);
                 }
-                Type::A | Type::Aaaa => assert_eq!(&r.rdata, parsed.rdata.bytes().unwrap()),
+                Type::A => {
+                    if let IpAddr::V4(addr) = parsed.rdata.ip_addr().unwrap() {
+                        assert_eq!(&addr.octets(), &r.rdata);
+                    } else {
+                        panic!("expected IpAddr::V4");
+                    }
+                }
+                Type::Aaaa => {
+                    if let IpAddr::V6(addr) = parsed.rdata.ip_addr().unwrap() {
+                        assert_eq!(&addr.octets(), &r.rdata);
+                    } else {
+                        panic!("expected IpAddr::V6");
+                    }
+                }
                 Type::Ptr => assert_eq!(parsed.rdata.domain().unwrap(), &"quux"),
                 _ => (),
             }
@@ -1406,21 +1491,27 @@ mod tests {
         assert_eq!(a.domain, "thumb-set-human-shred.local");
         assert_eq!(a.class, Class::In);
         assert_eq!(a.ttl, 120);
-        assert_eq!(a.rdata.bytes().unwrap().len(), IPV4_SIZE);
-        assert_eq!(a.rdata.bytes().unwrap(), &[172, 16, 243, 38]);
+        if let IpAddr::V4(addr) = a.rdata.ip_addr().unwrap() {
+            assert_eq!(&addr.octets()[..], &[172, 16, 243, 38]);
+        } else {
+            panic!("expected IpAddr::V4");
+        }
         let aaaa = &parsed.additional[3];
         assert_eq!(aaaa.rtype, Type::Aaaa);
         assert_eq!(aaaa.domain, "thumb-set-human-shred.local");
         assert_eq!(aaaa.class, Class::In);
         assert_eq!(aaaa.ttl, 120);
-        assert_eq!(aaaa.rdata.bytes().unwrap().len(), IPV6_SIZE);
-        assert_eq!(
-            aaaa.rdata.bytes().unwrap(),
-            &[
-                0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8e, 0xae, 0x4c, 0xff, 0xfe, 0xe9,
-                0xc9, 0xd3
-            ]
-        );
+        if let IpAddr::V6(addr) = aaaa.rdata.ip_addr().unwrap() {
+            assert_eq!(
+                &addr.octets()[..],
+                &[
+                    0xfe, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x8e, 0xae, 0x4c, 0xff, 0xfe,
+                    0xe9, 0xc9, 0xd3
+                ]
+            );
+        } else {
+            panic!("expected IpAddr::V6");
+        }
     }
 
     #[test]

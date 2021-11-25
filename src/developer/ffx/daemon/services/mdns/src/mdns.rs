@@ -1,5 +1,7 @@
 use std::os::unix::prelude::AsRawFd;
 
+use mdns::protocol::Type;
+
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -291,6 +293,9 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_service: Weak<MdnsServiceInner>) {
         if !is_fuchsia_response(&msg) && is_fastboot_response(&msg).is_none() {
             continue;
         }
+        if !contains_source_address(&addr, &msg) {
+            continue;
+        }
 
         if let Some(mdns_service) = mdns_service.upgrade() {
             if let Some((t, ttl)) = make_target(addr, msg) {
@@ -382,6 +387,31 @@ async fn query_recv_loop(
 
     tasks.lock().await.remove(&addr.ip()).map(drop);
     log::info!("mdns: shut down query socket {}", &addr);
+}
+
+// Exclude any mdns packets received where the source address of the packet does not appear in any
+// of the answers in the advert/response, as this likely means the target was NAT'd in some way, and
+// the return path is likely not viable. In particular this filters out multicast that QEMU SLIRP
+// has invalidly pumped onto the network that would cause us to attempt to connect to the host
+// machine as if it was a Fuchsia target.
+fn contains_source_address<B: zerocopy::ByteSlice + Clone>(
+    addr: &SocketAddr,
+    msg: &dns::Message<B>,
+) -> bool {
+    for answer in msg.answers.iter().chain(msg.additional.iter()) {
+        if answer.rtype != Type::A && answer.rtype != Type::Aaaa {
+            continue;
+        }
+
+        if answer.rdata.ip_addr() == Some(addr.ip()) {
+            return true;
+        }
+    }
+    log::info!(
+        "Dubious mdns from: {:?} does not contain an answer that includes the source address, therefore it is ignored.",
+        addr
+    );
+    false
 }
 
 fn is_fuchsia_response<B: zerocopy::ByteSlice + Clone>(m: &dns::Message<B>) -> bool {
@@ -490,7 +520,9 @@ fn make_sender_socket(interface_id: u32, addr: SocketAddr, ttl: u32) -> Result<U
 mod tests {
 
     use super::*;
-    use ::mdns::protocol::{Class, DomainBuilder, Message, MessageBuilder, RecordBuilder, Type};
+    use ::mdns::protocol::{
+        Class, DomainBuilder, EmbeddedPacketBuilder, Message, MessageBuilder, RecordBuilder, Type,
+    };
     use packet::{InnerPacketBuilder, ParseBuffer, Serializer};
 
     #[test]
@@ -537,5 +569,59 @@ mod tests {
         let parsed = msg_bytes.parse::<Message<_>>().expect("failed to parse");
         let addr: SocketAddr = (MDNS_MCAST_V4, 12).into();
         assert!(make_target(addr.clone(), parsed).is_none());
+    }
+
+    /// Create an mdns advertisement packet as network bytes
+    fn create_mdns_advert(nodename: &str, address: IpAddr) -> Vec<u8> {
+        let domain = DomainBuilder::from_str(&format!("{}._fuchsia._udp.local", nodename)).unwrap();
+        let rdata = DomainBuilder::from_str("_fuchsia._udp.local").unwrap().bytes();
+        let record = RecordBuilder::new(domain, Type::Ptr, Class::Any, true, 1, &rdata);
+        let mut message = MessageBuilder::new(0, true);
+        message.add_additional(record);
+
+        let domain = DomainBuilder::from_str(&format!("{}.local", nodename)).unwrap();
+        let rdata = match &address {
+            IpAddr::V4(addr) => Vec::from(addr.octets()),
+            IpAddr::V6(addr) => Vec::from(addr.octets()),
+        };
+        let record = RecordBuilder::new(
+            domain,
+            match address {
+                IpAddr::V4(_) => Type::A,
+                IpAddr::V6(_) => Type::Aaaa,
+            },
+            Class::Any,
+            true,
+            1,
+            &rdata,
+        );
+        message.add_additional(record);
+
+        message
+            .into_serializer()
+            .serialize_vec_outer()
+            .unwrap_or_else(|_| panic!("failed to serialize"))
+            .unwrap_b()
+            .as_ref()
+            .to_vec()
+    }
+
+    #[test]
+    fn test_contains_source_address() {
+        assert!(contains_source_address(
+            &"127.0.0.1:0".parse().unwrap(),
+            &create_mdns_advert("fuchsia-foo-1234", IpAddr::from([127, 0, 0, 1]))
+                .as_slice()
+                .parse::<Message<_>>()
+                .unwrap(),
+        ));
+
+        assert!(!contains_source_address(
+            &"127.0.0.1:0".parse().unwrap(),
+            &create_mdns_advert("fuchsia-foo-1234", IpAddr::from([127, 0, 0, 2]))
+                .as_slice()
+                .parse::<Message<_>>()
+                .unwrap(),
+        ));
     }
 }
