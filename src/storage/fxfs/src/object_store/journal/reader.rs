@@ -92,6 +92,23 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
         &mut self.handle
     }
 
+    /// Reads raw (buffered) bytes from the underlying handle.
+    pub async fn read_bytes(&mut self, mut dst: &mut [u8]) -> Result<(), Error> {
+        while dst.len() != 0 {
+            self.fill_buf().await?;
+            let src = self.buffer();
+            if src.len() == 0 {
+                bail!(format!("read buffer was empty. needed {} bytes.", dst.len()));
+            }
+            let sz = std::cmp::min(src.len(), dst.len());
+            assert!(sz > 0);
+            dst[0..sz].copy_from_slice(&src[0..sz]);
+            self.consume(sz);
+            dst = &mut dst[sz..];
+        }
+        Ok(())
+    }
+
     /// Tries to deserialize a record of type T from the journal stream.  It might return
     /// ReadResult::Reset if a reset marker is encountered, or ReadResult::ChecksumMismatch (which
     /// is expected at the end of the journal stream).

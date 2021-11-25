@@ -248,10 +248,7 @@ impl Journal {
         // Sanity-check the super-block before we attempt to use it. Further validation has to be
         // done after we replay the items in |reader|, since they could involve super-block
         // mutations.
-        if super_block.magic != super_block::SUPER_BLOCK_MAGIC {
-            return Err(anyhow!(FxfsError::Inconsistent))
-                .context(format!("Invalid magic, super_block: {:?}", super_block));
-        } else if super_block.major_version != super_block::SUPER_BLOCK_MAJOR_VERSION {
+        if super_block.major_version != super_block::SUPER_BLOCK_MAJOR_VERSION {
             return Err(anyhow!(FxfsError::InvalidVersion)).context(format!(
                 "Invalid version (has {}, want {})",
                 super_block.major_version,

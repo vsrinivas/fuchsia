@@ -25,6 +25,7 @@ use {
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
+        io::Write,
         ops::{Bound, Range},
         sync::Arc,
     },
@@ -40,8 +41,9 @@ const SUPER_BLOCK_CHUNK_SIZE: u64 = 65536;
 /// The first 2 * 512 KiB on the disk are reserved for two A/B super-blocks.
 const MIN_SUPER_BLOCK_SIZE: u64 = 524_288;
 
-// TODO(ripper): Consolidate constants in 'constants' or localise? Pick one, not both.
-pub const SUPER_BLOCK_MAGIC: u64 = 0x7270755353467846; // Little-endian "FxFSSupr" in ASCII.
+/// All superblocks start with the magic bytes "FxFSSupr".
+const SUPER_BLOCK_MAGIC: &[u8; 8] = b"FxFSSupr";
+
 pub const SUPER_BLOCK_MAJOR_VERSION: u32 = 1;
 pub const SUPER_BLOCK_MINOR_VERSION: u32 = 1;
 
@@ -96,9 +98,6 @@ impl SuperBlockCopy {
 // TODO(csuter): Add a UUID
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub struct SuperBlock {
-    /// A constant value (SUPER_BLOCK_MAGIC) for identifying super-blocks.
-    pub magic: u64,
-
     /// The major version of the super-block's format.
     pub major_version: u32,
 
@@ -170,7 +169,6 @@ impl SuperBlock {
         journal_checkpoint: JournalCheckpoint,
     ) -> Self {
         SuperBlock {
-            magic: SUPER_BLOCK_MAGIC,
             major_version: SUPER_BLOCK_MAJOR_VERSION,
             oldest_minor_version: SUPER_BLOCK_MINOR_VERSION,
             generation: 1u64,
@@ -196,6 +194,14 @@ impl SuperBlock {
             SUPER_BLOCK_BLOCK_SIZE as u64,
             &JournalCheckpoint::default(),
         );
+
+        // Validate magic bytes.
+        let mut magic_bytes: [u8; 8] = [0; 8];
+        reader.read_bytes(&mut magic_bytes).await?;
+        if magic_bytes.as_slice() != SUPER_BLOCK_MAGIC.as_slice() {
+            bail!(format!("Invalid magic: {:?}", magic_bytes));
+        }
+
         let super_block = match reader.deserialize::<SuperBlock>().await? {
             ReadResult::Reset => bail!("Unexpected reset"),
             ReadResult::ChecksumMismatch => bail!("Checksum mismatch"),
@@ -215,6 +221,7 @@ impl SuperBlock {
         let object_manager = root_parent_store.filesystem().object_manager();
         let mut writer = SuperBlockWriter::new(handle, object_manager.metadata_reservation());
 
+        writer.writer.write(SUPER_BLOCK_MAGIC)?;
         serialize_into(&mut writer.writer, self)?;
 
         let tree = root_parent_store.tree();
