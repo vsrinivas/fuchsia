@@ -108,7 +108,7 @@ async fn add_event_route_from_above_root(
         // node if it's behind a child decl.
         if realm.is_mutable(target_moniker.clone()).await? {
             let mut target_decl = realm.get_decl(target_moniker.clone()).await?;
-            target_decl.uses.push(new_use_decl(&route.capability));
+            add_use_for_capability(&mut target_decl.uses, &route.capability);
             realm.set_decl(target_moniker.clone(), target_decl).await?;
         }
     }
@@ -166,15 +166,15 @@ async fn add_event_route_between_components(
         // node if it's behind a child decl.
         if realm.is_mutable(target_moniker.clone()).await? {
             let mut target_decl = realm.get_decl(target_moniker.clone()).await?;
-            target_decl.uses.push(new_use_decl(&route.capability));
+            add_use_for_capability(&mut target_decl.uses, &route.capability);
             realm.set_decl(target_moniker.clone(), target_decl).await?;
         }
     }
     Ok(())
 }
 
-fn new_use_decl(capability: &Capability) -> cm_rust::UseDecl {
-    match capability {
+fn add_use_for_capability(uses: &mut Vec<cm_rust::UseDecl>, capability: &Capability) {
+    let use_decl = match capability {
         Capability::Event(event, mode) => cm_rust::UseDecl::Event(cm_rust::UseEventDecl {
             source: cm_rust::UseSource::Parent,
             source_name: event.name().into(),
@@ -183,6 +183,9 @@ fn new_use_decl(capability: &Capability) -> cm_rust::UseDecl {
             mode: mode.clone(),
             dependency_type: cm_rust::DependencyType::Strong,
         }),
+    };
+    if !uses.contains(&use_decl) {
+        uses.push(use_decl);
     }
 }
 
@@ -239,7 +242,7 @@ mod tests {
         super::*,
         crate::{error, mock, ChildProperties, RouteBuilder},
         cm_rust::*,
-        fidl_fuchsia_data as fdata, fuchsia_async as fasync,
+        fidl_fuchsia_data as fdata,
         maplit::hashmap,
         std::convert::TryInto,
     };
@@ -275,7 +278,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn expose_event_from_child_error() {
         let builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
@@ -295,7 +298,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn offer_event_from_child_error() {
         let builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
@@ -321,7 +324,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn verify_events_routing() {
         let builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
         builder
@@ -490,6 +493,90 @@ mod tests {
                                         "fuchsia.logger.LogSink".to_string()))),
                                 dependency_type: DependencyType::Strong,
                             }),
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+            ],
+        )
+        .await;
+    }
+
+    #[fuchsia::test]
+    async fn events_routing_doesnt_add_duplicate_use() {
+        let builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
+        builder
+            .add_mock_child(
+                "a",
+                |_: mock::MockHandles| Box::pin(async move { Ok(()) }),
+                ChildProperties::new(),
+            )
+            .await
+            .unwrap()
+            .add_route(
+                RouteBuilder::event(Event::Started, cm_rust::EventMode::Sync)
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component("a")]),
+            )
+            .await
+            .unwrap()
+            .add_route(
+                RouteBuilder::event(Event::Started, cm_rust::EventMode::Sync)
+                    .source(RouteEndpoint::AboveRoot)
+                    .targets(vec![RouteEndpoint::component("a")]),
+            )
+            .await
+            .unwrap();
+
+        build_and_check_results(
+            builder,
+            vec![
+                (
+                    "",
+                    ComponentDecl {
+                        offers: vec![OfferDecl::Event(OfferEventDecl {
+                            source: cm_rust::OfferSource::Parent,
+                            source_name: "started".into(),
+                            target: cm_rust::OfferTarget::static_child("a".to_string()),
+                            target_name: "started".into(),
+                            mode: EventMode::Sync,
+                            filter: None,
+                        })],
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as
+                            // their URLs are unknown until registration with the realm builder
+                            // server, and that happens during Realm::create
+                        ],
+                        ..ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    ComponentDecl {
+                        program: Some(ProgramDecl {
+                            runner: Some(mock::RUNNER_NAME.try_into().unwrap()),
+                            info: fdata::Dictionary {
+                                entries: Some(vec![fdata::DictionaryEntry {
+                                    key: mock::MOCK_ID_KEY.to_string(),
+                                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                                        "0".to_string(),
+                                    ))),
+                                }]),
+                                ..fdata::Dictionary::EMPTY
+                            },
+                        }),
+                        uses: vec![UseDecl::Event(UseEventDecl {
+                            source: UseSource::Parent,
+                            source_name: "started".into(),
+                            target_name: "started".into(),
+                            filter: None,
+                            mode: EventMode::Sync,
+                            dependency_type: DependencyType::Strong,
+                        })],
+                        children: vec![
+                            // Mock children aren't inserted into the decls at this point, as
+                            // their URLs are unknown until registration with the realm builder
+                            // server, and that happens during Realm::create
                         ],
                         ..ComponentDecl::default()
                     },
