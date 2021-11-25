@@ -3,13 +3,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import sys
-import argparse
 import os
 import unittest
-from depfile import DepFile
+import tempfile
 
-global OUTFILE_NAME
+from depfile import DepFile
 
 
 class DepFileTests(unittest.TestCase):
@@ -55,10 +53,10 @@ class DepFileTests(unittest.TestCase):
         input_b = "things/input_b"
         input_c = os.path.abspath("../input_c")
 
-        dep_file = DepFile(output)
-        dep_file.update([input_a, input_b, input_c])
+        depfile = DepFile(output)
+        depfile.update([input_a, input_b, input_c])
 
-        self.assertEqual(str(dep_file), DepFileTests.expected)
+        self.assertEqual(str(depfile), DepFileTests.expected)
 
     def test_depfile_writing(self):
         depfile = DepFile("/foo/bar/baz/output", rebase="/foo/bar")
@@ -68,18 +66,15 @@ class DepFileTests(unittest.TestCase):
                 "/foo/input_c"
             ])
 
-        with open(OUTFILE_NAME, 'w') as outfile:
+        with tempfile.TemporaryFile('w+') as outfile:
+            # Write out the depfile
             depfile.write_to(outfile)
 
-        with open(OUTFILE_NAME, 'r') as outfile:
+            # Read the contents back in
+            outfile.seek(0)
             contents = outfile.read()
-            self.assertEqual(contents, str(depfile))
+            self.assertEqual(contents, DepFileTests.expected)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser('Test depfile creation')
-    parser.add_argument("--outfile")
-    args = parser.parse_args()
-    OUTFILE_NAME = args.outfile
-
-    unittest.main(argv=[sys.argv[0]])
+    unittest.main()

@@ -2,19 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/python/python_action.gni")
+import("//build/python/python_host_test.gni")
 
-python_action("depfile_module_test") {
-  testonly = true
-
-  modules = [ "//build/python/modules/depfile.py" ]
-  script = "depfile_test.py"
-  outputs = [ "${target_out_dir}/depfile.txt" ]
-
-  args = [
-    "--outfile",
-    rebase_path(outputs[0], root_build_dir),
-  ]
+python_host_test("depfile_module_test") {
+  main_source = "depfile_test.py"
+  libraries = [ "//build/python/modules/depfile" ]
 }
 
 group("tests") {
