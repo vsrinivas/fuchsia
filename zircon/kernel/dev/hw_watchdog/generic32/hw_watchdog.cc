@@ -13,10 +13,10 @@
 #include <zircon/types.h>
 
 #include <arch/arm64/periphmap.h>
+#include <dev/hw_watchdog/generic32/init.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
-#include <pdev/driver.h>
 #include <pdev/watchdog.h>
 #include <vm/physmap.h>
 
@@ -32,8 +32,8 @@ class GenericWatchdog32 {
 
   // Early init takes place while we are still single threaded, and don't need
   // to worry about thread safety.
-  void InitEarly(const void* driver_data, uint32_t length);
-  void Init(const void*, uint32_t);
+  void InitEarly(const dcfg_generic_32bit_watchdog_t& config);
+  void Init();
 
   // Actions
   void Pet() TA_EXCL(lock_) {
@@ -139,7 +139,7 @@ static const pdev_watchdog_ops_t THUNKS = {
     .is_petting_suppressed = []() -> bool { return g_watchdog.IsPettingSuppressed(); },
 };
 
-void GenericWatchdog32::InitEarly(const void* driver_data, uint32_t length) {
+void GenericWatchdog32::InitEarly(const dcfg_generic_32bit_watchdog_t& config) {
   // "Assert" that we are holding the lock.  While this is technically a no-op,
   // it tells the thread analyzer to pretend that we are holding the lock.  We
   // are in the early init stage of boot, so it is too early to need to worry
@@ -156,24 +156,16 @@ void GenericWatchdog32::InitEarly(const void* driver_data, uint32_t length) {
   // Sadly, it is too early to do any logging.  If we manage to make it to the
   // PLATFORM init level, we will log the errors there.
 
-  // We must have config, and that config must be of the proper length.  If that
-  // checks out, go ahead and copy the config.
-  if ((driver_data == nullptr) || (length != sizeof(cfg_))) {
-    early_init_result_ = ZX_ERR_INVALID_ARGS;
-    return;
-  }
-  memcpy(&cfg_, driver_data, sizeof(cfg_));
-
   // All generic watchdog drivers must have some way of petting the dog.
   // Enable/disable is optional, but not petting.
-  if (!cfg_.pet_action.addr) {
+  if (!config.pet_action.addr) {
     early_init_result_ = ZX_ERR_INVALID_ARGS;
     return;
   }
 
   // The watchdog period must be at least 1 mSec.  We don't want to spend 15% of
   // our CPU petting the watchdog all of the time.
-  if (cfg_.watchdog_period_nsec < KDRV_GENERIC_32BIT_WATCHDOG_MIN_PERIOD) {
+  if (config.watchdog_period_nsec < KDRV_GENERIC_32BIT_WATCHDOG_MIN_PERIOD) {
     early_init_result_ = ZX_ERR_INVALID_ARGS;
     return;
   }
@@ -183,6 +175,7 @@ void GenericWatchdog32::InitEarly(const void* driver_data, uint32_t length) {
   // have a problem.  If we cannot translate the enable or disable address, then
   // so be it.  That functionality will be unavailable, but at least we can pet
   // the dog.
+  cfg_ = config;
   if (!TranslatePAddr(&cfg_.pet_action.addr)) {
     early_init_result_ = ZX_ERR_IO;
   }
@@ -212,7 +205,7 @@ void GenericWatchdog32::InitEarly(const void* driver_data, uint32_t length) {
   early_init_result_ = ZX_OK;
 }
 
-void GenericWatchdog32::Init(const void*, uint32_t) {
+void GenericWatchdog32::Init() {
   Guard<SpinLock, IrqSave> guard{&lock_};
 
   // Ok, we are much farther along in the boot now.  We should be able to do
@@ -280,11 +273,8 @@ bool GenericWatchdog32::TranslatePAddr(uint64_t* paddr) {
   return (*paddr != 0);
 }
 
-LK_PDEV_INIT(
-    generic_32bit_watchdog_init_early, KDRV_GENERIC_32BIT_WATCHDOG,
-    [](const void* driver_data, uint32_t length) { g_watchdog.InitEarly(driver_data, length); },
-    LK_INIT_LEVEL_PLATFORM_EARLY)
-LK_PDEV_INIT(
-    generic_32bit_watchdog_init, KDRV_GENERIC_32BIT_WATCHDOG,
-    [](const void* driver_data, uint32_t length) { g_watchdog.Init(driver_data, length); },
-    LK_INIT_LEVEL_PLATFORM)
+void Generic32BitWatchdogEarlyInit(const dcfg_generic_32bit_watchdog_t& config) {
+  g_watchdog.InitEarly(config);
+}
+
+void Generic32BitWatchdogLateInit() { g_watchdog.Init(); }

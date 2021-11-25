@@ -45,5 +45,19 @@ fitx::result<fitx::failed> ArchAppendMexecDataFromHandoff(MexecDataImage& image,
     }
   }
 
+  if (handoff.arch_handoff.generic_32bit_watchdog_driver) {
+    const zbi_header_t header = {
+        .type = ZBI_TYPE_KERNEL_DRIVER,
+        .extra = KDRV_GENERIC_32BIT_WATCHDOG,
+    };
+    auto result = image.Append(
+        header, zbitl::AsBytes(handoff.arch_handoff.generic_32bit_watchdog_driver.value()));
+    if (result.is_error()) {
+      printf("mexec: could not append generic 32-bit watchdog driver config: ");
+      zbitl::PrintViewError(result.error_value());
+      return fitx::failed();
+    }
+  }
+
   return fitx::ok();
 }
