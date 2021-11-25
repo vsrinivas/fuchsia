@@ -1,6 +1,7 @@
 {
     "include": [
         "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_audio.shard.cmx",
         "//src/chromium/web_engine/meta/shards/web_engine_feature_hardware_video_decoder.shard.cmx",
         "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
         "//src/chromium/web_engine/meta/shards/web_engine_view.shard.cmx",
@@ -14,9 +15,7 @@
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
-            "fuchsia.media.Audio",
             "fuchsia.media.ProfileProvider",
-            "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.ui.input.ImeService",

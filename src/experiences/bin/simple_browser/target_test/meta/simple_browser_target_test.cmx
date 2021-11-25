@@ -1,5 +1,6 @@
 {
     "include": [
+	"//src/chromium/web_engine/meta/shards/web_engine_feature_audio.shard.cmx",
         "//src/lib/vulkan/application-container.shard.cmx"
     ],
     "program": {
@@ -13,8 +14,6 @@
             "fuchsia.fonts.Provider",
             "fuchsia.intl.PropertyProvider",
             "fuchsia.logger.LogSink",
-            "fuchsia.media.Audio",
-            "fuchsia.media.SessionAudioConsumerFactory",
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.memorypressure.Provider",
             "fuchsia.net.interfaces.State",
