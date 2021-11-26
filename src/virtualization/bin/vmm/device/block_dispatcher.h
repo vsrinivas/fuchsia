@@ -50,12 +50,13 @@ using NestedBlockDispatcherCallback =
     fit::function<void(size_t size, std::unique_ptr<BlockDispatcher>)>;
 
 // Creates a BlockDispatcher based on a file.
-void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, NestedBlockDispatcherCallback callback);
+void CreateRawBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FilePtr file,
+                              NestedBlockDispatcherCallback callback);
 
 // Creates a BlockDispatcher based on a file, by acquiring a vmo representing the file. Falls back
 // to CreateRawBlockDispatcher when failing to acquire a vmo.
-void CreateVmoBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
-                              NestedBlockDispatcherCallback callback);
+void CreateVmoBlockDispatcher(async_dispatcher_t* dispatcher, fuchsia::io::FilePtr file,
+                              uint32_t vmo_flags, NestedBlockDispatcherCallback callback);
 
 // Creates a BlockDispatcher based on another BlockDispatcher, but stores writes
 // in memory.

@@ -266,7 +266,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
                         public fuchsia::virtualization::hardware::VirtioBlock {
  public:
   VirtioBlockImpl(sys::ComponentContext* context, async_dispatcher_t* dispatcher)
-      : DeviceBase(context), request_stream_(dispatcher) {}
+      : DeviceBase(context), dispatcher_(dispatcher), request_stream_(dispatcher) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -316,7 +316,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     if (mode == fuchsia::virtualization::BlockMode::READ_WRITE) {
       vmo_flags |= fuchsia::io::VMO_FLAG_WRITE;
     }
-    CreateVmoBlockDispatcher(file.Bind(), vmo_flags, std::move(nested));
+    CreateVmoBlockDispatcher(dispatcher_, file.Bind(), vmo_flags, std::move(nested));
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
@@ -336,6 +336,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void Ready(uint32_t negotiated_features, ReadyCallback callback) override { callback(); }
 
+  async_dispatcher_t* dispatcher_;
   bool read_only_;
   RequestStream request_stream_;
 };

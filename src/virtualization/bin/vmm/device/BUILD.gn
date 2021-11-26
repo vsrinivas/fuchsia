@@ -123,6 +123,8 @@ source_set("block") {
     "block_dispatcher.h",
     "qcow.cc",
     "qcow.h",
+    "request_queue.cc",
+    "request_queue.h",
   ]
   public_deps = [
     ":device",
@@ -386,13 +388,18 @@ executable("device_unittests") {
 
   sources = [
     "qcow_unittest.cc",
+    "request_queue_unittest.cc",
     "volatile_write_block_dispatcher_unittest.cc",
   ]
 
   deps = [
+    ":block",
     ":qcow_test_data",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
   ]
 }
