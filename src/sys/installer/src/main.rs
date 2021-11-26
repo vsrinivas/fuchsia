@@ -11,7 +11,9 @@ use {
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_hardware_block::BlockProxy,
-    fidl_fuchsia_paver::{DynamicDataSinkProxy, PaverMarker, PaverProxy},
+    fidl_fuchsia_paver::{
+        BootManagerMarker, Configuration, DynamicDataSinkProxy, PaverMarker, PaverProxy,
+    },
     fidl_fuchsia_sysinfo as fsysinfo, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx, fuchsia_zircon_status as zx_status,
@@ -200,6 +202,25 @@ fn do_confirmation_prompt() -> Result<bool, Error> {
     Ok(true)
 }
 
+/// Set the active boot configuration for the newly-installed system. We always boot from the "A"
+/// slot to start with.
+async fn set_active_configuration(paver: &PaverProxy) -> Result<(), Error> {
+    let (boot_manager, server) = fidl::endpoints::create_proxy::<BootManagerMarker>()
+        .context("Creating boot manager endpoints")?;
+
+    paver.find_boot_manager(server).context("Could not find boot manager")?;
+    zx::Status::ok(
+        boot_manager
+            .set_configuration_active(Configuration::A)
+            .await
+            .context("Sending set configuration active")?,
+    )
+    .context("Setting active configuration")?;
+
+    zx::Status::ok(boot_manager.flush().await.context("Sending boot manager flush")?)
+        .context("Flushing active configuration")
+}
+
 #[derive(Debug, StructOpt)]
 #[structopt(name = "installer", about = "install Fuchsia to a disk")]
 struct Opt {
@@ -244,7 +265,7 @@ async fn main() -> Result<(), Error> {
         return Ok(());
     }
 
-    let (_paver, data_sink) =
+    let (paver, data_sink) =
         paver_connect(&block_device_path).context("Could not contact paver")?;
 
     println!("Wiping old partition tables...");
@@ -277,16 +298,26 @@ async fn main() -> Result<(), Error> {
         }
     }
 
+    zx::Status::ok(data_sink.flush().await.context("Sending flush")?)
+        .context("Flushing partitions")?;
+
+    set_active_configuration(&paver)
+        .await
+        .context("Setting active configuration for the new system")?;
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    use fidl_fuchsia_paver::{BootManagerRequest, BootManagerRequestStream, PaverRequest};
+
     use {
         super::*,
         fidl::endpoints::RequestStream,
         fidl_fuchsia_device::{ControllerRequest, ControllerRequestStream},
         fidl_fuchsia_hardware_block::{BlockInfo, BlockRequest, BlockRequestStream},
+        fidl_fuchsia_paver::PaverRequestStream,
         futures::prelude::*,
     };
 
@@ -407,6 +438,52 @@ mod tests {
         )?;
         let info = block_device_get_info(chan).await?;
         assert!(info.is_none());
+        Ok(())
+    }
+
+    async fn fake_boot_manager(mut server: BootManagerRequestStream) {
+        while let Some(request) = server.try_next().await.unwrap() {
+            match request {
+                BootManagerRequest::SetConfigurationActive { configuration, responder } => {
+                    assert_eq!(configuration, Configuration::A);
+                    responder.send(zx::Status::OK.into_raw()).expect("Replying succeeds");
+                }
+                BootManagerRequest::Flush { responder } => {
+                    responder.send(zx::Status::OK.into_raw()).expect("Replying succeeds");
+                }
+                _ => unimplemented!(),
+            }
+        }
+    }
+
+    async fn fake_paver(mut server: PaverRequestStream) {
+        while let Some(request) = server.try_next().await.unwrap() {
+            match request {
+                PaverRequest::FindBootManager { boot_manager, .. } => {
+                    fasync::Task::spawn(async move {
+                        fake_boot_manager(
+                            boot_manager.into_stream().expect("Making stream succeeds"),
+                        )
+                        .await;
+                    })
+                    .detach();
+                }
+                _ => unimplemented!(),
+            }
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_active_configuration() -> Result<(), Error> {
+        let (paver, server) = fidl::endpoints::create_proxy_and_stream::<PaverMarker>()
+            .context("Creating paver endpoints")?;
+
+        fasync::Task::spawn(async move {
+            fake_paver(server).await;
+        })
+        .detach();
+
+        set_active_configuration(&paver).await.expect("Setting active configuration succeeds");
         Ok(())
     }
 }
