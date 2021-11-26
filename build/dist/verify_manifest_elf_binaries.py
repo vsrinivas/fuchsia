@@ -71,9 +71,7 @@ from typing import Any, Iterable, List, Set, Dict, Tuple, Optional
 #
 # 6) Verify that debug (unstripped) files for binaries are provided
 #    in the build root directory, or toolchain-specific lib directories.
-#    Missing entries just generate a WARNING, but are not an error
-#    because they do happen in practice (e.g. for prebuilt driver
-#    binaries), though are quite rare.
+#    Prebuilts are an exception, and are allowed not to have debug files.
 #
 
 
@@ -373,15 +371,21 @@ def main():
                     '%s is not stripped: %s' % (target, info.filename))
 
     # Verify that all ELF files have their debug file available.
-    # This is only a WARNING, not an error, since it can happen for
-    # prebuilt drivers, or with Go binaries.
     if args.check_debug_files:
         for target, source_file in manifest_entries.items():
+            # Prebuilts are allowed to have missing debug files.
+            # See: fxbug.dev/89174
+            if "/prebuilt/" in source_file:
+                continue
             if target in elf_entries:
                 debugfile = find_debug_file(
                     source_file, depfile_items, args.toolchain_lib_dir)
                 if debugfile is None:
                     print('WARNING: No debug file found for %s' % source_file)
+                    # TODO(fxbug.dev/89436): variant builds get
+                    # (falsely?) flagged.
+                    # Fix, then delete above and uncomment below.
+                    #errors.append('No debug file found for ' + source_file)
 
     if errors:
         print(
