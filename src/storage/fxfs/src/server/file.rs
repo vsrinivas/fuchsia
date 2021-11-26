@@ -25,7 +25,7 @@ use {
     fidl_fuchsia_mem::Buffer,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
-    futures::join,
+    futures::{channel::oneshot, join},
     once_cell::sync::Lazy,
     std::sync::{
         atomic::{AtomicBool, AtomicUsize, Ordering},
@@ -143,13 +143,14 @@ impl FxFile {
         self.open_count.load(Ordering::Relaxed)
     }
 
-    pub fn create_connection(
+    pub async fn create_connection(
         this: OpenedNode<FxFile>,
         scope: ExecutionScope,
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
+        shutdown: oneshot::Receiver<()>,
     ) {
-        FileConnection::<FxFile>::create_connection(
+        FileConnection::<FxFile>::create_connection_async(
             // Note readable/writable/executable do not override what's set in flags, they merely
             // tell the FileConnection which set of rights the file can be opened as.
             scope.clone(),
@@ -159,7 +160,9 @@ impl FxFile {
             /*readable=*/ true,
             /*writable=*/ true,
             /*executable=*/ false,
-        );
+            shutdown,
+        )
+        .await;
     }
 
     /// Marks the file as being purged.  Returns true if there are no open references.
@@ -323,7 +326,9 @@ impl DirectoryEntry for FxFile {
             send_on_open_with_error(flags, server_end, Status::NOT_FILE);
             return;
         }
-        Self::create_connection(OpenedNode::new(self), scope, flags, server_end);
+        scope.clone().spawn_with_shutdown(move |shutdown| {
+            Self::create_connection(OpenedNode::new(self), scope, flags, server_end, shutdown)
+        });
     }
 
     fn entry_info(&self) -> EntryInfo {

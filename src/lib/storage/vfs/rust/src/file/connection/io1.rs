@@ -92,13 +92,14 @@ impl<T: 'static + File> FileConnection<T> {
         // process of shutting down (this is the only error state currently). `server_end` and the
         // file will be closed when they're dropped - there seems to be no error to report there.
         let _ = scope.clone().spawn_with_shutdown(move |shutdown| {
-            Self::create_connection_task(
+            Self::create_connection_async(
                 scope, file, flags, server_end, readable, writable, executable, shutdown,
             )
         });
     }
 
-    async fn create_connection_task(
+    /// Same as create_connection, but does not spawn a new task.
+    pub async fn create_connection_async(
         scope: ExecutionScope,
         file: OpenFile<T>,
         flags: u32,

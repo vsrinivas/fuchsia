@@ -25,7 +25,7 @@ use crate::{
 };
 
 use {
-    anyhow::Error,
+    anyhow::{bail, Error},
     either::{Either, Left, Right},
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
@@ -33,9 +33,11 @@ use {
         OPEN_FLAG_DESCRIBE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::{UnlinkFlags, UnlinkOptions},
-    fidl_fuchsia_io_admin::{DirectoryAdminMarker, DirectoryAdminRequest},
+    fidl_fuchsia_io_admin::{
+        DirectoryAdminMarker, DirectoryAdminRequest, DirectoryAdminRequestStream,
+    },
     fuchsia_zircon::Status,
-    futures::future::BoxFuture,
+    futures::{channel::oneshot, future::BoxFuture},
     std::sync::Arc,
 };
 
@@ -83,45 +85,17 @@ impl DerivedConnection for MutableConnection {
         flags: u32,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        // TODO(fxbug.dev/82054): These flags should be validated before create_connection is called
-        // since at this point the directory resource has already been opened/created.
-        let flags = match new_connection_validate_flags(flags) {
-            Ok(updated) => updated,
-            Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
-                return;
-            }
-        };
-
-        let (requests, control_handle) =
-            match ServerEnd::<DirectoryAdminMarker>::new(server_end.into_channel())
-                .into_stream_and_control_handle()
-            {
-                Ok((requests, control_handle)) => (requests, control_handle),
-                Err(_) => {
-                    // As we report all errors on `server_end`, if we failed to send an error over
-                    // this connection, there is nowhere to send the error tothe error to.
-                    return;
-                }
-            };
-
-        if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::Directory(DirectoryObject);
-            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
-                Ok(()) => (),
-                Err(_) => return,
-            }
+        if let Ok((connection, requests)) =
+            Self::prepare_connection(scope.clone(), directory, flags, server_end)
+        {
+            // If we fail to send the task to the executor, it is probably shut down or is in the
+            // process of shutting down (this is the only error state currently).  So there is
+            // nothing for us to do - the connection will be closed automatically when the
+            // connection object is dropped.
+            let _ = scope.spawn_with_shutdown(move |shutdown| {
+                connection.handle_requests(requests, shutdown)
+            });
         }
-
-        let connection = Self::new(scope.clone(), directory, flags);
-
-        // If we fail to send the task to the executor, it is probably shut down or is in the
-        // process of shutting down (this is the only error state currently).  So there is nothing
-        // for us to do - the connection will be closed automatically when the connection object is
-        // dropped.
-        let _ = scope.spawn_with_shutdown(|shutdown| {
-            handle_requests::<Self>(requests, connection, shutdown)
-        });
     }
 
     fn entry_not_found(
@@ -164,6 +138,21 @@ impl DerivedConnection for MutableConnection {
 }
 
 impl MutableConnection {
+    /// Very similar to create_connection, but creates a connection without spawning a new task.
+    pub async fn create_connection_async(
+        scope: ExecutionScope,
+        directory: OpenDirectory<dyn MutableConnectionClient>,
+        flags: u32,
+        server_end: ServerEnd<NodeMarker>,
+        shutdown: oneshot::Receiver<()>,
+    ) {
+        if let Ok((connection, requests)) =
+            Self::prepare_connection(scope, directory, flags, server_end)
+        {
+            connection.handle_requests(requests, shutdown).await;
+        }
+    }
+
     async fn handle_request(
         &mut self,
         request: DirectoryAdminRequest,
@@ -333,6 +322,42 @@ impl MutableConnection {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }
+    }
+
+    fn prepare_connection(
+        scope: ExecutionScope,
+        directory: OpenDirectory<dyn MutableConnectionClient>,
+        flags: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) -> Result<(Self, DirectoryAdminRequestStream), Error> {
+        // TODO(fxbug.dev/82054): These flags should be validated before create_connection is called
+        // since at this point the directory resource has already been opened/created.
+        let flags = match new_connection_validate_flags(flags) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                bail!(status);
+            }
+        };
+
+        let (requests, control_handle) =
+            ServerEnd::<DirectoryAdminMarker>::new(server_end.into_channel())
+                .into_stream_and_control_handle()?;
+
+        if flags & OPEN_FLAG_DESCRIBE != 0 {
+            let mut info = NodeInfo::Directory(DirectoryObject);
+            control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info))?;
+        }
+
+        Ok((Self::new(scope, directory, flags), requests))
+    }
+
+    async fn handle_requests(
+        self,
+        requests: DirectoryAdminRequestStream,
+        shutdown: oneshot::Receiver<()>,
+    ) {
+        handle_requests::<Self>(requests, self, shutdown).await;
     }
 }
 

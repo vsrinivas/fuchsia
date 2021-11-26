@@ -42,7 +42,7 @@ use {
     vfs::{
         common::send_on_open_with_error,
         directory::{
-            connection::{io1::DerivedConnection, util::OpenDirectory},
+            connection::util::OpenDirectory,
             dirents_sink::{self, AppendResult, Sink},
             entry::{DirectoryEntry, EntryInfo},
             entry_container::{Directory, MutableDirectory},
@@ -453,16 +453,15 @@ impl DirectoryEntry for FxDirectory {
         path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
-        let cloned_scope = scope.clone();
-        scope.spawn(async move {
+        scope.clone().spawn_with_shutdown(move |shutdown| async move {
             // TODO(jfsulliv): Factor this out into a visitor-pattern style method for FxNode, e.g.
             // FxNode::visit(FileFn, DirFn).
             match self.lookup(flags, mode, path).await {
                 Err(e) => send_on_open_with_error(flags, server_end, map_to_status(e)),
                 Ok(node) => {
                     if node.is::<FxDirectory>() {
-                        MutableConnection::create_connection(
-                            cloned_scope,
+                        MutableConnection::create_connection_async(
+                            scope,
                             OpenDirectory::new(
                                 node.downcast::<FxDirectory>()
                                     .unwrap_or_else(|_| unreachable!())
@@ -470,14 +469,18 @@ impl DirectoryEntry for FxDirectory {
                             ),
                             flags,
                             server_end,
-                        );
+                            shutdown,
+                        )
+                        .await;
                     } else if node.is::<FxFile>() {
                         FxFile::create_connection(
                             node.downcast::<FxFile>().unwrap_or_else(|_| unreachable!()),
-                            cloned_scope,
+                            scope,
                             flags,
                             server_end,
-                        );
+                            shutdown,
+                        )
+                        .await;
                     } else {
                         unreachable!();
                     }
