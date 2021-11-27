@@ -582,6 +582,8 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
           case flat::Type::Kind::kIdentifier:
           case flat::Type::Kind::kBox:
             continue;
+          case flat::Type::Kind::kUntypedNumeric:
+            assert(false && "compiler bug: should not have untyped numeric here");
         }
       }
 

@@ -86,7 +86,7 @@ protocol P {
 
   // NOTE(fxbug.dev/72924): we provide a more general error because there are multiple
   // possible interpretations.
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrUnexpectedConstraint);
 }
 

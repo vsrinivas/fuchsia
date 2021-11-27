@@ -78,7 +78,7 @@ type Fruit = bits : uint64 {
     APPLE = -2;
 };
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantOverflowsType,
                                       fidl::ErrCouldNotResolveMember);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
 }
@@ -92,7 +92,7 @@ type Fruit = bits : uint8 {
     APPLE = 256;
 };
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantOverflowsType,
                                       fidl::ErrCouldNotResolveMember);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "256");
 }

@@ -1477,7 +1477,7 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString));
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
@@ -1494,7 +1494,7 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
@@ -1511,7 +1511,7 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "uint8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kUint8));
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantOverflowsType,
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
@@ -1730,7 +1730,7 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "string", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kString));
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
@@ -1749,7 +1749,7 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "bool", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
@@ -1768,7 +1768,7 @@ type MyStruct = struct {};
                       experimental_flags);
   library.AddAttributeSchema("attr").AddArg(
       "int8", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kInt8));
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConvertConstantToType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
@@ -1842,8 +1842,7 @@ type MyStruct = struct {};
   EXPECT_EQ(example_struct->attributes->attributes[0]->args[0]->name, "foo");
 }
 
-// TODO(fxbug.dev/87614): Enable this test.
-TEST(AttributesTests, DISABLED_BadReferencesNonexistentConstWithoutSchema) {
+TEST(AttributesTests, BadReferencesNonexistentConstWithoutSchema) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1867,8 +1866,7 @@ type MyStruct = struct {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveAttributeArg);
 }
 
-// TODO(fxbug.dev/87614): Enable this test.
-TEST(AttributesTests, DISABLED_BadReferencesInvalidConstWithoutSchema) {
+TEST(AttributesTests, BadReferencesInvalidConstWithoutSchema) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1880,7 +1878,7 @@ const BAD bool = "not a bool";
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 3);
-  EXPECT_ERR(library.errors()[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(library.errors()[0], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
   EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveAttributeArg);
 }
@@ -1899,13 +1897,12 @@ const BAD bool = "not a bool";
       "value", fidl::flat::AttributeArgSchema(fidl::flat::ConstantValue::Kind::kBool));
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 3);
-  EXPECT_ERR(library.errors()[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(library.errors()[0], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
   EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveAttributeArg);
 }
 
-// TODO(fxbug.dev/87521): Enable this test.
-TEST(AttributesTests, DISABLED_BadSelfReferenceWithoutSchemaBool) {
+TEST(AttributesTests, BadSelfReferenceWithoutSchemaBool) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1917,8 +1914,7 @@ const BAR bool = true;
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
-// TODO(fxbug.dev/87521): Enable this test.
-TEST(AttributesTests, DISABLED_BadSelfReferenceWithoutSchemaString) {
+TEST(AttributesTests, BadSelfReferenceWithoutSchemaString) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1944,8 +1940,7 @@ const BAR bool = true;
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
-// TODO(fxbug.dev/87521): Enable this test.
-TEST(AttributesTests, DISABLED_BadMutualReferenceWithoutSchemaBool) {
+TEST(AttributesTests, BadMutualReferenceWithoutSchemaBool) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -1959,8 +1954,7 @@ const SECOND bool = false;
                                       fidl::ErrCouldNotResolveAttributeArg);
 }
 
-// TODO(fxbug.dev/87521): Enable this test.
-TEST(AttributesTests, DISABLED_BadMutualReferenceWithoutSchemaString) {
+TEST(AttributesTests, BadMutualReferenceWithoutSchemaString) {
   TestLibrary library(R"FIDL(
 library example;
 

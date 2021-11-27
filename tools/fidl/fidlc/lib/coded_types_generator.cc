@@ -319,6 +319,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
     case flat::Type::Kind::kBox:
       // this defers to the code path for a nullable struct identifier type.
       return CompileType(static_cast<const flat::BoxType*>(type)->boxed_type, context);
+    case flat::Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
+      __builtin_unreachable();
   }
 }
 

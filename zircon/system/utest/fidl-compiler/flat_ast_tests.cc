@@ -35,10 +35,10 @@ TEST(FlatAstTests, GoodImplicitAssumptions) {
 TEST(FlatAstTests, GoodCompareHandles) {
   auto name_not_important = Name::CreateIntrinsic("ignore");
   auto rights1Constant = std::make_unique<Constant>(Constant::Kind::kLiteral, SourceSpan());
-  rights1Constant->ResolveTo(std::make_unique<HandleRights>(1));
+  rights1Constant->ResolveTo(std::make_unique<HandleRights>(1), nullptr);
   auto rights1Value = static_cast<const HandleRights*>(&rights1Constant->Value());
   auto rights2Constant = std::make_unique<Constant>(Constant::Kind::kLiteral, SourceSpan());
-  rights2Constant->ResolveTo(std::make_unique<HandleRights>(2));
+  rights2Constant->ResolveTo(std::make_unique<HandleRights>(2), nullptr);
   auto rights2Value = static_cast<const HandleRights*>(&rights2Constant->Value());
   fidl::flat::Resource* resource_decl_not_needed = nullptr;
   HandleType nonnullable_channel_rights1(name_not_important, resource_decl_not_needed, 4,

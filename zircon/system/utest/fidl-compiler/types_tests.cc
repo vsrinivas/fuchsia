@@ -664,7 +664,7 @@ type Foo = resource struct {
 };
 )FIDL");
 
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrUnexpectedConstraint);
 }
 

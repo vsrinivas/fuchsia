@@ -31,6 +31,7 @@ struct Type : public Object {
     kHandle,
     kTransportSide,
     kPrimitive,
+    kUntypedNumeric,
     kIdentifier,
   };
 
@@ -319,6 +320,15 @@ struct BoxType final : public Type {
     return Type::Compare(o).Compare(name, o.name).Compare(boxed_type, o.boxed_type);
   }
 
+  bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
+                        const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
+                        LayoutInvocation* out_params) const override;
+};
+
+struct UntypedNumericType final : public Type {
+  UntypedNumericType(const Name& name)
+      : Type(name, Kind::kUntypedNumeric, types::Nullability::kNonnullable) {}
+  std::any AcceptAny(VisitorAny* visitor) const override;
   bool ApplyConstraints(const flat::LibraryMediator& lib, const TypeConstraints& constraints,
                         const flat::TypeTemplate* layout, std::unique_ptr<Type>* out_type,
                         LayoutInvocation* out_params) const override;

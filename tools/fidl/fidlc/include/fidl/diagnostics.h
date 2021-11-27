@@ -151,12 +151,10 @@ constexpr ErrorDef<flat::Name> ErrExpectedValueButGotType("{} is a type, but a v
 constexpr ErrorDef<flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(
     "mismatched named type assignment: cannot define a constant or default value of type {} "
     "using a value of type {}");
-constexpr ErrorDef<flat::IdentifierConstant *, const flat::Type *, const flat::Type *>
-    ErrCannotConvertConstantToType("{}, of type {}, cannot be converted to type {}");
-constexpr ErrorDef<flat::LiteralConstant *, uint64_t, const flat::Type *>
-    ErrStringConstantExceedsSizeBound("{} (string:{}) exceeds the size bound of type {}");
-constexpr ErrorDef<flat::LiteralConstant *, const flat::Type *>
-    ErrConstantCannotBeInterpretedAsType("{} cannot be interpreted as type {}");
+constexpr ErrorDef<const flat::Constant *, const flat::Type *, const flat::Type *>
+    ErrTypeCannotBeConvertedToType("{} (type {}) cannot be converted to type {}");
+constexpr ErrorDef<const flat::Constant *, const flat::Type *> ErrConstantOverflowsType(
+    "{} overflows type {}");
 constexpr ErrorDef ErrCouldNotResolveIdentifierToType("could not resolve identifier to a type");
 constexpr ErrorDef ErrBitsMemberMustBePowerOfTwo("bits members must be powers of two");
 constexpr ErrorDef<std::string> ErrFlexibleEnumMemberWithMaxValue(

@@ -223,6 +223,9 @@ bool IsSimple(const Type* type, Reporter* reporter) {
         case Type::Kind::kIdentifier:
         case Type::Kind::kBox:
           return false;
+        case Type::Kind::kUntypedNumeric:
+          assert(false && "compiler bug: should not have untyped numeric here");
+          return false;
       }
     }
     case Type::Kind::kString: {
@@ -257,10 +260,12 @@ bool IsSimple(const Type* type, Reporter* reporter) {
           return depth == 0u;
       }
     }
-    case Type::Kind::kBox: {
+    case Type::Kind::kBox:
       // we can handle a depth of 1 because the secondary object is directly accessible.
       return depth <= 1u;
-    }
+    case Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
+      return false;
   }
 }
 
@@ -320,6 +325,16 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
                                out_type, out_params);
 }
 
+const Size* Typespace::InternSize(uint32_t size) {
+  sizes_.push_back(std::make_unique<Size>(size));
+  return sizes_.back().get();
+}
+
+const Type* Typespace::Intern(std::unique_ptr<Type> type) {
+  types_.push_back(std::move(type));
+  return types_.back().get();
+}
+
 void Typespace::AddTemplate(std::unique_ptr<TypeTemplate> type_template) {
   templates_.emplace(type_template->name(), std::move(type_template));
 }
@@ -366,6 +381,8 @@ class PrimitiveTypeTemplate : public TypeTemplate {
                   num_params);
     }
 
+    // TODO(fxbug.dev/76219): Should instead use the static const types provided
+    // on Typespace, e.g. Typespace::kBoolType.
     PrimitiveType type(name_, subtype_);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
   }
@@ -1021,6 +1038,15 @@ bool BoxType::ApplyConstraints(const flat::LibraryMediator& lib, const TypeConst
   return true;
 }
 
+bool UntypedNumericType::ApplyConstraints(const flat::LibraryMediator& lib,
+                                          const TypeConstraints& constraints,
+                                          const TypeTemplate* layout,
+                                          std::unique_ptr<Type>* out_type,
+                                          LayoutInvocation* out_params) const {
+  assert(false && "compiler bug: should not have untyped numeric here");
+  return false;
+}
+
 Typespace Typespace::RootTypes(Reporter* reporter) {
   Typespace root_typespace(reporter);
 
@@ -1066,6 +1092,47 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
   add_template(std::make_unique<BoxTypeTemplate>(&root_typespace, reporter));
   return root_typespace;
 }
+
+// static
+const Name Typespace::kBoolTypeName = Name::CreateIntrinsic("bool");
+const Name Typespace::kInt8TypeName = Name::CreateIntrinsic("int8");
+const Name Typespace::kInt16TypeName = Name::CreateIntrinsic("int16");
+const Name Typespace::kInt32TypeName = Name::CreateIntrinsic("int32");
+const Name Typespace::kInt64TypeName = Name::CreateIntrinsic("int64");
+const Name Typespace::kUint8TypeName = Name::CreateIntrinsic("uint8");
+const Name Typespace::kUint16TypeName = Name::CreateIntrinsic("uint16");
+const Name Typespace::kUint32TypeName = Name::CreateIntrinsic("uint32");
+const Name Typespace::kUint64TypeName = Name::CreateIntrinsic("uint64");
+const Name Typespace::kFloat32TypeName = Name::CreateIntrinsic("float32");
+const Name Typespace::kFloat64TypeName = Name::CreateIntrinsic("float64");
+const Name Typespace::kUntypedNumericTypeName = Name::CreateIntrinsic("untyped numeric");
+const Name Typespace::kStringTypeName = Name::CreateIntrinsic("string");
+const PrimitiveType Typespace::kBoolType =
+    PrimitiveType(kBoolTypeName, types::PrimitiveSubtype::kBool);
+const PrimitiveType Typespace::kInt8Type =
+    PrimitiveType(kInt8TypeName, types::PrimitiveSubtype::kInt8);
+const PrimitiveType Typespace::kInt16Type =
+    PrimitiveType(kInt16TypeName, types::PrimitiveSubtype::kInt16);
+const PrimitiveType Typespace::kInt32Type =
+    PrimitiveType(kInt32TypeName, types::PrimitiveSubtype::kInt32);
+const PrimitiveType Typespace::kInt64Type =
+    PrimitiveType(kInt64TypeName, types::PrimitiveSubtype::kInt64);
+const PrimitiveType Typespace::kUint8Type =
+    PrimitiveType(kUint8TypeName, types::PrimitiveSubtype::kUint8);
+const PrimitiveType Typespace::kUint16Type =
+    PrimitiveType(kUint16TypeName, types::PrimitiveSubtype::kUint16);
+const PrimitiveType Typespace::kUint32Type =
+    PrimitiveType(kUint32TypeName, types::PrimitiveSubtype::kUint32);
+const PrimitiveType Typespace::kUint64Type =
+    PrimitiveType(kUint64TypeName, types::PrimitiveSubtype::kUint64);
+const PrimitiveType Typespace::kFloat32Type =
+    PrimitiveType(kFloat32TypeName, types::PrimitiveSubtype::kFloat32);
+const PrimitiveType Typespace::kFloat64Type =
+    PrimitiveType(kFloat64TypeName, types::PrimitiveSubtype::kFloat64);
+const UntypedNumericType Typespace::kUntypedNumericType =
+    UntypedNumericType(kUntypedNumericTypeName);
+const StringType Typespace::kUnboundedStringType = StringType(
+    Typespace::kStringTypeName, &VectorBaseType::kMaxSize, types::Nullability::kNonnullable);
 
 AttributeSchema& AttributeSchema::RestrictTo(std::set<AttributePlacement> placements) {
   assert(!placements.empty() && "must allow some placements");
@@ -1268,40 +1335,50 @@ void AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute, Attr
     return;
   }
 
+  const Type* target_type;
   switch (type_) {
     case ConstantValue::Kind::kDocComment:
-    case ConstantValue::Kind::kString: {
-      if (library->ResolveConstant(constant, &library->kUnboundedStringType)) {
-        arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
-      } else {
-        library->Fail(ErrCouldNotResolveAttributeArg, arg->span);
-      }
+      assert(false && "we know the target type of doc comments, and should not end up here");
+      return;
+    case ConstantValue::Kind::kString:
+      target_type = &Typespace::kUnboundedStringType;
       break;
-    }
     case ConstantValue::Kind::kBool:
-    case ConstantValue::Kind::kInt8:
-    case ConstantValue::Kind::kInt16:
-    case ConstantValue::Kind::kInt32:
-    case ConstantValue::Kind::kInt64:
-    case ConstantValue::Kind::kUint8:
-    case ConstantValue::Kind::kUint16:
-    case ConstantValue::Kind::kUint32:
-    case ConstantValue::Kind::kUint64:
-    case ConstantValue::Kind::kFloat32:
-    case ConstantValue::Kind::kFloat64: {
-      const std::string primitive_name = ConstantValue::KindToIntrinsicName(type_);
-      const std::optional<types::PrimitiveSubtype> primitive_subtype =
-          ConstantValue::KindToPrimitiveSubtype(type_);
-      assert(primitive_subtype.has_value());
-      auto primitive_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic(primitive_name),
-                                                            primitive_subtype.value());
-      if (library->ResolveConstant(constant, primitive_type.get())) {
-        arg->type = std::move(primitive_type);
-      } else {
-        library->Fail(ErrCouldNotResolveAttributeArg, arg->span);
-      }
+      target_type = &Typespace::kBoolType;
       break;
-    }
+    case ConstantValue::Kind::kInt8:
+      target_type = &Typespace::kInt8Type;
+      break;
+    case ConstantValue::Kind::kInt16:
+      target_type = &Typespace::kInt16Type;
+      break;
+    case ConstantValue::Kind::kInt32:
+      target_type = &Typespace::kInt32Type;
+      break;
+    case ConstantValue::Kind::kInt64:
+      target_type = &Typespace::kInt64Type;
+      break;
+    case ConstantValue::Kind::kUint8:
+      target_type = &Typespace::kUint8Type;
+      break;
+    case ConstantValue::Kind::kUint16:
+      target_type = &Typespace::kUint16Type;
+      break;
+    case ConstantValue::Kind::kUint32:
+      target_type = &Typespace::kUint32Type;
+      break;
+    case ConstantValue::Kind::kUint64:
+      target_type = &Typespace::kUint64Type;
+      break;
+    case ConstantValue::Kind::kFloat32:
+      target_type = &Typespace::kFloat32Type;
+      break;
+    case ConstantValue::Kind::kFloat64:
+      target_type = &Typespace::kFloat64Type;
+      break;
+  }
+  if (!library->ResolveConstant(constant, target_type)) {
+    library->Fail(ErrCouldNotResolveAttributeArg, arg->span);
   }
 }
 
@@ -1319,18 +1396,35 @@ void AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attr
     assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
            "attribute arg with a binary operator is a parse error");
 
-    // Try first as a string...
-    if (library->TryResolveConstant(arg->value.get(), &library->kUnboundedStringType)) {
-      arg->type = std::make_unique<StringType>(library->kUnboundedStringType);
+    auto inferred_type = library->InferType(arg->value.get());
+    if (!inferred_type) {
+      library->Fail(ErrCouldNotResolveAttributeArg, attribute->span);
       continue;
     }
-    // ...then as a bool if that doesn't work.
-    if (library->TryResolveConstant(arg->value.get(), &library->kBoolType)) {
-      arg->type = std::make_unique<PrimitiveType>(library->kBoolType);
-      continue;
+    // Only string or bool supported.
+    switch (inferred_type->kind) {
+      case Type::Kind::kString:
+        break;
+      case Type::Kind::kPrimitive:
+        if (static_cast<const PrimitiveType*>(inferred_type)->subtype ==
+            types::PrimitiveSubtype::kBool) {
+          break;
+        }
+        [[fallthrough]];
+      case Type::Kind::kIdentifier:
+      case Type::Kind::kArray:
+      case Type::Kind::kBox:
+      case Type::Kind::kVector:
+      case Type::Kind::kHandle:
+      case Type::Kind::kTransportSide:
+      case Type::Kind::kUntypedNumeric:
+        library->Fail(ErrCanOnlyUseStringOrBool, attribute->span, arg.get(), attribute);
+        continue;
     }
-    // Otherwise, it must be an integer or float type.
-    library->Fail(ErrCanOnlyUseStringOrBool, attribute->span, arg.get(), attribute);
+    if (!library->ResolveConstant(arg->value.get(), inferred_type)) {
+      // Since we've inferred the type, it must resolve correclty.
+      __builtin_unreachable();
+    }
   }
 }
 
@@ -2895,12 +2989,13 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   return step.Done();
 }
 
-bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
+bool Library::ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
                                         const ConstantValue& left_operand,
                                         const ConstantValue& right_operand) {
   assert(left_operand.kind == right_operand.kind &&
          "left and right operands of or operator must be of the same kind");
-  type = TypeResolve(type);
+  assert(opt_type && "compiler bug: type inference not implemented for or operator");
+  const auto type = TypeResolve(opt_type.value());
   if (type == nullptr)
     return false;
   if (type->kind != Type::Kind::kPrimitive) {
@@ -2919,19 +3014,11 @@ bool Library::ResolveOrOperatorConstant(Constant* constant, const Type* type,
   if (!result.Convert(ConstantValuePrimitiveKind(static_cast<const PrimitiveType*>(type)->subtype),
                       &converted_result))
     return false;
-  constant->ResolveTo(std::move(converted_result));
+  constant->ResolveTo(std::move(converted_result), type);
   return true;
 }
 
-bool Library::TryResolveConstant(Constant* constant, const Type* type) {
-  reporter::Reporter::ScopedReportingMode silenced =
-      reporter_->OverrideMode(reporter::Reporter::ReportingMode::kDoNotReport);
-  // Reset flag to allow re-entry on multiple attempts with different types.
-  constant->compiled = false;
-  return ResolveConstant(constant, type);
-}
-
-bool Library::ResolveConstant(Constant* constant, const Type* type) {
+bool Library::ResolveConstant(Constant* constant, std::optional<const Type*> opt_type) {
   assert(constant != nullptr);
 
   // Prevent re-entry.
@@ -2941,20 +3028,20 @@ bool Library::ResolveConstant(Constant* constant, const Type* type) {
 
   switch (constant->kind) {
     case Constant::Kind::kIdentifier:
-      return ResolveIdentifierConstant(static_cast<IdentifierConstant*>(constant), type);
+      return ResolveIdentifierConstant(static_cast<IdentifierConstant*>(constant), opt_type);
     case Constant::Kind::kLiteral:
-      return ResolveLiteralConstant(static_cast<LiteralConstant*>(constant), type);
+      return ResolveLiteralConstant(static_cast<LiteralConstant*>(constant), opt_type);
     case Constant::Kind::kBinaryOperator: {
       auto binary_operator_constant = static_cast<BinaryOperatorConstant*>(constant);
-      if (!ResolveConstant(binary_operator_constant->left_operand.get(), type)) {
+      if (!ResolveConstant(binary_operator_constant->left_operand.get(), opt_type)) {
         return false;
       }
-      if (!ResolveConstant(binary_operator_constant->right_operand.get(), type)) {
+      if (!ResolveConstant(binary_operator_constant->right_operand.get(), opt_type)) {
         return false;
       }
       switch (binary_operator_constant->op) {
         case BinaryOperatorConstant::Operator::kOr:
-          return ResolveOrOperatorConstant(constant, type,
+          return ResolveOrOperatorConstant(constant, opt_type,
                                            binary_operator_constant->left_operand->Value(),
                                            binary_operator_constant->right_operand->Value());
         default:
@@ -2995,9 +3082,12 @@ ConstantValue::Kind Library::ConstantValuePrimitiveKind(
   assert(false && "Compiler bug: unhandled primitive subtype");
 }
 
-bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type) {
-  assert(TypeCanBeConst(type) &&
-         "Compiler bug: resolving identifier constant to non-const-able type!");
+bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
+                                        std::optional<const Type*> opt_type) {
+  if (opt_type) {
+    assert(TypeCanBeConst(opt_type.value()) &&
+           "Compiler bug: resolving identifier constant to non-const-able type!");
+  }
 
   auto decl = LookupDeclByName(identifier_constant->name.memberless_key());
   if (!decl)
@@ -3068,6 +3158,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   assert(const_type && "Compiler bug: did not set const_type");
 
   std::unique_ptr<ConstantValue> resolved_val;
+  const auto type = opt_type ? opt_type.value() : const_type;
   switch (type->kind) {
     case Type::Kind::kString: {
       if (!TypeIsConvertibleTo(const_type, type))
@@ -3141,156 +3232,141 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
     }
   }
 
-  identifier_constant->ResolveTo(std::move(resolved_val));
+  identifier_constant->ResolveTo(std::move(resolved_val), type);
   return true;
 
 fail_cannot_convert:
-  return FailNoSpan(ErrCannotConvertConstantToType, identifier_constant, const_type, type);
+  return Fail(ErrTypeCannotBeConvertedToType, identifier_constant->name.span(),
+              static_cast<const flat::Constant*>(identifier_constant),
+              static_cast<const flat::Type*>(const_type), type);
+  return false;
 }
 
-bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type) {
+bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant,
+                                     std::optional<const Type*> opt_type) {
+  auto inferred_type = InferType(static_cast<flat::Constant*>(literal_constant));
+  const Type* type = opt_type ? opt_type.value() : inferred_type;
+  if (!TypeIsConvertibleTo(inferred_type, type)) {
+    return Fail(ErrTypeCannotBeConvertedToType, literal_constant->literal->span(),
+                static_cast<const flat::Constant*>(literal_constant), inferred_type, type);
+  }
   switch (literal_constant->literal->kind) {
     case raw::Literal::Kind::kDocComment: {
       auto doc_comment_literal =
           static_cast<raw::DocCommentLiteral*>(literal_constant->literal.get());
-
       literal_constant->ResolveTo(
-          std::make_unique<DocCommentConstantValue>(doc_comment_literal->span().data()));
+          std::make_unique<DocCommentConstantValue>(doc_comment_literal->span().data()),
+          &Typespace::kUnboundedStringType);
       return true;
     }
     case raw::Literal::Kind::kString: {
-      if (type->kind != Type::Kind::kString)
-        goto return_fail;
-      auto string_type = static_cast<const StringType*>(type);
-      auto string_literal = static_cast<raw::StringLiteral*>(literal_constant->literal.get());
-      auto string_data = string_literal->span().data();
-
-      // TODO(pascallouis): because data() contains the raw content,
-      // with the two " to identify strings, we need to take this
-      // into account. We should expose the actual size of string
-      // literals properly, and take into account escaping.
-      uint64_t string_size = string_data.size() < 2 ? 0 : string_data.size() - 2;
-      if (string_type->max_size->value < string_size) {
-        return Fail(ErrStringConstantExceedsSizeBound, literal_constant->literal->span(),
-                    literal_constant, string_size, type);
-      }
-
       literal_constant->ResolveTo(
-          std::make_unique<StringConstantValue>(string_literal->span().data()));
+          std::make_unique<StringConstantValue>(literal_constant->literal->span().data()),
+          &Typespace::kUnboundedStringType);
       return true;
     }
     case raw::Literal::Kind::kTrue: {
-      if (type->kind != Type::Kind::kPrimitive)
-        goto return_fail;
-      if (static_cast<const PrimitiveType*>(type)->subtype != types::PrimitiveSubtype::kBool)
-        goto return_fail;
-      literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(true));
+      literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(true), &Typespace::kBoolType);
       return true;
     }
     case raw::Literal::Kind::kFalse: {
-      if (type->kind != Type::Kind::kPrimitive)
-        goto return_fail;
-      if (static_cast<const PrimitiveType*>(type)->subtype != types::PrimitiveSubtype::kBool)
-        goto return_fail;
-      literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(false));
+      literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(false),
+                                  &Typespace::kBoolType);
       return true;
     }
     case raw::Literal::Kind::kNumeric: {
-      if (type->kind != Type::Kind::kPrimitive)
-        goto return_fail;
-
-      // These must be initialized out of line to allow for goto statement
-      const raw::NumericLiteral* numeric_literal;
-      const PrimitiveType* primitive_type;
-      numeric_literal = static_cast<const raw::NumericLiteral*>(literal_constant->literal.get());
-      primitive_type = static_cast<const PrimitiveType*>(type);
-      switch (primitive_type->subtype) {
-        case types::PrimitiveSubtype::kInt8: {
-          int8_t value;
-          if (!ParseNumericLiteral<int8_t>(numeric_literal, &value))
-            goto return_fail;
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<int8_t>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kInt16: {
-          int16_t value;
-          if (!ParseNumericLiteral<int16_t>(numeric_literal, &value))
-            goto return_fail;
-
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<int16_t>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kInt32: {
-          int32_t value;
-          if (!ParseNumericLiteral<int32_t>(numeric_literal, &value))
-            goto return_fail;
-
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<int32_t>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kInt64: {
-          int64_t value;
-          if (!ParseNumericLiteral<int64_t>(numeric_literal, &value))
-            goto return_fail;
-
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<int64_t>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kUint8: {
-          uint8_t value;
-          if (!ParseNumericLiteral<uint8_t>(numeric_literal, &value))
-            goto return_fail;
-
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<uint8_t>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kUint16: {
-          uint16_t value;
-          if (!ParseNumericLiteral<uint16_t>(numeric_literal, &value))
-            goto return_fail;
-
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<uint16_t>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kUint32: {
-          uint32_t value;
-          if (!ParseNumericLiteral<uint32_t>(numeric_literal, &value))
-            goto return_fail;
-
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<uint32_t>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kUint64: {
-          uint64_t value;
-          if (!ParseNumericLiteral<uint64_t>(numeric_literal, &value))
-            goto return_fail;
-
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<uint64_t>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kFloat32: {
-          float value;
-          if (!ParseNumericLiteral<float>(numeric_literal, &value))
-            goto return_fail;
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<float>>(value));
-          return true;
-        }
-        case types::PrimitiveSubtype::kFloat64: {
-          double value;
-          if (!ParseNumericLiteral<double>(numeric_literal, &value))
-            goto return_fail;
-
-          literal_constant->ResolveTo(std::make_unique<NumericConstantValue<double>>(value));
-          return true;
-        }
+      // Even though `untyped numeric` is convertible to any numeric type, we
+      // still need to check for overflows which is done in
+      // ResolveLiteralConstantKindNumericLiteral.
+      switch (static_cast<const PrimitiveType*>(type)->subtype) {
+        case types::PrimitiveSubtype::kInt8:
+          return ResolveLiteralConstantKindNumericLiteral<int8_t>(literal_constant, type);
+        case types::PrimitiveSubtype::kInt16:
+          return ResolveLiteralConstantKindNumericLiteral<int16_t>(literal_constant, type);
+        case types::PrimitiveSubtype::kInt32:
+          return ResolveLiteralConstantKindNumericLiteral<int32_t>(literal_constant, type);
+        case types::PrimitiveSubtype::kInt64:
+          return ResolveLiteralConstantKindNumericLiteral<int64_t>(literal_constant, type);
+        case types::PrimitiveSubtype::kUint8:
+          return ResolveLiteralConstantKindNumericLiteral<uint8_t>(literal_constant, type);
+        case types::PrimitiveSubtype::kUint16:
+          return ResolveLiteralConstantKindNumericLiteral<uint16_t>(literal_constant, type);
+        case types::PrimitiveSubtype::kUint32:
+          return ResolveLiteralConstantKindNumericLiteral<uint32_t>(literal_constant, type);
+        case types::PrimitiveSubtype::kUint64:
+          return ResolveLiteralConstantKindNumericLiteral<uint64_t>(literal_constant, type);
+        case types::PrimitiveSubtype::kFloat32:
+          return ResolveLiteralConstantKindNumericLiteral<float>(literal_constant, type);
+        case types::PrimitiveSubtype::kFloat64:
+          return ResolveLiteralConstantKindNumericLiteral<double>(literal_constant, type);
         default:
-          goto return_fail;
+          assert(false && "compiler bug: should not have any other primitive type reachable");
+          return false;
       }
-
-    return_fail:
-      return Fail(ErrConstantCannotBeInterpretedAsType, literal_constant->literal->span(),
-                  literal_constant, type);
     }
+  }  // switch
+}
+
+template <typename NumericType>
+bool Library::ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
+                                                       const Type* type) {
+  NumericType value;
+  const auto span = literal_constant->literal->span();
+  std::string string_data(span.data().data(), span.data().data() + span.data().size());
+  switch (utils::ParseNumeric(string_data, &value)) {
+    case utils::ParseNumericResult::kSuccess:
+      literal_constant->ResolveTo(std::make_unique<NumericConstantValue<NumericType>>(value), type);
+      return true;
+    case utils::ParseNumericResult::kMalformed:
+      // The caller (ResolveLiteralConstant) ensures that the constant kind is
+      // a numeric literal, which means that it follows the grammar for
+      // numerical types. As a result, an error to parse the data here is due
+      // to the data being too large, rather than bad input.
+      [[fallthrough]];
+    case utils::ParseNumericResult::kOutOfBounds:
+      return Fail(ErrConstantOverflowsType, span,
+                  static_cast<const flat::Constant*>(literal_constant), type);
+  }
+}
+
+const Type* Library::InferType(Constant* constant) {
+  switch (constant->kind) {
+    case Constant::Kind::kLiteral: {
+      auto literal = static_cast<const raw::Literal*>(
+          static_cast<const LiteralConstant*>(constant)->literal.get());
+      switch (literal->kind) {
+        case raw::Literal::Kind::kString: {
+          auto string_literal = static_cast<const raw::StringLiteral*>(literal);
+          auto string_data = string_literal->span().data();
+          // TODO(fxbug.dev/89330): because data() contains the raw content,
+          // with the two " to identify strings, we need to take this
+          // into account. We should expose the actual size of string
+          // literals properly, and take into account escaping.
+          auto inferred_size =
+              static_cast<uint32_t>(string_data.size() < 2 ? 0 : string_data.size() - 2);
+          auto inferred_type = std::make_unique<StringType>(Typespace::kUnboundedStringType.name,
+                                                            typespace_->InternSize(inferred_size),
+                                                            types::Nullability::kNonnullable);
+          return typespace_->Intern(std::move(inferred_type));
+        }
+        case raw::Literal::Kind::kNumeric:
+          return &Typespace::kUntypedNumericType;
+        case raw::Literal::Kind::kTrue:
+        case raw::Literal::Kind::kFalse:
+          return &Typespace::kBoolType;
+        case raw::Literal::Kind::kDocComment:
+          return &Typespace::kUnboundedStringType;
+      }
+      return nullptr;
+    }
+    case Constant::Kind::kIdentifier:
+      if (!ResolveConstant(constant, std::nullopt)) {
+        return nullptr;
+      }
+      return constant->type;
+    case Constant::Kind::kBinaryOperator:
+      assert(false && "compiler bug: type inference not implemented for binops");
+      __builtin_unreachable();
   }
 }
 
@@ -3400,13 +3476,16 @@ bool Library::TypeIsConvertibleTo(const Type* from_type, const Type* to_type) {
       return true;
     }
     case flat::Type::Kind::kPrimitive: {
-      if (from_type->kind != flat::Type::Kind::kPrimitive) {
-        return false;
-      }
-
-      auto from_primitive_type = static_cast<const flat::PrimitiveType*>(from_type);
       auto to_primitive_type = static_cast<const flat::PrimitiveType*>(to_type);
-
+      switch (from_type->kind) {
+        case flat::Type::Kind::kUntypedNumeric:
+          return to_primitive_type->subtype != types::PrimitiveSubtype::kBool;
+        case flat::Type::Kind::kPrimitive:
+          break;  // handled below
+        default:
+          return false;
+      }
+      auto from_primitive_type = static_cast<const flat::PrimitiveType*>(from_type);
       switch (to_primitive_type->subtype) {
         case types::PrimitiveSubtype::kBool:
           return from_primitive_type->subtype == types::PrimitiveSubtype::kBool;
@@ -3430,18 +3509,6 @@ Decl* Library::LookupDeclByName(Name::Key name) const {
     return nullptr;
   }
   return iter->second;
-}
-
-template <typename NumericType>
-bool Library::ParseNumericLiteral(const raw::NumericLiteral* literal,
-                                  NumericType* out_value) const {
-  assert(literal != nullptr);
-  assert(out_value != nullptr);
-
-  auto data = literal->span().data();
-  std::string string_data(data.data(), data.data() + data.size());
-  auto result = utils::ParseNumeric(string_data, out_value);
-  return result == utils::ParseNumericResult::kSuccess;
 }
 
 bool Library::AddConstantDependencies(const Constant* constant, std::set<const Decl*>* out_edges) {
@@ -3536,6 +3603,8 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
           }
           return;
         }
+        case Type::Kind::kUntypedNumeric:
+          assert(false && "compiler bug: should not have untyped numeric here");
       }
     }
   };
@@ -3893,6 +3962,8 @@ types::Resourceness Type::Resourceness() const {
       break;
     case Type::Kind::kBox:
       return static_cast<const BoxType*>(this)->boxed_type->Resourceness();
+    case Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
   }
 
   const auto* decl = static_cast<const IdentifierType*>(this)->type_decl;
@@ -3937,6 +4008,8 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
       break;
     case Type::Kind::kBox:
       return EffectiveResourceness(static_cast<const BoxType*>(type)->boxed_type);
+    case Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
   }
 
   const auto* decl = static_cast<const IdentifierType*>(type)->type_decl;
@@ -4694,11 +4767,11 @@ bool Library::ResolveHandleSubtypeIdentifier(Resource* resource,
 }
 
 bool Library::ResolveSizeBound(Constant* size_constant, const Size** out_size) {
-  if (!ResolveConstant(size_constant, &kSizeType)) {
+  if (!ResolveConstant(size_constant, &Typespace::kUint32Type)) {
     if (size_constant->kind == Constant::Kind::kIdentifier) {
       auto name = static_cast<IdentifierConstant*>(size_constant)->name;
       if (name.library() == this && name.decl_name() == "MAX" && !name.member_name()) {
-        size_constant->ResolveTo(std::make_unique<Size>(Size::Max()));
+        size_constant->ResolveTo(std::make_unique<Size>(Size::Max()), &Typespace::kUint32Type);
       }
     }
   }

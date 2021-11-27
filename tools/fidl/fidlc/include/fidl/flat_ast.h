@@ -72,8 +72,6 @@ struct AttributeArg final {
   // Set during compilation (if it wasn't already set in the constructor).
   std::optional<std::string> name;
   std::unique_ptr<Constant> value;
-  // Set during compilation. Must be a primitive or string type.
-  std::unique_ptr<Type> type = nullptr;
 
   const SourceSpan span;
 
@@ -928,12 +926,29 @@ class Typespace {
               const std::unique_ptr<TypeConstraints>& constraints, const Type** out_type,
               LayoutInvocation* out_params);
 
+  const Size* InternSize(uint32_t size);
+  const Type* Intern(std::unique_ptr<Type> type);
+
   void AddTemplate(std::unique_ptr<TypeTemplate> type_template);
 
   // RootTypes creates a instance with all primitive types. It is meant to be
   // used as the top-level types lookup mechanism, providing definitional
   // meaning to names such as `int64`, or `bool`.
   static Typespace RootTypes(Reporter* reporter);
+
+  static const PrimitiveType kBoolType;
+  static const PrimitiveType kInt8Type;
+  static const PrimitiveType kInt16Type;
+  static const PrimitiveType kInt32Type;
+  static const PrimitiveType kInt64Type;
+  static const PrimitiveType kUint8Type;
+  static const PrimitiveType kUint16Type;
+  static const PrimitiveType kUint32Type;
+  static const PrimitiveType kUint64Type;
+  static const PrimitiveType kFloat32Type;
+  static const PrimitiveType kFloat64Type;
+  static const UntypedNumericType kUntypedNumericType;
+  static const StringType kUnboundedStringType;
 
  private:
   friend class TypeAliasTypeTemplate;
@@ -946,9 +961,23 @@ class Typespace {
                       std::unique_ptr<Type>* out_type, LayoutInvocation* out_params);
 
   std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
+  std::vector<std::unique_ptr<Size>> sizes_;
   std::vector<std::unique_ptr<Type>> types_;
-
   Reporter* reporter_;
+
+  static const Name kBoolTypeName;
+  static const Name kInt8TypeName;
+  static const Name kInt16TypeName;
+  static const Name kInt32TypeName;
+  static const Name kInt64TypeName;
+  static const Name kUint8TypeName;
+  static const Name kUint16TypeName;
+  static const Name kUint32TypeName;
+  static const Name kUint64TypeName;
+  static const Name kFloat32TypeName;
+  static const Name kFloat64TypeName;
+  static const Name kUntypedNumericTypeName;
+  static const Name kStringTypeName;
 };
 
 // AttributeArgSchema defines a schema for a single argument in an attribute.
@@ -1321,16 +1350,18 @@ class Library : Attributable {
   bool ResolveHandleSubtypeIdentifier(Resource* resource, const std::unique_ptr<Constant>& constant,
                                       uint32_t* out_obj_type);
   bool ResolveSizeBound(Constant* size_constant, const Size** out_size);
-  bool ResolveOrOperatorConstant(Constant* constant, const Type* type,
+  bool ResolveOrOperatorConstant(Constant* constant, std::optional<const Type*> opt_type,
                                  const ConstantValue& left_operand,
                                  const ConstantValue& right_operand);
-  bool ResolveConstant(Constant* constant, const Type* type);
-  bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant, const Type* type);
-  bool ResolveLiteralConstant(LiteralConstant* literal_constant, const Type* type);
-
-  // Identical to "ResolveConstant" except that it disables error reporting, allowing us to attempt
-  // to resolve a constant as a type without failing compilation.
-  bool TryResolveConstant(Constant* constant, const Type* type);
+  bool ResolveConstant(Constant* constant, std::optional<const Type*> opt_type);
+  bool ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
+                                 std::optional<const Type*> opt_type);
+  bool ResolveLiteralConstant(LiteralConstant* literal_constant,
+                              std::optional<const Type*> opt_type);
+  template <typename NumericType>
+  bool ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_constant,
+                                                const Type* type);
+  const Type* InferType(Constant* constant);
 
   // Validates a single member of a bits or enum. On success, returns nullptr,
   // and on failure returns an error.
@@ -1354,9 +1385,6 @@ class Library : Attributable {
   // Returns nullptr when the |name| cannot be resolved to a
   // Name. Otherwise it returns the declaration.
   Decl* LookupDeclByName(Name::Key name) const;
-
-  template <typename NumericType>
-  bool ParseNumericLiteral(const raw::NumericLiteral* literal, NumericType* out_value) const;
 
   const std::set<Library*>& dependencies() const;
 
@@ -1382,15 +1410,6 @@ class Library : Attributable {
   std::map<SourceSpan::Key, bool> derived_resourceness;
 
  private:
-  // TODO(fxbug.dev/76219): Remove when canonicalizing types.
-  const Name kSizeTypeName = Name::CreateIntrinsic("uint32");
-  const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
-  const Name kBoolTypeName = Name::CreateIntrinsic("bool");
-  const PrimitiveType kBoolType = PrimitiveType(kBoolTypeName, types::PrimitiveSubtype::kBool);
-  const Name kUnboundedStringTypeName = Name::CreateIntrinsic("string");
-  const StringType kUnboundedStringType = StringType(
-      kUnboundedStringTypeName, &VectorBaseType::kMaxSize, types::Nullability::kNonnullable);
-
   Dependencies dependencies_;
   const Libraries* all_libraries_;
 
@@ -1558,6 +1577,11 @@ inline std::any TransportSideType::AcceptAny(VisitorAny* visitor) const {
 }
 
 inline std::any BoxType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+
+inline std::any UntypedNumericType::AcceptAny(VisitorAny* visitor) const {
+  assert(false && "compiler bug: should not have untyped numeric here");
+  return nullptr;
+}
 
 inline std::any Enum::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 

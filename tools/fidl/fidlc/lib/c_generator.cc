@@ -264,6 +264,9 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
           break;
       }
       break;
+    case flat::Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
+      break;
   }
 }
 
@@ -320,6 +323,8 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
           break;
       }
       break;
+    case flat::Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
   }
 }
 
@@ -549,6 +554,10 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
             }
             break;
         }
+        break;
+      case flat::Type::Kind::kUntypedNumeric:
+        assert(false && "compiler bug: should not have untyped numeric here");
+        break;
     }
   }
 }
@@ -735,6 +744,8 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl,
       break;
     case flat::Type::Kind::kPrimitive:
       break;
+    case flat::Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
   }
   return CGenerator::Member{
       type->kind,
@@ -1423,6 +1434,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
                 break;
             }
             break;
+          case flat::Type::Kind::kUntypedNumeric:
+            assert(false && "compiler bug: should not have untyped numeric here");
         }
       }
 
@@ -1542,6 +1555,10 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
               }
               break;
           }
+          break;
+        case flat::Type::Kind::kUntypedNumeric:
+          assert(false && "compiler bug: should not have untyped numeric here");
+          break;
       }
     }
     if (method_info.response != nullptr)

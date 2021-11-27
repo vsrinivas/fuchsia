@@ -107,7 +107,7 @@ type Enum = enum {
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttributeArg);
   ASSERT_ERR(errors[1], fidl::ErrCanOnlyUseStringOrBool);
   ASSERT_ERR(errors[2], fidl::ErrCanOnlyUseStringOrBool);
-  ASSERT_ERR(errors[3], fidl::ErrConstantCannotBeInterpretedAsType);
+  ASSERT_ERR(errors[3], fidl::ErrTypeCannotBeConvertedToType);
   ASSERT_ERR(errors[4], fidl::ErrCouldNotResolveMember);
 }
 
@@ -122,7 +122,7 @@ const FOO string = 2;
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 3);
   EXPECT_ERR(errors[0], fidl::ErrCanOnlyUseStringOrBool);
-  EXPECT_ERR(errors[1], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(errors[1], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(errors[2], fidl::ErrCannotResolveConstantValue);
 }
 
@@ -142,7 +142,7 @@ type Foo = bits {
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 6);
-  EXPECT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(errors[0], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
   EXPECT_ERR(errors[2], fidl::ErrCouldNotResolveMember);
   EXPECT_ERR(errors[3], fidl::ErrDuplicateMemberNameCanonical);
@@ -166,7 +166,7 @@ type Foo = flexible enum : uint8 {
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 6);
-  EXPECT_ERR(errors[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(errors[0], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(errors[1], fidl::ErrCouldNotResolveMember);
   EXPECT_ERR(errors[2], fidl::ErrCouldNotResolveMember);
   EXPECT_ERR(errors[3], fidl::ErrDuplicateMemberNameCanonical);
@@ -192,7 +192,7 @@ type Foo = struct {
   EXPECT_ERR(errors[0], fidl::ErrWrongNumberOfLayoutParameters);
   EXPECT_ERR(errors[1], fidl::ErrUnknownType);
   EXPECT_ERR(errors[2], fidl::ErrDuplicateStructMemberNameCanonical);
-  EXPECT_ERR(errors[3], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(errors[3], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(errors[4], fidl::ErrCouldNotResolveMemberDefault);
 }
 

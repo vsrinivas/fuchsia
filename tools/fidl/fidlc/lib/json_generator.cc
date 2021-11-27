@@ -204,10 +204,13 @@ void JSONGenerator::Generate(const flat::Type* value) {
         GenerateObjectMember("nullable", type->nullability);
         break;
       }
-      case flat::Type::Kind::kArray: {
+      case flat::Type::Kind::kArray:
         assert(false &&
                "expected non-parameterized type (neither array<T>, vector<T>, nor request<P>)");
-      }
+        break;
+      case flat::Type::Kind::kUntypedNumeric:
+        assert(false && "compiler bug: should not have untyped numeric here");
+        break;
     }
 
     GenerateTypeShapes(*value);
@@ -219,7 +222,7 @@ void JSONGenerator::Generate(const flat::AttributeArg& value) {
     assert(value.name.has_value() &&
            "anonymous attribute argument names should always be inferred during compilation");
     GenerateObjectMember("name", value.name.value(), Position::kFirst);
-    GenerateObjectMember("type", value.type->name);
+    GenerateObjectMember("type", value.value->type->name);
     GenerateObjectMember("value", value.value);
 
     // TODO(fxbug.dev/7660): Be consistent in emitting location fields.
@@ -488,9 +491,12 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
       case flat::Type::Kind::kString:
       case flat::Type::Kind::kPrimitive:
       case flat::Type::Kind::kBox:
-      case flat::Type::Kind::kHandle: {
+      case flat::Type::Kind::kHandle:
         assert(false && "expected parameterized type (either array<T>, vector<T>, or request<P>)");
-      }
+        break;
+      case flat::Type::Kind::kUntypedNumeric:
+        assert(false && "compiler bug: should not have untyped numeric here");
+        break;
     }
     GenerateTypeShapes(*type);
   });

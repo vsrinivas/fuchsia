@@ -34,66 +34,6 @@ struct ConstantValue {
 
   virtual bool Convert(Kind kind, std::unique_ptr<ConstantValue>* out_value) const = 0;
 
-  static const char* KindToIntrinsicName(Kind kind) {
-    switch (kind) {
-      case Kind::kInt8:
-        return "int8";
-      case Kind::kInt16:
-        return "int16";
-      case Kind::kInt32:
-        return "int32";
-      case Kind::kInt64:
-        return "int64";
-      case Kind::kUint8:
-        return "uint8";
-      case Kind::kUint16:
-        return "uint16";
-      case Kind::kUint32:
-        return "uint32";
-      case Kind::kUint64:
-        return "uint64";
-      case Kind::kFloat32:
-        return "float32";
-      case Kind::kFloat64:
-        return "float64";
-      case Kind::kBool:
-        return "bool";
-      case Kind::kString:
-        return "string";
-      case Kind::kDocComment:
-        return "docComment";
-    }
-  }
-
-  static std::optional<types::PrimitiveSubtype> KindToPrimitiveSubtype(Kind kind) {
-    switch (kind) {
-      case Kind::kInt8:
-        return types::PrimitiveSubtype::kInt8;
-      case Kind::kInt16:
-        return types::PrimitiveSubtype::kInt16;
-      case Kind::kInt32:
-        return types::PrimitiveSubtype::kInt32;
-      case Kind::kInt64:
-        return types::PrimitiveSubtype::kInt64;
-      case Kind::kUint8:
-        return types::PrimitiveSubtype::kUint8;
-      case Kind::kUint16:
-        return types::PrimitiveSubtype::kUint16;
-      case Kind::kUint32:
-        return types::PrimitiveSubtype::kUint32;
-      case Kind::kUint64:
-        return types::PrimitiveSubtype::kUint64;
-      case Kind::kFloat32:
-        return types::PrimitiveSubtype::kFloat32;
-      case Kind::kFloat64:
-        return types::PrimitiveSubtype::kFloat64;
-      case Kind::kBool:
-        return types::PrimitiveSubtype::kBool;
-      default:
-        return std::nullopt;
-    }
-  }
-
   const Kind kind;
 
  protected:
@@ -391,10 +331,11 @@ struct Constant {
 
   bool IsResolved() const { return value_ != nullptr; }
 
-  void ResolveTo(std::unique_ptr<ConstantValue> value) {
+  void ResolveTo(std::unique_ptr<ConstantValue> value, const Type* type) {
     assert(value != nullptr);
     assert(!IsResolved() && "Constants should only be resolved once!");
     value_ = std::move(value);
+    this->type = type;
   }
 
   const ConstantValue& Value() const {
@@ -410,6 +351,9 @@ struct Constant {
   // compiled tracks whether we attempted to resolve this constant, to avoid
   // resolving twice a constant which cannot be resolved.
   bool compiled = false;
+
+  // set when resolved to
+  const Type* type = nullptr;
 
  protected:
   std::unique_ptr<ConstantValue> value_;

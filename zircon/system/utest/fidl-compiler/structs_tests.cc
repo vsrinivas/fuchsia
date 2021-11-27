@@ -99,7 +99,7 @@ type MyStruct = struct {
     field MyEnum = 1;
 };
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveMemberDefault);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");
 }
@@ -157,7 +157,7 @@ type MyStruct = struct {
     field MyBits = 1;
 };
 )FIDL");
-  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantCannotBeInterpretedAsType,
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveMemberDefault);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyBits");
 }
@@ -291,7 +291,7 @@ const BAR bool = "not a bool";
 )FIDL");
   ASSERT_FALSE(library.Compile());
   ASSERT_EQ(library.errors().size(), 3);
-  EXPECT_ERR(library.errors()[0], fidl::ErrConstantCannotBeInterpretedAsType);
+  EXPECT_ERR(library.errors()[0], fidl::ErrTypeCannotBeConvertedToType);
   EXPECT_ERR(library.errors()[1], fidl::ErrCannotResolveConstantValue);
   EXPECT_ERR(library.errors()[2], fidl::ErrCouldNotResolveMemberDefault);
 }

@@ -203,6 +203,9 @@ std::string NameFlatTypeKind(const flat::Type* type) {
     case flat::Type::Kind::kBox:
     case flat::Type::Kind::kIdentifier:
       return "identifier";
+    case flat::Type::Kind::kUntypedNumeric:
+      assert(false && "compiler bug: should not have untyped numeric here");
+      return "NameFlatTypeKind over untyped numeric";
   }
 }
 
@@ -357,6 +360,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
     }
     case flat::Type::Kind::kPrimitive:
     case flat::Type::Kind::kIdentifier:
+    case flat::Type::Kind::kUntypedNumeric:
       // Like Stars, they are known by name.
       break;
   }  // switch
@@ -423,7 +427,12 @@ std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind) {
             assert(false && "no C name");
             break;
         }
+        break;
       }
+
+      case flat::Type::Kind::kUntypedNumeric:
+        assert(false && "compiler bug: should not have untyped numeric here");
+        break;
     }
   }
 }
