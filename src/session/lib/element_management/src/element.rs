@@ -142,7 +142,7 @@ impl Element {
     /// the `Element`.
     #[inline]
     pub fn connect_to_service<US: ServiceMarker>(&self) -> Result<US::Proxy, Error> {
-        fuchsia_component::client::connect_to_service_at_dir::<US>(&self.directory_channel())
+        fuchsia_component::client::connect_to_service_at_channel::<US>(&self.directory_channel())
     }
 
     /// Connect to a protocol by passing a channel for the server.

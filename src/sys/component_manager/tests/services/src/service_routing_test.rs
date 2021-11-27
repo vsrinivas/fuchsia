@@ -9,7 +9,7 @@ use {
         matcher::EventMatcher,
         sequence::*,
     },
-    fidl::endpoints::{Proxy, ServiceMarker},
+    fidl::endpoints::ServiceMarker,
     fidl_fuchsia_examples_services as fexamples,
     fuchsia_component::client,
     fuchsia_component_test::ScopedInstance,
@@ -68,7 +68,7 @@ async fn connect_to_instances_test() {
     // Connect to every instance and ensure the protocols are functional.
     for instance in instances {
         let proxy = client::connect_to_service_instance_at_dir::<fexamples::BankAccountMarker>(
-            branch.get_exposed_dir().as_channel().as_ref(),
+            branch.get_exposed_dir(),
             &instance,
         )
         .expect("failed to connect to service instance");

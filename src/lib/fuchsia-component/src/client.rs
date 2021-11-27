@@ -279,7 +279,7 @@ pub fn connect_to_service_instance_at<S: ServiceMarker>(
 /// Connect to the "default" instance of a FIDL service hosted on the directory protocol
 /// channel `directory`.
 pub fn connect_to_service_at_dir<S: ServiceMarker>(
-    directory: &zx::Channel,
+    directory: &DirectoryProxy,
 ) -> Result<S::Proxy, Error> {
     connect_to_service_instance_at_dir::<S>(directory, DEFAULT_SERVICE_INSTANCE)
 }
@@ -290,6 +290,28 @@ pub fn connect_to_service_at_dir<S: ServiceMarker>(
 // inputs but Rust limits specifying explicit generic parameters when `impl-traits`
 // are present.
 pub fn connect_to_service_instance_at_dir<S: ServiceMarker>(
+    directory: &DirectoryProxy,
+    instance: &str,
+) -> Result<S::Proxy, Error> {
+    let service_path = Path::new(S::SERVICE_NAME).join(instance);
+    let flags = io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE;
+    let directory_proxy = io_util::open_directory(directory, service_path.as_path(), flags)?;
+    Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
+}
+
+/// Connect to the "default" instance of a FIDL service hosted in `directory`.
+pub fn connect_to_service_at_channel<S: ServiceMarker>(
+    directory: &zx::Channel,
+) -> Result<S::Proxy, Error> {
+    connect_to_service_instance_at_channel::<S>(directory, DEFAULT_SERVICE_INSTANCE)
+}
+
+/// Connect to an instance of a FIDL service hosted in `directory`.
+/// `instance` is a path of one or more components.
+// NOTE: We would like to use impl AsRef<T> to accept a wide variety of string-like
+// inputs but Rust limits specifying explicit generic parameters when `impl-traits`
+// are present.
+pub fn connect_to_service_instance_at_channel<S: ServiceMarker>(
     directory: &zx::Channel,
     instance: &str,
 ) -> Result<S::Proxy, Error> {
@@ -303,13 +325,25 @@ pub fn connect_to_service_instance_at_dir<S: ServiceMarker>(
     Ok(S::Proxy::from_member_opener(Box::new(DirectoryProtocolImpl(directory_proxy))))
 }
 
-/// Opens a FIDL service as a directory so that its instances can be listed.
+/// Opens a FIDL service as a directory, which holds instances of the service.
 pub fn open_service<S: ServiceMarker>() -> Result<DirectoryProxy, Error> {
     let service_path = Path::new(SVC_DIR).join(S::SERVICE_NAME);
-    Ok(io_util::directory::open_in_namespace(
+    io_util::open_directory_in_namespace(
         service_path.to_str().unwrap(),
         io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-    )?)
+    )
+}
+
+/// Opens a FIDL service hosted in `directory` as a directory, which holds
+/// instances of the service.
+pub fn open_service_at_dir<S: ServiceMarker>(
+    directory: &DirectoryProxy,
+) -> Result<DirectoryProxy, Error> {
+    io_util::open_directory(
+        directory,
+        Path::new(S::SERVICE_NAME),
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+    )
 }
 
 /// Opens the exposed directory from a child. Only works in CFv2, and only works if this component
@@ -515,7 +549,7 @@ impl App {
     /// Connect to a FIDL service provided by the `App`.
     #[inline]
     pub fn connect_to_service<S: ServiceMarker>(&self) -> Result<S::Proxy, Error> {
-        connect_to_service_at_dir::<S>(&self.directory_request)
+        connect_to_service_at_channel::<S>(&self.directory_request)
     }
 
     /// Connect to a protocol by passing a channel for the server.

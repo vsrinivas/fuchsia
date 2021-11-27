@@ -8,7 +8,7 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{create_proxy, Proxy, ServerEnd, ServiceMarker},
+    fidl::endpoints::{create_proxy, ServerEnd, ServiceMarker},
     fidl_fuchsia_component_test::{
         CounterRequest, CounterRequestStream, CounterServiceMarker, CounterServiceRequest,
     },
@@ -469,12 +469,9 @@ async fn connect_to_unified_service_member_of_default_instance() -> Result<(), E
     });
     fasync::Task::spawn(serve_fut).detach();
 
-    let dir_request =
-        dir_proxy.into_channel().expect("failed to extract channel from proxy").into_zx_channel();
-
     // Connect to the default instance of CounterService and make calls to the "counter" member.
     let service_proxy =
-        fuchsia_component::client::connect_to_service_at_dir::<CounterServiceMarker>(&dir_request)?;
+        fuchsia_component::client::connect_to_service_at_dir::<CounterServiceMarker>(&dir_proxy)?;
     let counter_proxy = service_proxy.counter().expect("failed conencting to counter member");
     let value: u32 =
         counter_proxy.get_and_increment().await.expect("first call to get_and_increment failed");
@@ -482,7 +479,7 @@ async fn connect_to_unified_service_member_of_default_instance() -> Result<(), E
     let value =
         counter_proxy.get_and_increment().await.expect("second call to get_and_increment failed");
     assert_eq!(value, 1);
-    drop(dir_request);
+    drop(dir_proxy);
     Ok(())
 }
 
