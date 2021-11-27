@@ -1679,6 +1679,14 @@ impl RealmNode {
         let capability_name = get_capability_name(&capability)?;
         let new_decl = {
             match &capability {
+                ftest::Capability::Service(_) => {
+                    cm_rust::ExposeDecl::Service(cm_rust::ExposeServiceDecl {
+                        source,
+                        source_name: capability_name.clone().into(),
+                        target: cm_rust::ExposeTarget::Parent,
+                        target_name: capability_name.into(),
+                    })
+                }
                 ftest::Capability::Protocol(_) => {
                     cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
                         source,
@@ -1726,6 +1734,14 @@ impl RealmNode {
         }
         let capability_name = get_capability_name(&capability)?;
         let capability_decl = match capability {
+            ftest::Capability::Service(_) => {
+                Some(cm_rust::CapabilityDecl::Service(cm_rust::ServiceDecl {
+                    name: capability_name.as_str().try_into().unwrap(),
+                    source_path: Some(
+                        format!("/svc/{}", capability_name).as_str().try_into().unwrap(),
+                    ),
+                }))
+            }
             ftest::Capability::Protocol(_) => {
                 Some(cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
                     name: capability_name.as_str().try_into().unwrap(),
@@ -1770,6 +1786,12 @@ impl RealmNode {
         }
         let capability_name = get_capability_name(&capability)?;
         let use_decl = match capability {
+            ftest::Capability::Service(_) => cm_rust::UseDecl::Service(cm_rust::UseServiceDecl {
+                source: use_source,
+                source_name: capability_name.as_str().try_into().unwrap(),
+                target_path: format!("/svc/{}", capability_name).as_str().try_into().unwrap(),
+                dependency_type: cm_rust::DependencyType::Strong,
+            }),
             ftest::Capability::Protocol(_) => {
                 cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
                     source: use_source,
@@ -1826,6 +1848,14 @@ impl RealmNode {
         let capability_name = get_capability_name(&capability)?;
 
         let offer_decl = match &capability {
+            ftest::Capability::Service(_) => {
+                cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
+                    source: offer_source,
+                    source_name: capability_name.clone().into(),
+                    target: cm_rust::OfferTarget::static_child(target_name.to_string()),
+                    target_name: capability_name.into(),
+                })
+            }
             ftest::Capability::Protocol(_) => {
                 cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                     source: offer_source,
@@ -2006,6 +2036,9 @@ fn is_legacy_url(url: &str) -> bool {
 
 fn get_capability_name(capability: &ftest::Capability) -> Result<String, Error> {
     match &capability {
+        ftest::Capability::Service(ftest::ServiceCapability { name, .. }) => {
+            Ok(name.as_ref().unwrap().clone())
+        }
         ftest::Capability::Protocol(ftest::ProtocolCapability { name, .. }) => {
             Ok(name.as_ref().unwrap().clone())
         }
@@ -4582,6 +4615,129 @@ mod tests {
                     },
                 ),
             ],
+        );
+    }
+
+    #[fuchsia::test]
+    async fn use_service_from_parent() {
+        let mut realm = RealmNode::default();
+        realm
+            .set_component(
+                "a".into(),
+                ftest::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
+            )
+            .await
+            .unwrap();
+        realm
+            .route_capability(ftest::CapabilityRoute {
+                capability: Some(ftest::Capability::Service(ftest::ServiceCapability {
+                    name: Some("fuchsia.examples.services.BankAccount".to_string()),
+                    ..ftest::ServiceCapability::EMPTY
+                })),
+                source: Some(ftest::RouteEndpoint::AboveRoot(ftest::AboveRoot {})),
+                targets: Some(vec![ftest::RouteEndpoint::Component("a".to_string())]),
+                ..ftest::CapabilityRoute::EMPTY
+            })
+            .unwrap();
+
+        check_results(
+            realm,
+            vec![
+                (
+                    "",
+                    cm_rust::ComponentDecl {
+                        offers: vec![cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
+                            source: cm_rust::OfferSource::Parent,
+                            source_name: "fuchsia.examples.services.BankAccount".into(),
+                            target: cm_rust::OfferTarget::static_child("a".to_string()),
+                            target_name: "fuchsia.examples.services.BankAccount".into(),
+                        })],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+                (
+                    "a",
+                    cm_rust::ComponentDecl {
+                        uses: vec![cm_rust::UseDecl::Service(cm_rust::UseServiceDecl {
+                            source: cm_rust::UseSource::Parent,
+                            source_name: "fuchsia.examples.services.BankAccount".into(),
+                            target_path: "/svc/fuchsia.examples.services.BankAccount"
+                                .try_into()
+                                .unwrap(),
+                            dependency_type: cm_rust::DependencyType::Strong,
+                        })],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                ),
+            ],
+        );
+    }
+
+    #[fuchsia::test]
+    async fn expose_service_to_parent() {
+        let mut realm = RealmNode::default();
+        realm
+            .set_component(
+                "a".into(),
+                ftest::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
+            )
+            .await
+            .unwrap();
+        realm
+            .set_component(
+                "b".into(),
+                ftest::Component::Decl(cm_rust::ComponentDecl::default().native_into_fidl()),
+                &None,
+            )
+            .await
+            .unwrap();
+        realm
+            .route_capability(ftest::CapabilityRoute {
+                capability: Some(ftest::Capability::Service(ftest::ServiceCapability {
+                    name: Some("fuchsia.examples.services.BankAccount".to_string()),
+                    ..ftest::ServiceCapability::EMPTY
+                })),
+                source: Some(ftest::RouteEndpoint::Component("a".to_string())),
+                targets: Some(vec![ftest::RouteEndpoint::AboveRoot(ftest::AboveRoot {})]),
+                ..ftest::CapabilityRoute::EMPTY
+            })
+            .unwrap();
+        realm
+            .route_capability(ftest::CapabilityRoute {
+                capability: Some(ftest::Capability::Service(ftest::ServiceCapability {
+                    name: Some("fuchsia.examples.services.BankAccount".to_string()),
+                    ..ftest::ServiceCapability::EMPTY
+                })),
+                source: Some(ftest::RouteEndpoint::Component("b".to_string())),
+                targets: Some(vec![ftest::RouteEndpoint::AboveRoot(ftest::AboveRoot {})]),
+                ..ftest::CapabilityRoute::EMPTY
+            })
+            .unwrap();
+
+        check_results(
+            realm,
+            vec![(
+                "",
+                cm_rust::ComponentDecl {
+                    exposes: vec![
+                        cm_rust::ExposeDecl::Service(cm_rust::ExposeServiceDecl {
+                            source: cm_rust::ExposeSource::Child("a".to_string()),
+                            source_name: "fuchsia.examples.services.BankAccount".into(),
+                            target: cm_rust::ExposeTarget::Parent,
+                            target_name: "fuchsia.examples.services.BankAccount".into(),
+                        }),
+                        cm_rust::ExposeDecl::Service(cm_rust::ExposeServiceDecl {
+                            source: cm_rust::ExposeSource::Child("b".to_string()),
+                            source_name: "fuchsia.examples.services.BankAccount".into(),
+                            target: cm_rust::ExposeTarget::Parent,
+                            target_name: "fuchsia.examples.services.BankAccount".into(),
+                        }),
+                    ],
+                    ..cm_rust::ComponentDecl::default()
+                },
+            )],
         );
     }
 }

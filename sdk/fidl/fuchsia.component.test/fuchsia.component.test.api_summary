@@ -8,6 +8,7 @@ union/member fuchsia.component.test/Builder_Build_Result.response fuchsia.compon
 strict union fuchsia.component.test/Builder_Build_Result
 union/member fuchsia.component.test/Capability.directory fuchsia.component.test/DirectoryCapability
 union/member fuchsia.component.test/Capability.protocol fuchsia.component.test/ProtocolCapability
+union/member fuchsia.component.test/Capability.service fuchsia.component.test/ServiceCapability
 union/member fuchsia.component.test/Capability.storage fuchsia.component.test/StorageCapability
 flexible union fuchsia.component.test/Capability
 union/member fuchsia.component.test/Capability2.directory fuchsia.component.test/Directory
@@ -172,6 +173,8 @@ union/member fuchsia.component.test/RouteEndpoint.above_root fuchsia.component.t
 union/member fuchsia.component.test/RouteEndpoint.component string:1024
 union/member fuchsia.component.test/RouteEndpoint.debug fuchsia.component.test/Debug
 flexible union fuchsia.component.test/RouteEndpoint
+table/member fuchsia.component.test/ServiceCapability.name string:100
+table fuchsia.component.test/ServiceCapability
 table/member fuchsia.component.test/StorageCapability.name string:100
 table/member fuchsia.component.test/StorageCapability.path string:1024
 table fuchsia.component.test/StorageCapability

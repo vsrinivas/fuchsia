@@ -271,6 +271,15 @@ pub struct RouteBuilder {
 }
 
 impl RouteBuilder {
+    /// Creates a new RouteBuilder that routes the given service capability
+    pub fn service(name: impl Into<String>) -> Self {
+        ftest::Capability::Service(ftest::ServiceCapability {
+            name: Some(name.into()),
+            ..ftest::ServiceCapability::EMPTY
+        })
+        .into()
+    }
+
     /// Creates a new RouteBuilder that routes the given protocol capability
     pub fn protocol(name: impl Into<String>) -> Self {
         ftest::Capability::Protocol(ftest::ProtocolCapability {

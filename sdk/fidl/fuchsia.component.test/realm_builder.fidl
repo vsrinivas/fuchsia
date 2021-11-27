@@ -122,6 +122,12 @@ type Capability = flexible union {
     1: protocol ProtocolCapability;
     2: directory DirectoryCapability;
     3: storage StorageCapability;
+    4: service ServiceCapability;
+};
+
+/// A service capability
+type ServiceCapability = table {
+    1: name string:fuchsia.component.MAX_NAME_LENGTH;
 };
 
 /// A protocol capability
