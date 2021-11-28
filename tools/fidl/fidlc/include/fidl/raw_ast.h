@@ -127,9 +127,7 @@ class Literal : public SourceElement {
     kDocComment,
     kString,
     kNumeric,
-    // TODO(pascallouis): should have kBool instead.
-    kTrue,
-    kFalse,
+    kBool,
   };
 
   explicit Literal(SourceElement const& element, Kind kind) : SourceElement(element), kind(kind) {}
@@ -183,18 +181,14 @@ class Ordinal64 final : public SourceElement {
   const uint64_t value;
 };
 
-class TrueLiteral final : public Literal {
+class BoolLiteral final : public Literal {
  public:
-  TrueLiteral(SourceElement const& element) : Literal(element, Kind::kTrue) {}
+  BoolLiteral(SourceElement const& element, bool value)
+      : Literal(element, Kind::kBool), value(value) {}
 
   void Accept(TreeVisitor* visitor) const;
-};
 
-class FalseLiteral final : public Literal {
- public:
-  FalseLiteral(SourceElement const& element) : Literal(element, Kind::kFalse) {}
-
-  void Accept(TreeVisitor* visitor) const;
+  const bool value;
 };
 
 class Constant : public SourceElement {

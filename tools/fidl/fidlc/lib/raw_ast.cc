@@ -38,9 +38,7 @@ void StringLiteral::Accept(TreeVisitor* visitor) const { SourceElementMark sem(v
 
 void NumericLiteral::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
 
-void TrueLiteral::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
-
-void FalseLiteral::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
+void BoolLiteral::Accept(TreeVisitor* visitor) const { SourceElementMark sem(visitor, *this); }
 
 void IdentifierConstant::Accept(TreeVisitor* visitor) const {
   SourceElementMark sem(visitor, *this);

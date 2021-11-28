@@ -265,8 +265,7 @@ class Parser {
 
   std::unique_ptr<raw::StringLiteral> ParseStringLiteral();
   std::unique_ptr<raw::NumericLiteral> ParseNumericLiteral();
-  std::unique_ptr<raw::TrueLiteral> ParseTrueLiteral();
-  std::unique_ptr<raw::FalseLiteral> ParseFalseLiteral();
+  std::unique_ptr<raw::BoolLiteral> ParseBoolLiteral(Token::Subkind subkind);
   std::unique_ptr<raw::Literal> ParseLiteral();
   std::unique_ptr<raw::Ordinal64> ParseOrdinal64();
 

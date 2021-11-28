@@ -3265,12 +3265,9 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant,
           &Typespace::kUnboundedStringType);
       return true;
     }
-    case raw::Literal::Kind::kTrue: {
-      literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(true), &Typespace::kBoolType);
-      return true;
-    }
-    case raw::Literal::Kind::kFalse: {
-      literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(false),
+    case raw::Literal::Kind::kBool: {
+      auto bool_literal = static_cast<raw::BoolLiteral*>(literal_constant->literal.get());
+      literal_constant->ResolveTo(std::make_unique<BoolConstantValue>(bool_literal->value),
                                   &Typespace::kBoolType);
       return true;
     }
@@ -3351,8 +3348,7 @@ const Type* Library::InferType(Constant* constant) {
         }
         case raw::Literal::Kind::kNumeric:
           return &Typespace::kUntypedNumericType;
-        case raw::Literal::Kind::kTrue:
-        case raw::Literal::Kind::kFalse:
+        case raw::Literal::Kind::kBool:
           return &Typespace::kBoolType;
         case raw::Literal::Kind::kDocComment:
           return &Typespace::kUnboundedStringType;

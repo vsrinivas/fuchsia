@@ -172,10 +172,8 @@ std::string NameRawLiteralKind(raw::Literal::Kind kind) {
       return "string";
     case raw::Literal::Kind::kNumeric:
       return "numeric";
-    case raw::Literal::Kind::kTrue:
-      return "true";
-    case raw::Literal::Kind::kFalse:
-      return "false";
+    case raw::Literal::Kind::kBool:
+      return "bool";
   }
 }
 

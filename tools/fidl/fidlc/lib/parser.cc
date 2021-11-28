@@ -211,22 +211,14 @@ std::unique_ptr<raw::Ordinal64> Parser::ParseOrdinal64() {
   return std::make_unique<raw::Ordinal64>(scope.GetSourceElement(), ordinal);
 }
 
-std::unique_ptr<raw::TrueLiteral> Parser::ParseTrueLiteral() {
+std::unique_ptr<raw::BoolLiteral> Parser::ParseBoolLiteral(Token::Subkind subkind) {
   ASTScope scope(this);
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kTrue));
+  ConsumeToken(IdentifierOfSubkind(subkind));
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::TrueLiteral>(scope.GetSourceElement());
-}
-
-std::unique_ptr<raw::FalseLiteral> Parser::ParseFalseLiteral() {
-  ASTScope scope(this);
-  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kFalse));
-  if (!Ok())
-    return Fail();
-
-  return std::make_unique<raw::FalseLiteral>(scope.GetSourceElement());
+  return std::make_unique<raw::BoolLiteral>(scope.GetSourceElement(),
+                                            Token::Subkind::kTrue == subkind);
 }
 
 std::unique_ptr<raw::Literal> Parser::ParseLiteral() {
@@ -238,10 +230,10 @@ std::unique_ptr<raw::Literal> Parser::ParseLiteral() {
       return ParseNumericLiteral();
 
     case CASE_IDENTIFIER(Token::Subkind::kTrue):
-      return ParseTrueLiteral();
+      return ParseBoolLiteral(Token::Subkind::kTrue);
 
     case CASE_IDENTIFIER(Token::Subkind::kFalse):
-      return ParseFalseLiteral();
+      return ParseBoolLiteral(Token::Subkind::kFalse);
 
     default:
       return Fail();

@@ -270,11 +270,7 @@ pub enum Literal {
         value: String,
         expression: String,
     },
-    True {
-        value: String,
-        expression: String,
-    },
-    False {
+    Bool {
         value: String,
         expression: String,
     },

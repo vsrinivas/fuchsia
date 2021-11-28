@@ -24,35 +24,18 @@ class TreeVisitor {
   }
 
   virtual void OnLiteral(std::unique_ptr<fidl::raw::Literal> const& element) {
-    fidl::raw::Literal::Kind kind = element->kind;
-    switch (kind) {
-      case Literal::Kind::kDocComment: {
-        DocCommentLiteral* literal = static_cast<DocCommentLiteral*>(element.get());
-        OnDocCommentLiteral(*literal);
+    switch (element->kind) {
+      case Literal::Kind::kDocComment:
+        OnDocCommentLiteral(*static_cast<DocCommentLiteral*>(element.get()));
         break;
-      }
-      case Literal::Kind::kString: {
-        StringLiteral* literal = static_cast<StringLiteral*>(element.get());
-        OnStringLiteral(*literal);
+      case Literal::Kind::kString:
+        OnStringLiteral(*static_cast<StringLiteral*>(element.get()));
         break;
-      }
-      case Literal::Kind::kNumeric: {
-        NumericLiteral* literal = static_cast<NumericLiteral*>(element.get());
-        OnNumericLiteral(*literal);
+      case Literal::Kind::kNumeric:
+        OnNumericLiteral(*static_cast<NumericLiteral*>(element.get()));
         break;
-      }
-      case Literal::Kind::kTrue: {
-        TrueLiteral* literal = static_cast<TrueLiteral*>(element.get());
-        OnTrueLiteral(*literal);
-        break;
-      }
-      case Literal::Kind::kFalse: {
-        FalseLiteral* literal = static_cast<FalseLiteral*>(element.get());
-        OnFalseLiteral(*literal);
-        break;
-      }
-      default:
-        // Die!
+      case Literal::Kind::kBool:
+        OnBoolLiteral(*static_cast<BoolLiteral*>(element.get()));
         break;
     }
   }
@@ -62,9 +45,7 @@ class TreeVisitor {
 
   virtual void OnNumericLiteral(NumericLiteral& element) { element.Accept(this); }
 
-  virtual void OnTrueLiteral(TrueLiteral& element) { element.Accept(this); }
-
-  virtual void OnFalseLiteral(FalseLiteral& element) { element.Accept(this); }
+  virtual void OnBoolLiteral(BoolLiteral& element) { element.Accept(this); }
 
   virtual void OnOrdinal64(Ordinal64& element) { element.Accept(this); }
 

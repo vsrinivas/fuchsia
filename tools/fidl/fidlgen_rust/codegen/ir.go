@@ -535,10 +535,8 @@ func compileLiteral(val fidlgen.Literal, typ fidlgen.Type) string {
 			return val.Value
 		}
 		return val.Value
-	case fidlgen.TrueLiteral:
-		return "true"
-	case fidlgen.FalseLiteral:
-		return "false"
+	case fidlgen.BoolLiteral:
+		return val.Value
 	case fidlgen.DefaultLiteral:
 		return "::Default::default()"
 	default:

@@ -368,8 +368,7 @@ type LiteralKind string
 const (
 	StringLiteral  LiteralKind = "string"
 	NumericLiteral LiteralKind = "numeric"
-	TrueLiteral    LiteralKind = "true"
-	FalseLiteral   LiteralKind = "false"
+	BoolLiteral    LiteralKind = "bool"
 	DefaultLiteral LiteralKind = "default"
 )
 

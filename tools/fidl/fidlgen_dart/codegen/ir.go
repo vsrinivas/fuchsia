@@ -596,10 +596,8 @@ func (c *compiler) compileLiteral(val fidlgen.Literal) string {
 			panic(fmt.Sprintf("JSON IR contains invalid numeric literal: %s", val.Value))
 		}
 		return fmt.Sprintf("%#x", num)
-	case fidlgen.TrueLiteral:
-		return "true"
-	case fidlgen.FalseLiteral:
-		return "false"
+	case fidlgen.BoolLiteral:
+		return val.Value
 	case fidlgen.DefaultLiteral:
 		return "default"
 	default:

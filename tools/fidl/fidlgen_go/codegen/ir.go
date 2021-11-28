@@ -638,10 +638,8 @@ func (_ *compiler) compileLiteral(val fidlgen.Literal) string {
 	switch val.Kind {
 	case fidlgen.NumericLiteral:
 		return val.Value
-	case fidlgen.TrueLiteral:
-		return "true"
-	case fidlgen.FalseLiteral:
-		return "false"
+	case fidlgen.BoolLiteral:
+		return val.Value
 	case fidlgen.StringLiteral:
 		return strconv.Quote(val.Value)
 	default:

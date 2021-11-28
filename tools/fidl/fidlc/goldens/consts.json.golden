@@ -116,7 +116,7 @@
         "value": "true",
         "expression": "true",
         "literal": {
-          "kind": "true",
+          "kind": "bool",
           "value": "true",
           "expression": "true"
         }

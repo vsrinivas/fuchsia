@@ -971,8 +971,7 @@
                     "enum": [
                         "string",
                         "numeric",
-                        "true",
-                        "false"
+                        "bool"
                     ],
                     "type": "string"
                 },
