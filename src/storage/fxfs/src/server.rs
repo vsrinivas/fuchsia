@@ -56,8 +56,7 @@ enum Services {
 
 pub struct FxfsServer {
     fs: OpenFxFilesystem,
-    // TODO(jfsulliv): we'd like to support multiple volumes, but not clear how to multiplex
-    // requests.
+    // TODO(fxbug.dev/89443): Support multiple volumes.
     volume: FxVolumeAndRoot,
     closed: AtomicBool,
 }

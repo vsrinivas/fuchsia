@@ -480,7 +480,7 @@ impl Debug for FatDirectory {
 
 #[async_trait]
 impl MutableDirectory for FatDirectory {
-    async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
+    async fn unlink(self: Arc<Self>, name: &str, must_be_directory: bool) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let parent = self.borrow_dir(&fs_lock)?;
         let mut existing_node = self.cache_get(name);

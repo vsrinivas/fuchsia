@@ -345,7 +345,11 @@ mod tests {
 
         #[async_trait]
         impl MutableDirectory for MockDirectory {
-            async fn unlink(&self, _name: &str, _must_be_directory: bool) -> Result<(), Status> {
+            async fn unlink(
+                self: Arc<Self>,
+                _name: &str,
+                _must_be_directory: bool,
+            ) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 

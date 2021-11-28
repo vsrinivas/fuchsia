@@ -80,7 +80,7 @@ pub trait MutableDirectory: Directory + Send + Sync {
     async fn set_attrs(&self, flags: u32, attributes: NodeAttributes) -> Result<(), Status>;
 
     /// Removes an entry from this directory.
-    async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status>;
+    async fn unlink(self: Arc<Self>, name: &str, must_be_directory: bool) -> Result<(), Status>;
 
     /// Gets the filesystem this directory belongs to.
     fn get_filesystem(&self) -> &dyn Filesystem;

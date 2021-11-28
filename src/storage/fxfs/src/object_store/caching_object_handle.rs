@@ -32,8 +32,6 @@ pub use crate::object_store::writeback_cache::CACHE_READ_AHEAD_SIZE;
 /// How much data each sync transaction in a given flush will cover.
 pub const FLUSH_BATCH_SIZE: u64 = 524_288;
 
-// TODO(jfsulliv): We should move away from having CachingObjectHandle implement ObjectHandle, since
-// it stubs out most of the methods.
 pub struct CachingObjectHandle<S: HandleOwner> {
     handle: StoreObjectHandle<S>,
     cache: WritebackCache<S::Buffer>,

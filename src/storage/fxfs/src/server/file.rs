@@ -220,6 +220,7 @@ impl FxFile {
         }
         range.start = round_down(range.start, self.handle.block_size());
         let this = self.clone();
+        // TODO(fxbug.dev/89444): Handle IO errors.
         fasync::Task::spawn_on(self.handle.owner().executor(), async move {
             async_enter!("page_in");
             static TRANSFER_BUFFERS: Lazy<TransferBuffers> = Lazy::new(|| TransferBuffers::new());
@@ -413,8 +414,6 @@ impl File for FxFile {
 
     async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         let props = self.handle.get_properties().await.map_err(map_to_status)?;
-        // TODO(jfsulliv): This assumes that we always get the data attribute at index 0 of
-        // |attribute_sizes|.
         Ok(NodeAttributes {
             mode: V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH,
             id: self.handle.object_id(),
@@ -469,6 +468,7 @@ mod tests {
             object_store::filesystem::Filesystem,
             server::testing::{close_file_checked, open_file_checked, TestFixture},
         },
+        fdio::fdio_sys::{V_IRGRP, V_IROTH, V_IRUSR, V_IWUSR, V_TYPE_FILE},
         fidl_fuchsia_io::{
             self as fio, SeekOrigin, MODE_TYPE_FILE, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
             OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
@@ -500,8 +500,8 @@ mod tests {
 
         let (status, attrs) = file.get_attr().await.expect("FIDL call failed");
         Status::ok(status).expect("get_attr failed");
-        // TODO(jfsulliv): Check mode
         assert_ne!(attrs.id, INVALID_OBJECT_ID);
+        assert_eq!(attrs.mode, V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH);
         assert_eq!(attrs.content_size, 0u64);
         assert_eq!(attrs.storage_size, 0u64);
         assert_eq!(attrs.link_count, 1u64);

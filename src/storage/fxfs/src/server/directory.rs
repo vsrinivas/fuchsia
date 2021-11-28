@@ -273,17 +273,6 @@ impl FxDirectory {
     pub(crate) fn did_add(&self, name: &str) {
         self.watchers.lock().unwrap().send_event(&mut SingleNameEventProducer::added(name));
     }
-
-    // TODO(jfsulliv): Change the VFS to send in &Arc<Self> so we don't need this.
-    async fn as_strong(&self) -> Arc<Self> {
-        self.volume()
-            .get_or_load_node(self.object_id(), ObjectDescriptor::Directory, self.parent())
-            .await
-            .expect("open_or_load_node on self failed")
-            .into_any()
-            .downcast::<FxDirectory>()
-            .unwrap()
-    }
 }
 
 impl Drop for FxDirectory {
@@ -361,10 +350,9 @@ impl MutableDirectory for FxDirectory {
         Ok(())
     }
 
-    async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
-        let this = self.as_strong().await;
+    async fn unlink(self: Arc<Self>, name: &str, must_be_directory: bool) -> Result<(), Status> {
         let (mut transaction, _object_id, object_descriptor) =
-            this.acquire_transaction_for_unlink(&[], name, true).await.map_err(map_to_status)?;
+            self.acquire_transaction_for_unlink(&[], name, true).await.map_err(map_to_status)?;
         if let ObjectDescriptor::Directory = object_descriptor {
         } else if must_be_directory {
             return Err(Status::NOT_DIR);
@@ -385,9 +373,11 @@ impl MutableDirectory for FxDirectory {
                     .commit_with_callback(|_| self.did_remove(name))
                     .await
                     .map_err(map_to_status)?;
-                // TODO(jfsulliv): This might return failure but the unlink has actually succeeded
-                // by this point.  Consider if this is the right thing to do.
-                self.volume().maybe_purge_file(id).await.map_err(map_to_status)?;
+                // If purging fails , we should still return success, since the file will appear
+                // unlinked at this point anyways.  The file should be cleaned up on a later mount.
+                if let Err(e) = self.volume().maybe_purge_file(id).await {
+                    log::warn!("Failed to purge file: {:?}", e);
+                }
             }
             ReplacedChild::Directory(id) => {
                 transaction
@@ -454,8 +444,6 @@ impl DirectoryEntry for FxDirectory {
         server_end: ServerEnd<NodeMarker>,
     ) {
         scope.clone().spawn_with_shutdown(move |shutdown| async move {
-            // TODO(jfsulliv): Factor this out into a visitor-pattern style method for FxNode, e.g.
-            // FxNode::visit(FileFn, DirFn).
             match self.lookup(flags, mode, path).await {
                 Err(e) => send_on_open_with_error(flags, server_end, map_to_status(e)),
                 Ok(node) => {

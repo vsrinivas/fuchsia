@@ -132,7 +132,7 @@ pub trait DirectlyMutable: Directory + Send + Sync {
 
 #[async_trait]
 impl<T: DirectlyMutable> MutableDirectory for T {
-    async fn unlink(&self, name: &str, must_be_directory: bool) -> Result<(), Status> {
+    async fn unlink(self: Arc<Self>, name: &str, must_be_directory: bool) -> Result<(), Status> {
         match self.remove_entry_impl(name.into(), must_be_directory) {
             Ok(Some(_)) => Ok(()),
             Ok(None) => Err(Status::NOT_FOUND),

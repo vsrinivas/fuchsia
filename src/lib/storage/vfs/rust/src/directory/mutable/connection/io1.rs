@@ -477,7 +477,11 @@ mod tests {
             self.fs.handle_event(MutableDirectoryAction::Link { id: self.id, path })
         }
 
-        async fn unlink(&self, name: &str, _must_be_directory: bool) -> Result<(), Status> {
+        async fn unlink(
+            self: Arc<Self>,
+            name: &str,
+            _must_be_directory: bool,
+        ) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::Unlink {
                 id: self.id,
                 name: name.to_string(),
