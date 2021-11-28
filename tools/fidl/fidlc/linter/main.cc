@@ -65,7 +65,7 @@ void Lint(const fidl::SourceFile& source_file, fidl::Findings* findings,
   fidl::ExperimentalFlags experimental_flags;
   fidl::Parser parser(&lexer, &reporter, experimental_flags);
   std::unique_ptr<fidl::raw::File> ast = parser.Parse();
-  for (auto* diag : reporter.diagnostics()) {
+  for (auto* diag : reporter.Diagnostics()) {
     findings->push_back(DiagnosticToFinding(*diag));
   }
   if (!parser.Success()) {

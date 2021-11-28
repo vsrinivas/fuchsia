@@ -70,4 +70,22 @@ TEST(ReporterTests, MakeWarningThenReportIt) {
                 "This test warning has one string param 'param1' and another 'param2'.");
 }
 
+TEST(ReporterTests, CheckpointNoNewErrors) {
+  Reporter reporter;
+  reporter.Report(ErrTest, std::string("1"), std::string());
+  auto checkpoint = reporter.Checkpoint();
+  EXPECT_TRUE(checkpoint.NoNewErrors());
+  reporter.Report(ErrTest, std::string("2"), std::string());
+  EXPECT_FALSE(checkpoint.NoNewErrors());
+}
+
+TEST(ReporterTests, CheckpointNoNewWarnings) {
+  Reporter reporter;
+  reporter.Report(WarnTest, std::string("1"), std::string());
+  auto checkpoint = reporter.Checkpoint();
+  EXPECT_TRUE(checkpoint.NoNewWarnings());
+  reporter.Report(WarnTest, std::string("2"), std::string());
+  EXPECT_FALSE(checkpoint.NoNewWarnings());
+}
+
 }  // namespace

@@ -45,7 +45,7 @@ type Table = table {
 };
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  const auto& diagnostics = library.diagnostics();
+  const auto& diagnostics = library.Diagnostics();
 
   ASSERT_JSON(diagnostics, R"JSON([
   {
@@ -70,7 +70,7 @@ protocol Protocol {
 };
 )FIDL");
   ASSERT_TRUE(library.Compile());
-  const auto& diagnostics = library.diagnostics();
+  const auto& diagnostics = library.Diagnostics();
 
   ASSERT_JSON(diagnostics, R"JSON([
   {
@@ -99,7 +99,7 @@ type Table = table {
 type NewType = Table;  // Error: new type not allowed
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  const auto& diagnostics = library.diagnostics();
+  const auto& diagnostics = library.Diagnostics();
 
   ASSERT_JSON(diagnostics, R"JSON([
   {
@@ -132,7 +132,7 @@ type Table = table {
 }
 )FIDL");
   ASSERT_FALSE(library.Compile());
-  const auto& diagnostics = library.diagnostics();
+  const auto& diagnostics = library.Diagnostics();
 
   ASSERT_JSON(diagnostics, R"JSON([
   {

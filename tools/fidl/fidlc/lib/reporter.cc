@@ -12,7 +12,9 @@
 
 namespace fidl::reporter {
 
-std::string MakeSquiggle(const std::string& surrounding_line, int column) {
+using diagnostics::DiagnosticKind;
+
+static std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   std::string squiggle;
   size_t line_size = surrounding_line.size();
   for (size_t i = 0; i < (static_cast<size_t>(column) - 1); i++) {
@@ -26,7 +28,7 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   return squiggle;
 }
 
-std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
+std::string Format(std::string_view qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, bool color, size_t squiggle_size) {
   const std::string_view bold = color ? "\033[1m" : "";
   const std::string_view bold_red = color ? "\033[1;31m" : "";
@@ -73,19 +75,13 @@ std::string Format(std::string qualifier, const std::optional<SourceSpan>& span,
   return error.str();
 }
 
-void Reporter::AddError(std::unique_ptr<Diagnostic> diag) {
-  if (mode_ == ReportingMode::kDoNotReport)
-    return;
-  errors_.push_back(std::move(diag));
-}
+void Reporter::AddError(std::unique_ptr<Diagnostic> error) { errors_.push_back(std::move(error)); }
 
-void Reporter::AddWarning(std::unique_ptr<Diagnostic> diag) {
-  if (mode_ == ReportingMode::kDoNotReport)
-    return;
+void Reporter::AddWarning(std::unique_ptr<Diagnostic> warning) {
   if (warnings_as_errors_) {
-    errors_.push_back(std::move(diag));
+    errors_.push_back(std::move(warning));
   } else {
-    warnings_.push_back(std::move(diag));
+    warnings_.push_back(std::move(warning));
   }
 }
 
@@ -107,8 +103,46 @@ void Reporter::Report(std::unique_ptr<Diagnostic> diag) {
   }
 }
 
-void Reporter::PrintReports() {
-  const auto diags = diagnostics();
+std::vector<Diagnostic*> Reporter::Diagnostics() const {
+  std::vector<Diagnostic*> diagnostics;
+  for (const auto& err : errors_) {
+    diagnostics.push_back(err.get());
+  }
+  for (const auto& warn : warnings_) {
+    diagnostics.push_back(warn.get());
+  }
+
+  // Sort by file > position > kind (errors then warnings) > message.
+  sort(diagnostics.begin(), diagnostics.end(), [](Diagnostic* a, Diagnostic* b) -> bool {
+    if (a->span && b->span) {
+      // SourceSpan overloads the < operator to compare by filename, then
+      // start position, then end position.
+      if (a->span < b->span)
+        return true;
+      if (b->span < a->span)
+        return false;
+    } else {
+      // Sort errors without spans first.
+      if (b->span)
+        return true;
+      if (a->span)
+        return false;
+    }
+
+    // If neither diagnostic had a span, or if their spans were ==, sort
+    // by kind (errors first) and then message.
+    if (a->kind == DiagnosticKind::kError && b->kind == DiagnosticKind::kWarning)
+      return true;
+    if (a->kind == DiagnosticKind::kWarning && b->kind == DiagnosticKind::kError)
+      return false;
+    return a->msg < b->msg;
+  });
+
+  return diagnostics;
+}
+
+void Reporter::PrintReports() const {
+  const auto diags = Diagnostics();
   for (const auto& diag : diags) {
     size_t squiggle_size = diag->span ? diag->span->data().size() : 0;
     std::string qualifier = diag->kind == DiagnosticKind::kError ? "error" : "warning";
@@ -126,8 +160,8 @@ void Reporter::PrintReports() {
   }
 }
 
-void Reporter::PrintReportsJson() {
-  fprintf(stderr, "%s", fidl::DiagnosticsJson(diagnostics()).Produce().str().c_str());
+void Reporter::PrintReportsJson() const {
+  fprintf(stderr, "%s", fidl::DiagnosticsJson(Diagnostics()).Produce().str().c_str());
 }
 
 }  // namespace fidl::reporter

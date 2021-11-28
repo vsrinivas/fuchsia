@@ -292,7 +292,7 @@ class TestLibrary final {
     return fidl::SourceSpan(data, *all_sources_.at(0));
   }
 
-  std::vector<fidl::Diagnostic*> diagnostics() const { return reporter_->diagnostics(); }
+  std::vector<fidl::Diagnostic*> Diagnostics() const { return reporter_->Diagnostics(); }
 
   const std::vector<std::unique_ptr<fidl::Diagnostic>>& errors() const {
     return reporter_->errors();
