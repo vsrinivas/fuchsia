@@ -39,7 +39,6 @@ impl FsckError {
 pub enum FsckWarning {
     // An object ID was found which had no parent.
     // Parameters are (store_id, object_id)
-    // TODO(jfsulliv): Implement this check.
     OrphanedObject(u64, u64),
 }
 

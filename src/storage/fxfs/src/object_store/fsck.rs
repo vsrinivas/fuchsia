@@ -51,8 +51,6 @@ pub struct FsckOptions<F: Fn(&FsckError)> {
 //  + Keys should be in-order.
 //  + Objects should either be <object>[<attribute>[<extent>...]...], or <tombstone>.
 //  + Values need to match keys.
-//  + There should be no orphaned objects, dangling object references (in directory entries), or
-//    other object reference mismatches.
 //  + No overlapping keys within a single layer.
 //  + We might want to individually check layers.
 //  + Extents should be aligned and end > start.
