@@ -198,12 +198,31 @@ An example for troubleshooting a case where a test wasn't showing coverage
 because it was not set up to run on CQ can be found
 [here][fxr608002-comment].
 
-### Test only flakes in coverage
+### Test only fails or flakes in coverage
 
 Related to the above, tests are more likely to be flaky under coverage
 [example][fxr541525]. The extra overhead from collecting coverage at runtime
 slows down performance, which in turn affects timing, which is often the cause
 for additional flakiness.
+
+Another reason could be a timeout during the test that is not encountered in
+regular test runs. Experimental results show that on average tests run 2.3x
+slower in the coverage variant, due to the added overhead of collecting the
+runtime profile. To accommodate for this, the test runner affords a longer
+timeout for each test when running a coverage build. However tests may still
+have their own timeouts for internal operations, which may be affected by this.
+
+As a general rule of thumb, you shouldn't have timeouts in tests. When waiting
+on an asynchronous operation in a test, it's best to wait indefinitely and let
+the test runner's overall timeout expire.
+
+Lastly, on the coverage variant components may use the
+[`fuchsia.debug.DebugData`][debugdata] protocol. This interferes with tests
+that make assumptions about precisely what capabilities components use. See
+for instance:
+
+*   [Issue 77206: Failing test on coverage builder: fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_integration_test.cmx][fxb77206]
+*   [Issue 89446: realm_builder_server_test fails on coverage variant][fxb89446]
 
 An immediate fix would be to disable your test under coverage (see the GN
 snippet above), at the immediate cost of not collecting coverage information
@@ -302,6 +321,8 @@ Areas for future work:
 [fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
 [fuzz-testing]: /docs/concepts/testing/fuzz_testing.md
 [fx-smoke-test]: https://fuchsia.dev/reference/tools/fx/cmd/smoke-test
+[fxb77206]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=77206
+[fxb89446]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=89446
 [fxr541525]: https://fuchsia-review.googlesource.com/c/fuchsia/+/541525
 [fxr608002-comment]: https://fuchsia-review.googlesource.com/c/fuchsia/+/608002/comments/b0fde8b7_9a3a39d7
 [gerrit]: https://fuchsia-review.googlesource.com/
