@@ -183,11 +183,9 @@ group("diagnostics-eng") {
   deps = [ "//src/diagnostics/bundles:dev-tools" ]
 }
 
-# Group including all drivers in the fuchsia repo. Useful for ensuring
-# all driver continue to build without needing to build every board.
-check_included_drivers("drivers-build-only") {
+# Group including all drivers in the fuchsia repo except for templates.
+group("drivers-not-templates") {
   testonly = true
-  contains_all_drivers = true
   deps = [
     "//src/camera:drivers",
     "//src/connectivity/bundles:drivers",
@@ -198,13 +196,23 @@ check_included_drivers("drivers-build-only") {
     "//src/media/bundles:drivers",
     "//src/storage/fvm/driver:driver",
     "//src/ui/bundles:drivers",
-    "//tools/create/goldens/my-driver-cpp:component",
     "//zircon/third_party/dev/ethernet/e1000:e1000",
+  ]
+}
+
+# Group including all drivers in the fuchsia repo. Useful for ensuring
+# all driver continue to build without needing to build every board.
+check_included_drivers("drivers-build-only") {
+  testonly = true
+  contains_all_drivers = true
+  deps = [
+    ":drivers-not-templates",
+    "//tools/create/goldens/my-driver-cpp:component",
   ]
 }
 
 # Group including all drivers to extract documentation from.
 create_all_drivers_doc("create_all_drivers_doc") {
   testonly = true
-  deps = [ ":drivers-build-only" ]
+  deps = [ ":drivers-not-templates" ]
 }

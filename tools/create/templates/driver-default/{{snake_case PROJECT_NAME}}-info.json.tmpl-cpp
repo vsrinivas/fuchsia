@@ -4,6 +4,6 @@
     "families": [],
     "models": [],
     "areas": [
-        "Test"
+        "<Please add one or more areas from //build/drivers/areas.txt here>"
     ]
 }
