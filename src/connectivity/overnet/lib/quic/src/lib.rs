@@ -94,6 +94,7 @@ pub struct ConnState {
     conn_send: Wakeup,
     stream_recv: WakeupMap,
     stream_send: WakeupMap,
+    stream_send_init: WakeupMap,
     dgram_send: Wakeup,
     dgram_recv: Wakeup,
     new_timeout: Wakeup,
@@ -137,6 +138,7 @@ impl ConnState {
             self.stream_send.ready_iter(self.conn.writable());
             self.stream_recv.ready_iter(self.conn.readable());
         }
+        self.stream_send_init.all_ready();
     }
 
     fn wait_for_new_timeout(
@@ -201,6 +203,7 @@ impl AsyncConnection {
                 conn_send: Default::default(),
                 stream_recv: Default::default(),
                 stream_send: Default::default(),
+                stream_send_init: Default::default(),
                 dgram_recv: Default::default(),
                 dgram_send: Default::default(),
                 timeout: None,
@@ -421,11 +424,14 @@ impl AsyncQuicStreamWriter {
                 if !io.conn.is_established() {
                     return io.stream_send.pending(ctx, id);
                 }
-                let n = io
-                    .conn
-                    .stream_send(id, &bytes[sent..], fin)
-                    .or_else(|e| if quiche::Error::Done == e { Ok(0) } else { Err(e) })
-                    .with_context(|| format!("sending on stream {}", id))?;
+                let n = match io.conn.stream_send(id, &bytes[sent..], fin) {
+                    Ok(n) => n,
+                    Err(quiche::Error::Done) => {
+                        io.conn_send.ready();
+                        return io.stream_send_init.pending(ctx, id);
+                    }
+                    e @ Err(_) => e.with_context(|| format!("sending on stream {}", id))?,
+                };
                 io.conn_send.ready();
                 sent += n;
                 if sent == bytes.len() {
