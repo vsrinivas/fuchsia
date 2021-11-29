@@ -1,0 +1,13 @@
+{
+    "short_description": "AMLogic NNA driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "T931",
+        "S905D3",
+        "A311D"
+    ],
+    "areas": [
+        "ML"
+    ]
+}

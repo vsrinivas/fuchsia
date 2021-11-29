@@ -41,6 +41,7 @@ fuchsia_driver("usb-harriet-driver") {
 }
 
 fuchsia_driver_component("usb-harriet") {
+  info = "usb-harriet-info.json"
   component_name = "usb-harriet"
   deps = [ ":usb-harriet-driver" ]
 }
