@@ -61,4 +61,5 @@ fuchsia_driver("intel-i2c-driver") {
 fuchsia_driver_component("intel-i2c") {
   component_name = "intel-i2c"
   deps = [ ":intel-i2c-driver" ]
+  info = "intel-i2c-info.json"
 }

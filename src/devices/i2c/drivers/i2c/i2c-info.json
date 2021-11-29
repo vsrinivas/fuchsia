@@ -1,5 +1,5 @@
 {
-    "short_description": "ACPI I2C HID driver",
+    "short_description": "Core I2C driver",
     "manufacturer": "",
     "families": [
         "generic"
@@ -8,7 +8,6 @@
         "generic"
     ],
     "areas": [
-        "Input",
         "I2C"
     ]
 }

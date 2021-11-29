@@ -13,7 +13,7 @@ Ethernet
 Firmware
 GPIO
 Graphics
-I2c
+I2C
 Input
 Light
 Kernel

@@ -1,0 +1,9 @@
+{
+    "short_description": "Intel I2C driver",
+    "manufacturer": "Intel",
+    "families": [],
+    "models": [],
+    "areas": [
+        "I2C"
+    ]
+}
