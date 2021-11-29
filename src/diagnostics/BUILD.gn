@@ -40,3 +40,8 @@ group("tests") {
     # "transit_bench",
   ]
 }
+
+group("benchmarks") {
+  testonly = true
+  deps = [ "archivist:benchmarks" ]
+}

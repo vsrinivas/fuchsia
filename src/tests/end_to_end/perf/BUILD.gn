@@ -191,9 +191,8 @@ if (is_host) {
 group("package_deps") {
   testonly = true
   public_deps = [
-    "//src/diagnostics/archivist/bench",
-    "//src/lib/diagnostics/inspect:benchmarks",
-    "//src/lib/diagnostics/selectors/bench",
+    "//src/diagnostics:benchmarks",
+    "//src/lib/diagnostics:benchmarks",
     "//src/media/audio/audio_core/mixer/tools:audio_mixer_profiler",
     "//src/tests/benchmarks:kernel-boot-benchmarks",
     "//src/tests/benchmarks/fidl:benchmarks",

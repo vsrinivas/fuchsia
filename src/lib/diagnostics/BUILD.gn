@@ -26,3 +26,11 @@ group("tests") {
     "//src/lib/diagnostics/testing:tests",
   ]
 }
+
+group("benchmarks") {
+  testonly = true
+  deps = [
+    "inspect:benchmarks",
+    "selectors:benchmarks",
+  ]
+}
