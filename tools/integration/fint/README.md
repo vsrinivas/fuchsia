@@ -3,6 +3,18 @@
 `fint` provides a common high-level interface for continuous integration
 infrastructure and local developer tools to build Fuchsia.
 
+`fx set` is a wrapper around fint with a minimal layer of logic to present a
+nice command-line interface, because fint's command-line interface is not
+particularly ergonomic for human use. fint's interface is more optimized for
+automated use (e.g. it accepts inputs via protobuf files instead of separate
+command-line flags) to make it easy for the infrastructure to use fint directly.
+
+On the other hand, `fx build` does not use fint for performance reasons. `fx
+build` is a trivially thin wrapper around ninja and does not need the vast
+majority of the ninja-wrapping logic that fint provides to the infrastructure.
+Using fint would require a bootstrapping step that would add significant latency
+to `fx build`.
+
 ## CLI
 
 fint has two subcommands, intended to be run in succession:
