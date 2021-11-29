@@ -7,7 +7,6 @@ group("drivers") {
   deps = [
     "drivers/aml-light",
     "drivers/gpio-light",
-    "drivers/lp50xx-light",
   ]
 }
 group("tests") {

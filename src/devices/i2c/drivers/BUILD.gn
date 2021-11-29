@@ -7,7 +7,6 @@ group("tests") {
 
   deps = [
     "aml-i2c:tests",
-    "dw-i2c:tests",
     "i2c:tests",
     "intel-i2c:tests",
   ]

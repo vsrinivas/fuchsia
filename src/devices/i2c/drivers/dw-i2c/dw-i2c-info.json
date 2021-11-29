@@ -1,9 +1,0 @@
-{
-    "short_description": "Designware I2C driver",
-    "manufacturer": "Designware",
-    "families": [],
-    "models": [],
-    "areas": [
-        "I2C"
-    ]
-}

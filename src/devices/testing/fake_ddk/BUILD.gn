@@ -107,7 +107,6 @@ zx_library("fake_ddk") {
     "//src/devices/cpu/drivers/aml-cpu-legacy/*",
     "//src/devices/cpu/drivers/aml-cpu/*",
     "//src/devices/gpio/drivers/gpio/*",
-    "//src/devices/i2c/drivers/dw-i2c/*",
     "//src/devices/i2c/drivers/i2c/*",
     "//src/devices/lib/goldfish/pipe_io/*",
     "//src/devices/nand/drivers/aml-rawnand/tests/*",

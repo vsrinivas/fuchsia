@@ -367,3 +367,15 @@
   available_in_git: '636114fa5f0c3a175cf6f054f26b415f72a72dad'
   areas: ['LightSensor']
   path: '/src/devices/light-sensor/drivers/lite-on'
+- short_description: 'DesignWire I2C driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '610581'
+  available_in_git: '636114fa5f0c3a175cf6f054f26b415f72a72dad'
+  areas: ['I2c']
+  path: '/src/devices/i2c/drivers/dw-i2c'
+- short_description: 'Texas Instruments Lp LED driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '610581'
+  available_in_git: '636114fa5f0c3a175cf6f054f26b415f72a72dad'
+  areas: ['Light']
+  path: '/src/ui/light/drivers/lp50xx-light'

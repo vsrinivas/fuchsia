@@ -120,7 +120,6 @@
 //src/devices/gpio/drivers/gpio-test:gpio-test-driver
 //src/devices/gpio/drivers/gpio:gpio-driver
 //src/devices/i2c/drivers/aml-i2c:aml-i2c-driver
-//src/devices/i2c/drivers/dw-i2c:dw-i2c-driver
 //src/devices/i2c/drivers/i2c:i2c-driver
 //src/devices/i2c/drivers/intel-i2c:intel-i2c-driver
 //src/devices/internal/drivers/fragment:fragment-driver
@@ -301,6 +300,5 @@
 //src/ui/input/drivers/virtio:virtio_input-driver
 //src/ui/light/drivers/aml-light:aml-light-driver
 //src/ui/light/drivers/gpio-light:gpio-light-driver
-//src/ui/light/drivers/lp50xx-light:lp50xx-light-driver
 //tools/create/goldens/my-driver-cpp:driver
 //zircon/third_party/dev/ethernet/e1000:e1000-driver
