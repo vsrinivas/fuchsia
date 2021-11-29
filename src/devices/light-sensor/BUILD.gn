@@ -4,10 +4,7 @@
 
 group("drivers") {
   testonly = true
-  deps = [
-    "drivers/ams-light",
-    "drivers/lite-on",
-  ]
+  deps = [ "drivers/ams-light" ]
 }
 
 group("tests") {

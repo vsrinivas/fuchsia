@@ -4,10 +4,7 @@
 
 group("drivers") {
   testonly = true
-  deps = [
-    "drivers/sg-micro",
-    "drivers/ti-lp8556",
-  ]
+  deps = [ "drivers/ti-lp8556" ]
 }
 
 group("tests") {

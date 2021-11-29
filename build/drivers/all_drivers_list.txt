@@ -126,7 +126,6 @@
 //src/devices/internal/drivers/fragment:fragment-driver
 //src/devices/internal/drivers/fragment:fragment.proxy-driver
 //src/devices/light-sensor/drivers/ams-light:ams-light-driver
-//src/devices/light-sensor/drivers/lite-on:lite-on-driver
 //src/devices/mcu/drivers/chromiumos-ec-lpc:driver
 //src/devices/mcu/drivers/chromiumos-ec-core:driver
 //src/devices/mcu/drivers/vim3-mcu:vim3-mcu-driver
@@ -284,9 +283,7 @@
 //src/media/audio/drivers/usb-audio:usb-audio-driver
 //src/media/audio/drivers/virtual_audio:virtual_audio_driver-driver
 //src/storage/fvm/driver:fuchsia_driver
-//src/ui/backlight/drivers/sg-micro:sg-micro-driver
 //src/ui/backlight/drivers/ti-lp8556:ti-lp8556-driver
-//src/ui/input/drivers/bma253:bma253-driver
 //src/ui/input/drivers/cypress:cypress-driver
 //src/ui/input/drivers/focaltech:focaltech-driver
 //src/ui/input/drivers/focaltech:focaltech-sherlock-driver

@@ -5,8 +5,5 @@
 group("tests") {
   testonly = true
 
-  deps = [
-    "ams-light:tests",
-    "lite-on:tests",
-  ]
+  deps = [ "ams-light:tests" ]
 }

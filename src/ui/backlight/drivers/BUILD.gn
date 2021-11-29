@@ -5,8 +5,5 @@
 group("tests") {
   testonly = true
 
-  deps = [
-    "sg-micro:tests",
-    "ti-lp8556:tests",
-  ]
+  deps = [ "ti-lp8556:tests" ]
 }

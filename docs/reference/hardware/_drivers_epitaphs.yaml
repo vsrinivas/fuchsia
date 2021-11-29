@@ -349,3 +349,21 @@
   available_in_git: 'b1218b93f39358bef3c45cbbb32af7b431ce3c72'
   areas: ['Board']
   path: '/src/devices/board/drivers/vim2'
+- short_description: 'SG Micro backlight driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '610307'
+  available_in_git: '636114fa5f0c3a175cf6f054f26b415f72a72dad'
+  areas: ['Display']
+  path: '/src/ui/backlight/drivers/sg-micro'
+- short_description: 'Bosch Bma253 accelerometer driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '610307'
+  available_in_git: '636114fa5f0c3a175cf6f054f26b415f72a72dad'
+  areas: ['Input']
+  path: '/src/ui/input/drivers/bma253'
+- short_description: 'Lite-On LTR-578ALS optical sensor driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '610307'
+  available_in_git: '636114fa5f0c3a175cf6f054f26b415f72a72dad'
+  areas: ['LightSensor']
+  path: '/src/devices/light-sensor/drivers/lite-on'
