@@ -297,6 +297,12 @@ impl WaitQueue {
     pub fn notify_all(&mut self) {
         self.notify_count(usize::MAX)
     }
+
+    pub fn transfer(&mut self, other: &mut WaitQueue) {
+        for entry in other.waiters.drain(..) {
+            self.waiters.push(entry);
+        }
+    }
 }
 
 #[cfg(test)]

@@ -59,6 +59,19 @@ impl FutexTable {
         self.get_waiters(addr).lock().notify_mask_count(mask, count);
     }
 
+    /// Requeue the waitersd to another address.
+    ///
+    /// See FUTEX_REQUEUE
+    pub fn requeue(&self, addr: UserAddress, count: usize, new_addr: UserAddress) {
+        let mut waiters = WaitQueue::default();
+        if let Some(old_waiters) = self.state.lock().remove(&addr) {
+            waiters.transfer(&mut old_waiters.lock());
+        }
+        waiters.notify_mask_count(FUTEX_BITSET_MATCH_ANY, count);
+        let new_waiters = self.get_waiters(new_addr);
+        new_waiters.lock().transfer(&mut waiters);
+    }
+
     /// Returns the WaitQueue for a given address.
     fn get_waiters(&self, addr: UserAddress) -> Arc<Mutex<WaitQueue>> {
         let mut state = self.state.lock();

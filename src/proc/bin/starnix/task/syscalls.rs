@@ -339,7 +339,7 @@ pub fn sys_futex(
     op: u32,
     value: u32,
     _utime: UserRef<timespec>,
-    _addr2: UserAddress,
+    addr2: UserAddress,
     value3: u32,
 ) -> Result<SyscallResult, Errno> {
     // TODO: Distinguish between public and private futexes.
@@ -378,6 +378,9 @@ pub fn sys_futex(
                 return error!(EINVAL);
             }
             current_task.mm.futex.wake(addr, value as usize, value3);
+        }
+        FUTEX_REQUEUE => {
+            current_task.mm.futex.requeue(addr, value as usize, addr2);
         }
         _ => {
             not_implemented!("futex: command 0x{:x} not implemented.", cmd);
