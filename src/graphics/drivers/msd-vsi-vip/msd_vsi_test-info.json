@@ -1,10 +1,11 @@
 {
-    "short_description": "Test Magma Service Driver for Verisilicon",
+    "short_description": "Test Magma Service Driver for Verisilicon ML",
     "manufacturer": "Verisilicon",
     "families": [],
     "models": [],
     "areas": [
         "Graphics",
+        "ML",
         "Test"
     ]
 }

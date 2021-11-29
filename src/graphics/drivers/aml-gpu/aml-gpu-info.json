@@ -4,10 +4,10 @@
     "families": [],
     "models": [
         "S912",
-        "S905d2",
-        "S905d3",
+        "S905D2",
+        "S905D3",
         "T931",
-        "A311d"
+        "A311D"
     ],
     "areas": [
         "Graphics"
