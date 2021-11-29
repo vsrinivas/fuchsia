@@ -30,7 +30,8 @@ phys_exclude_variant_tags = []
 
 phys_zbi_configs = [ "//zircon/kernel/phys:load-pic" ]
 
-if (optimize != "none") {
+if (optimize != "none" && optimize != "coverage" && optimize != "profile" &&
+    optimize != "sanitizer") {
   # All phys executables should be small enough for the tiny code model.
   phys_configs += [ "//build/config/zircon:tiny" ]
   phys_tags += [ "tiny" ]
