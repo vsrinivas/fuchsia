@@ -1,0 +1,19 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/reference-scenic",
+    },
+    capabilities: [
+        { protocol: "fuchsia.ui.scenic.Scenic" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.ui.scenic.Scenic",
+            from: "self",
+        },
+    ],
+}

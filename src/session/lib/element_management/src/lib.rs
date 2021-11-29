@@ -187,6 +187,10 @@ pub struct ElementManager {
     ///
     /// If a launcher is not provided during initialization, it is requested from the environment.
     sys_launcher: Result<fsys::LauncherProxy, Error>,
+
+    /// Returns whether the client should use Flatland to interact with Scenic.
+    /// TODO(fxbug.dev/64206): Remove after Flatland migration is completed.
+    scenic_uses_flatland: bool,
 }
 
 impl ElementManager {
@@ -194,12 +198,14 @@ impl ElementManager {
         realm: fcomponent::RealmProxy,
         graphical_presenter: Option<felement::GraphicalPresenterProxy>,
         collection: &str,
+        scenic_uses_flatland: bool,
     ) -> ElementManager {
         ElementManager {
             realm,
             graphical_presenter,
             collection: collection.to_string(),
             sys_launcher: fuchsia_component::client::connect_to_protocol::<fsys::LauncherMarker>(),
+            scenic_uses_flatland,
         }
     }
 
@@ -216,6 +222,7 @@ impl ElementManager {
             graphical_presenter,
             collection: collection.to_string(),
             sys_launcher: Ok(sys_launcher),
+            scenic_uses_flatland: false,
         }
     }
 
@@ -415,9 +422,6 @@ impl ElementManager {
         initial_annotations: Vec<felement::Annotation>,
         annotation_controller: Option<ClientEnd<felement::AnnotationControllerMarker>>,
     ) -> Result<felement::ViewControllerProxy, Error> {
-        // TODO(fxbug.dev/86450): flip this to use Flatland instead of legacy Scenic Gfx API.
-        let use_flatland = false;
-
         let view_provider = element.connect_to_protocol::<fuiapp::ViewProviderMarker>()?;
         let scenic::ViewRefPair { mut control_ref, mut view_ref } = scenic::ViewRefPair::new()?;
         let view_ref_dup = scenic::duplicate_view_ref(&view_ref)?;
@@ -427,7 +431,7 @@ impl ElementManager {
             ..felement::ViewSpec::EMPTY
         };
 
-        if use_flatland {
+        if self.scenic_uses_flatland {
             let link_token_pair = scenic::flatland::LinkTokenPair::new()?;
 
             view_provider.create_view2(fuiapp::CreateView2Args {

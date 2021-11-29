@@ -16,6 +16,7 @@ use {
     anyhow::Error,
     element_management::ElementManager,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
+    fidl_fuchsia_ui_scenic::ScenicMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::StreamExt,
@@ -43,8 +44,19 @@ async fn main() -> Result<(), Error> {
     let graphical_presenter = connect_to_protocol::<felement::GraphicalPresenterMarker>()
         .expect("Failed to connect to GraphicalPresenter service");
 
-    let element_manager =
-        Rc::new(ElementManager::new(realm, Some(graphical_presenter), ELEMENT_COLLECTION_NAME));
+    // TODO(fxbug.dev/64206): Remove after Flatland migration is completed.
+    let scenic_uses_flatland = fuchsia_component::client::connect_to_protocol::<ScenicMarker>()
+        .expect("Failed to connect to Scenic.")
+        .uses_flatland()
+        .await
+        .expect("Failed to get flatland info.");
+
+    let element_manager = Rc::new(ElementManager::new(
+        realm,
+        Some(graphical_presenter),
+        ELEMENT_COLLECTION_NAME,
+        scenic_uses_flatland,
+    ));
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(ExposedServices::Manager);

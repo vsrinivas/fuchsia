@@ -40,6 +40,7 @@ cts_fuchsia_test_package("fuchsia-element-tests") {
     ":element-manager-test",
     ":reference-element",
     ":reference-graphical-presenter",
+    ":reference-scenic",
     ":reference-session",
     "//src/session/bin/element_manager:element_manager_comp",
   ]
@@ -87,6 +88,26 @@ cts_fuchsia_component("reference-graphical-presenter") {
   deps = [ ":reference-graphical-presenter-bin" ]
 }
 
+cts_executable("reference-scenic-bin") {
+  output_name = "reference-scenic"
+  testonly = true
+
+  sources = [ "reference_scenic.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+cts_fuchsia_component("reference-scenic") {
+  manifest = "meta/reference-scenic.cml"
+  testonly = true
+  deps = [ ":reference-scenic-bin" ]
+}
+
 cts_executable("reference-session-bin") {
   output_name = "reference-session"
   testonly = true
@@ -127,6 +148,8 @@ sdk_molecule("test_sdks") {
     ":reference-element_sdk",
     ":reference-graphical-presenter-bin_sdk",
     ":reference-graphical-presenter_sdk",
+    ":reference-scenic-bin_sdk",
+    ":reference-scenic_sdk",
     ":reference-session-bin_sdk",
     ":reference-session_sdk",
   ]

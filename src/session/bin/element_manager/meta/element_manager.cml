@@ -20,8 +20,13 @@
             protocol: "fuchsia.component.Realm",
             from: "framework",
         },
-        { protocol: "fuchsia.element.GraphicalPresenter" },
-        { protocol: "fuchsia.sys.Launcher" },
+        {
+            protocol: [
+                "fuchsia.element.GraphicalPresenter",
+                "fuchsia.sys.Launcher",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+        },
     ],
     offer: [
         {

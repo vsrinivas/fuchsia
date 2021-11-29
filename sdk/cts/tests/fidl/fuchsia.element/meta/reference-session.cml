@@ -18,6 +18,11 @@
             url: "#meta/reference-graphical-presenter.cm",
             startup: "eager",
         },
+        {
+            name: "reference-scenic",
+            url: "#meta/reference-scenic.cm",
+            startup: "eager",
+        },
     ],
     capabilities: [
         { protocol: "fuchsia.element.Manager" },
@@ -39,6 +44,11 @@
         {
             protocol: [ "fuchsia.element.GraphicalPresenter" ],
             from: "#reference-graphical-presenter",
+            to: "#element_manager",
+        },
+        {
+            protocol: [ "fuchsia.ui.scenic.Scenic" ],
+            from: "#reference-scenic",
             to: "#element_manager",
         },
     ],
