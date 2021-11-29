@@ -11,21 +11,17 @@
 
 #include <string>
 
-#include "third_party/cobalt/src/logger/status.h"
+#include "third_party/cobalt/src/public/lib/status.h"
 
 namespace cobalt {
 
-fuchsia::cobalt::Status ToCobaltStatus(logger::Status s);
+fuchsia::cobalt::Status ToCobaltStatus(const Status &s);
 
-fuchsia::cobalt::Status ToCobaltStatus(Status s);
-
-fuchsia::metrics::Status ToMetricsStatus(logger::Status s);
-
-fuchsia::metrics::Status ToMetricsStatus(Status s);
+fuchsia::metrics::Status ToMetricsStatus(const Status &s);
 
 // Reads the PEM file at the specified path and returns the contents as
 // a string. CHECK fails if the file cannot be read.
-std::string ReadPublicKeyPem(const std::string& pem_file_path);
+std::string ReadPublicKeyPem(const std::string &pem_file_path);
 
 }  // namespace cobalt
 

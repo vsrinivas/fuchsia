@@ -12,31 +12,7 @@
 
 namespace cobalt {
 
-fuchsia::cobalt::Status ToCobaltStatus(logger::Status s) {
-  switch (s) {
-    case logger::Status::kOK:
-      return fuchsia::cobalt::Status::OK;
-
-    case logger::Status::kInvalidArguments:
-    case logger::Status::kInvalidConfig:
-      return fuchsia::cobalt::Status::INVALID_ARGUMENTS;
-
-    case logger::Status::kTooBig:
-      return fuchsia::cobalt::Status::EVENT_TOO_BIG;
-
-    case logger::Status::kFull:
-      return fuchsia::cobalt::Status::BUFFER_FULL;
-
-    case logger::Status::kOther:
-      return fuchsia::cobalt::Status::INTERNAL_ERROR;
-
-    default:  // Needed so that the Cobalt core enum can be added to.
-      FX_LOGS(ERROR) << "Unimplemented translation for enum value: " << s;
-      return fuchsia::cobalt::Status::INTERNAL_ERROR;
-  }
-}
-
-fuchsia::cobalt::Status ToCobaltStatus(Status s) {
+fuchsia::cobalt::Status ToCobaltStatus(const Status &s) {
   switch (s.error_code()) {
     case StatusCode::OK:
       return fuchsia::cobalt::Status::OK;
@@ -63,31 +39,7 @@ fuchsia::cobalt::Status ToCobaltStatus(Status s) {
   }
 }
 
-fuchsia::metrics::Status ToMetricsStatus(logger::Status s) {
-  switch (s) {
-    case logger::Status::kOK:
-      return fuchsia::metrics::Status::OK;
-
-    case logger::Status::kInvalidArguments:
-    case logger::Status::kInvalidConfig:
-      return fuchsia::metrics::Status::INVALID_ARGUMENTS;
-
-    case logger::Status::kTooBig:
-      return fuchsia::metrics::Status::EVENT_TOO_BIG;
-
-    case logger::Status::kFull:
-      return fuchsia::metrics::Status::BUFFER_FULL;
-
-    case logger::Status::kOther:
-      return fuchsia::metrics::Status::INTERNAL_ERROR;
-
-    default:  // Needed so that the Cobalt core enum can be added to.
-      FX_LOGS(ERROR) << "Unimplemented translation for enum value: " << s;
-      return fuchsia::metrics::Status::INTERNAL_ERROR;
-  }
-}
-
-fuchsia::metrics::Status ToMetricsStatus(Status s) {
+fuchsia::metrics::Status ToMetricsStatus(const Status &s) {
   switch (s.error_code()) {
     case StatusCode::OK:
       return fuchsia::metrics::Status::OK;
@@ -114,7 +66,7 @@ fuchsia::metrics::Status ToMetricsStatus(Status s) {
   }
 }
 
-std::string ReadPublicKeyPem(const std::string& pem_file_path) {
+std::string ReadPublicKeyPem(const std::string &pem_file_path) {
   FX_VLOGS(2) << "Reading PEM file at " << pem_file_path;
   std::string pem_out;
   FX_CHECK(util::PemUtil::ReadTextFile(pem_file_path, &pem_out))
