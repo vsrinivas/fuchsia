@@ -247,7 +247,8 @@ function __fx_env_main() {
           files+=("${fuchsia_tools_dir}"/"${cmd}"*)
         fi
         for file in "${files[@]}"; do
-          if [[ -x "${file}" ]]; then
+          if [[ "${file}" =~ .fx$ || -x "${file}" ]]; then
+            file="${file%%.fx}"
             COMPREPLY+=("${file##*/}")
           fi
         done
