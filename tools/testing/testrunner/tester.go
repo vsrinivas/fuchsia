@@ -715,7 +715,7 @@ func (t *FuchsiaSerialTester) Test(ctx context.Context, test testsharder.Test, s
 	var readErr error
 	for i := 0; i < startSerialCommandMaxAttempts; i++ {
 		if err := serial.RunCommands(ctx, t.socket, []serial.Command{{Cmd: command}}); err != nil {
-			return sinks, fmt.Errorf("failed to write to serial socket: %w", err)
+			return sinks, FatalError{fmt.Errorf("failed to write to serial socket: %w", err)}
 		}
 		startedCtx, cancel := newTestStartedContext(ctx)
 		startedStr := runtests.StartedSignature + test.Name
