@@ -13,6 +13,11 @@
 This RFC proposing a sparse FIDL wire format for tables is rejected with
 the following pro / con analysis.
 
+See also:
+
+* [RFC-0047: Tables](0047_tables.md)
+* [RFC-0132: FIDL table size limit](0132_fidl_table_size_limit.md)
+
 ### Benefits of sparse tables
 
 The main benefits of sparse tables are:

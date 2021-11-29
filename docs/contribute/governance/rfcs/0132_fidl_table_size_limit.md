@@ -12,6 +12,11 @@
 
 This RFC limits FIDL tables to at most 64 members.
 
+See also:
+
+* [RFC-0047: Tables](0047_tables.md)
+* [RFC-0116: Wire format support for sparser FIDL tables](0116_fidl_sparser_tables.md)
+
 ## Motivation
 
 The user-mode performance cost of sending a FIDL table (building, encode and

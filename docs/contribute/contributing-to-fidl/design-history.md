@@ -35,6 +35,8 @@ primary theme, even if it touches on multiple themes.
 * [RFC-0040: Identifier uniqueness][rfc-0040]
 * [RFC-0048: Explicit union ordinals][rfc-0048]
 * [RFC-0083: FIDL versioning][rfc-0083]
+* (Rejected) [RFC-0116: Wire format support for sparser FIDL tables][rfc-0116]
+* [RFC-0132: FIDL table size limit][rfc-0132]
 
 ### Expressivity
 
@@ -103,7 +105,7 @@ the FIDL language. It only includes current features, not obsolete ones.
 | Feature              | RFC        | Note
 | -------------------- | -----------| ------------------------------------------
 | struct defaults      | [RFC-0022] | Default values for struct members
-| `table`              | [RFC-0047] | Forward and backward compatible data type
+| `table`              | [RFC-0047], [RFC-0132] | Forward and backward compatible data type
 | `///`                | [RFC-0055] | Documentation comments
 | `struct Empty {};`   | [RFC-0056] | Empty structs
 | `error`              | [RFC-0060] | Method error result syntax
@@ -205,6 +207,7 @@ _Legend:_
 | [RFC-0083] | FIDL versioning | Implementation in progress
 | [RFC-0086] | Updates to RFC-0050: FIDL attributes syntax | Implementation in progress
 | [RFC-0087] | Updates to RFC-0050: FIDL method parameter syntax | Implementation in progress
+| [RFC-0132] | FIDL table size limit | [Implemented](https://fuchsia-review.googlesource.com/c/fuchsia/+/583988)
 
 <!-- link labels -->
 [rfcs]: /docs/contribute/governance/rfcs/README.md#proposals
@@ -267,3 +270,5 @@ _Legend:_
 [rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
 [rfc-0086]: /docs/contribute/governance/rfcs/0086_rfc_0050_attributes.md
 [rfc-0087]: /docs/contribute/governance/rfcs/0087_fidl_method_syntax.md
+[rfc-0116]: /docs/contribute/governance/rfcs/0116_fidl_sparser_tables.md
+[rfc-0132]: /docs/contribute/governance/rfcs/0132_fidl_table_size_limit.md
