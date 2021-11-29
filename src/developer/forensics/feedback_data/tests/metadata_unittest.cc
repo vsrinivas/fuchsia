@@ -412,7 +412,7 @@ TEST_F(MetadataTest, Check_UtcMonotonicDifference) {
   RunLoopUntilIdle();
 
   zx::time monotonic;
-  zx::time_utc utc;
+  timekeeper::time_utc utc;
 
   clock_.Set(zx::time(0));
 
@@ -492,7 +492,7 @@ TEST_F(MetadataTest, Check_NoUtcMonotonicDifferenceMissingFile) {
   RunLoopUntilIdle();
 
   zx::time monotonic;
-  zx::time_utc utc;
+  timekeeper::time_utc utc;
 
   clock_.Set(zx::time(0));
 

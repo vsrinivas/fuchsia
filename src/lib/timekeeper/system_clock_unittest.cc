@@ -25,7 +25,7 @@ TEST(SystemClockTest, UtcClock) {
   time_utc time1;
   ASSERT_EQ(ZX_OK, clock.UtcNow(&time1));
 
-  EXPECT_GT(time1, zx::time_utc(0));
+  EXPECT_GT(time1, time_utc(0));
 }
 
 }  // namespace

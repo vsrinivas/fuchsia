@@ -21,7 +21,7 @@
 namespace forensics {
 namespace {
 
-constexpr zx::time_utc kTime((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
+constexpr timekeeper::time_utc kTime((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
 
 class UtcTimeProviderTest : public UnitTestFixture {
  public:
@@ -75,7 +75,7 @@ TEST_F(UtcTimeProviderTest, Check_CurrentUtcMonotonicDifference) {
   RunLoopUntilIdle();
 
   zx::time monotonic = clock_.Now();
-  zx::time_utc utc;
+  timekeeper::time_utc utc;
   ASSERT_EQ(clock_.UtcNow(&utc), ZX_OK);
 
   const auto utc_monotonic_difference = utc_provider_->CurrentUtcMonotonicDifference();

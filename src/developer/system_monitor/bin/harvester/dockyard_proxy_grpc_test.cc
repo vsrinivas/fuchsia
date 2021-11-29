@@ -89,7 +89,7 @@ TEST_F(DockyardProxyGrpcTest, SendLogTest) {
 
   std::unique_ptr<timekeeper::TestClock> test_clock =
       std::make_unique<timekeeper::TestClock>();
-  constexpr zx::time_utc log_time(
+  constexpr timekeeper::time_utc log_time(
       (zx::hour(9) + zx::min(31) + zx::sec(42)).get());
   test_clock->Set(log_time);
 
@@ -141,7 +141,7 @@ TEST_F(DockyardProxyGrpcTest, SendUtcClockStartedTest) {
       .WillOnce(DoAll(SaveArg<1>(&request), Return(::grpc::Status::OK)));
   std::unique_ptr<timekeeper::TestClock> test_clock =
       std::make_unique<timekeeper::TestClock>();
-  constexpr zx::time_utc start_time(
+  constexpr timekeeper::time_utc start_time(
       (zx::hour(9) + zx::min(31) + zx::sec(42)).get());
   test_clock->Set(start_time);
 

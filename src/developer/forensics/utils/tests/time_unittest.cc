@@ -53,9 +53,10 @@ constexpr char kMinsAndHoursAndDaysString[] = "4d3h2m0s";
 constexpr char kAllUnitsString[] = "4d3h2m1s";
 constexpr char kRndmNSecsString[] = "3d5h17m12s";
 
-constexpr zx::time_utc kTime1(0);
-constexpr zx::time_utc kTime2((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
-constexpr zx::time_utc kTime3((zx::hour(3) * 24 + zx::hour(15) + zx::min(33) + zx::sec(17)).get());
+constexpr timekeeper::time_utc kTime1(0);
+constexpr timekeeper::time_utc kTime2((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
+constexpr timekeeper::time_utc kTime3(
+    (zx::hour(3) * 24 + zx::hour(15) + zx::min(33) + zx::sec(17)).get());
 
 constexpr char kTime1Str[] = "1970-01-01 00:00:00 GMT";
 constexpr char kTime2Str[] = "1970-01-01 07:14:52 GMT";
