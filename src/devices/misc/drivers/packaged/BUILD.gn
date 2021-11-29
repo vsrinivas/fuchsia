@@ -24,6 +24,7 @@ fuchsia_driver_component("component") {
   component_name = "packaged_driver"
   manifest = "meta/packaged_driver.cml"
   deps = [ ":lib" ]
+  info = "component-info.json"
 }
 
 fuchsia_package("package") {

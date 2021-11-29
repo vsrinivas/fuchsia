@@ -1,0 +1,9 @@
+{
+    "short_description": "Driver Framework example of a packaged driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework"
+    ]
+}

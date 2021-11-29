@@ -63,6 +63,7 @@ fuchsia_driver("v1_test") {
 
 fuchsia_driver_component("compat_v1_test") {
   deps = [ ":v1_test" ]
+  info = "compat_v1_test-info.json"
 }
 
 fuchsia_driver("v1_create_test") {
@@ -79,6 +80,7 @@ fuchsia_driver("v1_create_test") {
 
 fuchsia_driver_component("compat_v1_create_test") {
   deps = [ ":v1_create_test" ]
+  info = "compat_v1_create_test-info.json"
 }
 
 fuchsia_driver("v1_missing_test") {
@@ -92,6 +94,7 @@ fuchsia_driver("v1_missing_test") {
 
 fuchsia_driver_component("compat_v1_missing_test") {
   deps = [ ":v1_missing_test" ]
+  info = "compat_v1_missing_test-info.json"
 }
 
 executable("unittests") {

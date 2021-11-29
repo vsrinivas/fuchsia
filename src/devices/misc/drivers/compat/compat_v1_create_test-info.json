@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework DFv1 CompatLoader test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

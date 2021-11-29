@@ -24,6 +24,7 @@ fuchsia_driver("test-parent-sys_driver") {
 
 fuchsia_driver_component("test-parent-sys") {
   deps = [ ":test-parent-sys_driver" ]
+  info = "test-parent-sys-info.json"
 }
 
 group("test-parent") {
