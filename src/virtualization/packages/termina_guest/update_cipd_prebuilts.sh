@@ -74,6 +74,9 @@ create_cros_tree() {
   (cd src/platform2; git checkout cros/test-magma)
   (cd src/platform/minigbm; git checkout cros/test-magma)
 
+  # Apply patches to termina temporarily
+  (cd src/platform/tremplin; git fetch https://chromium.googlesource.com/chromiumos/platform/tremplin refs/changes/34/3302234/1 && git cherry-pick FETCH_HEAD)
+
   # Apply patches to minigbm temporarily
   (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/72/3276672/13 && git cherry-pick FETCH_HEAD)
   (cd src/platform/minigbm; git fetch https://chromium.googlesource.com/chromiumos/platform/minigbm refs/changes/36/3276636/4 && git cherry-pick FETCH_HEAD)
@@ -164,6 +167,9 @@ build_termina_image() {
 
   # Switch to source build of minigbm
   cros_sdk bash -c "cros_workon --board=${board} start minigbm"
+
+  # Switch to source build of tremplin
+  cros_sdk bash -c "cros_workon --board=${board} start tremplin"
 
   # Build chromeos image
   cros_sdk bash -c "./build_packages --board=${board} --nowithautotest && \
