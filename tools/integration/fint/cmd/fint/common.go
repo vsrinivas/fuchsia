@@ -100,9 +100,7 @@ func defaultContextSpec() (*fintpb.Context, error) {
 }
 
 func writeJSONPB(pb proto.Message, path string) error {
-	b, err := protojson.MarshalOptions{
-		UseProtoNames: true,
-	}.Marshal(pb)
+	b, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(pb)
 	if err != nil {
 		return err
 	}

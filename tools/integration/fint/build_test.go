@@ -167,7 +167,8 @@ func TestBuild(t *testing.T) {
 				}
 				return nil
 			},
-			expectErr: true,
+			expectErr:         true,
+			expectedArtifacts: &fintpb.BuildArtifacts{},
 		},
 		{
 			name:       "ninja compdb fails",
@@ -182,6 +183,9 @@ func TestBuild(t *testing.T) {
 				return nil
 			},
 			expectErr: true,
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				NinjaGraphPath: filepath.Join(artifactDir, "ninja-graph.dot"),
+			},
 		},
 		{
 			name:       "ninja graph and compdb fail after failed build",
@@ -476,7 +480,12 @@ func TestBuild(t *testing.T) {
 				t.Fatal("Expected an error but got nil")
 			}
 
-			if tc.expectedArtifacts != nil {
+			if tc.expectedArtifacts == nil {
+				tc.expectedArtifacts = &fintpb.BuildArtifacts{}
+			}
+			if len(runner.commandsRun) > 0 {
+				// If preprocessing fails before we run any subprocesses, then
+				// NinjaLogPath will not be set.
 				tc.expectedArtifacts.NinjaLogPath = filepath.Join(buildDir, ninjaLogPath)
 			}
 			opts := cmp.Options{

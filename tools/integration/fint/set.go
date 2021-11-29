@@ -34,7 +34,14 @@ func Set(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Con
 	if err != nil {
 		return nil, err
 	}
-	return setImpl(ctx, &subprocess.Runner{}, staticSpec, contextSpec, platform)
+	artifacts, err := setImpl(ctx, &subprocess.Runner{}, staticSpec, contextSpec, platform)
+	if err != nil && artifacts != nil && artifacts.FailureSummary == "" {
+		// Fall back to using the error text as the failure summary if the
+		// failure summary is unset. It's better than failing without emitting
+		// any information.
+		artifacts.FailureSummary = err.Error()
+	}
+	return artifacts, err
 }
 
 // setImpl runs `gn gen` along with any post-processing steps, and returns a

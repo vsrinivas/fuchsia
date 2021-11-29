@@ -71,7 +71,14 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	if err != nil {
 		return nil, err
 	}
-	return buildImpl(ctx, &subprocess.Runner{}, staticSpec, contextSpec, modules, platform)
+	artifacts, err := buildImpl(ctx, &subprocess.Runner{}, staticSpec, contextSpec, modules, platform)
+	if err != nil && artifacts != nil && artifacts.FailureSummary == "" {
+		// Fall back to using the error text as the failure summary if the
+		// failure summary is unset. It's better than failing without emitting
+		// any information.
+		artifacts.FailureSummary = err.Error()
+	}
+	return artifacts, err
 }
 
 // buildImpl contains the business logic of `fint build`, extracted into a more
@@ -88,21 +95,18 @@ func buildImpl(
 
 	targets, targetArtifacts, err := constructNinjaTargets(modules, staticSpec, platform)
 	if err != nil {
-		return nil, err
+		return artifacts, err
 	}
 	proto.Merge(artifacts, targetArtifacts)
 
 	artifacts.BuiltTargets = targets
-	// The ninja log is generated automatically by Ninja and its path is
-	// constant relative to the build directory.
-	artifacts.NinjaLogPath = filepath.Join(contextSpec.BuildDir, ninjaLogPath)
 	// Initialize the map, otherwise it will be nil and attempts to set keys
 	// will fail.
 	artifacts.LogFiles = make(map[string]string)
 
 	ninjaPath, err := toolAbsPath(modules, contextSpec.BuildDir, platform, "ninja")
 	if err != nil {
-		return nil, err
+		return artifacts, err
 	}
 	r := ninjaRunner{
 		runner:    runner,
@@ -125,7 +129,7 @@ func buildImpl(
 		if staticSpec.Incremental {
 			f, err := os.Create(filepath.Join(contextSpec.ArtifactDir, "explain_output.txt"))
 			if err != nil {
-				return nil, err
+				return artifacts, err
 			}
 			defer f.Close()
 			artifacts.LogFiles["explain_output.txt"] = f.Name()
@@ -143,6 +147,10 @@ func buildImpl(
 	ninjaDuration := time.Since(ninjaStartTime)
 	artifacts.NinjaDurationSeconds = int32(math.Round(ninjaDuration.Seconds()))
 
+	// The ninja log is generated automatically by Ninja and its path is
+	// constant relative to the build directory.
+	artifacts.NinjaLogPath = filepath.Join(contextSpec.BuildDir, ninjaLogPath)
+
 	// As an optimization, we only bother collecting graph and compdb data if we
 	// have a way to return it to the caller. We want to collect this data even
 	// when the build failed.
@@ -150,7 +158,7 @@ func buildImpl(
 		graph := filepath.Join(contextSpec.ArtifactDir, "ninja-graph.dot")
 		if err := ninjaGraph(ctx, r, targets, graph); err != nil {
 			if ninjaErr == nil {
-				return nil, err
+				return artifacts, err
 			}
 		} else {
 			artifacts.NinjaGraphPath = graph
@@ -159,7 +167,7 @@ func buildImpl(
 		compdb := filepath.Join(contextSpec.ArtifactDir, "compile-commands.json")
 		if err := ninjaCompdb(ctx, r, compdb); err != nil {
 			if ninjaErr == nil {
-				return nil, err
+				return artifacts, err
 			}
 		} else {
 			artifacts.NinjaCompdbPath = compdb
@@ -172,7 +180,7 @@ func buildImpl(
 
 	gnPath, err := toolAbsPath(modules, contextSpec.BuildDir, platform, "gn")
 	if err != nil {
-		return nil, err
+		return artifacts, err
 	}
 	if output, err := gnCheckGenerated(ctx, runner, gnPath, contextSpec.CheckoutDir, contextSpec.BuildDir); err != nil {
 		artifacts.FailureSummary = output
@@ -205,10 +213,10 @@ func buildImpl(
 	if !contextSpec.SkipNinjaNoopCheck {
 		noop, logs, err := checkNinjaNoop(ctx, r, targets, hostplatform.IsMac(platform))
 		if err != nil {
-			return nil, err
+			return artifacts, err
 		}
 		if err := saveLogs(logs); err != nil {
-			return nil, err
+			return artifacts, err
 		}
 		if !noop {
 			artifacts.FailureSummary = ninjaNoopFailureMessage(platform)
@@ -234,10 +242,10 @@ func buildImpl(
 		}
 		result, err := affectedTestsNoWork(ctx, r, tests, affectedFiles, targets)
 		if err != nil {
-			return nil, err
+			return artifacts, err
 		}
 		if err := saveLogs(result.logs); err != nil {
-			return nil, err
+			return artifacts, err
 		}
 		artifacts.AffectedTests = result.affectedTests
 		artifacts.BuildNotAffected = result.noWork
