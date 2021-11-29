@@ -23,6 +23,7 @@
 #include "src/devices/block/drivers/zxcrypt/debug.h"
 #include "src/devices/block/drivers/zxcrypt/device.h"
 #include "src/devices/block/drivers/zxcrypt/extra.h"
+#include "src/devices/block/drivers/zxcrypt/queue.h"
 #include "src/security/fcrypto/cipher.h"
 #include "src/security/zxcrypt/ddk-volume.h"
 #include "src/security/zxcrypt/volume.h"
@@ -36,18 +37,8 @@ Worker::~Worker() {
   ZX_DEBUG_ASSERT(!started_.load());
 }
 
-void Worker::MakeRequest(zx_port_packet_t* packet, uint64_t op, void* arg) {
-  static_assert(sizeof(uintptr_t) <= sizeof(uint64_t), "cannot store pointer as uint64_t");
-  ZX_DEBUG_ASSERT(packet);
-  packet->key = 0;
-  packet->type = ZX_PKT_TYPE_USER;
-  packet->status = ZX_OK;
-  packet->user.u64[0] = op;
-  packet->user.u64[1] = reinterpret_cast<uint64_t>(arg);
-}
-
-zx_status_t Worker::Start(Device* device, const DdkVolume& volume, zx::port&& port) {
-  LOG_ENTRY_ARGS("device=%p, volume=%p, port=%p", device, &volume, &port);
+zx_status_t Worker::Start(Device* device, const DdkVolume& volume, Queue<block_op_t*>& queue) {
+  LOG_ENTRY_ARGS("device=%p, volume=%p, queue=%p", device, &volume, &queue);
   zx_status_t rc;
 
   if (!device) {
@@ -62,7 +53,7 @@ zx_status_t Worker::Start(Device* device, const DdkVolume& volume, zx::port&& po
     return rc;
   }
 
-  port_ = std::move(port);
+  queue_ = &queue;
 
   if (thrd_create_with_name(&thrd_, WorkerRun, this, "zxcrypt_worker") != thrd_success) {
     zxlogf(ERROR, "failed to start thread");
@@ -76,35 +67,19 @@ zx_status_t Worker::Start(Device* device, const DdkVolume& volume, zx::port&& po
 zx_status_t Worker::Run() {
   LOG_ENTRY();
   ZX_DEBUG_ASSERT(device_);
-  zx_status_t rc;
 
-  zx_port_packet_t packet;
-  while (true) {
-    // Read request
-    if ((rc = port_.wait(zx::time::infinite(), &packet)) != ZX_OK) {
-      zxlogf(ERROR, "failed to read request: %s", zx_status_get_string(rc));
-      return rc;
-    }
-    ZX_DEBUG_ASSERT(packet.key == 0);
-    ZX_DEBUG_ASSERT(packet.type == ZX_PKT_TYPE_USER);
-    ZX_DEBUG_ASSERT(packet.status == ZX_OK);
-
-    // Handle control messages
-    switch (packet.user.u64[0]) {
-      case kBlockRequest:
-        break;
-      case kStopRequest:
-        zxlogf(DEBUG, "worker %p stopping.", this);
-        return ZX_OK;
-      default:
-        zxlogf(ERROR, "unknown request: 0x%016" PRIx64 "", packet.user.u64[0]);
-        return ZX_ERR_NOT_SUPPORTED;
+  for (;;) {
+    block_op_t* block;
+    if (auto block_or = queue_->Pop()) {
+      block = *block_or;
+    } else {
+      zxlogf(DEBUG, "worker %p stopping.", this);
+      return ZX_OK;
     }
 
     TRACE_DURATION("zxcrypt", "zxcrypt::Worker::Dispatch");
 
     // Dispatch block request
-    block_op_t* block = reinterpret_cast<block_op_t*>(packet.user.u64[1]);
     switch (block->command & BLOCK_OP_MASK) {
       case BLOCK_OP_WRITE:
         device_->BlockForward(block, EncryptWrite(block));

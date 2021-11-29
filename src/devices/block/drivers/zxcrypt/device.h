@@ -28,6 +28,7 @@
 #include "lib/inspect/cpp/inspector.h"
 #include "src/devices/block/drivers/zxcrypt/device-info.h"
 #include "src/devices/block/drivers/zxcrypt/extra.h"
+#include "src/devices/block/drivers/zxcrypt/queue.h"
 #include "src/devices/block/drivers/zxcrypt/worker.h"
 
 namespace zxcrypt {
@@ -99,9 +100,6 @@ class Device final : public DeviceType,
   // as fit in the space available in the write buffer.
   void EnqueueWrite(block_op_t* block = nullptr) __TA_EXCLUDES(mtx_);
 
-  // Sends a block I/O request to a worker to be encrypted or decrypted.
-  void SendToWorker(block_op_t* block) __TA_EXCLUDES(mtx_);
-
   // Callback used for block ops sent to the parent device.  Restores the fields saved by
   // |BlockForward|.
   static void BlockCallback(void* cookie, zx_status_t status, block_op_t* block);
@@ -124,11 +122,12 @@ class Device final : public DeviceType,
   // it to be used without holding the lock.
   const DeviceInfo info_;
 
+  // The queue for requests to the workers. This *should* come before `workers_` since the workers
+  // will hold a reference to the queue and should therefore be destroyed first.
+  Queue<block_op_t*> worker_queue_;
+
   // Threads that performs encryption/decryption.
   Worker workers_[kNumWorkers];
-
-  // Port used to send write/read operations to be encrypted/decrypted.
-  zx::port port_;
 
   // Primary lock for accessing the write queue
   fbl::Mutex mtx_;

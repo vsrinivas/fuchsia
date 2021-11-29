@@ -19,6 +19,7 @@ fuchsia_driver("zxcrypt-driver") {
     "device-manager.cc",
     "device.cc",
     "extra.cc",
+    "queue.h",
     "worker.cc",
   ]
 

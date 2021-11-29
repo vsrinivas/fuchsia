@@ -14,6 +14,7 @@
 #include <atomic>
 
 #include "src/devices/block/drivers/zxcrypt/extra.h"
+#include "src/devices/block/drivers/zxcrypt/queue.h"
 #include "src/security/fcrypto/cipher.h"
 #include "src/security/zxcrypt/ddk-volume.h"
 
@@ -30,16 +31,9 @@ class Worker final {
   Worker();
   ~Worker();
 
-  // Opcodes for requests that can be sent to workers.
-  static constexpr uint64_t kBlockRequest = 0x1;
-  static constexpr uint64_t kStopRequest = 0x2;
-
-  // Configure the given |packet| to be an |op| request, with an optional |arg|.
-  static void MakeRequest(zx_port_packet_t* packet, uint64_t op, void* arg = nullptr);
-
   // Starts the worker, which will service requests sent from the given |device| on the given
-  // |port|.  Cryptographic operations will use the key material from the given |volume|.
-  zx_status_t Start(Device* device, const DdkVolume& volume, zx::port&& port);
+  // |queue|.  Cryptographic operations will use the key material from the given |volume|.
+  zx_status_t Start(Device* device, const DdkVolume& volume, Queue<block_op_t*>& queue);
 
   // Asks the worker to stop.  This call blocks until the worker has finished processing the
   // currently queued operations and exits.
@@ -68,14 +62,14 @@ class Worker final {
   // The device associated with this worker.
   Device* device_;
 
-  // The port to wait for I/O request on, as given by the device.
-  zx::port port_;
-
   // The executing thread for this worker
   thrd_t thrd_;
 
   // Indicates if a thread was created for this worker
   std::atomic_bool started_;
+
+  // The queue from which requests are serviced.
+  Queue<block_op_t*>* queue_ = nullptr;
 };
 
 }  // namespace zxcrypt

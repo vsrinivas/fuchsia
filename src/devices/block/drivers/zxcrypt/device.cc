@@ -53,14 +53,8 @@ zx_status_t Device::Init(const DdkVolume& volume) {
   }
 
   // Start workers
-  if ((rc = zx::port::create(0, &port_)) != ZX_OK) {
-    zxlogf(ERROR, "zx::port::create failed: %s", zx_status_get_string(rc));
-    return rc;
-  }
   for (size_t i = 0; i < kNumWorkers; ++i) {
-    zx::port port;
-    port_.duplicate(ZX_RIGHT_SAME_RIGHTS, &port);
-    if ((rc = workers_[i].Start(this, volume, std::move(port))) != ZX_OK) {
+    if ((rc = workers_[i].Start(this, volume, worker_queue_)) != ZX_OK) {
       zxlogf(ERROR, "failed to start worker %zu: %s", i, zx_status_get_string(rc));
       return rc;
     }
@@ -381,20 +375,7 @@ void Device::EnqueueWrite(block_op_t* block) {
   list_for_every_entry_safe (&pending, extra, tmp, extra_op_t, node) {
     list_delete(&extra->node);
     block = ExtraToBlock(extra, info_.op_size);
-    SendToWorker(block);
-  }
-}
-
-void Device::SendToWorker(block_op_t* block) {
-  LOG_ENTRY_ARGS("block=%p", block);
-  zx_status_t rc;
-
-  zx_port_packet_t packet;
-  Worker::MakeRequest(&packet, Worker::kBlockRequest, block);
-  if ((rc = port_.queue(&packet)) != ZX_OK) {
-    zxlogf(ERROR, "zx::port::queue failed: %s", zx_status_get_string(rc));
-    BlockComplete(block, rc);
-    return;
+    worker_queue_.Push(block);
   }
 }
 
@@ -416,7 +397,7 @@ void Device::BlockCallback(void* cookie, zx_status_t status, block_op_t* block) 
   }
   switch (block->command & BLOCK_OP_MASK) {
     case BLOCK_OP_READ:
-      device->SendToWorker(block);
+      device->worker_queue_.Push(block);
       break;
     case BLOCK_OP_WRITE:
     default:
@@ -426,14 +407,8 @@ void Device::BlockCallback(void* cookie, zx_status_t status, block_op_t* block) 
 }
 
 void Device::StopWorkersIfDone() {
-  // Multiple threads may pass this check, but that's harmless.
-  if (!active_.load() && num_ops_.load() == 0) {
-    zx_port_packet_t packet;
-    Worker::MakeRequest(&packet, Worker::kStopRequest);
-    for (size_t i = 0; i < kNumWorkers; ++i) {
-      port_.queue(&packet);
-    }
-  }
+  if (!active_.load() && num_ops_.load() == 0)
+    worker_queue_.Terminate();
 }
 
 }  // namespace zxcrypt
