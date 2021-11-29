@@ -130,9 +130,6 @@ template("go_build") {
     target_name = main_target_name
     _variant_shared = false
 
-    if (carchive) {
-    }
-
     forward_variables_from(invoker,
                            [
                              "testonly",
@@ -277,17 +274,13 @@ template("go_build") {
     }
 
     # Go build tags
-    tags = []
-
     if (defined(invoker.tags)) {
-      tags += invoker.tags
-    }
-
-    foreach(tag, tags) {
-      args += [
-        "--tag",
-        tag,
-      ]
+      foreach(tag, invoker.tags) {
+        args += [
+          "--tag",
+          tag,
+        ]
+      }
     }
 
     # Go compiler flags
