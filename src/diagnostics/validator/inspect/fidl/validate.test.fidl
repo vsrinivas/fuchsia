@@ -38,6 +38,11 @@ type LinkDisposition = strict enum {
 /// ROOT_ID identifies the (virtual) root node.
 const ROOT_ID uint32 = 0;
 
+// RUNNER_ID and VM_SERVICE_PORT_ID identify the runner and
+// port info to be atached to dart components' inspect tree.
+const RUNNER_ID uint32 = 1000;
+const VM_SERVICE_PORT_ID uint32 = 1001;
+
 /// Tells the puppet to create a Node with the given name, parentage, and ID
 /// (the id is specified so other nodes can later be created under it).
 type CreateNode = struct {
@@ -186,6 +191,9 @@ type InsertMultiple = struct {
     count uint64;
 };
 
+/// Tells the puppet to apply no-op to the node (a blank action).
+type ApplyNoOp = struct {};
+
 // Action sent to instruct a Puppet to create a lazy node.
 // TODO(fxbug.dev/49114): This should be modified to allow for creating lazy nodes past 1-level deep.
 type CreateLazyNode = struct {
@@ -235,6 +243,7 @@ type Action = flexible union {
    19: insert_multiple InsertMultiple;
    20: create_bool_property CreateBoolProperty;
    21: set_bool SetBool;
+   22: apply_no_op ApplyNoOp;
 };
 
 /// Tells the puppet to do something to modify a lazy node.

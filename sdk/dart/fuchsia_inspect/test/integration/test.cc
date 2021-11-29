@@ -123,6 +123,9 @@ TEST_F(InspectTest, ReadHierarchy) {
       AllOf(
           NodeMatches(NameMatches("root")),
           ChildrenMatch(UnorderedElementsAre(
+              AllOf(NodeMatches(
+                  AllOf(NameMatches("runner"),
+                        PropertyList(UnorderedElementsAre(StringIs("vm_service_port", "")))))),
               AllOf(NodeMatches(AllOf(NameMatches("t1"),
                                       PropertyList(UnorderedElementsAre(
                                           StringIs("version", "1.0"),

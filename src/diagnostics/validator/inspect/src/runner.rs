@@ -4,10 +4,11 @@
 
 use {
     super::{
+        create_node, create_string_property,
         data::Data,
         puppet, results,
         trials::{self, Step},
-        validate,
+        validate::{self, ROOT_ID, RUNNER_ID, VM_SERVICE_PORT_ID},
     },
     anyhow::{bail, Error},
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
@@ -17,6 +18,9 @@ use {
 pub async fn run_all_trials(url: &str, results: &mut results::Results) {
     let mut trial_set = trials::real_trials();
     for trial in trial_set.iter_mut() {
+        if trial.name == "VM SERVICE NODE" && !url.contains("dart") {
+            continue;
+        }
         match puppet::Puppet::connect(url).await {
             Ok(mut puppet) => {
                 if results.test_archive {
@@ -33,6 +37,20 @@ pub async fn run_all_trials(url: &str, results: &mut results::Results) {
                     }
                 }
                 let mut data = Data::new();
+                if url.contains("dart") {
+                    // The vm_service_port string property is attached to the runner node and made a child of the root on startup.
+                    if let Err(e) =
+                        data.apply(&create_node!(parent: ROOT_ID, id: RUNNER_ID, name: "runner"))
+                    {
+                        results.error(format!(
+                            "Running trial {}, got failure creating the runner child node:\n{}",
+                            trial.name, e
+                        ));
+                    }
+                    if let Err(e) = data.apply(&create_string_property!(parent: RUNNER_ID, id: VM_SERVICE_PORT_ID, name: "vm_service_port", value: "")) {
+                        results.error(format!("Running trial {}, got failure creating the vm service port property:\n{}", trial.name, e));
+                    }
+                }
                 if let Err(e) = run_trial(&mut puppet, &mut data, trial, results).await {
                     results.error(format!("Running trial {}, got failure:\n{}", trial.name, e));
                 } else {

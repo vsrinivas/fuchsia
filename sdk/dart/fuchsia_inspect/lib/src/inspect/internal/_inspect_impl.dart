@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fuchsia_services/services.dart';
+import 'package:fuchsia_services/src/dart_vm.dart';
 import 'package:fuchsia_vfs/vfs.dart';
 import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';
@@ -55,6 +56,13 @@ class InspectImpl implements Inspect {
     if (_outgoing == null) {
       outgoing.diagnosticsDir().addNode(_fileName, _writer.vmoNode);
       _outgoing = outgoing;
+
+      // If the DART VM service port has been published to the /tmp directory, attach
+      //// it to the component's inpect tree.
+      _root!
+          .child('runner')
+          ?.stringProperty('vm_service_port')
+          ?.setValue(getVmServicePort() ?? '');
     } else {
       throw InspectStateError(
           'Attempted to call Inspect.serve after serving. Ensure that Inspect.serve is not called multiple times.');

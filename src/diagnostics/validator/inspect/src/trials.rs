@@ -33,6 +33,7 @@ pub fn real_trials() -> Vec<Trial> {
         deletions_trial(),
         lazy_nodes_trial(),
         repeated_names(),
+        vm_service_node(),
     ]
 }
 
@@ -148,6 +149,13 @@ macro_rules! subtract_number {
 macro_rules! delete_property {
     (id: $id:expr) => {
         validate::Action::DeleteProperty(validate::DeleteProperty { id: $id })
+    };
+}
+
+#[macro_export]
+macro_rules! apply_no_op {
+    () => {
+        validate::Action::ApplyNoOp(validate::ApplyNoOp {})
     };
 }
 
@@ -606,6 +614,13 @@ fn lazy_nodes_trial() -> Trial {
             delete_lazy_node!(id: 1),
         ])],
     }
+}
+
+fn vm_service_node() -> Trial {
+    // When running the dart validator puppet, this trial checks that the vm_service_node target
+    // is appended to the root at startup time. For all other validators, this will essentially
+    // yield a no-op.
+    Trial { name: "VM Service Node".into(), steps: vec![Step::Actions(vec![apply_no_op!()])] }
 }
 
 #[cfg(test)]

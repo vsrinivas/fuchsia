@@ -649,6 +649,7 @@ impl Data {
                     ));
                 }
             }
+            validate::Action::ApplyNoOp(validate::ApplyNoOp {}) => Ok(()),
             _ => return Err(format_err!("Unknown action {:?}", action)),
         }
     }
