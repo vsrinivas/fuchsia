@@ -5,7 +5,7 @@
 use std::sync::Arc;
 
 use crate::fs::*;
-use crate::mm::ProcMapsFile;
+use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::mode;
 use crate::task::{CurrentTask, EventHandler, Task, Waiter};
 use crate::types::*;
@@ -27,6 +27,7 @@ impl PidDirectory {
             b"fd".to_vec() => FdDirectory::new(fs, task.clone()),
             b"fdinfo".to_vec() => FdInfoDirectory::new(fs, task.clone()),
             b"maps".to_vec() => ProcMapsFile::new(fs, task.clone()),
+            b"stat".to_vec() => ProcStatFile::new(fs, task.clone()),
         });
 
         PidDirectory { nodes }

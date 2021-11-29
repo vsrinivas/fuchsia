@@ -135,7 +135,7 @@ pub enum DumpPolicy {
     /// Corresponds to SUID_DUMP_USER.
     USER,
 }
-struct MemoryManagerState {
+pub struct MemoryManagerState {
     /// The VMAR in which userspace mappings occur.
     ///
     /// We map userspace memory in this child VMAR so that we can destroy the
@@ -152,6 +152,10 @@ struct MemoryManagerState {
     ///
     /// The mappings record which VMO backs each address.
     mappings: RangeMap<UserAddress, Mapping>,
+
+    /// Stack location and size
+    pub stack_base: UserAddress,
+    pub stack_size: usize,
 }
 
 impl MemoryManagerState {
@@ -596,7 +600,7 @@ pub struct MemoryManager {
     pub futex: FutexTable,
 
     /// Mutable state for the memory manager.
-    state: RwLock<MemoryManagerState>,
+    pub state: RwLock<MemoryManagerState>,
 
     /// Whether this address space is dumpable.
     pub dumpable: Mutex<DumpPolicy>,
@@ -617,6 +621,8 @@ impl MemoryManager {
                 user_vmar_info,
                 brk: None,
                 mappings: RangeMap::new(),
+                stack_base: UserAddress::default(),
+                stack_size: 0,
             }),
             dumpable: Mutex::new(DumpPolicy::DISABLE),
         })
@@ -1100,6 +1106,58 @@ impl FileOps for ProcMapsFile {
                 sink.write(b"\n");
                 return Ok(Some(range.end));
             }
+            Ok(None)
+        };
+        seq.read_at(current_task, iter, offset, data)
+    }
+
+    fn write_at(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        _offset: usize,
+        _data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Err(ENOSYS)
+    }
+}
+
+pub struct ProcStatFile {
+    task: Arc<Task>,
+    seq: Mutex<SeqFileState<()>>,
+}
+
+impl ProcStatFile {
+    pub fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        fs.create_node_with_ops(
+            SimpleFileNode::new(move || {
+                Ok(ProcStatFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
+            }),
+            mode!(IFREG, 0o444),
+        )
+    }
+}
+
+impl FileOps for ProcStatFile {
+    fd_impl_seekable!();
+    fd_impl_nonblocking!();
+
+    fn read_at(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        offset: usize,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        let mut seq = self.seq.lock();
+        let iter = |_cursor, sink: &mut SeqFileBuf| {
+            let command = self.task.command.read();
+            let command = command.as_c_str().to_str().unwrap_or("unknown");
+            let mut stats = [0u64; 49];
+            let mm_state = self.task.mm.state.read();
+            stats[24] = mm_state.stack_base.ptr() as u64;
+            let stat_str = stats.map(|n| n.to_string()).join(" ");
+            write!(sink, "{} ({}) R {}\n", self.task.get_pid(), command, stat_str)?;
             Ok(None)
         };
         seq.read_at(current_task, iter, offset, data)
