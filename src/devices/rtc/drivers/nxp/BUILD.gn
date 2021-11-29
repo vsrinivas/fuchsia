@@ -35,6 +35,7 @@ fuchsia_driver("nxp-driver") {
 }
 
 fuchsia_driver_component("nxp") {
+  info = "nxp-info.json"
   component_name = "nxp"
   deps = [ ":nxp-driver" ]
 }

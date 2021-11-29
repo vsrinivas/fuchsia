@@ -1,0 +1,11 @@
+{
+    "short_description": "ARM PrimeCell Real Time Clock PL031 driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [
+        "PL031"
+    ],
+    "areas": [
+        "RTC"
+    ]
+}

@@ -1,0 +1,9 @@
+{
+    "short_description": "Intel RTC driver",
+    "manufacturer": "Intel",
+    "families": [],
+    "models": [],
+    "areas": [
+        "RTC"
+    ]
+}

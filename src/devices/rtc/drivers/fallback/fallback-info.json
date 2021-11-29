@@ -1,0 +1,13 @@
+{
+    "short_description": "RTC fallback driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "RTC"
+    ]
+}

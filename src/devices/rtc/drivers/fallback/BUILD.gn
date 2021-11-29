@@ -38,6 +38,7 @@ fuchsia_driver("fallback-driver") {
 }
 
 fuchsia_driver_component("fallback") {
+  info = "fallback-info.json"
   component_name = "fallback"
   deps = [ ":fallback-driver" ]
 }

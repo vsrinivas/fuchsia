@@ -45,6 +45,7 @@ fuchsia_driver("intel-rtc-driver") {
 }
 
 fuchsia_driver_component("intel-rtc") {
+  info = "intel-rtc-info.json"
   component_name = "intel-rtc"
   deps = [ ":intel-rtc-driver" ]
 }

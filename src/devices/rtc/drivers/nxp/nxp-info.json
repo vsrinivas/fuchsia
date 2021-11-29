@@ -1,0 +1,11 @@
+{
+    "short_description": "NXP PCF8563 real-time clock driver",
+    "manufacturer": "NXP",
+    "families": [],
+    "models": [
+        "PCF8563"
+    ],
+    "areas": [
+        "RTC"
+    ]
+}

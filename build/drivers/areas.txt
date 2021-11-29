@@ -25,6 +25,7 @@ Openthread
 PCI
 Platform
 Power
+RTC
 Spi
 Storage
 Telephony
