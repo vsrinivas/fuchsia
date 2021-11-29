@@ -3,54 +3,60 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/svc/outgoing.h>
+#include <lib/service/llcpp/outgoing_directory.h>
 
 #include "src/devices/lib/driver2/inspect.h"
 #include "src/devices/lib/driver2/namespace.h"
-#include "src/devices/lib/driver2/record.h"
+#include "src/devices/lib/driver2/record_cpp.h"
 #include "src/devices/lib/driver2/structured_logger.h"
+
+namespace fdf = fuchsia_driver_framework;
+namespace fio = fuchsia_io;
 
 namespace {
 
-namespace fdf = fuchsia_driver_framework;
-
 class PackagedDriver {
  public:
-  explicit PackagedDriver(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher), outgoing_(dispatcher) {}
+  PackagedDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
+                 driver::Namespace ns, driver::Logger logger)
+      : outgoing_(dispatcher),
+        node_(std::move(node)),
+        ns_(std::move(ns)),
+        logger_(std::move(logger)) {}
 
-  zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
-    node_.Bind(std::move(start_args->node()), dispatcher_);
+  static constexpr const char* Name() { return "packaged"; }
 
-    auto ns = driver::Namespace::Create(start_args->ns());
-    if (ns.is_error()) {
-      return ns.take_error();
+  static zx::status<std::unique_ptr<PackagedDriver>> Start(fdf::wire::DriverStartArgs& start_args,
+                                                           async_dispatcher_t* dispatcher,
+                                                           fidl::WireSharedClient<fdf::Node> node,
+                                                           driver::Namespace ns,
+                                                           driver::Logger logger) {
+    auto driver = std::make_unique<PackagedDriver>(dispatcher, std::move(node), std::move(ns),
+                                                   std::move(logger));
+    auto result = driver->Run(std::move(start_args.outgoing_dir()));
+    if (result.is_error()) {
+      return result.take_error();
     }
-    ns_ = std::move(ns.value());
+    return zx::ok(std::move(driver));
+  }
 
-    auto logger = driver::Logger::Create(ns_, dispatcher_, "packaged_driver");
-    if (logger.is_error()) {
-      return logger.take_error();
-    }
-    logger_ = std::move(logger.value());
-
+ private:
+  zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
     auto inspect = driver::ExposeInspector(inspector_, outgoing_.root_dir());
     if (inspect.is_error()) {
       FDF_SLOG(ERROR, "Failed to expose inspector", KV("error_string", inspect.status_string()));
       return inspect.take_error();
     }
     inspect_vmo_ = std::move(inspect.value());
-    FDF_SLOG(DEBUG, "Debug world");
-    FDF_SLOG(INFO, "Hello world", KV("The answer is", 42));
     auto& root = inspector_.GetRoot();
     root.CreateString("hello", "world", &inspector_);
-    zx_status_t status = outgoing_.Serve(std::move(start_args->outgoing_dir()));
-    return zx::make_status(status);
+
+    FDF_SLOG(DEBUG, "Debug world");
+    FDF_SLOG(INFO, "Hello world", KV("The answer is", 42));
+    return outgoing_.Serve(std::move(outgoing_dir));
   }
 
- private:
-  async_dispatcher_t* dispatcher_;
-  svc::Outgoing outgoing_;
+  service::OutgoingDirectory outgoing_;
   fidl::WireSharedClient<fdf::Node> node_;
   driver::Namespace ns_;
   driver::Logger logger_;
@@ -58,29 +64,6 @@ class PackagedDriver {
   zx::vmo inspect_vmo_;
 };
 
-zx_status_t PackagedDriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher,
-                                void** driver) {
-  fidl::DecodedMessage<fdf::wire::DriverStartArgs> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, msg);
-  if (!decoded.ok()) {
-    return decoded.status();
-  }
-
-  auto packaged_driver = std::make_unique<PackagedDriver>(dispatcher);
-  auto init = packaged_driver->Init(decoded.PrimaryObject());
-  if (init.is_error()) {
-    return init.error_value();
-  }
-
-  *driver = packaged_driver.release();
-  return ZX_OK;
-}
-
-zx_status_t PackagedDriverStop(void* driver) {
-  delete static_cast<PackagedDriver*>(driver);
-  return ZX_OK;
-}
-
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_V1(.start = PackagedDriverStart, .stop = PackagedDriverStop);
+FUCHSIA_DRIVER_RECORD_CPP_V1(PackagedDriver);

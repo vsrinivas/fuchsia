@@ -13,11 +13,13 @@
 #include <bind/fuchsia/test/cpp/fidl.h>
 
 #include "src/devices/lib/driver2/logger.h"
+#include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/lib/driver2/promise.h"
-#include "src/devices/lib/driver2/record.h"
+#include "src/devices/lib/driver2/record_cpp.h"
 
 namespace fcd = fuchsia_component_decl;
 namespace fdf = fuchsia_driver_framework;
+namespace fio = fuchsia_io;
 namespace ft = fuchsia_offers_test;
 
 using fpromise::error;
@@ -29,27 +31,33 @@ namespace {
 
 class RootDriver : public fidl::WireServer<ft::Handshake> {
  public:
-  explicit RootDriver(async_dispatcher_t* dispatcher)
-      : dispatcher_(dispatcher), executor_(dispatcher), outgoing_(dispatcher) {}
+  RootDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
+             driver::Namespace ns, driver::Logger logger)
+      : dispatcher_(dispatcher),
+        executor_(dispatcher),
+        outgoing_(dispatcher),
+        node_(std::move(node)),
+        ns_(std::move(ns)),
+        logger_(std::move(logger)) {}
 
-  zx::status<> Start(fdf::wire::DriverStartArgs* start_args) {
-    // Bind the node.
-    node_.Bind(std::move(start_args->node()), dispatcher_);
+  static constexpr const char* Name() { return "root"; }
 
-    // Create the namespace.
-    auto ns = driver::Namespace::Create(start_args->ns());
-    if (ns.is_error()) {
-      return ns.take_error();
+  static zx::status<std::unique_ptr<RootDriver>> Start(fdf::wire::DriverStartArgs& start_args,
+                                                       async_dispatcher_t* dispatcher,
+                                                       fidl::WireSharedClient<fdf::Node> node,
+                                                       driver::Namespace ns,
+                                                       driver::Logger logger) {
+    auto driver =
+        std::make_unique<RootDriver>(dispatcher, std::move(node), std::move(ns), std::move(logger));
+    auto result = driver->Run(std::move(start_args.outgoing_dir()));
+    if (result.is_error()) {
+      return result.take_error();
     }
-    ns_ = std::move(*ns);
+    return zx::ok(std::move(driver));
+  }
 
-    // Create the logger.
-    auto logger = driver::Logger::Create(ns_, dispatcher_, "root");
-    if (logger.is_error()) {
-      return logger.take_error();
-    }
-    logger_ = std::move(*logger);
-
+ private:
+  zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
     // Setup the outgoing directory.
     auto service = [this](fidl::ServerEnd<ft::Handshake> server_end) {
       fidl::BindServer(dispatcher_, std::move(server_end), this);
@@ -60,19 +68,18 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
     if (status != ZX_OK) {
       return zx::error(status);
     }
-    auto serve = outgoing_.Serve(std::move(start_args->outgoing_dir()));
+    auto serve = outgoing_.Serve(std::move(outgoing_dir));
     if (serve.is_error()) {
       return serve.take_error();
     }
 
     // Start the driver.
-    auto start_driver =
+    auto task =
         AddChild().or_else(fit::bind_member(this, &RootDriver::UnbindNode)).wrap_with(scope_);
-    executor_.schedule_task(std::move(start_driver));
+    executor_.schedule_task(std::move(task));
     return zx::ok();
   }
 
- private:
   promise<void, zx_status_t> AddChild() {
     fidl::Arena arena;
 
@@ -145,27 +152,6 @@ class RootDriver : public fidl::WireServer<ft::Handshake> {
   fpromise::scope scope_;
 };
 
-zx_status_t DriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void** driver) {
-  fidl::DecodedMessage<fdf::wire::DriverStartArgs> decoded(msg);
-  if (!decoded.ok()) {
-    return decoded.status();
-  }
-
-  auto root_driver = std::make_unique<RootDriver>(dispatcher);
-  auto start = root_driver->Start(decoded.PrimaryObject());
-  if (start.is_error()) {
-    return start.error_value();
-  }
-
-  *driver = root_driver.release();
-  return ZX_OK;
-}
-
-zx_status_t DriverStop(void* driver) {
-  delete static_cast<RootDriver*>(driver);
-  return ZX_OK;
-}
-
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_V1(.start = DriverStart, .stop = DriverStop);
+FUCHSIA_DRIVER_RECORD_CPP_V1(RootDriver);
