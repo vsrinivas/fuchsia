@@ -2765,37 +2765,17 @@ mod tests {
             .expect("failed to call add_child")
             .expect("add_child returned an error");
         let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
-        let a_decl = cm_rust::ComponentDecl {
-            program: Some(cm_rust::ProgramDecl {
-                runner: Some("rust_test_runner".into()),
-                info: fdata::Dictionary {
-                    entries: Some(vec![fdata::DictionaryEntry {
-                        key: "binary".to_string(),
-                        value: Some(Box::new(fdata::DictionaryValue::Str(
-                            "bin/realm_builder_server_bin_test".to_string(),
-                        ))),
-                    }]),
-                    ..fdata::Dictionary::EMPTY
-                },
-            }),
-            capabilities: vec![cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
-                name: "fuchsia.test.Suite".into(),
-                source_path: Some("/svc/fuchsia.test.Suite".try_into().unwrap()),
-            })],
-            exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
-                source: cm_rust::ExposeSource::Self_,
-                source_name: "fuchsia.test.Suite".into(),
-                target: cm_rust::ExposeTarget::Parent,
-                target_name: "fuchsia.test.Suite".into(),
-            })],
-            uses: vec![cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-                source: cm_rust::UseSource::Parent,
-                source_name: "fuchsia.logger.LogSink".into(),
-                target_path: "/svc/fuchsia.logger.LogSink".try_into().unwrap(),
-                dependency_type: cm_rust::DependencyType::Strong,
-            })],
-            ..cm_rust::ComponentDecl::default()
-        };
+
+        let a_decl_file = io_util::open_file_in_namespace(
+            "/pkg/meta/realm_builder_server_unit_tests.cm",
+            fio::OPEN_RIGHT_READABLE,
+        )
+        .expect("failed to open manifest");
+        let a_decl = io_util::read_file_fidl::<fcdecl::Component>(&a_decl_file)
+            .await
+            .expect("failed to read manifest")
+            .fidl_into_native();
+
         let mut expected_tree = ComponentTree {
             decl: cm_rust::ComponentDecl::default(),
             children: vec![(
@@ -2826,6 +2806,14 @@ mod tests {
             .expect("add_child returned an error");
         let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
 
+        let a_decl_file =
+            io_util::open_file_in_namespace("/pkg/meta/a.cm", fio::OPEN_RIGHT_READABLE)
+                .expect("failed to open manifest");
+        let a_decl = io_util::read_file_fidl::<fcdecl::Component>(&a_decl_file)
+            .await
+            .expect("failed to read manifest")
+            .fidl_into_native();
+
         let mut expected_tree = ComponentTree {
             decl: cm_rust::ComponentDecl::default(),
             children: vec![(
@@ -2848,18 +2836,7 @@ mod tests {
                     children: vec![(
                         "a".to_string(),
                         ftest::ChildOptions::EMPTY,
-                        ComponentTree {
-                            decl: cm_rust::ComponentDecl {
-                                uses: vec![cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
-                                    source: cm_rust::UseSource::Parent,
-                                    source_name: "example.Hippo".into(),
-                                    target_path: "/svc/example.Hippo".try_into().unwrap(),
-                                    dependency_type: cm_rust::DependencyType::Strong,
-                                })],
-                                ..cm_rust::ComponentDecl::default()
-                            },
-                            children: vec![],
-                        },
+                        ComponentTree { decl: a_decl, children: vec![] },
                     )],
                 },
             )],
