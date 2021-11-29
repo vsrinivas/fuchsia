@@ -13,7 +13,6 @@ fuchsia_driver("lib") {
   output_name = "packaged_driver"
   sources = [ "packaged_driver.cc" ]
   deps = [
-    "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:inspect",
     "//src/devices/lib/driver2:llcpp",
     "//zircon/system/ulib/svc",

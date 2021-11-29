@@ -25,7 +25,6 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
-    "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
     "//src/devices/lib/log",
     "//src/lib/storage/vfs/cpp",
@@ -52,7 +51,6 @@ fuchsia_driver("test_driver_driver") {
   deps = [
     ":bind",
     ":fuchsia.driverhost.test_llcpp",
-    "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]

@@ -31,7 +31,6 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/stdcompat",
-    "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

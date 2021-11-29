@@ -4,16 +4,12 @@
 
 import("//build/components.gni")
 
-group("driver2") {
-  public_deps = [ ":lib" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":driver2-tests" ]
 }
 
-source_set("lib") {
+source_set("record") {
   sources = [ "record.h" ]
 
   public_deps = [ "//zircon/system/ulib/async" ]
@@ -53,11 +49,13 @@ source_set("llcpp") {
     "namespace.cc",
     "namespace.h",
     "promise.h",
+    "record_cpp.h",
     "start_args.h",
     "structured_logger.h",
   ]
 
   public_deps = [
+    ":record",
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_llcpp",
     "//sdk/fidl/fuchsia.data:fuchsia.data_llcpp",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",

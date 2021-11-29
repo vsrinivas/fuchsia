@@ -33,7 +33,6 @@ fuchsia_driver("root_driver") {
     ":root_bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
     "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
-    "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
     "//zircon/system/ulib/service:service-llcpp",
   ]
@@ -60,7 +59,6 @@ fuchsia_driver("leaf_driver") {
   deps = [
     ":fuchsia.offers.test_llcpp",
     ":leaf_bind",
-    "//src/devices/lib/driver2",
     "//src/devices/lib/driver2:llcpp",
     "//zircon/system/ulib/async:async-cpp",
   ]
