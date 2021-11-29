@@ -26,7 +26,7 @@ PCI
 Platform
 Power
 RTC
-Spi
+SPI
 Storage
 Telephony
 Test

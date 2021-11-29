@@ -88,6 +88,7 @@ fuchsia_driver("aml-spi-driver") {
 }
 
 fuchsia_driver_component("aml-spi") {
+  info = "aml-spi-info.json"
   component_name = "aml-spi"
   deps = [ ":aml-spi-driver" ]
 }

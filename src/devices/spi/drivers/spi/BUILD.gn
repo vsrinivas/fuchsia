@@ -61,6 +61,7 @@ fuchsia_driver("spi-driver") {
 }
 
 fuchsia_driver_component("spi") {
+  info = "spi-info.json"
   component_name = "spi"
   deps = [ ":spi-driver" ]
 }

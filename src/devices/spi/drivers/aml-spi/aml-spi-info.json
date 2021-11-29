@@ -1,0 +1,12 @@
+{
+    "short_description": "AMLogic SPI driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "T931",
+        "S905D3"
+    ],
+    "areas": [
+        "SPI"
+    ]
+}
