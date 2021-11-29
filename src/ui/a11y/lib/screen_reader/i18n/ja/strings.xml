@@ -23,6 +23,12 @@
   <string name="table_summary">{table_name}、{table_rows} × {table_columns}</string>
   <string name="cell_summary">{row_index} 行、{column_index} 列</string>
   <string name="row_summary">{row_index}行目</string>
+  <string name="column_summary">{column_index}列目</string>
+  <string name="entered_table">表を開きました</string>
+  <string name="exited_table">表を終了しました</string>
+  <string name="table_dimensions">{num_rows}行、{num_columns}列</string>
+  <string name="row_span">{num_rows}行にわたっています</string>
+  <string name="column_span">{num_columns}列にわたっています</string>
   <string name="element_checked">オン</string>
   <string name="element_not_checked">オフ</string>
   <string name="element_partially_checked">一部オン</string>
@@ -107,4 +113,5 @@
   <string name="role_text_field">テキスト フィールド</string>
   <string name="role_search_box">検索ボックス</string>
   <string name="is_editing">は編集中です</string>
+  <string name="capitalized_letter">大文字の{letter}</string>
 </resources>

@@ -23,6 +23,12 @@
   <string name="table_summary">{table_name}, {table_rows} bij {table_columns}</string>
   <string name="cell_summary">Rij {row_index}, kolom {column_index}</string>
   <string name="row_summary">Rij {row_index}</string>
+  <string name="column_summary">Kolom {column_index}</string>
+  <string name="entered_table">Tabel geopend</string>
+  <string name="exited_table">Tabel gesloten</string>
+  <string name="table_dimensions">{num_rows} rijen, {num_columns} kolommen</string>
+  <string name="row_span">beslaat {num_rows} rijen</string>
+  <string name="column_span">beslaat {num_columns} kolommen</string>
   <string name="element_checked">Aangevinkt</string>
   <string name="element_not_checked">Uitgevinkt</string>
   <string name="element_partially_checked">Gedeeltelijk aangevinkt</string>
@@ -107,4 +113,5 @@
   <string name="role_text_field">Tekstveld</string>
   <string name="role_search_box">Zoekvak</string>
   <string name="is_editing">Bezig met bewerken</string>
+  <string name="capitalized_letter">Hoofdletter {letter}</string>
 </resources>

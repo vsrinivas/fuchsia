@@ -23,6 +23,12 @@
   <string name="table_summary">[ᐅ{table_name}ᐊ,        ᐅ{table_rows}ᐊ бý ᐅ{table_columns}ᐊ one two three four five]</string>
   <string name="cell_summary">[Ŕöŵ ᐅ{row_index}ᐊ çöļûmñ ᐅ{column_index}ᐊ one two three four]</string>
   <string name="row_summary">[Ŕöŵ ᐅ{row_index}ᐊ one two]</string>
+  <string name="column_summary">[Çöļûmñ ᐅ{column_index}ᐊ one two three]</string>
+  <string name="entered_table">[Éñţéŕéð ţåбļé one two]</string>
+  <string name="exited_table">[Éxîţéð ţåбļé one two]</string>
+  <string name="table_dimensions">[ᐅ{num_rows}ᐊ ŕöŵš, ᐅ{num_columns}ᐊ çöļûmñš one two three four five]</string>
+  <string name="row_span">[šþåñš ᐅ{num_rows}ᐊ ŕöŵš one two three]</string>
+  <string name="column_span">[šþåñš ᐅ{num_columns}ᐊ çöļûmñš one two three four]</string>
   <string name="element_checked">[Çĥéçķéð one]</string>
   <string name="element_not_checked">[Ñöţ çĥéçķéð one two]</string>
   <string name="element_partially_checked">[Þåŕţîåļļý çĥéçķéð one two three]</string>
@@ -107,4 +113,5 @@
   <string name="role_text_field">[Ţéxţ ƒîéļð one two]</string>
   <string name="role_search_box">[Šéåŕçĥ бöx one two]</string>
   <string name="is_editing">[Îš éðîţîñĝ one two]</string>
+  <string name="capitalized_letter">[Çåþîţåļ ᐅ{letter}ᐊ one two three]</string>
 </resources>

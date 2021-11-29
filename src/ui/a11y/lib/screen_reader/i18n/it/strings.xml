@@ -23,6 +23,12 @@
   <string name="table_summary">{table_name},        {table_rows} per {table_columns}</string>
   <string name="cell_summary">Riga {row_index} colonna {column_index}</string>
   <string name="row_summary">Riga {row_index}</string>
+  <string name="column_summary">Colonna {column_index}</string>
+  <string name="entered_table">Tabella aperta</string>
+  <string name="exited_table">Tabella chiusa</string>
+  <string name="table_dimensions">{num_rows} righe, {num_columns} colonne</string>
+  <string name="row_span">si estende su {num_rows} righe</string>
+  <string name="column_span">si estende su {num_columns} colonne</string>
   <string name="element_checked">Elemento selezionato</string>
   <string name="element_not_checked">Elemento non selezionato</string>
   <string name="element_partially_checked">Elemento parzialmente selezionato</string>
@@ -38,7 +44,7 @@
   <string name="role_list_item">Voce elenco</string>
   <string name="role_ordered_list">Elenco ordinato</string>
   <string name="role_list">Elenco</string>
-  <string name="list_items">{num_items,plural, =0{senza voci}=1{con una voce}other{con # voci}}</string>
+  <string name="list_items">{num_items,plural, =0{senza voci}=1{con una voce}one{con # voci}other{con # voci}}</string>
   <string name="normal_navigation_granularity">Navigazione normale</string>
   <string name="default_navigation_granularity">Predefinita</string>
   <string name="adjust_value_granularity">Regola valore</string>
@@ -107,4 +113,5 @@
   <string name="role_text_field">Campo di testo</string>
   <string name="role_search_box">Casella di ricerca</string>
   <string name="is_editing">Sta modificando</string>
+  <string name="capitalized_letter">{letter} maiuscola</string>
 </resources>
