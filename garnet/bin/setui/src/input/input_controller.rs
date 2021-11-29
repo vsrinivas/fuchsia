@@ -189,22 +189,6 @@ impl InputControllerInner {
         }
     }
 
-    /// Sets the software mic state to `muted`.
-    // TODO(fxb/65686): remove when FIDL is changed.
-    async fn set_sw_mic_mute(&mut self, muted: bool) -> SettingHandlerResult {
-        let mut input_info = self.get_stored_info().await;
-        input_info.input_device_state.set_source_state(
-            InputDeviceType::MICROPHONE,
-            DEFAULT_MIC_NAME.to_string(),
-            DeviceStateSource::SOFTWARE,
-            if muted { DeviceState::MUTED } else { DeviceState::AVAILABLE },
-        );
-
-        // Store the newly set value.
-        let nonce = fuchsia_trace::generate_nonce();
-        self.client.write_setting(input_info.into(), true, nonce).await.into_handler_result()
-    }
-
     async fn set_sw_camera_mute(&mut self, disabled: bool, name: String) -> SettingHandlerResult {
         let mut input_info = self.get_stored_info().await;
         input_info.input_device_state.set_source_state(
@@ -416,10 +400,6 @@ impl controller::Handle for InputController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::Restore => Some(self.inner.lock().await.restore().await.map(|_| None)),
-            // TODO(fxb/65686): remove when FIDL is changed.
-            Request::SetMicMute(muted) => {
-                Some(self.inner.lock().await.set_sw_mic_mute(muted).await)
-            }
             Request::Get => Some(
                 self.inner.lock().await.get_info().await.map(|info| Some(SettingInfo::Input(info))),
             ),

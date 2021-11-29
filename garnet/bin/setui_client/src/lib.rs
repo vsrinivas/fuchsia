@@ -46,7 +46,7 @@ pub enum SettingClientSubcommands {
     // TODO(fxbug.dev/65686): Move back into input when the clients are migrated over.
     // TODO(fxbug.dev/66186): Support multiple input devices to be set.
     // For simplicity, currently only supports setting one input device at a time.
-    Input2(InputDeviceOptions),
+    Input2(Input),
     Intl(Intl),
     Keyboard(Keyboard),
     Light(LightGroup),
@@ -221,19 +221,10 @@ pub struct FactoryReset {
     is_local_reset_allowed: Option<bool>,
 }
 
-#[derive(FromArgs, Debug)]
-#[argh(subcommand, name = "input")]
-/// get or set input settings
-pub struct Input {
-    /// when set to 'true', mutes the mic and prevents it from being accessed
-    #[argh(option, short = 'm')]
-    mic_muted: Option<bool>,
-}
-
 #[derive(FromArgs, Debug, Clone)]
 #[argh(subcommand, name = "input_device")]
-/// get or set input device settings
-pub struct InputDeviceOptions {
+/// get or set input settings
+pub struct Input {
     #[argh(option, short = 't', from_str_fn(str_to_device_type))]
     /// the type of input device. Valid options are camera and microphone
     device_type: Option<fidl_fuchsia_settings::DeviceType>,
@@ -550,22 +541,22 @@ pub async fn run_command(command: SettingClient) -> Result<(), Error> {
             )
             .await?;
         }
-        SettingClientSubcommands::Input(Input { mic_muted }) => {
+        SettingClientSubcommands::Input(Input { device_type, device_name, device_state }) => {
             let input_service = connect_to_protocol::<fidl_fuchsia_settings::InputMarker>()
                 .context("Failed to connect to input service")?;
-            utils::handle_mixed_result("Input", input::command(input_service, mic_muted).await)
-                .await?;
+            utils::handle_mixed_result(
+                "Input",
+                input::command(input_service, device_type, device_name, device_state).await,
+            )
+            .await?;
         }
-        SettingClientSubcommands::Input2(InputDeviceOptions {
-            device_type,
-            device_name,
-            device_state,
-        }) => {
+        // TODO(fxbug.dev/65686): Remove when clients are ported to new interface.
+        SettingClientSubcommands::Input2(Input { device_type, device_name, device_state }) => {
             let input_service = connect_to_protocol::<fidl_fuchsia_settings::InputMarker>()
                 .context("Failed to connect to input2 service")?;
             utils::handle_mixed_result(
                 "Input2",
-                input::command2(input_service, device_type, device_name, device_state).await,
+                input::command(input_service, device_type, device_name, device_state).await,
             )
             .await?;
         }

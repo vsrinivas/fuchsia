@@ -98,9 +98,6 @@ generate_inspect! {
         // Audio requests.
         SetVolume(Vec<SetAudioStream>, TracingNonce),
 
-        // Audio in requests.
-        SetMicMute(bool),
-
         // Display requests.
         SetDisplayInfo(SetDisplayInfo),
 

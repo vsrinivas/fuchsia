@@ -26,8 +26,8 @@ use crate::tests::input_test_environment::{TestInputEnvironment, TestInputEnviro
 use crate::tests::test_failure_utils::create_test_env_with_failures;
 use fidl::Error::ClientChannelClosed;
 use fidl_fuchsia_settings::{
-    DeviceState as FidlDeviceState, DeviceType, InputDeviceSettings, InputMarker, InputProxy,
-    InputSettings, InputState as FidlInputState, Microphone as FidlMicrophone, ToggleStateFlags,
+    DeviceState as FidlDeviceState, DeviceType, InputMarker, InputProxy, InputSettings,
+    InputState as FidlInputState, ToggleStateFlags,
 };
 use fidl_fuchsia_ui_input::MediaButtonsEvent;
 use fuchsia_async::TestExecutor;
@@ -177,21 +177,8 @@ fn create_env_and_executor_with_config(
     (executor, env)
 }
 
-// Set the software mic mute state to muted = [mic_muted].
+// Set the software mic mute state to muted = [mic_muted] for input.
 async fn set_mic_mute(proxy: &InputProxy, mic_muted: bool) {
-    let mut input_device_settings = InputDeviceSettings::EMPTY;
-    let mut microphone = FidlMicrophone::EMPTY;
-
-    microphone.muted = Some(mic_muted);
-    input_device_settings.microphone = Some(microphone);
-    proxy.set(input_device_settings).await.expect("set completed").expect("set successful");
-}
-
-// Set the software mic mute state to muted = [mic_muted] for input2.
-async fn set_mic_mute_input2(proxy: &InputProxy, mic_muted: bool) {
-    // TODO(fxbug.dev/65686): Remove once clients are ported to input2.
-    set_mic_mute(proxy, mic_muted).await;
-
     set_device_muted(proxy, mic_muted, DEFAULT_MIC_NAME, DeviceType::Microphone).await;
 }
 
@@ -225,7 +212,7 @@ async fn set_device_muted(
         .expect("set successful");
 }
 
-// Switch the hardware mic state to muted = [muted] for input2.
+// Switch the hardware mic state to muted = [muted] for input.
 async fn switch_hardware_mic_mute(env: &TestInputEnvironment, muted: bool) {
     let buttons_event = MediaButtonsEventBuilder::new().set_volume(1).set_mic_mute(muted).build();
     env.input_button_service.lock().await.send_media_button_event(buttons_event.clone()).await;
@@ -238,24 +225,19 @@ async fn switch_hardware_camera_disable(env: &TestInputEnvironment, disabled: bo
     env.input_button_service.lock().await.send_media_button_event(buttons_event.clone()).await;
 }
 
-// Perform a watch and watch2 and check that the mic mute state matches [expected_muted_state].
+// Perform a watch and check that the mic mute state matches [expected_muted_state].
 async fn get_and_check_mic_mute(input_proxy: &InputProxy, expected_muted_state: bool) {
-    // TODO(fxb/65686): remove when deprecated watch is removed.
     let settings = input_proxy.watch().await.expect("watch completed");
-
-    let settings2 = input_proxy.watch2().await.expect("watch2 completed");
-
-    assert_eq!(settings.microphone.unwrap().muted, Some(expected_muted_state));
-    verify_muted_state(&settings2, expected_muted_state, DeviceType::Microphone);
+    verify_muted_state(&settings, expected_muted_state, DeviceType::Microphone);
 }
 
-// Perform a watch2 and check that the camera disabled state matches [expected_camera_disabled_state].
+// Perform a watch and check that the camera disabled state matches [expected_camera_disabled_state].
 async fn get_and_check_camera_disable(
     input_proxy: &InputProxy,
     expected_camera_disabled_state: bool,
 ) {
-    let settings2 = input_proxy.watch2().await.expect("watch2 completed");
-    verify_muted_state(&settings2, expected_camera_disabled_state, DeviceType::Camera);
+    let settings = input_proxy.watch().await.expect("watch completed");
+    verify_muted_state(&settings, expected_camera_disabled_state, DeviceType::Camera);
 }
 
 // Creates a broker to listen in on media buttons events.
@@ -303,20 +285,20 @@ fn is_attr_onbutton(message: &Message<Payload, Address, Role>) -> bool {
     matches!(attr_msg.payload(), Payload::Setting(HandlerPayload::Request(Request::OnButton(_))))
 }
 
-// Perform a watch2 and check that the mic mute state matches [expected_mic_mute_state]
+// Perform a watch and check that the mic mute state matches [expected_mic_mute_state]
 // and the camera disabled state matches [expected_camera_disabled_state].
 async fn get_and_check_state(
     input_proxy: &InputProxy,
     expected_mic_mute_state: bool,
     expected_camera_disabled_state: bool,
 ) {
-    let settings2 = input_proxy.watch2().await.expect("watch2 completed");
-    verify_muted_state(&settings2, expected_camera_disabled_state, DeviceType::Camera);
-    verify_muted_state(&settings2, expected_mic_mute_state, DeviceType::Microphone);
+    let settings = input_proxy.watch().await.expect("watch completed");
+    verify_muted_state(&settings, expected_camera_disabled_state, DeviceType::Camera);
+    verify_muted_state(&settings, expected_mic_mute_state, DeviceType::Microphone);
 }
 
 // Helper for checking the returned muted state for a given
-// device type in the watch2 results.
+// device type in the watch results.
 fn verify_muted_state(
     settings: &InputSettings,
     expected_muted_state: bool,
@@ -368,7 +350,7 @@ fn test_set_watch_mic_mute() {
     move_executor_forward(
         &mut executor,
         async {
-            set_mic_mute_input2(&input_proxy, true).await;
+            set_mic_mute(&input_proxy, true).await;
         },
         "Failed to set mic mute",
     );
@@ -385,7 +367,7 @@ fn test_set_watch_mic_mute() {
         &mut executor,
         async {
             switch_hardware_mic_mute(&env, true).await;
-            set_mic_mute_input2(&input_proxy, false).await;
+            set_mic_mute(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
         },
         "Failed to switch mic mute state",
@@ -575,7 +557,7 @@ fn test_mic_mute_combinations() {
         &mut executor,
         async {
             switch_hardware_mic_mute(&env, true).await;
-            set_mic_mute_input2(&input_proxy, false).await;
+            set_mic_mute(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
         },
         "Failed to switch mic mute state",
@@ -592,7 +574,7 @@ fn test_mic_mute_combinations() {
     move_executor_forward(
         &mut executor,
         async {
-            set_mic_mute_input2(&input_proxy, true).await;
+            set_mic_mute(&input_proxy, true).await;
             get_and_check_mic_mute(&input_proxy, true).await;
         },
         "Failed to switch and check mic mute state",
@@ -620,7 +602,7 @@ fn test_mic_mute_combinations() {
         &mut executor,
         async {
             switch_hardware_mic_mute(&env, false).await;
-            set_mic_mute_input2(&input_proxy, false).await;
+            set_mic_mute(&input_proxy, false).await;
             wait_for_media_button_event(&mut media_buttons_receptor).await;
         },
         "Failed to switch mic mute state",
