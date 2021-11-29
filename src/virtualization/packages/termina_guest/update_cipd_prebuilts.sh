@@ -177,6 +177,10 @@ build_termina_image() {
 }
 
 main() {
+  if [[ $# < 2 ]]; then
+    print_usage_and_exit
+  fi
+
   work_dir="$1"
   shift
 
