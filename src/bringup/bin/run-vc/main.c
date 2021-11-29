@@ -86,6 +86,9 @@ int main(int argc, const char** argv) {
   uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
   uint32_t type = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO);
 
+  // set TERM for virtcon
+  const char* environ[] = {"TERM=xterm-256color", 0};
+
   fdio_spawn_action_t actions[2] = {
       {.action = FDIO_SPAWN_ACTION_SET_NAME, .name.data = pname},
       {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h.id = type, .h.handle = session},
@@ -96,8 +99,8 @@ int main(int argc, const char** argv) {
   actions[1].h.handle = session;
 
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, NULL, countof(actions), actions,
-                          NULL, err_msg);
+  status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, environ, countof(actions),
+                          actions, NULL, err_msg);
   if (status != ZX_OK) {
     fprintf(stderr, "error %d (%s) launching: %s\n", status, zx_status_get_string(status), err_msg);
     return -1;
