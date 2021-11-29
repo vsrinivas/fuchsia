@@ -1837,3 +1837,16 @@
   reviewers: [ 'ananthak@google.com', 'dworsham@google.com', 'jcecil@google.com', 'pascallouis@google.com', 'shayba@google.com']
   submitted: '2021-09-20'
   reviewed: '2021-11-15'
+
+- name: 'RFC-0142'
+  title: 'zx_thread_legacy_yield'
+  short_description: 'Introduces a specialized syscall for yield.'
+  authors: ['gevalentino@google.com']
+  file: '0142_zx_thread_legacy_yield.md'
+  area: ['Kernel']
+  issue: ['']
+  gerrit_change_id: ['590273']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'eieio@google.com', 'travisg@google.com', 'mvanotti@google.com', 'surajmalhotra@google.com']
+  submitted: '2021-11-29'
+  reviewed: '2021-10-13'
