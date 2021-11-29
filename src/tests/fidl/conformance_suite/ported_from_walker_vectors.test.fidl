@@ -50,7 +50,12 @@ type MultipleNonnullableVectorsOfUint32s = struct {
     vu1 vector<uint32>;
 };
 
-type MultipleNullableVectorsOfUint32s = struct {
-    vu0 vector<uint32>:optional;
-    vu1 vector<uint32>:optional;
+type MultipleBoundedNonnullableVectorsOfUint32s = struct {
+    vu0 vector<uint32>:2;
+    vu1 vector<uint32>:32;
+};
+
+type MultipleBoundedNullableVectorsOfUint32s = struct {
+    vu0 vector<uint32>:<2, optional>;
+    vu1 vector<uint32>:<32, optional>;
 };

@@ -342,3 +342,178 @@ decode_failure("PresentNullableBoundedVectorOfHandlesShortError") {
     },
     err = COUNT_EXCEEDS_LIMIT,
 }
+
+success("PresentNonnullableVectorOfUint32") {
+    value = UnboundedNonnullableVectorOfUint32s{
+        vu0: [1, 2, 3, 4],
+    },
+    bytes = {
+        v1, v2 = [
+            // Count and presence
+            num(4):8, repeat(0xff):8,
+            // Vector values
+            num(1):4,
+            num(2):4,
+            num(3):4,
+            num(4):4,
+        ],
+    },
+}
+
+success("PresentNullableVectorOfUint32") {
+    // TODO(fxbug.dev/88979): generated Rust test does not compile.
+    bindings_denylist = [rust],
+    value = UnboundedNullableVectorOfUint32s{
+        vu0: [1, 2, 3, 4],
+    },
+    bytes = {
+        v1, v2 = [
+            // Count and presence
+            num(4):8, repeat(0xff):8,
+            // Vector values
+            num(1):4,
+            num(2):4,
+            num(3):4,
+            num(4):4,
+        ],
+    },
+}
+
+decode_failure("AbsentNonnullableVectorOfUint32Error") {
+    type = UnboundedNonnullableVectorOfUint32s,
+    bytes = {
+        v1, v2 = [
+            // Count of zero, absent marker.
+            num(0):8, repeat(0):8,
+        ],
+    },
+    err = NON_NULLABLE_TYPE_WITH_NULL_VALUE,
+}
+
+decode_failure("AbsentNullableVectorOfUint32NonZeroLengthError") {
+    type = UnboundedNullableVectorOfUint32s,
+    bytes = {
+        v1, v2 = [
+            // Count of four, absent marker.
+            num(4):8, repeat(0):8,
+        ],
+    },
+    err = NON_EMPTY_VECTOR_WITH_NULL_BODY,
+}
+
+success("AbsentNullableVectorOfUint32") {
+    value = UnboundedNullableVectorOfUint32s{},
+    bytes = {
+        v1, v2 = [
+            // Count of zero, absent marker.
+            num(0):8, repeat(0):8,
+        ],
+    },
+}
+
+success("PresentNonnullableBoundedVectorOfUint32") {
+    value = Bounded32NonnullableVectorOfUint32s{
+        vu0: [1, 2, 3, 4],
+    },
+    bytes = {
+        v1, v2 = [
+            // Count of four, present marker.
+            num(4):8, repeat(0xff):8,
+            // Vector values.
+            num(1):4,
+            num(2):4,
+            num(3):4,
+            num(4):4,
+        ],
+    },
+}
+
+success("PresentNullableBoundedVectorOfUint32") {
+    // TODO(fxbug.dev/88979): generated Rust test does not compile.
+    bindings_denylist = [rust],
+    value = Bounded32NullableVectorOfUint32s{
+        vu0: [1, 2, 3, 4],
+    },
+    bytes = {
+        v1, v2 = [
+            // Count of four, present marker.
+            num(4):8, repeat(0xff):8,
+            // Vector values
+            num(1):4,
+            num(2):4,
+            num(3):4,
+            num(4):4,
+        ],
+    },
+}
+
+decode_failure("AbsentNonnullableBoundedVectorOfUint32Error") {
+    type = UnboundedNonnullableVectorOfUint32s,
+    bytes = {
+        v1, v2 = [
+            // Count of four, absent marker.
+            num(4):8, repeat(0):8,
+        ],
+    },
+    err = NON_EMPTY_VECTOR_WITH_NULL_BODY,
+}
+
+success("AbsentNullableBoundedVectorOfUint32") {
+    value = Bounded32NullableVectorOfUint32s{},
+    bytes = {
+        v1, v2 = [
+            // Count of zero, absent marker.
+            num(0):8, repeat(0):8,
+        ],
+    },
+}
+
+decode_failure("PresentNonnullableBoundedVectorOfUint32ShortError") {
+    // TODO(fxbug.dev/37304): Validate bounds in Rust.
+    bindings_denylist = [rust],
+    type = MultipleBoundedNonnullableVectorsOfUint32s,
+    bytes = {
+        v1, v2 = [
+            // vh0 count, presence
+            num(4):8, repeat(0xff):8,
+            // vh1 count, presence
+            num(4):8, repeat(0xff):8,
+            // vh0 content
+            num(1):4,
+            num(2):4,
+            num(3):4,
+            num(4):4,
+            // vh1 content
+            num(1):4,
+            num(2):4,
+            num(3):4,
+            num(4):4,
+        ],
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
+
+decode_failure("PresentNullableBoundedVectorOfUint32ShortError") {
+    // TODO(fxbug.dev/37304): Validate bounds in Rust.
+    bindings_denylist = [rust],
+    type = MultipleBoundedNullableVectorsOfUint32s,
+    bytes = {
+        v1, v2 = [
+            // vh0 count, presence
+            num(4):8, repeat(0xff):8,
+            // vh1 count, presence
+            num(4):8, repeat(0xff):8,
+            // vh0 content
+            num(1):4,
+            num(2):4,
+            num(3):4,
+            num(4):4,
+            // vh1 content
+            num(1):4,
+            num(2):4,
+            num(3):4,
+            num(4):4,
+        ],
+    },
+    err = COUNT_EXCEEDS_LIMIT,
+}
