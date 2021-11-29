@@ -46,9 +46,6 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new_local();
 
-    // TODO(fxbug.dev/86450): flip this to use Flatland instead of legacy Scenic Gfx API.
-    let use_flatland = false;
-
     inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
 
     fs.dir("svc").add_fidl_service(ExposedServices::AccessibilityViewRegistry);
@@ -70,6 +67,9 @@ async fn main() -> Result<(), Error> {
     // Unicode data is kept in memory.
     let icu_data_loader = icu_data::Loader::new().unwrap();
 
+    let scenic = connect_to_protocol::<ScenicMarker>()?;
+
+    let use_flatland = scenic.uses_flatland().await.expect("Failed to get flatland info.");
     fx_log_info!("Instantiating SceneManager, use_flatland: {:?}", use_flatland);
 
     let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
@@ -89,7 +89,6 @@ async fn main() -> Result<(), Error> {
             .await?,
         )))
     } else {
-        let scenic = connect_to_protocol::<ScenicMarker>()?;
         let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
         Arc::new(Mutex::new(Box::new(
             scene_management::GfxSceneManager::new(scenic, view_ref_installed, None, None).await?,

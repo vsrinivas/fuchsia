@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <optional>
+
 #include <gtest/gtest.h>
 
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
@@ -224,6 +226,25 @@ TEST_F(ScenicTest, ScenicApiAfterDelegate) {
   EXPECT_TRUE(screenshot);
   EXPECT_TRUE(display_ownership);
 }
+
+// Tests that Scenic returns the flatland signal it is initialized with.
+class ParameterizedScenicUsesFlatlandTest : public ScenicTest,
+                                            public ::testing::WithParamInterface<bool> {
+ protected:
+  void SetUp() override {
+    use_flatland_ = GetParam();
+    ScenicTest::SetUp();
+  }
+};
+
+TEST_P(ParameterizedScenicUsesFlatlandTest, UsesFlatlandCallbackIsRun) {
+  std::optional<bool> uses_flatland;
+  scenic()->UsesFlatland([&uses_flatland](bool enabled) { uses_flatland = enabled; });
+  EXPECT_TRUE(uses_flatland.has_value());
+  EXPECT_EQ(*uses_flatland, GetParam());
+}
+
+INSTANTIATE_TEST_SUITE_P(UseFlatland, ParameterizedScenicUsesFlatlandTest, ::testing::Bool());
 
 }  // namespace test
 }  // namespace scenic_impl

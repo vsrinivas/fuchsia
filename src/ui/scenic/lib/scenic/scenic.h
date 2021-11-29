@@ -40,8 +40,8 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
         fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
   };
 
-  explicit Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
-                  fit::closure quit_callback);
+  Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node, fit::closure quit_callback,
+         bool use_flatland);
   ~Scenic();
 
   // |fuchsia::ui::scenic::Scenic|
@@ -51,6 +51,8 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   // |fuchsia::ui::scenic::Scenic|
   void GetDisplayOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
+  // |fuchsia::ui::scenic::Scenic|
+  void UsesFlatland(fuchsia::ui::scenic::Scenic::UsesFlatlandCallback callback) override;
 
   // |scheduling::SessionUpdater|
   UpdateResults UpdateSessions(
@@ -63,7 +65,7 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
       scheduling::PresentTimestamps present_times) override;
 
   // |scheduling::SessionUpdater|
-  void OnCpuWorkDone() override{}
+  void OnCpuWorkDone() override {}
 
   // Register a delegate class for implementing top-level Scenic operations (e.g., GetDisplayInfo).
   // This delegate must outlive the Scenic instance.
@@ -139,6 +141,8 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
   inspect::Node inspect_node_;
+
+  const bool use_flatland_;
 
   // Registered systems, mapped to their TypeId.
   std::unordered_map<System::TypeId, std::shared_ptr<System>> systems_;

@@ -17,6 +17,7 @@ protocol/member fuchsia.ui.scenic/Scenic.CreateSessionT(fuchsia.ui.scenic/Sessio
 protocol/member fuchsia.ui.scenic/Scenic.GetDisplayInfo() -> (fuchsia.ui.gfx/DisplayInfo info)
 protocol/member fuchsia.ui.scenic/Scenic.GetDisplayOwnershipEvent() -> (zx/handle:EVENT ownership_event)
 protocol/member fuchsia.ui.scenic/Scenic.TakeScreenshot() -> (fuchsia.ui.scenic/ScreenshotData img_data,bool success)
+protocol/member fuchsia.ui.scenic/Scenic.UsesFlatland() -> (bool flatland_enabled)
 protocol fuchsia.ui.scenic/Scenic
 struct/member fuchsia.ui.scenic/ScreenshotData.data fuchsia.mem/Buffer
 struct/member fuchsia.ui.scenic/ScreenshotData.info fuchsia.images/ImageInfo

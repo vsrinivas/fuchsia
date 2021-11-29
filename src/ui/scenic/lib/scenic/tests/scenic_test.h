@@ -37,6 +37,7 @@ class ScenicTest : public ::gtest::TestLoopFixture {
   // none are installed by default.
   virtual void InitializeScenic(std::shared_ptr<Scenic> scenic);
 
+  bool use_flatland_ = false;
   std::unique_ptr<sys::ComponentContext> context_;
   std::shared_ptr<Scenic> scenic_;
 };

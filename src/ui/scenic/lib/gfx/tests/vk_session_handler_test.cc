@@ -41,7 +41,8 @@ void VkSessionHandlerTest::TearDown() {
 }
 
 void VkSessionHandlerTest::InitializeScenic() {
-  scenic_ = std::make_unique<Scenic>(app_context_.context(), inspect::Node(), [] {});
+  scenic_ = std::make_unique<Scenic>(
+      app_context_.context(), inspect::Node(), [] {}, /*use_flatland=*/false);
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));

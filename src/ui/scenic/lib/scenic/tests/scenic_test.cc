@@ -12,7 +12,8 @@ namespace test {
 void ScenicTest::SetUp() {
   sys::testing::ComponentContextProvider provider;
   context_ = provider.TakeContext();
-  scenic_ = std::make_shared<Scenic>(context_.get(), inspect::Node(), [this] { QuitLoop(); });
+  scenic_ = std::make_shared<Scenic>(
+      context_.get(), inspect::Node(), [this] { QuitLoop(); }, use_flatland_);
   InitializeScenic(scenic_);
 }
 

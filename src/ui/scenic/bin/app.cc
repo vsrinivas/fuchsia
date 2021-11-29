@@ -46,6 +46,13 @@ scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
           },
       },
       {
+          "i_can_haz_flatland",
+          [&values](auto& key, auto& value) {
+            FX_CHECK(value.is_boolval()) << key << " must be a boolean";
+            values.i_can_haz_flatland = value.boolval();
+          },
+      },
+      {
           "enable_allocator_for_flatland",
           [&values](auto& key, auto& value) {
             FX_CHECK(value.is_boolval()) << key << " must be a boolean";
@@ -147,6 +154,7 @@ scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
 
   FX_LOGS(INFO) << "Scenic min_predicted_frame_duration(us): "
                 << values.min_predicted_frame_duration.to_usecs();
+  FX_LOGS(INFO) << "i_can_haz_flatland: " << values.i_can_haz_flatland;
   FX_LOGS(INFO) << "enable_allocator_for_flatland: " << values.enable_allocator_for_flatland;
   FX_LOGS(INFO) << "Scenic pointer auto focus: " << values.pointer_auto_focus_on;
   FX_LOGS(INFO) << "flatland_buffer_collection_import_mode: "
@@ -205,13 +213,14 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       // themselves. It is preferable to cleanly shutdown using destructors only, if possible.
       shutdown_manager_(
           ShutdownManager::New(async_get_default_dispatcher(), std::move(quit_callback))),
-      scenic_(std::make_shared<Scenic>(app_context_.get(), std::move(inspect_node),
-                                       [weak = std::weak_ptr<ShutdownManager>(shutdown_manager_)] {
-                                         if (auto strong = weak.lock()) {
-                                           strong->Shutdown(
-                                               LifecycleControllerImpl::kShutdownTimeout);
-                                         }
-                                       })),
+      scenic_(std::make_shared<Scenic>(
+          app_context_.get(), std::move(inspect_node),
+          [weak = std::weak_ptr<ShutdownManager>(shutdown_manager_)] {
+            if (auto strong = weak.lock()) {
+              strong->Shutdown(LifecycleControllerImpl::kShutdownTimeout);
+            }
+          },
+          config_values_.i_can_haz_flatland)),
       uber_struct_system_(std::make_shared<flatland::UberStructSystem>()),
       link_system_(
           std::make_shared<flatland::LinkSystem>(uber_struct_system_->GetNextInstanceId())),

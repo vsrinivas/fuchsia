@@ -101,6 +101,14 @@ protocol Scenic {
         img_data ScreenshotData;
         success bool;
     });
+
+    /// Returns whether the clients should use [`fuchsia.ui.composition/Flatland`] protocol to
+    /// interact with Scenic instead.
+    // TODO(fxbug.dev/64206): Remove after Flatland migration is completed.
+    @transitional
+    UsesFlatland() -> (struct {
+        flatland_enabled bool;
+    });
 };
 
 const displayOwnedSignal uint32 = 0x02000000;

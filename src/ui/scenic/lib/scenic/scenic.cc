@@ -15,10 +15,11 @@ namespace scenic_impl {
 using fuchsia::ui::scenic::SessionEndpoints;
 
 Scenic::Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
-               fit::closure quit_callback)
+               fit::closure quit_callback, bool use_flatland)
     : app_context_(app_context),
       quit_callback_(std::move(quit_callback)),
-      inspect_node_(std::move(inspect_node)) {
+      inspect_node_(std::move(inspect_node)),
+      use_flatland_(use_flatland) {
   FX_DCHECK(app_context_);
 
   app_context->outgoing()->AddPublicService(scenic_bindings_.GetHandler(this));
@@ -252,6 +253,10 @@ void Scenic::GetDisplayOwnershipEvent(
   // initialization order logic.
   FX_DCHECK(display_delegate_);
   display_delegate_->GetDisplayOwnershipEvent(std::move(callback));
+}
+
+void Scenic::UsesFlatland(fuchsia::ui::scenic::Scenic::UsesFlatlandCallback callback) {
+  callback(use_flatland_);
 }
 
 void Scenic::InitializeSnapshotService(
