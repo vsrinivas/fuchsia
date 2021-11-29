@@ -106,6 +106,7 @@ type ExponentialBackoff struct {
 }
 
 // NewExponentialBackoff returns a new ExponentialBackoff object.
+// If maxInterval is non-positive, no maximum is imposed.
 func NewExponentialBackoff(initialInterval time.Duration, maxInterval time.Duration, multiplier float64) *ExponentialBackoff {
 	return &ExponentialBackoff{
 		initialInterval: initialInterval,
@@ -127,7 +128,7 @@ func (e *ExponentialBackoff) Next() time.Duration {
 	// ceiling.
 	seconds += math.Min(10.0, seconds/2) * e.randObj.Float64()
 	next := time.Duration(seconds * float64(time.Second))
-	if next > e.maxInterval {
+	if e.maxInterval > 0 && next > e.maxInterval {
 		return e.maxInterval
 	}
 	e.iteration++

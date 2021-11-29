@@ -20,8 +20,9 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
-	"go.fuchsia.dev/fuchsia/tools/artifactory"
 	"google.golang.org/api/googleapi"
+
+	"go.fuchsia.dev/fuchsia/tools/artifactory"
 )
 
 const (
@@ -264,9 +265,6 @@ func TestUploading(t *testing.T) {
 		}
 		// True for transient errors.
 		if !isTransientError(transientError{err: errors.New("foo")}) {
-			t.Fatal("explicit transient error: got false, want true")
-		}
-		if !isTransientError(context.DeadlineExceeded) {
 			t.Fatal("explicit transient error: got false, want true")
 		}
 		// True on HTTP response code 500.

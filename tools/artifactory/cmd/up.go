@@ -28,11 +28,12 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/google/subcommands"
+	"google.golang.org/api/googleapi"
+
 	"go.fuchsia.dev/fuchsia/tools/artifactory"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
-	"google.golang.org/api/googleapi"
 )
 
 const (
@@ -92,10 +93,6 @@ const (
 	// A mapping of fidl mangled names to api functions.
 	fidlMangledToApiMappingManifestName = "fidl_mangled_to_api_mapping.json"
 
-	// Constants for upload retries.
-	uploadRetryBackoff = 1 * time.Second
-	maxUploadAttempts  = 4
-
 	// Timeout for every file upload.
 	perFileUploadTimeout = 8 * time.Minute
 
@@ -110,6 +107,8 @@ type transientError struct {
 }
 
 func (e transientError) Error() string { return e.err.Error() }
+
+func (e transientError) Unwrap() error { return e.err }
 
 type upCommand struct {
 	// GCS bucket to which build artifacts will be uploaded.
@@ -191,7 +190,7 @@ func (cmd *upCommand) SetFlags(f *flag.FlagSet) {
 func isTransientError(err error) bool {
 	_, transient := err.(transientError)
 	var apiErr *googleapi.Error
-	return transient || (errors.As(err, &apiErr) && apiErr.Code >= 500) || errors.Is(err, context.DeadlineExceeded)
+	return transient || (errors.As(err, &apiErr) && apiErr.Code >= 500)
 }
 
 func (cmd upCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
@@ -206,7 +205,7 @@ func (cmd upCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 		// Use a different exit code if the failure is a (likely transient)
 		// server error so the infrastructure knows to consider it as an infra
 		// failure.
-		if isTransientError(err) {
+		if isTransientError(err) || errors.Is(err, context.DeadlineExceeded) {
 			return exitTransientError
 		}
 		return subcommands.ExitFailure
@@ -356,12 +355,12 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		Source:      buildIDManifest,
 		Destination: path.Join(buildsNamespaceDir, buildIDsTxt),
 	})
-	buildIDsToLabelsJson, err := json.MarshalIndent(buildIDsToLabels, "", "  ")
+	buildIDsToLabelsJSON, err := json.MarshalIndent(buildIDsToLabels, "", "  ")
 	if err != nil {
 		return err
 	}
 	files = append(files, artifactory.Upload{
-		Contents:    buildIDsToLabelsJson,
+		Contents:    buildIDsToLabelsJSON,
 		Destination: path.Join(buildsNamespaceDir, buildIDsToLabelsManifestName),
 	})
 
@@ -438,16 +437,20 @@ func newCloudSink(ctx context.Context, bucket string) (*cloudSink, error) {
 }
 
 func (s *cloudSink) objectExistsAt(ctx context.Context, name string) (bool, *storage.ObjectAttrs, error) {
-	a, err := s.bucket.Object(name).Attrs(ctx)
-	if err == storage.ErrObjectNotExist {
-		return false, nil, nil
-	} else if err != nil {
-		return false, nil,
-			transientError{err: fmt.Errorf("object %q: possibly exists remotely, but is in an unknown state: %w", name, err)}
+	var attrs *storage.ObjectAttrs
+	if err := retryGCSOperation(ctx, func() error {
+		var err error
+		attrs, err = s.bucket.Object(name).Attrs(ctx)
+		return err
+	}); err != nil {
+		if errors.Is(err, storage.ErrObjectNotExist) {
+			return false, nil, nil
+		}
+		return false, nil, err
 	}
 	// Check if MD5 is not set, mark this as a miss, then write() function will
 	// handle the race.
-	return len(a.MD5) != 0, a, nil
+	return len(attrs.MD5) != 0, attrs, nil
 }
 
 // hasher is a io.Writer that calculates the MD5.
@@ -544,8 +547,12 @@ func (s *cloudSink) write(ctx context.Context, upload *artifactory.Upload) error
 	t := time.Second
 	const max = 30 * time.Second
 	for {
-		attrs, err := obj.Attrs(ctx)
-		if err != nil {
+		var attrs *storage.ObjectAttrs
+		if err := retryGCSOperation(ctx, func() error {
+			var err error
+			attrs, err = obj.Attrs(ctx)
+			return err
+		}); err != nil {
 			return fmt.Errorf("failed to confirm MD5 for %s due to: %w", upload.Destination, err)
 		}
 		if len(attrs.MD5) == 0 {
@@ -729,14 +736,35 @@ func uploadFiles(ctx context.Context, files []artifactory.Upload, dest dataSink,
 
 func uploadFile(ctx context.Context, upload artifactory.Upload, dest dataSink) error {
 	logger.Debugf(ctx, "object %q: attempting creation", upload.Destination)
-	if err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(uploadRetryBackoff), maxUploadAttempts), func() error {
-		if err := dest.write(ctx, &upload); err != nil {
-			return fmt.Errorf("%s: %w", upload.Destination, err)
-		}
-		return nil
-	}, nil); err != nil {
+	if err := retryGCSOperation(ctx, func() error {
+		return dest.write(ctx, &upload)
+	}); err != nil {
 		return fmt.Errorf("%s: %w", upload.Destination, err)
 	}
 	logger.Debugf(ctx, "object %q: created", upload.Destination)
 	return nil
+}
+
+// retryGCSOperation wraps a function that makes a GCS API call, adding retries
+// for failures that might be transient. It also wraps any such errors with
+// `transientError` so that they will cause artifactory to produce an exit code
+// of `exitTransientError`.
+func retryGCSOperation(ctx context.Context, f func() error) error {
+	const (
+		initialWait = time.Second
+		backoff     = 2
+		maxAttempts = 5
+	)
+	retryStrategy := retry.WithMaxAttempts(
+		retry.NewExponentialBackoff(initialWait, 0, backoff),
+		maxAttempts)
+	return retry.Retry(ctx, retryStrategy, func() error {
+		if err := f(); err != nil {
+			if errors.Is(err, storage.ErrBucketNotExist) || errors.Is(err, storage.ErrObjectNotExist) {
+				return retry.Fatal(err)
+			}
+			return transientError{err: err}
+		}
+		return nil
+	}, nil)
 }
