@@ -1252,6 +1252,7 @@ dependencies = [
  "hyper-rustls",
  "indoc",
  "inotify",
+ "iota",
  "itertools",
  "itoa",
  "json5format",
@@ -1845,6 +1846,12 @@ checksum = "61124eeebbd69b8190558df225adf7e4caafce0d743919e5d6b19652314ec5ec"
 dependencies = [
  "cfg-if 1.0.0",
 ]
+
+[[package]]
+name = "iota"
+version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89e730ff45c40144e64262ee1fdb0d81984ccb854b17d370444ef111d251635f"
 
 [[package]]
 name = "ipnet"

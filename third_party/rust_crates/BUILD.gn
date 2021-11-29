@@ -332,6 +332,10 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+group("iota") {
+  deps = [ ":iota-v0_2_2" ]
+}
+
 group("itertools") {
   deps = [ ":itertools-v0_8_0" ]
 }
@@ -5013,6 +5017,27 @@ rust_library("instant-v0_1_9") {
     "--edition=2018",
     "-Cmetadata=83da69adfa026a2e",
     "-Cextra-filename=-83da69adfa026a2e",
+  ]
+}
+
+rust_library("iota-v0_2_2") {
+  crate_name = "iota"
+  crate_root = "//third_party/rust_crates/vendor/iota/src/lib.rs"
+  output_name = "iota-e068e14ca4b8dd42"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=e068e14ca4b8dd42",
+    "-Cextra-filename=-e068e14ca4b8dd42",
   ]
 }
 
