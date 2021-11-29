@@ -315,7 +315,7 @@ Things to keep in mind:
   patterns. A strong indifference signal is interpreted as a hint that the point
   being discussed does not merit encoding as a pattern.
 
-[api-rust]: /docs/concepts/api/rust.md
+[api-rust]: /docs/development/api/rust.md
 [unused-results]: https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html#unused-results
 [unused-results-explanation]: https://doc.rust-lang.org/rustc/lints/listing/allowed-by-default.html#explanation-31
 [Netstack team]: /src/connectivity/network/OWNERS

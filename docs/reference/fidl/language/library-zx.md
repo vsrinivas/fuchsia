@@ -13,7 +13,7 @@ using zx;
 ```
 
 The types generally correspond to [Zircon System
-Types](/docs/concepts/api/system.md#types). For example,
+Types](/docs/development/api/system.md#types). For example,
 `zx.duration` corresponds to `zx_duration_t`.
 
 > The `CHANNEL_MAX_MSG_BYTES` and `CHANNEL_MAX_MSG_HANDLES`

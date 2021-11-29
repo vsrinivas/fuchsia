@@ -20,6 +20,9 @@ toc:
   section:
   - include: /docs/development/run/_toc.yaml
 - heading: "Write code"
+- title: "API development"
+  section:
+  - include: /docs/development/api/_toc.yaml
 - title: "Configure editors"
   section:
   - include: /docs/development/editors/_toc.yaml

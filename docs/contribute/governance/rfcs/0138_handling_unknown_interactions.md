@@ -647,7 +647,7 @@ side:
 * [FIDL Wire Format Specification](/docs/reference/fidl/language/wire-format/README.md)
 * [FIDL Bindings Specification](/docs/reference/fidl/language/bindings-spec.md)
 
-Additional entries in the [FIDL API Rubric](/docs/concepts/api/fidl.md) will be
+Additional entries in the [FIDL API Rubric](/docs/development/api/fidl.md) will be
 added covering protocol evolution.
 
 On the concrete use of this feature in a given target language, we expect every
@@ -684,7 +684,7 @@ Some ideas for future direction might be:
 
 ### Alternative: comparison to the command pattern
 
-The [command pattern](/docs/concepts/api/fidl.md#command-union) is useful to
+The [command pattern](/docs/development/api/fidl.md#command-union) is useful to
 allow clients to batch many requests to be processed by a server. It is also
 possible to use the command pattern to achieve the kind of evolvability
 described in this RFC.

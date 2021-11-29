@@ -162,7 +162,7 @@ This results in a total size of 104 bytes.
 
 <!-- xrefs -->
 [lostart]: http://www.catb.org/esr/structure-packing/
-[pagination-api]: /docs/concepts/api/fidl.md#pagination
+[pagination-api]: /docs/development/api/fidl.md#pagination
 
 [fidl-wire-format]: /docs/reference/fidl/language/wire-format
 [fidl-wire-format-union]: /docs/reference/fidl/language/wire-format#unions

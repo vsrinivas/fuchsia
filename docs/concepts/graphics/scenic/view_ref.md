@@ -25,7 +25,7 @@ FIDL datatype that has some desirable properties:
     [KOID uniqueness](/docs/concepts/kernel/concepts.md#kernel_object_ids) for
     kernel objects.
 *   A ViewRef can be used in a
-    [feed-forward](/docs/concepts/api/fidl.md#feed_forward-dataflow) pattern for
+    [feed-forward](/docs/development/api/fidl.md#feed_forward-dataflow) pattern for
     Scenic View creation. Protocols and components that participate in View
     creation do not have to "tunnel back" the corresponding ViewRef.
 *   ViewRef holders can implement lifecycle management by listening for a

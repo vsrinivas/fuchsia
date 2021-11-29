@@ -217,7 +217,7 @@ fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx access
 [sysmgr]: /src/sys/sysmgr/README.md
 [accessibility]: /sdk/fidl/fuchsia.settings/accessibility.fidl
 [manifest]: /docs/concepts/components/v2/component_manifests.md
-[hanging-get]: /docs/concepts/api/fidl.md#hanging-get
+[hanging-get]: /docs/development/api/fidl.md#hanging-get
 [fidl_table]: /docs/reference/fidl/language/language.md#tables
 [epitaph]: /docs/contribute/governance/rfcs/0053_epitaphs.md
 [pkg]: /docs/development/build/fx.md#serve-a-build

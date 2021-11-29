@@ -206,7 +206,7 @@ We're adopting a more conservative idea of error representation for now.
 [grpc]: https://grpc.io/docs/guides/error.html
 [http]: https://tools.ietf.org/html/rfc1945#section-9
 [language]: /docs/reference/fidl/language/language.md
-[rubric]: /docs/concepts/api/fidl.md
+[rubric]: /docs/development/api/fidl.md
 [testinterface]: /src/tests/fidl/compatibility/compatibility_service.test.fidl
 [tutorial]: /docs/development/languages/fidl/tutorials/overview.md
 [wire-format]: /docs/reference/fidl/language/wire-format/README.md

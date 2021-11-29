@@ -383,7 +383,7 @@ Apache Thrift [discards unknown fields][thrift-unknowns].
 [FIDL language specification]: /docs/reference/fidl/language/language.md
 [lang-flexible]: /docs/reference/fidl/language/language.md#strict-vs-flexible
 [NaN]: https://en.wikipedia.org/wiki/NaN
-[partial update pattern]: /docs/concepts/api/fidl.md#controlling-settings
+[partial update pattern]: /docs/development/api/fidl.md#controlling-settings
 [proto-unknowns]: https://developers.google.com/protocol-buffers/docs/proto3#unknowns
 [rfc-0033]: /docs/contribute/governance/rfcs/0033_handling_unknown_fields_strictness.md
 [rfc-0057-bwd]: /docs/contribute/governance/rfcs/0057_default_no_handles.md#backwards-compatibility

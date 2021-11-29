@@ -80,7 +80,7 @@ Here are explanations for some high level decisions made around Flatland API:
     clients about an illegal operation. The Flatland channel is closed following
     this.
 * Flatland expects clients to define and keep track of [unique resource
-  identifiers](/docs/concepts/api/fidl.md#client-assigned_identifiers). Type
+  identifiers](/docs/development/api/fidl.md#client-assigned_identifiers). Type
   safety is enforced by the structs defined around these identifiers, such as
   TransformId and ContentId.
 * Flatland uses hanging-gets to notify clients about changes in the link
@@ -177,7 +177,7 @@ without affecting each other’s work.
 
 Flatland users are isolated from each other. Each of them connect to Scenic
 through their own channels. [Unique resource
-identifiers](/docs/concepts/api/fidl.md#client-assigned_identifiers) are defined
+identifiers](/docs/development/api/fidl.md#client-assigned_identifiers) are defined
 only within the scope of their channel. They can only target the portion of the
 screen that is defined by their parent Flatland session.
 

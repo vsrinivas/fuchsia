@@ -203,6 +203,6 @@ protocol requests that may fail, see the [FIDL API rubric][rubric].
 [server-tut]: /docs/development/languages/fidl/tutorials/dart/basics/server.md
 [server-tut-main]: /docs/development/languages/fidl/tutorials/dart/basics/server.md#main
 [client-tut]: /docs/development/languages/fidl/tutorials/dart/basics/client.md
-[rubric]: /docs/concepts/api/fidl.md#request-pipelining
+[rubric]: /docs/development/api/fidl.md#request-pipelining
 [overview]: /docs/development/languages/fidl/tutorials/dart/README.md
 [examples-fidl]: /examples/fidl/fuchsia.examples/

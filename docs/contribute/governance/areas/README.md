@@ -47,7 +47,7 @@ Examples:
 
 {% if area.name == "Developer" %}
 Developer tool interfaces, such as the [Command-line Tools
-Rubric](/docs/concepts/api/cli.md). APIs that affect the developer experience in
+Rubric](/docs/development/api/cli.md). APIs that affect the developer experience in
 the host environment such as debugging, forensics, or the development kit.
 {% endif %} <!-- Developer -->
 

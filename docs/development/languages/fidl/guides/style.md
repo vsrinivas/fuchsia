@@ -3,7 +3,7 @@
 This section contains style-related information for
 [Fuchsia Interface Definition Language](/docs/development/languages/fidl/README.md) files.
 
-See also the [FIDL API Rubric](/docs/concepts/api/fidl.md).
+See also the [FIDL API Rubric](/docs/development/api/fidl.md).
 
 [TOC]
 
@@ -386,7 +386,7 @@ specification that describes a configuration structure.  Similarly, if a
 structure must match an ABI defined in a C header, reference the C header.
 
 For more information about what your comments should contain, see the [API
-Documentation Rubric](/docs/concepts/api/documentation.md).
+Documentation Rubric](/docs/development/api/documentation.md).
 
 #### Referencing FIDL protocols or protocol methods
 

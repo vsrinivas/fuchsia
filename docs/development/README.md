@@ -33,14 +33,14 @@ and debugging Fuchsia and programs running on Fuchsia.
 
 ## API
 
- - [README](/docs/concepts/api/README.md) - Developing APIs for Fuchsia
+ - [README](/docs/development/api/README.md) - Developing APIs for Fuchsia
  - [API Council](/docs/contribute/governance/api_council.md) - Definition of the API council
- - [System](/docs/concepts/api/system.md) - Rubric for designing the Zircon System Interface
+ - [System](/docs/development/api/system.md) - Rubric for designing the Zircon System Interface
  - [FIDL API][fidl-api] - Rubric for designing FIDL protocols
  - [FIDL style][fidl-style] - FIDL style rubric
- - [C](/docs/concepts/api/c.md) - Rubric for designing C library interfaces
- - [Tools](/docs/concepts/api/tools.md) - Rubrics for designing developer tools
- - [Devices](/docs/concepts/api/device_interfaces.md) - Rubric for designing device interfaces
+ - [C](/docs/development/api/c.md) - Rubric for designing C library interfaces
+ - [Tools](/docs/development/api/tools.md) - Rubrics for designing developer tools
+ - [Devices](/docs/development/api/device_interfaces.md) - Rubric for designing device interfaces
 
 ## ABI
 
@@ -108,6 +108,6 @@ This section covers Fuchsia-wide conventions and best practices.
 [khadas-vim3]: /docs/development/hardware/khadas-vim3.md "Khadas VIM3"
 [intel-nuc]: /docs/development/hardware/intel_nuc.md "Intel NUC"
 [fidl-style]: /docs/development/languages/fidl/guides/style.md
-[fidl-api]: /docs/concepts/api/fidl.md
+[fidl-api]: /docs/development/api/fidl.md
 [drivers-start]: /docs/development/drivers/developer_guide/driver-development.md
 [boards-start]: /docs/development/boards/bringup.md

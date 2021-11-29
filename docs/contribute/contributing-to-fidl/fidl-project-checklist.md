@@ -89,7 +89,7 @@ Add coverage to:
 * The [source compatibility suite].
 
 <!-- xrefs -->
-[api-rubric]: /docs/concepts/api/fidl.md
+[api-rubric]: /docs/development/api/fidl.md
 [at-rest conformance suite]: /src/tests/fidl/conformance_suite/
 [banjo]: /src/devices/tools/fidlgen_banjo
 [bindings-refs]: /docs/reference/fidl/bindings/overview.md

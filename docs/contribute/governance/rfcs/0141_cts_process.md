@@ -335,4 +335,4 @@ well.
 
 [cts]: /docs/contribute/governance/rfcs/0015_cts.md
 [fsi]: /docs/concepts/system/abi/system.md
-[doc-rubric]: /docs/concepts/api/documentation.md
+[doc-rubric]: /docs/development/api/documentation.md

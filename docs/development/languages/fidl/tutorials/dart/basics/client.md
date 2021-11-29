@@ -199,5 +199,5 @@ You should see output similar to the following in the QEMU console
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
 [environment]: /docs/concepts/components/v2/environments.md
 [service-name]: /docs/reference/fidl/bindings/dart-bindings.md#discoverable
-[pipeline]: /docs/concepts/api/fidl.md#request-pipelining
+[pipeline]: /docs/development/api/fidl.md#request-pipelining
 [pipeline-tut]: /docs/development/languages/fidl/tutorials/hlcpp/topics/request-pipelining.md

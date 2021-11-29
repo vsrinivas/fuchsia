@@ -31,4 +31,4 @@ below is not complete: as Fuchsia evolves, more rubrics will be added.
 <!-- xrefs -->
 [api-council]: /docs/contribute/governance/api_council.md
 [fidl-style]: /docs/development/languages/fidl/guides/style.md
-[fidl-api]: /docs/concepts/api/fidl.md
+[fidl-api]: /docs/development/api/fidl.md

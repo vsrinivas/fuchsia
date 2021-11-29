@@ -38,7 +38,7 @@ details via [URLs][url], [component monikers][monikers], and
 
 [fidl]: /docs/concepts/fidl/overview.md
 [fidl-compatibility]: /docs/development/languages/fidl/guides/compatibility/README.md
-[fidl-rubric]: /docs/concepts/api/fidl.md
+[fidl-rubric]: /docs/development/api/fidl.md
 [monikers]: /docs/concepts/components/v2/monikers.md
 [rfc-0021]: /docs/contribute/governance/rfcs/0021_soft_transitions_methods_add_remove.md
 [rfc-0048]: /docs/contribute/governance/rfcs/0048_explicit_union_ordinals.md

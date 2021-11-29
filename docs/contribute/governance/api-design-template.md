@@ -35,7 +35,7 @@ This section contains the following:
 
   + A Gerrit change link that contains the code for your API:
 
-    + Your API design should conform to the [API readability rubric](/docs/concepts/api/README.md)
+    + Your API design should conform to the [API readability rubric](/docs/development/api/README.md)
       for the language that you use to write the API. The interface should be
       fully documented at this stage but it does not need to be implemented.
 
@@ -92,7 +92,7 @@ your API's approach to testing:
 There is often a tension between performance and usability. The performance
 considerations for an API often vary by the frequency with which the API is
 used. This section should describe the choices that you’ve made to balance these
-concerns. Consider consulting the [API readability rubric](/docs/concepts/api/README.md)
+concerns. Consider consulting the [API readability rubric](/docs/development/api/README.md)
 for language-specific guidance about how to balance these concerns.
 
 This section answers the following questions regarding how

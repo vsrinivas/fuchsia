@@ -315,7 +315,7 @@ the [component instance tree][glossary.component-instance-tree]
 [protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [discoverable]: /docs/reference/fidl/bindings/hlcpp-bindings.md#discoverable
 [bindings-iface]: /docs/reference/fidl/bindings/hlcpp-bindings.md#protocols
-[pipeline]: /docs/concepts/api/fidl.md#request-pipelining
+[pipeline]: /docs/development/api/fidl.md#request-pipelining
 [pipeline-tut]: /docs/development/languages/fidl/tutorials/hlcpp/topics/request-pipelining.md
 [compiling-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [async-loop]: /zircon/system/ulib/async-loop/include/lib/async-loop/cpp/loop.h
