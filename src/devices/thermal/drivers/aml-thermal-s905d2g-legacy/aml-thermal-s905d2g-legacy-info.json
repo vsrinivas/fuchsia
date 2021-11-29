@@ -1,0 +1,12 @@
+{
+    "short_description": "AMLogic T931 and S905D3 legacy thermal driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "T931",
+        "S905D3"
+    ],
+    "areas": [
+        "Thermal"
+    ]
+}

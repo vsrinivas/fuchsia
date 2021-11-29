@@ -1,0 +1,11 @@
+{
+    "short_description": "Texas Instruments TMP112 digital temperature sensor driver",
+    "manufacturer": "Texas Instruments",
+    "families": [],
+    "models": [
+        "TMP112"
+    ],
+    "areas": [
+        "Thermal"
+    ]
+}

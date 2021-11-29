@@ -1,0 +1,11 @@
+{
+    "short_description": "AMLogic thermistor driver",
+    "manufacturer": "AMLogic",
+    "families": [
+        "g12"
+    ],
+    "models": [],
+    "areas": [
+        "Thermal"
+    ]
+}

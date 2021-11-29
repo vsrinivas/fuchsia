@@ -1,0 +1,13 @@
+{
+    "short_description": "AMLogic S905D2G thermal driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "A311D",
+        "S905D2G",
+        "T931"
+    ],
+    "areas": [
+        "Thermal"
+    ]
+}

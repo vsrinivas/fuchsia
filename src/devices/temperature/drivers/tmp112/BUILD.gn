@@ -36,6 +36,7 @@ fuchsia_driver("tmp112-driver") {
 }
 
 fuchsia_driver_component("tmp112") {
+  info = "tmp112-info.json"
   component_name = "tmp112"
   deps = [ ":tmp112-driver" ]
 }

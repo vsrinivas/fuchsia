@@ -55,6 +55,7 @@ fuchsia_driver("aml-thermal-s905d2g-driver") {
 }
 
 fuchsia_driver_component("aml-thermal-s905d2g") {
+  info = "aml-thermal-s905d2g-info.json"
   component_name = "aml-thermal-s905d2g"
   deps = [ ":aml-thermal-s905d2g-driver" ]
 }
