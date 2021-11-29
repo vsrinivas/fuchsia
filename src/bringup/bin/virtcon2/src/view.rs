@@ -254,7 +254,12 @@ impl VirtualConsoleViewAssistant {
             .values()
             .map(|(t, _)| t.try_clone_pty_fd().expect("failed to clone PTY fd"))
             .collect();
-        let window_size = WindowSize { width: size.width as u32, height: size.height as u32 };
+
+        // PTY window size (in character cells).
+        let window_size = WindowSize {
+            width: clamped_grid_size.width as u32,
+            height: clamped_grid_size.height as u32 - 1,
+        };
 
         fasync::Task::local(async move {
             for pty_fd in &pty_fds {
