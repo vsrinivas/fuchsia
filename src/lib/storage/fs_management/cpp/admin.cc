@@ -173,12 +173,12 @@ zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const InitOptio
 
 __EXPORT
 zx_status_t fs_root_handle(zx_handle_t export_root, zx_handle_t* out_root) {
-  // The POSIX flag here requests that the old connection rights be inherited by the new connection.
-  // This specifically ensures that WRITABLE connections continue to have the WRITABLE right, while
-  // read-only connections do not.
+  // The POSIX flags here requests that the parent export root write/execute rights are inherited by
+  // the new connection.
   auto handle_or = fs_management::GetFsRootHandle(
       zx::unowned_channel(export_root),
-      fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix | fio::wire::kOpenRightAdmin);
+      fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
+          fio::wire::kOpenFlagPosixExecutable | fio::wire::kOpenRightAdmin);
   if (handle_or.is_error())
     return handle_or.status_value();
   *out_root = handle_or.value().release();

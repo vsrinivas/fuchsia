@@ -114,9 +114,10 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df, const Mo
     return status;
   }
 
-  // Extract the handle to the root of the filesystem from the export root. The POSIX flag will
+  // Extract the handle to the root of the filesystem from the export root. The POSIX flags will
   // cause the writable and executable rights to be inherited (if present).
-  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix;
+  uint32_t flags = fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
+                   fio::wire::kOpenFlagPosixExecutable;
   if (options.admin)
     flags |= fio::wire::kOpenRightAdmin;
   auto handle_or = GetFsRootHandle(zx::unowned_channel(export_root), flags);
