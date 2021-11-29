@@ -450,7 +450,7 @@ impl VirtualConsoleViewAssistant {
                         const HID_USAGE_KEY_VOL_UP: u32 = 0xe9;
 
                         match keyboard_event.hid_usage {
-                            HID_USAGE_KEY_ESC => {
+                            HID_USAGE_KEY_ESC if self.animation.is_some() => {
                                 self.cancel_animation();
                                 return Ok(true);
                             }
