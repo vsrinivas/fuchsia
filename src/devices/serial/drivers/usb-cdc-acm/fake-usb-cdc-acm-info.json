@@ -1,0 +1,10 @@
+{
+    "short_description": "Fake USB Serial CDC-ACM driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "UART",
+        "Test"
+    ]
+}

@@ -48,6 +48,7 @@ fuchsia_driver("ftdi-driver") {
 }
 
 fuchsia_driver_component("ftdi") {
+  info = "ftdi-info.json"
   component_name = "ftdi"
   deps = [ ":ftdi-driver" ]
 }
@@ -86,6 +87,7 @@ fuchsia_driver("ftdi-fake-usb-driver") {
 }
 
 fuchsia_driver_component("ftdi-fake-usb") {
+  info = "ftdi-fake-usb-info.json"
   component_name = "ftdi-fake-usb"
   deps = [ ":ftdi-fake-usb-driver" ]
 }

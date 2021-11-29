@@ -43,6 +43,7 @@ fuchsia_driver("usb-cdc-acm-driver") {
 }
 
 fuchsia_driver_component("usb-cdc-acm") {
+  info = "usb-cdc-acm-info.json"
   component_name = "usb-cdc-acm"
   deps = [ ":usb-cdc-acm-driver" ]
 }
@@ -81,6 +82,7 @@ fuchsia_driver("fake-usb-cdc-acm-driver") {
 }
 
 fuchsia_driver_component("fake-usb-cdc-acm") {
+  info = "fake-usb-cdc-acm-info.json"
   component_name = "fake-usb-cdc-acm"
   deps = [ ":fake-usb-cdc-acm-driver" ]
 }

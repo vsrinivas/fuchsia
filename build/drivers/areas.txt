@@ -32,6 +32,6 @@ Storage
 Telephony
 Test
 Thermal
-Uart
+UART
 USB
 Wlan

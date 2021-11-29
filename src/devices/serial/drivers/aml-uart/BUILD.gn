@@ -45,6 +45,7 @@ fuchsia_driver("aml-uart-driver") {
 }
 
 fuchsia_driver_component("aml-uart") {
+  info = "aml-uart-info.json"
   component_name = "aml-uart"
   deps = [ ":aml-uart-driver" ]
 }

@@ -1,0 +1,9 @@
+{
+    "short_description": "Virtio emulation console driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "UART"
+    ]
+}

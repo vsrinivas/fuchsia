@@ -47,6 +47,7 @@ fuchsia_driver("virtio_console-driver") {
 }
 
 fuchsia_driver_component("virtio_console") {
+  info = "virtio_console-info.json"
   component_name = "virtio_console"
   deps = [ ":virtio_console-driver" ]
 }

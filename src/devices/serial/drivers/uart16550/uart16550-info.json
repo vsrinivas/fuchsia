@@ -1,0 +1,11 @@
+{
+    "short_description": "UART 16550 driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [
+        "16550"
+    ],
+    "areas": [
+        "UART"
+    ]
+}

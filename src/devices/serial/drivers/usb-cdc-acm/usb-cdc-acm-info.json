@@ -1,0 +1,13 @@
+{
+    "short_description": "USB Serial CDC-ACM driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "UART"
+    ]
+}

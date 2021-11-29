@@ -88,6 +88,7 @@ fuchsia_driver("uart16550-driver") {
 }
 
 fuchsia_driver_component("uart16550") {
+  info = "uart16550-info.json"
   component_name = "uart16550"
   deps = [ ":uart16550-driver" ]
 }

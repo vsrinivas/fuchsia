@@ -1,0 +1,10 @@
+{
+    "short_description": "Fake USB FTDI driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Misc",
+        "Test"
+    ]
+}

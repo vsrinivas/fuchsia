@@ -26,6 +26,7 @@ fuchsia_driver("serial-driver") {
 }
 
 fuchsia_driver_component("serial") {
+  info = "serial-info.json"
   component_name = "serial"
   deps = [ ":serial-driver" ]
 }
