@@ -26,10 +26,12 @@ using ByteView = cpp20::span<const std::byte>;
 // The byte alignment that storage backends are expected to have.
 constexpr size_t kStorageAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
 
-// Whether a type is Plain Ol' Data and has unique object representations.
 template <typename T>
-constexpr bool is_uniquely_representable_pod_v = std::is_trivial_v<T>&&
-    std::is_standard_layout_v<T>&& std::has_unique_object_representations_v<T>;
+constexpr bool is_pod_v = std::is_trivial_v<T>&& std::is_standard_layout_v<T>;
+
+template <typename T>
+constexpr bool is_uniquely_representable_pod_v =
+    is_pod_v<T>&& std::has_unique_object_representations_v<T>;
 
 // It is expected that `payload` is `kStorageAlignment`-aligned in the
 // following AsSpan methods (see StorageTraits below), along with `T` itself.
@@ -46,7 +48,8 @@ inline cpp20::span<T> AsSpan(U* payload, size_t len) {
 
 template <typename T, typename U>
 inline cpp20::span<T> AsSpan(const U& payload) {
-  if constexpr (is_uniquely_representable_pod_v<std::decay_t<U>>) {
+  static_assert(is_uniquely_representable_pod_v<std::decay_t<T>>);
+  if constexpr (is_pod_v<std::decay_t<U>>) {
     return AsSpan<T>(&payload, 1);
   } else {
     return AsSpan<T>(std::data(payload), std::size(payload));
