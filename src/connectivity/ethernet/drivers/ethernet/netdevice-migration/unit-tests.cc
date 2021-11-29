@@ -149,7 +149,21 @@ class NetdeviceMigrationTest : public ::testing::Test {
   void NetdevImplPrepareVmo(uint8_t vmo_id) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo));
-    device_->NetworkDeviceImplPrepareVmo(vmo_id, std::move(vmo));
+    NetdevImplPrepareVmo(vmo_id, std::move(vmo));
+  }
+
+  void NetdevImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) {
+    bool called = false;
+    device_->NetworkDeviceImplPrepareVmo(
+        vmo_id, std::move(vmo),
+        [](void* cookie, zx_status_t status) {
+          *static_cast<bool*>(cookie) = true;
+          ASSERT_OK(status);
+        },
+        &called);
+    // Synchronous behavior offered by helper function is true iff the
+    // implementation calls the callback inline.
+    ASSERT_TRUE(called);
   }
 
   // Use a helper method rather than a parameterized test so that we can leverage test fixtures for
@@ -574,7 +588,7 @@ TEST_P(FillTxQueueTest, Succeeds) {
   zx::vmo vmo;
   constexpr uint64_t kVmoSize = ZX_PAGE_SIZE;
   ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
-  Device().NetworkDeviceImplPrepareVmo(kVmoId, std::move(vmo));
+  ASSERT_NO_FATAL_FAILURE(NetdevImplPrepareVmo(kVmoId, std::move(vmo)));
   netdevice_migration::NetdeviceMigrationTestHelper helper(Device());
   const uint8_t* vmo_start =
       helper.WithVmoStore<uint8_t*>([](netdevice_migration::NetdeviceMigrationVmoStore& vmo_store) {

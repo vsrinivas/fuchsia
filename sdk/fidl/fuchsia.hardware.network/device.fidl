@@ -111,6 +111,8 @@ protocol Device {
     /// frame types or descriptors set up.
     /// * error `ZX_ERR_INVALID_ARGS` if `session_info` is missing fields or
     /// contains invalid information.
+    /// * error `ZX_ERR_INTERNAL` if the data VMO is rejected by the underlying
+    /// device.
     OpenSession(resource struct {
         session_name string:MAX_SESSION_NAME;
         session_info SessionInfo;

@@ -76,7 +76,8 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   void NetworkDeviceImplGetInfo(device_info_t* out_info);
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list, size_t buf_count);
-  void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo);
+  void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo,
+                                   network_device_impl_prepare_vmo_callback callback, void* cookie);
   void NetworkDeviceImplReleaseVmo(uint8_t vmo_id);
   void NetworkDeviceImplSetSnoop(bool snoop) { /* do nothing , only auto-snooping is allowed */
   }

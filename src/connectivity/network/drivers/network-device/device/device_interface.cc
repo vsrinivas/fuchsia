@@ -380,62 +380,112 @@ void DeviceInterface::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync
 
 void DeviceInterface::OpenSession(OpenSessionRequestView request,
                                   OpenSessionCompleter::Sync& completer) {
-  zx::status response = OpenSession(request->session_name, std::move(request->session_info));
-  if (response.is_error()) {
-    completer.ReplyError(response.error_value());
-  } else {
-    auto& [session, fifos] = response.value();
-    completer.ReplySuccess(std::move(session), std::move(fifos));
-  }
-}
+  zx::status sync_result = [this, &request]()
+      -> zx::status<std::tuple<netdev::wire::DeviceOpenSessionResponse, uint8_t, zx::vmo>> {
+    fbl::AutoLock lock(&control_lock_);
+    // We're currently tearing down and can't open any new sessions.
+    if (teardown_state_ != TeardownState::RUNNING) {
+      return zx::error(ZX_ERR_UNAVAILABLE);
+    }
 
-zx::status<netdev::wire::DeviceOpenSessionResponse> DeviceInterface::OpenSession(
-    fidl::StringView name, netdev::wire::SessionInfo session_info) {
-  fbl::AutoLock lock(&control_lock_);
-  // We're currently tearing down and can't open any new sessions.
-  if (teardown_state_ != TeardownState::RUNNING) {
-    return zx::error(ZX_ERR_UNAVAILABLE);
+    zx::status endpoints = fidl::CreateEndpoints<netdev::Session>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+
+    fidl::StringView& name = request->session_name;
+    netdev::wire::SessionInfo& session_info = request->session_info;
+    zx::status session_creation =
+        Session::Create(dispatcher_, session_info, name, this, std::move(endpoints->server));
+    if (session_creation.is_error()) {
+      return session_creation.take_error();
+    }
+    auto& [session, fifos] = session_creation.value();
+
+    if (!session_info.has_data()) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+    zx::vmo& vmo = session_info.data();
+    // NB: It's safe to register the VMO after session creation (and thread start) because sessions
+    // always start in a paused state, so the tx path can't be running while we hold the control
+    // lock.
+    if (vmo_store_.is_full()) {
+      return zx::error(ZX_ERR_NO_RESOURCES);
+    }
+    // Duplicate the VMO to share with the device implementation.
+    zx::vmo device_vmo;
+    if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &device_vmo); status != ZX_OK) {
+      return zx::error(status);
+    }
+
+    zx::status registration = vmo_store_.Register(std::move(vmo));
+    if (registration.is_error()) {
+      return registration.take_error();
+    }
+    const uint8_t vmo_id = registration.value();
+    session->SetDataVmo(vmo_id, vmo_store_.GetVmo(vmo_id));
+
+    if (session->ShouldTakeOverPrimary(primary_session_.get())) {
+      // Set this new session as the primary session.
+      std::swap(primary_session_, session);
+      rx_queue_->TriggerSessionChanged();
+    }
+    if (session) {
+      // Add the new session (or the primary session if it the new session just took over) to
+      // the list of sessions.
+      sessions_.push_back(std::move(session));
+    }
+
+    return zx::ok(std::make_tuple(
+        netdev::wire::DeviceOpenSessionResponse{
+            .session = std::move(endpoints->client),
+            .fifos = std::move(fifos),
+        },
+        vmo_id, std::move(device_vmo)));
+  }();
+
+  if (sync_result.is_error()) {
+    completer.ReplyError(sync_result.error_value());
+    return;
   }
 
-  zx::status endpoints = fidl::CreateEndpoints<netdev::Session>();
-  if (endpoints.is_error()) {
-    return endpoints.take_error();
-  }
+  // Holds information about a pending session creation.
+  //
+  // By holding the client end on this pending operation, we guarantee that if
+  // we drop it the session will be closed and thus the regular cleanup path is
+  // triggered.
+  struct PendingSessionOpen {
+    PendingSessionOpen(netdev::wire::DeviceOpenSessionResponse response,
+                       OpenSessionCompleter::Sync& completer)
+        : response(std::move(response)), completer(completer.ToAsync()) {}
+    netdev::wire::DeviceOpenSessionResponse response;
+    OpenSessionCompleter::Async completer;
+  };
+  auto [response, vmo_id, device_vmo] = std::move(sync_result.value());
 
-  zx::status session_creation =
-      Session::Create(dispatcher_, session_info, name, this, std::move(endpoints->server));
-  if (session_creation.is_error()) {
-    return session_creation.take_error();
+  // NB: PendingSessionOpen's constructor takes over the completer on successful
+  // allocation.
+  fbl::AllocChecker ac;
+  std::unique_ptr cookie =
+      fbl::make_unique_checked<PendingSessionOpen>(&ac, std::move(response), completer);
+  if (!ac.check()) {
+    completer.ReplyError(ZX_ERR_NO_MEMORY);
+    return;
   }
-  auto& [session, fifos] = session_creation.value();
+  device_.PrepareVmo(
+      vmo_id, std::move(device_vmo),
+      [](void* cookie, zx_status_t status) {
+        std::unique_ptr<PendingSessionOpen> pending_open(static_cast<PendingSessionOpen*>(cookie));
+        if (status != ZX_OK) {
+          LOGF_ERROR("network-device: Failed to prepare vmo: %s", zx_status_get_string(status));
+          pending_open->completer.ReplyError(ZX_ERR_INTERNAL);
+          return;
+        }
 
-  if (!session_info.has_data()) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-  // NB: It's safe to register the VMO after session creation (and thread start) because sessions
-  // always start in a paused state, so the tx path can't be running while we hold the control lock.
-  zx::status vmo_registration = RegisterDataVmo(std::move(session_info.data()));
-  if (vmo_registration.is_error()) {
-    return vmo_registration.take_error();
-  }
-  auto& [vmo_id, vmo] = vmo_registration.value();
-  session->SetDataVmo(vmo_id, vmo);
-
-  if (session->ShouldTakeOverPrimary(primary_session_.get())) {
-    // Set this new session as the primary session.
-    std::swap(primary_session_, session);
-    rx_queue_->TriggerSessionChanged();
-  }
-  if (session) {
-    // Add the new session (or the primary session if it the new session just took over) to the list
-    // of sessions.
-    sessions_.push_back(std::move(session));
-  }
-
-  return zx::ok(netdev::wire::DeviceOpenSessionResponse{
-      .session = std::move(endpoints->client),
-      .fifos = std::move(fifos),
-  });
+        pending_open->completer.ReplySuccess(std::move(pending_open->response.session),
+                                             std::move(pending_open->response.fifos));
+      },
+      cookie.release());
 }
 
 void DeviceInterface::GetPort(GetPortRequestView request, GetPortCompleter::Sync& _completer) {
@@ -1015,36 +1065,6 @@ void DeviceInterface::PruneDeadSessions() __TA_REQUIRES_SHARED(control_lock_) {
       LOGF_TRACE("network-device: %s: %s still pending", __FUNCTION__, session.name());
     }
   }
-}
-
-zx::status<std::pair<uint8_t, DataVmoStore::StoredVmo*>> DeviceInterface::RegisterDataVmo(
-    zx::vmo vmo) __TA_REQUIRES(control_lock_) {
-  if (vmo_store_.is_full()) {
-    return zx::error(ZX_ERR_NO_RESOURCES);
-  }
-  // Duplicate the VMO to share with device implementation.
-  zx::vmo device_vmo;
-  if (zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &device_vmo); status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  zx::status registration = vmo_store_.Register(std::move(vmo));
-  if (registration.is_error()) {
-    return registration.take_error();
-  }
-  uint8_t id = registration.value();
-  DataVmoStore::StoredVmo* stored_vmo = vmo_store_.GetVmo(id);
-
-  // NB: We're calling into the device implementation here while holding the control lock
-  // exclusively which we generally try to avoid in case the device wants to call back into us.
-  // Furthermore, `PrepareVmo` should have a response so that we can wait for the device to do its
-  // registration before we start sending it buffers with that VMO id.
-  // Irrelevant right now because this is a synchronous call.
-  // TODO(https://fxbug.dev/75456): We should wait until PrepareVmo returns (possibly
-  // asynchronously) before allowing the session to run.
-  device_.PrepareVmo(id, std::move(device_vmo));
-
-  return zx::ok(std::make_pair(id, stored_vmo));
 }
 
 void DeviceInterface::CommitAllSessions() {

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
@@ -365,7 +366,25 @@ TEST_F(NetworkDeviceTest, InvalidRxThreshold) {
   ASSERT_STATUS(CreateDevice(), ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST_F(NetworkDeviceTest, OpenSession) {
+class PrepareVmoCallbackParamTest : public NetworkDeviceTest,
+                                    public ::testing::WithParamInterface<bool> {
+ public:
+  void InstallPrepareVmoCallback(zx_status_t status) {
+    impl_.set_prepare_vmo_handler([this, status](uint8_t, const zx::vmo&,
+                                                 network_device_impl_prepare_vmo_callback callback,
+                                                 void* cookie) {
+      const bool deferred_callback = GetParam();
+      if (deferred_callback) {
+        async::PostTask(dispatcher(), [callback, cookie, status]() { callback(cookie, status); });
+      } else {
+        callback(cookie, status);
+      }
+    });
+  }
+};
+
+TEST_P(PrepareVmoCallbackParamTest, OpenSession) {
+  InstallPrepareVmoCallback(ZX_OK);
   ASSERT_OK(CreateDeviceWithPort13());
   fidl::WireSyncClient connection = OpenConnection();
   TestSession session;
@@ -378,6 +397,25 @@ TEST_F(NetworkDeviceTest, OpenSession) {
   ASSERT_OK(WaitStart());
   ASSERT_OK(WaitRxAvailable());
 }
+
+// Test that OpenSession fails if the device implementation rejects a VMO.
+TEST_P(PrepareVmoCallbackParamTest, PrepareVmoFailure) {
+  // Use any status here, the API contract is that the client should observe
+  // ZX_ERR_INTERNAL.
+  InstallPrepareVmoCallback(ZX_ERR_CANCELED);
+  ASSERT_OK(CreateDevice());
+  TestSession session;
+  ASSERT_STATUS(OpenSession(&session), ZX_ERR_INTERNAL);
+}
+
+INSTANTIATE_TEST_SUITE_P(NetworkDeviceTest, PrepareVmoCallbackParamTest,
+                         ::testing::Values(true, false),
+                         [](const ::testing::TestParamInfo<bool>& info) {
+                           if (info.param) {
+                             return "Deferred";
+                           }
+                           return "Inline";
+                         });
 
 TEST_F(NetworkDeviceTest, RxBufferBuild) {
   ASSERT_OK(CreateDeviceWithPort13());
@@ -1267,11 +1305,33 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   // String view only contains "hello".
   fidl::StringView name = fidl::StringView::FromExternal(name_str, 5u);
 
-  zx::status response = dev->OpenSession(std::move(name), std::move(info));
-  ASSERT_OK(response.status_value());
+  bool reply_called = false;
+  class T : public fidl::Transaction {
+   public:
+    explicit T(bool* r) : reply_called_(r) {}
+    std::unique_ptr<Transaction> TakeOwnership() override {
+      auto t = std::make_unique<T>(reply_called_);
+      reply_called_ = nullptr;
+      return t;
+    }
+    zx_status_t Reply(fidl::OutgoingMessage* message) override {
+      *reply_called_ = true;
+      return ZX_OK;
+    }
+    void Close(zx_status_t epitaph) override {
+      ADD_FAILURE() << "Unexpected call to Close with " << zx_status_get_string(epitaph);
+    }
 
+   private:
+    bool* reply_called_;
+  } transaction(&reply_called);
+
+  fidl::WireServer<netdev::Device>::OpenSessionCompleter::Sync completer(&transaction);
+  fidl::WireRequest<netdev::Device::OpenSession> req(name, info);
+  fidl::WireServer<netdev::Device>::OpenSessionRequestView view(&req);
+  dev->OpenSession(view, completer);
+  ASSERT_TRUE(reply_called);
   const auto& session = GetDeviceSessionsUnsafe(*dev).front();
-
   ASSERT_STREQ("hello", session.name());
 }
 

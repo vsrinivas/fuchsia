@@ -154,11 +154,11 @@ void DeviceAdapter::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_l
   }
 }
 
-void DeviceAdapter::NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) {
+void DeviceAdapter::NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo,
+                                                network_device_impl_prepare_vmo_callback callback,
+                                                void* cookie) {
   zx_status_t status = vmos_.RegisterVmo(vmo_id, std::move(vmo));
-  if (status != ZX_OK) {
-    FX_LOGF(ERROR, "tun", "DeviceAdapter failed to register vmo: %s", zx_status_get_string(status));
-  }
+  callback(cookie, status);
 }
 
 void DeviceAdapter::NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {

@@ -144,12 +144,6 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // are safely returned and we own all the buffers again.
   void NotifyDeadSession(Session& dead_session);
 
-  // Registers `vmo` as a data vmo that will be shared with the device implementation.
-  //
-  // Returns the generated identifier and an unowned pointer to the vmo holder.
-  zx::status<std::pair<uint8_t, DataVmoStore::StoredVmo*>> RegisterDataVmo(zx::vmo vmo)
-      __TA_REQUIRES(control_lock_);
-
   // FIDL protocol implementation.
   void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
   void OpenSession(OpenSessionRequestView request, OpenSessionCompleter::Sync& completer) override;
@@ -157,10 +151,6 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   void GetPortWatcher(GetPortWatcherRequestView request,
                       GetPortWatcherCompleter::Sync& _completer) override;
   void Clone(CloneRequestView request, CloneCompleter::Sync& _completer) override;
-
-  // Serves the OpenSession FIDL handle method synchronously.
-  zx::status<netdev::wire::DeviceOpenSessionResponse> OpenSession(
-      fidl::StringView name, netdev::wire::SessionInfo session_info);
 
   // Returns the current port salt for the provided base port ID.
   //

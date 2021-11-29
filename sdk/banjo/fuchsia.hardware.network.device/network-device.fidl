@@ -618,9 +618,16 @@ protocol NetworkDeviceImpl {
     ///
     /// + request `id` identifier used to reference this VMO.
     /// + request `vmo` VMO where frame data will be stored.
+    /// - response `s` vmo registration status. `ZX_OK` indicates a successful
+    /// VMO preparation. Any other status value indicates an implementation
+    /// specific error and causes the client session which owns the VMO to be
+    /// closed.
+    @async
     PrepareVmo(resource struct {
         id vmo_id;
         vmo zx.handle:VMO;
+    }) -> (struct {
+        s zx.status;
     });
     /// Device may dispose of all references to the VMO referenced by `id`.
     ///

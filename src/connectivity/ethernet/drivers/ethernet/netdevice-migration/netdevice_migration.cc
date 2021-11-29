@@ -375,16 +375,12 @@ void NetdeviceMigration::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* 
   }
 }
 
-void NetdeviceMigration::NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo)
+void NetdeviceMigration::NetworkDeviceImplPrepareVmo(
+    uint8_t id, zx::vmo vmo, network_device_impl_prepare_vmo_callback callback, void* cookie)
     __TA_EXCLUDES(vmo_lock_) {
   fbl::AutoLock vmo_lock(&vmo_lock_);
-  if (zx_status_t status = vmo_store_.RegisterWithKey(id, std::move(vmo)); status != ZX_OK) {
-    zxlogf(ERROR, "netdevice-migration: failed to prepare vmo id = %d: %s", id,
-           zx_status_get_string(status));
-    // Remove the driver because a failure to register the vmo indicates that the driver will not be
-    // able to perform tx/rx.
-    DdkAsyncRemove();
-  }
+  zx_status_t status = vmo_store_.RegisterWithKey(id, std::move(vmo));
+  callback(cookie, status);
 }
 
 void NetdeviceMigration::NetworkDeviceImplReleaseVmo(uint8_t id) __TA_EXCLUDES(vmo_lock_) {

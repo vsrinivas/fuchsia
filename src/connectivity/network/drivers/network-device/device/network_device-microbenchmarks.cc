@@ -106,7 +106,11 @@ class FakeDeviceImpl : public ddk::NetworkPortProtocol<FakeDeviceImpl>,
     return ddk::NetworkDeviceImplProtocolClient(&proto);
   }
 
-  void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) {}
+  void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo,
+                                   network_device_impl_prepare_vmo_callback callback,
+                                   void* cookie) {
+    callback(cookie, ZX_OK);
+  }
   void NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {}
   void NetworkDeviceImplSetSnoop(bool snoop) { ZX_PANIC("unexpected call to SetSnoop(%d)", snoop); }
   void NetworkPortGetInfo(port_info_t* out_info) {

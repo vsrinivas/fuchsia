@@ -189,6 +189,8 @@ class FakeNetworkPortImpl : public ddk::NetworkPortProtocol<FakeNetworkPortImpl>
 
 class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkDeviceImpl> {
  public:
+  using PrepareVmoHandler =
+      fit::function<void(uint8_t, const zx::vmo&, network_device_impl_prepare_vmo_callback, void*)>;
   FakeNetworkDeviceImpl();
   ~FakeNetworkDeviceImpl();
 
@@ -200,10 +202,17 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   void NetworkDeviceImplGetInfo(device_info_t* out_info);
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count);
   void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_list, size_t buf_count);
-  void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo) {
+  void NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo,
+                                   network_device_impl_prepare_vmo_callback callback,
+                                   void* cookie) {
     zx::vmo& slot = vmos_[vmo_id];
     EXPECT_FALSE(slot.is_valid()) << "vmo " << static_cast<uint32_t>(vmo_id) << " already prepared";
     slot = std::move(vmo);
+    if (prepare_vmo_handler_) {
+      prepare_vmo_handler_(vmo_id, slot, callback, cookie);
+    } else {
+      callback(cookie, ZX_OK);
+    }
   }
   void NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {
     zx::vmo& slot = vmos_[vmo_id];
@@ -275,6 +284,9 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
 
   void set_immediate_return_tx(bool auto_return) { immediate_return_tx_ = auto_return; }
   void set_immediate_return_rx(bool auto_return) { immediate_return_rx_ = auto_return; }
+  void set_prepare_vmo_handler(PrepareVmoHandler handler) {
+    prepare_vmo_handler_ = std::move(handler);
+  }
 
   ddk::NetworkDeviceIfcProtocolClient& client() { return device_client_; }
 
@@ -297,6 +309,7 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   bool device_started_ __TA_GUARDED(lock_) = false;
   fit::function<void()> pending_start_callback_ __TA_GUARDED(lock_);
   fit::function<void()> pending_stop_callback_ __TA_GUARDED(lock_);
+  PrepareVmoHandler prepare_vmo_handler_;
 };
 
 class RxReturnTransaction {

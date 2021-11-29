@@ -66,7 +66,9 @@ class NetdeviceMigration : public DeviceType,
   void NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_list, size_t buffers_count);
   void NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buffers_list, size_t buffers_count)
       __TA_EXCLUDES(rx_lock_);
-  void NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo) __TA_EXCLUDES(vmo_lock_);
+  void NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo,
+                                   network_device_impl_prepare_vmo_callback callback, void* cookie)
+      __TA_EXCLUDES(vmo_lock_);
   void NetworkDeviceImplReleaseVmo(uint8_t id) __TA_EXCLUDES(vmo_lock_);
   void NetworkDeviceImplSetSnoop(bool snoop);
 
