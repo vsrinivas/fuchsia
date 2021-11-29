@@ -70,7 +70,7 @@ func (r *Runner) RunWithStdin(ctx context.Context, command []string, stdout io.W
 
 	// Spin off handler to exit subprocesses cleanly via SIGTERM.
 	processDone := make(chan struct{})
-	var processMu sync.Mutex
+	processMu := &sync.Mutex{}
 	go handleSubprocessCleanup(ctx, cmd, processMu, processDone, pgidSet)
 
 	// Ensure that the context still exists before running the subprocess.
@@ -98,7 +98,7 @@ func (r *Runner) RunWithStdin(ctx context.Context, command []string, stdout io.W
 	return err
 }
 
-func handleSubprocessCleanup(ctx context.Context, cmd *exec.Cmd, processMu sync.Mutex, processDone chan struct{}, pgidSet bool) {
+func handleSubprocessCleanup(ctx context.Context, cmd *exec.Cmd, processMu *sync.Mutex, processDone chan struct{}, pgidSet bool) {
 	select {
 	case <-processDone:
 		// Process is done so no need to worry about cleanup. Just exit.
