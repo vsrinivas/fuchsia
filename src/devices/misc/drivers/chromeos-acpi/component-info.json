@@ -1,5 +1,5 @@
 {
-    "short_description": "ACPI battery driver",
+    "short_description": "ChromeOS ACPI table driver",
     "manufacturer": "",
     "families": [
         "generic"
