@@ -42,6 +42,9 @@ class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvid
 
   void SetFileSource(zx::channel file_channel) override;
 
+  void SetFileSourceWithOptions(zx::channel file_channel,
+                                fuchsia::media::playback::PlayerOptions options) override;
+
   void Play() override;
 
   void Pause() override;
@@ -207,6 +210,7 @@ class PlayerImpl : public fuchsia::media::playback::Player, public ServiceProvid
   fuchsia::media::playback::PlayerStatus status_;
 
   float playback_rate_ = 1.0f;
+  bool option_silent_ = false;
 };
 
 }  // namespace media_player

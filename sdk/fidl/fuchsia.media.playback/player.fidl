@@ -19,6 +19,12 @@ protocol Player {
         file_channel zx.handle:CHANNEL;
     });
 
+    /// Sets a file channel to read from.
+    SetFileSourceWithOptions(resource struct {
+        file_channel zx.handle:CHANNEL;
+        options PlayerOptions;
+    });
+
     /// Starts playback.
     Play();
 
@@ -57,6 +63,12 @@ protocol Player {
     SetPlaybackRate(struct {
         playback_rate float32;
     });
+};
+
+/// Options used in `SetFileSourceWithOptions`.
+type PlayerOptions = table {
+    /// When set to true, suppresses audio rendering. Default value false.
+    1: silent bool;
 };
 
 /// Player status information.

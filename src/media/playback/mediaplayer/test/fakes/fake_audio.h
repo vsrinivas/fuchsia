@@ -27,10 +27,13 @@ class FakeAudio : public fuchsia::media::Audio {
 
   FakeAudioRenderer& renderer() { return fake_audio_renderer_; }
 
+  bool create_audio_renderer_called() const { return create_audio_renderer_called_; }
+
   // Audio implementation.
   void CreateAudioRenderer(
       fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) override {
     fake_audio_renderer_.Bind(std::move(audio_renderer_request));
+    create_audio_renderer_called_ = true;
   }
 
   void CreateAudioCapturer(
@@ -42,6 +45,7 @@ class FakeAudio : public fuchsia::media::Audio {
  private:
   fidl::BindingSet<fuchsia::media::Audio> bindings_;
   FakeAudioRenderer fake_audio_renderer_;
+  bool create_audio_renderer_called_ = false;
 };
 
 class FakeAudioCore : public fuchsia::media::AudioCore {

@@ -32,6 +32,8 @@ class MediaPlayerTestUtilParams {
 
   bool auto_play() const { return play_ || loop_ || test_seek_; }
 
+  bool silent() const { return silent_; }
+
   const std::vector<std::string>& paths() const { return paths_; }
 
   float rate() const { return rate_; }
@@ -46,6 +48,7 @@ class MediaPlayerTestUtilParams {
   bool loop_ = false;
   bool test_seek_ = false;
   bool experiment_ = false;
+  bool silent_ = false;
   float rate_ = 1.0f;
 
   // Disallow copy, assign and move.

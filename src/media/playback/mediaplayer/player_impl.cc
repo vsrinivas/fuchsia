@@ -403,6 +403,13 @@ void PlayerImpl::SetTimelineFunction(float rate, int64_t reference_time, fit::cl
 }
 
 void PlayerImpl::SetFileSource(zx::channel file_channel) {
+  option_silent_ = false;
+  BeginSetSource(CreateSource(FileReader::Create(std::move(file_channel)), nullptr));
+}
+
+void PlayerImpl::SetFileSourceWithOptions(zx::channel file_channel,
+                                          fuchsia::media::playback::PlayerOptions options) {
+  option_silent_ = options.has_silent() ? options.silent() : false;
   BeginSetSource(CreateSource(FileReader::Create(std::move(file_channel)), nullptr));
 }
 
@@ -447,7 +454,9 @@ void PlayerImpl::FinishSetSource() {
   program_range_min_pts_ = 0;
   transform_subject_time_ = 0;
 
-  MaybeCreateRenderer(StreamType::Medium::kAudio);
+  if (!option_silent_) {
+    MaybeCreateRenderer(StreamType::Medium::kAudio);
+  }
 
   core_.SetSourceSegment(new_source_->TakeSourceSegment(), [this]() {
     state_ = State::kFlushed;
