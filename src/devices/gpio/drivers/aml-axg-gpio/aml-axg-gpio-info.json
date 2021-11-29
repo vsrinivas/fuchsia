@@ -1,0 +1,17 @@
+{
+    "short_description": "AMLogic GPIO driver",
+    "manufacturer": "AMLogic",
+    "families": [
+        "axg"
+    ],
+    "models": [
+        "A113",
+        "S905D2",
+        "T931",
+        "S905D3",
+        "A311D"
+    ],
+    "areas": [
+        "GPIO"
+    ]
+}

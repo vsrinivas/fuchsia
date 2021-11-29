@@ -11,7 +11,7 @@ Display
 DriverFramework
 Ethernet
 Firmware
-Gpio
+GPIO
 Graphics
 I2c
 Input

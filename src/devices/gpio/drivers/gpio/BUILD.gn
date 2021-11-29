@@ -40,6 +40,7 @@ fuchsia_driver("gpio-driver") {
 fuchsia_driver_component("gpio") {
   component_name = "gpio"
   deps = [ ":gpio-driver" ]
+  info = "gpio-info.json"
 }
 
 test("gpio-test-bin") {

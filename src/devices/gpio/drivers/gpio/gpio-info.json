@@ -1,5 +1,5 @@
 {
-    "short_description": "GPIO lights core driver",
+    "short_description": "Core GPIO driver",
     "manufacturer": "",
     "families": [
         "generic"
@@ -8,7 +8,6 @@
         "generic"
     ],
     "areas": [
-        "GPIO",
-        "Light"
+        "GPIO"
     ]
 }
