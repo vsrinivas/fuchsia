@@ -1,0 +1,11 @@
+{
+    "short_description": "AMLogic cpu frequency scaling driver for Sherlock",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "T931"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}

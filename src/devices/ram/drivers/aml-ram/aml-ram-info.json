@@ -1,0 +1,13 @@
+{
+    "short_description": "AMLogic RAM performance counters driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "S905D2",
+        "T931",
+        "S905D3"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}

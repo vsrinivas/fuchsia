@@ -1,0 +1,14 @@
+{
+    "short_description": "AMLogic cpu frequency scaling driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "S905D2",
+        "T931",
+        "S905D3",
+        "A311D"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}

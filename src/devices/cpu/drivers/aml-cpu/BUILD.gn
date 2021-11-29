@@ -51,6 +51,7 @@ fuchsia_driver("aml-cpu-driver") {
 fuchsia_driver_component("aml-cpu") {
   component_name = "aml-cpu"
   deps = [ ":aml-cpu-driver" ]
+  info = "aml-cpu-info.json"
 }
 
 test("aml-cpu-test-bin") {

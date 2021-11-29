@@ -48,6 +48,7 @@ fuchsia_driver("ams-light-driver") {
 fuchsia_driver_component("ams-light") {
   component_name = "ams-light"
   deps = [ ":ams-light-driver" ]
+  info = "ams-light-info.json"
 }
 
 test("ams-light-test-bin") {

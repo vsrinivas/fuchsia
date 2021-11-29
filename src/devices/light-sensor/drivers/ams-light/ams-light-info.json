@@ -1,0 +1,11 @@
+{
+    "short_description": "AMS TCS3400 ambient light sensor driver",
+    "manufacturer": "AMS",
+    "families": [],
+    "models": [
+        "TCS3400"
+    ],
+    "areas": [
+        "Light"
+    ]
+}
