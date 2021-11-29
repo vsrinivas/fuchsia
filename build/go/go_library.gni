@@ -22,9 +22,8 @@
 #     Path to the root of the sources for the package.
 #     Defaults to the current directory.
 #
-#   sources (optional)
+#   sources (required)
 #     List of source files, relative to source_dir.
-#     TODO(fxbug.dev/3037): make this attribute required.
 #
 #   deps (optional)
 #     List of labels for Go libraries this target depends on.
@@ -41,6 +40,7 @@
 template("go_library") {
   assert(!(defined(invoker.name) && defined(invoker.name_file)),
          "Defining both name and name_file is not allowed")
+  assert(defined(invoker.sources), "sources is required for go_library")
 
   source_dir = "."
   if (defined(invoker.source_dir)) {
