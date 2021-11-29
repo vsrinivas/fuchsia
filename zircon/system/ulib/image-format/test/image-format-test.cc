@@ -188,6 +188,32 @@ TEST(ImageFormat, InvalidColorSpace_V1_LLCPP) {
   EXPECT_FALSE(ImageFormatIsSupportedColorSpaceForPixelFormat(color_space, sysmem_format));
 }
 
+TEST(ImageFormat, PassThroughColorSpace_V1_LLCPP) {
+  fidl::Arena allocator;
+  fuchsia_sysmem::wire::PixelFormat linear_bgra = {
+      .type = fuchsia_sysmem::wire::PixelFormatType::kBgra32,
+      .has_format_modifier = true,
+      .format_modifier =
+          {
+              .value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+          },
+  };
+
+  sysmem_v1::wire::ColorSpace color_space{sysmem_v1::wire::ColorSpaceType::kPassThrough};
+  EXPECT_TRUE(ImageFormatIsSupportedColorSpaceForPixelFormat(color_space, linear_bgra));
+
+  fuchsia_sysmem::wire::PixelFormat linear_nv12 = {
+      .type = fuchsia_sysmem::wire::PixelFormatType::kNv12,
+      .has_format_modifier = true,
+      .format_modifier =
+          {
+              .value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR,
+          },
+  };
+
+  EXPECT_TRUE(ImageFormatIsSupportedColorSpaceForPixelFormat(color_space, linear_nv12));
+}
+
 TEST(ImageFormat, ZxPixelFormat_V2_LLCPP) {
   fidl::Arena allocator;
   zx_pixel_format_t pixel_formats[] = {

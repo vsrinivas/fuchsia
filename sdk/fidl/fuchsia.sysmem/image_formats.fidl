@@ -164,4 +164,8 @@ type ColorSpaceType = strict enum {
     REC2020 = 7;
     /// 2100 YCbCr (not RGB, not ICtCp)
     REC2100 = 8;
+    /// Either the pixel format doesn't represent a color, or it's in an
+    /// application-specific colorspace that isn't describable by another entry
+    /// in this enum.
+    PASS_THROUGH = 9;
 };

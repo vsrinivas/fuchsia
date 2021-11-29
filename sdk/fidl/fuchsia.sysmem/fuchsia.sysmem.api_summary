@@ -84,6 +84,7 @@ strict enum fuchsia.sysmem/CoherencyDomain uint32
 struct/member fuchsia.sysmem/ColorSpace.type fuchsia.sysmem/ColorSpaceType
 struct fuchsia.sysmem/ColorSpace
 enum/member fuchsia.sysmem/ColorSpaceType.INVALID 0
+enum/member fuchsia.sysmem/ColorSpaceType.PASS_THROUGH 9
 enum/member fuchsia.sysmem/ColorSpaceType.REC2020 7
 enum/member fuchsia.sysmem/ColorSpaceType.REC2100 8
 enum/member fuchsia.sysmem/ColorSpaceType.REC601_NTSC 2

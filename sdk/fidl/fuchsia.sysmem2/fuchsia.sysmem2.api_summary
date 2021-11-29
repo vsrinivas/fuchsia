@@ -48,6 +48,7 @@ table fuchsia.sysmem2/CoherencyDomainSupport
 table/member fuchsia.sysmem2/ColorSpace.type fuchsia.sysmem2/ColorSpaceType
 table fuchsia.sysmem2/ColorSpace
 enum/member fuchsia.sysmem2/ColorSpaceType.INVALID 0
+enum/member fuchsia.sysmem2/ColorSpaceType.PASS_THROUGH 9
 enum/member fuchsia.sysmem2/ColorSpaceType.REC2020 7
 enum/member fuchsia.sysmem2/ColorSpaceType.REC2100 8
 enum/member fuchsia.sysmem2/ColorSpaceType.REC601_NTSC 2

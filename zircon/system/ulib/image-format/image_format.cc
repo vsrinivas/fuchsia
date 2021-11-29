@@ -730,6 +730,8 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(
     const fuchsia_sysmem2::wire::PixelFormat& pixel_format) {
   if (!color_space.has_type())
     return false;
+  if (color_space.type() == ColorSpaceType::kPassThrough)
+    return true;
   // Ignore pixel format modifier - assume it has already been checked.
   auto color_space_sampling_info_iter = kColorSpaceSamplingInfo.find(color_space.type());
   if (color_space_sampling_info_iter == kColorSpaceSamplingInfo.end()) {
