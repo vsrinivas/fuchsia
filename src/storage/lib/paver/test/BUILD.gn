@@ -43,7 +43,7 @@ test("test") {
     "//src/devices/lib/amlogic",
     "//src/firmware/lib/abr",
     "//src/lib/storage/fs_management",
-    "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test-static",
+    "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/uuid",
     "//src/storage/fvm",

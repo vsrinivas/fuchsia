@@ -39,6 +39,7 @@ zx_library("driver-integration-test") {
     "//src/devices/tests/driver-inspect-test/*",
     "//src/devices/tests/isolateddevmgr/*",
     "//src/diagnostics/validator/logs/ddk/sink/puppet/cpp/*",
+    "//src/lib/storage/ramdevice_client/cpp/*",
     "//src/recovery/factory_reset/*",
     "//src/security/zxcrypt/tests/*",
     "//src/storage/fvm/*",
@@ -47,34 +48,6 @@ zx_library("driver-integration-test") {
     "//zircon/system/ulib/driver-integration-test/test/*",
     "//zircon/system/ulib/usb-virtual-bus-launcher/*",
   ]
-}
-
-zx_library("driver-integration-test-static") {
-  testonly = true
-  sdk = "static"
-  sdk_headers = [ "lib/driver-integration-test/fixture.h" ]
-
-  sources = [ "launcher.cc" ]
-  deps = [
-    "//sdk/lib/fdio",
-    "//src/lib/ddk",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/inspector",
-    "//zircon/system/ulib/zx",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//sdk/lib/fit",
-    "//src/lib/ddk",
-    "//src/lib/ddk:ddk-metadata-headers",
-    "//zircon/system/ulib/devmgr-integration-test",
-    "//zircon/system/ulib/fbl",
-  ]
-  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-
-  # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
-  visibility = [ "//src/lib/storage/ramdevice_client/cpp/*" ]
 }
 
 group("tests") {
