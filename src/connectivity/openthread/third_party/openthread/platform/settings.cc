@@ -41,15 +41,19 @@
 
 static otError platformSettingsDelete(otInstance *instance, uint16_t key, int index);
 
-ThreadConfigManager* config_manager = nullptr;
+std::unique_ptr<ThreadConfigManager> config_manager;
 
 void otPlatSettingsInit(otInstance *instance) {
-  config_manager = new ThreadConfigManager(kThreadSettingsPath);
+  FX_LOGS(INFO) << "Inside otPlatSettingsInit";
+  if (config_manager == nullptr) {
+    config_manager = std::make_unique<ThreadConfigManager>(kThreadSettingsPath);
+    FX_LOGS(INFO) << "Created new config_manager!";
+  }
 }
 
 void otPlatSettingsDeinit(otInstance *instance) {
-  delete config_manager;
-  config_manager = nullptr;
+  FX_LOGS(INFO) << "Deleting config_manager during Deinit.";
+  config_manager.reset();
 }
 
 static otError get_ot_error(ThreadConfigMgrError error) {
@@ -85,7 +89,7 @@ otError otPlatSettingsGet(otInstance *instance, uint16_t key, int index, uint8_t
     return OT_ERROR_NOT_FOUND;
   }
   error = config_manager->ReadConfigValueFromBinArray(key_str.c_str(), index, value, buffer_length,
-                                                     &actual_value_length);
+                                                      &actual_value_length);
   if (value_length != NULL) {
     *value_length = actual_value_length;
   }
