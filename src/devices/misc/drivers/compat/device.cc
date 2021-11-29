@@ -76,16 +76,16 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   fidl::Arena arena;
   std::vector<fdf::wire::NodeSymbol> symbols;
   symbols.emplace_back(arena)
-      .set_name(arena, fidl::StringView::FromExternal(kName))
+      .set_name(arena, kName)
       .set_address(arena, reinterpret_cast<uint64_t>(device_ptr->Name()));
   symbols.emplace_back(arena)
-      .set_name(arena, fidl::StringView::FromExternal(kContext))
+      .set_name(arena, kContext)
       .set_address(arena, reinterpret_cast<uint64_t>(zx_args->ctx));
   symbols.emplace_back(arena)
-      .set_name(arena, fidl::StringView::FromExternal(kOps))
+      .set_name(arena, kOps)
       .set_address(arena, reinterpret_cast<uint64_t>(zx_args->ops));
   symbols.emplace_back(arena)
-      .set_name(arena, fidl::StringView::FromExternal(kParent))
+      .set_name(arena, kParent)
       .set_address(arena, reinterpret_cast<uint64_t>(device_ptr));
   std::vector<fdf::wire::NodeProperty> props;
   props.reserve(zx_args->prop_count);
