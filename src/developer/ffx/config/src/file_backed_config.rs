@@ -122,7 +122,7 @@ impl FileBacked {
         self.data.get(query, mapper)
     }
 
-    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<()> {
+    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<bool> {
         self.data.set(query, value)
     }
 

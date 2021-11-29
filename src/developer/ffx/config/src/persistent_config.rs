@@ -83,7 +83,7 @@ impl Persistent {
         self.data.get(query, mapper)
     }
 
-    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<()> {
+    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<bool> {
         let level = if let Some(l) = query.level {
             l
         } else {

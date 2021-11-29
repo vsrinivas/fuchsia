@@ -123,9 +123,16 @@ impl Priority {
         key: &str,
         remaining_keys: Vec<&str>,
         value: Value,
-    ) {
+    ) -> bool {
         if remaining_keys.len() == 0 {
+            // Exit early if the value hasn't changed.
+            if let Some(old_value) = cur.get(key) {
+                if old_value == &value {
+                    return false;
+                }
+            }
             cur.insert(key.to_string(), value);
+            true
         } else {
             match cur.get(key) {
                 Some(value) => {
@@ -144,7 +151,7 @@ impl Priority {
                 .expect("unable to get configuration")
                 .as_object_mut()
                 .expect("Unable to set configuration value as map");
-            Priority::nested_set(next_map, remaining_keys[0], remaining_keys[1..].to_vec(), value);
+            Priority::nested_set(next_map, remaining_keys[0], remaining_keys[1..].to_vec(), value)
         }
     }
 
@@ -256,7 +263,7 @@ impl Priority {
         }
     }
 
-    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<()> {
+    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<bool> {
         let key = if let Some(k) = query.name {
             k
         } else {
@@ -270,13 +277,13 @@ impl Priority {
         };
 
         let key_vec: Vec<&str> = key.split('.').collect();
-        Priority::nested_set(
+        let config_changed = Priority::nested_set(
             &mut self.get_level_map(&level),
             key_vec[0],
             key_vec[1..].to_vec(),
             value,
         );
-        Ok(())
+        Ok(config_changed)
     }
 
     pub fn remove(&mut self, query: &ConfigQuery<'_>) -> Result<()> {
@@ -537,6 +544,45 @@ mod test {
         let value = test.get(&"name".into(), &identity);
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("user-test")));
+        Ok(())
+    }
+
+    #[test]
+    fn test_set_twice_does_not_change_config() -> Result<()> {
+        let mut test = Priority {
+            user: Some(serde_json::from_str(USER)?),
+            build: Some(serde_json::from_str(BUILD)?),
+            global: Some(serde_json::from_str(GLOBAL)?),
+            default: Some(serde_json::from_str(DEFAULT)?),
+            runtime: None,
+        };
+        assert!(test.set(
+            &("name", &ConfigLevel::User).into(),
+            Value::String(String::from("user-test1"))
+        )?);
+        assert_eq!(
+            test.get(&"name".into(), &identity).unwrap(),
+            Value::String(String::from("user-test1"))
+        );
+
+        assert!(!test.set(
+            &("name", &ConfigLevel::User).into(),
+            Value::String(String::from("user-test1"))
+        )?);
+        assert_eq!(
+            test.get(&"name".into(), &identity).unwrap(),
+            Value::String(String::from("user-test1"))
+        );
+
+        assert!(test.set(
+            &("name", &ConfigLevel::User).into(),
+            Value::String(String::from("user-test2"))
+        )?);
+        assert_eq!(
+            test.get(&"name".into(), &identity).unwrap(),
+            Value::String(String::from("user-test2"))
+        );
+
         Ok(())
     }
 

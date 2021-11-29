@@ -135,8 +135,17 @@ pub async fn set<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result
     check_config_files(&level, &config_query.build_dir.map(String::from))?;
     let config = load_config(&config_query.build_dir.map(String::from)).await?;
     let mut write_guard = config.write().await;
-    (*write_guard).set(&config_query, value)?;
-    save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
+    let config_changed = (*write_guard).set(&config_query, value)?;
+
+    // FIXME(81502): There is a race between the ffx CLI and the daemon service
+    // in updating the config. We can lose changes if both try to change the
+    // config at the same time. We can reduce the rate of races by only writing
+    // to the config if the value actually changed.
+    if config_changed {
+        save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
+    } else {
+        Ok(())
+    }
 }
 
 fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result<()> {
@@ -210,24 +219,31 @@ pub async fn add<'a, U: Into<ConfigQuery<'a>>>(query: U, value: Value) -> Result
     check_config_files(&level, &config_query.build_dir.map(String::from))?;
     let config = load_config(&config_query.build_dir.map(String::from)).await?;
     let mut write_guard = config.write().await;
-    if let Some(mut current) = (*write_guard).get(&config_query, &identity) {
+    let config_changed = if let Some(mut current) = (*write_guard).get(&config_query, &identity) {
         if current.is_object() {
             bail!("cannot add a value to a subtree");
         } else {
             match current.as_array_mut() {
                 Some(v) => {
                     v.push(value);
-                    (*write_guard).set(&config_query, Value::Array(v.to_vec()))?;
+                    (*write_guard).set(&config_query, Value::Array(v.to_vec()))?
                 }
-                None => {
-                    (*write_guard).set(&config_query, Value::Array(vec![current, value]))?;
-                }
+                None => (*write_guard).set(&config_query, Value::Array(vec![current, value]))?,
             }
         }
     } else {
-        (*write_guard).set(&config_query, value)?;
+        (*write_guard).set(&config_query, value)?
+    };
+
+    // FIXME(81502): There is a race between the ffx CLI and the daemon service
+    // in updating the config. We can lose changes if both try to change the
+    // config at the same time. We can reduce the rate of races by only writing
+    // to the config if the value actually changed.
+    if config_changed {
+        save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
+    } else {
+        Ok(())
     }
-    save_config(&mut *write_guard, &config_query.build_dir.map(String::from))
 }
 
 pub fn save_config(config: &mut Config, build_dir: &Option<String>) -> Result<()> {
