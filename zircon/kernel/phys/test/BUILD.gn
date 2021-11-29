@@ -322,8 +322,11 @@ if (current_toolchain != default_toolchain) {
 
   turducken_zbi_test("zbi-chain-load-hello-world-test") {
     kernel = ":chain-load-test"
-    deps = [ ":zbi-hello-world-test.executable" ]
-    sources = get_target_outputs(deps[0])
+    sources = get_target_outputs(":zbi-hello-world-test.executable")
+
+    # Prefer `data_deps` since `zhi_input` adds a `zbi_input_barrier`, preventing
+    # this zbi's kernel image from being prepended.
+    data_deps = [ ":zbi-hello-world-test.executable" ]
   }
 
   core_tests_label =
@@ -331,22 +334,14 @@ if (current_toolchain != default_toolchain) {
   core_tests_zbi =
       get_label_info(core_tests_label, "target_out_dir") + "/core-tests.zbi"
 
-  # This wraps the deps on the core-tests ZBI with a metadata barrier that
-  # prevents it from rolling up into zbi() targets.
-  group("core-tests.deps") {
-    visibility = [ ":*" ]
-    testonly = true
-    deps = [ core_tests_label ]
-    metadata = {
-      zbi_input_barrier = []
-    }
-  }
-
   turducken_zbi_test("zbi-chain-load-core-tests") {
     kernel = ":chain-load-test"
 
     sources = [ core_tests_zbi ]
-    deps = [ ":core-tests.deps" ]
+
+    # Prefer `data_deps` since `zhi_input` adds a `zbi_input_barrier`, preventing
+    # this zbi's kernel image from being prepended.
+    data_deps = [ core_tests_label ]
 
     # Once it chain-loads Zircon, it will shut down by itself, but not
     # necessarily really quickly since the tests take a little while to run.
