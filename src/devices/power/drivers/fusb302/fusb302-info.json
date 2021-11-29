@@ -1,0 +1,12 @@
+{
+    "short_description": "ON Semiconductor FUSB302 USB connector driver",
+    "manufacturer": "ON Semiconductor",
+    "families": [],
+    "models": [
+        "FUSB302"
+    ],
+    "areas": [
+        "Power",
+        "USB"
+    ]
+}

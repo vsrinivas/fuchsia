@@ -1,0 +1,13 @@
+{
+    "short_description": "AMLogic power driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "A311D",
+        "S905D2",
+        "T931"
+    ],
+    "areas": [
+        "Power"
+    ]
+}

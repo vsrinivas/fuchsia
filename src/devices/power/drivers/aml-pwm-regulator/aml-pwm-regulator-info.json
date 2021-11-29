@@ -1,0 +1,9 @@
+{
+    "short_description": "AMLogic PWM regulator driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Power"
+    ]
+}

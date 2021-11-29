@@ -1,0 +1,13 @@
+{
+    "short_description": "Core power driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Power"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "short_description": "Texas Instruments INA231 power sensor driver",
+    "manufacturer": "Texas Instruments",
+    "families": [],
+    "models": [
+        "INA231"
+    ],
+    "areas": [
+        "Power"
+    ]
+}

@@ -1,0 +1,11 @@
+{
+    "short_description": "Silergy Buck converter driver",
+    "manufacturer": "Silergy",
+    "families": [],
+    "models": [
+        "sy8827n"
+    ],
+    "areas": [
+        "Power"
+    ]
+}

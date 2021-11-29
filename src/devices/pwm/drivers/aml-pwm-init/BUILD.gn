@@ -37,6 +37,7 @@ fuchsia_driver("aml-pwm-init-driver") {
 }
 
 fuchsia_driver_component("aml-pwm-init") {
+  info = "aml-pwm-init-info.json"
   component_name = "aml-pwm-init"
   deps = [ ":aml-pwm-init-driver" ]
 }

@@ -39,6 +39,7 @@ fuchsia_driver("nelson-brownout-protection-driver") {
 }
 
 fuchsia_driver_component("nelson-brownout-protection") {
+  info = "nelson-brownout-protection-info.json"
   component_name = "nelson-brownout-protection"
   deps = [ ":nelson-brownout-protection-driver" ]
 }

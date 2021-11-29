@@ -48,6 +48,7 @@ fuchsia_driver("fusb302-driver") {
 }
 
 fuchsia_driver_component("fusb302") {
+  info = "fusb302-info.json"
   component_name = "fusb302"
   deps = [ ":fusb302-driver" ]
 }
