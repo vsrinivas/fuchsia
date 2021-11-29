@@ -56,7 +56,7 @@ class ThreadConfigManager : public ThreadConfigReader, ThreadConfigWriter {
  public:
   explicit ThreadConfigManager(const std::string& path);
 
-  ~ThreadConfigManager() = default;
+  ~ThreadConfigManager();
   ThreadConfigManager(const ThreadConfigManager&) = delete;
   ThreadConfigManager(ThreadConfigManager&&) = delete;
   ThreadConfigManager& operator=(const ThreadConfigManager&) = delete;
