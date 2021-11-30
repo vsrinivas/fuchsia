@@ -182,13 +182,26 @@ executable("please_fix_the_bugs") {
 }
 ```
 
-The example above demonstrates suppressing all sanitizers. However you should at
+The examples above demonstrate suppressing all sanitizers. However you should at
 most suppress sanitizers that are causing failures. Please track suppressions
 by filing a bug and referencing it in the comment as shown above.
 
-Furthermore the example above suppresses at the granularity of an entire
-executable. For finer-grained suppressions you may detect the presence of
-sanitizers in code. For C/C++ see:
+Another common approach for disabling sanitizers works as follows:
+
+```gn
+executable("too_slow_when_built_with_asan") {
+  ...
+  exclude_toolchain_tags = [ "asan" ]
+}
+```
+
+Both examples above suppress at the granularity of an entire executable.
+For finer-grained suppressions you may detect the presence of sanitizers in
+code. This is useful for instance for suppressing sanitizers in a particular test
+case, but not more broadly. For instance this is used by tests that intentionally
+introduce memory errors and test the sanitizer runtime itself.
+
+For C/C++ see:
 
 *   [Conditional Compilation with
     `__has_feature(address_sanitizer)`][asan-conditional]{:.external}
