@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This board produces a chromebook-x64 image which attempts to tune to have a
+# more stable performance profile, which can be useful for benchmarking.
+#
+# This is using the same tuning done for the x64 board, please check
+# x64-reduced-perf-variation.gni for more details.
+#
+# "Real world" or "whole system" benchmarks may consider using just the plain
+# x64 board to ensure that measured results match real-world usage more
+# closely, at the expense of higher variance in benchmark results.
+
+import("chromebook-x64.gni")
+
+board_bootfs_labels += [ "//boards/kernel_cmdline:x64-reduced-perf-variation" ]
