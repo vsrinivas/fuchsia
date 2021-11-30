@@ -199,7 +199,7 @@ static bool ipt_config_lip = false;
 
 // maximum space, in bytes, for trace buffers (per cpu)
 // This isn't necessarily
-// MAX_NUM_CHUNKS * (1 << (MAX_CHUNK_ORDER + PAGE_SIZE_SHIFT)).
+// MAX_NUM_CHUNKS * (1 << (MAX_CHUNK_ORDER + __builtin_ctzl(zx_system_get_page_size()))).
 // Buffers have to be naturally aligned contiguous pages, but we can have
 // a lot of them. Supporting large buffers and/or lots of them is for
 // experimentation.
@@ -210,12 +210,6 @@ static bool ipt_config_lip = false;
 
 // maximum size of each buffer, in pages (1MB)
 #define MAX_CHUNK_ORDER 8
-
-#if PAGE_SIZE == 4096
-#define PAGE_SIZE_SHIFT 12
-#else
-#error "unsupported page size"
-#endif
 
 #define BIT(x, b) ((x) & (1u << (b)))
 
@@ -294,8 +288,8 @@ static zx_status_t InsntraceInitOnce() {
 // the stop bit to the last entry.
 void InsntraceDevice::MakeTopa(ipt_per_trace_state_t* per_trace) {
   const size_t run_len_log2 = per_trace->chunk_order;
-  assert(run_len_log2 + PAGE_SIZE_SHIFT <= IPT_TOPA_MAX_SHIFT);
-  assert(run_len_log2 + PAGE_SIZE_SHIFT >= IPT_TOPA_MIN_SHIFT);
+  assert(run_len_log2 + __builtin_ctzl(zx_system_get_page_size()) <= IPT_TOPA_MAX_SHIFT);
+  assert(run_len_log2 + __builtin_ctzl(zx_system_get_page_size()) >= IPT_TOPA_MIN_SHIFT);
 
   uint32_t curr_table = 0;
   uint32_t curr_idx = 0;
@@ -310,8 +304,8 @@ void InsntraceDevice::MakeTopa(ipt_per_trace_state_t* per_trace) {
     io_buffer_t* topa = &per_trace->topas[curr_table];
     zx_paddr_t pa = io_buffer_phys(buffer);
 
-    uint64_t val =
-        IPT_TOPA_ENTRY_PHYS_ADDR(pa) | IPT_TOPA_ENTRY_SIZE(run_len_log2 + PAGE_SIZE_SHIFT);
+    uint64_t val = IPT_TOPA_ENTRY_PHYS_ADDR(pa) |
+                   IPT_TOPA_ENTRY_SIZE(run_len_log2 + __builtin_ctzl(zx_system_get_page_size()));
     auto table = reinterpret_cast<uint64_t*>(io_buffer_virt(topa));
     table[curr_idx] = val;
     last_entry = &table[curr_idx];
@@ -427,9 +421,10 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer1(ipt_per_trace_state_t* per_trace,
 
   for (uint32_t i = 0; i < num; ++i) {
     // ToPA entries of size N must be aligned to N, too.
-    uint32_t alignment_log2 = PAGE_SIZE_SHIFT + order;
-    status = io_buffer_init_aligned(&per_trace->chunks[i], bti_.get(), chunk_pages * PAGE_SIZE,
-                                    alignment_log2, IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    uint32_t alignment_log2 = __builtin_ctzl(zx_system_get_page_size()) + order;
+    status = io_buffer_init_aligned(&per_trace->chunks[i], bti_.get(),
+                                    chunk_pages * zx_system_get_page_size(), alignment_log2,
+                                    IO_BUFFER_RW | IO_BUFFER_CONTIG);
     if (status != ZX_OK)
       return status;
     // Keep track of allocated buffers as we go in case we later fail:
@@ -521,7 +516,7 @@ zx_status_t InsntraceDevice::X86PtAllocBuffer(const BufferConfig* config,
     return ZX_ERR_INVALID_ARGS;
   size_t chunk_pages = 1 << config->chunk_order;
   size_t nr_pages = config->num_chunks * chunk_pages;
-  size_t total_per_trace = nr_pages * PAGE_SIZE;
+  size_t total_per_trace = nr_pages * zx_system_get_page_size();
   if (total_per_trace > MAX_PER_TRACE_SPACE)
     return ZX_ERR_INVALID_ARGS;
 
