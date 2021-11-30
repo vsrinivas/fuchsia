@@ -14,8 +14,8 @@ use {
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::channel::mpsc::unbounded,
     input_pipeline::{
-        gfx_touch_handler::GfxTouchHandler, input_pipeline::InputPipelineAssembly,
-        mouse_handler::MouseHandler, Position, Size,
+        gfx_mouse_handler::GfxMouseHandler, gfx_touch_handler::GfxTouchHandler,
+        input_pipeline::InputPipelineAssembly, Position, Size,
     },
     std::sync::{Arc, Weak},
 };
@@ -276,7 +276,7 @@ impl SceneManager for GfxSceneManager {
         mut assembly: InputPipelineAssembly,
     ) -> InputPipelineAssembly {
         let (width_pixels, height_pixels) = self.display_size.pixels();
-        let mouse_handler = MouseHandler::new(
+        let mouse_handler = GfxMouseHandler::new(
             Position { x: width_pixels, y: height_pixels },
             position_sender,
             self.session.clone(),

@@ -17,8 +17,8 @@ use {
     std::rc::Rc,
 };
 
-/// A [`MouseHandler`] tracks the mouse position and sends updates to clients.
-pub struct MouseHandler {
+/// A [`GfxMouseHandler`] tracks the mouse position and sends updates to clients.
+pub struct GfxMouseHandler {
     /// The current position.
     current_position: RefCell<Position>,
 
@@ -37,7 +37,7 @@ pub struct MouseHandler {
 }
 
 #[async_trait(?Send)]
-impl InputHandler for MouseHandler {
+impl InputHandler for GfxMouseHandler {
     async fn handle_input_event(
         self: Rc<Self>,
         input_event: input_device::InputEvent,
@@ -64,8 +64,8 @@ impl InputHandler for MouseHandler {
     }
 }
 
-impl MouseHandler {
-    /// Creates a new [`MouseHandler`] that sends pointer events to Scenic and tracks cursor
+impl GfxMouseHandler {
+    /// Creates a new [`GfxMouseHandler`] that sends pointer events to Scenic and tracks cursor
     /// position.
     ///
     /// # Parameters
@@ -78,8 +78,8 @@ impl MouseHandler {
         position_sender: Sender<Position>,
         scenic_session: scenic::SessionPtr,
         scenic_compositor_id: u32,
-    ) -> Rc<MouseHandler> {
-        Rc::new(MouseHandler {
+    ) -> Rc<GfxMouseHandler> {
+        Rc::new(GfxMouseHandler {
             max_position,
             position_sender: RefCell::new(position_sender),
             scenic_session,
@@ -298,7 +298,7 @@ mod tests {
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mouse_handler = MouseHandler::new(
+        let mouse_handler = GfxMouseHandler::new(
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
@@ -352,7 +352,7 @@ mod tests {
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mouse_handler = MouseHandler::new(
+        let mouse_handler = GfxMouseHandler::new(
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
@@ -410,7 +410,7 @@ mod tests {
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mouse_handler = MouseHandler::new(
+        let mouse_handler = GfxMouseHandler::new(
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
@@ -464,7 +464,7 @@ mod tests {
 
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
-        let mouse_handler = MouseHandler::new(
+        let mouse_handler = GfxMouseHandler::new(
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
