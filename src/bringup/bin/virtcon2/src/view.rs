@@ -7,7 +7,7 @@ use {
     crate::args::{MAX_FONT_SIZE, MIN_FONT_SIZE},
     crate::colors::{ColorScheme, DARK_COLOR_SCHEME, LIGHT_COLOR_SCHEME, SPECIAL_COLOR_SCHEME},
     crate::terminal::Terminal,
-    crate::text_grid::{font_to_cell_size, TextGridFacet, TextGridMessages},
+    crate::text_grid::{TextGridFacet, TextGridMessages},
     anyhow::{anyhow, Error},
     carnelian::{
         drawing::{load_font, FontFace},
@@ -15,7 +15,7 @@ use {
         render::{rive::load_rive, Context as RenderContext},
         scene::{
             facets::{FacetId, RiveFacet},
-            scene::{Scene, SceneBuilder},
+            scene::{Scene, SceneBuilder, MAX_ORDER},
         },
         AppContext, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
     },
@@ -38,6 +38,7 @@ use {
         grid::Scroll,
         term::{color::Rgb, SizeInfo},
     },
+    terminal::font_to_cell_size,
 };
 
 fn is_control_only(modifiers: &input::Modifiers) -> bool {
@@ -93,11 +94,8 @@ const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
 // Amount of change to font size when zooming.
 const FONT_SIZE_INCREMENT: f32 = 14.0;
 
-// Maximum terminal size.
-// TODO(fxbug.dev/85164): Increase these when Mold/Carnelian is not limited to
-// 65536 layers.
-const MAX_COLUMNS: usize = 240;
-const MAX_ROWS: usize = 135;
+// Maximum terminal size in cells. We support up to 4 layers per cell.
+const MAX_CELLS: u32 = MAX_ORDER / 4;
 
 struct Animation {
     // Artboard has weak references to data owned by file.
@@ -227,7 +225,17 @@ impl VirtualConsoleViewAssistant {
         let cell_size = font_to_cell_size(new_font_size, new_font_size * CELL_PADDING_FACTOR);
         let grid_size =
             Size::new(new_size.width / cell_size.width, new_size.height / cell_size.height).floor();
-        let clamped_grid_size = grid_size.min(Size::new(MAX_COLUMNS as f32, MAX_ROWS as f32));
+        // Clamp width to respect `MAX_CELLS`.
+        let clamped_grid_size = if grid_size.area() > MAX_CELLS as f32 {
+            assert!(
+                grid_size.height <= MAX_CELLS as f32,
+                "terminal height greater than MAX_CELLS: {}",
+                grid_size.height
+            );
+            Size::new(MAX_CELLS as f32 / grid_size.height, grid_size.height).floor()
+        } else {
+            grid_size
+        };
         let clamped_size = Size::new(
             clamped_grid_size.width * cell_size.width,
             clamped_grid_size.height * cell_size.height,

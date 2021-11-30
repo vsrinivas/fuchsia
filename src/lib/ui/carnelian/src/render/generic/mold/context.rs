@@ -141,7 +141,7 @@ fn copy_region_to_image(
 
 #[derive(Debug)]
 pub struct MoldContext {
-    buffer_collection: BufferCollectionSynchronousProxy,
+    buffer_collection: Option<BufferCollectionSynchronousProxy>,
     size: Size2D<u32>,
     display_rotation: DisplayRotation,
     images: Vec<RefCell<VmoImage>>,
@@ -172,7 +172,18 @@ impl MoldContext {
             .expect("failed to set constraints on sysmem buffer");
 
         Self {
-            buffer_collection,
+            buffer_collection: Some(buffer_collection),
+            size,
+            display_rotation,
+            images: vec![],
+            index_map: HashMap::new(),
+            composition_id: 0,
+        }
+    }
+
+    pub(crate) fn without_token(size: Size2D<u32>, display_rotation: DisplayRotation) -> Self {
+        Self {
+            buffer_collection: None,
             size,
             display_rotation,
             images: vec![],
@@ -213,7 +224,7 @@ impl Context<Mold> for MoldContext {
     }
 
     fn get_image(&mut self, image_index: u32) -> MoldImage {
-        let buffer_collection = &mut self.buffer_collection;
+        let buffer_collection = self.buffer_collection.as_mut().expect("buffer_collection");
         let images = &mut self.images;
         let width = self.size.width;
         let height = self.size.height;

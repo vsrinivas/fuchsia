@@ -10,6 +10,7 @@ group("ui") {
     "input-synthesis",
     "keymaps",
     "scenic/cpp",
+    "terminal",
   ]
 }
 
@@ -22,6 +23,7 @@ group("tests") {
     "fuchsia-framebuffer:fuchsia-framebuffer-tests",
     "input-synthesis:tests",
     "keymaps:tests",
+    "terminal:tests",
   ]
 }
 

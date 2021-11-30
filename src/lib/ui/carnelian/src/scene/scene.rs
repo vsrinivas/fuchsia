@@ -31,6 +31,13 @@ use std::{
     fmt::{self, Debug},
 };
 
+// Mold backend currently supports up to Order::MAX / 2 orders.
+const BACKEND_MAX_ORDER: u32 = Order::MAX.as_u32() / 2;
+
+// Maximum order supported by scene. 3 layers are reserved for
+/// scene features such as rounded corners.
+pub const MAX_ORDER: u32 = BACKEND_MAX_ORDER - 3;
+
 struct DirectLayerGroup<'a>(&'a mut Composition);
 
 impl LayerGroup for DirectLayerGroup<'_> {
@@ -38,10 +45,12 @@ impl LayerGroup for DirectLayerGroup<'_> {
         self.0.clear();
     }
     fn insert(&mut self, order: Order, layer: Layer) {
-        self.0.insert(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)), layer);
+        assert!(order.as_u32() < MAX_ORDER, "invalid order for scene: {}", order.as_u32());
+        self.0.insert(order, layer);
     }
     fn remove(&mut self, order: Order) {
-        self.0.remove(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)));
+        assert!(order.as_u32() < MAX_ORDER, "invalid order for scene: {}", order.as_u32());
+        self.0.remove(order);
     }
 }
 
@@ -52,9 +61,11 @@ impl LayerGroup for SimpleLayerGroup<'_> {
         self.0.clear();
     }
     fn insert(&mut self, order: Order, layer: Layer) {
+        assert!(order.as_u32() < MAX_ORDER, "invalid order for scene: {}", order.as_u32());
         self.0.insert(order, layer);
     }
     fn remove(&mut self, order: Order) {
+        assert!(order.as_u32() < MAX_ORDER, "invalid order for scene: {}", order.as_u32());
         self.0.remove(&order);
     }
 }
@@ -290,12 +301,9 @@ impl Scene {
             composition.insert(Order::try_from(order).unwrap_or_else(|e| panic!("{}", e)), layer);
         }
 
-        // Mold backend currently supports up to Order::MAX / 2 orders.
-        const MAX_ORDER: u32 = Order::MAX.as_u32() / 2;
-
-        const CORNER_KOCKOUTS_ORDER: u32 = MAX_ORDER;
-        const MOUSE_CURSOR_LAYER_0_ORDER: u32 = MAX_ORDER - 1;
-        const MOUSE_CURSOR_LAYER_1_ORDER: u32 = MAX_ORDER - 2;
+        const CORNER_KOCKOUTS_ORDER: u32 = BACKEND_MAX_ORDER;
+        const MOUSE_CURSOR_LAYER_0_ORDER: u32 = BACKEND_MAX_ORDER - 1;
+        const MOUSE_CURSOR_LAYER_1_ORDER: u32 = BACKEND_MAX_ORDER - 2;
 
         if let Some(position) = mouse_position {
             if let Some(raster) = mouse_cursor_raster {

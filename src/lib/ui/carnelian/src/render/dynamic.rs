@@ -73,10 +73,10 @@ pub struct PostCopy {
 /// Rendering context and API start point.
 #[derive(Debug)]
 pub struct Context {
-    pub(crate) inner: ContextInner,
+    pub inner: ContextInner,
 }
 #[derive(Debug)]
-pub(crate) enum ContextInner {
+pub enum ContextInner {
     Mold(MoldContext),
     Spinel(SpinelContext),
 }

@@ -23,6 +23,16 @@ pub use raster::{MoldRaster, MoldRasterBuilder};
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Mold;
 
+impl Mold {
+    // Available for tests.
+    pub fn new_context_without_token(
+        size: Size2D<u32>,
+        display_rotation: DisplayRotation,
+    ) -> MoldContext {
+        MoldContext::without_token(size, display_rotation)
+    }
+}
+
 impl Backend for Mold {
     type Image = MoldImage;
     type Context = MoldContext;
