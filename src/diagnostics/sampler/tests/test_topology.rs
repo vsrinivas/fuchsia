@@ -14,14 +14,10 @@ use fuchsia_component_test::{
 use futures::{channel::mpsc, lock::Mutex, StreamExt};
 use std::sync::Arc;
 
-const MOCK_COBALT_URL: &str =
-    "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/mock_cobalt.cm";
-const SINGLE_COUNTER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/single_counter_test_component.cm";
-const SAMPLER_URL: &str =
-    "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/sampler-for-test.cm";
-const ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/sampler-integration-tests#meta/archivist-for-embedding.cm";
+const MOCK_COBALT_URL: &str = "#meta/mock_cobalt.cm";
+const SINGLE_COUNTER_URL: &str = "#meta/single_counter_test_component.cm";
+const SAMPLER_URL: &str = "#meta/sampler-for-test.cm";
+const ARCHIVIST_URL: &str = "#meta/archivist-for-embedding.cm";
 
 pub async fn create() -> Result<RealmInstance, Error> {
     let builder = RealmBuilder::new().await?;
