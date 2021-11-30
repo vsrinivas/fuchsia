@@ -1,0 +1,9 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Path to file to use for font
+  terminal_font_path =
+      "//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"
+}

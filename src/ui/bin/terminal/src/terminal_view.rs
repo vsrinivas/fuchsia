@@ -11,7 +11,7 @@ use {
     anyhow::{Context as _, Error},
     carnelian::{
         color::Color,
-        drawing::FontFace,
+        drawing::{load_font, FontFace},
         input::{self},
         render::Context as RenderContext,
         scene::{
@@ -27,7 +27,7 @@ use {
     pty::Pty,
     std::{
         any::Any, cell::RefCell, convert::TryFrom, ffi::CStr, ffi::CString, fs::File,
-        io::prelude::*, rc::Rc,
+        io::prelude::*, path::PathBuf, rc::Rc,
     },
     term_model::{
         ansi::Processor,
@@ -41,8 +41,7 @@ use {
     terminal::font_to_cell_size,
 };
 
-static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
+const FONT: &'static str = "/pkg/data/font.ttf";
 
 // Default font size.
 const FONT_SIZE: f32 = 14.0;
@@ -225,7 +224,7 @@ impl TerminalViewAssistant {
 
         let term = Term::new(&TerminalConfig::default(), &size_info, Clipboard::new(), event_proxy);
 
-        let font = FontFace::new(FONT_DATA).expect("unable to load font data");
+        let font = load_font(PathBuf::from(FONT)).expect("unable to load font data");
 
         TerminalViewAssistant {
             last_known_size: Size::zero(),
