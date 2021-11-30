@@ -107,6 +107,7 @@ cts_resource("resolve-once-bin") {
   sources = get_target_outputs(":resolve-once-file")
   outputs = [ "bin/resolve_once" ]
   deps = [ ":resolve-once-file" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("resolve-once-component") {
@@ -124,6 +125,7 @@ cts_resource("resolve-twice-bin") {
   sources = get_target_outputs(":resolve-twice-file")
   outputs = [ "bin/resolve_twice" ]
   deps = [ ":resolve-twice-file" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("resolve-twice-component") {
@@ -141,6 +143,7 @@ cts_resource("resolve-infinite-loop-bin") {
   sources = get_target_outputs(":resolve-infinite-loop-file")
   outputs = [ "bin/resolve_infinite_loop" ]
   deps = [ ":resolve-infinite-loop-file" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("resolve-infinite-loop-component") {
@@ -152,6 +155,7 @@ cts_fuchsia_component("resolve-infinite-loop-component") {
 cts_resource("resolve-to-not-found-bin") {
   sources = [ "test_bins/resolve_to_not_found" ]
   outputs = [ "bin/resolve_to_not_found" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("resolve-to-not-found-component") {
@@ -163,6 +167,7 @@ cts_fuchsia_component("resolve-to-not-found-component") {
 cts_resource("shebang-echo-arguments-bin") {
   sources = [ "test_bins/shebang_echo_arguments" ]
   outputs = [ "bin/shebang_echo_arguments" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("shebang-echo-arguments-component") {
@@ -174,6 +179,7 @@ cts_fuchsia_component("shebang-echo-arguments-component") {
 cts_resource("use-script-as-interpreter-bin") {
   sources = [ "test_bins/use_script_as_interpreter" ]
   outputs = [ "bin/use_script_as_interpreter" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("use-script-as-interpreter-component") {
@@ -185,6 +191,7 @@ cts_fuchsia_component("use-script-as-interpreter-component") {
 cts_resource("shebang-infinite-loop-bin") {
   sources = [ "test_bins/shebang_infinite_loop" ]
   outputs = [ "bin/shebang_infinite_loop" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("shebang-infinite-loop-component") {
@@ -196,6 +203,7 @@ cts_fuchsia_component("shebang-infinite-loop-component") {
 cts_resource("attempt-use-shell-outside-package-script") {
   sources = [ "test_bins/attempt_use_shell_outside_package.sh" ]
   outputs = [ "bin/attempt_use_shell_outside_package.sh" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("attempt-use-shell-outside-package-component") {
@@ -207,6 +215,7 @@ cts_fuchsia_component("attempt-use-shell-outside-package-component") {
 cts_resource("too-long-shebang-bin") {
   sources = [ "test_bins/too_long_shebang" ]
   outputs = [ "bin/too_long_shebang" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("too-long-shebang-component") {
@@ -218,6 +227,7 @@ cts_fuchsia_component("too-long-shebang-component") {
 cts_resource("use-resolve-from-shebang-bin") {
   sources = [ "test_bins/use_resolve_from_shebang" ]
   outputs = [ "bin/use_resolve_from_shebang" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("use-resolve-from-shebang-component") {
@@ -235,6 +245,7 @@ cts_resource("use-shebang-from-resolve-bin") {
   sources = get_target_outputs(":use-shebang-from-resolve-file")
   outputs = [ "bin/use_shebang_from_resolve" ]
   deps = [ ":use-shebang-from-resolve-file" ]
+  allow_binary_output_dir = true
 }
 
 cts_fuchsia_component("use-shebang-from-resolve-component") {

@@ -13,6 +13,15 @@
 # target in the build listed in $deps.  If that would be a generated_file()
 # target, then use generated_resource() instead of resource().
 #
+# Using resource() to install an ELF binary file into bin/ or test/ will
+# break instrumented builds (with an error that only occurs very late in
+# the build, during the packaging step). To solve this, use renamed_binary()
+# to install them instead.
+#
+# Due to this, using resource() with an output directory of bin/ or test/
+# is an error by default, but can be overridden for data files by setting
+# allow_binary_output_dir to true!
+#
 # Parameters
 #
 #   data_deps
@@ -45,10 +54,38 @@
 #     See copy() for details.
 #     Type: list(file)
 #
+#   allow_binary_output_dir
+#     Optional: Set to true to allow copying a resource into either
+#     bin/ or test/. Useful when installing non-ELF files there, while
+#     ELF files should be installed using renamed_binary() instead.
+#     Type: boolean
+#
 # See copy() for other parameters.
 template("resource") {
   if (invoker.sources != []) {
     _label = get_label_info(":$target_name", "label_with_toolchain")
+  }
+
+  # Prevent binaries to be copied to bin/ or test/ with resource() to prevent
+  # build breaks with instrumented builds. See https://fxbug.dev/89436
+  #
+  _allow_binary_output_dir = defined(invoker.allow_binary_output_dir) &&
+                             invoker.allow_binary_output_dir
+  if (!_allow_binary_output_dir) {
+    _outputs = invoker.outputs
+
+    # invoker.outputs can be a list or a string. If it is a string, turn
+    # it into a list here.
+    if ("${_outputs}" == _outputs) {
+      _outputs = [ _outputs ]
+    } else {
+      assert(_outputs == [ _outputs[0] ],
+             "outputs should be a string or a list of one string!")
+    }
+    _output_dir = get_path_info(_outputs[0], "dir")
+    assert(
+        _output_dir != "bin" && _output_dir != "test",
+        "Installing file to bin/ or test/ requires renamed_binary() or allow_binary_output_dir!")
   }
 
   group(target_name) {
@@ -136,10 +173,29 @@ template("resource") {
 #     ]
 #     Type: list(scope)
 #
+#   allow_binary_output_dir
+#     See resource()
+#
 #   testonly, visibility
 template("resource_group") {
   if (invoker.files != []) {
     _label = get_label_info(":$target_name", "label_with_toolchain")
+  }
+
+  if (!(defined(invoker.allow_binary_output_dir) &&
+        invoker.allow_binary_output_dir)) {
+    # Prevent binaries to be copied to bin/ or test/ with resource() to prevent
+    # build breaks with instrumented builds. See https://fxbug.dev/89436
+    #
+    # NOTE: This check cannot be performed in the metadata definition below
+    # because GN will complain that the _dest_with_prefix temporary variable
+    # is not a list (metadata scope variables can only be lists).
+    foreach(file, invoker.files) {
+      _dest_dir = get_path_info(file.dest, "dir")
+      assert(
+          _dest_dir != "bin" && _dest_dir != "test",
+          "Installing file to bin/ or test/ requires renamed_binary() or allow_binary_output_dir!")
+    }
   }
 
   group(target_name) {
@@ -236,6 +292,9 @@ template("resource_group") {
 #     $sources list.
 #     Type: list(label)
 #
+#   allow_binary_output_dir
+#     See resource()
+#
 #   deps
 #     Optional: Targets that produce $sources.  Any files listed in
 #     $sources that are produced by the build should be produced by a
@@ -257,6 +316,12 @@ template("resource_tree") {
     assert(dest_dir != "." && dest_dir != ".." &&
                string_replace(dest_dir, "./", "") == dest_dir,
            "dest_dir cannot contain . or .. path elements!: $dest_dir")
+    if (!(defined(invoker.allow_binary_output_dir) &&
+          invoker.allow_binary_output_dir)) {
+      assert(
+          dest_dir != "bin" && dest_dir != "test",
+          "Installing file to bin/ or test/ requires renamed_binary() or allow_binary_output_dir!")
+    }
     dest_dir = string_replace(dest_dir + "/", "//", "/")
   }
 

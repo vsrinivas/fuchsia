@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dist/generated_resource.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/dist/resource.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
@@ -60,19 +61,18 @@ executable("profile-helper") {
   ]
 }
 
-resource("packaged-publish-data-helper") {
+renamed_binary("packaged-publish-data-helper") {
   testonly = true
-  deps = [ ":publish-data-helper" ]
-  outputs =
-      [ "test/sys/runtests-utils-testdata/publish-data/publish-data-helper" ]
-  sources = [ "$root_out_dir/publish-data-helper" ]
+  dest = "test/sys/runtests-utils-testdata/publish-data/publish-data-helper"
+  source = "$root_out_dir/publish-data-helper"
+  source_deps = [ ":publish-data-helper" ]
 }
 
-resource("packaged-profile-helper") {
+renamed_binary("packaged-profile-helper") {
   testonly = true
-  deps = [ ":profile-helper" ]
-  outputs = [ "test/sys/runtests-utils-testdata/profile/profile-helper" ]
-  sources = [ "$root_out_dir/profile-helper" ]
+  dest = "test/sys/runtests-utils-testdata/profile/profile-helper"
+  source = "$root_out_dir/profile-helper"
+  source_deps = [ ":profile-helper" ]
 }
 
 resource("packaged-raw-profile") {

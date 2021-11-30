@@ -69,9 +69,9 @@ from typing import Any, Iterable, List, Set, Dict, Tuple, Optional
 # 5) Ignore files under data/, meta/ and lib/firmware, as they could be
 #    any ELF binaries for non-Fuchsia systems, or for testing.
 #
-# 6) Verify that debug (unstripped) files for binaries are provided
+# 6) Verify that unstripped files for binaries are provided
 #    in the build root directory, or toolchain-specific lib directories.
-#    Prebuilts are an exception, and are allowed not to have debug files.
+#    Prebuilts are an exception, and are allowed not to have unstripped files.
 #
 
 
@@ -152,11 +152,11 @@ def verify_elf_dependencies(
     return (errors, libraries)
 
 
-def find_debug_file(
+def find_unstripped_file(
         filename: str,
         depfile_items: Set[str],
         toolchain_lib_dirs: List[str] = []) -> Optional[str]:
-    """Find the debug version of a given ELF binary.
+    """Find the unstripped version of a given ELF binary.
 
         Args:
           filename: input file path in build directory.
@@ -169,7 +169,7 @@ def find_debug_file(
           Path to the debug file, if it exists, or None.
         """
     if os.path.exists(filename + '.debug'):
-        # Zircon-specific toolchains currently write the debug files
+        # Zircon-specific toolchains currently write the unstripped files
         # for .../foo as .../foo.debug.
         debugfile = filename + '.debug'
     else:
@@ -234,9 +234,9 @@ def main():
         action='store_true',
         help='Verify that ELF binaries are stripped.')
     parser.add_argument(
-        '--check-debug-files',
+        '--check-unstripped-files',
         action='store_true',
-        help='Verify that each ELF binary has its own debug file available.' + \
+        help='Verify that each ELF binary has its own unstripped file available.' + \
              'this requires --toolchain-lib-dir to find toolchain-provided runtime debug files')
     parser.add_argument(
         '--toolchain-lib-dir',
@@ -370,22 +370,18 @@ def main():
                 errors.append(
                     '%s is not stripped: %s' % (target, info.filename))
 
-    # Verify that all ELF files have their debug file available.
-    if args.check_debug_files:
+    # Verify that all ELF files have their unstripped file available.
+    if args.check_unstripped_files:
         for target, source_file in manifest_entries.items():
             # Prebuilts are allowed to have missing debug files.
             # See: fxbug.dev/89174
             if "/prebuilt/" in source_file:
                 continue
             if target in elf_entries:
-                debugfile = find_debug_file(
+                unstripped = find_unstripped_file(
                     source_file, depfile_items, args.toolchain_lib_dir)
-                if debugfile is None:
-                    print('WARNING: No debug file found for %s' % source_file)
-                    # TODO(fxbug.dev/89436): variant builds get
-                    # (falsely?) flagged.
-                    # Fix, then delete above and uncomment below.
-                    #errors.append('No debug file found for ' + source_file)
+                if unstripped is None:
+                    errors.append('No unstripped file found for ' + source_file)
 
     if errors:
         print(

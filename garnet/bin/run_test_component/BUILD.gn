@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//build/dist/renamed_binary.gni")
 
 source_set("lib") {
   testonly = true
@@ -92,11 +93,12 @@ group("run-test-component") {
 }
 
 # Deprecated binary name
-resource("bin-deprecated") {
+renamed_binary("bin-deprecated") {
   testonly = true
-  data_deps = [ ":bin" ]
-  sources = [ "$root_out_dir/run-test-component" ]
-  outputs = [ "bin/run_test_component" ]
+  dest = "bin/run_test_component"
+  source = "$root_out_dir/run-test-component"
+  source_deps = [ ":bin" ]
+  keep_original = true
 }
 
 fuchsia_shell_package("run-test-component-pkg") {
