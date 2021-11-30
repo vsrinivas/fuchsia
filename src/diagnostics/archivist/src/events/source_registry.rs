@@ -250,7 +250,7 @@ mod tests {
         static ref LEGACY_IDENTITY: ComponentIdentity =
             ComponentIdentity::from_identifier_and_url(LEGACY_ID.clone(), &*TEST_URL);
         static ref MONIKER_ID: ComponentIdentifier =
-            ComponentIdentifier::parse_from_moniker("./a/b").unwrap();
+            ComponentIdentifier::parse_from_moniker("./a:0/b:1").unwrap();
         static ref MONIKER_IDENTITY: ComponentIdentity =
             ComponentIdentity::from_identifier_and_url(MONIKER_ID.clone(), &*TEST_URL);
     }

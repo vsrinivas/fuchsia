@@ -43,7 +43,7 @@ async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
 /// This component receives `DirectoryReady` events when its child makes them available.
 /// Those directories contain a `Trigger` service that should be accessible when opening the
 /// directory.
-/// It sends "Saw: /path/to/dir on /some_moniker" for each successful read.
+/// It sends "Saw: /path/to/dir on /some_moniker:0" for each successful read.
 #[fasync::run_singlethreaded]
 async fn main() {
     let event_source = EventSource::new().unwrap();
@@ -65,7 +65,7 @@ async fn main() {
             event.component_url(),
             "fuchsia-pkg://fuchsia.com/events_integration_test#meta/directory_ready_child.cm"
         );
-        assert_eq!(event.target_moniker(), "./child");
+        assert_eq!(event.target_moniker(), "./child:0");
 
         match event.result() {
             Ok(payload) => {

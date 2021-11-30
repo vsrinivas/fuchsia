@@ -35,9 +35,9 @@ async fn main() {
     EventSequence::new()
         .all_of(
             vec![
-                EventMatcher::ok().moniker_regex("./child_a"),
-                EventMatcher::ok().moniker_regex("./child_b"),
-                EventMatcher::ok().moniker_regex("./child_c"),
+                EventMatcher::ok().moniker_regex("./child_a:0"),
+                EventMatcher::ok().moniker_regex("./child_b:0"),
+                EventMatcher::ok().moniker_regex("./child_c:0"),
             ],
             Ordering::Unordered,
         )

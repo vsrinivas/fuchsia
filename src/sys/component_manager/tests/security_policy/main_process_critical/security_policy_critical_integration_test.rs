@@ -133,7 +133,7 @@ async fn verify_main_process_critical_denied() -> Result<(), Error> {
     client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
         .context("failed to connect to fuchsia.component.Binder of child")?;
 
-    let mut matcher = EventMatcher::ok().moniker_regex(format!("./{}", child_name));
+    let mut matcher = EventMatcher::ok().moniker_regex(format!("./{}:0", child_name));
     matcher.expect_match::<Started>(&mut event_stream).await;
     matcher.expect_match::<Stopped>(&mut event_stream).await;
 

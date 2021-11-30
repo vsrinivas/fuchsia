@@ -41,7 +41,7 @@ async fn base_resolver_appmgr_bridge_test() {
 
     // // Expect start to succeed because we're using the appmgr loader
     EventMatcher::ok()
-        .moniker_regex("./echo_server")
+        .moniker_regex("./echo_server:0")
         .expect_match::<Started>(&mut event_stream)
         .await;
 }

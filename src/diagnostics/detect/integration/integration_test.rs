@@ -321,7 +321,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     // Await the test result.
     if test_data.bails {
         let root_name = realm_instance.root.child_name();
-        let moniker = format!(".*{}.*detect", root_name);
+        let moniker = format!(".*{}.*detect:0", root_name);
         let exit_future = EventMatcher::ok()
             .stop(None)
             .moniker_regex(moniker)

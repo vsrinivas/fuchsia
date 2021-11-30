@@ -283,8 +283,8 @@ mod tests {
     #[fuchsia::test]
     async fn attributed_inspect_two_v2_streams_different_identities() {
         let mut harness = TestHarness::with_retained_sinks();
-        let log_reader1 = harness.create_event_stream_reader("./foo", "http://foo.com");
-        let log_reader2 = harness.create_event_stream_reader("./bar", "http://bar.com");
+        let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
+        let log_reader2 = harness.create_event_stream_reader("./bar:0", "http://bar.com");
 
         attributed_inspect_two_streams_different_identities_by_reader!(
             harness,
@@ -296,7 +296,7 @@ mod tests {
     #[fuchsia::test]
     async fn attributed_inspect_two_mixed_streams_different_identities() {
         let mut harness = TestHarness::with_retained_sinks();
-        let log_reader1 = harness.create_event_stream_reader("./foo", "http://foo.com");
+        let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::Legacy {

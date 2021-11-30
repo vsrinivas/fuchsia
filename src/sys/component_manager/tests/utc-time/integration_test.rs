@@ -81,10 +81,10 @@ async fn builtin_time_service_and_clock_routed() {
             vec![
                 EventMatcher::ok()
                     .stop(Some(ExitStatusMatcher::Clean))
-                    .moniker_regex("./time_client"),
+                    .moniker_regex("./time_client:0"),
                 EventMatcher::ok()
                     .stop(Some(ExitStatusMatcher::Clean))
-                    .moniker_regex("./maintainer"),
+                    .moniker_regex("./maintainer:0"),
             ],
             Ordering::Unordered,
         )

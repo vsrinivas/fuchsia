@@ -320,7 +320,7 @@ async fn capability_requested_event_at_parent() {
         fsys::Event {
             header: Some(fsys::EventHeader {
             moniker: Some(moniker), .. }), ..
-        } if *moniker == "./b".to_string() );
+        } if *moniker == "./b:0".to_string() );
 
     assert_matches!(&event,
         fsys::Event {
@@ -1742,7 +1742,7 @@ async fn use_runner_from_environment_failed() {
             ),
             ..
         }
-        if *moniker == "./b".to_string()
+        if *moniker == "./b:0".to_string()
             && *status == zx::Status::PEER_CLOSED.into_raw() as i32
     );
 }

@@ -38,8 +38,8 @@ async fn check_logsink_requested() {
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)
                     .capability_name("fuchsia.logger.LogSink")
-                    .moniker_regex("/empty_child"),
-                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex("/empty_child"),
+                    .moniker_regex("/empty_child:0"),
+                EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex("/empty_child:0"),
             ],
             sequence::Ordering::Unordered,
         )

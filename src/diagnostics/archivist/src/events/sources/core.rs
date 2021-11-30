@@ -146,7 +146,7 @@ pub mod tests {
             .on_event(fsys::Event {
                 header: Some(fsys::EventHeader {
                     event_type: Some(fsys::EventType::Started),
-                    moniker: Some("./foo/bar".to_string()),
+                    moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                     ..fsys::EventHeader::EMPTY
@@ -161,7 +161,7 @@ pub mod tests {
             .on_event(fsys::Event {
                 header: Some(fsys::EventHeader {
                     event_type: Some(fsys::EventType::Running),
-                    moniker: Some("./foo/bar".to_string()),
+                    moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                     ..fsys::EventHeader::EMPTY
@@ -182,7 +182,7 @@ pub mod tests {
             .on_event(fsys::Event {
                 header: Some(fsys::EventHeader {
                     event_type: Some(fsys::EventType::DirectoryReady),
-                    moniker: Some("./foo/bar".to_string()),
+                    moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                     ..fsys::EventHeader::EMPTY
@@ -203,7 +203,7 @@ pub mod tests {
             .on_event(fsys::Event {
                 header: Some(fsys::EventHeader {
                     event_type: Some(fsys::EventType::Stopped),
-                    moniker: Some("./foo/bar".to_string()),
+                    moniker: Some("./foo:0/bar:0".to_string()),
                     component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx".to_string()),
                     timestamp: Some(zx::Time::get_monotonic().into_nanos()),
                     ..fsys::EventHeader::EMPTY
@@ -213,7 +213,8 @@ pub mod tests {
             })
             .expect("send stopped event ok");
 
-        let expected_component_id = ComponentIdentifier::parse_from_moniker("./foo/bar").unwrap();
+        let expected_component_id =
+            ComponentIdentifier::parse_from_moniker("./foo:0/bar:0").unwrap();
         let expected_identity = ComponentIdentity::from_identifier_and_url(
             expected_component_id,
             "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx",

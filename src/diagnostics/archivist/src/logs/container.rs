@@ -474,8 +474,16 @@ mod tests {
         let container = Arc::new(LogsArtifactsContainer::new(
             Arc::new(ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::Moniker(vec![
-                    MonikerSegment { name: "foo".to_string(), collection: None },
-                    MonikerSegment { name: "bar".to_string(), collection: None },
+                    MonikerSegment {
+                        name: "foo".to_string(),
+                        collection: None,
+                        instance_id: "0".to_string(),
+                    },
+                    MonikerSegment {
+                        name: "bar".to_string(),
+                        collection: None,
+                        instance_id: "0".to_string(),
+                    },
                 ]),
                 "fuchsia-pkg://test",
             )),

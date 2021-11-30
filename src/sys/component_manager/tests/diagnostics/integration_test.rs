@@ -27,7 +27,7 @@ async fn component_manager_exposes_inspect() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("/reporter")
+        .moniker_regex("/reporter:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

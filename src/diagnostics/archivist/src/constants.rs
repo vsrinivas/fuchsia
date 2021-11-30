@@ -38,7 +38,7 @@ pub(crate) const LEGACY_DEFAULT_MAXIMUM_CACHED_LOGS_BYTES: usize = 4 * 1024 * 10
 
 /// The root Archivist's moniker in the component topology, used for attributing our own logs.
 // TODO(fxbug.dev/50105,fxbug.dev/64197): update this to reflect updated monikers received in events
-pub const ARCHIVIST_MONIKER: &str = "./archivist";
+pub const ARCHIVIST_MONIKER: &str = "./archivist:0";
 
 /// The root Archivist's URL in bootfs, used for attributing our own logs.
 pub const ARCHIVIST_URL: &str = "fuchsia-boot:///archivist.cm";

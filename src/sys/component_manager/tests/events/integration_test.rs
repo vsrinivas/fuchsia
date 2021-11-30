@@ -52,7 +52,7 @@ async fn scoped_events_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./echo_reporter")
+        .moniker_regex("./echo_reporter:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -77,7 +77,7 @@ async fn realm_offered_event_source_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./nested_realm/reporter")
+        .moniker_regex("./nested_realm:0/reporter:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
@@ -141,8 +141,8 @@ async fn event_dispatch_order_test() {
     // the parent is resolved and its manifest is processed.
     let timestamp_a = expect_and_get_timestamp::<Discovered>(&mut event_stream, ".").await;
     let timestamp_b = expect_and_get_timestamp::<Resolved>(&mut event_stream, ".").await;
-    let timestamp_c = expect_and_get_timestamp::<Discovered>(&mut event_stream, "./child").await;
-    let timestamp_d = expect_and_get_timestamp::<Resolved>(&mut event_stream, "./child").await;
+    let timestamp_c = expect_and_get_timestamp::<Discovered>(&mut event_stream, "./child:0").await;
+    let timestamp_d = expect_and_get_timestamp::<Resolved>(&mut event_stream, "./child:0").await;
 
     assert!(timestamp_a < timestamp_b);
     assert!(timestamp_b < timestamp_c);
@@ -243,7 +243,7 @@ async fn static_event_stream_capability_requested_test() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./components/trigger_server")
+        .moniker_regex("./components:0/trigger_server:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

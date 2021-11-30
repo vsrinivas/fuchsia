@@ -124,6 +124,7 @@ impl ComponentIdentifier {
                 let mut key = vec![];
                 for segment in segments {
                     key.push(segment.to_string());
+                    key.push(segment.instance_id.clone());
                 }
                 UniqueKey(key)
             }
@@ -135,6 +136,7 @@ impl ComponentIdentifier {
             return Ok(ComponentIdentifier::Moniker(vec![MonikerSegment {
                 collection: None,
                 name: "<component_manager>".to_string(),
+                instance_id: "0".to_string(),
             }]));
         }
 
@@ -149,13 +151,19 @@ impl ComponentIdentifier {
         let mut segments = vec![];
         for raw_segment in without_root.split("/") {
             let mut parts = raw_segment.split(":");
-            let segment = match (parts.next(), parts.next()) {
-                // we have a component name and a collection
-                (Some(c), Some(n)) => {
-                    MonikerSegment { collection: Some(c.to_string()), name: n.to_string() }
-                }
-                // we have a component name
-                (Some(n), None) => MonikerSegment { collection: None, name: n.to_string() },
+            let segment = match (parts.next(), parts.next(), parts.next()) {
+                // we have a collection, a component name, and an instance id
+                (Some(c), Some(n), Some(i)) => MonikerSegment {
+                    collection: Some(c.to_string()),
+                    name: n.to_string(),
+                    instance_id: i.to_string(),
+                },
+                // we have a name and an instance id, no collection
+                (Some(n), Some(i), None) => MonikerSegment {
+                    collection: None,
+                    name: n.to_string(),
+                    instance_id: i.to_string(),
+                },
                 _ => return Err(MonikerError::InvalidSegment(raw_segment.to_string())),
             };
             segments.push(segment);
@@ -172,6 +180,8 @@ pub struct MonikerSegment {
     pub collection: Option<String>,
     /// The name of the component.
     pub name: String,
+    /// The instance of the component.
+    pub instance_id: String,
 }
 
 impl std::fmt::Display for MonikerSegment {
@@ -463,17 +473,17 @@ mod tests {
 
     #[fuchsia::test]
     fn convert_v2_moniker_for_diagnostics() {
-        let identifier = ComponentIdentifier::parse_from_moniker("./a").unwrap();
+        let identifier = ComponentIdentifier::parse_from_moniker("./a:0").unwrap();
         assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a"].into());
-        assert_eq!(identifier.unique_key(), vec!["a"].into());
+        assert_eq!(identifier.unique_key(), vec!["a", "0"].into());
 
-        let identifier = ComponentIdentifier::parse_from_moniker("./a/b").unwrap();
+        let identifier = ComponentIdentifier::parse_from_moniker("./a:0/b:1").unwrap();
         assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "b"].into());
-        assert_eq!(identifier.unique_key(), vec!["a", "b"].into());
+        assert_eq!(identifier.unique_key(), vec!["a", "0", "b", "1"].into());
 
-        let identifier = ComponentIdentifier::parse_from_moniker("./a/coll:comp/b").unwrap();
+        let identifier = ComponentIdentifier::parse_from_moniker("./a:0/coll:comp:1/b:0").unwrap();
         assert_eq!(identifier.relative_moniker_for_selectors(), vec!["a", "coll:comp", "b"].into());
-        assert_eq!(identifier.unique_key(), vec!["a", "coll:comp", "b"].into());
+        assert_eq!(identifier.unique_key(), vec!["a", "0", "coll:comp", "1", "b", "0"].into());
 
         let identifier = ComponentIdentifier::parse_from_moniker(".").unwrap();
         assert!(identifier.relative_moniker_for_selectors().is_empty());
@@ -482,7 +492,7 @@ mod tests {
 
     #[fuchsia::test] // we need an executor for the fidl types
     async fn validate_logsink_requested_event() {
-        let target_moniker = "./foo";
+        let target_moniker = "./foo:0";
         let target_url = "http://foo.com".to_string();
         let (_log_sink_proxy, log_sink_server_end) =
             fidl::endpoints::create_proxy::<LogSinkMarker>().unwrap();

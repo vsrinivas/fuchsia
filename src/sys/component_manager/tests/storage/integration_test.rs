@@ -27,7 +27,7 @@ async fn storage() {
     // Expect the static child to stop
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./storage_user")
+        .moniker_regex("./storage_user:0")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();
