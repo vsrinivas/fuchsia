@@ -9,19 +9,15 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
-#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <inttypes.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/client_end.h>
 #include <lib/fzl/time.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
@@ -58,7 +54,6 @@
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fshost-fs-provider.h"
-#include "src/storage/fshost/minfs-manipulator.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
@@ -224,35 +219,6 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   } else {
     return std::move(copier_or).value();
   }
-}
-
-// Sends a message requesting that the device be rebooted without waiting for a response. Returns an
-// error if the message could not be sent.
-zx::status<> RebootDevice() {
-  using fuchsia_hardware_power_statecontrol::Admin;
-  using fuchsia_hardware_power_statecontrol::wire::RebootReason;
-
-  auto svc = service::OpenServiceRoot();
-  if (svc.is_error()) {
-    FX_LOGS(ERROR) << "Failed to open service root: " << svc.status_string();
-    return svc.take_error();
-  }
-  auto client_end = service::ConnectAt<Admin>(*svc);
-  if (client_end.is_error()) {
-    FX_LOGS(ERROR) << "Failed to connect to fuchsia.hardware.power.statecontrol/Admin: "
-                   << client_end.status_string();
-    return client_end.take_error();
-  }
-  // Create an async loop for sending an async Reboot request. Return without running the loop
-  // because we cannot wait for the response. The Reboot call waits for component-manager to do an
-  // orderly shutdown which includes stopping fshost. If fshost is waiting for the response then it
-  // won't shutdown. Component-manager has a 20 minute timeout for shutting down fshost that would
-  // be reached if the response was waited for.
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  fidl::WireClient client(*std::move(client_end), loop.dispatcher());
-  client->Reboot(RebootReason::kFactoryDataReset,
-                 [](fidl::WireResponse<Admin::Reboot>*) { /*ignored*/ });
-  return zx::ok();
 }
 
 }  // namespace
@@ -724,7 +690,7 @@ zx_status_t BlockDevice::MountFilesystem() {
     case DISK_FORMAT_MINFS: {
       MountOptions options;
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
-      zx_status_t status = MountData(&options);
+      zx_status_t status = MountData(&options, std::move(block_device));
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount data partition: " << zx_status_get_string(status) << ".";
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
@@ -746,45 +712,21 @@ zx_status_t BlockDevice::MountFilesystem() {
 // GUID of the device does not match a known valid one. Returns
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
-zx_status_t BlockDevice::MountData(MountOptions* options) {
+zx_status_t BlockDevice::MountData(MountOptions* options, zx::channel block_device) {
   const uint8_t* guid = GetTypeGuid().value.data();
 
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
   } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
-    uint64_t minfs_max_size = device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0);
-    bool using_custom_fs = device_config_->is_set(Config::kDataFilesystemBinaryPath);
-    if (!using_custom_fs && minfs_max_size > 0) {
-      auto excluded_paths = ParseExcludedPaths(
-          device_config_->ReadStringOptionValue(Config::kMinfsResizeExcludedPaths));
-      constexpr uint64_t kMinfsResizeRequiredInodes = 4096;
-      constexpr uint64_t kMinfsResizeDataSizeLimit = 10223616;  // 9.75 * 1024 * 1024
-      MaybeResizeMinfsResult result =
-          MaybeResizeMinfs(CloneDeviceChannel(), minfs_max_size, kMinfsResizeRequiredInodes,
-                           kMinfsResizeDataSizeLimit, excluded_paths, mounter_->manager());
-      switch (result) {
-        case MaybeResizeMinfsResult::kMinfsMountable:
-          break;
-        case MaybeResizeMinfsResult::kRebootRequired:
-          // fshost if a critical process so if requesting a reboot fails then try crashing fshost.
-          ZX_ASSERT_MSG(RebootDevice().is_ok(), "Failed to request a reboot");
-          return ZX_ERR_CANCELED;
-      }
-    }
-    return mounter_->MountData(CloneDeviceChannel(), *options);
+    return mounter_->MountData(std::move(block_device), *options);
   } else if (gpt_is_install_guid(guid, GPT_GUID_LEN)) {
     options->readonly = true;
-    return mounter_->MountInstall(CloneDeviceChannel(), *options);
+    return mounter_->MountInstall(std::move(block_device), *options);
   } else if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
-    return mounter_->MountDurable(CloneDeviceChannel(), *options);
+    return mounter_->MountDurable(std::move(block_device), *options);
   }
   FX_LOGS(ERROR) << "Unrecognized partition GUID for data partition; not mounting";
   return ZX_ERR_WRONG_TYPE;
-}
-
-zx::channel BlockDevice::CloneDeviceChannel() const {
-  fdio_cpp::UnownedFdioCaller caller(fd_.get());
-  return zx::channel(fdio_service_clone(caller.borrow_channel()));
 }
 
 zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
@@ -851,10 +793,6 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       }
       if (zx_status_t status = MountFilesystem(); status != ZX_OK) {
         FX_LOGS(ERROR) << "failed to mount filesystem: " << zx_status_get_string(status);
-        if (status == ZX_ERR_CANCELED) {
-          // If mounting was canceled then don't try to format minfs or mount again.
-          return status;
-        }
         if (!format_on_corruption) {
           FX_LOGS(ERROR) << "formatting minfs on this target is disabled";
           return status;
@@ -920,8 +858,6 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   if (zx_status_t status = fdio_fd_create(handle, fd.reset_and_get_address()); status != ZX_OK)
     return status;
 
-  mounter_->inspect_manager().LogMinfsUpgradeProgress(
-      InspectManager::MinfsUpgradeState::kReadOldPartition);
   Copier copier;
   {
     auto device_or = GetDeviceEndPoint();
@@ -957,9 +893,6 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   const uint64_t slice_size = query_response->manager->slice_size;
 
   // Free all the existing slices.
-  mounter_->inspect_manager().LogMinfsUpgradeProgress(
-      InspectManager::MinfsUpgradeState::kWriteNewPartition);
-
   uint64_t slice = 1;
   // The -1 here is because of zxcrypt; zxcrypt will offset all slices by 1 to account for its
   // header.  zxcrypt isn't present in all cases, but that won't matter since minfs shouldn't be
@@ -1091,8 +1024,6 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   }
 
   Unmount(export_root_or->client);
-
-  mounter_->inspect_manager().LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kFinished);
 
   return ZX_OK;
 }

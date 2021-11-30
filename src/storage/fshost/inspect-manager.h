@@ -21,8 +21,8 @@ zx_status_t OpenNode(fidl::UnownedClientEnd<fuchsia_io::Directory> root, const s
 // Management of fshost inspect data.
 class InspectManager {
  public:
-  InspectManager();
-  ~InspectManager();
+  InspectManager() = default;
+  ~InspectManager() = default;
 
   // Returns the diagnostics directory where inspect data is contained.
   fbl::RefPtr<fs::PseudoDir> Initialize(async_dispatcher* dispatcher);
@@ -30,30 +30,10 @@ class InspectManager {
   // Creates a lazy node which serves stats about the given path.
   void ServeStats(const std::string& path, fbl::RefPtr<fs::Vnode> root);
 
-  enum MinfsUpgradeState {
-    kUnknown = 0,
-    // The upgrade was skipped due to the preconditions not being met.
-    kSkipped,
-    // A partially finished upgrade was detected, so the upgrade had to be discarded and the
-    // partition wiped.
-    kDetectedFailedUpgrade,
-    // The upgrade started to read the old data partition.
-    kReadOldPartition,
-    // The upgrade started to write the new data partition (which is destructive).
-    kWriteNewPartition,
-    // The upgrade finished writing the new data partition.
-    kFinished,
-  };
-  static const char* MinfsUpgradeStateString(MinfsUpgradeState state);
-  // Creates an inspect node indicating that the minfs upgrade entered a given state.
-  // Each state creates a separate node, so the full set of states entered can be observed.
-  void LogMinfsUpgradeProgress(MinfsUpgradeState state);
-
   const inspect::Inspector& inspector() const { return inspector_; }
 
  private:
   inspect::Inspector inspector_;
-  inspect::Node minfs_upgrade_progress_;
 
   // Fills information about the size of files and directories under the given `root` under the
   // given `node` and emplaces it in the given `inspector`. Returns the total size of `root`.
