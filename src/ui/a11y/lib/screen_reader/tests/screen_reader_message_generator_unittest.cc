@@ -436,6 +436,13 @@ TEST_F(ScreenReaderMessageGeneratorTest, FormatCharacterForSpelling) {
   auto result2 = screen_reader_message_generator_->FormatCharacterForSpelling("a");
   ASSERT_TRUE(result2.utterance.has_message());
   ASSERT_EQ(result2.utterance.message(), "a");
+
+  // Sends a letter that is capitalized and should be read as such.
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::CAPITALIZED_LETTER), "capital A");
+  auto result3 = screen_reader_message_generator_->FormatCharacterForSpelling("A");
+  ASSERT_TRUE(result3.utterance.has_message());
+  ASSERT_EQ(result3.utterance.message(), "capital A");
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, NodeTextField) {

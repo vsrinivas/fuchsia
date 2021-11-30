@@ -251,13 +251,21 @@ ScreenReaderMessageGenerator::DescribeToggleSwitch(
 ScreenReaderMessageGenerator::UtteranceAndContext
 ScreenReaderMessageGenerator::FormatCharacterForSpelling(const std::string& character) {
   const auto it = character_to_message_id_.find(character);
-  if (it == character_to_message_id_.end()) {
-    UtteranceAndContext utterance;
-    utterance.utterance.set_message(character);
-    return utterance;
+  if (it != character_to_message_id_.end()) {
+    return GenerateUtteranceByMessageId(it->second);
   }
 
-  return GenerateUtteranceByMessageId(it->second);
+  UtteranceAndContext utterance;
+
+  // TODO(fxbug.dev/89506): Logic to detect uppercase letters may lead to bugs in non English
+  // locales. Checks if this character is uppercase.
+  if (character.size() == 1 && std::isupper(character[0])) {
+    return GenerateUtteranceByMessageId(MessageIds::CAPITALIZED_LETTER, zx::msec(0), {"letter"},
+                                        {character});
+  }
+
+  utterance.utterance.set_message(character);
+  return utterance;
 }
 
 }  // namespace a11y
