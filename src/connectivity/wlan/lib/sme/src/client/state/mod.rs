@@ -688,6 +688,11 @@ impl Associated {
             &mut Context,
         ) -> Result<LinkState, EstablishRsnaFailureReason>,
     {
+        let was_establishing_rsna = match &self.link_state {
+            LinkState::EstablishingRsna(_) => true,
+            LinkState::Init(_) | LinkState::LinkUp(_) => false,
+        };
+
         let link_state = match update_handler(
             self.link_state,
             update,
@@ -709,8 +714,14 @@ impl Associated {
         };
 
         if let LinkState::LinkUp(_) = link_state {
-            context.info.report_rsna_established(context.att_id);
-            report_connect_finished(&mut self.connect_txn_sink, context, ConnectResult::Success);
+            if was_establishing_rsna {
+                context.info.report_rsna_established(context.att_id);
+                report_connect_finished(
+                    &mut self.connect_txn_sink,
+                    context,
+                    ConnectResult::Success,
+                );
+            }
         }
 
         Ok(Self { link_state, ..self })
@@ -2093,7 +2104,7 @@ mod tests {
     fn gtk_rotation_during_link_up() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_psk_supplicant();
-        let (cmd, _connect_txn_stream) = connect_command_wpa2(supplicant);
+        let (cmd, mut connect_txn_stream) = connect_command_wpa2(supplicant);
         let bssid = cmd.bss.bssid;
         let state = link_up_state(cmd);
 
@@ -2119,6 +2130,9 @@ mod tests {
         assert_variant!(&state, ClientState::Associated(state) => {
             assert_variant!(&state.link_state, LinkState::LinkUp { .. });
         });
+
+        // No new ConnectResult is sent
+        assert_variant!(connect_txn_stream.try_next(), Err(_));
     }
 
     #[test]
