@@ -38,7 +38,6 @@ use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::signals::signal_handling::*;
-use crate::signals::SignalActions;
 use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
@@ -191,7 +190,6 @@ pub fn spawn_task<F>(
 }
 
 struct StartupHandles {
-    files: Arc<FdTable>,
     shell_controller: Option<ServerEnd<fstardev::ShellControllerMarker>>,
 }
 
@@ -204,9 +202,9 @@ struct StartupHandles {
 /// interpreted as the server end of the ShellController protocol.
 fn parse_numbered_handles(
     numbered_handles: Option<Vec<fprocess::HandleInfo>>,
+    files: &Arc<FdTable>,
     kernel: &Kernel,
 ) -> Result<StartupHandles, Error> {
-    let files = FdTable::new();
     let mut shell_controller = None;
     if let Some(numbered_handles) = numbered_handles {
         for numbered_handle in numbered_handles {
@@ -223,7 +221,7 @@ fn parse_numbered_handles(
             }
         }
     }
-    Ok(StartupHandles { files, shell_controller })
+    Ok(StartupHandles { shell_controller })
 }
 
 fn create_filesystem_from_spec<'a>(
@@ -342,21 +340,13 @@ fn start_component(
     };
 
     let fs = FsContext::new(root_fs);
-    let startup_handles = parse_numbered_handles(start_info.numbered_handles, &kernel)?;
-    let files = startup_handles.files;
-    let shell_controller = startup_handles.shell_controller;
 
-    let current_task = Task::create_process(
-        &kernel,
-        &binary_path,
-        0,
-        files,
-        fs.clone(),
-        SignalActions::default(),
-        credentials,
-        Arc::clone(&kernel.default_abstract_socket_namespace),
-        None,
-    )?;
+    let current_task =
+        Task::create_process_without_parent(&kernel, binary_path.clone(), fs.clone())?;
+    *current_task.creds.write() = credentials;
+    let startup_handles =
+        parse_numbered_handles(start_info.numbered_handles, &current_task.files, &kernel)?;
+    let shell_controller = startup_handles.shell_controller;
 
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =

@@ -175,13 +175,8 @@ impl EpollFileObject {
         let mut pending_list: Vec<ReadyObject> = vec![];
         loop {
             match self.waiter.wait_until(&current_task, wait_deadline) {
-                Ok(_) => {}
-                Err(err) => {
-                    if err == ETIMEDOUT {
-                        break;
-                    }
-                    return error!(err);
-                }
+                Err(err) if err == ETIMEDOUT => break,
+                result => result?,
             }
 
             // For each sucessful wait, we take an item off
@@ -284,7 +279,8 @@ mod tests {
         static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
         const EVENT_DATA: u64 = 42;
 
-        let (kernel, current_task) = create_kernel_and_task();
+        let (kernel, _init_task) = create_kernel_and_task();
+        let current_task = create_task(&kernel, "main-task");
         let writer_task = create_task(&kernel, "writer-task");
 
         let (pipe_out, pipe_in) = new_pipe(&kernel).unwrap();

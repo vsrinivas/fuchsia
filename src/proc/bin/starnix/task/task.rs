@@ -132,13 +132,12 @@ pub enum TaskSelector {
 }
 
 impl Task {
-    /// Internal function for creating a Task object.
+    /// Internal function for creating a Task object. Useful when you need to specify the value of
+    /// every field. create_process and create_thread are more likely to be what you want.
     ///
-    /// Useful for sharing the default initialization of members between
-    /// create_process and create_thread.
-    ///
-    /// Consider using create_process or create_thread instead of calling this
-    /// function directly.
+    /// Any fields that should be initialized fresh for every task, even if the task was created
+    /// with fork, are initialized to their defaults inside this function. All other fields are
+    /// passed as parameters.
     fn new(
         id: pid_t,
         comm: CString,
@@ -182,97 +181,35 @@ impl Task {
     ///
     /// This function creates an underlying Zircon process to host the new
     /// task.
-    pub fn create_process(
+    pub fn create_process_without_parent(
         kernel: &Arc<Kernel>,
-        comm: &CString,
-        parent: pid_t,
-        files: Arc<FdTable>,
-        fs: Arc<FsContext>,
-        signal_actions: Arc<SignalActions>,
-        creds: Credentials,
-        abstract_socket_namespace: Arc<AbstractSocketNamespace>,
-        exit_signal: Option<Signal>,
+        initial_name: CString,
+        root_fs: Arc<FsContext>,
     ) -> Result<CurrentTask, Errno> {
-        let (process, root_vmar) = kernel
-            .job
-            .create_child_process(comm.as_bytes())
-            .map_err(|status| from_status_like_fdio!(status))?;
-        let thread = process
-            .create_thread(comm.as_bytes())
-            .map_err(|status| from_status_like_fdio!(status))?;
-
-        // TODO: Stop giving MemoryManager a duplicate of the process handle once a process
-        // handle is not needed to implement read_memory or write_memory.
-        let duplicate_process =
-            process.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?;
-
         let mut pids = kernel.pids.write();
-        let id = pids.allocate_pid();
+        let pid = pids.allocate_pid();
+
+        let (thread, thread_group, mm) = Self::create_zircon_process(kernel, pid, &initial_name)?;
 
         let task = Self::new(
-            id,
-            comm.clone(),
+            pid,
+            initial_name,
             None,
-            Arc::new(ThreadGroup::new(kernel.clone(), process, id)),
-            parent,
+            thread_group,
+            1,
             thread,
-            files,
-            Arc::new(
-                MemoryManager::new(duplicate_process, root_vmar)
-                    .map_err(|status| from_status_like_fdio!(status))?,
-            ),
-            fs,
-            signal_actions,
-            creds,
-            abstract_socket_namespace,
-            ShellJobControl::new(id),
-            exit_signal,
+            FdTable::new(),
+            mm,
+            root_fs,
+            SignalActions::default(),
+            Credentials::default(),
+            Arc::clone(&kernel.default_abstract_socket_namespace),
+            ShellJobControl { sid: pid, pgrp: pid },
+            None,
         );
 
         pids.add_task(&task.task);
-        pids.add_thread_group(&task.task.thread_group);
-        Ok(task)
-    }
-
-    /// Create a task that is a member of an existing thread group.
-    ///
-    /// The task is added to |self.thread_group|.
-    ///
-    /// This function creates an underlying Zircon thread to run the new
-    /// task.
-    pub fn create_thread(
-        &self,
-        files: Arc<FdTable>,
-        fs: Arc<FsContext>,
-        signal_actions: Arc<SignalActions>,
-        creds: Credentials,
-    ) -> Result<CurrentTask, Errno> {
-        let thread = self
-            .thread_group
-            .process
-            .create_thread(self.command.read().as_bytes())
-            .map_err(|status| from_status_like_fdio!(status))?;
-
-        let mut pids = self.thread_group.kernel.pids.write();
-        let id = pids.allocate_pid();
-        let task = Self::new(
-            id,
-            self.command.read().clone(),
-            self.executable_node.read().clone(),
-            Arc::clone(&self.thread_group),
-            self.parent,
-            thread,
-            files,
-            Arc::clone(&self.mm),
-            fs,
-            signal_actions,
-            creds,
-            Arc::clone(&self.abstract_socket_namespace),
-            ShellJobControl::new(self.shell_job_control.sid),
-            None,
-        );
-        pids.add_task(&task.task);
-        self.thread_group.add(&task.task);
+        pids.add_thread_group(&task.thread_group);
         Ok(task)
     }
 
@@ -339,42 +276,99 @@ impl Task {
         } else {
             self.signal_actions.fork()
         };
-        let creds = self.creds.read().clone();
 
-        let child;
-        if clone_thread {
-            child = self.create_thread(files, fs, signal_actions, creds)?;
+        let kernel = &self.thread_group.kernel;
+        let mut pids = kernel.pids.write();
+        let pid = pids.allocate_pid();
+        let comm = self.command.read();
+        let (thread, thread_group, mm) = if clone_thread {
+            Self::create_zircon_thread(self)?
         } else {
-            child = Self::create_process(
-                &self.thread_group.kernel,
-                &self.command.read(),
-                self.id,
-                files,
-                fs,
-                signal_actions,
-                creds,
-                Arc::clone(&self.abstract_socket_namespace),
-                child_exit_signal,
-            )?;
-            child.task.signals.write().alt_stack = self.signals.read().alt_stack;
-            self.mm.snapshot_to(&child.task.mm)?;
+            Self::create_zircon_process(kernel, pid, &comm)?
+        };
+
+        let child = Self::new(
+            pid,
+            comm.clone(),
+            self.executable_node.read().clone(),
+            thread_group,
+            self.id,
+            thread,
+            files,
+            mm,
+            fs,
+            signal_actions,
+            self.creds.read().clone(),
+            self.abstract_socket_namespace.clone(),
+            self.shell_job_control.clone(),
+            child_exit_signal,
+        );
+        pids.add_task(&child.task);
+
+        if clone_thread {
+            self.thread_group.add(&child);
+        } else {
+            pids.add_thread_group(&child.thread_group);
+            child.signals.write().alt_stack = self.signals.read().alt_stack;
+            self.mm.snapshot_to(&child.mm)?;
         }
 
         if flags & (CLONE_PARENT_SETTID as u64) != 0 {
-            self.mm.write_object(user_parent_tid, &child.task.id)?;
+            self.mm.write_object(user_parent_tid, &child.id)?;
         }
 
         if flags & (CLONE_CHILD_CLEARTID as u64) != 0 {
-            *child.task.clear_child_tid.lock() = user_child_tid;
+            *child.clear_child_tid.lock() = user_child_tid;
         }
 
         if flags & (CLONE_CHILD_SETTID as u64) != 0 {
-            child.task.mm.write_object(user_child_tid, &child.task.id)?;
+            child.mm.write_object(user_child_tid, &child.id)?;
         }
 
-        self.children.write().insert(child.task.id);
+        self.children.write().insert(child.id);
 
         Ok(child)
+    }
+
+    fn create_zircon_thread(
+        parent: &Task,
+    ) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
+        let thread = parent
+            .thread_group
+            .process
+            .create_thread(parent.command.read().as_bytes())
+            .map_err(|status| from_status_like_fdio!(status))?;
+
+        let thread_group = parent.thread_group.clone();
+        let mm = parent.mm.clone();
+        Ok((thread, thread_group, mm))
+    }
+
+    fn create_zircon_process(
+        kernel: &Arc<Kernel>,
+        pid: pid_t,
+        name: &CString,
+    ) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
+        let (process, root_vmar) = kernel
+            .job
+            .create_child_process(name.as_bytes())
+            .map_err(|status| from_status_like_fdio!(status))?;
+        let thread = process
+            .create_thread(name.as_bytes())
+            .map_err(|status| from_status_like_fdio!(status))?;
+
+        // TODO: Stop giving MemoryManager a duplicate of the process handle once a process
+        // handle is not needed to implement read_memory or write_memory.
+        let duplicate_process =
+            process.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(impossible_error)?;
+        let mm = Arc::new(
+            MemoryManager::new(duplicate_process, root_vmar)
+                .map_err(|status| from_status_like_fdio!(status))?,
+        );
+
+        let thread_group = Arc::new(ThreadGroup::new(kernel.clone(), process, pid));
+
+        Ok((thread, thread_group, mm))
     }
 
     /// If needed, clear the child tid for this task.
@@ -527,7 +521,7 @@ impl CurrentTask {
     }
 
     pub fn kernel(&self) -> &Arc<Kernel> {
-        &self.task.thread_group.kernel
+        &self.thread_group.kernel
     }
 
     pub fn task_arc_clone(&self) -> Arc<Task> {

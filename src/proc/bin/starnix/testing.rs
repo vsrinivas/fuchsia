@@ -8,7 +8,6 @@ use io_util::directory;
 use std::ffi::CString;
 use std::sync::Arc;
 
-use crate::auth::Credentials;
 use crate::fs::fuchsia::RemoteFs;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
@@ -16,7 +15,6 @@ use crate::mm::{
     syscalls::{sys_mmap, sys_mremap},
     PAGE_SIZE,
 };
-use crate::signals::SignalActions;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
 use crate::types::*;
@@ -55,18 +53,8 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, Curre
         Kernel::new(&CString::new("test-kernel").unwrap()).expect("failed to create kernel"),
     );
 
-    let task = Task::create_process(
-        &kernel,
-        &CString::new("test-task").unwrap(),
-        0,
-        FdTable::new(),
-        fs,
-        SignalActions::default(),
-        Credentials::default(),
-        Arc::clone(&kernel.default_abstract_socket_namespace),
-        None,
-    )
-    .expect("failed to create first task");
+    let task = Task::create_process_without_parent(&kernel, CString::new("test-task").unwrap(), fs)
+        .expect("failed to create first task");
     *task.exit_code.lock() = Some(0);
 
     (kernel, task)
@@ -76,16 +64,10 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, Curre
 ///
 /// The `Task` is backed by a real process, and can be used to test syscalls.
 pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
-    let task = Task::create_process(
+    let task = Task::create_process_without_parent(
         kernel,
-        &CString::new(task_name).unwrap(),
-        0,
-        FdTable::new(),
+        CString::new(task_name).unwrap(),
         create_pkgfs(),
-        SignalActions::default(),
-        Credentials::default(),
-        Arc::clone(&kernel.default_abstract_socket_namespace),
-        None,
     )
     .expect("failed to create second task");
     *task.exit_code.lock() = Some(0);

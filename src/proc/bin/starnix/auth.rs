@@ -82,9 +82,3 @@ pub struct ShellJobControl {
     /// The process group ID of a task.
     pub pgrp: pid_t,
 }
-
-impl ShellJobControl {
-    pub fn new(id: pid_t) -> ShellJobControl {
-        ShellJobControl { sid: id, pgrp: id }
-    }
-}
