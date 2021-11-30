@@ -73,6 +73,7 @@ fuchsia_driver_component("leaf") {
 
 rustc_test("bin") {
   testonly = true
+  output_name = "dynamic_offers_bin"
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
