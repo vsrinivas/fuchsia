@@ -79,7 +79,7 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestMonitorConfigFR"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kNumClientBuffers);
+  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kNumMonitorMLFRBuffers);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kOutputStreamMlFRHeight * kOutputStreamMlFRWidth);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -209,7 +209,7 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   // Allocating some buffer collection
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestConvertBufferCollection2TypeTest"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kNumClientBuffers);
+  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kNumMonitorMLFRBuffers);
 
   BufferCollectionHelper buffer_collection_helper(buffer_collection.buffers);
 
