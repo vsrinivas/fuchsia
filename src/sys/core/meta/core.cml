@@ -362,10 +362,7 @@
             to: "#pkg-cache",
         },
         {
-            protocol: [
-                "fuchsia.boot.Arguments",
-                "fuchsia.paver.Paver",
-            ],
+            protocol: [ "fuchsia.boot.Arguments" ],
             from: "parent",
             to: "#pkg-resolver",
         },
@@ -396,20 +393,6 @@
             from: "parent",
             to: "#exceptions",
             subdir: "forensics",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "skip-block",
-            to: "#pkg-resolver",
-            subdir: "class/skip-block",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "platform",
-            to: "#pkg-resolver",
-            subdir: "sys/platform",
         },
         {
             directory: "pkgfs",
