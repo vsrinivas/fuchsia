@@ -5,26 +5,9 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_FUNCTIONAL_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_FUNCTIONAL_H_
 
-#include <functional>
-
 #include "internal/functional.h"
 
 namespace cpp20 {
-
-#if __cplusplus >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
-
-using std::identity;
-
-#else
-
-struct identity {
-  template <typename T>
-  constexpr T&& operator()(T&& arg) const noexcept {
-    return std::forward<T>(arg);
-  }
-};
-
-#endif  //  __cplusplus >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 // This version is always constexpr-qualified, with no other changes from C++17.
 
@@ -33,7 +16,7 @@ struct identity {
 
 using std::invoke;
 
-#else  // Use invoke() polyfill
+#else  // Provide invoke() polyfill
 
 template <typename F, typename... Args>
 constexpr cpp17::invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) noexcept(
@@ -43,6 +26,22 @@ constexpr cpp17::invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) noexc
 
 #endif  // __cpp_lib_invoke >= 201411L && __cpp_lib_constexpr_functional >= 201907L &&
         // !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+#if __cpp_lib_bind_front >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::bind_front;
+
+#else  // Provide bind_front() polyfill
+
+template <typename F, typename... Args>
+constexpr ::cpp20::internal::front_binder_t<F, Args...> bind_front(F&& f, Args&&... args) noexcept(
+    cpp17::is_nothrow_constructible_v<::cpp20::internal::front_binder_t<F, Args...>,
+                                      cpp17::in_place_t, F, Args...>) {
+  return ::cpp20::internal::front_binder_t<F, Args...>(cpp17::in_place, std::forward<F>(f),
+                                                       std::forward<Args>(args)...);
+}
+
+#endif  // __cpp_lib_bind_front >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 }  // namespace cpp20
 

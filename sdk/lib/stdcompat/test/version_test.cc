@@ -41,10 +41,14 @@ TEST(VersionTest, FeatureTestMacrosForCpp20) {
   static_assert(__cpp_lib_remove_cvref == 201711L,
                 "'__cpp_lib_remove_cvref' should be using draft 201711L for c++20.");
   static_assert(__cpp_lib_as_const == 201510L,
-                "'__cpp_lib_as_const' should be using draft 201510L for c++17.");
+                "'__cpp_lib_as_const' should be using draft 201510L for c++20.");
 #if defined(__cpp_lib_type_identity)
   static_assert(__cpp_lib_type_identity == 201806L,
                 "'__cpp_lib_type_identity' should be using draft 201806L for c++20.");
+#endif
+#if defined(__cpp_lib_bind_front)
+  static_assert(__cpp_lib_bind_front == 201907L,
+                "'__cpp_lib_bind_front' should be using draft 201907L for c++20.");
 #endif
   // TODO(fxb/67616): When libc++'s __cplusplus reflects C++20 as specified in the standard, move
   // this into a separate #if branch for C++23.
@@ -156,7 +160,7 @@ TEST(VersionTest, FeatureTestMacrosForCpp14) {
   static_assert(false, "'__cpp_lib_as_const' should not be defined in c++14.");
 #endif
 #if defined(__cpp_lib_is_constant_evaluated)
-  static_assert(false, "'__cpp_lib_is_constant_evaluated ' should not be defined in c++14.");
+  static_assert(false, "'__cpp_lib_is_constant_evaluated' should not be defined in c++14.");
 #endif
 }
 

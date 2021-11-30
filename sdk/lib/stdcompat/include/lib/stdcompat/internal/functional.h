@@ -5,7 +5,10 @@
 #ifndef LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_FUNCTIONAL_H_
 #define LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_FUNCTIONAL_H_
 
+#include <functional>
+
 #include "../type_traits.h"
+#include "../utility.h"
 
 namespace cpp17 {
 namespace internal {
@@ -59,5 +62,89 @@ constexpr auto invoke(F&& f, Args&&... args)
 
 }  // namespace internal
 }  // namespace cpp17
+
+namespace cpp20 {
+
+template <typename F, typename... Args>
+constexpr cpp17::invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) noexcept(
+    cpp17::is_nothrow_invocable_v<F, Args...>);
+
+namespace internal {
+
+template <typename Invocable, typename BoundTuple, size_t... Is, typename... CallArgs>
+constexpr decltype(auto) invoke_with_bound(Invocable&& invocable, BoundTuple&& bound_args,
+                                           std::index_sequence<Is...>, CallArgs&&... call_args) {
+  return cpp20::invoke(std::forward<Invocable>(invocable),
+                       std::get<Is>(std::forward<BoundTuple>(bound_args))...,
+                       std::forward<CallArgs>(call_args)...);
+}
+
+template <typename FD, typename... BoundArgs>
+class front_binder {
+  using bound_indices = std::index_sequence_for<BoundArgs...>;
+
+ public:
+  template <typename F, typename... Args>
+  explicit constexpr front_binder(cpp17::in_place_t, F&& f, Args&&... args) noexcept(
+      cpp17::conjunction_v<std::is_nothrow_constructible<FD, F>,
+                           std::is_nothrow_constructible<BoundArgs, Args>...>)
+      : fd_(std::forward<F>(f)), bound_args_(std::forward<Args>(args)...) {
+    // [func.bind.front] ¶ 2
+    static_assert(cpp17::is_constructible_v<FD, F>,
+                  "Must be able to construct decayed callable type.");
+    static_assert(cpp17::is_move_constructible_v<FD>, "Callable type must be move-constructible.");
+    static_assert(cpp17::conjunction_v<std::is_constructible<BoundArgs, Args>...>,
+                  "Must be able to construct decayed bound argument types.");
+    static_assert(cpp17::conjunction_v<std::is_move_constructible<BoundArgs>...>,
+                  "Bound argument types must be move-constructible.");
+  }
+
+  constexpr front_binder(const front_binder&) = default;
+  constexpr front_binder& operator=(const front_binder&) = default;
+  constexpr front_binder(front_binder&&) noexcept = default;
+  constexpr front_binder& operator=(front_binder&&) noexcept = default;
+
+  template <typename... CallArgs>
+  constexpr cpp17::invoke_result_t<FD&, BoundArgs&..., CallArgs&&...>
+  operator()(CallArgs&&... call_args) & noexcept(
+      cpp17::is_nothrow_invocable_v<FD&, BoundArgs&..., CallArgs&&...>) {
+    return invoke_with_bound(fd_, bound_args_, bound_indices(),
+                             std::forward<CallArgs>(call_args)...);
+  }
+
+  template <typename... CallArgs>
+  constexpr cpp17::invoke_result_t<const FD&, const BoundArgs&..., CallArgs&&...>
+  operator()(CallArgs&&... call_args) const& noexcept(
+      cpp17::is_nothrow_invocable_v<const FD&, const BoundArgs&..., CallArgs&&...>) {
+    return invoke_with_bound(fd_, bound_args_, bound_indices(),
+                             std::forward<CallArgs>(call_args)...);
+  }
+
+  template <typename... CallArgs>
+  constexpr cpp17::invoke_result_t<FD&&, BoundArgs&&..., CallArgs&&...>
+  operator()(CallArgs&&... call_args) && noexcept(
+      cpp17::is_nothrow_invocable_v<FD&&, BoundArgs&&..., CallArgs&&...>) {
+    return invoke_with_bound(std::move(fd_), std::move(bound_args_), bound_indices(),
+                             std::forward<CallArgs>(call_args)...);
+  }
+
+  template <typename... CallArgs>
+  constexpr cpp17::invoke_result_t<const FD&&, const BoundArgs&&..., CallArgs&&...>
+  operator()(CallArgs&&... call_args) const&& noexcept(
+      cpp17::is_nothrow_invocable_v<const FD&&, const BoundArgs&&..., CallArgs&&...>) {
+    return invoke_with_bound(std::move(fd_), std::move(bound_args_), bound_indices(),
+                             std::forward<CallArgs>(call_args)...);
+  }
+
+ private:
+  FD fd_;
+  std::tuple<BoundArgs...> bound_args_;
+};
+
+template <typename F, typename... BoundArgs>
+using front_binder_t = front_binder<std::decay_t<F>, std::decay_t<BoundArgs>...>;
+
+}  // namespace internal
+}  // namespace cpp20
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_INTERNAL_FUNCTIONAL_H_

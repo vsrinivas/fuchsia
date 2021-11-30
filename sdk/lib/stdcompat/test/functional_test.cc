@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/stdcompat/functional.h>
+#include <lib/stdcompat/tuple.h>
 
 #include <gtest/gtest.h>
 
@@ -72,6 +73,116 @@ TEST(InvokeTest, SpecialCases) {
   EXPECT_EQ(cpp20::invoke(&member_pointers::pmd_add_one, &lp)(2), 3);
   EXPECT_EQ(cpp20::invoke(&member_pointers::pmf_add_one, std::optional<liar>(liar()), 2), 4);
   EXPECT_EQ(cpp20::invoke(&member_pointers::pmd_add_one, std::optional<liar>(liar()))(2), 3);
+}
+
+template <typename T>
+constexpr auto reduce(T&& only) {
+  return std::forward<T>(only);
+}
+
+template <typename First, typename Second, typename... Args>
+constexpr auto reduce(First&& first, Second&& second, Args&&... args) {
+  return std::forward<First>(first) +
+         reduce(std::forward<Second>(second), std::forward<Args>(args)...);
+}
+
+constexpr auto call_reduce = [](auto&&... args) {
+  return reduce(std::forward<decltype(args)>(args)...);
+};
+
+template <size_t N, typename... Args, std::enable_if_t<(N == 1), bool> = true>
+constexpr auto reduce_bound(Args&&... args) {
+  return reduce(std::forward<Args>(args)...);
+}
+
+template <size_t N, typename... Args, std::enable_if_t<(N > 1), bool> = true>
+constexpr auto reduce_bound(Args&&... args) {
+  return [call_with_args =
+              cpp20::bind_front(call_reduce, std::forward<Args>(args)...)](auto&&... next) {
+    return reduce_bound<N - 1>(std::move(call_with_args)(std::forward<decltype(next)>(next)...));
+  };
+}
+
+TEST(BindFrontTest, Currying) {
+  static_assert(reduce(1, 2, 3, 4, 5) == 15, "");
+
+  static_assert(cpp20::bind_front(call_reduce)(1, 2, 3, 4, 5) == 15, "");
+  static_assert(cpp20::bind_front(call_reduce, 1)(2, 3, 4, 5) == 15, "");
+  static_assert(cpp20::bind_front(call_reduce, 1, 2)(3, 4, 5) == 15, "");
+  static_assert(cpp20::bind_front(call_reduce, 1, 2, 3)(4, 5) == 15, "");
+  static_assert(cpp20::bind_front(call_reduce, 1, 2, 3, 4)(5) == 15, "");
+  static_assert(cpp20::bind_front(call_reduce, 1, 2, 3, 4, 5)() == 15, "");
+
+  static_assert(reduce_bound<1>(1, 2, 3, 4, 5) == 15, "");
+
+  static_assert(reduce_bound<2>(1)(2, 3, 4, 5) == 15, "");
+  static_assert(reduce_bound<2>(1, 2)(3, 4, 5) == 15, "");
+  static_assert(reduce_bound<2>(1, 2, 3)(4, 5) == 15, "");
+  static_assert(reduce_bound<2>(1, 2, 3, 4)(5) == 15, "");
+
+  static_assert(reduce_bound<3>(1)(2)(3, 4, 5) == 15, "");
+  static_assert(reduce_bound<3>(1)(2, 3)(4, 5) == 15, "");
+  static_assert(reduce_bound<3>(1)(2, 3, 4)(5) == 15, "");
+  static_assert(reduce_bound<3>(1, 2)(3)(4, 5) == 15, "");
+  static_assert(reduce_bound<3>(1, 2)(3, 4)(5) == 15, "");
+  static_assert(reduce_bound<3>(1, 2, 3)(4)(5) == 15, "");
+
+  static_assert(reduce_bound<4>(1)(2)(3)(4, 5) == 15, "");
+  static_assert(reduce_bound<4>(1)(2)(3, 4)(5) == 15, "");
+  static_assert(reduce_bound<4>(1)(2, 3)(4)(5) == 15, "");
+  static_assert(reduce_bound<4>(1, 2)(3)(4)(5) == 15, "");
+
+  static_assert(reduce_bound<5>(1)(2)(3)(4)(5) == 15, "");
+
+  // And these extra ones where we don't even give it a number (they mess up our perfect grid and
+  // multiply the number of cases by a lot, so I won't include any more)
+  static_assert(reduce_bound<2>()(1, 2, 3, 4, 5) == 15, "");
+  static_assert(reduce_bound<2>(1, 2, 3, 4, 5)() == 15, "");
+}
+
+TEST(BindFrontTest, BindCopyable) {
+  constexpr auto one_plus_one = cpp20::bind_front(lambda_add_one, 1);
+  static_assert(one_plus_one() == 2, "");
+
+  constexpr auto one_plus_two = cpp20::bind_front(func_add_one, 2);
+  EXPECT_EQ(one_plus_two(), 3);
+
+  const std::string empty;
+  auto echo_string = cpp20::bind_front(call_reduce, empty);
+  auto test_if_copyable = echo_string;
+
+  EXPECT_EQ(echo_string("asdf"), "asdf");
+  EXPECT_EQ(test_if_copyable("jkl"), "jkl");
+
+  constexpr char dot = '.';
+  const std::string space = " ";
+  const std::string words[][4] = {
+      {"The", "quick", "brown", "fox"}, {"jumped", "over"}, {"the", "lazy", "dog"}};
+  EXPECT_EQ(reduce_bound<3>(words[0][0], space, words[0][1], space, words[0][2], space, words[0][3],
+                            space)(words[1][0], space, words[1][1], space)(
+                words[2][0], space, words[2][1], space, words[2][2], dot),
+            "The quick brown fox jumped over the lazy dog.");
+}
+
+TEST(BindFrontTest, BindMoveOnly) {
+  auto ptr = std::make_unique<int>(3);
+  constexpr auto deref = [](auto&& ptr) { return *ptr; };
+  auto call_with_ptr = cpp20::bind_front(deref, std::move(ptr));
+  auto test_if_movable = std::move(call_with_ptr);
+
+  static_assert(cpp17::is_copy_constructible_v<decltype(ptr)> == false, "");
+  static_assert(cpp17::is_copy_constructible_v<decltype(call_with_ptr)> == false, "");
+  static_assert(cpp17::is_copy_constructible_v<decltype(test_if_movable)> == false, "");
+
+  EXPECT_EQ(test_if_movable(), 3);
+}
+
+TEST(BindFrontTest, MemberPointers) {
+  liar lp;
+  auto liar_pmf = cpp20::bind_front(&member_pointers::pmf_add_one, lp, 1);
+  auto liar_pmd = cpp20::bind_front(&member_pointers::pmd_add_one, lp);
+  EXPECT_EQ(liar_pmf(), 3);
+  EXPECT_EQ(liar_pmd()(1), 2);
 }
 
 }  // namespace
