@@ -1,28 +1,6 @@
-#!/usr/bin/env python3.8
-
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-#### CATEGORY=Run, inspect and debug
-### Extract pprof data from inspect.json
-##
-## inspect.json holds Inspect data generated as part of a snapshot (see fx snapshot).
-## pprof is a tool used to analyze profiling data (for more details, see
-## https://github.com/google/pprof). Some components are configured to provide
-## the Inspect tool with pprof data that can later be used to analyze the running
-## program's state (memory, threads, etc.). This is especially useful after a
-## crash where developers can observe the last known state before the crash.
-##
-## This tool extracts the pprof data for some component from inspect.json and
-## decodes it from its stored format (base64 encoded) into the format the pprof
-## tool will understand (raw binary). The pprof files will be extracted to a
-## temporary directory.
-##
-## usage: fx extract_pprof --inspect FILE --component CMX
-##
-##   --inspect   Path to the inspect.json file
-##   --component Component to extract pprof data for (i.e. netstack)
 
 import argparse
 import base64
