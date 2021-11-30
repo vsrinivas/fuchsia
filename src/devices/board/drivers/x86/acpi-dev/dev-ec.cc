@@ -53,6 +53,7 @@ typedef struct acpi_ec_device {
   bool gpe_setup : 1;
   bool thread_setup : 1;
   bool ec_space_setup : 1;
+  bool use_global_lock : 1;
 } acpi_ec_device_t;
 
 static ACPI_STATUS get_ec_handle(ACPI_HANDLE, UINT32, void*, void**);
@@ -69,6 +70,32 @@ static zx_status_t wait_for_interrupt(acpi_ec_device_t* dev);
 static zx_status_t execute_read_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t* val);
 static zx_status_t execute_write_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t val);
 static zx_status_t execute_query_op(acpi_ec_device_t* dev, uint8_t* val);
+
+static zx_status_t check_needs_global_lock(acpi_ec_device_t* dev) {
+  dev->use_global_lock = false;
+  ACPI_BUFFER buf = {
+      .Length = ACPI_ALLOCATE_BUFFER,
+      .Pointer = nullptr,
+  };
+  ACPI_STATUS status =
+      AcpiEvaluateObject(dev->acpi_handle, const_cast<ACPI_STRING>("_GLK"), nullptr, &buf);
+  if (status != AE_OK) {
+    if (status == AE_NOT_FOUND) {
+      // Not found means no global lock.
+      return ZX_OK;
+    }
+    zxlogf(ERROR, "EvaluateObject for _GLK failed: %d", status);
+    return acpi_to_zx_status(status);
+  }
+
+  ACPI_OBJECT* obj = static_cast<ACPI_OBJECT*>(buf.Pointer);
+  if (obj->Type != ACPI_TYPE_INTEGER) {
+    zxlogf(ERROR, "_GLK had wrong type: %d", obj->Type);
+    return ZX_ERR_WRONG_TYPE;
+  }
+  dev->use_global_lock = obj->Integer.Value != 0;
+  return ZX_OK;
+}
 
 // Execute the EC_CMD_READ operation.  Requires the ACPI global lock be held.
 static zx_status_t execute_read_op(acpi_ec_device_t* dev, uint8_t addr, uint8_t* val) {
@@ -182,9 +209,11 @@ static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRE
     return AE_BAD_PARAMETER;
   }
 
-  UINT32 global_lock;
-  while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
-    ;
+  UINT32 global_lock = 0;
+  if (dev->use_global_lock) {
+    while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
+      ;
+  }
 
   // NB: The processing of the read/write ops below will generate interrupts,
   // which will unfortunately cause spurious wakeups on the event thread.  One
@@ -217,7 +246,9 @@ static ACPI_STATUS ec_space_request_handler(UINT32 Function, ACPI_PHYSICAL_ADDRE
   }
 
 finish:
-  AcpiReleaseGlobalLock(global_lock);
+  if (dev->use_global_lock) {
+    AcpiReleaseGlobalLock(global_lock);
+  }
   return status;
 }
 
@@ -251,8 +282,10 @@ static int acpi_ec_thread(void* arg) {
       goto exiting_without_lock;
     }
 
-    while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
-      ;
+    if (dev->use_global_lock) {
+      while (AcpiAcquireGlobalLock(0xFFFF, &global_lock) != AE_OK)
+        ;
+    }
 
     uint8_t status;
     bool processed_evt = false;
@@ -286,11 +319,15 @@ static int acpi_ec_thread(void* arg) {
       xprintf("acpi-ec: Spurious wakeup, no evt: %#x", status);
     }
 
-    AcpiReleaseGlobalLock(global_lock);
+    if (dev->use_global_lock) {
+      AcpiReleaseGlobalLock(global_lock);
+    }
   }
 
 exiting_with_lock:
-  AcpiReleaseGlobalLock(global_lock);
+  if (dev->use_global_lock) {
+    AcpiReleaseGlobalLock(global_lock);
+  }
 exiting_without_lock:
   xprintf("acpi-ec: thread terminated");
   return 0;
@@ -474,6 +511,8 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
     return ZX_ERR_NO_MEMORY;
   }
   dev->acpi_handle = acpi_handle;
+
+  check_needs_global_lock(dev);
 
   zx_status_t err = zx_event_create(0, &dev->interrupt_event);
   if (err != ZX_OK) {
