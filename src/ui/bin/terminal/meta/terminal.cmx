@@ -36,6 +36,8 @@
             "fuchsia.sys.index.FuzzySearch",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.composition.Allocator",
+            "fuchsia.ui.composition.Flatland",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input3.KeyEventInjector",
             "fuchsia.ui.input3.Keyboard",
