@@ -42,11 +42,12 @@ struct BlobPageInFrequencies {
 // This class is not thread-safe except for the read_metrics() and verification_metrics()
 // accessors, as well as calls to IncrementPageIn(). Everything else is only accessed from the main
 // serving thread which is currently single-threaded.
+//
 // TODO(fxbug.dev/80285): Make this properly thread-safe.
 class BlobfsMetrics : public fs::MetricsTrait {
  public:
   explicit BlobfsMetrics(
-      bool should_record_page_in,
+      bool should_record_page_in, inspect::Inspector inspector = {},
       const std::function<std::unique_ptr<cobalt_client::Collector>()>& collector_factory = {},
       zx::duration cobalt_flush_time = kMetricsFlushTime);
   ~BlobfsMetrics() override;
@@ -115,10 +116,8 @@ class BlobfsMetrics : public fs::MetricsTrait {
   // Flushes the metrics to the cobalt client and schedules itself to flush again.
   void ScheduleMetricFlush();
 
-  static inspect::Inspector CreateInspector();
-
   // Inspect instrumentation data.
-  inspect::Inspector inspector_ = CreateInspector();
+  inspect::Inspector inspector_;
   inspect::Node& root_ = inspector_.GetRoot();
 
   // ALLOCATION STATS

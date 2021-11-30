@@ -47,16 +47,19 @@ fs_metrics::CompressionFormat FormatForInode(const Inode& inode) {
 }  // namespace
 
 BlobfsMetrics::BlobfsMetrics(
-    bool should_record_page_in,
+    bool should_record_page_in, inspect::Inspector inspector,
     const std::function<std::unique_ptr<cobalt_client::Collector>()>& collector_factory,
     zx::duration cobalt_flush_time)
-    : should_record_page_in_(should_record_page_in),
+    : inspector_{std::move(inspector)},
+      should_record_page_in_(should_record_page_in),
       cobalt_metrics_(collector_factory ? collector_factory()
                                         : std::make_unique<cobalt_client::Collector>(
                                               fs_metrics::kCobaltProjectId),
                       fs_metrics::Source::kBlobfs, fs_metrics::CompressionSource::kBlobfs),
       cobalt_flush_time_(cobalt_flush_time) {
-  // Add a node that allows querying the size of the Inspect VMO at runtime
+  // Add a node that allows querying the size of the Inspect VMO at runtime.
+  // TODO(fxbug.dev/85419): Replace the following lazy node with the one now part of the Inspector
+  // class itself (i.e. call `inspector_.CreateStatsNode()` instead).
   root_.CreateLazyNode(
       "inspect_vmo_stats",
       [this] {
@@ -142,21 +145,6 @@ void BlobfsMetrics::ScheduleMetricFlush() {
         ScheduleMetricFlush();
       },
       cobalt_flush_time_);
-}
-
-inspect::Inspector BlobfsMetrics::CreateInspector() {
-  // The maximum size of the VMO is set to 128KiB. In practice, we have not seen this inspect VMO
-  // need more than 128KiB. This gives the VMO enough space to grow if we add more data in the
-  // future. When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
-  //
-  // TODO(fxbug.dev/59043): Inspect should print warnings about overflowing the maximum size of a
-  // VMO.
-#ifdef BLOBFS_ENABLE_LARGE_INSPECT_VMO
-  constexpr size_t kSize = 2 * 1024 * 1024;
-#else
-  constexpr size_t kSize = 128 * 1024;
-#endif
-  return inspect::Inspector(inspect::InspectSettings{.maximum_size = kSize});
 }
 
 void BlobfsMetrics::Collect() {

@@ -104,6 +104,21 @@ zx_status_t LoadSuperblock(const fuchsia_hardware_block_BlockInfo& block_info, i
   return CheckSuperblock(superblock, blocks, /*quiet=*/false);
 }
 
+inspect::Inspector CreateInspector() {
+  // The maximum size of the VMO is set to 128KiB. In practice, we have not seen this inspect VMO
+  // need more than 128KiB. This gives the VMO enough space to grow if we add more data in the
+  // future. When recording page-in frequencies, a much larger Inspect VMO is required (>512KB).
+  //
+  // TODO(fxbug.dev/59043): Inspect should print warnings about overflowing the maximum size of a
+  // VMO.
+#ifdef BLOBFS_ENABLE_LARGE_INSPECT_VMO
+  constexpr size_t kSize = 2ul * 1024ul * 1024ul;
+#else
+  constexpr size_t kSize = 128ul * 1024ul;
+#endif
+  return inspect::Inspector(inspect::InspectSettings{.maximum_size = kSize});
+}
+
 }  // namespace
 
 zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatcher,
@@ -800,7 +815,8 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
       writability_(writable),
       write_compression_settings_(write_compression_settings),
       vmex_resource_(std::move(vmex_resource)),
-      metrics_(CreateMetrics(std::move(collector_factory), metrics_flush_time)),
+      inspector_(CreateInspector()),
+      metrics_(CreateMetrics(inspector_, std::move(collector_factory), metrics_flush_time)),
       pager_backed_cache_policy_(pager_backed_cache_policy) {
   ZX_ASSERT(vfs_);
 
@@ -1078,14 +1094,15 @@ zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& o
 }
 
 std::shared_ptr<BlobfsMetrics> Blobfs::CreateMetrics(
+    inspect::Inspector inspector,
     std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
     zx::duration metrics_flush_time) {
   bool enable_page_in_metrics = false;
 #ifdef BLOBFS_ENABLE_PAGE_IN_METRICS
   enable_page_in_metrics = true;
 #endif
-  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics, collector_factory,
-                                         metrics_flush_time);
+  return std::make_shared<BlobfsMetrics>(enable_page_in_metrics, std::move(inspector),
+                                         collector_factory, metrics_flush_time);
 }
 
 zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {

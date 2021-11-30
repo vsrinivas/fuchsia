@@ -293,6 +293,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   void ComputeFragmentationMetrics();
 
   static std::shared_ptr<BlobfsMetrics> CreateMetrics(
+      inspect::Inspector inspector,
       std::function<std::unique_ptr<cobalt_client::Collector>()> collector_factory,
       zx::duration metrics_flush_time);
 
@@ -321,6 +322,9 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // This event's koid is used as a unique identifier for this filesystem instance. This must be
   // an event because it's returned by the fs.Query interface.
   zx::event fs_id_;
+
+  // Inspector used for Blobfs.
+  inspect::Inspector inspector_;
 
   std::shared_ptr<BlobfsMetrics> metrics_;  // Guaranteed non-null.
 
