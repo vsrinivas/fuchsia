@@ -36,12 +36,17 @@ impl Default for AccelerationMode {
 impl FromStr for AccelerationMode {
     type Err = std::string::String;
     fn from_str(text: &str) -> Result<Self, std::string::String> {
-        let value = serde_json::from_str(&format!("\"{}\"", text)).expect(&format!(
-            "could not parse '{}' as a valid AccelerationMode. \
-            Please check the help text for allowed values and try again",
-            text
-        ));
-        Ok(value)
+        let result = serde_json::from_str(&format!("\"{}\"", text));
+        return match result {
+            Err(e) => {
+                return Err(format!(
+                    "could not parse '{}' as a valid AccelerationMode. \
+                    Please check the help text for allowed values and try again: {:?}",
+                    text, e
+                ))
+            }
+            Ok(v) => Ok(v),
+        };
     }
 }
 
@@ -75,21 +80,26 @@ pub enum EngineType {
     Qemu,
 }
 
-impl FromStr for EngineType {
-    type Err = std::string::String;
-    fn from_str(text: &str) -> Result<Self, std::string::String> {
-        let value = serde_json::from_str(&format!("\"{}\"", text)).expect(&format!(
-            "could not parse '{}' as a valid EngineType. \
-            Please check the help text for allowed values and try again",
-            text
-        ));
-        Ok(value)
-    }
-}
-
 impl Default for EngineType {
     fn default() -> Self {
         EngineType::Femu
+    }
+}
+
+impl FromStr for EngineType {
+    type Err = std::string::String;
+    fn from_str(text: &str) -> Result<Self, std::string::String> {
+        let result = serde_json::from_str(&format!("\"{}\"", text));
+        return match result {
+            Err(e) => {
+                return Err(format!(
+                    "could not parse '{}' as a valid EngineType. \
+                    Please check the help text for allowed values and try again: {:?}",
+                    text, e
+                ))
+            }
+            Ok(v) => Ok(v),
+        };
     }
 }
 
@@ -134,12 +144,17 @@ impl fmt::Display for GpuType {
 impl FromStr for GpuType {
     type Err = std::string::String;
     fn from_str(text: &str) -> Result<Self, std::string::String> {
-        let value = serde_json::from_str(&format!("\"{}\"", text)).expect(&format!(
-            "could not parse '{}' as a valid GpuType. \
-            Please check the help text for allowed values and try again",
-            text
-        ));
-        Ok(value)
+        let result = serde_json::from_str(&format!("\"{}\"", text));
+        return match result {
+            Err(e) => {
+                return Err(format!(
+                    "could not parse '{}' as a valid GpuType. \
+                    Please check the help text for allowed values and try again: {:?}",
+                    text, e
+                ))
+            }
+            Ok(v) => Ok(v),
+        };
     }
 }
 
@@ -188,4 +203,72 @@ pub struct VirtualCpu {
 
     /// The number of virtual CPUs that will emulated in the virtual device.
     pub count: usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_accel() -> Result<()> {
+        // Verify it returns a default
+        let _default = AccelerationMode::default();
+        // Deserialize a valid value
+        assert!(AccelerationMode::from_str("auto").is_ok());
+        // Fail to deserialize and invalid value
+        assert!(AccelerationMode::from_str("bad_value").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_console() -> Result<()> {
+        // Verify it returns a default
+        let _default = ConsoleType::default();
+        Ok(())
+    }
+
+    #[test]
+    fn test_engine() -> Result<()> {
+        // Verify it returns a default
+        let _default = EngineType::default();
+        // Deserialize a valid value
+        assert!(EngineType::from_str("qemu").is_ok());
+        // Fail to deserialize and invalid value
+        assert!(EngineType::from_str("bad_value").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_gpu() -> Result<()> {
+        // Verify it returns a default
+        let default = GpuType::default();
+        // Verify we can use default formatting to print it
+        println!("{}", default);
+        // Deserialize a valid value
+        assert!(GpuType::from_str("auto").is_ok());
+        // Fail to deserialize and invalid value
+        assert!(GpuType::from_str("bad_value").is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_log() -> Result<()> {
+        // Verify it returns a default
+        let _default = LogLevel::default();
+        Ok(())
+    }
+
+    #[test]
+    fn test_net() -> Result<()> {
+        // Verify it returns a default
+        let _default = NetworkingMode::default();
+        Ok(())
+    }
+
+    #[test]
+    fn test_cpu() -> Result<()> {
+        // Verify it returns a default
+        let _default = VirtualCpu::default();
+        Ok(())
+    }
 }
