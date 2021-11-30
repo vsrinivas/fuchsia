@@ -113,9 +113,14 @@ grand_swd_binary("bin") {
   output_name = "pkg_resolver"
 }
 
-fuchsia_package_with_single_component("pkg-resolver") {
+fuchsia_component("component") {
+  component_name = "pkg-resolver"
   manifest = "meta/pkg-resolver.cml"
   deps = [ ":bin" ]
+}
+
+fuchsia_package("pkg-resolver") {
+  deps = [ ":component" ]
 }
 
 fuchsia_component("unit-tests-root") {
