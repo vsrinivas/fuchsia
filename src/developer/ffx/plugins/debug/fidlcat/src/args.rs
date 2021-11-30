@@ -160,7 +160,7 @@ pub struct FidlcatCommand {
     ///
     /// When used with --remote-job-id or --remote-job-name, only the processes from the selected
     /// jobs are taken into account.
-    #[argh(option)]
+    #[argh(option, short = 'f')]
     pub remote_name: Vec<String>,
 
     /// like --remote-name, it monitors some processes. However, for these processes, monitoring

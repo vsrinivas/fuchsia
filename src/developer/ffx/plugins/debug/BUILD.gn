@@ -11,6 +11,7 @@ ffx_plugin("ffx_debug_plugin") {
   plugin_deps = [
     "core:ffx_debug_core",
     "fidlcat:ffx_debug_fidlcat",
+    "run:ffx_debug_run",
     "symbol-index:ffx_debug_symbol_index",
   ]
 

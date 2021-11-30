@@ -122,8 +122,8 @@ const char kEnableDebugAdapterHelp[] = R"( --enable-debug-adapter
       This is useful for connecting the debugger with an IDE.)";
 
 const char kDebugAdapterPortHelp[] = R"( --debug-adapter-port=<port>
-      Uses this port number to serve debug adapter protocol. By default 15678 is used.
-      )";
+      Uses this port number to serve debug adapter protocol.
+      By default 15678 is used.)";
 
 }  // namespace
 

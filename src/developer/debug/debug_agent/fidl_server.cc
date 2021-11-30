@@ -21,9 +21,12 @@ void DebugAgentImpl::Connect(zx::socket socket, ConnectCallback callback) {
       [adapter = adapter_.get()]() { adapter->OnStreamReadable(); });
 
   // Exit the message loop on error.
-  buffer_->set_error_callback([]() {
+  buffer_->set_error_callback([this]() {
+    // buffer_ is owned by us, so `this` outlives buffer_.
     DEBUG_LOG(Agent) << "Remote socket connection lost";
     debug::MessageLoop::Current()->QuitNow();
+    debug_agent_->Disconnect();
+    has_connection_ = false;
   });
 
   // Connect the buffer into the agent.

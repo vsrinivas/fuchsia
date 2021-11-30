@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Error, Result},
-    async_net::unix::UnixListener,
-    ffx_config::sdk::SdkVersion,
-    futures_util::future::FutureExt,
-    futures_util::io::{AsyncReadExt, AsyncWriteExt},
-    std::fs,
+    anyhow::Result, errors::ffx_error, ffx_config::sdk::SdkVersion,
+    ffx_debug_run::DebugAgentSocket, fuchsia_async::unblock, std::process::Command,
 };
 
 struct ProcessArguments {
@@ -46,8 +42,6 @@ impl ProcessArguments {
     }
 }
 
-const UNIX_SOCKET: &str = "/tmp/debug_agent.socket";
-
 #[ffx_core::ffx_plugin(
     "debug.enabled",
     fidl_fuchsia_debugger::DebugAgentProxy = "core/appmgr:out:fuchsia.debugger.DebugAgent"
@@ -56,28 +50,19 @@ pub async fn fidlcat(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
     cmd: ffx_debug_fidlcat_args::FidlcatCommand,
 ) -> Result<()> {
-    let result = execute_debug(debugger_proxy, &cmd).await;
-    // Removes the Unix socket file to be able to connect again.
-    let _ = fs::remove_file(UNIX_SOCKET);
-    result
-}
+    if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
+        log::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
+    }
 
-pub async fn execute_debug(
-    debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
-    cmd: &ffx_debug_fidlcat_args::FidlcatCommand,
-) -> Result<(), Error> {
     let sdk = ffx_config::get_sdk().await?;
-
+    let fidlcat_path = sdk.get_host_tool("fidlcat")?;
     let mut arguments = ProcessArguments::new();
-    let mut needs_debug_agent = true;
+    let mut debug_agent_socket: Option<DebugAgentSocket> = None;
 
-    let command_path = sdk.get_host_tool("fidlcat")?;
-
-    if let Some(from) = &cmd.from {
-        if from != "device" {
-            needs_debug_agent = false;
-            arguments.add_value("--from", from);
-        }
+    if cmd.from.is_some() && cmd.from.as_ref().unwrap() != "device" {
+        arguments.add_value("--from", &cmd.from.unwrap());
+    } else {
+        debug_agent_socket = Some(DebugAgentSocket::create(debugger_proxy)?);
     }
 
     arguments.add_option("--to", &cmd.to);
@@ -93,7 +78,7 @@ pub async fn execute_debug(
     arguments.add_values("--thread", &cmd.thread);
     arguments.add_flag("--dump-messages", cmd.dump_messages);
 
-    if needs_debug_agent {
+    if debug_agent_socket.is_some() {
         // Processes to monitor.
         arguments.add_values("--remote-pid", &cmd.remote_pid);
         arguments.add_values("--remote-name", &cmd.remote_name);
@@ -104,105 +89,43 @@ pub async fn execute_debug(
         arguments.add_values("--remote-job-name", &cmd.remote_job_name);
     }
 
-    if let SdkVersion::InTree = sdk.get_version() {
+    if sdk.get_version() == &SdkVersion::InTree {
         // When ffx is used in tree, uses the JSON IR files listed in all_fidl_json.txt.
         let ir_file = format!("@{}/all_fidl_json.txt", sdk.get_path_prefix().to_str().unwrap());
         arguments.add_value("--fidl-ir-path", &ir_file);
     }
 
-    if !needs_debug_agent {
-        // Start fidlcat locally.
-        let child = std::process::Command::new(&command_path).args(&arguments.arguments).spawn();
-        if let Err(error) = child {
-            return Err(anyhow!("Can't launch {:?}: {:?}", command_path, error));
-        }
-        let mut child = child.unwrap();
+    if let Some(ref socket) = debug_agent_socket {
+        // Connect to the debug_agent on the device.
 
-        // When the debug agent is not needed, the process (fidlcat) doesn't communicate with the
-        // device. In that case, just wait for the process to terminate.
-        let _ = child.wait();
-        return Ok(());
+        // It's safe to unwrap because the path is created by us.
+        let unix_socket_path = socket.unix_socket_path().to_str().unwrap();
+        // Connect to the Unix socket.
+        arguments.add_value("--unix-connect", unix_socket_path);
+
+        // Terminate the debug agent when exiting.
+        arguments.add_flag("--quit-agent-on-exit", true);
     }
 
-    // Connect to the debug_agent on the device.
-    let (sock_server, sock_client) =
-        fidl::Socket::create(fidl::SocketOpts::STREAM).expect("Failed while creating socket");
-    debugger_proxy.connect(sock_client).await?;
+    // Start fidlcat locally.
+    let mut fidlcat = Command::new(&fidlcat_path).args(&arguments.arguments).spawn()?;
 
-    let (rx, tx) = fidl::AsyncSocket::from_socket(sock_server)?.split();
-    let rx = std::cell::RefCell::new(rx);
-    let tx = std::cell::RefCell::new(tx);
+    // Spawn the task that doing the forwarding in the background.
+    let _task = fuchsia_async::Task::local(async move {
+        if let Some(socket) = debug_agent_socket {
+            let _ = socket.forward_one_connection().await.map_err(|e| {
+                eprintln!("Connection to debug_agent broken: {}", e);
+            });
+        };
+    });
 
-    // Create our Unix socket.
-    let listener = UnixListener::bind(UNIX_SOCKET)?;
-
-    // Connect to the Unix socket.
-    arguments.add_value("--unix-connect", UNIX_SOCKET);
-
-    // Use the symbol server.
-    arguments.add_value("--symbol-server", "gs://fuchsia-artifacts-release/debug");
-
-    // Terminate the debug agent when exiting.
-    arguments.add_flag("--quit-agent-on-exit", true);
-
-    // Start fidlcat or zxdb locally.
-    let child = std::process::Command::new(&command_path).args(&arguments.arguments).spawn();
-    if let Err(error) = child {
-        return Err(anyhow!("Can't launch {:?}: {:?}", command_path, error));
+    if let Some(exit_code) = unblock(move || fidlcat.wait()).await?.code() {
+        if exit_code == 0 {
+            Ok(())
+        } else {
+            Err(ffx_error!("fidlcat exits with code {}", exit_code).into())
+        }
+    } else {
+        Err(ffx_error!("fidlcat terminated by signal").into())
     }
-
-    // Wait for a connection on the unix socket (connection from zxdb).
-    let (socket, _) = listener.accept().await?;
-
-    let (mut zxdb_rx, mut zxdb_tx) = socket.split();
-    // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-    // If this is the case, it is an error. See fxbug.dev/87757 for more details
-    let mut debug_agent_rx = rx.borrow_mut();
-    // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-    // If this is the case, it is an error. See fxbug.dev/87757 for more details
-    let mut debug_agent_tx = tx.borrow_mut();
-
-    // Reading from zxdb (using the Unix socket) and writing to the debug agent.
-    let zxdb_socket_read = async move {
-        let mut buffer = [0; 4096];
-        loop {
-            let n = zxdb_rx.read(&mut buffer[..]).await?;
-            if n == 0 {
-                return Ok(()) as Result<(), Error>;
-            }
-            let mut ofs = 0;
-            while ofs != n {
-                let wrote = debug_agent_tx.write(&buffer[ofs..n]).await?;
-                ofs += wrote;
-                if wrote == 0 {
-                    return Ok(()) as Result<(), Error>;
-                }
-            }
-        }
-    };
-    let mut zxdb_socket_read = Box::pin(zxdb_socket_read.fuse());
-
-    // Reading from the debug agent and writing to zxdb (using the Unix socket).
-    let zxdb_socket_write = async move {
-        let mut buffer = [0; 4096];
-        loop {
-            let n = debug_agent_rx.read(&mut buffer).await?;
-            let mut ofs = 0;
-            while ofs != n {
-                let wrote = zxdb_tx.write(&buffer[ofs..n]).await?;
-                ofs += wrote;
-                if wrote == 0 {
-                    return Ok(()) as Result<(), Error>;
-                }
-            }
-        }
-    };
-    let mut zxdb_socket_write = Box::pin(zxdb_socket_write.fuse());
-
-    // ffx zxdb exits when we have an error on the unix socket (either read or write).
-    futures::select! {
-        read_res = zxdb_socket_read => read_res?,
-        write_res = zxdb_socket_write => write_res?,
-    };
-    return Ok(()) as Result<(), Error>;
 }

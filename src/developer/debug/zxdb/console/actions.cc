@@ -120,7 +120,9 @@ Err ScriptFileToActions(const std::string& path, std::vector<Action>* actions) {
   if (!files::ReadFileToString(files::AbsolutePath(path), &contents))
     return Err(fxl::StringPrintf("Could not read file \"%s\"", path.c_str()));
 
-  *actions = CommandsToActions(contents);
+  for (auto& action : CommandsToActions(contents)) {
+    actions->push_back(std::move(action));
+  }
   return Err();
 }
 

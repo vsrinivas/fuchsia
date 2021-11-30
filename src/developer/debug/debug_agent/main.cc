@@ -101,7 +101,7 @@ int main(int argc, const char* argv[]) {
   debug_agent::CommandLineOptions options;
   cmdline::Status status = ParseCommandLine(argc, argv, &options);
   if (status.has_error()) {
-    fprintf(stderr, "%s\n", status.error_message().c_str());
+    FX_LOGS(ERROR) << status.error_message();
     return 1;
   }
 
@@ -113,7 +113,7 @@ int main(int argc, const char* argv[]) {
   } else if (options.unwind == debug_agent::kFuchsiaUnwinder) {
     debug_agent::SetUnwinderType(debug_agent::UnwinderType::kFuchsia);
   } else {
-    fprintf(stderr, "Invalid option for --unwind. See debug_agent --help.\n");
+    FX_LOGS(ERROR) << "Invalid option for --unwind. See debug_agent --help.";
     return 1;
   }
 
@@ -158,9 +158,8 @@ int main(int argc, const char* argv[]) {
           auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
           context->outgoing()->AddPublicService(bindings.GetHandler(&fidl_agent));
 
+          FX_LOGS(INFO) << "Start listening on FIDL fuchsia::debugger::DebugAgent.";
           message_loop->Run();
-
-          DEBUG_LOG(Agent) << "Joining connection thread.";
         } else {
           // Start a new thread that will listen on a socket from an incoming connection from a
           // client. In the meantime, the main thread will block waiting for something to be posted
@@ -176,6 +175,7 @@ int main(int argc, const char* argv[]) {
           conn_config.port = options.port;
           std::thread conn_thread(&debug_agent::SocketServer::Run, &server, std::move(conn_config));
 
+          FX_LOGS(INFO) << "Start listening on port " << options.port;
           message_loop->Run();
 
           DEBUG_LOG(Agent) << "Joining connection thread.";
@@ -193,12 +193,12 @@ int main(int argc, const char* argv[]) {
     }
     message_loop->Cleanup();
   } else {
-    fprintf(stderr, "ERROR: --port=<port-number> required. See debug_agent --help.\n\n");
+    FX_LOGS(ERROR) << "--port=<port-number> required. See debug_agent --help.";
     return 1;
   }
 
   // It's very useful to have a simple message that informs the debug agent
   // exited successfully.
-  fprintf(stderr, "\rSee you, Space Cowboy...\r\n");
+  FX_LOGS(INFO) << "See you, Space Cowboy...";
   return 0;
 }
