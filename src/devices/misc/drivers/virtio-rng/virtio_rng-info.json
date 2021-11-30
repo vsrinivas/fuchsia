@@ -1,0 +1,9 @@
+{
+    "short_description": "Virtio emulation entropy driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Misc"
+    ]
+}

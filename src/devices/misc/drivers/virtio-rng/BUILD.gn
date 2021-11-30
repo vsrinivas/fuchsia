@@ -37,6 +37,7 @@ fuchsia_driver("virtio_rng-driver") {
 }
 
 fuchsia_driver_component("virtio_rng") {
+  info = "virtio_rng-info.json"
   component_name = "virtio_rng"
   deps = [ ":virtio_rng-driver" ]
 }
