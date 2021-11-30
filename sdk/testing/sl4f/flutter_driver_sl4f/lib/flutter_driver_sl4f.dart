@@ -44,7 +44,12 @@ class FlutterDriverConnector {
   FlutterDriverConnector(this._sl4f) : _proxyController = _sl4f.proxy;
 
   /// Initializes the connection to fuchsia.
-  Future<void> initialize() async {
+  ///
+  /// sshCommandRunner - An optional [frdp.SshCommandRunner] that can be used
+  /// to override commands sent to the device.
+  /// TODO(http://fxb/89277): Remove after support for flutter runner CFv2 is
+  /// fixed.
+  Future<void> initialize([frdp.SshCommandRunner sshCommandRunner]) async {
     _logger.info('Initializing Flutter port forwarding to Fuchsia...');
     if (_connection != null) {
       return;
@@ -52,7 +57,7 @@ class FlutterDriverConnector {
     frdp.fuchsiaPortForwardingFunction = _sl4fPortForwardingFunction;
     _connection =
         await frdp.FuchsiaRemoteConnection.connectWithSshCommandRunner(
-            _Sl4fCommandRunner(_sl4f.ssh));
+            sshCommandRunner ?? _Sl4fCommandRunner(_sl4f.ssh));
     _logger.info('Connected to FlutterDriver port on device.');
   }
 
