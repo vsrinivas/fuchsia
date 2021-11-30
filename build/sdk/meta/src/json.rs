@@ -98,6 +98,12 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
                 /*ban_unknown=*/ true,
             )
             .map_err(Error::SchemaInvalid)?;
+        scope
+            .compile(
+                from_str(include_str!("../product_bundle_common-ab8943fd.json"))?,
+                /*ban_unknown=*/ true,
+            )
+            .map_err(Error::SchemaInvalid)?;
 
         let validator = scope
             .compile_and_return(schema, /*ban_unknown=*/ true)

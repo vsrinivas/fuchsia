@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Metadata deserializer.
+//! Metadata deserializer. The metadata is a wrapper or enumeration of the
+//! specific types such as a physical device spec, virtual device spec, product
+//! bundle, or product bundle container (with more to come).
 
 use crate::common::{ElementType, Envelope};
 use crate::json::JsonObject;
 use crate::physical_device::PhysicalDeviceV1;
-use crate::product_bundle::ProductBundleV1;
+use crate::product_bundle_common::ProductBundleV1;
+use crate::product_bundle_container::ProductBundleContainerV1;
 use crate::virtual_device::VirtualDeviceV1;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
@@ -19,6 +22,7 @@ use std::io::Read;
 enum SchemaId {
     PhysicalDeviceV1,
     ProductBundleV1,
+    ProductBundleContainerV1,
     VirtualDeviceV1,
 }
 
@@ -32,6 +36,10 @@ lazy_static! {
             SchemaId::PhysicalDeviceV1,
         );
         m.insert(Envelope::<ProductBundleV1>::get_schema_id().unwrap(), SchemaId::ProductBundleV1);
+        m.insert(
+            Envelope::<ProductBundleContainerV1>::get_schema_id().expect("insert PB container"),
+            SchemaId::ProductBundleContainerV1,
+        );
         m.insert(
             Envelope::<VirtualDeviceV1>::get_schema_id().unwrap(),
             SchemaId::VirtualDeviceV1,
@@ -52,6 +60,7 @@ impl SchemaId {
 pub enum Metadata {
     PhysicalDeviceV1(PhysicalDeviceV1),
     ProductBundleV1(ProductBundleV1),
+    ProductBundleContainerV1(ProductBundleContainerV1),
     VirtualDeviceV1(VirtualDeviceV1),
 }
 
@@ -61,6 +70,7 @@ impl Metadata {
         match self {
             Self::PhysicalDeviceV1(data) => &data.name[..],
             Self::ProductBundleV1(data) => &data.name[..],
+            Self::ProductBundleContainerV1(data) => &data.name[..],
             Self::VirtualDeviceV1(data) => &data.name[..],
         }
     }
@@ -101,6 +111,11 @@ pub fn from_reader<R: Read>(mut source: R) -> Result<Metadata> {
                     let e = Envelope::<ProductBundleV1>::new(buf.as_bytes())?;
                     e.validate()?;
                     Metadata::ProductBundleV1(e.data)
+                }
+                SchemaId::ProductBundleContainerV1 => {
+                    let e = Envelope::<ProductBundleContainerV1>::new(buf.as_bytes())?;
+                    e.validate()?;
+                    Metadata::ProductBundleContainerV1(e.data)
                 }
                 SchemaId::VirtualDeviceV1 => {
                     let e = Envelope::<VirtualDeviceV1>::new(buf.as_bytes())?;
@@ -200,6 +215,74 @@ mod tests {
                 "name": "generic-x64",
                 "type": "product_bundle",
                 "device_refs": ["generic-x64"],
+            }
+        }
+        "#;
+        let result = from_reader(json.as_bytes());
+        assert!(result.is_err(), "Expected to fail validation.");
+    }
+
+    #[test]
+    fn test_read_product_bundle_container_v1() {
+        let json = r#"
+        {
+            "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle_container-76a5c104.json",
+            "data": {
+                "name": "fake-fuchsia-f1",
+                "type": "product_bundle_container",
+                "bundles": [
+                    {
+                        "data": {
+                            "name": "generic-x64",
+                            "type": "product_bundle",
+                            "device_refs": ["generic-x64"],
+                            "images": [{
+                                "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
+                                "format": "tgz"
+                            }],
+                            "packages": [{
+                                "format": "tgz",
+                                "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
+                            }]
+                        },
+                        "schema_id": "product_bundle_common-ab8943fd.json#/definitions/product_bundle"
+                    }
+                ]
+            }
+        }
+        "#;
+        let metadata = from_reader(json.as_bytes()).expect("metadata from reader");
+        match metadata {
+            Metadata::ProductBundleContainerV1(data) => {
+                assert_eq!(data.name.as_str(), "fake-fuchsia-f1")
+            }
+            _ => assert!(false, "Unexpected metadata type {:?}", metadata),
+        };
+    }
+
+    #[test]
+    fn test_read_invalid_product_bundle_container_v1() {
+        let json = r#"
+        {
+            "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle_container-76a5c104.json",
+            "data": {
+                "name": "fake-fuchsia-f1",
+                "type": "product_bundle_container",
+                "bundles": [
+                    {
+                        "name": "generic-x64",
+                        "type": "product_bundle",
+                        "device_refs": ["generic-x64"],
+                        "images": [{
+                            "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
+                            "format": "tgz"
+                        }],
+                        "packages": [{
+                            "format": "tgz",
+                            "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
+                        }]
+                    }
+                ],
             }
         }
         "#;

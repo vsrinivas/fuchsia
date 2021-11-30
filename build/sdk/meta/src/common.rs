@@ -102,6 +102,7 @@ pub enum ElementType {
     LoadableModule,
     PhysicalDevice,
     ProductBundle,
+    ProductBundleContainer,
     Sysroot,
     VirtualDevice,
 }

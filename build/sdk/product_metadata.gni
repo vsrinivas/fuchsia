@@ -128,6 +128,7 @@ template("product_metadata") {
       "//build/sdk/meta/common.json",
       "//build/sdk/meta/emu_manifest.json",
       "//build/sdk/meta/flash_manifest-835e8f26.json",
+      "//build/sdk/meta/product_bundle_common-ab8943fd.json",
     ]
     allow_comments = true
   }

@@ -25,6 +25,7 @@ if (is_host) {
     inputs = [
       "test_data/test_physical_device.json",
       "test_data/test_product_bundle.json",
+      "test_data/test_product_bundle_container.json",
       "test_data/test_virtual_device.json",
     ]
 

@@ -21,6 +21,8 @@ mod loadable_module;
 mod manifest;
 mod metadata;
 mod product_bundle;
+mod product_bundle_common;
+mod product_bundle_container;
 mod sysroot;
 
 // These need to be addressable from external code, because they have conflicting types
@@ -45,5 +47,7 @@ pub use crate::manifest::*;
 pub use crate::metadata::*;
 pub use crate::physical_device::*;
 pub use crate::product_bundle::*;
+pub use crate::product_bundle_common::*;
+pub use crate::product_bundle_container::*;
 pub use crate::sysroot::*;
 pub use crate::virtual_device::*;

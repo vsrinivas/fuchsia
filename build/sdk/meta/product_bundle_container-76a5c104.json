@@ -1,5 +1,5 @@
 {
-    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$schema": "http://json-schema.org/draft/2020-12/schema#",
     "allOf": [
         {
             "$ref": "common.json#/definitions/versioned_sdk_element"
@@ -16,7 +16,14 @@
                         "bundles": {
                             "description": "A list of product bundles for a particular release.",
                             "items": {
-                                "$ref": "product_bundle-6320eef1.json#/definitions/product_bundle"
+                                "properties": {
+                                    "data": {
+                                        "$ref": "product_bundle_common-ab8943fd.json#/definitions/product_bundle"
+                                    },
+                                    "schema_id": {
+                                        "type": "string"
+                                    }
+                                }
                             },
                             "minItems": 1,
                             "type": "array"
@@ -47,7 +54,7 @@
             "type": "object"
         }
     },
-    "description": "A collection of product bundles for a particular release.",
-    "id": "https://fuchsia.dev/schema/sdk/product_bundle_container-76a5c104.json",
+    "description": "A collection of metadata for a particular SDK release.",
+    "id": "http://fuchsia.com/schemas/sdk/product_bundle_container-76a5c104.json",
     "type": "object"
 }

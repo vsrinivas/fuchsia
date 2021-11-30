@@ -1,0 +1,400 @@
+{
+    "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle_container-76a5c104.json",
+    "data": {
+        "bundles": [
+            {
+                "data": {
+                    "device_refs": [
+                        "qemu-arm64"
+                    ],
+                    "images": [
+                        {
+                            "base_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331089/images",
+                            "format": "files"
+                        }
+                    ],
+                    "type": "product_bundle",
+                    "name": "terminal.arm64",
+                    "packages": [
+                        {
+                            "format": "files",
+                            "blob_uri": "gs://fuchsia-artifacts-release/blobs",
+                            "repo_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331089/packages"
+                        }
+                    ],
+                    "description": "",
+                    "metadata": [
+                        [
+                            "build_info_board",
+                            "arm64"
+                        ],
+                        [
+                            "build_info_product",
+                            "terminal"
+                        ],
+                        [
+                            "build_info_version",
+                            "7.20211124.3.2"
+                        ],
+                        [
+                            "is_debug",
+                            true
+                        ]
+                    ],
+                    "manifests": {
+                        "flash": {
+                            "credentials": [],
+                            "hw_revision": "qemu-arm64",
+                            "products": [
+                                {
+                                    "bootloader_partitions": [],
+                                    "name": "recovery",
+                                    "oem_files": [],
+                                    "partitions": [
+                                        {
+                                            "name": "",
+                                            "path": "zedboot.zbi"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "zedboot.zbi"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "zedboot.zbi"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "zedboot.vbmeta"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "zedboot.vbmeta"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "zedboot.vbmeta"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "bootloader_partitions": [],
+                                    "name": "fuchsia",
+                                    "oem_files": [],
+                                    "partitions": [
+                                        {
+                                            "name": "",
+                                            "path": "fuchsia.zbi"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "fuchsia.zbi"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "zedboot.zbi"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "fuchsia.vbmeta"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "fuchsia.vbmeta"
+                                        },
+                                        {
+                                            "name": "",
+                                            "path": "zedboot.vbmeta"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+            },
+            {
+                "data": {
+                    "device_refs": [
+                        "x64"
+                    ],
+                    "images": [
+                        {
+                            "base_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331073/images",
+                            "format": "files"
+                        }
+                    ],
+                    "type": "product_bundle",
+                    "name": "terminal.x64",
+                    "packages": [
+                        {
+                            "format": "files",
+                            "blob_uri": "gs://fuchsia-artifacts-release/blobs",
+                            "repo_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331073/packages"
+                        }
+                    ],
+                    "description": "",
+                    "metadata": [
+                        [
+                            "build_info_board",
+                            "x64"
+                        ],
+                        [
+                            "build_info_product",
+                            "terminal"
+                        ],
+                        [
+                            "build_info_version",
+                            "7.20211124.3.2"
+                        ],
+                        [
+                            "is_debug",
+                            true
+                        ]
+                    ],
+                    "manifests": {
+                        "flash": {
+                            "credentials": [],
+                            "hw_revision": "x64",
+                            "products": [
+                                {
+                                    "bootloader_partitions": [
+                                        {
+                                            "name": "fuchsia-esp",
+                                            "path": "fuchsia.esp.blk"
+                                        }
+                                    ],
+                                    "name": "recovery",
+                                    "oem_files": [],
+                                    "partitions": [
+                                        {
+                                            "name": "zircon-a",
+                                            "path": "zedboot.zbi"
+                                        },
+                                        {
+                                            "name": "zircon-b",
+                                            "path": "zedboot.zbi"
+                                        },
+                                        {
+                                            "name": "zircon-r",
+                                            "path": "zedboot.zbi"
+                                        },
+                                        {
+                                            "name": "vbmeta_a",
+                                            "path": "zedboot.vbmeta"
+                                        },
+                                        {
+                                            "name": "vbmeta_b",
+                                            "path": "zedboot.vbmeta"
+                                        },
+                                        {
+                                            "name": "vbmeta_r",
+                                            "path": "zedboot.vbmeta"
+                                        }
+                                    ]
+                                },
+                                {
+                                    "bootloader_partitions": [
+                                        {
+                                            "name": "fuchsia-esp",
+                                            "path": "fuchsia.esp.blk"
+                                        }
+                                    ],
+                                    "name": "fuchsia",
+                                    "oem_files": [],
+                                    "partitions": [
+                                        {
+                                            "name": "zircon-a",
+                                            "path": "fuchsia.zbi"
+                                        },
+                                        {
+                                            "name": "zircon-b",
+                                            "path": "fuchsia.zbi"
+                                        },
+                                        {
+                                            "name": "zircon-r",
+                                            "path": "zedboot.zbi"
+                                        },
+                                        {
+                                            "name": "vbmeta_a",
+                                            "path": "fuchsia.vbmeta"
+                                        },
+                                        {
+                                            "name": "vbmeta_b",
+                                            "path": "fuchsia.vbmeta"
+                                        },
+                                        {
+                                            "name": "vbmeta_r",
+                                            "path": "zedboot.vbmeta"
+                                        },
+                                        {
+                                            "name": "fvm",
+                                            "path": "obj/build/images/fuchsia/fuchsia/fvm.fastboot.blk"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+            },
+            {
+                "data": {
+                    "device_refs": [
+                        "qemu-arm64"
+                    ],
+                    "images": [
+                        {
+                            "base_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331057/images",
+                            "format": "files"
+                        }
+                    ],
+                    "type": "product_bundle",
+                    "name": "terminal.qemu-arm64",
+                    "packages": [
+                        {
+                            "format": "files",
+                            "blob_uri": "gs://fuchsia-artifacts-release/blobs",
+                            "repo_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331057/packages"
+                        }
+                    ],
+                    "description": "",
+                    "metadata": [
+                        [
+                            "build_info_board",
+                            "qemu-arm64"
+                        ],
+                        [
+                            "build_info_product",
+                            "terminal"
+                        ],
+                        [
+                            "build_info_version",
+                            "7.20211124.3.2"
+                        ],
+                        [
+                            "is_debug",
+                            false
+                        ]
+                    ],
+                    "manifests": {
+                        "emu": {
+                            "disk_images": [
+                                "obj/build/images/fuchsia/fuchsia/fvm.blk"
+                            ],
+                            "initial_ramdisk": "fuchsia.zbi",
+                            "kernel": "qemu-boot-shim.bin"
+                        }
+                    }
+                },
+                "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+            },
+            {
+                "data": {
+                    "device_refs": [
+                        "qemu-x64"
+                    ],
+                    "images": [
+                        {
+                            "base_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331041/images",
+                            "format": "files"
+                        }
+                    ],
+                    "type": "product_bundle",
+                    "name": "terminal.qemu-x64",
+                    "packages": [
+                        {
+                            "format": "files",
+                            "blob_uri": "gs://fuchsia-artifacts-release/blobs",
+                            "repo_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331041/packages"
+                        }
+                    ],
+                    "description": "",
+                    "metadata": [
+                        [
+                            "build_info_board",
+                            "qemu-x64"
+                        ],
+                        [
+                            "build_info_product",
+                            "terminal"
+                        ],
+                        [
+                            "build_info_version",
+                            "7.20211124.3.2"
+                        ],
+                        [
+                            "is_debug",
+                            false
+                        ]
+                    ],
+                    "manifests": {
+                        "emu": {
+                            "disk_images": [
+                                "obj/build/images/fuchsia/fuchsia/fvm.blk"
+                            ],
+                            "initial_ramdisk": "fuchsia.zbi",
+                            "kernel": "multiboot.bin"
+                        }
+                    }
+                },
+                "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+            },
+            {
+                "data": {
+                    "device_refs": [
+                        "qemu-x64"
+                    ],
+                    "images": [
+                        {
+                            "base_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331025/images",
+                            "format": "files"
+                        }
+                    ],
+                    "type": "product_bundle",
+                    "name": "workstation.qemu-x64",
+                    "packages": [
+                        {
+                            "format": "files",
+                            "blob_uri": "gs://fuchsia-artifacts-release/blobs",
+                            "repo_uri": "gs://fuchsia-artifacts-release/builds/8829647327982331025/packages"
+                        }
+                    ],
+                    "description": "",
+                    "metadata": [
+                        [
+                            "build_info_board",
+                            "qemu-x64"
+                        ],
+                        [
+                            "build_info_product",
+                            "workstation"
+                        ],
+                        [
+                            "build_info_version",
+                            "7.20211124.3.2"
+                        ],
+                        [
+                            "is_debug",
+                            false
+                        ]
+                    ],
+                    "manifests": {
+                        "emu": {
+                            "disk_images": [
+                                "obj/build/images/fuchsia/fuchsia/fvm.blk"
+                            ],
+                            "initial_ramdisk": "fuchsia.zbi",
+                            "kernel": "multiboot.bin"
+                        }
+                    }
+                },
+                "schema_id": "http://fuchsia.com/schemas/sdk/product_bundle-6320eef1.json"
+            }
+        ],
+        "type": "product_bundle_container",
+        "name": "sdk_product_bundle_container"
+    }
+}

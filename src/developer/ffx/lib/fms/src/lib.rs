@@ -88,7 +88,17 @@ impl Entries {
     /// be overwritten with the new metadata.
     pub fn add_json<R: Read>(&mut self, reader: &mut R) -> Result<()> {
         let metadata = from_reader(reader)?;
-        self.data.insert(metadata.name().to_string(), metadata);
+        match metadata {
+            Metadata::ProductBundleContainerV1(container) => {
+                for entry in container.bundles {
+                    self.data
+                        .insert(entry.data.name.to_string(), Metadata::ProductBundleV1(entry.data));
+                }
+            }
+            _ => {
+                self.data.insert(metadata.name().to_string(), metadata);
+            }
+        };
         Ok(())
     }
 
@@ -293,5 +303,40 @@ mod tests {
             find_product_bundle(&entries, &Some("generic-x64".to_string())).expect("entry found");
         let device = find_virtual_device(&entries, &pbm.device_refs).expect("entry found");
         assert_eq!(device.name, "virtual-arm64");
+    }
+
+    #[test]
+    fn test_product_bundle_container() {
+        let mut entries = Entries::new();
+        entries
+            .add_json(&mut BufReader::new(
+                include_str!("../test_data/test_physical_device.json").as_bytes(),
+            ))
+            .expect("add metadata");
+        entries
+            .add_json(&mut BufReader::new(
+                include_str!("../test_data/test_product_bundle.json").as_bytes(),
+            ))
+            .expect("add metadata");
+        entries
+            .add_json(&mut BufReader::new(
+                include_str!("../test_data/test_virtual_device.json").as_bytes(),
+            ))
+            .expect("add metadata");
+        const METADATA: &str = include_str!("../test_data/test_product_bundle_container.json");
+
+        // Damage "kind" key.
+        let broken = str::replace(METADATA, r#""type""#, r#""wrong""#);
+        let mut reader = BufReader::new(broken.as_bytes());
+        match entries.add_json(&mut reader) {
+            Ok(_) => panic!("badly formed metadata passed schema"),
+            Err(_) => (),
+        }
+        assert_eq!(entries.entry("terminal.arm64"), None);
+
+        // Finally, add the correct (original) metadata.
+        let mut reader = BufReader::new(METADATA.as_bytes());
+        entries.add_json(&mut reader).expect("add fms metadata");
+        assert_ne!(entries.entry("terminal.arm64"), None);
     }
 }

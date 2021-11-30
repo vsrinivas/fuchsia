@@ -10,7 +10,7 @@ import("//build/sdk/sdk_documentation.gni")
 product_bundle_container_required_schemas = [
   "product_bundle_container-76a5c104.json",
   "common.json",
-  "product_bundle-6320eef1.json",
+  "product_bundle_common-ab8943fd.json",
   "flash_manifest-835e8f26.json",
   "emu_manifest.json",
 ]
@@ -30,6 +30,7 @@ schemas = [
             "loadable_module.json",
             "manifest.json",
             "physical_device-0bd5d21f.json",
+            "product_bundle-6320eef1.json",
             "sysroot.json",
             "version_history-038fa854.json",
             "virtual_device-93A41932.json",
@@ -115,6 +116,8 @@ if (is_host) {
       "src/metadata.rs",
       "src/physical_device.rs",
       "src/product_bundle.rs",
+      "src/product_bundle_common.rs",
+      "src/product_bundle_container.rs",
       "src/sysroot.rs",
       "src/testing.rs",
       "src/virtual_device.rs",
@@ -137,6 +140,8 @@ if (is_host) {
       "manifest.json",
       "physical_device-0bd5d21f.json",
       "product_bundle-6320eef1.json",
+      "product_bundle_common-ab8943fd.json",
+      "product_bundle_container-76a5c104.json",
       "sysroot.json",
       "virtual_device-93A41932.json",
     ]
