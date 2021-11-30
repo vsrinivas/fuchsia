@@ -277,6 +277,10 @@ pub fn sys_arch_prctl(
             current_task.registers.fs_base = addr.ptr() as u64;
             Ok(SUCCESS)
         }
+        ARCH_SET_GS => {
+            current_task.registers.gs_base = addr.ptr() as u64;
+            Ok(SUCCESS)
+        }
         _ => {
             not_implemented!("arch_prctl: Unknown code: code=0x{:x} addr={}", code, addr);
             error!(ENOSYS)
