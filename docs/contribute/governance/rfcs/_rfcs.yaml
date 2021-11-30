@@ -1850,3 +1850,16 @@
   reviewers: ['cpu@google.com', 'eieio@google.com', 'travisg@google.com', 'mvanotti@google.com', 'surajmalhotra@google.com']
   submitted: '2021-11-29'
   reviewed: '2021-10-13'
+
+- name: 'RFC-0143'
+  title: 'Userspace Top-Byte-Ignore'
+  short_description: 'Changes the kernel ABI to support tagged userspace pointers.'
+  authors: ['leonardchan@google.com']
+  file: '0143_userspace_top_byte_ignore.md'
+  area: ['Kernel']
+  issue: ['']
+  gerrit_change_id: ['571312']
+  status: 'Accepted'
+  reviewers: ['maniscalco@google.com', 'shayba@google.com', 'dangyi@google.com', 'cpu@google.com', 'travisg@google.com', 'mvanotti@google.com', 'mcgrathr@google.com']
+  submitted: '2021-11-30'
+  reviewed: '2021-11-30'

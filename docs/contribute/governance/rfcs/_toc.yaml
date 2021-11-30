@@ -297,3 +297,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0141_cts_process.md
 - title: "RFC-0142: Software updates time dependency"
   path: /docs/contribute/governance/rfcs/0142_zx_thread_legacy_yield.md
+- title: "RFC-0143: Userspace Top-Byte-Ignore"
+  path: /docs/contribute/governance/rfcs/0143_userspace_top_byte_ignore.md
