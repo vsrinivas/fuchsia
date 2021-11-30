@@ -44,8 +44,9 @@ enum class Type : uint64_t {
   // Reserved for internal bookkeeping.
   kPoolBookkeeping = kMinExtendedTypeValue,
 
-  // A region of memory conventionally discarded as unsafe (e.g., would result
-  // in an undereferenceable pointer).
+  // The beginning region of memory, discarded so that accidental, relative
+  // access off of a null pointer is unlikely to touch any memory that might
+  // be allocated.
   kNullPointerRegion,
 
   // The phys kernel memory image.
