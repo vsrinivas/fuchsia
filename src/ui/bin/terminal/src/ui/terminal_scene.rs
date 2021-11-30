@@ -2,23 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
 use {
     crate::ui::terminal_views::{GridView, ScrollBar},
     carnelian::{
-        color::Color,
         input::{self},
-        render::{Composition, Context as RenderContext, Order, PreClear, RenderExt},
-        Coord, Rect, Size, ViewAssistantContext,
+        AppContext, Coord, Rect, Size, ViewAssistantContext, ViewKey,
     },
     fuchsia_trace as ftrace,
-    std::convert::TryFrom,
-    term_model::term::RenderableCellsIter,
 };
 
 pub struct TerminalScene {
-    composition: Composition,
-    background_color: Color,
     grid_view: GridView,
     scroll_bar: ScrollBar,
     size: Size,
@@ -37,41 +30,21 @@ pub enum PointerEventResponse {
 }
 
 impl TerminalScene {
-    pub fn new(background_color: Color) -> TerminalScene {
-        let composition = Composition::new(background_color);
-        TerminalScene { background_color, composition, ..TerminalScene::default() }
+    pub fn new(app_context: AppContext, view_key: ViewKey) -> Self {
+        TerminalScene {
+            size: Size::zero(),
+            grid_view: GridView::default(),
+            scroll_bar: ScrollBar::new(app_context, view_key),
+            scroll_context: ScrollContext::default(),
+        }
     }
 
-    pub fn update_background_color(&mut self, new_color: Color) {
-        self.background_color = new_color;
+    pub fn scroll_thumb(&self) -> Option<Rect> {
+        self.scroll_bar.thumb_frame()
     }
 
     pub fn calculate_term_size_from_size(size: &Size) -> Size {
         Size::new(size.width - SCROLL_BAR_WIDTH, size.height)
-    }
-
-    pub fn render<'a, C>(
-        &mut self,
-        render_context: &mut RenderContext,
-        context: &ViewAssistantContext,
-        cells: RenderableCellsIter<'a, C>,
-    ) {
-        ftrace::duration!("terminal", "Scene:TerminalScene:render2");
-        let image = render_context.get_current_image(context);
-        let ext = RenderExt {
-            pre_clear: Some(PreClear { color: self.background_color }),
-            ..Default::default()
-        };
-
-        let grid_layers = self.grid_view.render(render_context, cells);
-        let scroll_bar_layers = self.scroll_bar.render(render_context);
-
-        self.composition.clear();
-        for (i, layer) in grid_layers.into_iter().chain(scroll_bar_layers).enumerate() {
-            self.composition.insert(Order::try_from(i).unwrap_or_else(|e| panic!("{}", e)), layer);
-        }
-
-        render_context.render(&mut self.composition, None, image, &ext);
     }
 
     pub fn update_size(&mut self, new_size: Size, cell_size: Size) {
@@ -177,13 +150,9 @@ impl TerminalScene {
 
 impl Default for TerminalScene {
     fn default() -> Self {
-        let background_color = Color::new();
-        let composition = Composition::new(background_color);
         TerminalScene {
-            composition,
-            background_color,
             size: Size::zero(),
-            grid_view: GridView::new(&background_color),
+            grid_view: GridView::default(),
             scroll_bar: ScrollBar::default(),
             scroll_context: ScrollContext::default(),
         }
@@ -265,19 +234,6 @@ mod tests {
             row_height,
         );
         assert_eq!(delta, 2);
-    }
-
-    #[test]
-    fn new_with_color_sets_background_color() {
-        let scene = TerminalScene::new(Color { r: 255, ..Color::new() });
-        assert_eq!(scene.background_color.r, 255);
-    }
-
-    #[test]
-    fn update_background_color_sets_color_of_bg_view() {
-        let mut scene = TerminalScene::default();
-        scene.update_background_color(Color { g: 255, ..Color::new() });
-        assert_eq!(scene.background_color.g, 255);
     }
 
     #[test]

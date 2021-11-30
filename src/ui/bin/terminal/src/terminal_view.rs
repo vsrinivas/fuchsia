@@ -4,34 +4,54 @@
 
 use {
     crate::key_util::get_input_sequence_for_key_event,
-    crate::ui::{PointerEventResponse, ScrollContext, TerminalScene},
+    crate::ui::{
+        PointerEventResponse, ScrollContext, TerminalConfig, TerminalFacet, TerminalMessages,
+        TerminalScene,
+    },
     anyhow::{Context as _, Error},
     carnelian::{
         color::Color,
+        drawing::FontFace,
         input::{self},
         render::Context as RenderContext,
+        scene::{
+            facets::FacetId,
+            scene::{Scene, SceneBuilder, MAX_ORDER},
+        },
         AppContext, Message, Size, ViewAssistant, ViewAssistantContext, ViewKey,
     },
     fidl_fuchsia_hardware_pty::WindowSize,
     fuchsia_async as fasync, fuchsia_trace as ftrace,
-    fuchsia_zircon::{AsHandleRef, Signals},
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
     log::error,
     pty::Pty,
     std::{
-        cell::RefCell, convert::TryFrom, ffi::CStr, ffi::CString, fs::File, io::prelude::*, rc::Rc,
+        any::Any, cell::RefCell, convert::TryFrom, ffi::CStr, ffi::CString, fs::File,
+        io::prelude::*, rc::Rc,
     },
     term_model::{
         ansi::Processor,
         clipboard::Clipboard,
-        config::Config,
         event::{Event, EventListener},
         grid::Scroll,
         index::{Column, Line, Point},
         term::{SizeInfo, TermMode},
         Term,
     },
+    terminal::font_to_cell_size,
 };
+
+static FONT_DATA: &'static [u8] =
+    include_bytes!("../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
+
+// Default font size.
+const FONT_SIZE: f32 = 14.0;
+
+// Padding between text and cell size.
+const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
+
+// Maximum terminal size in cells. We support up to 4 layers per cell.
+const MAX_CELLS: u32 = MAX_ORDER / 4;
 
 #[cfg(test)]
 use cstr::cstr;
@@ -127,17 +147,6 @@ impl EventListener for EventProxy {
     }
 }
 
-/// Empty type for term model config
-struct UIConfig;
-
-impl Default for UIConfig {
-    fn default() -> UIConfig {
-        UIConfig
-    }
-}
-
-type TerminalConfig = Config<UIConfig>;
-
 trait PointerEventResponseHandler {
     /// Signals that the struct should queue a view update.
     fn update_view(&mut self);
@@ -161,6 +170,11 @@ impl PointerEventResponseHandler for PointerEventResponseHandlerImpl<'_> {
     }
 }
 
+struct SceneDetails {
+    scene: Scene,
+    terminal: FacetId,
+}
+
 pub struct TerminalViewAssistant {
     last_known_size: Size,
     last_known_size_info: SizeInfo,
@@ -169,9 +183,15 @@ pub struct TerminalViewAssistant {
     term: Rc<RefCell<Term<EventProxy>>>,
     app_context: AppContextWrapper,
     view_key: ViewKey,
+    font: FontFace,
+    font_size: f32,
+    scene_details: Option<SceneDetails>,
 
     /// If non-empty, will use this command when spawning the pty.
     spawn_command: Vec<CString>,
+
+    /// If non-empty, will use this environment when spawning the pty.
+    spawn_environ: Vec<CString>,
 }
 
 impl TerminalViewAssistant {
@@ -180,19 +200,23 @@ impl TerminalViewAssistant {
         app_context: &AppContext,
         view_key: ViewKey,
         spawn_command: Vec<CString>,
+        spawn_environ: Vec<CString>,
     ) -> TerminalViewAssistant {
-        let cell_size = Size::new(12.0, 22.0);
+        let font_size = FONT_SIZE;
+        let cell_size = font_to_cell_size(font_size, font_size * CELL_PADDING_FACTOR);
         let size_info = SizeInfo {
             // set the initial size/width to be that of the cell size which prevents
-            // the term from panicing if a byte is received before a resize event.
-            width: cell_size.width,
-            height: cell_size.height,
+            // the term from panicking if a byte is received before a resize event.
+            width: cell_size.width * 80.0,
+            height: cell_size.height * 24.0,
             cell_width: cell_size.width,
             cell_height: cell_size.height,
             padding_x: 0.0,
             padding_y: 0.0,
             dpr: 1.0,
         };
+
+        let terminal_scene = TerminalScene::new(app_context.clone(), view_key);
 
         let app_context =
             AppContextWrapper { app_context: Some(app_context.clone()), test_sender: None };
@@ -201,22 +225,28 @@ impl TerminalViewAssistant {
 
         let term = Term::new(&TerminalConfig::default(), &size_info, Clipboard::new(), event_proxy);
 
+        let font = FontFace::new(FONT_DATA).expect("unable to load font data");
+
         TerminalViewAssistant {
             last_known_size: Size::zero(),
             last_known_size_info: size_info,
             pty_context: None,
             term: Rc::new(RefCell::new(term)),
-            terminal_scene: TerminalScene::new(Color::new()),
+            terminal_scene,
             app_context,
             view_key,
+            font,
+            font_size,
+            scene_details: None,
             spawn_command,
+            spawn_environ,
         }
     }
 
     #[cfg(test)]
     pub fn new_for_test() -> TerminalViewAssistant {
         let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context, 1, vec![cstr!("/pkg/bin/sh").to_owned()])
+        Self::new(&app_context, 1, vec![cstr!("/pkg/bin/sh").to_owned()], vec![])
     }
 
     /// Checks if we need to perform a resize based on a new size.
@@ -226,7 +256,7 @@ impl TerminalViewAssistant {
     }
 
     /// Checks to see if the size of terminal has changed and resizes if it has.
-    fn resize_if_needed(&mut self, new_size: &Size, metrics: &Size) -> Result<(), Error> {
+    fn resize_if_needed(&mut self, new_size: &Size, _metrics: &Size) -> Result<(), Error> {
         // The shell works on logical size units but the views operate based on the size
         if TerminalViewAssistant::needs_resize(&self.last_known_size, new_size) {
             let floored_size = new_size.floor();
@@ -238,34 +268,51 @@ impl TerminalViewAssistant {
             let mut term = self.term.borrow_mut();
             let last_size_info = self.last_known_size_info.clone();
 
-            let cell_width = last_size_info.cell_width;
-            let cell_height = last_size_info.cell_height;
-            let padding_x = last_size_info.padding_x;
-            let padding_y = last_size_info.padding_y;
-            let dpr = metrics.width.min(metrics.height) as f64;
-
+            let cell_size = Size::new(last_size_info.cell_width, last_size_info.cell_height);
+            let grid_size =
+                Size::new(term_size.width / cell_size.width, term_size.height / cell_size.height)
+                    .floor();
+            // Clamp width to respect `MAX_CELLS`.
+            let clamped_grid_size = if grid_size.area() > MAX_CELLS as f32 {
+                assert!(
+                    grid_size.height <= MAX_CELLS as f32,
+                    "terminal height greater than MAX_CELLS: {}",
+                    grid_size.height
+                );
+                Size::new(MAX_CELLS as f32 / grid_size.height, grid_size.height).floor()
+            } else {
+                grid_size
+            };
+            let clamped_size = Size::new(
+                clamped_grid_size.width * cell_size.width,
+                clamped_grid_size.height * cell_size.height,
+            );
             let term_size_info = SizeInfo {
-                width: term_size.width,
-                height: term_size.height,
-                cell_width,
-                cell_height,
-                padding_x,
-                padding_y,
-                dpr,
+                width: clamped_size.width,
+                height: clamped_size.height,
+                cell_width: cell_size.width,
+                cell_height: cell_size.height,
+                padding_x: 0.0,
+                padding_y: 0.0,
+                dpr: 1.0,
             };
 
             term.resize(&term_size_info);
             drop(term);
 
-            let window_size =
-                WindowSize { width: new_size.width as u32, height: new_size.height as u32 };
+            // PTY window size (in character cells).
+            let window_size = WindowSize {
+                width: clamped_grid_size.width as u32,
+                height: clamped_grid_size.height as u32,
+            };
 
             self.queue_resize_event(ResizeEvent { window_size })
                 .context("unable to queue outgoing pty message")?;
 
-            self.last_known_size = floored_size;
+            self.last_known_size = *new_size;
             self.last_known_size_info = term_size_info;
-            self.terminal_scene.update_size(floored_size, Size::new(cell_width, cell_height));
+            self.terminal_scene.update_size(clamped_size, cell_size);
+            self.scene_details = None;
         }
         Ok(())
     }
@@ -285,16 +332,20 @@ impl TerminalViewAssistant {
 
         let term_clone = self.term.clone();
         let spawn_command = self.spawn_command.clone();
+        let spawn_environ = self.spawn_environ.clone();
 
         // We want spawn_local here to enforce the single threaded model. If we
         // do move to multithreaded we will need to refactor the term parsing
         // logic to account for thread safaty.
         fasync::Task::local(async move {
+            let environ: Vec<&CStr> = spawn_environ.iter().map(|s| s.as_ref()).collect();
             if spawn_command.is_empty() {
-                pty.spawn(None).await.expect("unable to spawn pty");
+                pty.spawn(None, Some(environ.as_slice())).await.expect("unable to spawn pty");
             } else {
                 let argv: Vec<&CStr> = spawn_command.iter().map(|s| s.as_ref()).collect();
-                pty.spawn_with_argv(&argv[0], argv.as_slice()).await.expect("unable to spawn pty");
+                pty.spawn_with_argv(&argv[0], argv.as_slice(), Some(environ.as_slice()))
+                    .await
+                    .expect("unable to spawn pty");
             }
 
             let fd = pty.try_clone_fd().expect("unable to clone pty read fd");
@@ -425,15 +476,23 @@ impl ViewAssistant for TerminalViewAssistant {
         self.spawn_pty_loop()?;
         self.resize_if_needed(&context.size, &context.metrics)?;
 
-        // Tell the termnial scene to render the values
-        let config = TerminalConfig::default();
+        let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
+            let background_color = Color::new();
+
+            let mut builder = SceneBuilder::new().background_color(background_color).mutable(false);
+
+            let terminal = builder.facet(Box::new(TerminalFacet::new(
+                self.font.clone(),
+                self.font_size,
+                self.term.clone(),
+                self.font_size * CELL_PADDING_FACTOR,
+                self.terminal_scene.scroll_thumb(),
+            )));
+
+            SceneDetails { scene: builder.build(), terminal }
+        });
+
         let term = self.term.borrow();
-
-        let iter = {
-            ftrace::duration!("terminal", "TerminalViewAssistant:update:renderable_cells");
-            term.renderable_cells(&config)
-        };
-
         let grid = term.grid();
 
         let scroll_context = ScrollContext {
@@ -457,8 +516,9 @@ impl ViewAssistant for TerminalViewAssistant {
 
         drop(grid);
 
-        self.terminal_scene.render(render_context, context, iter);
-        ready_event.as_handle_ref().signal(Signals::NONE, Signals::EVENT_SIGNALED)?;
+        scene_details.scene.render(render_context, ready_event, context)?;
+        self.scene_details = Some(scene_details);
+
         Ok(())
     }
 
@@ -483,6 +543,22 @@ impl ViewAssistant for TerminalViewAssistant {
             self.handle_pointer_event_response(response, &mut handler);
         }
         Ok(())
+    }
+
+    fn handle_message(&mut self, message: Box<dyn Any>) {
+        if let Some(message) = message.downcast_ref::<TerminalMessages>() {
+            match message {
+                TerminalMessages::SetScrollThumbMessage(thumb) => {
+                    // Forward message to the terminal facet.
+                    if let Some(scene_details) = &mut self.scene_details {
+                        scene_details.scene.send_message(
+                            &scene_details.terminal,
+                            Box::new(TerminalMessages::SetScrollThumbMessage(*thumb)),
+                        );
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -576,24 +652,12 @@ mod tests {
         let mut view = TerminalViewAssistant::new_for_test();
         let new_size = Size::new(100.5, 100.9);
         view.resize_if_needed(&new_size, &unit_metrics()).expect("call to resize failed");
-
         let size_info = view.last_known_size_info.clone();
-        let expected_size = TerminalScene::calculate_term_size_from_size(&view.last_known_size);
 
         // we want to make sure that the values are floored and that they
         // match what the scene will render the terminal as.
-        assert_eq!(size_info.width, expected_size.width);
-        assert_eq!(size_info.height, expected_size.height);
-    }
-
-    #[test]
-    fn last_known_size_is_floored_on_resize() {
-        let mut view = TerminalViewAssistant::new_for_test();
-        let new_size = Size::new(100.3, 100.4);
-        view.resize_if_needed(&new_size, &unit_metrics()).expect("call to resize failed");
-
-        assert_eq!(view.last_known_size.width, 100.0);
-        assert_eq!(view.last_known_size.height, 100.0);
+        assert_eq!(size_info.width, 80.0);
+        assert_eq!(size_info.height, 96.0);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -645,12 +709,12 @@ mod tests {
 
         view.pty_context = Some(pty_context);
 
-        view.resize_if_needed(&Size::new(1000.0, 2000.0), &unit_metrics())
+        view.resize_if_needed(&Size::new(800.0, 1600.0), &unit_metrics())
             .expect("call to resize failed");
 
         let event = receiver.next().await.expect("failed to receive pty event");
-        assert_eq!(event.window_size.width, 1000);
-        assert_eq!(event.window_size.height, 2000);
+        assert_eq!(event.window_size.width, 98);
+        assert_eq!(event.window_size.height, 100);
 
         Ok(())
     }

@@ -9,6 +9,8 @@ use {
     std::ffi::CString,
 };
 
+const TERMINAL_ENVIRON: &[&str; 1] = &["TERM=xterm-256color"];
+
 pub struct TerminalAssistant {
     app_context: AppContext,
     cmd: Vec<CString>,
@@ -32,7 +34,14 @@ impl AppAssistant for TerminalAssistant {
     }
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
-        Ok(Box::new(TerminalViewAssistant::new(&self.app_context, view_key, self.cmd.clone())))
+        let environ =
+            TERMINAL_ENVIRON.iter().map(|s| CString::new(*s).unwrap()).collect::<Vec<_>>();
+        Ok(Box::new(TerminalViewAssistant::new(
+            &self.app_context,
+            view_key,
+            self.cmd.clone(),
+            environ,
+        )))
     }
 }
 

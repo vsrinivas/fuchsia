@@ -3,152 +3,25 @@
 // found in the LICENSE file.
 
 use {
-    carnelian::{
-        color::Color,
-        drawing::{path_for_rectangle, FontFace, Glyph},
-        render::{BlendMode, Context as RenderContext, Fill, FillRule, Layer, Raster, Style},
-        Coord, Point, Rect, Size,
-    },
-    euclid::default::Vector2D,
-    fuchsia_trace as ftrace,
-    term_model::{
-        ansi::CursorStyle,
-        term::{CursorKey, RenderableCellContent, RenderableCellsIter},
-    },
+    crate::ui::TerminalMessages,
+    carnelian::{make_message, AppContext, Coord, MessageTarget, Point, Rect, Size, ViewKey},
 };
 
-const UNDERLINE_CURSOR_CHAR: char = '\u{10a3e2}';
-const BEAM_CURSOR_CHAR: char = '\u{10a3e3}';
-const BOX_CURSOR_CHAR: char = '\u{10a3e4}';
-
-const MAXIMUM_THUMB_RATIO: f32 = 0.8;
-const MINIMUM_THUMB_RATIO: f32 = 0.05;
-
-const SCROLL_BAR_MOVEMENT_THRESHOLD: f32 = 1.0;
-
-static FONT_DATA: &'static [u8] =
-    include_bytes!("../../../../../../prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf");
-
-fn make_color(term_color: &term_model::term::color::Rgb) -> Color {
-    Color { r: term_color.r, g: term_color.g, b: term_color.b, a: 0xFF }
-}
-
-fn raster_for_rectangle(bounds: &Rect, render_context: &mut RenderContext) -> Raster {
-    let mut raster_builder = render_context.raster_builder().expect("raster_builder");
-    raster_builder.add(&path_for_rectangle(bounds, render_context), None);
-    raster_builder.build()
-}
-
 pub struct GridView {
-    font: FontFace,
-    background_color: Color,
     pub frame: Rect,
     pub cell_size: Size,
 }
 
 impl Default for GridView {
     fn default() -> Self {
-        GridView::new(&Color::new())
+        GridView { frame: Rect::zero(), cell_size: Size::zero() }
     }
 }
 
-impl GridView {
-    pub fn new(background_color: &Color) -> GridView {
-        GridView {
-            frame: Rect::zero(),
-            background_color: *background_color,
-            font: FontFace::new(FONT_DATA).expect("unable to load font data"),
-            cell_size: Size::zero(),
-        }
-    }
+const MAXIMUM_THUMB_RATIO: f32 = 0.8;
+const MINIMUM_THUMB_RATIO: f32 = 0.05;
 
-    pub fn render<'a, C>(
-        &self,
-        render_context: &mut RenderContext,
-        cells: RenderableCellsIter<'a, C>,
-    ) -> Vec<Layer> {
-        let size = self.cell_size;
-
-        let font = &self.font;
-
-        let font_size = size.height * 0.9;
-        let baseline = font_size * 0.9;
-        let background_color = self.background_color;
-        let (mut layers, maybe_bg_layers): (Vec<_>, Vec<_>) = cells
-            .filter_map(|cell| {
-                if let Some(character) = maybe_char_for_renderable_cell_content(cell.inner) {
-                    let cell_position = Point::new(
-                        size.width * cell.column.0 as f32,
-                        size.height * cell.line.0 as f32,
-                    );
-                    let char_position = cell_position + Vector2D::new(0.0, baseline);
-                    let glyph_index = font.face.glyph_index(character);
-                    let glyph = Glyph::new(render_context, &self.font, font_size, glyph_index);
-                    let cell_bounds = Rect::new(cell_position, size);
-                    let fg_raster = if glyph_index.is_none() {
-                        raster_for_rectangle(&cell_bounds, render_context)
-                    } else {
-                        let pos_vec = char_position.to_vector().to_i32();
-                        glyph.raster.translate(pos_vec)
-                    };
-                    let cell_background_color = make_color(&cell.bg);
-                    let bg_layer = if cell_background_color != background_color {
-                        let bg_raster = raster_for_rectangle(&cell_bounds, render_context);
-                        Some(Layer {
-                            raster: bg_raster,
-                            clip: None,
-                            style: Style {
-                                fill_rule: FillRule::NonZero,
-                                fill: Fill::Solid(cell_background_color),
-                                blend_mode: BlendMode::Over,
-                            },
-                        })
-                    } else {
-                        None
-                    };
-
-                    Some((
-                        Layer {
-                            raster: fg_raster,
-                            clip: None,
-                            style: Style {
-                                fill_rule: FillRule::NonZero,
-                                fill: Fill::Solid(make_color(&cell.fg)),
-                                blend_mode: BlendMode::Over,
-                            },
-                        },
-                        bg_layer,
-                    ))
-                } else {
-                    None
-                }
-            })
-            .unzip();
-        let bg_layers: Vec<Layer> = maybe_bg_layers.into_iter().filter_map(|a| a).collect();
-        layers.extend(bg_layers);
-        layers
-    }
-}
-
-// The term-model library gives us zero-width characters in our array of chars. However,
-// we do not support this at thsi point so we just pull out the first char for rendering.
-fn maybe_char_for_renderable_cell_content(content: RenderableCellContent) -> Option<char> {
-    match content {
-        RenderableCellContent::Cursor(cursor_key) => chars_for_cursor(cursor_key),
-        RenderableCellContent::Chars(chars) => Some(chars[0]),
-    }
-}
-
-fn chars_for_cursor(cursor: CursorKey) -> Option<char> {
-    match cursor.style {
-        CursorStyle::Block => Some(BOX_CURSOR_CHAR),
-        CursorStyle::Underline => Some(UNDERLINE_CURSOR_CHAR),
-        CursorStyle::Beam => Some(BEAM_CURSOR_CHAR),
-        //TODO add support for HollowBlock style
-        CursorStyle::HollowBlock => Some(UNDERLINE_CURSOR_CHAR),
-        CursorStyle::Hidden => None,
-    }
-}
+const SCROLL_BAR_MOVEMENT_THRESHOLD: f32 = 1.0;
 
 pub struct ScrollBar {
     pub frame: Rect,
@@ -166,11 +39,17 @@ pub struct ScrollBar {
     /// eventually need to track the device_id when we handle multiple
     /// input events.
     last_pointer_tracking_location: Option<Point>,
+
+    // AppContext used to update scroll thumb rendering.
+    app_context: Option<AppContext>,
+    view_key: ViewKey,
 }
 
 impl Default for ScrollBar {
     fn default() -> Self {
         ScrollBar {
+            app_context: None,
+            view_key: 0,
             frame: Rect::zero(),
             content_height: 0.0,
             content_offset: 0.0,
@@ -181,10 +60,20 @@ impl Default for ScrollBar {
 }
 
 impl ScrollBar {
-    pub fn render(&self, render_context: &mut RenderContext) -> Option<Layer> {
-        ftrace::duration!("terminal", "Views:ScrollBar:render2");
+    pub fn new(app_context: AppContext, view_key: ViewKey) -> Self {
+        ScrollBar {
+            app_context: Some(app_context),
+            view_key,
+            frame: Rect::zero(),
+            content_height: 0.0,
+            content_offset: 0.0,
+            thumb_frame: None,
+            last_pointer_tracking_location: None,
+        }
+    }
+
+    pub fn thumb_frame(&self) -> Option<Rect> {
         self.thumb_frame
-            .and_then(|thumb_frame| Some(Self::render_thumb_pattern(render_context, &thumb_frame)))
     }
 
     /// This method must be called after the client has updated
@@ -256,26 +145,23 @@ impl ScrollBar {
     }
 
     fn update_thumb_frame(&mut self) {
-        if let Some(thumb_info) = self.calculate_thumb_render_info() {
+        let thumb_frame = if let Some(thumb_info) = self.calculate_thumb_render_info() {
             let thumb_frame = thumb_info.calculate_frame_in_rect(&self.frame);
 
-            self.thumb_frame = Some(thumb_frame);
+            Some(thumb_frame)
         } else {
-            self.thumb_frame = None;
-        }
-    }
+            None
+        };
 
-    fn render_thumb_pattern(render_context: &mut RenderContext, frame: &Rect) -> Layer {
-        let white = Color::white();
-        let raster = raster_for_rectangle(&frame, render_context);
-        Layer {
-            raster: raster,
-            clip: None,
-            style: Style {
-                fill_rule: FillRule::NonZero,
-                fill: Fill::Solid(white),
-                blend_mode: BlendMode::Over,
-            },
+        if self.thumb_frame != thumb_frame {
+            self.thumb_frame = thumb_frame;
+            if let Some(app_context) = &self.app_context {
+                app_context.queue_message(
+                    MessageTarget::View(self.view_key),
+                    make_message(TerminalMessages::SetScrollThumbMessage(thumb_frame)),
+                );
+                app_context.request_render(self.view_key);
+            }
         }
     }
 
