@@ -70,9 +70,13 @@ class VmObjectPaged final : public VmObject {
   bool is_contiguous() const override { return (options_ & kContiguous); }
   bool is_resizable() const override { return (options_ & kResizable); }
   bool is_discardable() const override { return (options_ & kDiscardable); }
-  bool is_pager_backed() const override {
+  bool is_user_pager_backed() const override {
     Guard<Mutex> guard{&lock_};
-    return cow_pages_locked()->is_pager_backed_locked();
+    return cow_pages_locked()->is_root_source_user_pager_backed_locked();
+  }
+  bool is_private_pager_copy_supported() const override {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->is_private_pager_copy_supported();
   }
   bool is_dirty_tracked() const override {
     Guard<Mutex> guard{&lock_};

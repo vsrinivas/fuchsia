@@ -43,6 +43,7 @@ class PhysicalPageProvider : public PageProvider {
   void SendAsyncRequest(page_request_t* request) final;
   void ClearAsyncRequest(page_request_t* request) final;
   void SwapAsyncRequest(page_request_t* old, page_request_t* new_req) final;
+  void FreePages(list_node* pages) final;
   bool DebugIsPageOk(vm_page_t* page, uint64_t offset) final;
   // This also calls pmm_delete_lender()
   void OnClose() final;

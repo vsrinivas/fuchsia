@@ -175,7 +175,7 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
   entry.flags = (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
                 (vmo->is_resizable() ? ZX_INFO_VMO_RESIZABLE : 0) |
                 (vmo->is_discardable() ? ZX_INFO_VMO_DISCARDABLE : 0) |
-                (vmo->is_pager_backed() ? ZX_INFO_VMO_PAGER_BACKED : 0) |
+                (vmo->is_user_pager_backed() ? ZX_INFO_VMO_PAGER_BACKED : 0) |
                 (vmo->is_contiguous() ? ZX_INFO_VMO_CONTIGUOUS : 0);
   entry.committed_bytes = vmo->AttributedPages() * PAGE_SIZE;
   entry.cache_policy = vmo->GetMappingCachePolicy();
@@ -385,7 +385,7 @@ zx_status_t VmObjectDispatcher::CreateChild(uint32_t options, uint64_t offset, u
     type = CloneType::Snapshot;
   } else if (options & ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE) {
     options &= ~ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
-    if (vmo_->is_pager_backed()) {
+    if (vmo_->is_private_pager_copy_supported()) {
       type = CloneType::PrivatePagerCopy;
     } else {
       type = CloneType::Snapshot;

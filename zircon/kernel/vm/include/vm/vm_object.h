@@ -268,7 +268,9 @@ class VmObject : public VmHierarchyBase,
   // Returns true if the object's pages are discardable by the kernel.
   virtual bool is_discardable() const { return false; }
   // Returns true if the VMO was created via CreatePagerVmo().
-  virtual bool is_pager_backed() const { return false; }
+  virtual bool is_user_pager_backed() const { return false; }
+  // Returns true if the VMO supports CloneType::PrivatePagerCopy.
+  virtual bool is_private_pager_copy_supported() const { return false; }
   // Returns true if the VMO's pages require dirty bit tracking.
   virtual bool is_dirty_tracked() const { return false; }
 

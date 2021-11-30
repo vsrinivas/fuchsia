@@ -26,7 +26,9 @@ namespace {
 
 const PageSourceProperties kProperties{
     .is_user_pager = false,
+    .is_preserving_page_content = false,
     .is_providing_specific_physical_pages = true,
+    .is_handling_free = true,
 };
 
 }  // namespace
@@ -117,6 +119,12 @@ void PhysicalPageProvider::SwapAsyncRequest(page_request_t* old, page_request_t*
   if (list_in_list(&old->provider_node)) {
     list_replace_node(&old->provider_node, &new_req->provider_node);
   }
+}
+
+void PhysicalPageProvider::FreePages(list_node* pages) {
+  // This marks the pages loaned, and makes them FREE for potential use by other clients that are ok
+  // with getting loaned pages when allocating.
+  pmm_begin_loan(pages);
 }
 
 bool PhysicalPageProvider::DebugIsPageOk(vm_page_t* page, uint64_t offset) {
