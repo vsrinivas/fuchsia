@@ -19,6 +19,7 @@ primary theme, even if it touches on multiple themes.
 * [RFC-0018: FTP process: A modest proposal][rfc-0018]
 * [RFC-0049: FIDL tuning process evolution][rfc-0049]
 * [RFC-0017: The FTP Process is dead, long live the RFC Process!][rfc-0017]
+* [RFC-0131: Design principles of the FIDL wire format][rfc-0131]
 
 ### Evolvability
 
@@ -37,6 +38,7 @@ primary theme, even if it touches on multiple themes.
 * [RFC-0083: FIDL versioning][rfc-0083]
 * (Rejected) [RFC-0116: Wire format support for sparser FIDL tables][rfc-0116]
 * [RFC-0132: FIDL table size limit][rfc-0132]
+* [RFC-0138: Handling unknown interactions][rfc-0138]
 
 ### Expressivity
 
@@ -50,6 +52,7 @@ primary theme, even if it touches on multiple themes.
 * (Rejected) [RFC-0044: Extensible method arguments][rfc-0044]
 * [RFC-0052: Type aliasing and new types][rfc-0052]
 * [RFC-0054: Parameter attributes][rfc-0054]
+* [RFC-0137: Discard unknown data in FIDL][rfc-0137]
 
 ### Syntax
 
@@ -75,6 +78,8 @@ primary theme, even if it touches on multiple themes.
 * (Rejected) [RFC-0032: Efficient envelopes][rfc-0032]
 * (Rejected) [RFC-0035: Automatic flow tracing][rfc-0035]
 * (Rejected) [RFC-0045: Zero-size empty structs][rfc-0045]
+* [RFC-0113: Efficient envelopes][rfc-0113]
+* [RFC-0114: Inlining small values in FIDL envelopes][rfc-0114]
 
 ### Safety & security
 
@@ -86,6 +91,8 @@ primary theme, even if it touches on multiple themes.
 ### Tooling
 
 * [RFC-0076: FIDL API summaries][rfc-0076]
+* [RFC-0097: FIDL Toolchain][rfc-0097]
+* [RFC-0120: Standalone use of the FIDL wire format][rfc-0120]
 
 ### Documentation
 
@@ -207,7 +214,15 @@ _Legend:_
 | [RFC-0083] | FIDL versioning | Implementation in progress
 | [RFC-0086] | Updates to RFC-0050: FIDL attributes syntax | Implementation in progress
 | [RFC-0087] | Updates to RFC-0050: FIDL method parameter syntax | Implementation in progress
+| [RFC-0097] | FIDL Toolchain | Implemented
+| [RFC-0113] | Efficient envelopes | Implementation in progress
+| [RFC-0114] | Inlining small values in FIDL envelopes | Implementation in progress
+| [RFC-0116] | Wire format support for sparser FIDL tables | Rejected
+| [RFC-0120] | Standalone use of FIDL | Implementation in progress
+| [RFC-0131] | Design principles of the FIDL wire format | Implemented
 | [RFC-0132] | FIDL table size limit | [Implemented](https://fuchsia-review.googlesource.com/c/fuchsia/+/583988)
+| [RFC-0137] | Discard unknown data in FIDL | Implementation in progress
+| [RFC-0138] | Handling unknown interactions | Implementation in progress
 
 <!-- link labels -->
 [rfcs]: /docs/contribute/governance/rfcs/README.md#proposals
@@ -270,5 +285,12 @@ _Legend:_
 [rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
 [rfc-0086]: /docs/contribute/governance/rfcs/0086_rfc_0050_attributes.md
 [rfc-0087]: /docs/contribute/governance/rfcs/0087_fidl_method_syntax.md
+[rfc-0097]: /docs/contribute/governance/rfcs/0097_fidl_toolchain.md
+[rfc-0113]: /docs/contribute/governance/rfcs/0113_efficient_envelopes.md
+[rfc-0114]: /docs/contribute/governance/rfcs/0114_fidl_envelope_inlining.md
 [rfc-0116]: /docs/contribute/governance/rfcs/0116_fidl_sparser_tables.md
+[rfc-0120]: /docs/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format.md
+[rfc-0131]: /docs/contribute/governance/rfcs/0131_fidl_wire_format_principles.md
 [rfc-0132]: /docs/contribute/governance/rfcs/0132_fidl_table_size_limit.md
+[rfc-0137]: /docs/contribute/governance/rfcs/0137_discard_unknown_data_in_fidl.md
+[rfc-0138]: /docs/contribute/governance/rfcs/0138_handling_unknown_interactions.md
