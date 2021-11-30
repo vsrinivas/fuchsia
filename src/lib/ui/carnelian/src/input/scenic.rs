@@ -187,12 +187,13 @@ impl ScenicInputHandler {
 
         // Apply the resolved code point if one is available.  Fall back to US_QWERTY if no such
         // luck. Note that the fallback currently includes the nonprintable keys, which may need to
-        // change in the future.
+        // change in the future. Filter out code point if 0.
         let code_point = match event.key_meaning {
             Some(fidl_fuchsia_ui_input3::KeyMeaning::Codepoint(cp)) => Some(cp),
             Some(fidl_fuchsia_ui_input3::KeyMeaning::NonPrintableKey(_)) | _ => keymaps::US_QWERTY
                 .hid_usage_to_code_point_for_mods(hid_usage, modifiers.shift, modifiers.caps_lock),
-        };
+        }
+        .filter(|cp| *cp != 0);
 
         let keyboard_event = keyboard::Event { code_point, hid_usage, modifiers, phase };
 
