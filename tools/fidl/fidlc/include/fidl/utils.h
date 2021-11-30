@@ -179,6 +179,19 @@ std::string to_upper_snake_case(const std::string& str);
 std::string to_lower_camel_case(const std::string& str);
 std::string to_upper_camel_case(const std::string& str);
 
+// string_literal_length returns the length of the string
+// represented by the provided string literal.
+// String literals start and end with double quotes,
+// and may contain escape characters.
+// For instance, the string Hello\n, i.e.
+// the word Hello followed by a newline character,
+// is represented as the string literal "Hello\n".
+// While the string literal itself has 9 characters,
+// the length of the string it represents is 6.
+//
+// PRECONDITION: str must be a valid string literal.
+std::size_t string_literal_length(std::string_view str);
+
 // Returns the canonical form of an identifier, used to detect name collisions
 // in FIDL libraries. For example, the identifers "FooBar" and "FOO_BAR" collide
 // because canonicalize returns "foo_bar" for both.

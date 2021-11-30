@@ -737,6 +737,25 @@ TEST(UtilsTests, StringStripping) {
                    "\n Weird\n Offsets\n Slash///\nPlacement ///\n And\n   Spacing   \n");
 }
 
+TEST(UtilsTests, StringLiteralLength) {
+  ASSERT_EQ(string_literal_length(R"("Hello")"), 5);
+  ASSERT_EQ(string_literal_length(R"("\\")"), 1);
+  ASSERT_EQ(string_literal_length(R"("\to")"), 2);
+  ASSERT_EQ(string_literal_length(R"("\n")"), 1);
+  ASSERT_EQ(string_literal_length(R"("\x0a")"), 1);
+  ASSERT_EQ(string_literal_length(R"("\x0aa")"), 2);
+  ASSERT_EQ(string_literal_length(R"("\012")"), 1);
+  ASSERT_EQ(string_literal_length(R"("\0123")"), 2);
+  ASSERT_EQ(string_literal_length(R"("\U0001F600")"), 1);
+  ASSERT_EQ(string_literal_length(R"("\u2713")"), 1);
+  ASSERT_EQ(string_literal_length(R"("")"), 0);
+  ASSERT_EQ(string_literal_length(R"("$")"), 1);
+  ASSERT_EQ(string_literal_length(R"("¢")"), 2);
+  ASSERT_EQ(string_literal_length(R"("€")"), 3);
+  ASSERT_EQ(string_literal_length(R"("𐍈")"), 4);
+  ASSERT_EQ(string_literal_length(R"("😁")"), 4);
+}
+
 }  // namespace
 
 }  // namespace fidl::utils

@@ -293,4 +293,55 @@ bool OnlyWhitespaceChanged(const std::string& unformatted_input,
   return formatted == unformatted;
 }
 
+std::size_t string_literal_length(std::string_view str) {
+  // -2 to account for the leading and trailing quotes
+  std::size_t cnt = -2;
+  for (auto it = str.begin(), it_end = str.end(); it < it_end; ++it) {
+    ++cnt;
+    if (*it == '\\') {
+      ++it;
+      assert(it < it_end && "compiler bug: invalid string literal");
+      char next = *it;
+      switch (next) {
+        case 'x':
+        case '0':
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+        case '5':
+        case '6':
+        case '7':
+          // Hex \xnn
+          // Oct \nnn
+          it += 2;
+          break;
+        case 'u':
+          // Unicode code point: U+nnnn
+          it += 4;
+          break;
+        case 'U':
+          // Unicode code point: U+nnnnnnnn
+          it += 8;
+          break;
+        case 'a':
+        case 'b':
+        case 'f':
+        case 'n':
+        case 'r':
+        case 't':
+        case 'v':
+        case '\\':
+        case '"':
+          // no additional skip required
+          break;
+        default:
+          assert(false && "compiler bug: invalid string literal");
+      }
+      assert(it < it_end && "compiler bug: invalid string literal");
+    }
+  }
+  return cnt;
+}
+
 }  // namespace fidl::utils
