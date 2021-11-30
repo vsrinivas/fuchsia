@@ -52,6 +52,23 @@ namespace concurrent {
 // operation which included the fence, not the last.
 enum class SyncOpt { AcqRelOps, Fence, None };
 
+// Define tag types and constexpr instances of them which allow us to parameter
+// based template deduction.  Mostly, this is about working around some of C++'s
+// otherwise painful syntax.  It allows us to say:
+//
+// WellDefinedCopyable<Foo> wrapped_foo;
+// Foo foo;
+// wrapped_foo.CopyFrom(foo, SyncOpt_Fence);            // This
+// wrapped_foo.template CopyFrom<SyncOpt::Fence>(foo);  // Instead of this
+//
+// Without this, having to put the `template` keyword after the `.` but before
+// the `<>`'s is just a sad and painful fact of C++ template lyfe.
+template <SyncOpt>
+struct SyncOptType {};
+constexpr SyncOptType<SyncOpt::AcqRelOps> SyncOpt_AcqRelOps;
+constexpr SyncOptType<SyncOpt::Fence> SyncOpt_Fence;
+constexpr SyncOptType<SyncOpt::None> SyncOpt_None;
+
 namespace internal {
 
 constexpr size_t kMaxTransferGranularity = sizeof(uint64_t);

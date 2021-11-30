@@ -97,6 +97,54 @@ void WellDefinedCopyFrom(void* dst, const void* src, size_t size_bytes) {
   }
 }
 
+template <typename T>
+class WellDefinedCopyable {
+ public:
+  static_assert(std::is_trivially_copyable_v<T>,
+                "T must be trivially copyable in order to use WellDefinedCopyable<>");
+
+  template <typename... Args, typename = std::enable_if_t<std::is_constructible_v<T, Args...>>>
+  WellDefinedCopyable(Args&&... args) : instance_(std::forward<Args>(args)...) {}
+  ~WellDefinedCopyable() = default;
+
+  // No copy, no move.
+  WellDefinedCopyable(const WellDefinedCopyable<T>&) = delete;
+  WellDefinedCopyable(WellDefinedCopyable<T>&&) = delete;
+  WellDefinedCopyable<T>& operator=(const WellDefinedCopyable<T>&) = delete;
+  WellDefinedCopyable<T>& operator=(WellDefinedCopyable<T>&&) = delete;
+
+  // Read from the wrapped object into the destination buffer provided by the caller.
+  template <SyncOpt kSyncOpt = SyncOpt::AcqRelOps>
+  void Read(T& dst, SyncOptType<kSyncOpt> = SyncOptType<kSyncOpt>{}) const {
+    WellDefinedCopyFrom<kSyncOpt, alignof(T)>(&dst, &instance_, sizeof(T));
+  }
+
+  // Update the wrapped object from the source buffer provided by the caller.
+  template <SyncOpt kSyncOpt = SyncOpt::AcqRelOps>
+  void Update(const T& src, SyncOptType<kSyncOpt> = SyncOptType<kSyncOpt>{}) {
+    WellDefinedCopyTo<kSyncOpt, alignof(T)>(&instance_, &src, sizeof(T));
+  }
+
+  // WARNING: There be dragons here!
+  //
+  // |unsynchronized_get| provides direct read-only access to the underlying
+  // instance of |T|. Accessing the buffer this way is _only_ safe if the user
+  // can guarantee that no write operations may be concurrently performed
+  // against the storage while the user is reading the instance.
+  //
+  // One example of a legitimate use of this method might be when a user is
+  // operating in the write exclusive portion of a sequence lock.  They are
+  // guaranteed to be the only potential writer of the wrapped object, so while
+  // it is still important that they continue to use Update when they wish to
+  // mutate their instance of T, it is OK for them to read T directly without
+  // using Read as this will not cause any undefined behavior when done
+  // concurrently with other readers in the system.
+  const T& unsynchronized_get() const { return instance_; }
+
+ private:
+  T instance_;
+};
+
 }  // namespace concurrent
 
 #endif  // LIB_CONCURRENT_COPY_H_

@@ -53,6 +53,8 @@ unintentional data races.  These building blocks are:
 
 + `concurrent::WellDefinedCopyTo<SyncOpt, Alignment>(void* dst, const void* src, size_t len)`
 + `concurrent::WellDefinedCopyFrom<SyncOpt, Alignment>(void* dst, const void* src, size_t len)`
++ `concurrent::WellDefinedCopyable<T>::Update(const T&, SyncOptType<SyncOpt>)`
++ `concurrent::WellDefinedCopyable<T>::Read(T&, SyncOptType<SyncOpt>)`
 
 `CopyTo` operations move data from a thread's private buffer into a shared
 buffer which may be accessed concurrently by readers. `CopyFrom` operations move
@@ -158,3 +160,72 @@ void ObserveData(const T& src, T& dst) {
   WellDefinedCopyFrom<SyncOpt::AcqRelOps, alignof(T)>(&dst, &src, sizeof(T));
 }
 ```
+
+### `WellDefinedCopyable<T>`
+
+In order to make life a bit easier for users who need copy data in a well
+defined way into and out of structures, a helper class named
+`WellDefinedCopyable<T>` is offered.
+
+Users may wrap any trivially copyable type, `T` in one of these wrapper
+instances, and the use the provided Update and Read methods to copy data
+into and out of the contained `T` instance, respectively.  These methods, by
+design, deliberately restrict the ways that the user can gain access to the
+underlying storage, forcing them make use of the lowest level well-defined
+transfer functions.
+
+Constructor parameters are directly forwarded to the underlying `T` instance.
+
+```c++
+WellDefinedCopyable<Foo> default_constructed;
+WellDefinedCopyable<Foo> explicit_construction{45};
+WellDefinedCopyable<Foo> moar_args{"Foo", 45, "Bar", 34.4};
+```
+
+Just remember that `T` (and therefore all of its data members) must be trivially
+copyable.
+
+#### Explicit synchronization
+
+The wrapper's `Update` and `Read` methods allow the user to specify the
+synchronization option to use, with a default of `SyncOpt::AcqRelOps`, just like
+the `WellDefinedCopy(To|From)` functions do.  Because of the somewhat awkward
+dependent name rules of C++, the type of explicit synchronization desired can be
+specified using a type-tagging pattern, instead of needing to specify the sync
+option as an explicit template parameter.
+
+```c++
+WellDefinedCopyable<Foo> shared_foo;
+Foo my_foo;
+
+shared_foo.Read<SyncOpt::Fence>(my_foo);          // this does not work.
+shared_foo.template Read<SyncOpt::Fence>(my_foo); // this is one way to make it work.
+shared_foo.Read(my_foo, SyncOpt_Fence);           // this reads a bit better.
+```
+
+Aliases for the synchronization type tags are as follows.
+| enum class         | type tag instance |
+|--------------------|-------------------|
+| SyncOpt::AcqRelOps | SyncOpt_AcqRelOps |
+| SyncOpt::Fence     | SyncOpt_Fence     |
+| SyncOpt::None      | SyncOpt_None      |
+
+
+#### Raw storage access
+
+User don't always _have_ to access their `T` instance's storage only by copying
+data into or out of it.  Direct read-only access may be obtained using the
+`WellDefinedCopyable<T>`'s `unsynchronized_get` method, however users should
+exercise caution when choosing to do this.
+
+Accessing the buffer using `unsynchronized_get` is _only_ safe if the user can
+guarantee that no write operations may be concurrently performed against the
+storage while the user is reading the instance.
+
+One example of a legitimate use of this method might be when a user is operating
+in the write exclusive portion of a sequence lock.  They are guaranteed to be
+the only potential writer of the wrapped object, so while it is still important
+that they continue to use `Update` when they wish to mutate their instance of
+`T`, it is OK for them to read `T` directly without using `Read` as this
+will not cause any undefined behavior when done concurrently with other readers
+in the system.

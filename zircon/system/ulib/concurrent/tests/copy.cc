@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/concurrent/copy.h>
+#include <stdio.h>
 
 #include <array>
 #include <random>
@@ -23,6 +24,13 @@ class ConcurrentCopyFixture : public zxtest::Test {
  protected:
   static constexpr size_t kTestBufferSize = 256;
 
+  template <typename T>
+  struct SimpleObj {
+    SimpleObj() = default;
+    explicit SimpleObj(T val) : val(val) {}
+    T val{0};
+  };
+
   void ResetBuffer() {
     std::uniform_int_distribution<uint8_t> dist{0x00, 0x0FF};
 
@@ -30,6 +38,124 @@ class ConcurrentCopyFixture : public zxtest::Test {
       dst_[i] = dist(generator_);
       src_[i] = ~dst_[i];
     }
+  }
+
+  template <typename T>
+  T GetNonZeroRandom() {
+    std::uniform_int_distribution<T> dist{1, std::numeric_limits<T>::max()};
+    return dist(generator_);
+  }
+
+  template <typename T, concurrent::SyncOpt kSyncOpt>
+  void DoWrapperCopyTest() {
+    using concurrent::WellDefinedCopyable;
+
+    const T val = GetNonZeroRandom<T>();
+
+    // Exercise the classic "template" syntax for selecting the synchronization
+    // options for the Copy(To|From) operation.
+    {
+      WellDefinedCopyable<SimpleObj<T>> wrapped;
+      {
+        SimpleObj<T> unwrapped{val};
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(0, wrapped.unsynchronized_get().val);
+
+        wrapped.template Update<kSyncOpt>(unwrapped);
+
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+      }
+
+      {
+        SimpleObj<T> unwrapped;
+        ASSERT_EQ(0, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+
+        wrapped.template Read<kSyncOpt>(unwrapped);
+
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+      }
+    }
+
+    // Exercise the type-tagging syntax for selecting the synchronization
+    // options for the Copy(To|From) operation.
+    {
+      using SyncOptTypeTag = concurrent::SyncOptType<kSyncOpt>;
+      WellDefinedCopyable<SimpleObj<T>> wrapped;
+      {
+        SimpleObj<T> unwrapped{val};
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(0, wrapped.unsynchronized_get().val);
+
+        wrapped.Update(unwrapped, SyncOptTypeTag{});
+
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+      }
+
+      {
+        SimpleObj<T> unwrapped;
+        ASSERT_EQ(0, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+
+        wrapped.Read(unwrapped, SyncOptTypeTag{});
+
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+      }
+    }
+
+    // Make sure we exercise the default sync type as well
+    {
+      WellDefinedCopyable<SimpleObj<T>> wrapped;
+      {
+        SimpleObj<T> unwrapped{val};
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(0, wrapped.unsynchronized_get().val);
+
+        wrapped.Update(unwrapped);
+
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+      }
+
+      {
+        SimpleObj<T> unwrapped;
+        ASSERT_EQ(0, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+
+        wrapped.Read(unwrapped);
+
+        ASSERT_EQ(val, unwrapped.val);
+        ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+      }
+    }
+  }
+
+  template <typename T>
+  void DoWrapperTest() {
+    using concurrent::SyncOpt;
+    using concurrent::WellDefinedCopyable;
+
+    // Default Construction
+    {
+      WellDefinedCopyable<SimpleObj<T>> wrapped;
+      ASSERT_EQ(0, wrapped.unsynchronized_get().val);
+    }
+
+    // Explicit Construction
+    {
+      T val = GetNonZeroRandom<T>();
+      WellDefinedCopyable<SimpleObj<T>> wrapped{val};
+      ASSERT_EQ(val, wrapped.unsynchronized_get().val);
+    }
+
+    // Copy with various sync options.
+    DoWrapperCopyTest<T, SyncOpt::AcqRelOps>();
+    DoWrapperCopyTest<T, SyncOpt::Fence>();
+    DoWrapperCopyTest<T, SyncOpt::None>();
   }
 
   std::array<uint8_t, kTestBufferSize> src_{0};
@@ -162,6 +288,56 @@ TEST_F(ConcurrentCopyFixture, CopyFrom) {
   ResetBuffer();
   WellDefinedCopyFrom<SyncOpt::None, kMaxTransferGranularity>(&dst_, &src_, dst_.size());
   ASSERT_BYTES_EQ(&dst_, &src_, dst_.size());
+}
+
+namespace {
+struct NonTrivialCopy {
+  NonTrivialCopy() = default;
+  ~NonTrivialCopy() = default;
+
+  NonTrivialCopy(const NonTrivialCopy& other) { memcpy(this, &other, sizeof(*this)); }
+
+  uint32_t val{0};
+};
+
+struct NonTrivialAssign {
+  NonTrivialAssign() = default;
+  ~NonTrivialAssign() = default;
+
+  NonTrivialAssign& operator=(const NonTrivialAssign& other) {
+    memcpy(this, &other, sizeof(*this));
+    return *this;
+  }
+
+  uint32_t val{0};
+};
+
+struct NonTrivialDestructor {
+  NonTrivialDestructor() = default;
+  ~NonTrivialDestructor() { printf("This destructor is non-trivial\n"); }
+  uint32_t val{0};
+};
+}  // namespace
+
+TEST_F(ConcurrentCopyFixture, WrapperCopy) {
+  DoWrapperTest<uint8_t>();
+  DoWrapperTest<uint16_t>();
+  DoWrapperTest<uint32_t>();
+  DoWrapperTest<uint64_t>();
+
+  // Make sure we cannot make wrappers around objects which are not trivially
+  // copyable.
+#if TEST_WILL_NOT_COMPILE || 0
+  { [[maybe_unused]] concurrent::WellDefinedCopyable<NonTrivialCopy> not_allowed; }
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+  { [[maybe_unused]] concurrent::WellDefinedCopyable<NonTrivialAssign> not_allowed; }
+#endif
+
+#if TEST_WILL_NOT_COMPILE || 0
+  { [[maybe_unused]] concurrent::WellDefinedCopyable<NonTrivialDestructor> not_allowed; }
+#endif
 }
 
 }  // namespace test
