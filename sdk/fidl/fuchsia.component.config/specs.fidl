@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.component.config;
+
+using fuchsia.component.decl;
+
+/// Contents of the configuration value file. Defines the base values for a component's config.
+type ValuesData = table {
+    /// The concrete values for the component's configuration.
+    1: values vector<ValueSpec>:MAX;
+    /// A SHA-256 checksum of the configuration schema. Must match the checksum in the component
+    /// manifest and config parser library used to resolve the final configuration.
+    2: declaration_checksum fuchsia.component.decl.ConfigChecksum;
+};
+
+/// An individual configuration value. It is matched against a specific configuration field based
+/// on its offset within `ValuesData.values`.
+// NOTE: RFC-0127 calls for storing override mutability in the value file so we want a table for
+// extensibility even though we only have a single field right now
+type ValueSpec = table {
+    1: value Value;
+};

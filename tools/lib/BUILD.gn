@@ -11,6 +11,7 @@ group("tests") {
     "//tools/lib/cm_fidl_analyzer:tests",
     "//tools/lib/cml:tests",
     "//tools/lib/color:color_tests",
+    "//tools/lib/config_value_file:tests",
     "//tools/lib/environment:environment_tests",
     "//tools/lib/ffxutil:tests",
     "//tools/lib/flagmisc:tests",

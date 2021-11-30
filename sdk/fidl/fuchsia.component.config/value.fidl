@@ -1,0 +1,45 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.component.config;
+
+// This library does not have opinionated size constraints, instead
+// using `MAX` to indicate that the overall maximum size should
+// come from a size limit on an overall list of values.
+
+/// A configuration value which can be provided to a component.
+///
+/// Used both for storing configuration at-rest and in runtime configuration APIs.
+type Value = flexible union {
+    1: single SingleValue;
+    2: list ListValue;
+};
+
+/// A single configuration value.
+type SingleValue = flexible union {
+    1: flag bool;
+    2: unsigned_8 uint8;
+    3: unsigned_16 uint16;
+    4: unsigned_32 uint32;
+    5: unsigned_64 uint64;
+    6: signed_8 int8;
+    7: signed_16 int16;
+    8: signed_32 int32;
+    9: signed_64 int64;
+   10: text string:MAX;
+};
+
+/// A list-like configuration value.
+type ListValue = flexible union {
+    1: flag_list vector<bool>:MAX;
+    2: unsigned_8_list vector<uint8>:MAX;
+    3: unsigned_16_list vector<uint16>:MAX;
+    4: unsigned_32_list vector<uint32>:MAX;
+    5: unsigned_64_list vector<uint64>:MAX;
+    6: signed_8_list vector<int8>:MAX;
+    7: signed_16_list vector<int16>:MAX;
+    8: signed_32_list vector<int32>:MAX;
+    9: signed_64_list vector<int64>:MAX;
+   10: text_list vector<string:MAX>:MAX;
+};
