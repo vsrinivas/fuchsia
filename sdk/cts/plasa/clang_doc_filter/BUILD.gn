@@ -10,9 +10,13 @@ import("//build/testing/host_test_data.gni")
 
 if (is_host) {
   go_library("gopkg") {
-    sources = [ "main.go" ]
+    sources = [
+      "main.go",
+      "report_test.go",
+    ]
     deps = [
       "//sdk/cts/plasa/model:gopkg",
+      "//third_party/golibs:github.com/google/go-cmp",
       "//third_party/golibs:gopkg.in/yaml.v2",
     ]
   }
@@ -20,16 +24,6 @@ if (is_host) {
   go_binary("clang_doc_filter") {
     gopackage = "go.fuchsia.dev/fuchsia/sdk/cts/plasa/clang_doc_filter"
     deps = [ ":gopkg" ]
-  }
-
-  go_library("clang_doc_filter_test_lib") {
-    testonly = true
-    sources = [ "report_test.go" ]
-    deps = [
-      ":gopkg",
-      "//sdk/cts/plasa/model:gopkg",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
   }
 
   _testdata_path = "${target_gen_dir}/testdata"
@@ -41,7 +35,7 @@ if (is_host) {
       "--test_data_dir",
       rebase_path(_testdata_path, root_build_dir),
     ]
-    deps = [ ":clang_doc_filter_test_lib" ]
+    deps = [ ":gopkg" ]
     non_go_deps = [ ":testdatadir" ]
   }
 

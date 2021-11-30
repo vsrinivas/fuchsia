@@ -10,27 +10,19 @@ import("//build/testing/host_test_data.gni")
 
 group("model") {
   testonly = true
-  deps = [
-    ":model_test_lib($host_toolchain)",
-    ":tests",
-  ]
+  deps = [ ":tests" ]
 }
 
 if (is_host) {
   go_library("gopkg") {
     sources = [
       "model.go",
+      "model_test.go",
       "report.go",
     ]
-    deps = [ "//third_party/golibs:gopkg.in/yaml.v2" ]
-  }
-
-  go_library("model_test_lib") {
-    testonly = true
-    sources = [ "model_test.go" ]
     deps = [
-      ":gopkg",
       "//third_party/golibs:github.com/google/go-cmp",
+      "//third_party/golibs:gopkg.in/yaml.v2",
     ]
   }
 
@@ -43,7 +35,7 @@ if (is_host) {
       "--test_data_dir",
       rebase_path(_testdata_path, root_build_dir),
     ]
-    deps = [ ":model_test_lib" ]
+    deps = [ ":gopkg" ]
     non_go_deps = [ ":testdatafiles" ]
   }
 

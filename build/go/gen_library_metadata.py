@@ -88,13 +88,25 @@ def main():
                     os.path.join(name, source),
                     os.path.join(args.source_dir, source), args.output))
         if not name.endswith('/...'):
-            # Validate that `sources` are all in the same directory.
-            dirnames = {os.path.dirname(s) for s in args.sources}
-            if len(dirnames) > 1:
-                dirnames_joined = ', '.join(sorted(dirnames))
+            for s in args.sources:
+                if os.path.dirname(s):
+                    raise ValueError(
+                        f'Source "{s}" for "{name}" comes from a subdirectory.'
+                        f' Specify source_dir instead.'
+                    )
+
+            # TODO: Use `glob.glob("*.go", root_dir=args.source_dir)` instead of
+            # os.listdir after upgrading to Python 3.10.
+            go_files = {
+                f for f in os.listdir(args.source_dir) if f.endswith('.go')
+            }
+            go_sources = {f for f in args.sources if f.endswith('.go')}
+            missing = go_files - go_sources
+            if missing:
                 raise ValueError(
-                    f'Sources for "{name}" come from multiple directories:'
-                    f' {dirnames_joined}')
+                    f'go_library requires that all Go files in source_dir be listed'
+                    f' as sources, but the following files are missing from sources'
+                    f' for target {name}: {", ".join(sorted(missing))}')
     elif args.allow_globbing:
         current_sources.append(Source(name, args.source_dir, args.output))
     result = get_sources(args.deps, extra_sources=current_sources)

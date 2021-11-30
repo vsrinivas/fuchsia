@@ -24,14 +24,15 @@ template("test_case_binary") {
   test_case = invoker.test_case
   library_name = "prints_to_${test_case}_go_lib"
   go_library(library_name) {
-    sources = [ "src/${test_case}.go" ]
+    source_dir = "src/${test_case}"
+    sources = [ "main.go" ]
 
     deps = []
   }
 
   go_binary(target_name) {
     output_name = "prints_to_${test_case}_go"
-    gopackage = "go.fuchsia.dev/fuchsia/src/sys/component_manager/src/elf_runner/tests/stdout/go/src"
+    gopackage = "go.fuchsia.dev/fuchsia/src/sys/component_manager/src/elf_runner/tests/stdout/go/src/${test_case}"
 
     deps = [ ":$library_name" ]
   }

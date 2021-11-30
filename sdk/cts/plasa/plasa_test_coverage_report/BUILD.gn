@@ -10,9 +10,13 @@ import("//build/testing/host_test_data.gni")
 
 if (is_host) {
   go_library("gopkg") {
-    sources = [ "main.go" ]
+    sources = [
+      "main.go",
+      "main_test.go",
+    ]
     deps = [
       "//sdk/cts/plasa/model:gopkg",
+      "//third_party/golibs:github.com/google/go-cmp",
       "//third_party/golibs:gopkg.in/yaml.v2",
       "//tools/fidl/lib/summarize:gopkg",
     ]
@@ -22,16 +26,6 @@ if (is_host) {
     gopackage =
         "go.fuchsia.dev/fuchsia/sdk/cts/plasa/plasa_test_coverage_report"
     deps = [ ":gopkg" ]
-  }
-
-  go_library("plasa_test_coverage_report_test_lib") {
-    testonly = true
-    sources = [ "main_test.go" ]
-    deps = [
-      ":gopkg",
-      "//sdk/cts/plasa/model:gopkg",
-      "//third_party/golibs:github.com/google/go-cmp",
-    ]
   }
 
   _testdata_path = "${target_gen_dir}/testdata"
@@ -44,7 +38,7 @@ if (is_host) {
       "--fragment-prefix",
       rebase_path(_testdata_path, root_build_dir),
     ]
-    deps = [ ":plasa_test_coverage_report_test_lib" ]
+    deps = [ ":gopkg" ]
     non_go_deps = [ ":testdata" ]
   }
 

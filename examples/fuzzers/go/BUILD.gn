@@ -12,6 +12,7 @@ go_fuzzer("basic_fuzzer") {
 }
 
 go_library("fuzzer_lib") {
-  sources = [ "basic/basic.go" ]
+  source_dir = "basic"
+  sources = [ "basic.go" ]
   deps = [ "//src/testing/fuzzing/go:fuzzing" ]
 }
