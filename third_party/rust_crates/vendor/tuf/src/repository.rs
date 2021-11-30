@@ -17,7 +17,10 @@ use std::sync::Arc;
 mod file_system;
 pub use self::file_system::{FileSystemRepository, FileSystemRepositoryBuilder};
 
+#[cfg(any(feature = "hyper_013", feature = "hyper_014"))]
 mod http;
+
+#[cfg(any(feature = "hyper_013", feature = "hyper_014"))]
 pub use self::http::{HttpRepository, HttpRepositoryBuilder};
 
 mod ephemeral;

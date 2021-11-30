@@ -4,6 +4,10 @@
 //!
 //! ```no_run
 //! # use futures_executor::block_on;
+//! # #[cfg(feature = "hyper_013")]
+//! # use hyper_013 as hyper;
+//! # #[cfg(feature = "hyper_014")]
+//! # use hyper_014 as hyper;
 //! # use hyper::client::Client as HttpClient;
 //! # use std::path::PathBuf;
 //! # use std::str::FromStr;

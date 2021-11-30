@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "tuf"
-version = "0.3.0-beta2"
+version = "0.3.0-beta3"
 authors = ["heartsucker <heartsucker@autistici.org>", "Erick Tryzelaar <etryzelaar@google.com>"]
 description = "Library for The Update Framework (TUF)"
 homepage = "https://github.com/heartsucker/rust-tuf"
@@ -46,10 +46,19 @@ features = ["io"]
 [dependencies.http]
 version = "0.2.0"
 
-[dependencies.hyper]
+[dependencies.hyper_013]
 version = "0.13.2"
 features = ["stream"]
+optional = true
 default-features = false
+package = "hyper"
+
+[dependencies.hyper_014]
+version = "0.14.15"
+features = ["stream", "client", "http1"]
+optional = true
+default-features = false
+package = "hyper"
 
 [dependencies.itoa]
 version = "0.4"
@@ -102,4 +111,4 @@ version = "0.1.8"
 version = "1"
 
 [features]
-default = ["hyper/default"]
+default = ["hyper_014/tcp"]

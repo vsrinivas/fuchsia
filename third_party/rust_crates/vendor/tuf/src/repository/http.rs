@@ -4,6 +4,10 @@ use futures_io::AsyncRead;
 use futures_util::future::{BoxFuture, FutureExt};
 use futures_util::stream::TryStreamExt;
 use http::{Response, StatusCode, Uri};
+#[cfg(feature = "hyper_013")]
+use hyper_013 as hyper;
+#[cfg(feature = "hyper_014")]
+use hyper_014 as hyper;
 use hyper::body::Body;
 use hyper::client::connect::Connect;
 use hyper::Client;
