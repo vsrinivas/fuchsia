@@ -33,6 +33,11 @@
             url: "fuchsia-pkg://fuchsia.com/forensics#meta/exceptions.cm",
         },
         {
+            name: "feedback",
+            url: "fuchsia-pkg://fuchsia.com/forensics#meta/feedback.cm",
+            startup: "eager",
+        },
+        {
             name: "setui_service",
             url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cm",
             on_terminate: "reboot",
@@ -273,13 +278,17 @@
         {
             protocol: [ "fuchsia.net.http.Loader" ],
             from: "#network",
-            to: [ "#cobalt" ],
+            to: [
+                "#cobalt",
+                "#feedback",
+            ],
         },
         {
             protocol: [ "fuchsia.net.interfaces.State" ],
             from: "#network",
             to: [
                 "#exceptions",
+                "#feedback",
                 "#last_reboot",
                 "#remote-control",
             ],
@@ -292,6 +301,7 @@
             from: "#network",
             to: [
                 "#cobalt",
+                "#feedback",
                 "#pkg-resolver",
             ],
         },
@@ -391,7 +401,10 @@
         {
             directory: "config-data",
             from: "parent",
-            to: "#exceptions",
+            to: [
+                "#exceptions",
+                "#feedback",
+            ],
             subdir: "forensics",
         },
         {
@@ -417,7 +430,10 @@
         {
             protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],
             from: "parent",
-            to: [ "#sampler" ],
+            to: [
+                "#feedback",
+                "#sampler",
+            ],
         },
         {
             protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
@@ -425,6 +441,7 @@
             to: [
                 "#detect",
                 "#diagnostics-persistence",
+                "#feedback",
             ],
         },
         {
@@ -442,6 +459,7 @@
                 "#diagnostics-kcounter",
                 "#diagnostics-persistence",
                 "#exceptions",
+                "#feedback",
                 "#font_provider",
                 "#hwinfo",
                 "#last_reboot",
@@ -575,16 +593,15 @@
         },
         {
             protocol: "fuchsia.feedback.CrashReporter",
-            from: "self",
+            from: "#feedback",
             to: [
                 "#detect",
                 "#exceptions",
             ],
-            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.feedback.CrashReportingProductRegister",
-            from: "self",
+            from: "#feedback",
             to: "#detect",
         },
         {
@@ -883,6 +900,7 @@
             protocol: "fuchsia.metrics.MetricEventLoggerFactory",
             from: "#cobalt",
             to: [
+                "#feedback",
                 "#log-stats",
                 "#sampler",
             ],
@@ -908,6 +926,64 @@
             storage: "data",
             from: "self",
             to: "#cobalt",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.Log",
+                "fuchsia.process.Launcher",
+                "fuchsia.sysinfo.SysInfo",
+            ],
+            from: "parent",
+            to: [ "#feedback" ],
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: "#feedback",
+        },
+        {
+            protocol: [
+                "fuchsia.feedback.DeviceIdProvider",
+                "fuchsia.feedback.internal.CrashReportsDirectoryMigrator",
+                "fuchsia.feedback.internal.FeedbackDataDirectoryMigrator",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.settings.Privacy",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
+            ],
+            from: "self",
+            to: "#feedback",
+            dependency: "weak_for_migration",
+        },
+        {
+            storage: [
+                "cache",
+                "data",
+                "tmp",
+            ],
+            from: "self",
+            to: "#feedback",
+        },
+        {
+            directory: "build-info",
+            from: "parent",
+            to: "#feedback",
+        },
+        {
+            directory: "boot",
+            from: "parent",
+            to: "#feedback",
+        },
+        {
+            protocol: [ "fuchsia.feedback.internal.LastRebootDirectoryMigrator" ],
+            from: "#last_reboot",
+            to: "#feedback",
         },
     ],
     expose: [

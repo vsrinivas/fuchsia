@@ -105,8 +105,7 @@ void CrashReporter::Send(zx::exception exception, zx::process crashed_process,
 
                 fuchsia::feedback::CrashReporterPtr crash_reporter;
 
-                // TODO(fxbug.deb/79523): rename to feedback.cm
-                if (builder.ProcessName() == "feedback.cmx") {
+                if (builder.ProcessName() == "feedback.cm") {
                   // Delay connecting to the crash reporter by 5 seconds if the crashed process is
                   // the crash reporter. This gives the system time to route the request to a new
                   // instance of the crash reporter instead of sending it into oblivion.

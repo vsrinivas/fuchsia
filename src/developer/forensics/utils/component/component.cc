@@ -80,7 +80,9 @@ zx_status_t Component::RunLoop() { return loop_.Run(); }
 
 void Component::ShutdownLoop() { return loop_.Shutdown(); }
 
-void Component::OnStopSignal(::fit::function<void(::fit::deferred_callback)> on_stop) {
+void Component::OnStopSignal(
+    ::fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_channel,
+    ::fit::function<void(::fit::deferred_callback)> on_stop) {
   using ProcLifecycle = fuchsia::process::lifecycle::Lifecycle;
 
   lifecycle_ = std::make_unique<Lifecycle>([this, on_stop = std::move(on_stop)] {
@@ -89,16 +91,12 @@ void Component::OnStopSignal(::fit::function<void(::fit::deferred_callback)> on_
       lifecycle_connection_->Close(ZX_OK);
     }));
   });
-  lifecycle_connection_ = std::make_unique<::fidl::Binding<ProcLifecycle>>(lifecycle_.get());
+  lifecycle_connection_ = std::make_unique<::fidl::Binding<ProcLifecycle>>(
+      lifecycle_.get(), std::move(lifecycle_channel), Dispatcher());
 
-  ::fidl::InterfaceRequestHandler<ProcLifecycle> handler(
-      [this](::fidl::InterfaceRequest<ProcLifecycle> request) mutable {
-        lifecycle_connection_->Bind(std::move(request), Dispatcher());
-        lifecycle_connection_->set_error_handler([](const zx_status_t status) {
-          FX_PLOGS(WARNING, status) << "Lost connection to lifecycle client";
-        });
-      });
-  FX_CHECK(AddPublicService(std::move(handler), "fuchsia.process.lifecycle.Lifecycle") == ZX_OK);
+  lifecycle_connection_->set_error_handler([](const zx_status_t status) {
+    FX_PLOGS(WARNING, status) << "Lost connection to lifecycle client";
+  });
 }
 
 size_t Component::InitialInstanceIndex() const {

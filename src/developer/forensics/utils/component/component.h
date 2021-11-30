@@ -63,7 +63,9 @@ class Component {
   // that it can stop the component when |deferred_callback| is executed.
   //
   // Note: This will start serving the outgoing directory if |lazy_outgoing_dir| was set to true.
-  void OnStopSignal(::fit::function<void(::fit::deferred_callback)> on_stop);
+  void OnStopSignal(
+      ::fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_channel,
+      ::fit::function<void(::fit::deferred_callback)> on_stop);
 
  protected:
   // Constructor for testing when the component should run on a different loop than |loop_|.

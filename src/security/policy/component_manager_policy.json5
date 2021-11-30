@@ -283,6 +283,7 @@
                 target_monikers: [
                     "/bootstrap/fshost",
                     "/core/build-info",
+                    "/core/feedback",
                     "/core/omaha-client-service",
                     "/core/system-updater",
                 ],

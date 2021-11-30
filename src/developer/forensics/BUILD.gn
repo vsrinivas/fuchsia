@@ -63,6 +63,7 @@ template("forensics_package") {
       ":exceptions_v1",
       ":feedback",
       ":feedback_data",
+      ":feedback_v1",
       ":last_reboot",
     ]
   }
@@ -114,7 +115,7 @@ fuchsia_component("exceptions") {
   ]
 }
 
-# Needed for integration test.
+# Needed for integration tests.
 fuchsia_component("exceptions_v1") {
   manifest = "exceptions/meta/exceptions.cmx"
 
@@ -126,8 +127,17 @@ fuchsia_component("exceptions_v1") {
   ]
 }
 
-fuchsia_component("feedback") {
+# Needed for integration tests.
+fuchsia_component("feedback_v1") {
   manifest = "feedback/meta/feedback.cmx"
+
+  component_name = "feedback"
+
+  deps = [ ":feedback_exe" ]
+}
+
+fuchsia_component("feedback") {
+  manifest = "feedback/meta/feedback.cml"
 
   deps = [ ":feedback_exe" ]
 }

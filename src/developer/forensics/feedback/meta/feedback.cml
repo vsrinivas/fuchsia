@@ -1,0 +1,95 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/feedback",
+        lifecycle: { stop_event: "notify" },
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.CrashReportingProductRegister",
+                "fuchsia.feedback.DataProvider",
+                "fuchsia.feedback.DataProviderController",
+                "fuchsia.feedback.LastRebootInfoProvider",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.feedback.DeviceIdProvider",
+                "fuchsia.feedback.internal.CrashReportsDirectoryMigrator",
+                "fuchsia.feedback.internal.FeedbackDataDirectoryMigrator",
+                "fuchsia.feedback.internal.LastRebootDirectoryMigrator",
+                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Product",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.Log",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.net.http.Loader",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.settings.Privacy",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
+            ],
+        },
+        {
+            directory: "boot",
+            rights: [ "r*" ],
+            path: "/boot",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            directory: "build-info",
+            rights: [ "r*" ],
+            path: "/config/build-info",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            storage: "cache",
+            path: "/cache",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.CrashReportingProductRegister",
+                "fuchsia.feedback.DataProvider",
+                "fuchsia.feedback.DataProviderController",
+                "fuchsia.feedback.LastRebootInfoProvider",
+            ],
+            from: "self",
+        },
+    ],
+}

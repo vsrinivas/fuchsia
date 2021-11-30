@@ -72,14 +72,13 @@ TEST_F(ComponentTest, OnStopSignal) {
 
   ::fit::deferred_callback disconnect;
   bool stopped{false};
-  component.OnStopSignal([&](::fit::deferred_callback send_stop) {
-    stopped = true;
-    disconnect = std::move(send_stop);
-  });
-
   fuchsia::process::lifecycle::LifecyclePtr lifecycle_ptr;
-  Services()->Connect(lifecycle_ptr.NewRequest(dispatcher()),
-                      "fuchsia.process.lifecycle.Lifecycle");
+  component.OnStopSignal(lifecycle_ptr.NewRequest(dispatcher()),
+                         [&](::fit::deferred_callback send_stop) {
+                           stopped = true;
+                           disconnect = std::move(send_stop);
+                         });
+
   lifecycle_ptr->Stop();
 
   RunLoopUntilIdle();

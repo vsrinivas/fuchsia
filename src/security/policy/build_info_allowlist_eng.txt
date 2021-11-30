@@ -3,7 +3,6 @@ fuchsia-pkg://fuchsia.com/build-info-service#meta/build-info.cmx
 fuchsia-pkg://fuchsia.com/copy-forensics#meta/feedback.cmx
 fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/datastore_unittest.cmx
 fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/main_service_unittest.cmx
-fuchsia-pkg://fuchsia.com/forensics#meta/feedback.cmx
 fuchsia-pkg://fuchsia.com/has-build-info#meta/has-build-info.cmx
 fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx
 fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx

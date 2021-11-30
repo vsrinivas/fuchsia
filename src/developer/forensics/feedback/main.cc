@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/process/lifecycle/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/processargs.h>
 
 #include <cstdlib>
 #include <memory>
@@ -193,11 +196,16 @@ int main() {
             component.AddPublicService(
                 main_service->GetHandler<fuchsia::feedback::DataProviderController>());
 
-            component.OnStopSignal([&](::fit::deferred_callback stop_respond) {
-              FX_LOGS(INFO) << "Received stop signal; stopping upload, but not exiting "
-                               "to continue persisting new reports and logs";
-              main_service->ShutdownImminent(std::move(stop_respond));
-            });
+            zx::channel lifecycle_channel(zx_take_startup_handle(PA_LIFECYCLE));
+
+            component.OnStopSignal(
+                ::fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle>(
+                    std::move(lifecycle_channel)),
+                [&](::fit::deferred_callback stop_respond) {
+                  FX_LOGS(INFO) << "Received stop signal; stopping upload, but not exiting "
+                                   "to continue persisting new reports and logs";
+                  main_service->ShutdownImminent(std::move(stop_respond));
+                });
           }));
 
   component.RunLoop();
