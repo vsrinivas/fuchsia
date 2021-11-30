@@ -167,6 +167,22 @@ ordinal = NUMERIC-LITERAL ;
 literal = STRING-LITERAL | NUMERIC-LITERAL | "true" | "false" ;
 ```
 
+### `STRING-LITERAL`
+
+The grammar for `STRING-LITERAL` is as follows:
+
+```
+STRING-LITERAL   = "\"" ( unicode-value | byte-value )* "\"" ;
+unicode-value    = unicode-char | little-u-value | big-u-value | escaped-char ;
+byte-value       = octal-byte-value | hex-byte-value ;
+octal-byte-value = "\" octal-digit octal-digit octal-digit ;
+hex-byte-value   = "\x" hex-digit hex-digit ;
+little-u-value   = "\u" hex-digit hex-digit hex-digit hex-digit ;
+big-u-value      = "\U" hex-digit hex-digit hex-digit hex-digit
+                        hex-digit hex-digit hex-digit hex-digit ;
+escaped-char     = "\" ( "a" | "b" | "f" | "n" | "r" | "t" | "v" | "\" | "\"" ) ;
+```
+
 ----------
 
 ### NOTE 1
