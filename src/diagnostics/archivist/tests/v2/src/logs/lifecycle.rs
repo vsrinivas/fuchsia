@@ -161,21 +161,23 @@ async fn log_sink_connected_event_test() {
 
 #[fuchsia::test]
 async fn test_logs_lifecycle() {
+    // TODO(https://fxbug.dev/89184): Remove when fixed.
+    eprintln!("DEBUG0");
     let builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
     test_topology::add_lazy_child(&builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
-
+    eprintln!("DEBUG1");
     // Currently RealmBuilder doesn't support to expose a capability from framework, therefore we
     // manually update the decl that the builder creates.
     expose_test_realm_protocol(&builder).await;
-
+    eprintln!("DEBUG2");
     let instance = builder.build().await.expect("create instance");
     let accessor =
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
-
+    eprintln!("DEBUG3");
     let mut reader = ArchiveReader::new();
     reader
         .with_archive(accessor)
@@ -189,7 +191,7 @@ async fn test_logs_lifecycle() {
             panic!("{:#?}", error);
         }
     });
-
+    eprintln!("DEBUG4");
     let moniker = format!(
         "fuchsia_component_test_collection:{}/test/log_and_exit",
         instance.root.child_name()
@@ -201,10 +203,11 @@ async fn test_logs_lifecycle() {
         .subscribe(vec![EventSubscription::new(vec![Stopped::NAME], EventMode::Async)])
         .await
         .unwrap();
-
+    eprintln!("DEBUG5");
     let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
     reader.retry_if_empty(true);
     for i in 1..100 {
+        eprintln!("DEBUG6");
         // launch our child and wait for it to exit before asserting on its logs
         let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
@@ -213,6 +216,7 @@ async fn test_logs_lifecycle() {
         let _ = client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
             .unwrap();
 
+        eprintln!("DEBUG7");
         utils::wait_for_component_stopped_event(
             &instance.root.child_name(),
             LOG_AND_EXIT_COMPONENT,
@@ -221,14 +225,16 @@ async fn test_logs_lifecycle() {
         )
         .await;
 
+        eprintln!("DEBUG8");
         check_message(&moniker, subscription.next().await.unwrap());
-
+        eprintln!("DEBUG9");
         reader.with_minimum_schema_count(i);
         let all_messages = reader.snapshot::<Logs>().await.unwrap();
-
+        eprintln!("DEBUG10");
         for message in all_messages {
             check_message(&moniker, message);
         }
+        eprintln!("DEBUG11");
     }
 }
 
