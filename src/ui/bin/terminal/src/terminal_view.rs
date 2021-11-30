@@ -28,7 +28,7 @@ use {
         event::{Event, EventListener},
         grid::Scroll,
         index::{Column, Line, Point},
-        term::SizeInfo,
+        term::{SizeInfo, TermMode},
         Term,
     },
 };
@@ -376,7 +376,8 @@ impl TerminalViewAssistant {
         &mut self,
         event: &input::keyboard::Event,
     ) -> Result<(), Error> {
-        if let Some(string) = get_input_sequence_for_key_event(event) {
+        let app_cursor = self.term.borrow().mode().contains(TermMode::APP_CURSOR);
+        if let Some(string) = get_input_sequence_for_key_event(event, app_cursor) {
             // In practice these writes will contain a small amount of data
             // so we can use a synchronous write. If that proves to not be the
             // case we will need to refactor to have buffered writing.

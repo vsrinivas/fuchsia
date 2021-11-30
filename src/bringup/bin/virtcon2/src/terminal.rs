@@ -12,7 +12,7 @@ use {
         config::Config,
         event::EventListener,
         grid::Scroll,
-        term::{color::Rgb, SizeInfo},
+        term::{color::Rgb, SizeInfo, TermMode},
         Term,
     },
 };
@@ -115,6 +115,11 @@ impl<T> Terminal<T> {
     pub fn display_offset(&self) -> usize {
         let term = self.term.borrow();
         term.grid().display_offset()
+    }
+
+    pub fn mode(&self) -> TermMode {
+        let term = self.term.borrow();
+        *term.mode()
     }
 }
 

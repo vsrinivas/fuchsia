@@ -8,11 +8,14 @@ use {carnelian::input, pty::key_util::CodePoint, pty::key_util::HidUsage};
 /// If the conversion fails for any reason None is returned instead of an Error
 /// to promote performance since we do not need to handle all errors for keyboard
 /// events which are not supported.
-pub fn get_input_sequence_for_key_event(event: &input::keyboard::Event) -> Option<String> {
+pub fn get_input_sequence_for_key_event(
+    event: &input::keyboard::Event,
+    app_cursor: bool,
+) -> Option<String> {
     match event.phase {
         input::keyboard::Phase::Pressed | input::keyboard::Phase::Repeat => {
             match event.code_point {
-                None => HidUsage(event.hid_usage).into(),
+                None => HidUsage { hid_usage: event.hid_usage, app_cursor }.into(),
                 Some(code_point) => CodePoint {
                     code_point: code_point,
                     control_pressed: event.modifiers.is_control_only(),
@@ -56,7 +59,8 @@ mod tests {
                 hid_usage: 0,
                 modifiers: modifiers_with_control(),
             };
-            let result = get_input_sequence_for_key_event(&event).unwrap();
+            let app_cursor = false;
+            let result = get_input_sequence_for_key_event(&event, app_cursor).unwrap();
             let expected = String::from_utf8(vec![i]).unwrap();
             assert_eq!(result, expected);
         }
@@ -72,7 +76,8 @@ mod tests {
             hid_usage: HID_USAGE_KEY_TAB,
             modifiers: carnelian::input::Modifiers::default(),
         };
-        let result = get_input_sequence_for_key_event(&event).unwrap();
+        let app_cursor = false;
+        let result = get_input_sequence_for_key_event(&event, app_cursor).unwrap();
         let expected = "\t";
         assert_eq!(result, expected);
     }

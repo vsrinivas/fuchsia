@@ -36,7 +36,7 @@ use {
     term_model::{
         ansi::TermInfo,
         grid::Scroll,
-        term::{color::Rgb, SizeInfo},
+        term::{color::Rgb, SizeInfo, TermMode},
     },
     terminal::font_to_cell_size,
 };
@@ -45,11 +45,14 @@ fn is_control_only(modifiers: &input::Modifiers) -> bool {
     modifiers.control && !modifiers.shift && !modifiers.alt && !modifiers.caps_lock
 }
 
-fn get_input_sequence_for_key_event(event: &input::keyboard::Event) -> Option<String> {
+fn get_input_sequence_for_key_event(
+    event: &input::keyboard::Event,
+    app_cursor: bool,
+) -> Option<String> {
     match event.phase {
         input::keyboard::Phase::Pressed | input::keyboard::Phase::Repeat => {
             match event.code_point {
-                None => HidUsage(event.hid_usage).into(),
+                None => HidUsage { hid_usage: event.hid_usage, app_cursor }.into(),
                 Some(code_point) => CodePoint {
                     code_point: code_point,
                     control_pressed: is_control_only(&event.modifiers),
@@ -668,9 +671,10 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
             return Ok(());
         }
 
-        // Get input sequence and write it to the active terminal.
-        if let Some(string) = get_input_sequence_for_key_event(keyboard_event) {
-            if let Some((terminal, _)) = self.terminals.get_mut(&self.active_terminal_id) {
+        if let Some((terminal, _)) = self.terminals.get_mut(&self.active_terminal_id) {
+            // Get input sequence and write it to the active terminal.
+            let app_cursor = terminal.mode().contains(TermMode::APP_CURSOR);
+            if let Some(string) = get_input_sequence_for_key_event(keyboard_event, app_cursor) {
                 terminal
                     .write_all(string.as_bytes())
                     .unwrap_or_else(|e| println!("failed to write to terminal: {}", e));
