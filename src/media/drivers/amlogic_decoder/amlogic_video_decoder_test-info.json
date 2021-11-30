@@ -1,0 +1,14 @@
+{
+    "short_description": "AMLogic video decoder test driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "S912",
+        "S905D2",
+        "T931",
+        "S905D3"
+    ],
+    "areas": [
+        "Media"
+    ]
+}
