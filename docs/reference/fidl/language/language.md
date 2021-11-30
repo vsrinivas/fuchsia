@@ -399,8 +399,9 @@ FIDL library, e.g. `zx.rights.READ`. In both the incoming and outgoing
 directions, handles are validated to have the correct Zircon object type and at
 least as many rights as are specified in FIDL. If the handle has more rights
 than is specified in FIDL, then its rights will be reduced by a call to
-`zx_handle_replace`. See further details on
-[RFC-0028: Handle rights](/docs/contribute/governance/rfcs/0028_handle_rights.md).
+`zx_handle_replace`. See [Life of a handle] for an example and [RFC-0028: Handle
+rights](/docs/contribute/governance/rfcs/0028_handle_rights.md) for further
+details.
 
 Structs, tables, and unions containing handles must be marked with the
 [`resource` modifier](#value-vs-resource).
@@ -896,3 +897,4 @@ obtain a different reserved name:
 [wire-format]: /docs/reference/fidl/language/wire-format/README.md
 [naming-context]: /docs/contribute/governance/rfcs/0050_syntax_revamp.md#layout-naming-contexts
 [generated-name-attr]: /docs/reference/fidl/language/attributes.md#generated-name
+[Life of a handle]: /docs/concepts/fidl/life-of-a-handle.md

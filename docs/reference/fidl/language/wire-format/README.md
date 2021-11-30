@@ -231,6 +231,9 @@ Handles are moved from one application's context to the other's.
 
 The value zero can be used to indicate a optional handle is absent[[1]](#Footnote-1).
 
+See [Life of a handle] for a detailed example of transferring a handle over
+FIDL.
+
 ## Aggregate objects
 
 Aggregate objects serve as containers of other objects.
@@ -860,3 +863,4 @@ treatise on the subject.
 [lostart]: http://www.catb.org/esr/structure-packing/
 [concepts]: /docs/concepts/fidl/overview.md
 [c-tutorial]: /docs/development/languages/fidl/tutorials/tutorial-c.md
+[Life of a handle]: /docs/concepts/fidl/life-of-a-handle.md

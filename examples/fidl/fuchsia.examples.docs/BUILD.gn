@@ -12,6 +12,7 @@ fidl("fuchsia.examples.docs") {
     "api_rubric.test.fidl",
     "attributes.test.fidl",
     "language_reference.test.fidl",
+    "life_of_a_handle.test.fidl",
     "misc.test.fidl",
     "style.test.fidl",
   ]

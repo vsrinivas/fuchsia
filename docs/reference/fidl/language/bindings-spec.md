@@ -378,7 +378,7 @@ the wire format data, or as errors from the underlying transport mechanism (for
 example, an error obtained from calling `zx_channel_write_etc`). These errors
 MAY consist of the error status, as well as any other diagnostics information.
 
-## Handle Type and Rights Checking
+## Handle type and rights checking
 
 Bindings MUST enforce handle type and rights checking in both the incoming and
 outgoing directions. This means that `zx_channel_write_etc`,
@@ -404,6 +404,8 @@ Suppose a handle *h* is read and its rights in the FIDL file are *R*:
 
 Additionally, it is an error for *h* to have the wrong type. The channel
 MUST be closed if this condition is encountered.
+
+See [Life of a handle] for a detailed example.
 
 ## Iovec Support
 
@@ -601,3 +603,4 @@ ensuring their rights are the same.
 [llcpp]: /docs/reference/fidl/bindings/llcpp-bindings.md
 [source-compatible]: /docs/development/languages/fidl/guides/compatibility/README.md#strict-flexible
 [soft-transitions]: /docs/contribute/governance/rfcs/0002_platform_versioning.md#terminology
+[Life of a handle]: /docs/concepts/fidl/life-of-a-handle.md
