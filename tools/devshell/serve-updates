@@ -191,12 +191,12 @@ else
   fi
 fi
 
-if is_feature_enabled "legacy_serve"; then
-  # Default the port to 8083 if it is unset.
-  if [[ -z "${port}" ]]; then
-    port="8083"
-  fi
+# Default the port to 8083 if it is unset.
+if [[ -z "${port}" ]]; then
+  port="8083"
+fi
 
+if is_feature_enabled "legacy_serve"; then
   pm_serve_args=( serve -vt -repo "${repo_dir}" "${serve_flags[@]}" )
 
   # the manifest list file has relative paths and "pm serve" looks for them
@@ -208,12 +208,6 @@ else
     fx-error "The feature 'incremental' is not supported yet by ffx"
     fx-error "See http://fxbug.dev/79636 for more details."
     exit 1
-  fi
-
-  # FIXME(http://fxbug.dev/77146): The tunnel is currently hardcoded to port
-  # 8085.
-  if [[ -z "${port}" ]]; then
-    port=8085
   fi
 fi
 
@@ -237,9 +231,13 @@ if is_feature_enabled "legacy_serve"; then
   # Allow a little slack for pm serve to startup, that way the first kill -0 will catch a dead server
   sleep 0.1
   if ! kill -0 "${background_pid}" 2> /dev/null; then
-    log "Server died, exiting"
+    err=$?
+    fx-error "Server died"
+    fx-error "If the server exited with 'address already in use', pm may be colliding with"
+    fx-error "the ffx repository server. To disable the ffx repository server, run:"
+    fx-error "$ ffx config set repository.server.listen \"\" && ffx doctor --restart-daemon"
     wait
-    exit $?
+    exit $err
   fi
 else
   if [[ "${verbose}" == true ]]; then
