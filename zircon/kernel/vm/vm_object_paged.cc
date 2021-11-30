@@ -189,6 +189,7 @@ uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
 
 zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                                         fbl::RefPtr<VmObjectPaged>* obj) {
+  DEBUG_ASSERT(!(options & kContiguous));
   // make sure size is page aligned
   zx_status_t status = RoundSize(size, &size);
   if (status != ZX_OK) {
@@ -202,7 +203,7 @@ zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t optio
   }
 
   fbl::RefPtr<VmCowPages> cow_pages;
-  status = VmCowPages::Create(state, pmm_alloc_flags, size, &cow_pages);
+  status = VmCowPages::Create(state, VmCowPagesOptions::kNone, pmm_alloc_flags, size, &cow_pages);
   if (status != ZX_OK) {
     return status;
   }
@@ -246,8 +247,23 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     return status;
   }
 
+  fbl::AllocChecker ac;
+  // For contiguous VMOs, we need a PhysicalPageProvider to reclaim specific loaned physical pages
+  // on commit.
+  auto page_provider = fbl::AdoptRef(new (&ac) PhysicalPageProvider(size));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  PhysicalPageProvider* physical_page_provider_ptr = page_provider.get();
+  fbl::RefPtr<PageSource> page_source =
+      fbl::AdoptRef(new (&ac) PageSource(ktl::move(page_provider)));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  auto* page_source_ptr = page_source.get();
+
   fbl::RefPtr<VmObjectPaged> vmo;
-  status = CreateCommon(pmm_alloc_flags, kContiguous, size, &vmo);
+  status = CreateWithSourceCommon(ktl::move(page_source), pmm_alloc_flags, kContiguous, size, &vmo);
   if (status != ZX_OK) {
     return status;
   }
@@ -287,6 +303,8 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
   // is deleted, since the child slice should remain contiguous after the parent VMO handle is
   // closed.
   vmo->cow_pages_locked()->SetUnpinOnDeleteLocked();
+
+  physical_page_provider_ptr->Init(vmo->cow_pages_locked(), page_source_ptr, pa);
 
   *obj = ktl::move(vmo);
   return ZX_OK;
@@ -367,14 +385,28 @@ zx_status_t VmObjectPaged::CreateExternal(fbl::RefPtr<PageSource> src, uint32_t 
     return status;
   }
 
+  return CreateWithSourceCommon(ktl::move(src), PMM_ALLOC_FLAG_ANY, options, size, obj);
+}
+
+zx_status_t VmObjectPaged::CreateWithSourceCommon(fbl::RefPtr<PageSource> src,
+                                                  uint32_t pmm_alloc_flags, uint32_t options,
+                                                  uint64_t size, fbl::RefPtr<VmObjectPaged>* obj) {
+  // Caller must check that size is page aligned.
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+
   fbl::AllocChecker ac;
   auto state = fbl::AdoptRef<VmHierarchyState>(new (&ac) VmHierarchyState);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
+  VmCowPagesOptions cow_options = VmCowPagesOptions::kNone;
+  if (options & kContiguous) {
+    cow_options |= VmCowPagesOptions::kCannotDecommitZeroPages;
+  }
   fbl::RefPtr<VmCowPages> cow_pages;
-  status = VmCowPages::CreateExternal(ktl::move(src), state, size, &cow_pages);
+  zx_status_t status =
+      VmCowPages::CreateExternal(ktl::move(src), cow_options, state, size, &cow_pages);
   if (status != ZX_OK) {
     return status;
   }
@@ -776,6 +808,9 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
 
 zx_status_t VmObjectPaged::DecommitRangeLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
+
+  // Decommit of pages from a contiguous VMO relies on contiguous VMOs not being resizable.
+  DEBUG_ASSERT(!is_resizable() || !is_contiguous());
 
   zx_status_t status = cow_pages_locked()->DecommitRangeLocked(offset, len);
   if (status == ZX_OK) {

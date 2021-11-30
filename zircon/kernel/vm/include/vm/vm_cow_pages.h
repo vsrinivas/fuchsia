@@ -72,10 +72,11 @@ class VmCowPages final
           fbl::TaggedDoublyLinkedListable<VmCowPages*, internal::DiscardableListTag>>,
       public fbl::Recyclable<VmCowPages> {
  public:
-  static zx_status_t Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t pmm_alloc_flags,
-                            uint64_t size, fbl::RefPtr<VmCowPages>* cow_pages);
+  static zx_status_t Create(fbl::RefPtr<VmHierarchyState> root_lock, VmCowPagesOptions options,
+                            uint32_t pmm_alloc_flags, uint64_t size,
+                            fbl::RefPtr<VmCowPages>* cow_pages);
 
-  static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src,
+  static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src, VmCowPagesOptions options,
                                     fbl::RefPtr<VmHierarchyState> root_lock, uint64_t size,
                                     fbl::RefPtr<VmCowPages>* cow_pages);
 
@@ -118,8 +119,7 @@ class VmCowPages final
   }
 
   bool debug_is_contiguous() const TA_REQ(lock_) {
-    // for now
-    return is_unpin_on_delete_locked();
+    return page_source_ && page_source_->properties().is_providing_specific_physical_pages;
   }
 
   bool is_private_pager_copy_supported() const TA_REQ(lock_) {
@@ -140,7 +140,7 @@ class VmCowPages final
     }
 
     // We also don't support COW clones for contiguous VMOs.
-    if (is_unpin_on_delete_locked()) {
+    if (is_source_supplying_specific_physical_pages_locked()) {
       return false;
     }
 
@@ -172,7 +172,7 @@ class VmCowPages final
     return result;
   }
 
-  bool has_backlinks_locked() const TA_REQ(lock_) {
+  bool has_pager_backlinks_locked() const TA_REQ(lock_) {
     bool result = can_evict_locked();
     DEBUG_ASSERT(result == debug_is_user_pager_backed_locked());
     return result;
@@ -190,6 +190,18 @@ class VmCowPages final
         which_cow->page_source_ && which_cow->page_source_->properties().is_preserving_page_content;
     AssertHeld(which_cow->lock_);
     DEBUG_ASSERT(result == which_cow->debug_is_user_pager_backed_locked());
+    return result;
+  }
+
+  bool is_source_preserving_page_content_locked() const TA_REQ(lock_) {
+    bool result = page_source_ && page_source_->properties().is_preserving_page_content;
+    DEBUG_ASSERT(result == debug_is_user_pager_backed_locked());
+    return result;
+  }
+
+  bool is_source_supplying_specific_physical_pages_locked() const TA_REQ(lock_) {
+    bool result = page_source_ && page_source_->properties().is_providing_specific_physical_pages;
+    DEBUG_ASSERT(result == debug_is_contiguous());
     return result;
   }
 
@@ -481,8 +493,7 @@ class VmCowPages final
   }
   bool can_decommit_zero_pages_locked() const TA_REQ(lock_) {
     bool result = !(options_ & VmCowPagesOptions::kCannotDecommitZeroPages);
-    // For now.
-    DEBUG_ASSERT(result);
+    DEBUG_ASSERT(result == !debug_is_contiguous());
     return result;
   }
 
@@ -504,8 +515,7 @@ class VmCowPages final
 
   bool direct_source_supplies_zero_pages_locked() const TA_REQ(lock_) {
     bool result = page_source_ && !page_source_->properties().is_preserving_page_content;
-    // for now
-    DEBUG_ASSERT(!result);
+    DEBUG_ASSERT(result == debug_is_contiguous());
     return result;
   }
 
