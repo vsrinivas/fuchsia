@@ -130,16 +130,17 @@ impl SetUiFacade {
             },
         };
 
-        match input_proxy.watch2().await?.devices {
+        match input_proxy.watch().await?.devices {
             Some(input_device) => {
                 let mut muted = false;
-                let device = input_device.into_iter().find(|device| {
-                    device.device_type == Some(fsettings::DeviceType::Microphone)
-                  }).unwrap();
+                let device = input_device
+                    .into_iter()
+                    .find(|device| device.device_type == Some(fsettings::DeviceType::Microphone))
+                    .unwrap();
                 match device.state {
                     Some(state) => {
                         muted = state.toggle_flags == Some(fsettings::ToggleStateFlags::Muted);
-                    },
+                    }
                     _ => (),
                 }
                 return Ok(to_value(muted)?);
@@ -267,7 +268,7 @@ impl SetUiFacade {
         }
 
         fx_log_info!("SetMicMute: setting input state {:?}", input_states);
-        match input_proxy.set_states(&mut vec![input_states].into_iter()).await? {
+        match input_proxy.set(&mut vec![input_states].into_iter()).await? {
             Ok(_) => Ok(to_value(SetUiResult::Success)?),
             Err(e) => Err(format_err!("SetMicMute failed with err {:?}", e)),
         }
@@ -392,7 +393,7 @@ mod tests {
         futures::future::join(facade_fut, stream_fut).await;
     }
 
-    // Tests that `set_mic_mute` correctly sends a request to the Input service to 
+    // Tests that `set_mic_mute` correctly sends a request to the Input service to
     // mute the device mic.
     #[fasync::run_singlethreaded(test)]
     async fn test_set_mic_mute() {
@@ -412,7 +413,7 @@ mod tests {
         // Create a future to service the request stream.
         let input_stream_fut = async move {
             match stream.try_next().await {
-                Ok(Some(fsettings::InputRequest::Watch2 { responder })) => {
+                Ok(Some(fsettings::InputRequest::Watch { responder })) => {
                     let device = InputDevice {
                         device_name: None,
                         device_type: Some(fsettings::DeviceType::Microphone),
@@ -432,10 +433,10 @@ mod tests {
                     };
                     responder.send(settings).unwrap();
                 }
-                other => panic!("Unexpected Watch2 request: {:?}", other),
+                other => panic!("Unexpected Watch request: {:?}", other),
             }
             match stream.try_next().await {
-                Ok(Some(fsettings::InputRequest::SetStates { input_states, responder })) => {
+                Ok(Some(fsettings::InputRequest::Set { input_states, responder })) => {
                     assert_eq!(
                         input_states[0],
                         InputState {
@@ -473,10 +474,10 @@ mod tests {
             );
         };
 
-        // Create a future to check that the request stream using SetStates is never called (due to early termination).
+        // Create a future to check that the request stream using Set is never called (due to early termination).
         let input_stream_fut = async move {
             match stream.try_next().await {
-                Ok(Some(fsettings::InputRequest::Watch2 { responder })) => {
+                Ok(Some(fsettings::InputRequest::Watch { responder })) => {
                     let device = InputDevice {
                         device_name: None,
                         device_type: Some(fsettings::DeviceType::Microphone),
@@ -496,10 +497,10 @@ mod tests {
                     };
                     responder.send(settings).unwrap();
                 }
-                other => panic!("Unexpected Watch2 request: {:?}", other),
+                other => panic!("Unexpected Watch request: {:?}", other),
             }
             match stream.try_next().await {
-                Ok(Some(fsettings::InputRequest::SetStates { input_states, responder: _ })) => {
+                Ok(Some(fsettings::InputRequest::Set { input_states, responder: _ })) => {
                     panic!("Unexpected stream item: {:?}", input_states[0]);
                 }
                 _ => (),
@@ -519,16 +520,13 @@ mod tests {
         let facade =
             SetUiFacade { audio_proxy: None, display_proxy: None, input_proxy: Some(proxy) };
         let facade_fut = async move {
-            assert_eq!(
-                facade.is_mic_muted().await.unwrap(),
-                to_value(is_muted).unwrap()
-            );
+            assert_eq!(facade.is_mic_muted().await.unwrap(), to_value(is_muted).unwrap());
         };
 
         // Create a future to service the request stream.
         let input_stream_fut = async move {
             match stream.try_next().await {
-                Ok(Some(fsettings::InputRequest::Watch2 { responder })) => {
+                Ok(Some(fsettings::InputRequest::Watch { responder })) => {
                     let device = InputDevice {
                         device_name: None,
                         device_type: Some(fsettings::DeviceType::Microphone),
@@ -548,7 +546,7 @@ mod tests {
                     };
                     responder.send(settings).unwrap();
                 }
-                other => panic!("Unexpected Watch2 request: {:?}", other),
+                other => panic!("Unexpected Watch request: {:?}", other),
             }
         };
 
