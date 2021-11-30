@@ -23,7 +23,7 @@
         },
         "go": {
             "starting_fidl": "step_00_before",
-            "starting_src": "go/step_00_before.go",
+            "starting_src": "go/step_00_before/step_00_before.go",
             "steps": [
                 {
                     "fidl": "step_01_during",
@@ -35,7 +35,7 @@
                         "Remove the implementation for the method being removed from the server.",
                         "Remove any references to the method in client code (e.g. request calls being made)"
                     ],
-                    "source": "go/step_02_during.go",
+                    "source": "go/step_02_during/step_02_during.go",
                     "step_num": 2
                 },
                 {
@@ -46,7 +46,7 @@
                     "instructions": [
                         "Remove the embedded `WithCtxInterface` struct."
                     ],
-                    "source": "go/step_04_after.go",
+                    "source": "go/step_04_after/step_04_after.go",
                     "step_num": 4
                 }
             ]

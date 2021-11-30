@@ -17,13 +17,13 @@
         },
         "go": {
             "starting_fidl": "step_00_before",
-            "starting_src": "go/step_00_before.go",
+            "starting_src": "go/step_00_before/step_00_before.go",
             "steps": [
                 {
                     "instructions": [
                         "Remove usages of any flexible specific APIs"
                     ],
-                    "source": "go/step_01_after.go",
+                    "source": "go/step_01_after/step_01_after.go",
                     "step_num": 1
                 },
                 {

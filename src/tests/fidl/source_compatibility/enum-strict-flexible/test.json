@@ -23,7 +23,7 @@
         },
         "go": {
             "starting_fidl": "step_00_before",
-            "starting_src": "go/step_00_before.go",
+            "starting_src": "go/step_00_before/step_00_before.go",
             "steps": [
                 {
                     "fidl": "step_02_during",
@@ -34,7 +34,7 @@
                         "If using a custom unknown with the [Unknown] attribute, update readers and writers to use `IsUnknown` and the `_Unknown` constant.",
                         "You can now use any flexible enum specific APIs"
                     ],
-                    "source": "go/step_03_after.go",
+                    "source": "go/step_03_after/step_03_after.go",
                     "step_num": 3
                 },
                 {

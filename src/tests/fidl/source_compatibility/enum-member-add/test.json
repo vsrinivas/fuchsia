@@ -19,7 +19,7 @@
         },
         "go": {
             "starting_fidl": "step_00_before",
-            "starting_src": "go/step_00_before.go",
+            "starting_src": "go/step_00_before/step_00_before.go",
             "steps": [
                 {
                     "fidl": "step_02_after",
@@ -29,7 +29,7 @@
                     "instructions": [
                         "Writers can now produce instances of the new enum member."
                     ],
-                    "source": "go/step_03_after.go",
+                    "source": "go/step_03_after/step_03_after.go",
                     "step_num": 3
                 }
             ]

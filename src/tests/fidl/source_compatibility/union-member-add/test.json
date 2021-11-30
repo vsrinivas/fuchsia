@@ -27,13 +27,13 @@
         },
         "go": {
             "starting_fidl": "step_00_before",
-            "starting_src": "go/step_00_before.go",
+            "starting_src": "go/step_00_before/step_00_before.go",
             "steps": [
                 {
                     "instructions": [
                         "Evolve readers first by updating switch statements on the union tag to handle the soon-to-be-added variant as part of a default case."
                     ],
-                    "source": "go/step_01_during.go",
+                    "source": "go/step_01_during/step_01_during.go",
                     "step_num": 1
                 },
                 {
@@ -45,7 +45,7 @@
                         "Writers can now start producing instances of the new variant.",
                         "Readers should handle the new variant in switch statements."
                     ],
-                    "source": "go/step_03_after.go",
+                    "source": "go/step_03_after/step_03_after.go",
                     "step_num": 3
                 }
             ]

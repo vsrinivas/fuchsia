@@ -12,7 +12,7 @@
         },
         "go": {
             "starting_fidl": "step_00_before",
-            "starting_src": "go/step_00_during.go",
+            "starting_src": "go/step_00_during/step_00_during.go",
             "steps": [
                 {
                     "fidl": "step_02_after",
