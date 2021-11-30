@@ -95,7 +95,7 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContex
       return false;
     } else {
       Node* node = std::move(result).value();
-      ranges_.push_back(node);
+      AppendNode(node);
     }
     return true;
   };
@@ -289,7 +289,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
     ZX_DEBUG_ASSERT(range.size < it->size);
     it->addr += range.size;
     it->size -= range.size;
-    return fitx::ok(ranges_.insert(it, node));
+    return fitx::ok(InsertNodeAt(node, it));
   }
 
   const uint64_t containing_end = it->end();
@@ -303,7 +303,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
   if (range.end() == it->end()) {
     ZX_DEBUG_ASSERT(it->addr < range.addr);
     it->size -= range.size;
-    return fitx::ok(ranges_.insert(next, node));
+    return fitx::ok(InsertNodeAt(node, next));
   }
 
   //     .------------+------------.------------.
@@ -314,7 +314,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
   ZX_DEBUG_ASSERT(it->addr < range.addr);
   ZX_DEBUG_ASSERT(range.end() < containing_end);
   it->size = range.addr - it->addr;
-  ranges_.insert(next, node);
+  InsertNodeAt(node, next);
 
   Range after = {
       .addr = range.end(),
@@ -326,7 +326,7 @@ fitx::result<fitx::failed, Pool::mutable_iterator> Pool::InsertSubrange(
   } else {
     node = std::move(result).value();
     ZX_DEBUG_ASSERT(node);
-    ranges_.insert(next, node);
+    InsertNodeAt(node, next);
   }
 
   return fitx::ok(std::next(it));
@@ -358,14 +358,14 @@ Pool::mutable_iterator Pool::Coalesce(mutable_iterator it) {
     if (prev->type == it->type && prev->end() == it->addr) {
       it->addr = prev->addr;
       it->size += prev->size;
-      unused_.push_back(ranges_.erase(prev));
+      unused_.push_back(RemoveNodeAt(prev));
     }
   }
   if (it != ranges_.end()) {
     auto next = std::next(it);
     if (next != ranges_.end() && next->type == it->type && it->end() == next->addr) {
       it->size += next->size;
-      unused_.push_back(ranges_.erase(next));
+      unused_.push_back(RemoveNodeAt(next));
     }
   }
   return it;
@@ -417,6 +417,22 @@ std::byte* Pool::PopulateAsBookkeeping(std::byte* addr, uint64_t size) {
     addr += sizeof(Node);
   }
   return addr;
+}
+
+void Pool::AppendNode(Node* node) {
+  ++num_ranges_;
+  ranges_.push_back(node);
+}
+
+Pool::mutable_iterator Pool::InsertNodeAt(Node* node, mutable_iterator it) {
+  ++num_ranges_;
+  return ranges_.insert(it, node);
+}
+
+Pool::Node* Pool::RemoveNodeAt(mutable_iterator it) {
+  ZX_DEBUG_ASSERT(num_ranges_ > 0);
+  --num_ranges_;
+  return static_cast<Node*>(ranges_.erase(it));
 }
 
 void Pool::PrintMemoryRanges(const char* prefix, FILE* f) const {

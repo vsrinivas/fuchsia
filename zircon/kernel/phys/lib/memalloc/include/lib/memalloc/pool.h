@@ -146,6 +146,9 @@ class Pool {
     return *std::prev(end());
   }
 
+  // Returns the number of tracked, normalized ranges.
+  size_t size() const { return num_ranges_; }
+
   // Returns a pointer to the tracked, normalized range containing the
   // provided address, if one exists.
   const Range* GetContainingRange(uint64_t addr);
@@ -262,6 +265,11 @@ class Pool {
   // complete and report exactly that.
   void TryToEnsureTwoBookkeepingNodes();
 
+  // Thin wrappers around List methods that also update `num_ranges_`.
+  void AppendNode(Node* node);
+  mutable_iterator InsertNodeAt(Node* node, mutable_iterator it);
+  Node* RemoveNodeAt(mutable_iterator it);
+
   BookkeepingAddressToPointer bookkeeping_pointer_ = [](uint64_t addr, uint64_t size) {
     return reinterpret_cast<std::byte*>(addr);
   };
@@ -278,6 +286,9 @@ class Pool {
   // mutually disjoint, maximally contiguous, and where addr + size does not
   // overflow.
   List ranges_;
+
+  // The number of tracked ranges.
+  size_t num_ranges_ = 0;
 };
 
 }  // namespace memalloc

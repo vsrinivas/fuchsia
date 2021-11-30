@@ -49,12 +49,13 @@ void TestPoolInit(Pool& pool, cpp20::span<Range> input, bool init_error = false)
   ASSERT_FALSE(status.is_error());
 }
 
-void TestPoolContents(Pool& pool, cpp20::span<const Range> expected) {
+void TestPoolContents(const Pool& pool, cpp20::span<const Range> expected) {
+  EXPECT_EQ(expected.size(), pool.size());
   std::vector<const Range> actual(pool.begin(), pool.end());
   ASSERT_NO_FATAL_FAILURE(CompareRanges(expected, {actual}));
 }
 
-void TestPoolPrintOut(Pool& pool, const char* prefix, std::string_view expected) {
+void TestPoolPrintOut(const Pool& pool, const char* prefix, std::string_view expected) {
   constexpr size_t kPrintOutSizeMax = 0x400;
 
   FILE* f = tmpfile();
