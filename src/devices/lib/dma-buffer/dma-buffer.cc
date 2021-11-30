@@ -92,12 +92,12 @@ class BufferFactoryImpl : public BufferFactory {
     if (status != ZX_OK) {
       return status;
     }
-    if (size % ZX_PAGE_SIZE) {
-      size = ((size / ZX_PAGE_SIZE) + 1) * ZX_PAGE_SIZE;
+    if (size % zx_system_get_page_size()) {
+      size = ((size / zx_system_get_page_size()) + 1) * zx_system_get_page_size();
     }
     void* virt;
     std::vector<zx_paddr_t> phys;
-    phys.resize(size / ZX_PAGE_SIZE);
+    phys.resize(size / zx_system_get_page_size());
     status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size,
                                         reinterpret_cast<zx_vaddr_t*>(&virt));
     if (status != ZX_OK) {
