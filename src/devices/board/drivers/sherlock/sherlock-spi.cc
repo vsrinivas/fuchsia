@@ -20,7 +20,6 @@
 
 #define HHI_SPICC_CLK_CNTL (0xf7 * 4)
 #define spicc_0_clk_sel_fclk_div5 (5 << 7)
-#define spicc_0_clk_sel_fclk_div7 (6 << 7)
 #define spicc_0_clk_en (1 << 6)
 #define spicc_0_clk_div(x) ((x)-1)
 
@@ -110,15 +109,8 @@ zx_status_t Sherlock::SpiInit() {
       return status;
     }
 
-    // Setup the SPICC_0 Clock:
-    // Use the Fixed PLL (2GHz) Div 7 = ~285.7MHz
-    // Divide by 55 to get ~285.7MHz / 55 = 5.19MHz
-    // The SPI periph has the Enhanced clock disabled so the final rate is
-    // divided by 2^(n+2) where n = SPICC0 CONREG[18:16] which is 0 in our case.
-    // ~= 5.19MHz / 2^(0+2)
-    // ~= 5.19MHz / 4
-    // ~= 1.30MHz
-    buf->Write32(spicc_0_clk_sel_fclk_div7 | spicc_0_clk_en | spicc_0_clk_div(55),
+    // SPICC0 clock enable
+    buf->Write32(spicc_0_clk_sel_fclk_div5 | spicc_0_clk_en | spicc_0_clk_div(10),
                  HHI_SPICC_CLK_CNTL);
   }
 
