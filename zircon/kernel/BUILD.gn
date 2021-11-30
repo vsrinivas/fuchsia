@@ -261,17 +261,7 @@ if (is_kernel) {
       # This matters if vector registers are not available, e.g. in the kernel
       # since the they hold unsaved user state, or in the physmem environment
       # because they might not be enabled in hardware yet.
-      if (!is_gcc) {
-        cflags += [ "-mgeneral-regs-only" ]
-      } else {
-        # TODO(mcgrathr): To work around a GCC bug we have to sneak
-        # -mgeneral-regs-only in through an arcane mechanism.  See
-        # //zircon/kernel/lib/arch/arm64/include/lib/arch/intrin.h for details.
-        cflags += [
-          "-include",
-          rebase_path("arch/arm64/general-regs-only.h", root_build_dir),
-        ]
-      }
+      cflags += [ "-mgeneral-regs-only" ]
     }
 
     if (is_gcc && current_os == "fuchsia") {

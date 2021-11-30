@@ -32,30 +32,16 @@
 #include <stdint.h>
 
 // TODO(mcgrathr): Until https://gcc.gnu.org/bugzilla/show_bug.cgi?id=94993 is
-// fixed, <arm_acle.h> won't compile properly under -mgeneral-regs-only.  We
-// need that switch on for the whole kernel, but to work around this bug we
-// need it temporarily off while processing <arm_acle.h>.  The push_options and
-// pop_options pragmas provide a way to do things like this.  However, there is
-// no -mno-general-regs-only, just -mgeneral-regs-only, so it's not possible to
-// use `#pragma GCC target ("no-general-regs-only")` here, as would be more
-// straightforward (relatively speaking).  Instead, we use `-include` to feed
-// kernel/arch/arm64/general-regs-only.h into every translation unit, and that
-// does `push_options` and `target ("general-regs-only")`.  So now we can use
-// `pop_options` here to unset -mgeneral-regs-only, and then restore it
-// afterwards by repeating the same `push_options` and `target` pragmas below.
-#if __GNUC__ == 10
-#pragma GCC pop_options
-#endif  // __GNUC__ == 10
+// fixed, <arm_acle.h> won't compile properly under -mgeneral-regs-only.
+// GCC's version turns out not to supply anything we need anyway.
+
+#ifdef __clang__
 
 // Provide the standard ARM C Language Extensions API.
 #include <arm_acle.h>
 
-#if __GNUC__ == 10
-#pragma GCC push_options
-#pragma GCC target ("general-regs-only")
-#endif  // __GNUC__ == 10
+#else  // !__clang
 
-#ifndef __clang__
 // GCC's <arm_acle.h> is missing implementations of the following APIs
 // specified by ARM, so they are filled in here.  Clang's implementation
 // is already complete.
