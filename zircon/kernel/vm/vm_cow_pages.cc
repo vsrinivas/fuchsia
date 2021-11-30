@@ -433,11 +433,12 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
   return count;
 }
 
-zx_status_t VmCowPages::Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t pmm_alloc_flags,
-                               uint64_t size, fbl::RefPtr<VmCowPages>* cow_pages) {
+zx_status_t VmCowPages::Create(fbl::RefPtr<VmHierarchyState> root_lock, VmCowPagesOptions options,
+                               uint32_t pmm_alloc_flags, uint64_t size,
+                               fbl::RefPtr<VmCowPages>* cow_pages) {
+  DEBUG_ASSERT(!(options & VmCowPagesOptions::kInternalOnlyMask));
   fbl::AllocChecker ac;
-  auto cow = NewVmCowPages(&ac, ktl::move(root_lock), VmCowPagesOptions::kNone, pmm_alloc_flags,
-                           size, nullptr);
+  auto cow = NewVmCowPages(&ac, ktl::move(root_lock), options, pmm_alloc_flags, size, nullptr);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -445,18 +446,17 @@ zx_status_t VmCowPages::Create(fbl::RefPtr<VmHierarchyState> root_lock, uint32_t
   return ZX_OK;
 }
 
-zx_status_t VmCowPages::CreateExternal(fbl::RefPtr<PageSource> src,
+zx_status_t VmCowPages::CreateExternal(fbl::RefPtr<PageSource> src, VmCowPagesOptions options,
                                        fbl::RefPtr<VmHierarchyState> root_lock, uint64_t size,
                                        fbl::RefPtr<VmCowPages>* cow_pages) {
+  DEBUG_ASSERT(!(options & VmCowPagesOptions::kInternalOnlyMask));
   fbl::AllocChecker ac;
-  auto cow = NewVmCowPages(&ac, ktl::move(root_lock), VmCowPagesOptions::kNone, PMM_ALLOC_FLAG_ANY,
-                           size, ktl::move(src));
+  auto cow =
+      NewVmCowPages(&ac, ktl::move(root_lock), options, PMM_ALLOC_FLAG_ANY, size, ktl::move(src));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-
   *cow_pages = ktl::move(cow);
-
   return ZX_OK;
 }
 
@@ -837,7 +837,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   // Hidden parents are not supposed to have page sources, but we assert it here anyway because a
   // page source would make the way we move pages between objects incorrect, as we would break any
   // potential back links.
-  DEBUG_ASSERT(!has_backlinks_locked());
+  DEBUG_ASSERT(!has_pager_backlinks_locked());
 
   page_list_.RemovePages(page_remover.RemovePagesCallback(), 0, visibility_start_offset);
   page_list_.RemovePages(page_remover.RemovePagesCallback(), merge_end_offset,
@@ -1799,8 +1799,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // 1) This is a write fault.
     // 2) This is a read fault and we do not need to do dirty tracking, i.e. it is fine to retain
     // the write permission on mappings since we don't need to generate a permission fault. We only
-    // need to dirty track pages owned by a root pager-backed VMO.
-    out->writable = pf_flags & VMM_PF_FLAG_WRITE || !page_source_;
+    // need to dirty track pages owned by a root user-pager-backed VMO.
+    out->writable = pf_flags & VMM_PF_FLAG_WRITE || !is_dirty_tracked_locked();
 
     out->add_page(p->paddr());
     if (max_out_pages > 1) {
@@ -1814,8 +1814,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // The check for is_preserving_page_content here may need to be adjusted if we add more
     // PageProvider types; for now it's effectively checking if this is PagerProxy (which does
     // preserve page content) vs. PhysicalPageProvider (which doesn't preserve page content).
-    if (pf_flags & VMM_PF_FLAG_WRITE && page_source_ &&
-        page_source_->properties().is_preserving_page_content &&
+    if ((pf_flags & VMM_PF_FLAG_WRITE) && is_dirty_tracked_locked() &&
         mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite) {
       zx_status_t status = PrepareForWriteLocked(page_request, offset, out->num_pages * PAGE_SIZE);
       if (status != ZX_OK) {
@@ -1872,11 +1871,26 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // We need to get a real page as our initial content. At this point we are either starting from
     // the zero page, or something supplied from a page source. The page source only fills in if we
     // have a true absence of content.
-    if ((page_or_mark && page_or_mark->IsMarker()) || !page_owner->page_source_) {
-      // Contiguous VMOs don't use markers.
-      //
-      // Either no relevant page source or this is a known marker, in which case the content is
-      // the zero page.
+    //
+    // We treat a page source that always supplies zeroes (does not preserve page content) as an
+    // absence of content (given the lack of a page), but we can only use the zero page if we're not
+    // writing, since we can't (or in case of not providing specific physical pages, shouldn't) let
+    // an arbitrary physical page get added below - we need to only add the specific physical pages
+    // supplied by the source.
+    //
+    // In the case of a (hypothetical) page source that's both always providing zeroes and not
+    // suppying specific physical pages, we intentionally ask the page source to supply the pages
+    // here since otherwise there's no point in having such a page source.  We have no such page
+    // sources currently.
+    //
+    // Contiguous VMOs don't use markers and always have a page source, so the first two conditions
+    // won't be true for a contiguous VMO.
+    AssertHeld(page_owner->lock_);
+    if ((page_or_mark && page_or_mark->IsMarker()) || !page_owner->page_source_ ||
+        (!writing && !page_owner->is_source_preserving_page_content_locked())) {
+      // We case use the zero page, since we have a marker, or no page source, or we're not adding
+      // a page to the VmCowPages (due to !writing) and the page source always provides zeroes so
+      // reading zeroes is consistent with what the page source would provide.
       p = vm_get_zero_page();
     } else {
       AssertHeld(page_owner->lock_);
@@ -1939,8 +1953,14 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     }
     // Interpret a software fault as an explicit desire to have potential zero pages and don't
     // consider them for cleaning, this is an optimization.
-    // We explicitly must *not* place pages from a page_source_ into the zero scanning queue.
-    if (p == vm_get_zero_page() && !page_source_ && !(pf_flags & VMM_PF_FLAG_SW_FAULT)) {
+    //
+    // We explicitly must *not* place pages from a page_source_ that's using pager queues into the
+    // zero scanning queue, as the pager queues are already using the backlink.
+    //
+    // We don't need to scan for zeroes if on finding zeroes we wouldn't be able to remove the page
+    // anyway.
+    if (p == vm_get_zero_page() && !has_pager_backlinks_locked() &&
+        can_decommit_zero_pages_locked() && !(pf_flags & VMM_PF_FLAG_SW_FAULT)) {
       pmm_page_queues()->MoveToUnswappableZeroFork(res_page, this, offset);
     }
 
@@ -2243,9 +2263,7 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
   }
 
   // Currently, we can't decommit if the absence of a page doesn't imply zeroes.
-  auto root = GetRootLocked();
-  if (parent_ ||
-      (root->page_source_ && root->page_source_->properties().is_preserving_page_content)) {
+  if (parent_ || is_source_preserving_page_content_locked()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -2556,7 +2574,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 }
 
 void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
-  if (has_backlinks_locked()) {
+  if (has_pager_backlinks_locked()) {
     pmm_page_queues()->MoveToPagerBacked(page, this, offset);
   } else {
     pmm_page_queues()->MoveToUnswappable(page);
@@ -2564,7 +2582,7 @@ void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
 }
 
 void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
-  if (has_backlinks_locked()) {
+  if (has_pager_backlinks_locked()) {
     pmm_page_queues()->SetPagerBacked(page, this, offset);
   } else {
     pmm_page_queues()->SetUnswappable(page);
@@ -3810,8 +3828,8 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
 
 bool VmCowPages::DebugValidateBacklinksLocked() const {
   canary_.Assert();
-  if (!page_source_) {
-    // If there's not a page_source_, we don't need valid backlinks (for now).
+  if (!has_pager_backlinks_locked()) {
+    // If not directly user pager backed, we don't need valid backlinks (for now).
     return true;
   }
   bool result = true;

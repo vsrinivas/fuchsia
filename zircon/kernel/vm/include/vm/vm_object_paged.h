@@ -271,6 +271,9 @@ class VmObjectPaged final : public VmObject {
 
   static zx_status_t CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                                   fbl::RefPtr<VmObjectPaged>* vmo);
+  static zx_status_t CreateWithSourceCommon(fbl::RefPtr<PageSource> src, uint32_t pmm_alloc_flags,
+                                            uint32_t options, uint64_t size,
+                                            fbl::RefPtr<VmObjectPaged>* obj);
 
   // private destructor, only called from refptr
   ~VmObjectPaged() override;

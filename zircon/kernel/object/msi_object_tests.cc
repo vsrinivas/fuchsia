@@ -67,7 +67,7 @@ zx_status_t create_valid_msi_vmo(fbl::RefPtr<VmObject>* out_vmo,
   zx_status_t status;
   size_t vmo_size = sizeof(MsiCapability);
   fbl::RefPtr<VmObjectPaged> vmo;
-  if ((status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, 0 /* options */,
+  if ((status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, vmo_size, /*alignment_log2=*/0,
                                                 &vmo)) != ZX_OK) {
     return status;
   }

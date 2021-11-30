@@ -50,6 +50,10 @@ struct PageSourceProperties {
   //
   // If this is false, the provider will ensure (possibly with VmCowPages help) that pages are
   // zeroed by the time they are added to the VmCowPages.
+  //
+  // If true, the PageSource expects RequestDirtyTransition() to be called to track that pages are
+  // dirty before a write can proceed.  If false, the PageSource is fine with a write going through
+  // to the physical page without RequestDirtyTransition().
   const bool is_preserving_page_content;
 
   // Iff true, the PageSource (and PageProvider) must be used to allocate all pages.  Pre-allocating
