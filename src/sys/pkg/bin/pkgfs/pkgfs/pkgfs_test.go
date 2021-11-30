@@ -754,7 +754,7 @@ func TestTriggerGC(t *testing.T) {
 	// always perform the operation on a dedicated channel, so that pkgfsDir is not
 	// closed.
 	unlink := func(path string) error {
-		d, err := pkgfsDir.Open(".", zxio.OpenFlagDirectory|zxio.OpenRightReadable|zxio.OpenFlagPosix, 0o700)
+		d, err := pkgfsDir.Open(".", zxio.OpenFlagDirectory|zxio.OpenRightReadable|zxio.OpenRightWritable, 0o700)
 		if err != nil {
 			return err
 		}
