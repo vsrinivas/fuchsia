@@ -253,11 +253,13 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   fidl::Arena arena;
   fdf::wire::DriverStartArgs args(arena);
   args.set_node(std::move(client_end))
-      .set_symbols(arena, node.symbols())
       .set_url(arena, start_info.resolved_url())
       .set_program(arena, start_info.program())
       .set_ns(arena, start_info.ns())
       .set_outgoing_dir(std::move(start_info.outgoing_dir()));
+  if (auto symbols = node.symbols(); !symbols.empty()) {
+    args.set_symbols(arena, symbols);
+  }
   auto start = driver_host_->Start(args, std::move(endpoints->server));
   if (!start.ok()) {
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),

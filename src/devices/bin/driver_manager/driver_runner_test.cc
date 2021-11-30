@@ -716,7 +716,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
   EXPECT_TRUE(did_bind);
 
   driver_host().SetStartHandler([](fdf::DriverStartArgs start_args, auto request) {
-    EXPECT_TRUE(start_args.symbols().empty());
+    EXPECT_FALSE(start_args.has_symbols());
     auto& entries = start_args.program().entries();
     EXPECT_EQ(2u, entries.size());
     EXPECT_EQ("binary", entries[0].key);
