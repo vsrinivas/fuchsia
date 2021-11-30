@@ -50,6 +50,9 @@ const MAX_AUTO_CONNECT_RETRY_SECONDS: i64 = 10;
 /// is is compared against should be between 0 and 1.
 const THRESHOLD_BAD_CONNECTION: f32 = 0.0;
 
+/// The time to wait between roam scans to avoid constant scanning.
+const DURATION_BETWEEN_ROAM_SCANS: zx::Duration = zx::Duration::from_seconds(5 * 60);
+
 /// Wraps around vital information associated with a WLAN client interface.  In all cases, a client
 /// interface will have an ID and a ClientSmeProxy to make requests of the interface.  If a client
 /// is configured to connect to a WLAN network, it will store the network configuration information
@@ -61,6 +64,8 @@ struct ClientIfaceContainer {
     config: Option<ap_types::NetworkIdentifier>,
     client_state_machine: Option<Box<dyn client_fsm::ClientApi + Send>>,
     driver_features: Vec<fidl_fuchsia_wlan_common::DriverFeature>,
+    /// The time of the last scan for roaming or new connection on this iface.
+    last_roam_time: fasync::Time,
 }
 
 pub(crate) struct ApIfaceContainer {
@@ -272,6 +277,7 @@ impl IfaceManagerService {
             config: None,
             client_state_machine: None,
             driver_features: iface_info.driver_features,
+            last_roam_time: fasync::Time::now(),
         })
     }
 
@@ -463,6 +469,7 @@ impl IfaceManagerService {
             }
         }
 
+        client_iface.last_roam_time = fasync::Time::now();
         self.clients.push(client_iface);
         Ok(receiver)
     }
@@ -548,6 +555,7 @@ impl IfaceManagerService {
                 self.fsm_futures.push(fut);
                 client.config = Some(connect_req.target.network);
                 client.client_state_machine = Some(new_client);
+                client.last_roam_time = fasync::Time::now();
                 break;
             }
         }
@@ -888,6 +896,29 @@ impl IfaceManagerService {
         let guard = self.phy_manager.lock().await;
         return guard.has_wpa3_client_iface();
     }
+
+    /// Returns the last time this interface roamed or started a new connection, or none if the
+    /// iface is not found.
+    pub fn get_iface_roam_scan_time(&mut self, iface_id: u16) -> Option<fasync::Time> {
+        for client in self.clients.iter() {
+            if client.iface_id == iface_id {
+                return Some(client.last_roam_time);
+            }
+        }
+        None
+    }
+
+    /// Sets the last roam scan time on the iface, or does nothing if an iface with the provided
+    /// ID is not found.
+    pub fn set_iface_roam_scan_time(&mut self, iface_id: u16, time: fasync::Time) {
+        for client in self.clients.iter_mut() {
+            if client.iface_id == iface_id {
+                client.last_roam_time = time;
+                return;
+            }
+        }
+        info!("Roam scan time was not set, matching iface not found.");
+    }
 }
 
 /// Returns whether the list of DriverFeatures contains one that indicates WPA3 support.
@@ -1075,14 +1106,27 @@ async fn restore_state_after_setting_country_code(
 
 fn handle_periodic_connection_stats(
     connection_stats: PeriodicConnectionStats,
+    iface_manager: &mut IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     network_selector: Arc<NetworkSelector>,
     roaming_search_futures: &mut FuturesUnordered<
         BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
     >,
 ) {
-    // if there is a proactive network switch in consideration, ignore.
+    // If a proactive network switch already being considered, ignore.
     if !roaming_search_futures.is_empty() {
+        return;
+    }
+
+    // If a roaming scan already happened recently, ignore.
+    if let Some(last_roam_scan_time) =
+        iface_manager.get_iface_roam_scan_time(connection_stats.iface_id)
+    {
+        if fasync::Time::now() < last_roam_scan_time + DURATION_BETWEEN_ROAM_SCANS {
+            return;
+        }
+    } else {
+        warn!("Failed to find iface to get the last time of roam attempt, will not roam");
         return;
     }
 
@@ -1093,13 +1137,16 @@ fn handle_periodic_connection_stats(
     if connection_quality < THRESHOLD_BAD_CONNECTION {
         // Kick off a scan to find a roaming candidate
         let scan_fut = async move {
-            let ignore_list = vec![connection_stats.id];
+            let ignore_list = vec![];
             network_selector
                 .clone()
                 .find_best_connection_candidate(iface_manager_client.clone(), &ignore_list)
                 .await
         };
         roaming_search_futures.push(scan_fut.boxed());
+
+        // Record that a roam scan happened and another should not happen again for a while.
+        iface_manager.set_iface_roam_scan_time(connection_stats.iface_id, fasync::Time::now());
     }
 }
 
@@ -1167,6 +1214,7 @@ pub(crate) async fn serve_iface_manager_requests(
             connection_stats = stats_receiver.select_next_some() => {
                 handle_periodic_connection_stats(
                     connection_stats,
+                    &mut iface_manager,
                     iface_manager_client.clone(),
                     network_selector.clone(),
                     &mut roaming_search_futures
@@ -1657,6 +1705,7 @@ mod tests {
             config: None,
             client_state_machine: None,
             driver_features: Vec::new(),
+            last_roam_time: fasync::Time::now(),
         };
         let phy_manager = FakePhyManager {
             create_iface_ok: true,

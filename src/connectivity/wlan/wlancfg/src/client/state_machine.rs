@@ -185,6 +185,7 @@ struct CommonStateOptions {
 #[derive(Debug, PartialEq)]
 pub struct PeriodicConnectionStats {
     pub id: types::NetworkIdentifier,
+    pub iface_id: u16,
     pub rssi: i8,
 }
 
@@ -707,7 +708,12 @@ async fn connected_state(
                         fidl_sme::ConnectTransactionEvent::OnSignalReport { ind } => {
                             options.latest_ap_state.rssi_dbm = ind.rssi_dbm;
                             options.latest_ap_state.snr_db = ind.snr_db;
-                            handle_connection_stats(&mut common_options.stats_sender, options.currently_fulfilled_request.target.network.clone().into(), ind.rssi_dbm);
+                            handle_connection_stats(
+                                &mut common_options.stats_sender,
+                                options.currently_fulfilled_request.target.network.clone().into(),
+                                common_options.iface_id,
+                                ind.rssi_dbm,
+                            );
                             common_options.telemetry_sender.send(TelemetryEvent::OnSignalReport { ind });
                             false
                         }
@@ -828,9 +834,10 @@ async fn connected_state(
 fn handle_connection_stats(
     stats_sender: &mut ConnectionStatsSender,
     id: types::NetworkIdentifier,
+    iface_id: u16,
     rssi: i8,
 ) {
-    let connection_stats = PeriodicConnectionStats { id, rssi };
+    let connection_stats = PeriodicConnectionStats { id, iface_id, rssi };
     stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
         error!("Failed to send periodic connection stats from the connected state: {}", e);
     });
@@ -3708,7 +3715,8 @@ mod tests {
             ssid: network_ssid,
             security_type: types::SecurityType::Wpa2,
         };
-        let expected_connection_stats = PeriodicConnectionStats { id, rssi };
+        // Test setup always use iface ID 1.
+        let expected_connection_stats = PeriodicConnectionStats { id, iface_id: 1, rssi };
         let stats = test_values.stats_receiver.try_next().expect("failed to get connection stats");
         assert_eq!(stats, Some(expected_connection_stats));
     }
