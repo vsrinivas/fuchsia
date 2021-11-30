@@ -6,21 +6,10 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/testing/host_test_data.gni")
 
-go_library("intree_lib") {
+go_library("lib") {
   sources = [
     "common.go",
     "fvdl_intree_test.go",
-  ]
-  deps = [
-    "//tools/botanist:constants",
-    "//tools/fvdl/e2e/e2etest",
-    "//tools/lib/ffxutil",
-  ]
-}
-
-go_library("sdk_lib") {
-  sources = [
-    "common.go",
     "fvdl_sdk_test.go",
   ]
   deps = [
@@ -102,7 +91,7 @@ if (is_linux) {
   go_test("fvdl_intree_test_slirp") {
     output_name = "fvdl_intree_test_slirp"
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
-    deps = [ ":intree_lib" ]
+    deps = [ ":lib" ]
     non_go_deps = [
       ":copy_host_tools",
       ":copy_images",
@@ -127,7 +116,7 @@ if (is_linux) {
   go_test("fvdl_intree_test_tuntap") {
     output_name = "fvdl_intree_test_tuntap"
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
-    deps = [ ":intree_lib" ]
+    deps = [ ":lib" ]
     non_go_deps = [
       ":copy_host_tools",
       ":copy_images",
@@ -152,7 +141,7 @@ if (is_linux) {
   go_test("fvdl_sdk_test") {
     output_name = "fvdl_sdk_test"
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fvdl/e2e" ]
-    deps = [ ":sdk_lib" ]
+    deps = [ ":lib" ]
     non_go_deps = [
       ":copy_host_tools",
       ":copy_images",
@@ -161,6 +150,8 @@ if (is_linux) {
       ":prebuilt_grpcwebproxy",
     ]
     args = [
+      "-test.run",
+      "TestStartFVDLSDK.*",
       "--target_cpu",
       "$target_cpu",
       "--aemu_dir",
