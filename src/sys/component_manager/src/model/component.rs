@@ -937,10 +937,12 @@ impl ComponentInstance {
         match &*state {
             InstanceState::Resolved(resolved_instance_state) => {
                 let exposed_dir = &resolved_instance_state.exposed_dir;
-                // TODO(fxbug.dev/36541): Until directory capabilities specify rights, we always open
-                // directories using OPEN_FLAG_POSIX which automatically opens the new connection using
-                // the same directory rights as the parent directory connection.
-                let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
+                // TODO(fxbug.dev/36541): Until directory capabilities specify rights, we always
+                // open directories using OPEN_FLAG_POSIX_WRITABLE and OPEN_FLAG_POSIX_EXECUTABLE
+                // which expands the new connection's rights to those of the parent connection.
+                let flags = fio::OPEN_RIGHT_READABLE
+                    | fio::OPEN_FLAG_POSIX_WRITABLE
+                    | fio::OPEN_FLAG_POSIX_EXECUTABLE;
                 let server_chan = channel::take_channel(server_chan);
                 let server_end = ServerEnd::new(server_chan);
                 exposed_dir.open(flags, fio::MODE_TYPE_DIRECTORY, Path::dot(), server_end);

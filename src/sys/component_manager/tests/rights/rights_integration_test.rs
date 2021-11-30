@@ -163,7 +163,8 @@ async fn route_directories_from_component_manager_namespace() {
         panic!("Failed to spawn expose_dirs process: {}, {}", status, msg);
     });
 
-    let flags = fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX;
+    let flags =
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_FLAG_POSIX_WRITABLE | fio::OPEN_FLAG_POSIX_EXECUTABLE;
     let ro_channel = open_at(&dir_request_client, "read_only", flags).unwrap();
     let rw_channel = open_at(&dir_request_client, "read_write", flags).unwrap();
     let rx_channel = open_at(&dir_request_client, "read_exec", flags).unwrap();
