@@ -80,7 +80,9 @@ group("tests") {
   deps = [
     ":fuchsia_component_test_unittests",
     "realm_builder_server:fuchsia-component-test",
-    "realm_builder_server:realm_builder_server_unit_tests",
     "tests",
   ]
+  if (!is_coverage) {
+    deps += [ "realm_builder_server:realm_builder_server_unit_tests" ]
+  }
 }
