@@ -29,13 +29,13 @@ constexpr char kParent[] = "compat-parent";
 // Device is an implementation of a DFv1 device.
 class Device {
  public:
-  Device(const char* name, void* context, const zx_protocol_device_t* ops,
+  Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
          std::optional<Device*> parent, driver::Logger& logger, async_dispatcher_t* dispatcher);
 
   zx_device_t* ZxDevice();
 
   // Binds a device to a DFv2 node.
-  void Bind(fidl::ClientEnd<fuchsia_driver_framework::Node> client_end);
+  void Bind(fidl::WireSharedClient<fuchsia_driver_framework::Node> node);
   // Unbinds a device from a DFv2 node.
   void Unbind();
 

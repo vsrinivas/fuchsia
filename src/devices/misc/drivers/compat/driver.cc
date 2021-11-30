@@ -11,7 +11,7 @@
 #include <zircon/dlfcn.h>
 
 #include "src/devices/lib/driver2/promise.h"
-#include "src/devices/lib/driver2/record.h"
+#include "src/devices/lib/driver2/record_cpp.h"
 #include "src/devices/lib/driver2/start_args.h"
 #include "src/devices/misc/drivers/compat/loader.h"
 
@@ -47,12 +47,18 @@ T GetSymbol(const fidl::VectorView<fdf::wire::NodeSymbol>& symbols, std::string_
 
 namespace compat {
 
-Driver::Driver(const char* name, void* context, const zx_protocol_device_t* ops,
-               std::optional<Device*> parent, async_dispatcher_t* dispatcher)
+Driver::Driver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
+               driver::Namespace ns, driver::Logger logger, std::string_view url,
+               std::string_view name, void* context, const zx_protocol_device_t* ops,
+               std::optional<Device*> parent)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       outgoing_(dispatcher),
-      device_(name, context, ops, parent, inner_logger_, dispatcher) {}
+      ns_(std::move(ns)),
+      logger_(std::move(logger)),
+      device_(name, context, ops, parent, inner_logger_, dispatcher) {
+  device_.Bind(std::move(node));
+}
 
 Driver::~Driver() {
   if (record_ != nullptr && record_->ops->release != nullptr) {
@@ -63,53 +69,57 @@ Driver::~Driver() {
 
 zx_driver_t* Driver::ZxDriver() { return static_cast<zx_driver_t*>(this); }
 
-zx::status<> Driver::Start(fdf::wire::DriverStartArgs* start_args) {
-  device_.Bind(std::move(start_args->node()));
-
-  auto ns = driver::Namespace::Create(start_args->ns());
-  if (ns.is_error()) {
-    return ns.take_error();
+zx::status<std::unique_ptr<Driver>> Driver::Start(fdf::wire::DriverStartArgs& start_args,
+                                                  async_dispatcher_t* dispatcher,
+                                                  fidl::WireSharedClient<fdf::Node> node,
+                                                  driver::Namespace ns, driver::Logger logger) {
+  fidl::VectorView<fdf::wire::NodeSymbol> symbols;
+  if (start_args.has_symbols()) {
+    symbols = start_args.symbols();
   }
-  ns_ = std::move(*ns);
-
-  auto logger = driver::Logger::Create(ns_, dispatcher_, "compat");
-  if (logger.is_error()) {
-    return logger.take_error();
+  auto name = GetSymbol<const char*>(symbols, kName, "compat-device");
+  auto context = GetSymbol<void*>(symbols, kContext);
+  auto ops = GetSymbol<const zx_protocol_device_t*>(symbols, kOps);
+  std::optional<Device*> parent_opt;
+  if (auto parent = driver::SymbolValue<Device*>(symbols, kParent); parent.is_ok()) {
+    parent_opt = *parent;
   }
-  logger_ = std::move(*logger);
-
-  // Store the URL for logging.
-  url_ = start_args->url().get();
 
   // Open the compat driver's binary within the package.
-  auto compat = driver::ProgramValue(start_args->program(), "compat");
+  auto compat = driver::ProgramValue(start_args.program(), "compat");
   if (compat.is_error()) {
-    FDF_LOG(ERROR, "Field \"compat\" missing from component manifest");
+    FDF_LOGL(ERROR, logger, "Field \"compat\" missing from component manifest");
     return compat.take_error();
   }
 
-  auto serve_outgoing =
-      [this,
-       outgoing = std::move(start_args->outgoing_dir())]() mutable -> result<void, zx_status_t> {
-    auto serve = outgoing_.Serve(std::move(outgoing));
-    if (serve.is_error()) {
-      return error(serve.status_value());
-    }
-    return ok();
-  };
+  auto driver =
+      std::make_unique<Driver>(dispatcher, std::move(node), std::move(ns), std::move(logger),
+                               start_args.url().get(), name, context, ops, parent_opt);
+  auto result = driver->Run(std::move(start_args.outgoing_dir()), "/pkg/" + *compat);
+  if (result.is_error()) {
+    return result.take_error();
+  }
+  return zx::ok(std::move(driver));
+}
+
+zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
+                         std::string_view driver_path) {
+  auto serve = outgoing_.Serve(std::move(outgoing_dir));
+  if (serve.is_error()) {
+    return serve.take_error();
+  }
 
   auto root_resource = driver::Connect<fboot::RootResource>(ns_, dispatcher_)
                            .and_then(fit::bind_member(this, &Driver::GetRootResource));
   auto loader_vmo = driver::Connect<fio::File>(ns_, dispatcher_, kLibDriverPath, kOpenFlags)
                         .and_then(fit::bind_member(this, &Driver::GetBuffer));
-  auto driver_vmo = driver::Connect<fio::File>(ns_, dispatcher_, "/pkg/" + *compat, kOpenFlags)
+  auto driver_vmo = driver::Connect<fio::File>(ns_, dispatcher_, driver_path, kOpenFlags)
                         .and_then(fit::bind_member(this, &Driver::GetBuffer));
   auto start_driver =
       join_promises(std::move(root_resource), std::move(loader_vmo), std::move(driver_vmo))
           .then(fit::bind_member(this, &Driver::Join))
           .and_then(fit::bind_member(this, &Driver::LoadDriver))
           .and_then(fit::bind_member(this, &Driver::StartDriver))
-          .and_then(std::move(serve_outgoing))
           .or_else(fit::bind_member(this, &Driver::StopDriver))
           .wrap_with(scope_);
   executor_.schedule_task(std::move(start_driver));
@@ -309,40 +319,4 @@ void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file,
 
 }  // namespace compat
 
-namespace {
-
-zx_status_t DriverStart(fidl_incoming_msg_t* msg, async_dispatcher_t* dispatcher, void** driver) {
-  fidl::DecodedMessage<fdf::wire::DriverStartArgs> decoded(msg);
-  if (!decoded.ok()) {
-    return decoded.status();
-  }
-
-  auto start_args = decoded.PrimaryObject();
-  auto symbols = start_args->symbols();
-  auto name = GetSymbol<const char*>(symbols, compat::kName, "compat-root");
-  auto context = GetSymbol<void*>(symbols, compat::kContext);
-  auto ops = GetSymbol<const zx_protocol_device_t*>(symbols, compat::kOps);
-  std::optional<compat::Device*> parent_opt;
-  if (auto parent = driver::SymbolValue<compat::Device*>(symbols, compat::kParent);
-      parent.is_ok()) {
-    parent_opt = *parent;
-  }
-
-  auto compat_driver = std::make_unique<compat::Driver>(name, context, ops, parent_opt, dispatcher);
-  auto start = compat_driver->Start(start_args);
-  if (start.is_error()) {
-    return start.error_value();
-  }
-
-  *driver = compat_driver.release();
-  return ZX_OK;
-}
-
-zx_status_t DriverStop(void* driver) {
-  delete static_cast<compat::Driver*>(driver);
-  return ZX_OK;
-}
-
-}  // namespace
-
-FUCHSIA_DRIVER_RECORD_V1(.start = DriverStart, .stop = DriverStop);
+FUCHSIA_DRIVER_RECORD_CPP_V1(compat::Driver);

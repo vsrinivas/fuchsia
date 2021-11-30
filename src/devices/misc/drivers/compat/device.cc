@@ -38,7 +38,7 @@ bool HasOp(const zx_protocol_device_t* ops, T member) {
 
 namespace compat {
 
-Device::Device(const char* name, void* context, const zx_protocol_device_t* ops,
+Device::Device(std::string_view name, void* context, const zx_protocol_device_t* ops,
                std::optional<Device*> parent, driver::Logger& logger,
                async_dispatcher_t* dispatcher)
     : name_(name),
@@ -50,9 +50,7 @@ Device::Device(const char* name, void* context, const zx_protocol_device_t* ops,
 
 zx_device_t* Device::ZxDevice() { return static_cast<zx_device_t*>(this); }
 
-void Device::Bind(fidl::ClientEnd<fdf::Node> client_end) {
-  node_.Bind(std::move(client_end), dispatcher_);
-}
+void Device::Bind(fidl::WireSharedClient<fdf::Node> node) { node_ = std::move(node); }
 
 void Device::Unbind() {
   // This closes the client-end of the node to signal to the driver framework

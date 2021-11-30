@@ -122,17 +122,20 @@ class DriverTest : public gtest::TestLoopFixture {
   TestNode& node() { return node_; }
   TestFile& compat_file() { return compat_file_; }
 
-  void StartDriver(compat::Driver& driver, std::string_view v1_driver_path) {
+  std::unique_ptr<compat::Driver> StartDriver(std::string_view v1_driver_path,
+                                              const zx_protocol_device_t* ops) {
     auto node_endpoints = fidl::CreateEndpoints<fdf::Node>();
-    ASSERT_TRUE(node_endpoints.is_ok());
+    EXPECT_TRUE(node_endpoints.is_ok());
     auto outgoing_dir_endpoints = fidl::CreateEndpoints<fio::Directory>();
-    ASSERT_TRUE(outgoing_dir_endpoints.is_ok());
+    EXPECT_TRUE(outgoing_dir_endpoints.is_ok());
     auto pkg_endpoints = fidl::CreateEndpoints<fio::Directory>();
-    ASSERT_TRUE(pkg_endpoints.is_ok());
+    EXPECT_TRUE(pkg_endpoints.is_ok());
     auto svc_endpoints = fidl::CreateEndpoints<fio::Directory>();
-    ASSERT_TRUE(svc_endpoints.is_ok());
+    EXPECT_TRUE(svc_endpoints.is_ok());
 
-    // Bind node.
+    // Setup the node.
+    fidl::WireSharedClient<fuchsia_driver_framework::Node> node(std::move(node_endpoints->client),
+                                                                dispatcher());
     fidl::BindServer(dispatcher(), std::move(node_endpoints->server), &node_);
 
     // Setup and bind "/pkg" directory.
@@ -168,7 +171,7 @@ class DriverTest : public gtest::TestLoopFixture {
     });
     fidl::BindServer(dispatcher(), std::move(svc_endpoints->server), &svc_directory_);
 
-    // Setup start args.
+    // Setup the namespace.
     fidl::Arena arena;
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 2);
     ns_entries[0].Allocate(arena);
@@ -177,6 +180,18 @@ class DriverTest : public gtest::TestLoopFixture {
     ns_entries[1].Allocate(arena);
     ns_entries[1].set_path(arena, "/svc");
     ns_entries[1].set_directory(std::move(svc_endpoints->client));
+    auto ns = driver::Namespace::Create(ns_entries);
+    EXPECT_EQ(ZX_OK, ns.status_value());
+
+    // Setup the logger.
+    auto logger = driver::Logger::Create(*ns, dispatcher(), compat::Driver::Name());
+    EXPECT_EQ(ZX_OK, logger.status_value());
+
+    // Setup start args.
+    fidl::VectorView<fdf::wire::NodeSymbol> symbols(arena, 1);
+    symbols[0].Allocate(arena);
+    symbols[0].set_name(arena, compat::kOps);
+    symbols[0].set_address(arena, reinterpret_cast<uint64_t>(ops));
 
     fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 1);
     program_entries[0].key.Set(arena, "compat");
@@ -185,15 +200,16 @@ class DriverTest : public gtest::TestLoopFixture {
     program.set_entries(arena, std::move(program_entries));
 
     fdf::wire::DriverStartArgs start_args(arena);
-    start_args.set_node(std::move(node_endpoints->client));
     start_args.set_url(arena, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
+    start_args.set_symbols(arena, std::move(symbols));
     start_args.set_program(arena, std::move(program));
-    start_args.set_ns(arena, std::move(ns_entries));
     start_args.set_outgoing_dir(std::move(outgoing_dir_endpoints->server));
 
     // Start driver.
-    auto start = driver.Start(&start_args);
-    ASSERT_EQ(ZX_OK, start.status_value());
+    auto result = compat::Driver::Start(start_args, dispatcher(), std::move(node), std::move(*ns),
+                                        std::move(*logger));
+    EXPECT_EQ(ZX_OK, result.status_value());
+    return std::move(result.value());
   }
 
  private:
@@ -210,9 +226,7 @@ TEST_F(DriverTest, Start) {
   zx_protocol_device_t ops{
       .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
   };
-  auto driver =
-      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
-  StartDriver(*driver, "/pkg/driver/v1_test.so");
+  auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
 
   // Verify that v1_test.so has added a child device.
   EXPECT_FALSE(node().HasChildren());
@@ -237,9 +251,7 @@ TEST_F(DriverTest, Start) {
 
 TEST_F(DriverTest, Start_WithCreate) {
   zx_protocol_device_t ops{};
-  auto driver =
-      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
-  StartDriver(*driver, "/pkg/driver/v1_create_test.so");
+  auto driver = StartDriver("/pkg/driver/v1_create_test.so", &ops);
 
   // Verify that v1_test.so has added a child device.
   EXPECT_FALSE(node().HasChildren());
@@ -264,9 +276,7 @@ TEST_F(DriverTest, Start_WithCreate) {
 
 TEST_F(DriverTest, Start_MissingBindAndCreate) {
   zx_protocol_device_t ops{};
-  auto driver =
-      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
-  StartDriver(*driver, "/pkg/driver/v1_missing_test.so");
+  auto driver = StartDriver("/pkg/driver/v1_missing_test.so", &ops);
 
   // Verify that v1_test.so has not added a child device.
   EXPECT_FALSE(node().HasChildren());
@@ -278,11 +288,10 @@ TEST_F(DriverTest, Start_MissingBindAndCreate) {
 }
 
 TEST_F(DriverTest, Start_GetBufferFailed) {
-  zx_protocol_device_t ops{};
-  auto driver =
-      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
   compat_file().SetStatus(ZX_ERR_UNAVAILABLE);
-  StartDriver(*driver, "/pkg/driver/v1_test.so");
+
+  zx_protocol_device_t ops{};
+  auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
 
   // Verify that v1_test.so has not added a child device.
   EXPECT_FALSE(node().HasChildren());
@@ -295,9 +304,7 @@ TEST_F(DriverTest, Start_GetBufferFailed) {
 
 TEST_F(DriverTest, Start_BindFailed) {
   zx_protocol_device_t ops{};
-  auto driver =
-      std::make_unique<compat::Driver>("test-driver", nullptr, &ops, std::nullopt, dispatcher());
-  StartDriver(*driver, "/pkg/driver/v1_test.so");
+  auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
 
   // Verify that v1_test.so has added a child device.
   EXPECT_FALSE(node().HasChildren());

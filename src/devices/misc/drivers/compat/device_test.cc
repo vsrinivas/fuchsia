@@ -72,7 +72,7 @@ TEST_F(DeviceTest, ConstructDevice) {
   // Create a device.
   zx_protocol_device_t ops{};
   compat::Device device("test-device", nullptr, &ops, {}, logger(), dispatcher());
-  device.Bind(std::move(endpoints->client));
+  device.Bind({std::move(endpoints->client), dispatcher()});
 
   // Test basic functions on the device.
   EXPECT_EQ(reinterpret_cast<uintptr_t>(&device), reinterpret_cast<uintptr_t>(device.ZxDevice()));
@@ -100,7 +100,7 @@ TEST_F(DeviceTest, AddChildDevice) {
   // Create a device.
   zx_protocol_device_t ops{};
   compat::Device parent("parent", nullptr, &ops, {}, logger(), dispatcher());
-  parent.Bind(std::move(endpoints->client));
+  parent.Bind({std::move(endpoints->client), dispatcher()});
 
   // Add a child device.
   device_add_args_t args{.name = "child"};
@@ -125,7 +125,7 @@ TEST_F(DeviceTest, AddChildDeviceWithInit) {
   // Create a device.
   zx_protocol_device_t parent_ops{};
   compat::Device parent("parent", nullptr, &parent_ops, {}, logger(), dispatcher());
-  parent.Bind(std::move(endpoints->client));
+  parent.Bind({std::move(endpoints->client), dispatcher()});
 
   // Add a child device.
   bool child_ctx = false;
@@ -160,7 +160,7 @@ TEST_F(DeviceTest, AddAndRemoveChildDevice) {
   // Create a device.
   zx_protocol_device_t ops{};
   compat::Device parent("parent", nullptr, &ops, {}, logger(), dispatcher());
-  parent.Bind(std::move(endpoints->client));
+  parent.Bind({std::move(endpoints->client), dispatcher()});
 
   // Add a child device.
   device_add_args_t args{.name = "child"};

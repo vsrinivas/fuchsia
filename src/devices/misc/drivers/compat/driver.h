@@ -19,14 +19,20 @@ namespace compat {
 // Driver is the compatibility driver that loads DFv1 drivers.
 class Driver {
  public:
-  Driver(const char* name, void* context, const zx_protocol_device_t* ops,
-         std::optional<Device*> parent, async_dispatcher_t* dispatcher);
+  Driver(async_dispatcher_t* dispatcher,
+         fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
+         driver::Logger logger, std::string_view url, std::string_view name, void* context,
+         const zx_protocol_device_t* ops, std::optional<Device*> parent);
   ~Driver();
 
   zx_driver_t* ZxDriver();
 
-  // Starts the driver from `start_args`.
-  zx::status<> Start(fuchsia_driver_framework::wire::DriverStartArgs* start_args);
+  static constexpr const char* Name() { return "compat"; }
+
+  static zx::status<std::unique_ptr<Driver>> Start(
+      fuchsia_driver_framework::wire::DriverStartArgs& start_args, async_dispatcher_t* dispatcher,
+      fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
+      driver::Logger logger);
 
   // Returns the context that DFv1 driver provided.
   void* Context() const;
@@ -35,6 +41,10 @@ class Driver {
            const char* msg, va_list args);
 
  private:
+  // Run the driver at `driver_path`.
+  zx::status<> Run(fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
+                   std::string_view driver_path);
+
   // Gets the root resource for the DFv1 driver.
   fpromise::promise<zx::resource, zx_status_t> GetRootResource(
       const fidl::WireSharedClient<fuchsia_boot::RootResource>& root_resource);
@@ -58,12 +68,12 @@ class Driver {
   async::Executor executor_;
   service::OutgoingDirectory outgoing_;
 
-  driver::Namespace ns_;
+  const driver::Namespace ns_;
   driver::Logger logger_;
 
+  const std::string url_;
   Device device_;
 
-  std::string url_;
   void* library_ = nullptr;
   zx_driver_rec_t* record_ = nullptr;
   void* context_ = nullptr;
