@@ -117,13 +117,11 @@ variant("profile") {
 # Only enable either "coverage-rust" or clang coverage (variant("profile") or variant("coverage")),
 # not both.
 #
-# -Zinstrument-coverage is known to work with -Copt-level=1 (or 2 or 3, possibly others)
-# in tested cases. If helpful, we may want to include it.
-#
 # DO NOT NAME THIS WITH PREFIX `rust-`. The prefix will be stripped in some cases, and fail to
 # work with other cases that do not expect the stripped prefix.
 variant("coverage-rust") {
   rustflags = [ "-Zinstrument-coverage" ]
+
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
     # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
