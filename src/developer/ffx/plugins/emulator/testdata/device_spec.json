@@ -25,6 +25,84 @@
                 "units": "gigabytes"
             }
         },
+        "behaviors": [
+            {
+                "no_kvm": {
+                    "description": "Acceleration disabled. Works for Femu and Qemu, on MacOS and Linux. Included when --accel=None.",
+                    "data": [
+                        {
+                            "args": [
+                                "-cpu",
+                                "Haswell,+smap,-check,-fsgsbase"
+                            ],
+                            "features": [],
+                            "kernel_args": [],
+                            "options": []
+                        }
+                    ],
+                    "type": "NoKvmQemuBehavior"
+                }
+            },
+            {
+                "kvm_enabled": {
+                    "description": "Kvm-based acceleration enabled. Works for Femu and Qemu on Linux. Included when --accel=auto or --accel=hyper on Linux.",
+                    "data": [
+                        {
+                            "args": [
+                                "-enable-kvm",
+                                "-cpu",
+                                "host,migratable=no,+invtsc"
+                            ],
+                            "features": [
+                                "KVM"
+                            ],
+                            "kernel_args": [],
+                            "options": []
+                        }
+                    ],
+                    "type": "KvmQemuBehavior"
+                }
+            },
+            {
+                "hvf_enabled": {
+                    "description": "Hvf-based acceleration enabled. Works for Femu and Qemu on MacOS. Included when --accel=auto or --accel=hyper on MacOS.",
+                    "data": [
+                        {
+                            "args": [
+                                "-enable-hvf",
+                                "-cpu",
+                                "Haswell"
+                            ],
+                            "features": [
+                                "HVF"
+                            ],
+                            "kernel_args": [
+                                "kernel.page-scanner.page-table-eviction-policy=never"
+                            ],
+                            "options": []
+                        }
+                    ],
+                    "type": "HvfQemuBehavior"
+                }
+            },
+            {
+                "four_core_cpu": {
+                    "description": "A basic CPU configuration. Works for Femu and Qemu, on Linux and MacOS. Always included.",
+                    "data": [
+                        {
+                            "args": [],
+                            "features": [],
+                            "kernel_args": [],
+                            "options": [
+                                "-smp 4,threads=2",
+                                "-machine q35"
+                            ]
+                        }
+                    ],
+                    "type": "SimpleQemuBehavior"
+                }
+            }
+        ],
         "name": "qemu-x64",
         "type": "virtual_device"
     },
