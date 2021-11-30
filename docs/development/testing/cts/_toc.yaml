@@ -20,5 +20,8 @@ toc:
     path: /docs/development/testing/cts/diagnosing_test_failures.md
 - title: "Platform Surface Area (Plasa)"
   path: /docs/development/testing/cts/plasa_overview.md
+  section:
+  - title: "Plasa manifest"
+    path: /docs/development/testing/cts/plasa_manifest.md
 - title: "Frequently Asked Questions"
   path: /docs/development/testing/cts/faq.md

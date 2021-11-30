@@ -5,6 +5,13 @@ declarative record of the [Fuchsia System Interface][fsi].  It is intended to
 capture the pertinent state at the time the [Fuchsia Integrator Development Kit
 (IDK)][idk] has been built.
 
+This subsection of [`fuchsia.dev`][fxdev] describes Plasa for users and
+implementors alike.
+
+## Documentation
+
+* [Platform Surface Area Manifest][plasadoc] design document
+
 ## Uses
 
 Plasa provides input to the following efforts:
@@ -26,7 +33,9 @@ work is underway to backfill the missing platform surface fragments.
 [cts]: /docs/development/testing/cts/overview.md
 [fidl]: /docs/concepts/fidl/overview.md
 [fsi]: /docs/concepts/system/abi/system.md
+[fxdev]: https://fuchsia.dev
 [idk]: /docs/development/idk/README.md
+[plasadoc]: plasa_manifest.md
 [rfc2]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
 [rfccts]: /docs/contribute/governance/rfcs/0015_cts.md
 [sdk]: /docs/contribute/governance/rfcs/0106_manifest_includes_in_sdk.md
