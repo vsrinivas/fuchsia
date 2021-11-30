@@ -4,9 +4,11 @@
 
 import 'dart:async';
 
+import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_element/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
+import 'package:fidl_fuchsia_ui_scenic/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' hide FocusState;
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
@@ -18,6 +20,19 @@ class ShellService {
   late final FuchsiaViewConnection _fuchsiaViewConnection;
   bool _focusRequested = false;
   late final StreamSubscription<bool> _focusSubscription;
+  bool _useFlatland = false;
+
+  ShellService() {
+    ScenicProxy scenic = ScenicProxy();
+    Incoming.fromSvcPath().connectToService(scenic);
+    scenic.usesFlatland().then((scenicUsesFlatland) {
+      _useFlatland = scenicUsesFlatland;
+      _ready.value = true;
+    });
+  }
+
+  bool get ready => _ready.value;
+  final _ready = false.asObservable();
 
   void advertise(Outgoing outgoing) {
     outgoing.addPublicService((request) {
@@ -69,12 +84,7 @@ class ShellService {
       ..connectToService(viewProvider)
       ..connectToService(_graphicalPresenter);
 
-    // TODO(fxbug.dev/86450): Flip this to use Flatland instead of legacy Scenic
-    // Gfx API.
-    const useFlatland = false;
-
-    // ignore: dead_code
-    if (useFlatland) {
+    if (_useFlatland) {
       final viewTokens = ChannelPair();
       assert(viewTokens.status == ZX.OK);
       final viewportCreationToken =
@@ -86,15 +96,12 @@ class ShellService {
       viewProvider.createView2(createViewArgs);
       viewProvider.ctrl.close();
 
-      // TODO(fxbug.dev/86649): We should let the child send us the one they
-      // minted for Flatland. Once that is available, we can call requestFocus()
-      // on onViewStateChanged.
       return _fuchsiaViewConnection = FuchsiaViewConnection.flatland(
         viewportCreationToken,
         onViewStateChanged: (_, state) {
-          // Wait until ermine shell has rendered before focusing it.
           if (state == true && !_focusRequested) {
             _focusRequested = true;
+            _fuchsiaViewConnection.requestFocus();
           }
         },
       );

@@ -95,6 +95,9 @@ class OobeStateImpl with Disposable implements OobeState {
   }());
 
   @override
+  bool get ready => shellService.ready;
+
+  @override
   bool get loginDone => _loginDone.value;
   final _loginDone = true.asObservable();
 

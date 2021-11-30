@@ -39,6 +39,7 @@ abstract class OobeState {
   abstract int sshKeyIndex;
   bool get privacyVisible;
   bool get launchOobe;
+  bool get ready;
   bool get loginDone;
 
   FuchsiaViewConnection get ermineViewConnection;
