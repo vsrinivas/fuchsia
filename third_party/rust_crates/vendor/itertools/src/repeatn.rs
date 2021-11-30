@@ -1,9 +1,10 @@
+use std::iter::FusedIterator;
 
 /// An iterator that produces *n* repetitions of an element.
 ///
-/// See [`repeat_n()`](../fn.repeat_n.html) for more information.
+/// See [`repeat_n()`](crate::repeat_n) for more information.
 #[must_use = "iterators are lazy and do nothing unless consumed"]
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct RepeatN<A> {
     elt: Option<A>,
     n: usize,
@@ -14,9 +15,9 @@ pub fn repeat_n<A>(element: A, n: usize) -> RepeatN<A>
     where A: Clone,
 {
     if n == 0 {
-        RepeatN { elt: None, n: n, }
+        RepeatN { elt: None, n, }
     } else {
-        RepeatN { elt: Some(element), n: n, }
+        RepeatN { elt: Some(element), n, }
     }
 }
 
@@ -50,5 +51,9 @@ impl<A> DoubleEndedIterator for RepeatN<A>
 }
 
 impl<A> ExactSizeIterator for RepeatN<A>
+    where A: Clone
+{}
+
+impl<A> FusedIterator for RepeatN<A>
     where A: Clone
 {}

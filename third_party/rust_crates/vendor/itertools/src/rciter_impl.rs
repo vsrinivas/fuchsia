@@ -1,6 +1,6 @@
 
-use std::iter::IntoIterator;
-use std::rc::Rc;
+use std::iter::{FusedIterator, IntoIterator};
+use alloc::rc::Rc;
 use std::cell::RefCell;
 
 /// A wrapper for `Rc<RefCell<I>>`, that implements the `Iterator` trait.
@@ -52,9 +52,7 @@ pub fn rciter<I>(iterable: I) -> RcIter<I::IntoIter>
 
 impl<I> Clone for RcIter<I> {
     #[inline]
-    fn clone(&self) -> RcIter<I> {
-        RcIter { rciter: self.rciter.clone() }
-    }
+    clone_fields!(rciter);
 }
 
 impl<A, I> Iterator for RcIter<I>
@@ -62,7 +60,7 @@ impl<A, I> Iterator for RcIter<I>
 {
     type Item = A;
     #[inline]
-    fn next(&mut self) -> Option<A> {
+    fn next(&mut self) -> Option<Self::Item> {
         self.rciter.borrow_mut().next()
     }
 
@@ -71,8 +69,7 @@ impl<A, I> Iterator for RcIter<I>
         // To work sanely with other API that assume they own an iterator,
         // so it can't change in other places, we can't guarantee as much
         // in our size_hint. Other clones may drain values under our feet.
-        let (_, hi) = self.rciter.borrow().size_hint();
-        (0, hi)
+        (0, self.rciter.borrow().size_hint().1)
     }
 }
 
@@ -80,7 +77,7 @@ impl<I> DoubleEndedIterator for RcIter<I>
     where I: DoubleEndedIterator
 {
     #[inline]
-    fn next_back(&mut self) -> Option<I::Item> {
+    fn next_back(&mut self) -> Option<Self::Item> {
         self.rciter.borrow_mut().next_back()
     }
 }
@@ -96,3 +93,8 @@ impl<'a, I> IntoIterator for &'a RcIter<I>
         self.clone()
     }
 }
+
+
+impl<A, I> FusedIterator for RcIter<I>
+    where I: FusedIterator<Item = A>
+{}

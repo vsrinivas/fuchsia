@@ -337,7 +337,7 @@ group("iota") {
 }
 
 group("itertools") {
-  deps = [ ":itertools-v0_8_0" ]
+  deps = [ ":itertools-v0_10_1" ]
 }
 
 group("itoa") {
@@ -5039,9 +5039,34 @@ rust_library("ipnet-v2_3_1") {
   ]
 }
 
-rust_library("itertools-v0_8_0") {
+rust_library("itertools-v0_10_1") {
   crate_name = "itertools"
   crate_root = "//third_party/rust_crates/vendor/itertools/src/lib.rs"
+  output_name = "itertools-6923aac211951545"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":either-v1_5_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=6923aac211951545",
+    "-Cextra-filename=-6923aac211951545",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"use_alloc\"",
+    "--cfg=feature=\"use_std\"",
+  ]
+}
+
+rust_library("itertools-v0_8_0") {
+  crate_name = "itertools"
+  crate_root = "//third_party/rust_crates/vendor/itertools-0.8.0/src/lib.rs"
   output_name = "itertools-1f61a40f0ca305b"
   configs -= [
     "//build/config/rust:edition_2018",

@@ -2,7 +2,7 @@
 /// An iterator that produces only the `T` values as long as the
 /// inner iterator produces `Ok(T)`.
 ///
-/// Used by [`process_results`](../fn.process_results.html), see its docs
+/// Used by [`process_results`](crate::process_results), see its docs
 /// for more information.
 #[must_use = "iterator adaptors are lazy and do nothing unless consumed"]
 #[derive(Debug)]
@@ -28,8 +28,7 @@ impl<'a, I, T, E> Iterator for ProcessResults<'a, I, E>
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
-        let (_, hi) = self.iter.size_hint();
-        (0, hi)
+        (0, self.iter.size_hint().1)
     }
 }
 
@@ -75,7 +74,7 @@ pub fn process_results<I, F, T, E, R>(iterable: I, processor: F) -> Result<R, E>
     let iter = iterable.into_iter();
     let mut error = Ok(());
 
-    let result = processor(ProcessResults { error: &mut error, iter: iter });
+    let result = processor(ProcessResults { error: &mut error, iter });
 
     error.map(|_| result)
 }

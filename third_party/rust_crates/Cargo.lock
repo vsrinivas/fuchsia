@@ -639,7 +639,7 @@ dependencies = [
  "cast",
  "clap",
  "csv",
- "itertools",
+ "itertools 0.8.0",
  "lazy_static",
  "libc",
  "num-traits",
@@ -1247,7 +1247,7 @@ dependencies = [
  "indoc",
  "inotify",
  "iota",
- "itertools",
+ "itertools 0.10.1",
  "itoa",
  "json5format",
  "lazy_static",
@@ -1858,6 +1858,15 @@ name = "itertools"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b8467d9c1cebe26feb08c640139247fac215782d35371ade9a2136ed6085358"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "69ddb889f9d0d08a67338271fa9b62996bc788c7796a5c18cf057420aaed5eaf"
 dependencies = [
  "either",
 ]

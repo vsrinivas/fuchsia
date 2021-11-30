@@ -35,7 +35,7 @@ macro_rules! impl_cons_iter(
     );
 );
 
-impl_cons_iter!(A, B, C, D, E, F, G, H,);
+impl_cons_iter!(A, B, C, D, E, F, G, H, I, J, K, L,);
 
 /// An iterator that maps an iterator of tuples like
 /// `((A, B), C)` to an iterator of `(A, B, C)`.
@@ -52,17 +52,13 @@ pub struct ConsTuples<I, J>
 impl<I, J> Clone for ConsTuples<I, J>
     where I: Clone + Iterator<Item=J>,
 {
-    fn clone(&self) -> Self {
-        ConsTuples {
-            iter: self.iter.clone(),
-        }
-    }
+    clone_fields!(iter);
 }
 
 /// Create an iterator that maps for example iterators of
 /// `((A, B), C)` to `(A, B, C)`.
-pub fn cons_tuples<I, J>(iterable: I) -> ConsTuples<I, J>
-    where I: Iterator<Item=J>
+pub fn cons_tuples<I, J>(iterable: I) -> ConsTuples<I::IntoIter, J>
+    where I: IntoIterator<Item=J>
 {
     ConsTuples { iter: iterable.into_iter() }
 }

@@ -10,9 +10,6 @@ use std::convert::TryFrom as _;
 
 use anyhow::Context as _;
 use futures::{FutureExt as _, StreamExt as _};
-// TODO(https://fxbug.dev/87626): Remove the macro import when a newer version
-// of itertools which fixes the import hygiene issue is available.
-use itertools::iproduct;
 
 /// A realm and associated data as a helper for issuing pings in tests.
 pub struct Node<'a> {
