@@ -3777,6 +3777,12 @@ custom disk for development purposes.
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:24
 
+### terminal_font_path
+
+**Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"`
+
+From //src/ui/bin/terminal/terminal_args.gni:8
+
 ### test_durations_file
 A file in containing historical test duration data for this build
 configuration, used used by testsharder to evenly split tests across
