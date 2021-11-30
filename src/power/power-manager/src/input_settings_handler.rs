@@ -126,7 +126,7 @@ impl InputSettingsHandler {
         // Create a HangingGetStream wrapper to abstract the details of the hanging-get pattern that
         // is used by the InputSettings service.
         let proxy = self.input_settings_proxy.clone();
-        let mut stream = HangingGetStream::new(proxy, fsettings::InputProxy::watch2);
+        let mut stream = HangingGetStream::new(proxy, fsettings::InputProxy::watch);
 
         Ok(async move {
             self.inspect.set_handler_enabled(true);
@@ -242,7 +242,7 @@ mod tests {
     // A fake Settings service implementation for testing
     struct FakeSettingsSvc {
         stream: fsettings::InputRequestStream,
-        pending_request: Option<fsettings::InputWatch2Responder>,
+        pending_request: Option<fsettings::InputWatchResponder>,
     }
     impl FakeSettingsSvc {
         fn new() -> (fsettings::InputProxy, Self) {
@@ -297,7 +297,7 @@ mod tests {
         }
 
         // Retrieves the next hanging-get request
-        async fn get_next_request(&mut self) -> fsettings::InputWatch2Responder {
+        async fn get_next_request(&mut self) -> fsettings::InputWatchResponder {
             match self
                 .stream
                 .next()
@@ -308,7 +308,7 @@ mod tests {
                 )
                 .expect("Input request stream yielded Some(Err)")
             {
-                fsettings::InputRequest::Watch2 { responder } => responder,
+                fsettings::InputRequest::Watch { responder } => responder,
                 request => panic!("Unexpected request: {:?}", request),
             }
         }
