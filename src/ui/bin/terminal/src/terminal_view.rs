@@ -46,11 +46,20 @@ const FONT: &'static str = "/pkg/data/font.ttf";
 // Default font size.
 const FONT_SIZE: f32 = 14.0;
 
+// Amount of change to font size when zooming.
+const FONT_SIZE_INCREMENT: f32 = 14.0;
+
+// Font size limits.
+const MIN_FONT_SIZE: f32 = 14.0;
+const MAX_FONT_SIZE: f32 = 140.0;
+
 // Padding between text and cell size.
 const CELL_PADDING_FACTOR: f32 = 2.0 / 14.0;
 
 // Maximum terminal size in cells. We support up to 4 layers per cell.
 const MAX_CELLS: u32 = MAX_ORDER / 4;
+
+const BACKGROUND_COLOR: Color = Color { r: 0, g: 0, b: 0, a: 255 };
 
 #[cfg(test)]
 use cstr::cstr;
@@ -260,14 +269,8 @@ impl TerminalViewAssistant {
         if TerminalViewAssistant::needs_resize(&self.last_known_size, new_size) {
             let floored_size = new_size.floor();
             let term_size = TerminalScene::calculate_term_size_from_size(&floored_size);
-
-            // we can safely call borrow_mut here because we are running the terminal
-            // in single threaded mode. If we do move to a multithreaded model we will
-            // get a compiler error since we are using spawn_local in our pty_loop.
-            let mut term = self.term.borrow_mut();
-            let last_size_info = self.last_known_size_info.clone();
-
-            let cell_size = Size::new(last_size_info.cell_width, last_size_info.cell_height);
+            let font_size = self.font_size;
+            let cell_size = font_to_cell_size(font_size, font_size * CELL_PADDING_FACTOR);
             let grid_size =
                 Size::new(term_size.width / cell_size.width, term_size.height / cell_size.height)
                     .floor();
@@ -296,8 +299,10 @@ impl TerminalViewAssistant {
                 dpr: 1.0,
             };
 
-            term.resize(&term_size_info);
-            drop(term);
+            // we can safely call borrow_mut here because we are running the terminal
+            // in single threaded mode. If we do move to a multithreaded model we will
+            // get a compiler error since we are using spawn_local in our pty_loop.
+            self.term.borrow_mut().resize(&term_size_info);
 
             // PTY window size (in character cells).
             let window_size = WindowSize {
@@ -419,6 +424,12 @@ impl TerminalViewAssistant {
         Ok(())
     }
 
+    fn set_font_size(&mut self, font_size: f32) {
+        self.font_size = font_size;
+        self.last_known_size = Size::zero();
+        self.app_context.request_render(self.view_key);
+    }
+
     // This method is overloaded from the ViewAssistant trait so we can test the method.
     // The ViewAssistant trait requires a ViewAssistantContext which we do not use and
     // we cannot make. This allows us to call the method directly in the tests.
@@ -426,6 +437,10 @@ impl TerminalViewAssistant {
         &mut self,
         event: &input::keyboard::Event,
     ) -> Result<(), Error> {
+        if self.handle_control_keyboard_event(event)? {
+            return Ok(());
+        }
+
         let app_cursor = self.term.borrow().mode().contains(TermMode::APP_CURSOR);
         if let Some(string) = get_input_sequence_for_key_event(event, app_cursor) {
             // In practice these writes will contain a small amount of data
@@ -454,6 +469,80 @@ impl TerminalViewAssistant {
             PointerEventResponse::ViewDirty => handler.update_view(),
         }
     }
+
+    fn handle_control_keyboard_event(
+        &mut self,
+        event: &input::keyboard::Event,
+    ) -> Result<bool, Error> {
+        match event.phase {
+            input::keyboard::Phase::Pressed | input::keyboard::Phase::Repeat => {
+                let modifiers = &event.modifiers;
+                match event.code_point {
+                    None => {
+                        const HID_USAGE_KEY_HOME: u32 = 0x4a;
+                        const HID_USAGE_KEY_PAGEUP: u32 = 0x4b;
+                        const HID_USAGE_KEY_END: u32 = 0x4d;
+                        const HID_USAGE_KEY_PAGEDOWN: u32 = 0x4e;
+                        const HID_USAGE_KEY_DOWN: u32 = 0x51;
+                        const HID_USAGE_KEY_UP: u32 = 0x52;
+
+                        match event.hid_usage {
+                            HID_USAGE_KEY_UP if modifiers.alt => {
+                                self.term.borrow_mut().scroll_display(Scroll::Lines(1));
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_DOWN if modifiers.alt => {
+                                self.term.borrow_mut().scroll_display(Scroll::Lines(-1));
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_PAGEUP if modifiers.shift => {
+                                self.term.borrow_mut().scroll_display(Scroll::PageUp);
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_PAGEDOWN if modifiers.shift => {
+                                self.term.borrow_mut().scroll_display(Scroll::PageDown);
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_HOME if modifiers.shift => {
+                                self.term.borrow_mut().scroll_display(Scroll::Top);
+                                return Ok(true);
+                            }
+                            HID_USAGE_KEY_END if modifiers.shift => {
+                                self.term.borrow_mut().scroll_display(Scroll::Bottom);
+                                return Ok(true);
+                            }
+                            _ => {}
+                        }
+                    }
+                    Some(code_point) if modifiers.alt == true => {
+                        const PLUS: u32 = 43;
+                        const EQUAL: u32 = 61;
+                        const MINUS: u32 = 45;
+
+                        match code_point {
+                            PLUS | EQUAL => {
+                                let new_font_size =
+                                    (self.font_size + FONT_SIZE_INCREMENT).min(MAX_FONT_SIZE);
+                                self.set_font_size(new_font_size);
+                                return Ok(true);
+                            }
+                            MINUS => {
+                                let new_font_size =
+                                    (self.font_size - FONT_SIZE_INCREMENT).max(MIN_FONT_SIZE);
+                                self.set_font_size(new_font_size);
+                                return Ok(true);
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+
+        Ok(false)
+    }
 }
 
 impl ViewAssistant for TerminalViewAssistant {
@@ -476,9 +565,7 @@ impl ViewAssistant for TerminalViewAssistant {
         self.resize_if_needed(&context.size, &context.metrics)?;
 
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let background_color = Color::new();
-
-            let mut builder = SceneBuilder::new().background_color(background_color).mutable(false);
+            let mut builder = SceneBuilder::new().background_color(BACKGROUND_COLOR).mutable(false);
 
             let terminal = builder.facet(Box::new(TerminalFacet::new(
                 self.font.clone(),
@@ -728,10 +815,34 @@ mod tests {
         view.pty_context = Some(pty_context);
 
         let capital_a = 65;
-        view.handle_keyboard_event_internal(&make_keyboard_event(capital_a))?;
+        let alt_modifier = false;
+        view.handle_keyboard_event_internal(&make_keyboard_event(capital_a, alt_modifier))?;
 
         let test_buffer = view.pty_context.as_mut().unwrap().test_buffer.take().unwrap();
         assert_eq!(test_buffer, b"A");
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_control_keyboard_event() -> Result<(), Error> {
+        let pty = Pty::new()?;
+        let mut pty_context = PtyContext::from_pty(&pty)?;
+        let mut view = TerminalViewAssistant::new_for_test();
+        pty_context.allow_dual_write_for_test();
+
+        let (sender, mut _receiver) = mpsc::unbounded();
+        view.app_context = AppContextWrapper { app_context: None, test_sender: Some(sender) };
+        view.pty_context = Some(pty_context);
+
+        let equal = 61;
+        let alt_modifier = true;
+        view.handle_keyboard_event_internal(&make_keyboard_event(equal, alt_modifier))?;
+
+        assert_eq!(view.font_size, 28.0);
+
+        let test_buffer = view.pty_context.as_mut().unwrap().test_buffer.take().unwrap();
+        assert_eq!(test_buffer, b"");
 
         Ok(())
     }
@@ -867,12 +978,17 @@ mod tests {
         Ok(())
     }
 
-    fn make_keyboard_event(code_point: u32) -> input::keyboard::Event {
+    fn make_keyboard_event(code_point: u32, alt_modifier: bool) -> input::keyboard::Event {
+        let modifiers = if alt_modifier {
+            input::Modifiers { alt: true, ..input::Modifiers::default() }
+        } else {
+            input::Modifiers::default()
+        };
         input::keyboard::Event {
             code_point: Some(code_point),
             phase: input::keyboard::Phase::Pressed,
             hid_usage: 0 as u32,
-            modifiers: input::Modifiers::default(),
+            modifiers,
         }
     }
 
