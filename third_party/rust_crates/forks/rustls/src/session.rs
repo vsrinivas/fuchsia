@@ -1,26 +1,26 @@
-use ring;
-use std::io::{Read, Write};
-use crate::msgs::message::{BorrowMessage, Message, MessagePayload};
-use crate::msgs::deframer::MessageDeframer;
-use crate::msgs::fragmenter::{MessageFragmenter, MAX_FRAGMENT_LEN};
-use crate::msgs::hsjoiner::HandshakeJoiner;
+use crate::cipher;
+use crate::error::TLSError;
+use crate::key;
+#[cfg(feature = "logging")]
+use crate::log::{debug, error, warn};
 use crate::msgs::base::Payload;
 use crate::msgs::codec::Codec;
-use crate::msgs::enums::{ContentType, ProtocolVersion, AlertDescription, AlertLevel};
-use crate::error::TLSError;
-use crate::suites::SupportedCipherSuite;
-use crate::cipher;
-use crate::vecbuf::ChunkVecBuffer;
-use crate::key;
+use crate::msgs::deframer::MessageDeframer;
+use crate::msgs::enums::{AlertDescription, AlertLevel, ContentType, ProtocolVersion};
+use crate::msgs::fragmenter::{MessageFragmenter, MAX_FRAGMENT_LEN};
+use crate::msgs::hsjoiner::HandshakeJoiner;
+use crate::msgs::message::{BorrowMessage, Message, MessagePayload};
 use crate::prf;
-use crate::rand;
 use crate::quic;
+use crate::rand;
 use crate::record_layer;
-#[cfg(feature = "logging")]
-use crate::log::{warn, debug, error};
+use crate::suites::SupportedCipherSuite;
+use crate::vecbuf::ChunkVecBuffer;
+use ring;
+use std::io::{Read, Write};
 
-use std::io;
 use std::collections::VecDeque;
+use std::io;
 
 /// Generalises `ClientSession` and `ServerSession`
 pub trait Session: quic::QuicExt + Read + Write + Send + Sync {
@@ -89,6 +89,11 @@ pub trait Session: quic::QuicExt + Read + Write + Send + Sync {
 
     /// Retrieves the certificate chain used by the peer to authenticate.
     ///
+    /// The order of the certificate chain is as it appears in the TLS
+    /// protocol: the first certificate relates to the peer, the
+    /// second certifies the first, the third certifies the second, and
+    /// so on.
+    ///
     /// For clients, this is the certificate chain of the server.
     ///
     /// For servers, this is the certificate chain of the client,
@@ -122,10 +127,12 @@ pub trait Session: quic::QuicExt + Read + Write + Send + Sync {
     ///
     /// This function fails if called prior to the handshake completing;
     /// check with `is_handshaking()` first.
-    fn export_keying_material(&self,
-                              output: &mut [u8],
-                              label: &[u8],
-                              context: Option<&[u8]>) -> Result<(), TLSError>;
+    fn export_keying_material(
+        &self,
+        output: &mut [u8],
+        label: &[u8],
+        context: Option<&[u8]>,
+    ) -> Result<(), TLSError>;
 
     /// Retrieves the ciphersuite agreed with the peer.
     ///
@@ -155,7 +162,9 @@ pub trait Session: quic::QuicExt + Read + Write + Send + Sync {
     /// Errors from TLS record handling (ie, from `process_new_packets()`)
     /// are wrapped in an `io::ErrorKind::InvalidData`-kind error.
     fn complete_io<T>(&mut self, io: &mut T) -> Result<(usize, usize), io::Error>
-        where Self: Sized, T: Read + Write
+    where
+        Self: Sized,
+        T: Read + Write,
     {
         let until_handshaked = self.is_handshaking();
         let mut eof = false;
@@ -174,12 +183,12 @@ pub trait Session: quic::QuicExt + Read + Write + Send + Sync {
             if !eof && self.wants_read() {
                 match self.read_tls(io)? {
                     0 => eof = true,
-                    n => rdlen += n
+                    n => rdlen += n,
                 }
             }
 
             match self.process_new_packets() {
-                Ok(_) => {},
+                Ok(_) => {}
                 Err(e) => {
                     // In case we have an alert to send describing this error,
                     // try a last-gasp write -- but don't predate the primary
@@ -187,14 +196,14 @@ pub trait Session: quic::QuicExt + Read + Write + Send + Sync {
                     let _ignored = self.write_tls(io);
 
                     return Err(io::Error::new(io::ErrorKind::InvalidData, e));
-                },
+                }
             };
 
             match (eof, until_handshaked, self.is_handshaking()) {
                 (_, true, false) => return Ok((rdlen, wrlen)),
                 (_, false, _) => return Ok((rdlen, wrlen)),
                 (true, true, true) => return Err(io::Error::from(io::ErrorKind::UnexpectedEof)),
-                (..) => ()
+                (..) => {}
             }
         }
     }
@@ -257,8 +266,14 @@ impl SessionRandoms {
 
 fn join_randoms(first: &[u8], second: &[u8]) -> [u8; 64] {
     let mut randoms = [0u8; 64];
-    randoms.as_mut().write_all(first).unwrap();
-    randoms[32..].as_mut().write_all(second).unwrap();
+    randoms
+        .as_mut()
+        .write_all(first)
+        .unwrap();
+    randoms[32..]
+        .as_mut()
+        .write_all(second)
+        .unwrap();
     randoms
 }
 
@@ -270,10 +285,11 @@ pub struct SessionSecrets {
 }
 
 impl SessionSecrets {
-    pub fn new(randoms: &SessionRandoms,
-               hashalg: &'static ring::digest::Algorithm,
-               pms: &[u8])
-               -> SessionSecrets {
+    pub fn new(
+        randoms: &SessionRandoms,
+        hashalg: &'static ring::digest::Algorithm,
+        pms: &[u8],
+    ) -> SessionSecrets {
         let mut ret = SessionSecrets {
             randoms: randoms.clone(),
             hash: hashalg,
@@ -281,42 +297,52 @@ impl SessionSecrets {
         };
 
         let randoms = join_randoms(&ret.randoms.client, &ret.randoms.server);
-        prf::prf(&mut ret.master_secret,
-                 ret.hash,
-                 pms,
-                 b"master secret",
-                 &randoms);
+        prf::prf(
+            &mut ret.master_secret,
+            ret.hash,
+            pms,
+            b"master secret",
+            &randoms,
+        );
         ret
     }
 
-    pub fn new_ems(randoms: &SessionRandoms,
-                   hs_hash: &[u8],
-                   hashalg: &'static ring::digest::Algorithm,
-                   pms: &[u8]) -> SessionSecrets {
-        let mut ret = SessionSecrets {
-            randoms: randoms.clone(),
-            hash: hashalg,
-            master_secret: [0u8; 48]
-        };
-
-        prf::prf(&mut ret.master_secret,
-                 ret.hash,
-                 pms,
-                 b"extended master secret",
-                 hs_hash);
-        ret
-    }
-
-    pub fn new_resume(randoms: &SessionRandoms,
-                      hashalg: &'static ring::digest::Algorithm,
-                      master_secret: &[u8])
-                      -> SessionSecrets {
+    pub fn new_ems(
+        randoms: &SessionRandoms,
+        hs_hash: &[u8],
+        hashalg: &'static ring::digest::Algorithm,
+        pms: &[u8],
+    ) -> SessionSecrets {
         let mut ret = SessionSecrets {
             randoms: randoms.clone(),
             hash: hashalg,
             master_secret: [0u8; 48],
         };
-        ret.master_secret.as_mut().write_all(master_secret).unwrap();
+
+        prf::prf(
+            &mut ret.master_secret,
+            ret.hash,
+            pms,
+            b"extended master secret",
+            hs_hash,
+        );
+        ret
+    }
+
+    pub fn new_resume(
+        randoms: &SessionRandoms,
+        hashalg: &'static ring::digest::Algorithm,
+        master_secret: &[u8],
+    ) -> SessionSecrets {
+        let mut ret = SessionSecrets {
+            randoms: randoms.clone(),
+            hash: hashalg,
+            master_secret: [0u8; 48],
+        };
+        ret.master_secret
+            .as_mut()
+            .write_all(master_secret)
+            .unwrap();
         ret
     }
 
@@ -327,11 +353,13 @@ impl SessionSecrets {
         // NOTE: opposite order to above for no good reason.
         // Don't design security protocols on drugs, kids.
         let randoms = join_randoms(&self.randoms.server, &self.randoms.client);
-        prf::prf(&mut out,
-                 self.hash,
-                 &self.master_secret,
-                 b"key expansion",
-                 &randoms);
+        prf::prf(
+            &mut out,
+            self.hash,
+            &self.master_secret,
+            b"key expansion",
+            &randoms,
+        );
 
         out
     }
@@ -346,11 +374,13 @@ impl SessionSecrets {
         let mut out = Vec::new();
         out.resize(12, 0u8);
 
-        prf::prf(&mut out,
-                 self.hash,
-                 &self.master_secret,
-                 label,
-                 handshake_hash);
+        prf::prf(
+            &mut out,
+            self.hash,
+            &self.master_secret,
+            label,
+            handshake_hash,
+        );
         out
     }
 
@@ -362,10 +392,7 @@ impl SessionSecrets {
         self.make_verify_data(handshake_hash, b"server finished")
     }
 
-    pub fn export_keying_material(&self,
-                                  output: &mut [u8],
-                                  label: &[u8],
-                                  context: Option<&[u8]>) {
+    pub fn export_keying_material(&self, output: &mut [u8], label: &[u8], context: Option<&[u8]>) {
         let mut randoms = Vec::new();
         randoms.extend_from_slice(&self.randoms.client);
         randoms.extend_from_slice(&self.randoms.server);
@@ -375,11 +402,7 @@ impl SessionSecrets {
             randoms.extend_from_slice(context);
         }
 
-        prf::prf(output,
-                 self.hash,
-                 &self.master_secret,
-                 label,
-                 &randoms)
+        prf::prf(output, self.hash, &self.master_secret, label, &randoms)
     }
 }
 
@@ -387,7 +410,7 @@ impl SessionSecrets {
 
 enum Limit {
     Yes,
-    No
+    No,
 }
 
 /// For TLS1.3 middlebox compatibility mode, how to handle
@@ -447,10 +470,10 @@ impl SessionCommon {
     }
 
     pub fn is_tls13(&self) -> bool {
-      match self.negotiated_version {
-        Some(ProtocolVersion::TLSv1_3) => true,
-        _ => false
-      }
+        match self.negotiated_version {
+            Some(ProtocolVersion::TLSv1_3) => true,
+            _ => false,
+        }
     }
 
     pub fn get_suite(&self) -> Option<&'static SupportedCipherSuite> {
@@ -471,7 +494,7 @@ impl SessionCommon {
                 self.suite = Some(suite);
                 true
             }
-            _ => false
+            _ => false,
         }
     }
 
@@ -481,14 +504,14 @@ impl SessionCommon {
         // - prior to determining the version (it's illegal as a first message)
         // - if it's not a CCS at all
         // - if we've finished the handshake
-        if !self.is_tls13() ||
-           !msg.is_content_type(ContentType::ChangeCipherSpec) ||
-           self.traffic {
+        if !self.is_tls13() || !msg.is_content_type(ContentType::ChangeCipherSpec) || self.traffic {
             return Ok(MiddleboxCCS::Process);
         }
 
         if self.received_middlebox_ccs {
-            Err(TLSError::PeerMisbehavedError("illegal middlebox CCS received".into()))
+            Err(TLSError::PeerMisbehavedError(
+                "illegal middlebox CCS received".into(),
+            ))
         } else {
             self.received_middlebox_ccs = true;
             Ok(MiddleboxCCS::Drop)
@@ -496,7 +519,10 @@ impl SessionCommon {
     }
 
     pub fn decrypt_incoming(&mut self, encr: Message) -> Result<Message, TLSError> {
-        if self.record_layer.wants_close_before_decrypt() {
+        if self
+            .record_layer
+            .wants_close_before_decrypt()
+        {
             self.send_close_notify();
         }
 
@@ -552,7 +578,8 @@ impl SessionCommon {
     /// the encrypted fragments for sending.
     pub fn send_msg_encrypt(&mut self, m: Message) {
         let mut plain_messages = VecDeque::new();
-        self.message_fragmenter.fragment(m, &mut plain_messages);
+        self.message_fragmenter
+            .fragment(m, &mut plain_messages);
 
         for m in plain_messages {
             self.send_single_fragment(m.to_borrowed());
@@ -560,23 +587,25 @@ impl SessionCommon {
     }
 
     /// Like send_msg_encrypt, but operate on an appdata directly.
-    fn send_appdata_encrypt(&mut self,
-                            payload: &[u8],
-                            limit: Limit) -> usize {
+    fn send_appdata_encrypt(&mut self, payload: &[u8], limit: Limit) -> usize {
         // Here, the limit on sendable_tls applies to encrypted data,
         // but we're respecting it for plaintext data -- so we'll
         // be out by whatever the cipher+record overhead is.  That's a
         // constant and predictable amount, so it's not a terrible issue.
         let len = match limit {
-            Limit::Yes => self.sendable_tls.apply_limit(payload.len()),
-            Limit::No => payload.len()
+            Limit::Yes => self
+                .sendable_tls
+                .apply_limit(payload.len()),
+            Limit::No => payload.len(),
         };
 
         let mut plain_messages = VecDeque::new();
-        self.message_fragmenter.fragment_borrow(ContentType::ApplicationData,
-                                                ProtocolVersion::TLSv1_2,
-                                                &payload[..len],
-                                                &mut plain_messages);
+        self.message_fragmenter.fragment_borrow(
+            ContentType::ApplicationData,
+            ProtocolVersion::TLSv1_2,
+            &payload[..len],
+            &mut plain_messages,
+        );
 
         for m in plain_messages {
             self.send_single_fragment(m);
@@ -588,7 +617,10 @@ impl SessionCommon {
     fn send_single_fragment(&mut self, m: BorrowMessage) {
         // Close connection once we start to run out of
         // sequence space.
-        if self.record_layer.wants_close_before_encrypt() {
+        if self
+            .record_layer
+            .wants_close_before_encrypt()
+        {
             self.send_close_notify();
         }
 
@@ -625,41 +657,50 @@ impl SessionCommon {
     ///
     /// If internal buffers are too small, this function will not accept
     /// all the data.
-    pub fn send_some_plaintext(&mut self, data: &[u8]) -> io::Result<usize> {
+    pub fn send_some_plaintext(&mut self, data: &[u8]) -> usize {
         self.send_plain(data, Limit::Yes)
     }
 
-    pub fn send_early_plaintext(&mut self, data: &[u8]) -> io::Result<usize> {
+    pub fn send_early_plaintext(&mut self, data: &[u8]) -> usize {
         debug_assert!(self.early_traffic);
         debug_assert!(self.record_layer.is_encrypting());
 
         if data.is_empty() {
             // Don't send empty fragments.
-            return Ok(0);
+            return 0;
         }
 
-        Ok(self.send_appdata_encrypt(data, Limit::Yes))
+        self.send_appdata_encrypt(data, Limit::Yes)
     }
 
-    fn send_plain(&mut self, data: &[u8], limit: Limit) -> io::Result<usize> {
+    /// Encrypt and send some plaintext `data`.  `limit` controls
+    /// whether the per-session buffer limits apply.
+    ///
+    /// Returns the number of bytes written from `data`: this might
+    /// be less than `data.len()` if buffer limits were exceeded.
+    fn send_plain(&mut self, data: &[u8], limit: Limit) -> usize {
         if !self.traffic {
             // If we haven't completed handshaking, buffer
             // plaintext to send once we do.
             let len = match limit {
-                Limit::Yes => self.sendable_plaintext.append_limited_copy(data),
-                Limit::No => self.sendable_plaintext.append(data.to_vec())
+                Limit::Yes => self
+                    .sendable_plaintext
+                    .append_limited_copy(data),
+                Limit::No => self
+                    .sendable_plaintext
+                    .append(data.to_vec()),
             };
-            return Ok(len);
+            return len;
         }
 
         debug_assert!(self.record_layer.is_encrypting());
 
         if data.is_empty() {
             // Don't send empty fragments.
-            return Ok(0);
+            return 0;
         }
 
-        Ok(self.send_appdata_encrypt(data, limit))
+        self.send_appdata_encrypt(data, limit)
     }
 
     pub fn start_traffic(&mut self) {
@@ -676,14 +717,14 @@ impl SessionCommon {
 
         while !self.sendable_plaintext.is_empty() {
             let buf = self.sendable_plaintext.take_one();
-            self.send_plain(&buf, Limit::No)
-                .unwrap();
+            self.send_plain(&buf, Limit::No);
         }
     }
 
     // Put m into sendable_tls for writing.
     fn queue_tls_message(&mut self, m: Message) {
-        self.sendable_tls.append(m.get_encoding());
+        self.sendable_tls
+            .append(m.get_encoding());
     }
 
     /// Send a raw TLS message, fragmenting it if needed.
@@ -694,18 +735,27 @@ impl SessionCommon {
                 if let MessagePayload::Alert(alert) = m.payload {
                     self.quic.alert = Some(alert.description);
                 } else {
-                    debug_assert!(if let MessagePayload::Handshake(_) = m.payload { true } else { false },
-                                  "QUIC uses TLS for the cryptographic handshake only");
+                    debug_assert!(
+                        if let MessagePayload::Handshake(_) = m.payload {
+                            true
+                        } else {
+                            false
+                        },
+                        "QUIC uses TLS for the cryptographic handshake only"
+                    );
                     let mut bytes = Vec::new();
                     m.payload.encode(&mut bytes);
-                    self.quic.hs_queue.push_back((must_encrypt, bytes));
+                    self.quic
+                        .hs_queue
+                        .push_back((must_encrypt, bytes));
                 }
                 return;
             }
         }
         if !must_encrypt {
             let mut to_send = VecDeque::new();
-            self.message_fragmenter.fragment(m, &mut to_send);
+            self.message_fragmenter
+                .fragment(m, &mut to_send);
             for mm in to_send {
                 self.queue_tls_message(mm);
             }
@@ -722,8 +772,10 @@ impl SessionCommon {
         let len = self.received_plaintext.read(buf)?;
 
         if len == 0 && self.connection_at_eof() && self.received_plaintext.is_empty() {
-            return Err(io::Error::new(io::ErrorKind::ConnectionAborted,
-                                      "CloseNotify alert received"));
+            return Err(io::Error::new(
+                io::ErrorKind::ConnectionAborted,
+                "CloseNotify alert received",
+            ));
         }
 
         Ok(len)
@@ -731,8 +783,10 @@ impl SessionCommon {
 
     pub fn start_encryption_tls12(&mut self, secrets: &SessionSecrets) {
         let (dec, enc) = cipher::new_tls12(self.get_suite_assert(), secrets);
-        self.record_layer.prepare_message_encrypter(enc);
-        self.record_layer.prepare_message_decrypter(dec);
+        self.record_layer
+            .prepare_message_encrypter(enc);
+        self.record_layer
+            .prepare_message_decrypter(dec);
     }
 
     pub fn send_warning_alert(&mut self, desc: AlertDescription) {
@@ -767,7 +821,6 @@ impl SessionCommon {
         false
     }
 }
-
 
 #[cfg(feature = "quic")]
 pub(crate) struct Quic {

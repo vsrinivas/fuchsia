@@ -186,6 +186,7 @@ mod test {
                 &SessionID::new(&session_id),
                 Vec::new(),
                 Vec::new(),
+                &Vec::new(),
             )
             .get_encoding(),
             KeyType::ForTLS13 => ClientSessionValue::new(
@@ -194,6 +195,7 @@ mod test {
                 &SessionID::new(&session_id),
                 Vec::new(),
                 Vec::new(),
+                &Vec::new(),
             )
             .get_encoding(),
         };

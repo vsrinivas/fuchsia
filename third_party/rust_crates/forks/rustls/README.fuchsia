@@ -8,9 +8,9 @@ No.
 
 # What differs from upstream?
 
-This fork of rustls 0.18.1 includes patches to:
+This fork of rustls 0.19.1 includes patches to:
 
- * Update rustls to 0.18.1, but re-version it to 0.17.0 to make it easier to
+ * Update rustls to 0.19.1, but re-version it to 0.17.0 to make it easier to
    incrementally update rustls dependents.
  * Enable RFC8446 C.4: Client Tracking Prevention
  * Fix a bug in RFC8446 D.4: Middlebox Compatibility Mode, in which concurrent connections may race,
@@ -22,6 +22,8 @@ This fork of rustls 0.18.1 includes patches to:
 
  * We should not unfork until [the upstream bug for C.4](https://github.com/ctz/rustls/issues/466) is
    resolved.
+ * We should not switch the version of rustls to 0.19.1 until hyper has been
+   updated to 0.14.x, and tokio to 1.x.
 
 # Is there anything else which makes this dependency "special"?
 
