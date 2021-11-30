@@ -59,9 +59,6 @@ pub struct Task {
     // The command of this task.
     pub command: RwLock<CString>,
 
-    /// The namespace node that represents the executable associated with this task.
-    pub executable_node: RwLock<Option<NamespaceNode>>,
-
     /// The thread group to which this task belongs.
     pub thread_group: Arc<ThreadGroup>,
 
@@ -141,7 +138,6 @@ impl Task {
     fn new(
         id: pid_t,
         comm: CString,
-        executable_node: Option<NamespaceNode>,
         thread_group: Arc<ThreadGroup>,
         parent: pid_t,
         thread: zx::Thread,
@@ -157,7 +153,6 @@ impl Task {
         CurrentTask::new(Task {
             id,
             command: RwLock::new(comm),
-            executable_node: RwLock::new(executable_node),
             thread_group,
             parent,
             children: RwLock::new(HashSet::new()),
@@ -194,7 +189,6 @@ impl Task {
         let task = Self::new(
             pid,
             initial_name,
-            None,
             thread_group,
             1,
             thread,
@@ -290,7 +284,6 @@ impl Task {
         let child = Self::new(
             pid,
             comm.clone(),
-            self.executable_node.read().clone(),
             thread_group,
             self.id,
             thread,
@@ -788,7 +781,6 @@ impl CurrentTask {
         environ: &Vec<CString>,
     ) -> Result<ThreadStartInfo, Errno> {
         let executable = self.open_file(path.to_bytes(), OpenFlags::RDONLY)?;
-        *self.executable_node.write() = Some(executable.name.clone());
 
         // TODO: Implement #!interpreter [optional-arg]
 
@@ -799,7 +791,7 @@ impl CurrentTask {
 
         self.signals.write().alt_stack = None;
 
-        self.mm.exec().map_err(|status| from_status_like_fdio!(status))?;
+        self.mm.exec(executable.name.clone()).map_err(|status| from_status_like_fdio!(status))?;
 
         // TODO: The file descriptor table is unshared, undoing the effect of
         //       the CLONE_FILES flag of clone(2).

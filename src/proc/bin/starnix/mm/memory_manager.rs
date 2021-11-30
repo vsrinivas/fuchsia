@@ -153,6 +153,9 @@ pub struct MemoryManagerState {
     /// The mappings record which VMO backs each address.
     mappings: RangeMap<UserAddress, Mapping>,
 
+    /// The namespace node that represents the executable associated with this task.
+    executable_node: Option<NamespaceNode>,
+
     /// Stack location and size
     pub stack_base: UserAddress,
     pub stack_size: usize,
@@ -621,6 +624,7 @@ impl MemoryManager {
                 user_vmar_info,
                 brk: None,
                 mappings: RangeMap::new(),
+                executable_node: None,
                 stack_base: UserAddress::default(),
                 stack_size: 0,
             }),
@@ -764,12 +768,13 @@ impl MemoryManager {
         }
 
         target_state.brk = state.brk;
+        target_state.executable_node = state.executable_node.clone();
         *target.dumpable.lock() = *self.dumpable.lock();
 
         Ok(())
     }
 
-    pub fn exec(&self) -> Result<(), zx::Status> {
+    pub fn exec(&self, exe_node: NamespaceNode) -> Result<(), zx::Status> {
         let mut state = self.state.write();
         let info = self.root_vmar.info()?;
         // SAFETY: This operation is safe because the VMAR is for another process.
@@ -778,9 +783,14 @@ impl MemoryManager {
         state.user_vmar_info = state.user_vmar.info()?;
         state.brk = None;
         state.mappings = RangeMap::new();
+        state.executable_node = Some(exe_node);
 
         *self.dumpable.lock() = DumpPolicy::DISABLE;
         Ok(())
+    }
+
+    pub fn executable_node(&self) -> Option<NamespaceNode> {
+        self.state.read().executable_node.clone()
     }
 
     fn get_errno_for_map_err(status: zx::Status) -> Errno {
@@ -1258,7 +1268,8 @@ mod tests {
         assert!(mapped_addr > UserAddress::default());
         assert!(has(&mapped_addr));
 
-        mm.exec().expect("failed to exec memory manager");
+        let node = current_task.lookup_path_from_root(b"/").unwrap();
+        mm.exec(node).expect("failed to exec memory manager");
 
         assert!(!has(&brk_addr));
         assert!(!has(&mapped_addr));

@@ -258,8 +258,8 @@ impl FsNodeOps for ExeSymlink {
         _node: &FsNode,
         _current_task: &CurrentTask,
     ) -> Result<SymlinkTarget, Errno> {
-        if let Some(node) = &*self.task.executable_node.read() {
-            Ok(SymlinkTarget::Node(node.clone()))
+        if let Some(node) = self.task.mm.executable_node() {
+            Ok(SymlinkTarget::Node(node))
         } else {
             error!(ENOENT)
         }
