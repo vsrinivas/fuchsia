@@ -190,7 +190,7 @@ std::string to_upper_camel_case(const std::string& str);
 // the length of the string it represents is 6.
 //
 // PRECONDITION: str must be a valid string literal.
-std::size_t string_literal_length(std::string_view str);
+std::uint32_t string_literal_length(std::string_view str);
 
 // Returns the canonical form of an identifier, used to detect name collisions
 // in FIDL libraries. For example, the identifers "FooBar" and "FOO_BAR" collide

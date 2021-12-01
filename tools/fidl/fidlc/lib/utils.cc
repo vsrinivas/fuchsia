@@ -293,9 +293,9 @@ bool OnlyWhitespaceChanged(const std::string& unformatted_input,
   return formatted == unformatted;
 }
 
-std::size_t string_literal_length(std::string_view str) {
+std::uint32_t string_literal_length(std::string_view str) {
   // -2 to account for the leading and trailing quotes
-  std::size_t cnt = -2;
+  std::uint32_t cnt = -2;
   for (auto it = str.begin(), it_end = str.end(); it < it_end; ++it) {
     ++cnt;
     if (*it == '\\') {

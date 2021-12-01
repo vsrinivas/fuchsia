@@ -3334,13 +3334,7 @@ const Type* Library::InferType(Constant* constant) {
       switch (literal->kind) {
         case raw::Literal::Kind::kString: {
           auto string_literal = static_cast<const raw::StringLiteral*>(literal);
-          auto string_data = string_literal->span().data();
-          // TODO(fxbug.dev/89330): because data() contains the raw content,
-          // with the two " to identify strings, we need to take this
-          // into account. We should expose the actual size of string
-          // literals properly, and take into account escaping.
-          auto inferred_size =
-              static_cast<uint32_t>(string_data.size() < 2 ? 0 : string_data.size() - 2);
+          auto inferred_size = utils::string_literal_length(string_literal->span().data());
           auto inferred_type = std::make_unique<StringType>(Typespace::kUnboundedStringType.name,
                                                             typespace_->InternSize(inferred_size),
                                                             types::Nullability::kNonnullable);
