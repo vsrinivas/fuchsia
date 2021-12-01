@@ -15,11 +15,14 @@ using zx;
 protocol Manager {
     /// Connects to a fuzzer that implements the `fuchsia.fuzzer.Controller` protocol.
     ///
-    /// If the fuzzer is not currently running, it will first start it via the test_manager before
-    /// proceeding. The manager sends the |controller| onto the fuzz-registry which contains the
-    /// |ControllerProviders| that can fulfill the connection request.
+    /// If the fuzzer is not currently running, the fuzz-manager will first start it (via the
+    /// test_manager) before proceeding. The fuzz-manager sends the |controller| on to the
+    /// fuzz-registry, which contains the |ControllerProviders| that can fulfill the connection
+    /// request.
     ///
     /// See |fuchsia.test.manager.LaunchError| for details on ways test_manager can fail.
+    ///
+    /// Returns sockets that forward the fuzzer's standard output, error, and system log streams.
     ///
     /// Returns ZX_ERR_NO_RESOURCES if test_manager reports needed resources are unavailable.
     /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized by test_manager.
@@ -31,15 +34,30 @@ protocol Manager {
     Connect(resource struct {
         fuzzer_url fuchsia.url.Url;
         controller server_end:Controller;
+    }) -> (resource struct {
+        out_socket zx.handle:SOCKET;
+        err_socket zx.handle:SOCKET;
+        log_socket zx.handle:SOCKET;
+    }) error zx.status;
+
+    /// Stops the associated fuzzer as soon as possible.
+    ///
+    /// Returns ZX_OK if a running fuzzer was stopped.
+    /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized.
+    Stop(struct {
+        fuzzer_url fuchsia.url.Url;
     }) -> (struct {
         result zx.status;
     });
 
-    /// Stops the associated fuzzer.
+
+    /// Stops the associated fuzzer immediately.
+    ///
+    /// Some output may be truncated.
     ///
     /// Returns ZX_OK if a running fuzzer was stopped.
     /// Returns ZX_ERR_NOT_FOUND if the fuzzer URL was not recognized.
-    Terminate(struct {
+    Kill(struct {
         fuzzer_url fuchsia.url.Url;
     }) -> (struct {
         result zx.status;

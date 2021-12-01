@@ -6,6 +6,9 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <string>
+#include <vector>
+
 #include "src/sys/fuzzing/common/dispatcher.h"
 
 namespace fuzzing {
@@ -17,6 +20,11 @@ fidl::InterfaceRequestHandler<TargetAdapter> FakeTargetAdapter::GetHandler() {
     coordinator_.Reset();
     binding_.Bind(std::move(request));
   };
+}
+
+void FakeTargetAdapter::GetParameters(GetParametersCallback callback) {
+  // Stub; actual implementation is in a subsequent CL.
+  callback(std::vector<std::string>());
 }
 
 void FakeTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,

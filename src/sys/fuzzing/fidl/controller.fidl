@@ -59,7 +59,10 @@ protocol ControllerProvider {
     /// on its own exit. The fuzzer should exit and not attempt to reconnect when on channel close.
     Connect(resource struct {
         controller server_end:Controller;
-    });
+    }) -> ();
+
+    /// Interrupt any current workflow, closes the channel, and exits the fuzzing engine.
+    Stop();
 };
 
 /// Provides the management interface for fuzzing.

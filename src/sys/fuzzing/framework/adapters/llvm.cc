@@ -8,6 +8,9 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include <string>
+#include <vector>
+
 namespace fuzzing {
 
 LLVMTargetAdapter::LLVMTargetAdapter(const std::shared_ptr<Dispatcher>& dispatcher)
@@ -17,6 +20,11 @@ fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler(fit::
   on_close_ = std::move(on_close);
   return
       [this](fidl::InterfaceRequest<TargetAdapter> request) { binding_.Bind(std::move(request)); };
+}
+
+void LLVMTargetAdapter::GetParameters(GetParametersCallback callback) {
+  // Stub; actual implementation is in a subsequent CL.
+  callback(std::vector<std::string>());
 }
 
 void LLVMTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,

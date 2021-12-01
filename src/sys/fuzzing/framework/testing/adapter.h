@@ -37,7 +37,8 @@ class FakeTargetAdapter final : public TargetAdapter {
   // Provides a request handler for the engine to connect to the target adapter.
   fidl::InterfaceRequestHandler<TargetAdapter> GetHandler();
 
-  // Mimics a call to |fuchsia.fuzzer.TargetAdapter.Connect|.
+  // FIDL methods.
+  void GetParameters(GetParametersCallback callback) override;
   void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
 
   // Waits for a signal from the engine.

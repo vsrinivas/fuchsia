@@ -7,6 +7,9 @@ library fuchsia.fuzzer;
 using fuchsia.mem;
 using zx;
 
+const MAX_PARAMETERS uint16 = 128;
+const MAX_PARAMETER_LEN uint16 = 256;
+
 /// Maps test inputs to specific behaviors in the target code, e.g. by invoking APIs, making FIDL
 /// calls. etc. The adapter includes the target-specific code often referred to as the "fuzz target
 /// function".
@@ -15,6 +18,16 @@ using zx;
 ///     https://llvm.org/docs/LibFuzzer.html#fuzz-target
 @discoverable
 protocol TargetAdapter {
+    /// Retrieves the target-specific fuzzer parameters, e.g. the package-relative location of seed
+    /// corpora. These parameters are specific to individual fuzzers, and are used by both the
+    /// fuzzing engine and the "test-engine" used to create fuzzer unit tests. For these reasons,
+    /// it is most convenient for fuzzer authors to specify them as part of the (fuzzer-specific)
+    /// target adapter's component manifest file, and have the engine and test-engine retrieve them
+    /// via this method.
+    GetParameters() -> (struct {
+        parameters vector<string:MAX_PARAMETER_LEN>:MAX_PARAMETERS;
+    });
+
     /// Provides the eventpair used by driver and adapter to signal each other, and the shared VMO
     /// used to provide test inputs to the adapter.
     Connect(resource struct {

@@ -11,7 +11,7 @@ using zx;
 /// creates to the fuzz_manager. The other end is passed as a startup handle to the fuzzer component
 /// itself, which provides |Controller|s on request.
 @discoverable
-protocol Registry {
+protocol Registrar {
     /// Adds a |ControllerProvider|. This should be called by the fuzzer itself, using the channel
     /// provided by the fuzz-test-runner, and in response to being started by the fuzz-manager. This
     /// call will block until the fuzz-manager calls |GetProvider| and supplies the URL to associate
@@ -21,8 +21,14 @@ protocol Registry {
     /// |ClearProvider|, or on exit. The fuzzer should exit when the channel closes.
     Register(resource struct {
         provider client_end:ControllerProvider;
-    });
+    }) -> ();
+};
 
+/// Entry point for the fuzz-manager. It uses this protocol to wait for fuzz tests started within
+/// the test runner framework to register a |ControllerProvider|, and to stop those fuzzers when no
+/// additional fuzzing workflows remain to be performed.
+@discoverable
+protocol Registry {
     /// Connects the |Controller| to a registered fuzzer at |fuzzer_url|.
     ///
     /// Uses a |ControllerProvider| that has been |Register|ed at the given |fuzzer_url| to connect
@@ -40,10 +46,11 @@ protocol Registry {
         result zx.status;
     });
 
-    /// Removes the provider associated with the given URL.
+    /// Removes the provider associated with the given URL from the registry and closes its channel.
+    /// The associated fuzzer should exit upon channel closure.
     ///
     /// Return ZX_ERR_NOT_FOUND if no such provider exists in the registry.
-    Unregister(struct {
+    Disconnect(struct {
         fuzzer_url fuchsia.url.Url;
     }) -> (struct {
         result zx.status;

@@ -37,7 +37,8 @@ class LLVMTargetAdapter final : public TargetAdapter {
   // |Connect|ed peer, i.e. the engine, disconnects.
   fidl::InterfaceRequestHandler<TargetAdapter> GetHandler(fit::closure on_close);
 
-  // FIDL method.
+  // FIDL methods.
+  void GetParameters(GetParametersCallback callback) override;
   void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
 
  private:
