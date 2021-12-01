@@ -21,7 +21,7 @@ use {
 #[derive(Clone)]
 pub struct Directory {
     path: PathBuf,
-    pub proxy: fio::DirectoryProxy,
+    proxy: fio::DirectoryProxy,
 }
 
 impl Directory {
