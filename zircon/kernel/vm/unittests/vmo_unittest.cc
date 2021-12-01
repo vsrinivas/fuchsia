@@ -262,7 +262,8 @@ static bool vmo_create_contiguous_test() {
 
   EXPECT_TRUE(vmo->is_contiguous(), "vmo is contig\n");
 
-  EXPECT_TRUE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
+  // Contiguous VMOs don't implicitly pin.
+  EXPECT_FALSE(PagesInWiredQueue(vmo.get(), 0, alloc_size));
 
   paddr_t last_pa;
   auto lookup_func = [&last_pa](uint64_t offset, paddr_t pa) {

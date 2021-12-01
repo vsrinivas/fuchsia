@@ -21,8 +21,6 @@
 #include <vm/vm_object_paged.h>
 #include <vm/vm_page_list.h>
 
-#include "include/vm/page_source.h"
-#include "include/vm/pmm.h"
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
@@ -219,8 +217,6 @@ VmCowPages::VmCowPages(ktl::unique_ptr<VmCowPagesContainer> cow_container,
       pmm_alloc_flags_(pmm_alloc_flags),
       page_source_(ktl::move(page_source)) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
-  // This option is only set after pages are successfully pinned by VmObjectPaged.
-  DEBUG_ASSERT(!(options & VmCowPagesOptions::kUnpinOnDelete));
   // TODO(dustingreen): Apply PMM_ALLOC_FLAG_CAN_BORROW based on can_borrow_locked(), in
   // PmmAllocFlags(bool pin).
 }
@@ -237,11 +233,6 @@ void VmCowPages::fbl_recycle() {
   {  // scope guard
     Guard<Mutex> guard{&lock_};
     VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
-    if (is_unpin_on_delete_locked()) {
-      DEBUG_ASSERT(!is_slice_locked());
-      // Unpin all present pages.
-      UnpinLocked(0, size_, /*allow_gaps=*/true);
-    }
     // If we're not a hidden vmo, then we need to remove ourself from our parent. This needs
     // to be done before emptying the page list so that a hidden parent can't merge into this
     // vmo and repopulate the page list.
@@ -550,13 +541,6 @@ zx_status_t VmCowPages::CreateChildSliceLocked(uint64_t offset, uint64_t size,
 
   *cow_slice = slice;
   return ZX_OK;
-}
-
-void VmCowPages::SetUnpinOnDeleteLocked() {
-  canary_.Assert();
-  // Called up to once.
-  DEBUG_ASSERT(!(options_ & VmCowPagesOptions::kUnpinOnDelete));
-  options_ |= VmCowPagesOptions::kUnpinOnDelete;
 }
 
 void VmCowPages::CloneParentIntoChildLocked(fbl::RefPtr<VmCowPages>& child) {
@@ -2267,6 +2251,9 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  // VmObjectPaged::DecommitRange() rejects is_contiguous() VMOs (for now).
+  DEBUG_ASSERT(can_decommit_locked());
+
   // Demand offset and length be correctly aligned to not give surprising user semantics.
   if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(len)) {
     return ZX_ERR_INVALID_ARGS;
@@ -3114,9 +3101,8 @@ void VmCowPages::UpdateChildParentLimitsLocked(uint64_t new_size) {
   }
 }
 
-zx_status_t VmCowPages::LookupLocked(
-    uint64_t offset, uint64_t len,
-    fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) {
+zx_status_t VmCowPages::LookupLocked(uint64_t offset, uint64_t len,
+                                     VmObject::LookupFunction lookup_fn) {
   canary_.Assert();
   if (unlikely(len == 0)) {
     return ZX_ERR_INVALID_ARGS;
@@ -3648,14 +3634,6 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
     vm_page_t* p = page->Page();
     AssertHeld(this->lock_);
 
-    // All pages present in a VMO with kUnpinOnDelete should have a pin_count tally.
-    if (is_unpin_on_delete_locked() && !p->object.pin_count) {
-      printf("Found contiguous page without its pin_count tally - pin_count: %u\n",
-             static_cast<uint32_t>(p->object.pin_count));
-      valid = false;
-      return ZX_ERR_STOP;
-    }
-
     // All pages in non-hidden VMOs should not be split, as this is a meaningless thing to talk
     // about and indicates a book keeping error somewhere else.
     if (!this->is_hidden_locked()) {
@@ -4114,6 +4092,20 @@ bool VmCowPages::DebugIsInDiscardableListLocked(bool reclaim_candidate) const {
   }
 
   return false;
+}
+
+uint64_t VmCowPages::DebugGetPageCountLocked() const {
+  uint64_t page_count = 0;
+  zx_status_t status = page_list_.ForEveryPage([&page_count](auto* p, uint64_t offset) {
+    if (!p->IsPage()) {
+      return ZX_ERR_NEXT;
+    }
+    ++page_count;
+    return ZX_ERR_NEXT;
+  });
+  // We never stop early in lambda above.
+  DEBUG_ASSERT(status == ZX_OK);
+  return page_count;
 }
 
 bool VmCowPages::DebugIsReclaimable() const {

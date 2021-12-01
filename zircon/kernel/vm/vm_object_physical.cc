@@ -194,9 +194,8 @@ zx_status_t VmObjectPhysical::LookupPagesLocked(uint64_t offset, uint pf_flags,
   return ZX_OK;
 }
 
-zx_status_t VmObjectPhysical::Lookup(
-    uint64_t offset, uint64_t len,
-    fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) {
+zx_status_t VmObjectPhysical::Lookup(uint64_t offset, uint64_t len,
+                                     VmObject::LookupFunction lookup_fn) {
   canary_.Assert();
 
   if (unlikely(len == 0)) {

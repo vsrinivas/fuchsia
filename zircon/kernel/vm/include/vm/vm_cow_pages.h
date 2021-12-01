@@ -90,12 +90,6 @@ class VmCowPages final
   zx_status_t CreateChildSliceLocked(uint64_t offset, uint64_t size,
                                      fbl::RefPtr<VmCowPages>* cow_slice) TA_REQ(lock_);
 
-  // Remove 1 pin_count tally from each present page during delete.  This option is set only after
-  // successful pin of the pages, and only for contiguous VMOs.  This method must only be called
-  // up to once (exactly once for a successfully created contiguous VMO), shortly after the initial
-  // pin_count tally has been added successfully.
-  void SetUnpinOnDeleteLocked() TA_REQ(lock_);
-
   // Returns the size in bytes of this cow pages range. This will always be a multiple of the page
   // size.
   uint64_t size_locked() const TA_REQ(lock_) { return size_; }
@@ -235,8 +229,7 @@ class VmCowPages final
   zx_status_t ResizeLocked(uint64_t size) TA_REQ(lock_);
 
   // See VmObject::Lookup
-  zx_status_t LookupLocked(uint64_t offset, uint64_t len,
-                           fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn)
+  zx_status_t LookupLocked(uint64_t offset, uint64_t len, VmObject::LookupFunction lookup_fn)
       TA_REQ(lock_);
 
   // See VmObject::TakePages
@@ -418,6 +411,7 @@ class VmCowPages final
     Guard<Mutex> guard{&lock_};
     return lock_count_;
   }
+  uint64_t DebugGetPageCountLocked() const TA_REQ(lock_);
   bool DebugIsReclaimable() const;
   bool DebugIsUnreclaimable() const;
   bool DebugIsDiscarded() const;
@@ -488,9 +482,6 @@ class VmCowPages final
 
   bool is_hidden_locked() const TA_REQ(lock_) { return !!(options_ & VmCowPagesOptions::kHidden); }
   bool is_slice_locked() const TA_REQ(lock_) { return !!(options_ & VmCowPagesOptions::kSlice); }
-  bool is_unpin_on_delete_locked() const TA_REQ(lock_) {
-    return !!(options_ & VmCowPagesOptions::kUnpinOnDelete);
-  }
   bool can_decommit_zero_pages_locked() const TA_REQ(lock_) {
     bool result = !(options_ & VmCowPagesOptions::kCannotDecommitZeroPages);
     DEBUG_ASSERT(result == !debug_is_contiguous());
@@ -517,6 +508,11 @@ class VmCowPages final
     bool result = page_source_ && !page_source_->properties().is_preserving_page_content;
     DEBUG_ASSERT(result == debug_is_contiguous());
     return result;
+  }
+
+  bool can_decommit_locked() const TA_REQ(lock_) {
+    // For now.
+    return !page_source_;
   }
 
   // Add a page to the object. This operation unmaps the corresponding
