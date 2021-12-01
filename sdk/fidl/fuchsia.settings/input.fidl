@@ -9,36 +9,21 @@ library fuchsia.settings;
 /// REQUEST_NOT_SUPPORTED, INTERNAL_SERVICE_ERROR, PERSISTENT_STORAGE_ERROR
 @discoverable
 protocol Input {
-    /// Gets the current |InputSettings|. Returns immediately on first call;
+    /// Gets the current |InputDeviceSettings|. Returns immediately on first call;
     /// subsequent calls return when the value changes.
-    ///
-    /// When any of the input devices' states change, this will return the
-    /// full [InputSettings] object, containing the states for all the
-    /// available input devices on the target device.
-    ///
-    /// To find the state of a specific input device, the devices vector
-    /// contained in settings can be iterated through to find a specific
-    /// [DeviceType]. If there are multiple devices of the same [DeviceType],
-    /// the [InputDevice]'s device_name can be examined in conjunction with
-    /// the [DeviceType] to find the desired input device. Together, the
-    /// device_name and [DeviceType] uniquely identify an [InputDevice].
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    @transitional("Future replacement for Watch2")
+    @transitional("Will be deprecated in favor of Watch2")
     Watch() -> (struct {
-        settings InputSettings;
+        settings InputDeviceSettings;
     });
 
-    /// Requests software input devices to set their software state. May
-    /// not necessarily change the overall state of the device, depending on
-    /// the hardware state. Will modify the software state of the existing
-    /// device if a known device_name and device_type are passed. Otherwise
-    /// it will add a new input device. Devices not included in the SetStates
-    /// call will not be modified.
-    @transitional("Future replacement for SetStates")
+    /// Sets |InputDeviceSettings|. Any field not explicitly set in the table
+    /// performs a no-op, and will not make any changes.
+    @transitional("Will be deprecated in favor of SetStates")
     Set(struct {
-        input_states vector<InputState>:MAX;
+        settings InputDeviceSettings;
     }) -> (struct {}) error Error;
 
     /// Gets the current |InputSettings|. Returns immediately on first call;
@@ -57,7 +42,7 @@ protocol Input {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    @transitional("Will be deprecated in favor of Watch")
+    @transitional("Future replacement for Watch")
     Watch2() -> (struct {
         settings InputSettings;
     });
@@ -68,7 +53,7 @@ protocol Input {
     /// device if a known device_name and device_type are passed. Otherwise
     /// it will add a new input device. Devices not included in the SetStates
     /// call will not be modified.
-    @transitional("Will be deprecated in favor of Set")
+    @transitional("Future replacement for Set")
     SetStates(struct {
         input_states vector<InputState>:MAX;
     }) -> (struct {}) error Error;
@@ -143,4 +128,25 @@ type InputState = table {
     1: name string:MAX;
     2: device_type DeviceType;
     3: state DeviceState;
+};
+
+/////////////////////////////
+// To-be-deprecated API below
+/////////////////////////////
+
+/// Settings related to audio input. Replacement for fuchsia.settings.AudioSettings.input.
+type InputDeviceSettings = table {
+    1: microphone Microphone;
+};
+
+/// Settings related to the microphone.
+type Microphone = table {
+    /// Whether the microphone is muted.
+    ///
+    /// This is only tracking the software mute state. The service will pick up the hardware state
+    /// and combine the two states to find the overall state. If either software or hardware is
+    /// muted, the overall state is muted. The two may be different if the device should not
+    /// listen regardless of hardware state, or if the software state is unmuted and the user
+    /// turns the microphone off.
+    1: muted bool;
 };
