@@ -5,7 +5,6 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
-
 #include <zircon/syscalls.h>
 
 #include "inspector/inspector.h"
@@ -65,7 +64,11 @@ __EXPORT void inspector_print_general_regs(FILE* f, const zx_thread_state_genera
           regs->r[24], regs->r[25], regs->r[26], regs->r[27]);
   fprintf(f, " x28 %#18" PRIx64 " x29 %#18" PRIx64 " lr  %#18" PRIx64 " sp  %#18" PRIx64 "\n",
           regs->r[28], regs->r[29], regs->lr, regs->sp);
-  fprintf(f, " pc  %#18" PRIx64 " psr %#18" PRIx64 "\n", regs->pc, regs->cpsr);
+  fprintf(f, " pc  %#18" PRIx64 " psr %#18" PRIx64, regs->pc, regs->cpsr);
+  if (excp_data) {
+    fprintf(f, " far %#18" PRIx64 " esr %#18" PRIx32, excp_data->far, excp_data->esr);
+  }
+  fprintf(f, "\n");
 }
 
 #else  // unsupported arch

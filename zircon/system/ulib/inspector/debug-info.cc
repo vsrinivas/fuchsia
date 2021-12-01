@@ -145,12 +145,14 @@ static void get_name(zx_handle_t handle, char* buf, size_t size) {
 }
 
 static void print_exception_report(FILE* out, const zx_exception_report_t& report,
-                                   const zx_thread_state_general_regs* regs) {
+                                   const zx_thread_state_general_regs* regs,
+                                   const inspector_excp_data_t* excp_data) {
   inspector::decoded_registers decoded = inspector::decode_registers(regs);
 
   if (report.header.type == ZX_EXCP_FATAL_PAGE_FAULT) {
     const char* access_type;
     const char* violation;
+    zx_vaddr_t fault_addr;
 #if defined(__x86_64__)
     static constexpr uint32_t kErrCodeInstrFetch = (1 << 4);
     static constexpr uint32_t kErrCodeWrite = (1 << 1);
@@ -168,6 +170,7 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
     } else {
       violation = "not-present";
     }
+    fault_addr = excp_data->cr2;
 #elif defined(__aarch64__)
     // The one ec bit that's different between a data and instruction abort
     static constexpr uint32_t kEcDataAbortBit = (1 << 28);
@@ -211,27 +214,31 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
         violation = "undecoded";
         break;
     }
+
+    fault_addr = excp_data->far;
 #else
 #error unsupported architecture
 #endif
-    fprintf(out, "<== %s %s page fault (error %s), PC at 0x%" PRIxPTR "\n", access_type, violation,
-            zx_status_get_string(static_cast<zx_status_t>(report.context.synth_code)), decoded.pc);
+    fprintf(out, "<== %s %s page fault (error %s) at %#" PRIxPTR ", PC at %#" PRIxPTR "\n",
+            access_type, violation,
+            zx_status_get_string(static_cast<zx_status_t>(report.context.synth_code)), fault_addr,
+            decoded.pc);
   } else if (report.header.type == ZX_EXCP_POLICY_ERROR) {
     switch (report.context.synth_code) {
       case ZX_EXCP_POLICY_CODE_BAD_SYSCALL:
-        fprintf(out, "<== policy error: %s (%d, syscall %d), PC at 0x%" PRIxPTR "\n",
+        fprintf(out, "<== policy error: %s (%d, syscall %d), PC at %#" PRIxPTR "\n",
                 inspector::policy_exception_code_to_str(report.context.synth_code),
                 report.context.synth_code, report.context.synth_data, decoded.pc);
         break;
 
       default:
-        fprintf(out, "<== policy error: %s (%d), PC at 0x%" PRIxPTR "\n",
+        fprintf(out, "<== policy error: %s (%d), PC at %#" PRIxPTR "\n",
                 inspector::policy_exception_code_to_str(report.context.synth_code),
                 report.context.synth_code, decoded.pc);
         break;
     }
   } else {
-    fprintf(out, "<== %s, PC at 0x%" PRIxPTR "\n", inspector::excp_type_to_str(report.header.type),
+    fprintf(out, "<== %s, PC at %#" PRIxPTR "\n", inspector::excp_type_to_str(report.header.type),
             decoded.pc);
   }
 }
@@ -306,23 +313,17 @@ void inspector_print_debug_info_impl(FILE* out, zx_handle_t process_handle,
       // Normal exception.
       fprintf(out, "<== CRASH: process %s[%" PRIu64 "] thread %s[%" PRIu64 "]\n", process_name, pid,
               thread_name, tid);
-      inspector::print_exception_report(out, report, &regs);
 
 #if defined(__x86_64__)
-      inspector_print_general_regs(out, &regs, &report.context.arch.u.x86_64);
+      inspector_excp_data_t* excp_data = &report.context.arch.u.x86_64;
 #elif defined(__aarch64__)
-      inspector_print_general_regs(out, &regs, &report.context.arch.u.arm_64);
-
-      // Only output the Fault address register and ESR if there's a data or
-      // alignment fault.
-      if (ZX_EXCP_FATAL_PAGE_FAULT == report.header.type ||
-          ZX_EXCP_UNALIGNED_ACCESS == report.header.type) {
-        fprintf(out, " far %#18" PRIx64 " esr %#18x\n", report.context.arch.u.arm_64.far,
-                report.context.arch.u.arm_64.esr);
-      }
+      inspector_excp_data_t* excp_data = &report.context.arch.u.arm_64;
 #else
 #error unsupported architecture
 #endif
+
+      inspector::print_exception_report(out, report, &regs, excp_data);
+      inspector_print_general_regs(out, &regs, excp_data);
       // Print the common stack part of the thread.
       fprintf(out, "bottom of user stack:\n");
       inspector_print_memory(out, process->get(), decoded.sp, inspector::kMemoryDumpSize);
