@@ -18,6 +18,9 @@ static size_t used_size(uint16_t queue_size) {
 
 static zx_gpaddr_t align_addr(zx_gpaddr_t addr) {
   zx_gpaddr_t over_align = addr % alignof(std::max_align_t);
+  if (over_align == 0) {
+    return addr;
+  }
   return addr + alignof(std::max_align_t) - over_align;
 }
 
@@ -68,6 +71,7 @@ zx_status_t VirtioQueueFake::WriteDesc(void** buf, uint32_t len, uint16_t flags,
   desc.flags = flags;
 
   data_begin_ += len;
+  data_begin_ = align_addr(data_begin_);
   return ZX_OK;
 }
 
