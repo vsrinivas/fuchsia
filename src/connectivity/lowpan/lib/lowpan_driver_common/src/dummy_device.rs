@@ -8,8 +8,8 @@ use super::*;
 
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
-    AllCounters, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute, MacCounters,
-    NetworkScanParameters, OnMeshPrefix, ProvisionError, ProvisioningProgress,
+    AllCounters, CoexCounters, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute,
+    MacCounters, NetworkScanParameters, OnMeshPrefix, ProvisionError, ProvisioningProgress,
 };
 use fidl_fuchsia_lowpan_test::*;
 use fuchsia_zircon_status as zx_status;
@@ -403,6 +403,30 @@ impl Driver for DummyDevice {
                 err_other: Some(116),
                 ..MacCounters::EMPTY
             }),
+            coex_tx: Some(CoexCounters {
+                requests: Some(200),
+                grant_immediate: Some(201),
+                grant_wait: Some(202),
+                grant_wait_activated: Some(203),
+                grant_wait_timeout: Some(204),
+                grant_deactivated_during_request: Some(205),
+                delayed_grant: Some(206),
+                avg_delay_request_to_grant_usec: Some(207),
+                ..CoexCounters::EMPTY
+            }),
+            coex_rx: Some(CoexCounters {
+                requests: Some(300),
+                grant_immediate: Some(301),
+                grant_wait: Some(302),
+                grant_wait_activated: Some(303),
+                grant_wait_timeout: Some(304),
+                grant_deactivated_during_request: Some(305),
+                delayed_grant: Some(306),
+                avg_delay_request_to_grant_usec: Some(307),
+                grant_none: Some(308),
+                ..CoexCounters::EMPTY
+            }),
+            coex_saturated: Some(false),
             ..AllCounters::EMPTY
         });
     }

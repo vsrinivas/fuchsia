@@ -427,6 +427,84 @@ async fn monitor_device<LP: 'static + LookupProxyInterface>(
                                 );
                             }
                         }
+
+                        // Log coex counters
+                        let coex_counters =
+                            [("tx", all_counters.coex_tx), ("rx", all_counters.coex_rx)];
+                        inspector.root().record_child("coex_counters", |coex_counters_child| {
+                            for (coex_counter_for_str, coex_counter_option) in coex_counters {
+                                if let Some(coex_counter) = coex_counter_option {
+                                    if let Some(val) = coex_counter.requests {
+                                        coex_counters_child.record_uint(
+                                            format!("{}_requests", coex_counter_for_str),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = coex_counter.grant_immediate {
+                                        coex_counters_child.record_uint(
+                                            format!("{}_grant_immediate", coex_counter_for_str),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = coex_counter.grant_wait {
+                                        coex_counters_child.record_uint(
+                                            format!("{}_grant_wait", coex_counter_for_str),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = coex_counter.grant_wait_activated {
+                                        coex_counters_child.record_uint(
+                                            format!(
+                                                "{}_grant_wait_activated",
+                                                coex_counter_for_str
+                                            ),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = coex_counter.grant_wait_timeout {
+                                        coex_counters_child.record_uint(
+                                            format!("{}_grant_wait_timeout", coex_counter_for_str),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = coex_counter.grant_deactivated_during_request
+                                    {
+                                        coex_counters_child.record_uint(
+                                            format!(
+                                                "{}_grant_deactivated_during_request",
+                                                coex_counter_for_str
+                                            ),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = coex_counter.delayed_grant {
+                                        coex_counters_child.record_uint(
+                                            format!("{}_delayed_grant", coex_counter_for_str),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = coex_counter.avg_delay_request_to_grant_usec
+                                    {
+                                        coex_counters_child.record_uint(
+                                            format!(
+                                                "{}_avg_delay_request_to_grant_usec",
+                                                coex_counter_for_str
+                                            ),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = coex_counter.grant_none {
+                                        coex_counters_child.record_uint(
+                                            format!("{}_grant_none", coex_counter_for_str),
+                                            val.into(),
+                                        );
+                                    }
+                                }
+                            }
+                        });
+                        if let Some(val) = all_counters.coex_saturated {
+                            inspector.root().record_bool("coex_saturated", val.into());
+                        }
                     }
                     Err(e) => {
                         fx_log_warn!("Error in logging counters. Error: {}", e);
@@ -571,7 +649,7 @@ mod tests {
                 "status": {
                     "connectivity_state": "Ready",
                 },
-                "counters": {
+                "counters": contains {
                     "rx_ack_requested": AnyProperty,
                     "rx_acked": AnyProperty,
                     "rx_address_filtered": AnyProperty,
@@ -622,6 +700,32 @@ mod tests {
                         "short_address": AnyProperty,
                         "thread_mode": AnyProperty,
                     }
+                }
+            }
+        });
+        assert_data_tree!(inspector, root: contains {
+            "iface-lowpan0": contains {
+                "counters": contains {
+                    "coex_counters": {
+                        "tx_requests": AnyProperty,
+                        "tx_grant_immediate": AnyProperty,
+                        "tx_grant_wait": AnyProperty,
+                        "tx_grant_wait_activated": AnyProperty,
+                        "tx_grant_wait_timeout": AnyProperty,
+                        "tx_grant_deactivated_during_request": AnyProperty,
+                        "tx_delayed_grant": AnyProperty,
+                        "tx_avg_delay_request_to_grant_usec": AnyProperty,
+                        "rx_requests": AnyProperty,
+                        "rx_grant_immediate": AnyProperty,
+                        "rx_grant_wait": AnyProperty,
+                        "rx_grant_wait_activated": AnyProperty,
+                        "rx_grant_wait_timeout": AnyProperty,
+                        "rx_grant_deactivated_during_request": AnyProperty,
+                        "rx_delayed_grant": AnyProperty,
+                        "rx_avg_delay_request_to_grant_usec": AnyProperty,
+                        "rx_grant_none": AnyProperty,
+                    },
+                    "coex_saturated": false,
                 }
             }
         });
