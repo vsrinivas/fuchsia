@@ -20,6 +20,8 @@ use {
     realmbuilder_mock_helpers::stateless_mock_responder,
 };
 
+use crate::emulator::EMULATOR_ROOT_DRIVER_URL;
+
 pub const SHARED_STATE_INDEX: &str = "BT-CORE-REALM";
 pub const DEFAULT_TEST_DEVICE_NAME: &str = "fuchsia-bt-integration-test";
 
@@ -180,7 +182,7 @@ impl CoreRealm {
 
         // Start DriverTestRealm
         let args = fdt::RealmArgs {
-            root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),
+            root_driver: Some(EMULATOR_ROOT_DRIVER_URL.to_string()),
             ..fdt::RealmArgs::EMPTY
         };
         instance.driver_test_realm_start(args).await?;

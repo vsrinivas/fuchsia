@@ -100,6 +100,11 @@ use {
     },
 };
 
+/// The URL of the platform bus driver. The bt-hci-emulator driver is a legacy driver, which binds
+/// under the platform-bus instead of the test-root driver. Because this is non-standard behavior,
+/// we have to provide this URL to the Driver Test Realm.
+pub(crate) const EMULATOR_ROOT_DRIVER_URL: &str = "fuchsia-boot:///#driver/platform-bus.so";
+
 /// Used to maintain the state transitions that are observed from the emulator. This type can be
 /// used in test harness auxiliary types.
 #[derive(Clone, Debug)]

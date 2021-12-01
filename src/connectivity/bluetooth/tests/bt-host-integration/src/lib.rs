@@ -11,13 +11,16 @@ use {
     bt_device_watcher::{DeviceWatcher, WatchFilter},
     bt_test_harness::{
         emulator::{self, add_bredr_peer, add_le_peer, default_bredr_peer, default_le_peer},
-        host_driver::{expectation as host_expectation, HostDriverHarness},
+        host_driver::{
+            realm::HostDriverRealm,
+            v2::{expectation as host_expectation, HostDriverHarness},
+        },
     },
     fidl_fuchsia_bluetooth::{self as fbt, DeviceClass, MAJOR_DEVICE_CLASS_TOY},
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_sys::{self as fsys, TechnologyType},
     fidl_fuchsia_bluetooth_test::{EmulatorSettings, HciError, PeerProxy},
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_bluetooth::{
         constants::{integration_timeout_duration, HOST_DEVICE_DIR},
         expect_eq,
@@ -31,12 +34,17 @@ use {
     },
     fuchsia_zircon as zx,
     hci_emulator_client::Emulator,
-    std::{convert::TryInto, path::PathBuf},
+    io_util::directory,
+    std::{
+        convert::TryInto,
+        path::{Path, PathBuf},
+    },
 };
 
 // Tests that creating and destroying a fake HCI device binds and unbinds the bt-host driver.
 #[test_harness::run_singlethreaded_test]
 async fn test_lifecycle(_: ()) -> Result<(), Error> {
+    let realm = HostDriverRealm::create().await?;
     let address = Address::Public([1, 2, 3, 4, 5, 6]);
     let settings = EmulatorSettings {
         address: Some(address.to_fidl()),
@@ -47,13 +55,20 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
         ..EmulatorSettings::EMPTY
     };
 
-    let mut emulator = Emulator::create(None).await?;
+    let mut emulator = Emulator::create(Some(realm.instance())).await?;
     let hci_topo = PathBuf::from(fdio::device_get_topo_path(emulator.file())?);
 
     // Publish the bt-hci device and verify that a bt-host appears under its topology within a
     // reasonable timeout.
+    let stripped_path = Path::new(HOST_DEVICE_DIR).strip_prefix("/")?.to_string_lossy();
+    let dir_to_watch = directory::open_directory(
+        realm.instance().get_exposed_dir(),
+        stripped_path.as_ref(),
+        fio::OPEN_RIGHT_READABLE,
+    )
+    .await?;
     let mut watcher =
-        DeviceWatcher::new_in_namespace(HOST_DEVICE_DIR, zx::Duration::from_seconds(10)).await?;
+        DeviceWatcher::new(HOST_DEVICE_DIR, dir_to_watch, zx::Duration::from_seconds(10)).await?;
     let _ = emulator.publish(settings).await?;
     let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;
 

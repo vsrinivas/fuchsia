@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,7 +7,7 @@ use {
     bt_device_watcher::DeviceWatcher,
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_bluetooth::{
         constants::HOST_DEVICE_DIR,
         expectation::{
@@ -28,7 +28,7 @@ use {
         collections::HashMap,
         convert::{AsMut, AsRef, TryInto},
         ops::{Deref, DerefMut},
-        path::PathBuf,
+        path::{Path, PathBuf},
         sync::Arc,
     },
     test_harness::{SharedState, TestHarness},
@@ -37,6 +37,7 @@ use {
 
 use crate::{
     emulator::{watch_controller_parameters, EmulatorState},
+    host_driver::realm::{HostDriverRealm, SHARED_STATE_INDEX},
     timeout_duration,
 };
 
@@ -105,14 +106,18 @@ impl DerefMut for HostDriverHarness {
 }
 
 impl TestHarness for HostDriverHarness {
-    type Env = (PathBuf, Emulator);
+    type Env = (PathBuf, Emulator, Arc<HostDriverRealm>);
     type Runner = BoxFuture<'static, Result<(), Error>>;
 
     fn init(
-        _shared_state: &Arc<SharedState>,
+        shared_state: &Arc<SharedState>,
     ) -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
-        async {
-            let (harness, emulator) = new_host_harness().await?;
+        let shared_state = shared_state.clone();
+        async move {
+            let realm = shared_state
+                .get_or_insert_with(SHARED_STATE_INDEX, HostDriverRealm::create)
+                .await?;
+            let (harness, emulator) = new_host_harness(realm.clone()).await?;
             let watch_info = watch_host_info(harness.clone())
                 .map_err(|e| e.context("Error watching host state"))
                 .err_into();
@@ -127,17 +132,24 @@ impl TestHarness for HostDriverHarness {
             let run = future::try_join3(watch_info, watch_peers, watch_emulator_params)
                 .map_ok(|((), (), ())| ())
                 .boxed();
-            Ok((harness, (path, emulator), run))
+            Ok((harness, (path, emulator, realm), run))
         }
         .boxed()
     }
 
     fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
-        let (path, mut emulator) = env;
+        let (path, mut emulator, realm) = env;
         async move {
-            // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
+            let stripped_path = Path::new(HOST_DEVICE_DIR).strip_prefix("/")?.to_string_lossy();
+            let dir_to_watch = io_util::directory::open_directory(
+                realm.instance().get_exposed_dir(),
+                stripped_path.as_ref(),
+                fio::OPEN_RIGHT_READABLE,
+            )
+            .await?;
             let mut watcher =
-                DeviceWatcher::new_in_namespace(HOST_DEVICE_DIR, timeout_duration()).await?;
+                DeviceWatcher::new(HOST_DEVICE_DIR, dir_to_watch, timeout_duration()).await?;
+            // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
             emulator.destroy_and_wait().await?;
             watcher.watch_removed(&path).await
         }
@@ -146,8 +158,12 @@ impl TestHarness for HostDriverHarness {
 }
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
-async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
-    let emulator = Emulator::create(None).await.context("Error creating emulator root device")?;
+async fn new_host_harness(
+    realm: Arc<HostDriverRealm>,
+) -> Result<(HostDriverHarness, Emulator), Error> {
+    let emulator = Emulator::create(Some(realm.instance()))
+        .await
+        .context("Error creating emulator root device")?;
     let host_dev = emulator
         .publish_and_wait_for_host(Emulator::default_settings())
         .await

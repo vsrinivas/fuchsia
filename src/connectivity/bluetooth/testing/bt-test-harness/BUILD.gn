@@ -9,6 +9,7 @@ rustc_library("bt-test-harness") {
   with_unit_tests = true
   testonly = true
 
+  # These are the library and code dependencies of the bt-test-harness library.
   deps = [
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
@@ -19,6 +20,7 @@ rustc_library("bt-test-harness") {
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
@@ -47,10 +49,9 @@ rustc_library("bt-test-harness") {
     "//third_party/rust_crates:tracing",
   ]
 
-  # Add components used by core_realm to the library
+  # Components included in `deps` because they're used by core_realm and/or host_driver_realm
   deps += [
     ":test-bt-init",
-    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/connectivity/bluetooth/core/bt-gap:test-stash-secure",
     "//src/connectivity/bluetooth/core/bt-host:driver",
@@ -66,7 +67,9 @@ rustc_library("bt-test-harness") {
     "src/bootstrap.rs",
     "src/core_realm.rs",
     "src/emulator.rs",
-    "src/host_driver.rs",
+    "src/host_driver/mod.rs",
+    "src/host_driver/realm.rs",
+    "src/host_driver/v2.rs",
     "src/host_watcher.rs",
     "src/host_watcher_v2.rs",
     "src/inspect.rs",
