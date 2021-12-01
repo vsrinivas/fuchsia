@@ -73,10 +73,8 @@ where
         while let Some((responder, optional_exit_tx)) = self.pending_responders.pop() {
             responder.on_error(&error);
             if let Some(exit_tx) = optional_exit_tx {
-                // Panic if send failed, otherwise, spawn might not be ended.
-                exit_tx
-                    .unbounded_send(())
-                    .expect("HangingGetController::on_error, exit_tx failed to send exit signal");
+                // We can ignore the result. If exit_tx fails to send, the task has already ended.
+                let _ = exit_tx.unbounded_send(());
             }
         }
     }
@@ -346,10 +344,8 @@ where
 
     fn on_error(&mut self, error: &anyhow::Error) {
         if let Some(exit_tx) = self.listen_exit_tx.take() {
-            // Panic if send failed, otherwise, spawn might not be ended.
-            exit_tx
-                .unbounded_send(())
-                .expect("HangingGetHandler::on_error, exit_tx failed to send exit signal");
+            // We can ignore the result. If exit_tx fails to send, the task has already ended.
+            let _ = exit_tx.unbounded_send(());
         }
 
         self.default_controller.on_error(&error);
