@@ -171,6 +171,7 @@ static_library("minfs") {
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fidl-utils",
       "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/inspect",
       "//zircon/system/ulib/storage-metrics",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-engine",

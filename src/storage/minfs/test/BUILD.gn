@@ -75,6 +75,7 @@ test("minfs-integration") {
     "//src/storage/fs_test",
     "//src/storage/fvm",
     "//src/storage/minfs",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",

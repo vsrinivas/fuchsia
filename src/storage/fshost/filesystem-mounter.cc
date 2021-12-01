@@ -102,10 +102,22 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_o
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret = MountFilesystem(FsManager::MountPoint::kData, "/pkg/bin/minfs", options,
-                                   std::move(block_device), FS_SVC);
-  if (ret.is_error()) {
-    return ret.error_value();
+  zx::status export_root = MountFilesystem(FsManager::MountPoint::kData, "/pkg/bin/minfs", options,
+                                           std::move(block_device), FS_SVC);
+  if (export_root.is_error()) {
+    return export_root.error_value();
+  }
+
+  zx_status_t status =
+      fshost_.SetFsExportRoot(FsManager::MountPoint::kData, std::move(export_root.value()));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = fshost_.ForwardFsDiagnosticsDirectory(FsManager::MountPoint::kData, "minfs");
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to add diagnostic directory for minfs: "
+                   << zx_status_get_string(status);
   }
 
   data_mounted_ = true;
