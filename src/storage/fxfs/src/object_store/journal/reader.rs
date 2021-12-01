@@ -12,7 +12,12 @@ use {
     },
     anyhow::{bail, Error},
     byteorder::{ByteOrder, LittleEndian},
+    futures::{future::BoxFuture, io::AsyncRead, ready, FutureExt},
     serde::Deserialize,
+    std::{
+        pin::Pin,
+        task::{Context, Poll},
+    },
 };
 
 /// JournalReader supports reading from a journal file which consist of blocks that have a trailing
@@ -90,23 +95,6 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
 
     pub fn handle(&mut self) -> &mut OH {
         &mut self.handle
-    }
-
-    /// Reads raw (buffered) bytes from the underlying handle.
-    pub async fn read_bytes(&mut self, mut dst: &mut [u8]) -> Result<(), Error> {
-        while dst.len() != 0 {
-            self.fill_buf().await?;
-            let src = self.buffer();
-            if src.len() == 0 {
-                bail!(format!("read buffer was empty. needed {} bytes.", dst.len()));
-            }
-            let sz = std::cmp::min(src.len(), dst.len());
-            assert!(sz > 0);
-            dst[0..sz].copy_from_slice(&src[0..sz]);
-            self.consume(sz);
-            dst = &mut dst[sz..];
-        }
-        Ok(())
     }
 
     /// Tries to deserialize a record of type T from the journal stream.  It might return
@@ -236,6 +224,41 @@ impl<OH: ReadObjectHandle> JournalReader<OH> {
 
     fn buffer(&self) -> &[u8] {
         &self.buf[self.buf_range.clone()]
+    }
+
+    pub fn async_reader<'a>(&'a mut self) -> AsyncReader<'a, OH> {
+        AsyncReader(
+            async {
+                self.fill_buf().await?;
+                Ok(self)
+            }
+            .boxed(),
+        )
+    }
+}
+
+pub struct AsyncReader<'a, OH: ObjectHandle>(
+    BoxFuture<'a, Result<&'a mut JournalReader<OH>, Error>>,
+);
+
+impl<OH: ReadObjectHandle> AsyncRead for AsyncReader<'_, OH> {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        out_buf: &mut [u8],
+    ) -> Poll<Result<usize, std::io::Error>> {
+        match ready!(self.0.poll_unpin(cx)) {
+            Err(e) => {
+                return Poll::Ready(Err(std::io::Error::new(std::io::ErrorKind::Other, e)));
+            }
+            Ok(reader) => {
+                let buf = reader.buffer();
+                let amount = std::cmp::min(buf.len(), out_buf.len());
+                out_buf[..amount].copy_from_slice(&buf[..amount]);
+                reader.consume(amount);
+                Poll::Ready(Ok(amount))
+            }
+        }
     }
 }
 

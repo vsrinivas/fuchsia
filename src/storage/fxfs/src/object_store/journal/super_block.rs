@@ -22,6 +22,7 @@ use {
         },
     },
     anyhow::{bail, Error},
+    futures::AsyncReadExt,
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
@@ -197,7 +198,7 @@ impl SuperBlock {
 
         // Validate magic bytes.
         let mut magic_bytes: [u8; 8] = [0; 8];
-        reader.read_bytes(&mut magic_bytes).await?;
+        reader.async_reader().read_exact(&mut magic_bytes).await?;
         if magic_bytes.as_slice() != SUPER_BLOCK_MAGIC.as_slice() {
             bail!(format!("Invalid magic: {:?}", magic_bytes));
         }
