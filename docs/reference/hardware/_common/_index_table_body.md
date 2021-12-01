@@ -70,10 +70,12 @@
           <tr>
             <td title="The path in the Fuchsia source tree where the driver
             source code is currently located.">Path {{info_icon}}</td>
-          {%- if driver.path|first in 's' %}
+          {%- if driver.path[0] != '/' %}
             <td><a href="{{ cs_url }}{{ driver.path }}"><code>//{{ driver.path }}</code></a></td>
           {%- elif driver.path[0] == '/' and driver.path[1] != '/' %}
-            <td><a href="{{ cs_url }}{{ driver.path }}"><code>/{{ driver.path }}</code></a></td>
+            <td><a href="{{ cs_url }}{{ driver.path[1:] }}"><code>/{{ driver.path }}</code></a></td>
+          {%- elif driver.path[0] == '/' and driver.path[1] == '/' %}
+            <td><a href="{{ cs_url }}{{ driver.path[2:] }}"><code>{{ driver.path }}</code></a></td>
           {%- else %}
             <td><a href="{{ cs_url }}{{ driver.path }}"><code>{{ driver.path }}</code></a></td>
           {%- endif %}
