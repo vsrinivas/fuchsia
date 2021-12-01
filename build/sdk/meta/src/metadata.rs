@@ -321,6 +321,20 @@ mod tests {
                         "quantity": 1,
                         "units": "gigabytes"
                     }
+                },
+                "behaviors": {
+                    "test_behavior": {
+                        "description": "Text",
+                        "handler": "HanderName",
+                        "data": {
+                            "femu": {
+                                "args": [],
+                                "features": [],
+                                "kernel_args": [],
+                                "options": []
+                            }
+                        }
+                    }
                 }
             }
         }

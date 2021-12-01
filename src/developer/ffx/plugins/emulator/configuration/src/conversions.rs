@@ -30,6 +30,7 @@ pub fn convert_bundle_to_configs(
         screen: virtual_device.hardware.window_size.clone(),
         storage: virtual_device.hardware.storage.clone(),
     };
+    emulator_configuration.behavior = virtual_device.behaviors.clone();
     if let Some(manifests) = &product_bundle.manifests {
         if let Some(emu) = &manifests.emu {
             emulator_configuration.guest = GuestConfig {
@@ -59,9 +60,11 @@ mod tests {
     use super::*;
     use sdk_metadata::{
         virtual_device::{Cpu, Hardware},
-        AudioDevice, AudioModel, DataAmount, DataUnits, ElementType, EmuManifest, InputDevice,
-        Manifests, PointingDevice, Screen, ScreenUnits, TargetArchitecture,
+        AudioDevice, AudioModel, Behavior, BehaviorData, DataAmount, DataUnits, ElementType,
+        EmuManifest, FemuData, InputDevice, Manifests, PointingDevice, Screen, ScreenUnits,
+        TargetArchitecture,
     };
+    use std::collections::HashMap;
 
     #[test]
     fn test_convert_bundle_to_configs() -> Result<()> {
@@ -83,6 +86,22 @@ mod tests {
             name: "FakeBundle".to_string(),
             kind: ElementType::ProductBundle,
         };
+        let mut behaviors = HashMap::new();
+        behaviors.insert(
+            "four_core_cpu".to_string(),
+            Behavior {
+                description: "An example CPU behavior.".to_string(),
+                data: BehaviorData {
+                    femu: Some(FemuData {
+                        args: Vec::new(),
+                        features: Vec::new(),
+                        kernel_args: Vec::new(),
+                        options: vec!["-smp 4,threads=2".to_string(), "-machine q35".to_string()],
+                    }),
+                },
+                handler: "SimpleQemuBehavior".to_string(),
+            },
+        );
         let mut device = VirtualDeviceV1 {
             name: "FakeDevice".to_string(),
             description: Some("A fake virtual device".to_string()),
@@ -95,6 +114,7 @@ mod tests {
                 memory: DataAmount { quantity: 4, units: DataUnits::Gigabytes },
                 window_size: Screen { height: 480, width: 640, units: ScreenUnits::Pixels },
             },
+            behaviors,
         };
 
         // Run the conversion, then assert everything in the config matches the manifest data.
@@ -111,6 +131,8 @@ mod tests {
         assert_eq!(config.guest.fvm_image.unwrap().to_string_lossy(), emu.disk_images[0]);
         assert_eq!(config.guest.kernel_image.to_string_lossy(), emu.kernel);
         assert_eq!(config.guest.zbi_image.to_string_lossy(), emu.initial_ramdisk);
+
+        assert!(config.behavior.contains_key("four_core_cpu"));
 
         // Adjust all of the values that affect the config, then run it again.
         pb.manifests = Some(Manifests {
