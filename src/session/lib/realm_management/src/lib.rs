@@ -135,7 +135,7 @@ mod tests {
     }
 
     /// Tests that creating a child results in the appropriate call to the `RealmProxy`.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn create_child_parameters() {
         let child_name = "test_child";
         let child_url = "test_url";
@@ -162,7 +162,7 @@ mod tests {
 
     /// Tests that a success received when creating a child results in an appropriate result from
     /// `create_child`.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn create_child_success() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
@@ -184,7 +184,7 @@ mod tests {
 
     /// Tests that an error received when creating a child results in an appropriate error from
     /// `create_child`.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn create_child_error() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
@@ -205,7 +205,7 @@ mod tests {
     }
 
     /// Tests that `open_child_component_exposed_dir` results in the appropriate call to `RealmProxy`.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn open_child_component_exposed_dir_parameters() {
         let child_name = "test_child";
         let child_collection = "test_collection";
@@ -230,7 +230,7 @@ mod tests {
 
     /// Tests that a success received when opening a child's exposed directory
     /// results in an appropriate result from `open_child_component_exposed_dir`.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn open_child_component_exposed_dir_success() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
@@ -250,7 +250,7 @@ mod tests {
     }
 
     /// Tests that opening a child's exposed directory returns successfully.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn open_child_exposed_dir_success() {
         // Make a static call counter to avoid unneeded complexity with cloned Arc<Mutex>.
         lazy_static! {
@@ -313,7 +313,7 @@ mod tests {
 
     /// Tests that an error received when opening a child's exposed directory
     /// results in an appropriate error from `open_exposed_dir`.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn open_child_component_exposed_dir_error() {
         let realm_proxy = spawn_stream_handler(move |realm_request| async move {
             match realm_request {
@@ -333,7 +333,7 @@ mod tests {
     }
 
     /// Tests that `destroy_child` results in the appropriate call to `RealmProxy`.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn destroy_child_parameters() {
         let child_name = "test_child";
         let child_collection = "test_collection";

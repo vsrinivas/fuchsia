@@ -204,14 +204,14 @@ mod tests {
     use {
         super::{set_session, zx, StartupError, SESSION_CHILD_COLLECTION, SESSION_NAME},
         fidl::endpoints::spawn_stream_handler,
-        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio,
         lazy_static::lazy_static,
         session_testing::spawn_directory_server,
         std::sync::mpsc,
         test_util::Counter,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn set_session_calls_realm_methods_in_appropriate_order() {
         lazy_static! {
             // The number of realm calls which have been made so far.
@@ -261,7 +261,7 @@ mod tests {
         assert!(set_session(session_url, &realm).await.is_ok());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn set_session_returns_channel_bound_to_exposed_dir() {
         let session_url = "session";
         let (exposed_dir_server_end_sender, exposed_dir_server_end_receiver) = mpsc::channel();
@@ -304,7 +304,7 @@ mod tests {
         assert_eq!(read_buf.bytes(), b"hello world", "server and client channels do not match");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn set_session_returns_error_if_binder_connection_fails() {
         let session_url = "session";
 

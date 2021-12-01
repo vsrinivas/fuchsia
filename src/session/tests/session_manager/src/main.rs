@@ -15,7 +15,7 @@ mod tests {
     ///     - session_manager is able to use the Realm service to launch a component.
     ///     - the root session was started in the "session" collection.
     ///     - capability routing of the Scenic service to the session collection was successful.
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn launch_root_session() {
         let realm =
             connect_to_protocol::<fcomponent::RealmMarker>().expect("could not connect to Realm");

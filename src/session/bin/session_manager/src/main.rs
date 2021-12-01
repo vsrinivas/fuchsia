@@ -3,15 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error, fidl_fuchsia_component as fcomponent, fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol, fuchsia_syslog,
+    anyhow::Error, fidl_fuchsia_component as fcomponent,
+    fuchsia_component::client::connect_to_protocol,
     session_manager_lib::session_manager::SessionManager,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["session_manager"]).expect("Failed to initialize logger.");
-
     let realm = connect_to_protocol::<fcomponent::RealmMarker>()?;
     // Start the startup session, if any, and serve services exposed by session manager.
     let mut session_manager = SessionManager::new(realm);

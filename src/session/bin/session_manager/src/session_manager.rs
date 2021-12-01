@@ -515,7 +515,7 @@ mod tests {
             LauncherMarker, LauncherProxy, RestartError, RestarterMarker, RestarterProxy,
         },
         fidl_fuchsia_ui_accessibility_view::{RegistryMarker, RegistryRequest},
-        fuchsia_async as fasync, fuchsia_scenic as scenic,
+        fuchsia_scenic as scenic,
         futures::prelude::*,
         matches::assert_matches,
         session_testing::spawn_noop_directory_server,
@@ -554,7 +554,7 @@ mod tests {
     }
 
     /// Verifies that Launcher.Launch creates a new session.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn test_launch() {
         let session_url = "session";
 
@@ -594,7 +594,7 @@ mod tests {
     }
 
     /// Verifies that Launcher.Restart restarts an existing session.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn test_restart() {
         let session_url = "session";
 
@@ -637,7 +637,7 @@ mod tests {
     }
 
     /// Verifies that Launcher.Restart return an error if there is no running existing session.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn test_restart_error_not_running() {
         let realm = spawn_stream_handler(move |_realm_request| async move {
             panic!("Realm should not receive any requests as there is no session to launch")
@@ -653,7 +653,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn handle_input_device_registry_request_stream_propagates_request_to_downstream_service()
     {
         let (local_proxy, local_request_stream) =
@@ -688,7 +688,7 @@ mod tests {
         assert_eq!(num_devices_registered, 1);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn handle_accessibility_view_registry_request_stream_propagates_request_to_downstream_service(
     ) {
         let (local_proxy, local_request_stream) = create_proxy_and_stream::<RegistryMarker>()
@@ -764,7 +764,7 @@ mod tests {
         assert_eq!(num_create_viewport_calls, 1);
     }
 
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn handle_element_manager_request_stream_propagates_request_to_downstream_service() {
         let (local_proxy, local_request_stream) = create_proxy_and_stream::<ElementManagerMarker>()
             .expect("Failed to create local ElementManager proxy and stream");

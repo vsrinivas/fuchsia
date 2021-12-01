@@ -63,6 +63,7 @@ rustc_library("lib") {
   ]
 
   test_deps = [
+    "//src/lib/fuchsia",
     "//src/lib/test_util",
     "//src/lib/ui/fuchsia-scenic",
     "//src/session/testing",
@@ -84,7 +85,7 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
