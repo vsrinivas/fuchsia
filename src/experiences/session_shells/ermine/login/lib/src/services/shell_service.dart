@@ -5,8 +5,9 @@
 import 'dart:async';
 
 import 'package:ermine_utils/ermine_utils.dart';
-import 'package:fidl_fuchsia_element/fidl_async.dart';
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
+import 'package:fidl_fuchsia_component/fidl_async.dart';
+import 'package:fidl_fuchsia_component_decl/fidl_async.dart';
+import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_scenic/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' hide FocusState;
@@ -16,7 +17,6 @@ import 'package:zircon/zircon.dart';
 
 /// Defines a service to launch and support Ermine user shell.
 class ShellService {
-  final _graphicalPresenter = GraphicalPresenterProxy();
   late final FuchsiaViewConnection _fuchsiaViewConnection;
   bool _focusRequested = false;
   late final StreamSubscription<bool> _focusSubscription;
@@ -34,55 +34,26 @@ class ShellService {
   bool get ready => _ready.value;
   final _ready = false.asObservable();
 
-  void advertise(Outgoing outgoing) {
-    outgoing.addPublicService((request) {
-      GraphicalPresenterBinding().bind(_graphicalPresenter, request);
-    }, GraphicalPresenter.$serviceName);
-  }
-
   void dispose() {
     _focusSubscription.cancel();
-    _graphicalPresenter.ctrl.close();
   }
 
   /// Launch Ermine shell and return [FuchsiaViewConnection].
   FuchsiaViewConnection launchErmineShell() {
     _focusSubscription = FocusState.instance.stream().listen(_onFocusChanged);
 
-    final incoming = Incoming();
-    final componentController = ComponentControllerProxy();
-    final elementManager = ManagerProxy();
+    // Connect to the Realm.
+    final realm = RealmProxy();
+    Incoming.fromSvcPath().connectToService(realm);
 
-    final launcher = LauncherProxy();
-    Incoming.fromSvcPath()
-      ..connectToService(elementManager)
-      ..connectToService(launcher)
-      ..close();
+    // Get the ermine shell's exposed /svc directory.
+    final exposedDir = DirectoryProxy();
+    realm.openExposedDir(
+        ChildRef(name: 'ermine_shell'), exposedDir.ctrl.request());
 
-    final binding = ServiceProviderBinding();
-    final provider = ServiceProviderImpl()
-      ..addServiceForName(
-        (request) => ManagerBinding().bind(elementManager, request),
-        Manager.$serviceName,
-      );
-
-    launcher.createComponent(
-      LaunchInfo(
-        url: 'fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx',
-        directoryRequest: incoming.request().passChannel(),
-        additionalServices: ServiceList(
-          names: [Manager.$serviceName],
-          provider: binding.wrap(provider),
-        ),
-      ),
-      componentController.ctrl.request(),
-    );
-    launcher.ctrl.close();
-
-    ViewProviderProxy viewProvider = ViewProviderProxy();
-    incoming
-      ..connectToService(viewProvider)
-      ..connectToService(_graphicalPresenter);
+    // Get the ermine shell's view provider.
+    final viewProvider = ViewProviderProxy();
+    Incoming.withDirectory(exposedDir).connectToService(viewProvider);
 
     if (_useFlatland) {
       final viewTokens = ChannelPair();
