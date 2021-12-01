@@ -33,6 +33,3 @@ toc:
 - title: "Hardware"
   section:
    - include: /docs/reference/hardware/_toc.yaml
-- title: "Documentation"
-  section:
-  - include: /docs/reference/documentation/_toc.yaml

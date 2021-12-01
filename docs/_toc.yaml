@@ -28,6 +28,9 @@ toc:
 - name: "Governance"
   contents:
   - include: /docs/contribute/governance/_toc.yaml
+- name: "Contribute to docs"
+  contents:
+  - include: /docs/contribute/docs/_toc.yaml
 - name: "Community"
   contents:
   - include: /docs/contribute/community/_toc.yaml

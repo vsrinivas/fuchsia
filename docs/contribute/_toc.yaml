@@ -31,9 +31,6 @@ toc:
 - title: "Platform testing"
   section:
     - include: /docs/contribute/testing/_toc.yaml
-- title: "Documentation"
-  section:
-  - include: /docs/contribute/docs/_toc.yaml
 - title: "Open projects"
   section:
   - include: /docs/contribute/open_projects/_toc.yaml

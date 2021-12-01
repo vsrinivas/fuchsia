@@ -169,5 +169,5 @@ Update the [state header][sh]
 [doc-standard]: /docs/contribute/docs/documentation-standards.md
 [style-guide]: /docs/contribute/docs/documentation-style-guide.md
 [google-dev-doc-style-guide]: https://developers.google.com/style
-[markdown-reference-links]: /docs/reference/documentation/markdown.md
+[markdown-reference-links]: /docs/contribute/docs/markdown.md
 [external-link-example]: http://example.com

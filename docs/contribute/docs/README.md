@@ -1,6 +1,6 @@
 {% import 'docs/_common/_doc_widgets.md' as widgets %}
 
-# Documentation reference
+# Contributing to documentation
 
 Pages on Fuchsia.dev are written in markdown (.md) and use the
 [Hoedown][hoedown-git]{: .external} markdown flavor.
@@ -11,7 +11,7 @@ The following pages list reference material for creating documentation for
 Fuchsia.dev:
 
 {% set tocmeta | yamlloads %}
-{% include "docs/reference/documentation/_toc.yaml" %}
+{% include "docs/contribute/docs/_toc.yaml" %}
 {% endset %}
 {{ widgets.inline_toc () }}
 

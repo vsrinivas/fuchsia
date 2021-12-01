@@ -1,6 +1,6 @@
 {% setvar example_url "fuchsia.dev" %}
 
-# Markdown style guide
+# Markdown reference guide
 
 Fuchsia.dev supports the markdown elements documented in this guide.
 
@@ -621,7 +621,7 @@ The following are optional parameters for `includecode`:
       <tr>
         <td><code>adjust_indentation</code></td>
         <td><b>Optional</b><br>
-          By default, <code>includecode</code> returns the specified section of the source code, 
+          By default, <code>includecode</code> returns the specified section of the source code,
           including whitespace. You can adjust the indentation of the code with the
           <code>adjust_indentation</code> option.
           <br><br><code>adjust_indentation</code> takes two possible values:
