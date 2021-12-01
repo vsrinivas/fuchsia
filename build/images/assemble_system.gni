@@ -851,6 +851,13 @@ template("assemble_system") {
       # This barrier prevents a Assembly#1 from including a depending Assembly#2
       # packages in the package sets (base, cache, system) for Assembly#1.
       assembly_package_barrier = []
+
+      assembly_inputs_barrier = []
+      assembly_inputs = [
+        {
+          path = rebase_path(files.assembly_inputs, root_build_dir)
+        },
+      ]
     }
 
     # Note: "${image_name}_route_sources_verify_files" dependency on pm-publish

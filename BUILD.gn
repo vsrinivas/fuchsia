@@ -108,6 +108,7 @@ build_api_module("api") {
     ":binaries",
     ":build_info",
     ":checkout_artifacts",
+    ":cipd_assembly_artifacts",
     ":clippy_target_mapping",
     ":fuzzers",
     ":generated_sources",
@@ -973,6 +974,31 @@ create_all_drivers_doc("create-all-drivers-doc") {
     "//build/images:default-images",
     "//build/images:packages",
   ]
+}
+
+# Provides a flat list of the artifacts needed for assembly, which should be
+# uploaded to CIPD.
+#
+# Type: list(scope)
+#
+#   * path
+#     - Required: Path to the artifacts file
+#     - Type: path relative to $root_build_dir
+#
+# An artifacts file has the JSON format:
+#
+# [
+#   {
+#     "source": "/path/on/host/file.txt",
+#     "destination": "path/in/cipd/package/file.txt"
+#   },
+# ]
+#
+build_api_module("cipd_assembly_artifacts") {
+  testonly = true
+  data_keys = [ "assembly_inputs" ]
+  walk_keys = [ "assembly_inputs_barrier" ]
+  deps = [ "//build/images/fuchsia:fuchsia_assembly" ]
 }
 
 ###
