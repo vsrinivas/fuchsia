@@ -20,12 +20,12 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
 }
 
 fn get_mock_out_param_types(m: &Method, ir: &FidlIr) -> Result<String, Error> {
-    if !m.has_response || m.maybe_response.as_ref().unwrap().is_empty() {
+    if !m.has_response || m.response_parameters(ir)?.as_ref().unwrap().is_empty() {
         Ok("void".to_string())
     } else {
         Ok(format!(
             "std::tuple<{}>",
-            m.maybe_response
+            m.response_parameters(ir)?
                 .as_ref()
                 .unwrap()
                 .iter()
@@ -61,13 +61,13 @@ fn get_mock_params(m: &Method, ir: &FidlIr) -> Result<String, Error> {
         params.push(format!(
             "{} out_{}",
             return_param,
-            m.maybe_response.as_ref().unwrap()[0].name.0
+            m.response_parameters(ir)?.as_ref().unwrap()[0].name.0
         ));
     }
 
     Ok(params
         .into_iter()
-        .chain(m.maybe_request.as_ref().unwrap_or(&Vec::new()).iter().map(|param| {
+        .chain(m.request_parameters(ir)?.as_ref().unwrap_or(&Vec::new()).iter().map(|param| {
             let name = &to_c_name(&param.name.0);
             if let Some(arg_type) = get_base_type_from_alias(
                 &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
@@ -88,7 +88,7 @@ fn get_mock_params(m: &Method, ir: &FidlIr) -> Result<String, Error> {
             }
         }))
         .chain(
-            m.maybe_response
+            m.response_parameters(ir)?
                 .as_ref()
                 .unwrap_or(&Vec::new())
                 .iter()
@@ -119,12 +119,12 @@ fn get_mock_params(m: &Method, ir: &FidlIr) -> Result<String, Error> {
         .join(", "))
 }
 
-fn get_mock_expect_args(m: &Method) -> Result<String, Error> {
+fn get_mock_expect_args(m: &Method, ir: &FidlIr) -> Result<String, Error> {
     let mut args = Vec::new();
-    if m.has_response && !m.maybe_response.as_ref().unwrap().is_empty() {
+    if m.has_response && !m.response_parameters(ir)?.as_ref().unwrap().is_empty() {
         args.push(format!(
             "{{{}}}",
-            m.maybe_response
+            m.response_parameters(ir)?
                 .as_ref()
                 .unwrap()
                 .iter()
@@ -144,7 +144,7 @@ fn get_mock_expect_args(m: &Method) -> Result<String, Error> {
 
     Ok(args
         .into_iter()
-        .chain(m.maybe_request.as_ref().unwrap_or(&Vec::new()).iter().map(|param| {
+        .chain(m.request_parameters(ir)?.as_ref().unwrap_or(&Vec::new()).iter().map(|param| {
             let name = &to_c_name(&param.name.0);
             match param._type {
                 Type::Handle { .. } => format!("{}.get()", name),
@@ -159,7 +159,7 @@ fn get_mock_expect_args(m: &Method) -> Result<String, Error> {
 
 fn get_mock_param_types(m: &Method, ir: &FidlIr) -> Result<String, Error> {
     Ok(iter::once(get_mock_out_param_types(m, ir)?)
-        .chain(m.maybe_request.as_ref().unwrap_or(&Vec::new()).iter().map(|param| {
+        .chain(m.request_parameters(ir)?.as_ref().unwrap_or(&Vec::new()).iter().map(|param| {
             if let Some(arg_type) = get_base_type_from_alias(
                 &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
             ) {
@@ -227,7 +227,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
                     method_name = m.name.0,
                     params = get_mock_params(&m, ir)?,
                     method_name_snake = to_c_name(&m.name.0).as_str(),
-                    args = get_mock_expect_args(&m)?,
+                    args = get_mock_expect_args(&m, ir)?,
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()
@@ -250,7 +250,8 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
         let mut accum = String::new();
 
         if m.has_response {
-            let response = m.maybe_response.as_ref().unwrap();
+            let params = m.response_parameters(ir)?;
+            let response = params.as_ref().unwrap();
             for i in skip_amt..response.len() {
                 let name = to_c_name(&response[i].name.0);
                 match &response[i]._type {
@@ -328,7 +329,8 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
         out_args.push("cookie".to_string());
 
         if m.has_response {
-            let response = m.maybe_response.as_ref().unwrap();
+            let params = m.response_parameters(ir)?;
+            let response = params.as_ref().unwrap();
             for i in 0..response.len() {
                 match &response[i]._type {
                     Type::Handle { .. } => {
@@ -387,7 +389,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
                 );
 
                 let in_args = m
-                    .maybe_request
+                    .request_parameters(ir)?
                     .as_ref()
                     .unwrap_or(&Vec::new())
                     .iter()
@@ -441,7 +443,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
 
                 accum.push_str("        ");
 
-                if m.has_response && !m.maybe_response.as_ref().unwrap().is_empty() {
+                if m.has_response && !m.response_parameters(ir)?.as_ref().unwrap().is_empty() {
                     accum
                         .push_str(format!("{} ret = ", get_mock_out_param_types(&m, ir)?).as_str());
                 }
@@ -504,19 +506,21 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
         declarations.iter().filter_map(filter_protocol).for_each(|data| {
             data.methods.iter().for_each(|method| {
                 if method.has_request {
-                    method.maybe_request.as_ref().unwrap().iter().for_each(|param| {
-                        match param._type {
+                    method.request_parameters(ir).unwrap().as_ref().unwrap().iter().for_each(
+                        |param| match param._type {
                             Type::Str { .. } => need_cpp_string_header = true,
                             Type::Vector { .. } => need_cpp_vector_header = true,
                             _ => {}
-                        }
-                    });
+                        },
+                    );
                 }
 
-                if method.has_response && !method.maybe_response.as_ref().unwrap().is_empty() {
+                if method.has_response
+                    && !method.response_parameters(ir).unwrap().as_ref().unwrap().is_empty()
+                {
                     need_cpp_tuple_header = true;
-                    method.maybe_response.as_ref().unwrap().iter().for_each(|param| {
-                        match param._type {
+                    method.response_parameters(ir).unwrap().as_ref().unwrap().iter().for_each(
+                        |param| match param._type {
                             Type::Str { .. } => {
                                 need_cpp_string_header = true;
                                 if !method.maybe_attributes.has("Async") {
@@ -525,8 +529,8 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
                             }
                             Type::Vector { .. } => need_cpp_vector_header = true,
                             _ => {}
-                        }
-                    });
+                        },
+                    );
                 }
             })
         });

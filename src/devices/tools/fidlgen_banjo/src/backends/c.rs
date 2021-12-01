@@ -233,7 +233,7 @@ fn field_to_c_str(
 }
 
 fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), Error> {
-    if let Some(response) = &method.maybe_response {
+    if let Some(response) = &method.response_parameters(ir)? {
         if let Some(param) = response.get(0) {
             if let Some(arg_type) = get_base_type_from_alias(
                 &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
@@ -249,10 +249,7 @@ fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), Error
 }
 
 fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>, Error> {
-    if m.maybe_request == None {
-        return Ok(vec![]);
-    }
-    m.maybe_request
+    m.request_parameters(ir)?
         .as_ref()
         .unwrap()
         .iter()
@@ -344,7 +341,7 @@ fn get_out_params(name: &str, m: &Method, ir: &FidlIr) -> Result<(Vec<String>, S
     let skip_amt = if skip { 1 } else { 0 };
 
     Ok((
-        m.maybe_response.as_ref()
+        m.response_parameters(ir)?.as_ref()
             .map_or(Vec::new(), |response| {
                 response.iter().skip(skip_amt)
                 .map(|param| {
@@ -398,7 +395,7 @@ fn get_out_params(name: &str, m: &Method, ir: &FidlIr) -> Result<(Vec<String>, S
 }
 
 fn get_in_args(m: &Method, _ir: &FidlIr) -> Result<Vec<String>, Error> {
-    if let Some(request) = &m.maybe_request {
+    if let Some(request) = &m.request_parameters(_ir)? {
         return request
             .iter()
             .map(|param| match &param._type {
@@ -423,7 +420,7 @@ fn get_out_args(m: &Method, ir: &FidlIr) -> Result<(Vec<String>, bool), Error> {
     let (skip, _) = get_first_param(m, ir)?;
     let skip_amt = if skip { 1 } else { 0 };
     Ok((
-        m.maybe_response.as_ref().map_or(Vec::new(), |response| {
+        m.response_parameters(ir)?.as_ref().map_or(Vec::new(), |response| {
             response
                 .iter()
                 .skip(skip_amt)
@@ -722,7 +719,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 let (out_args, skip) = get_out_args(&m, ir)?;
                 let in_args = get_in_args(&m, ir)?;
 
-                if let Some(request) = &m.maybe_request {
+                if let Some(request) = &m.request_parameters(ir)? {
                     let proto_args = request
                         .iter()
                         .filter_map(|param| {
@@ -820,8 +817,8 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .filter(|method| method.maybe_attributes.has("Async"))
             .map(|method| {
                 let mut temp_method = method.clone();
-                temp_method.maybe_request = method.maybe_response.clone();
-                temp_method.maybe_response = None;
+                temp_method.maybe_request_payload = method.maybe_response_payload.clone();
+                temp_method.maybe_response_payload = None;
                 let in_params = get_in_params(&temp_method, true, ir)?;
                 let params = iter::once("void* ctx".to_string())
                     .chain(in_params)

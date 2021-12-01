@@ -11,6 +11,7 @@ use {
     regex::Regex,
     serde::{Deserialize, Deserializer, Serialize},
     std::collections::BTreeMap,
+    std::ops::Add,
     std::string::ToString,
 };
 
@@ -41,9 +42,25 @@ where
     Ok(ordinal)
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(transparent)]
 pub struct Count(pub u32);
+
+impl Add for Count {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Count(self.0 + rhs.0)
+    }
+}
+
+impl Add<u32> for Count {
+    type Output = Self;
+
+    fn add(self, rhs: u32) -> Self::Output {
+        Count(self.0 + rhs)
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
@@ -413,17 +430,6 @@ pub struct FieldShape {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct MethodParameter {
-    pub maybe_attributes: Option<Vec<Attribute>>,
-    #[serde(rename = "type")]
-    pub _type: Type,
-    pub name: Identifier,
-    pub location: Option<Location>,
-    pub field_shape_v1: FieldShape,
-    pub experimental_maybe_from_type_alias: Option<TypeConstructor>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TypeShape {
     pub inline_size: Count,
     pub alignment: Count,
@@ -433,6 +439,14 @@ pub struct TypeShape {
     pub has_padding: bool,
     pub has_flexible_envelope: bool,
 }
+pub struct MethodParameter<'a> {
+    pub field_shape_v1: FieldShape,
+    pub maybe_attributes: &'a Option<Vec<Attribute>>,
+    pub _type: &'a Type,
+    pub name: &'a Identifier,
+    pub location: &'a Option<Location>,
+    pub experimental_maybe_from_type_alias: &'a Option<FieldTypeConstructor>,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Method {
@@ -441,11 +455,9 @@ pub struct Method {
     pub name: Identifier,
     pub location: Option<Location>,
     pub has_request: bool,
-    pub maybe_request: Option<Vec<MethodParameter>>,
-    pub maybe_request_type_shape_v1: Option<TypeShape>,
+    pub maybe_request_payload: Option<Type>,
     pub has_response: bool,
-    pub maybe_response: Option<Vec<MethodParameter>>,
-    pub maybe_response_type_shape_v1: Option<TypeShape>,
+    pub maybe_response_payload: Option<Type>,
     pub is_composed: bool,
 }
 
@@ -706,6 +718,67 @@ impl FidlIr {
                     .ok_or(anyhow!("Could not find declaration: {:?}", identifier))
                     .map(|_| true)
             })
+    }
+}
+
+fn get_payload_parameters<'a>(
+    has_payload: bool,
+    payload: Option<&'a Type>,
+    ir: &'a FidlIr,
+) -> Result<Option<Vec<MethodParameter<'a>>>, Error> {
+    if !has_payload {
+        return Ok(None);
+    }
+    if payload.is_none() {
+        return Ok(Some(vec![]));
+    }
+
+    let identifier = match payload.unwrap() {
+        Type::Identifier { ref identifier, .. } => Ok(identifier),
+        _ => Err(anyhow!("payload must be an identifier type: {:?}", payload)),
+    }?;
+    let decl = ir.get_declaration(identifier)?;
+
+    match decl {
+        Declaration::Struct => {
+            let mut out = vec![];
+            let struct_decl = ir.get_struct(identifier)?;
+
+            // Flatten the struct members into method parameters.
+            for member in &struct_decl.members {
+                let offset_field_shape = FieldShape {
+                    offset: member.field_shape_v1.offset + 16,
+                    padding: member.field_shape_v1.padding,
+                };
+                out.push(MethodParameter {
+                    maybe_attributes: &member.maybe_attributes,
+                    _type: &member._type,
+                    name: &member.name,
+                    location: &member.location,
+                    field_shape_v1: offset_field_shape,
+                    experimental_maybe_from_type_alias: &member.experimental_maybe_from_type_alias,
+                });
+            }
+            Ok(Some(out))
+        }
+        // TODO(fxbug.dev/88343): add support for union and table with no flattening.
+        _ => Err(anyhow!("payload must point to a struct type: {:?}", payload)),
+    }
+}
+
+impl Method {
+    pub fn request_parameters<'a>(
+        &'a self,
+        ir: &'a FidlIr,
+    ) -> Result<Option<Vec<MethodParameter<'a>>>, Error> {
+        get_payload_parameters(self.has_request, self.maybe_request_payload.as_ref(), ir)
+    }
+
+    pub fn response_parameters<'a>(
+        &'a self,
+        ir: &'a FidlIr,
+    ) -> Result<Option<Vec<MethodParameter<'a>>>, Error> {
+        get_payload_parameters(self.has_response, self.maybe_response_payload.as_ref(), ir)
     }
 }
 

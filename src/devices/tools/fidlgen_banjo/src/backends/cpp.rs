@@ -22,7 +22,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 }
 
 fn get_in_args(m: &Method, wrappers: bool, ir: &FidlIr) -> Result<Vec<String>, Error> {
-    Ok(m.maybe_request
+    Ok(m.request_parameters(ir)?
         .as_ref()
         .unwrap_or(&Vec::new())
         .iter()
@@ -60,7 +60,7 @@ fn get_out_args(m: &Method, client: bool, ir: &FidlIr) -> Result<(Vec<String>, b
     let (skip, _) = get_first_param(m, ir)?;
     let skip_amt = if skip { 1 } else { 0 };
     Ok((
-        m.maybe_response
+        m.response_parameters(ir)?
             .as_ref()
             .unwrap_or(&Vec::new())
             .iter()
@@ -188,7 +188,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 vec![]
             } else {
                 let skip_amt = if skip { 1 } else { 0 };
-                m.maybe_response.as_ref().unwrap_or(&Vec::new()).iter().skip(skip_amt).filter_map(|param| {
+                m.response_parameters(ir)?.as_ref().unwrap_or(&Vec::new()).iter().skip(skip_amt).filter_map(|param| {
                     match &param._type {
                         Type::Handle {..} => Some((to_c_name(&param.name.0), type_to_cpp_str(&param._type, true, ir).unwrap())),
                         _ => None
@@ -252,7 +252,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 let in_args = get_in_args(&m, false, ir)?;
 
                 let proto_args = m
-                    .maybe_request
+                    .request_parameters(ir)?
                     .as_ref()
                     .unwrap_or(&Vec::new())
                     .iter()
@@ -367,7 +367,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     }
 
     fn codegen_includes(&self, declarations: &Vec<Decl<'_>>, ir: &FidlIr) -> Result<String, Error> {
-        let empty_params: Vec<MethodParameter> = vec![];
+        let empty_params: Vec<MethodParameter<'_>> = vec![];
         let mut includes = vec![
             "lib/ddk/device".to_string(),
             "lib/ddk/driver".to_string(),
@@ -402,7 +402,9 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     // Find all handle in/out params in each method.
                     methods.iter().flat_map(|method| {
                         method
-                            .maybe_request
+                            .request_parameters(ir)
+                            .as_ref()
+                            .unwrap()
                             .as_ref()
                             .unwrap_or(&empty_params)
                             .iter()
@@ -412,7 +414,9 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                             })
                             .chain(
                                 method
-                                    .maybe_response
+                                    .response_parameters(ir)
+                                    .as_ref()
+                                    .unwrap()
                                     .as_ref()
                                     .unwrap_or(&empty_params)
                                     .iter()
@@ -422,6 +426,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                                     }),
                             )
                             .map(|ty| handle_type_to_cpp_str(ty))
+                            .collect::<Vec<_>>()
                     })
                 })
                 // Place into set to remove duplicates.

@@ -438,7 +438,7 @@ pub fn get_base_type_from_alias(alias: &Option<&String>) -> Option<String> {
 }
 
 pub fn get_first_param(method: &Method, ir: &FidlIr) -> Result<(bool, String), Error> {
-    if let Some(response) = &method.maybe_response {
+    if let Some(response) = &method.response_parameters(ir)? {
         if let Some(param) = response.get(0) {
             if let Some(arg_type) = get_base_type_from_alias(
                 &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
@@ -462,7 +462,8 @@ pub fn get_in_params(
     if !m.has_request {
         return Ok(vec![]);
     }
-    m.maybe_request
+
+    m.request_parameters(ir)?
         .as_ref()
         .unwrap()
         .iter()
@@ -555,7 +556,7 @@ pub fn get_out_params(
     let (skip, return_param) = get_first_param(m, ir)?;
     let skip_amt = if skip { 1 } else { 0 };
 
-    Ok((m.maybe_response.as_ref().map_or(Vec::new(), |response| { response.iter().skip(skip_amt).map(|param| {
+    Ok((m.response_parameters(ir)?.as_ref().map_or(Vec::new(), |response| { response.iter().skip(skip_amt).map(|param| {
         let name = to_c_name(&param.name.0);
         if let Some(arg_type) = get_base_type_from_alias(
             &param.experimental_maybe_from_type_alias.as_ref().map(|t| &t.name),
