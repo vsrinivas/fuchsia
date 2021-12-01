@@ -74,7 +74,7 @@ macro_rules! impl_test_realm_component {
                                 slf.clone(),
                             ))
                         },
-                        ChildProperties::new(),
+                        ChildOptions::new(),
                     )
                     .await
                     .unwrap();

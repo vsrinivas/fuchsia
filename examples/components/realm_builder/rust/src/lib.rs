@@ -14,7 +14,7 @@ use {
     fuchsia_component::server as fserver,
     // [END_EXCLUDE]
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
 };
 // [END import_statement_rust]
@@ -31,11 +31,11 @@ async fn make_echo_call() -> Result<(), Error> {
         .add_child(
             "a",
             "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_client.cm",
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         // Add component `b` to the realm, which is fetched using a relative URL.
-        .add_child("b", "#meta/echo_client.cm", ChildProperties::new())
+        .add_child("b", "#meta/echo_client.cm", ChildOptions::new())
         .await?;
     // [END add_component_rust]
 
@@ -45,7 +45,7 @@ async fn make_echo_call() -> Result<(), Error> {
         .add_legacy_child(
             "c",
             "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_client.cmx",
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?;
     // [END add_legacy_component_rust]
@@ -55,7 +55,7 @@ async fn make_echo_call() -> Result<(), Error> {
         .add_mock_child(
             "d",
             move |mock_handles: MockHandles| Box::pin(echo_server_mock(mock_handles)),
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?;
     // [END add_mock_component_rust]

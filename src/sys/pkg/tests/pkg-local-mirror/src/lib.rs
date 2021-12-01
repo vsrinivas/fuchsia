@@ -16,8 +16,7 @@ use {
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RealmInstance, RouteBuilder,
-        RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::Status,
@@ -76,7 +75,7 @@ impl TestEnvBuilder {
         // Create the component-under-test (pkg-local-mirror) child component.
         // This is the production component + manifest.
         builder
-            .add_child(COMPONENT_UNDER_TEST, PKG_LOCAL_MIRROR_URL, ChildProperties::new().eager())
+            .add_child(COMPONENT_UNDER_TEST, PKG_LOCAL_MIRROR_URL, ChildOptions::new().eager())
             .await
             .expect("component added");
 
@@ -97,7 +96,7 @@ impl TestEnvBuilder {
                     }
                     .boxed()
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .expect("mock component added");

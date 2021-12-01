@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
         DEFAULT_COLLECTION_NAME,
     },
     futures::{
@@ -83,7 +83,7 @@ async fn single_storage_user() {
     let (mock, done_signal) = new_data_user_mock("file", "data");
     let builder = RealmBuilder::new().await.unwrap();
     builder
-        .add_mock_child("storage-user", mock, ChildProperties::new().eager())
+        .add_mock_child("storage-user", mock, ChildOptions::new().eager())
         .await
         .unwrap()
         .add_route(
@@ -151,7 +151,7 @@ async fn multiple_storage_users() {
     for (mock_idx, mock) in mocks.into_iter().enumerate() {
         let mock_name = format!("storage-user-{:?}", mock_idx);
         builder
-            .add_mock_child(mock_name.as_str(), mock, ChildProperties::new().eager())
+            .add_mock_child(mock_name.as_str(), mock, ChildOptions::new().eager())
             .await
             .unwrap()
             .add_route(
@@ -197,7 +197,7 @@ async fn purged_storage_user() {
     let (mock, done_signal) = new_data_user_mock("file", "data");
     let builder = RealmBuilder::new().await.unwrap();
     builder
-        .add_mock_child("storage-user", mock, ChildProperties::new().eager())
+        .add_mock_child("storage-user", mock, ChildOptions::new().eager())
         .await
         .unwrap()
         .add_route(

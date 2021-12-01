@@ -8,7 +8,7 @@ use argh::FromArgs;
 use difference::{Changeset, Difference};
 use fuchsia_async as fasync;
 use fuchsia_component_test::{
-    ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
 };
 use fuchsia_zircon::{self as zx, DurationNum};
 use iquery::{command_line::CommandLine, commands::*, types::Error};
@@ -55,7 +55,7 @@ impl TestBuilder {
 
     async fn add_child(&mut self, name: &str, url: &str) -> &mut Self {
         self.builder
-            .add_child(name, url, ChildProperties::new().eager())
+            .add_child(name, url, ChildOptions::new().eager())
             .await
             .unwrap()
             .add_route(

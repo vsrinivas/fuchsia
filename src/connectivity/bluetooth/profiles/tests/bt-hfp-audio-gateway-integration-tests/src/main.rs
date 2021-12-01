@@ -17,8 +17,7 @@ use {
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_bluetooth::types::{Channel, PeerId, Uuid},
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RealmInstance, RouteBuilder,
-        RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon::Duration,
     futures::{channel::mpsc, stream::StreamExt, TryFutureExt},
@@ -168,7 +167,7 @@ async fn add_mock_a2dp_controller(builder: &RealmBuilder) {
         .add_child(
             MOCK_A2DP_CONTROLLER_MONIKER,
             MOCK_A2DP_CONTROLLER_URL.to_string(),
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding Mock A2DP Controller to topology");
@@ -207,7 +206,7 @@ async fn add_mock_audio_device_enumerator_provider(builder: &RealmBuilder) {
                         AudioDeviceEnumeratorRequest,
                     >(sender.clone(), mock_handles))
                 },
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .expect("Failed adding AudioDevice mock to topology");
@@ -234,7 +233,7 @@ async fn add_mock_dai_devices(builder: &RealmBuilder) {
                     mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
                 ))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding mock /dev provider to topology");

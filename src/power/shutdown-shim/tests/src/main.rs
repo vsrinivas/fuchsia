@@ -9,8 +9,7 @@ use {
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_sys2 as fsys,
     fuchsia_async as fasync,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RealmInstance, RouteBuilder,
-        RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future, StreamExt},
@@ -56,9 +55,9 @@ async fn new_realm(
     let (mocks_provider, recv_signals) = new_mocks_provider();
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child("shutdown-shim", SHUTDOWN_SHIM_URL, ChildProperties::new())
+        .add_child("shutdown-shim", SHUTDOWN_SHIM_URL, ChildOptions::new())
         .await?
-        .add_mock_child("mocks-server", mocks_provider, ChildProperties::new())
+        .add_mock_child("mocks-server", mocks_provider, ChildOptions::new())
         .await?
         // Give the shim logging
         .add_route(
@@ -118,7 +117,7 @@ async fn new_realm(
                             panic!("the black hole component should never return")
                         })
                     },
-                    ChildProperties::new(),
+                    ChildOptions::new(),
                 )
                 .await?;
             builder

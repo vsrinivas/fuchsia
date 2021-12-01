@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_media_sessions2::{DiscoveryMarker, DiscoveryRequest, SessionsWatcherProxy},
     fuchsia_async as fasync,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, SinkExt, StreamExt},
@@ -100,7 +100,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
     let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
     let _ = builder
-        .add_child("avrcp-target", AVRCP_TARGET_URL.to_string(), ChildProperties::new())
+        .add_child("avrcp-target", AVRCP_TARGET_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding avrcp-tg to topology");
     // Mock AVRCP component to receive PeerManager requests.
@@ -111,7 +111,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
                 let sender = avrcp_tx.clone();
                 Box::pin(mock_component::<PeerManagerMarker, _>(sender, mock_handles))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding avrcp mock to topology");
@@ -123,7 +123,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
                 let sender = media_tx.clone();
                 Box::pin(mock_component::<DiscoveryMarker, _>(sender, mock_handles))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding media session mock to topology");
@@ -135,7 +135,7 @@ async fn avrcp_tg_v2_connects_to_avrcp_service() {
                 let sender = fake_client_tx.clone();
                 Box::pin(mock_avrcp_target_client(sender, mock_handles))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding avrcp target client mock to topology");

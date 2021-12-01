@@ -6,7 +6,7 @@ use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_data as fdata, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::channel::mpsc,
     futures::prelude::*,
@@ -60,11 +60,7 @@ async fn build_reboot_on_terminate_realm(
     // The actual test runs in a nested component manager that is configured with
     // reboot_on_terminate_enabled.
     builder
-        .add_child(
-            "component_manager",
-            "#meta/component_manager.cm",
-            ChildProperties::new().eager(),
-        )
+        .add_child("component_manager", "#meta/component_manager.cm", ChildOptions::new().eager())
         .await
         .unwrap();
 
@@ -73,7 +69,7 @@ async fn build_reboot_on_terminate_realm(
         .add_mock_child(
             "trigger",
             move |mock_handles| Box::pin(trigger_mock(send_trigger_called.clone(), mock_handles)),
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .unwrap();

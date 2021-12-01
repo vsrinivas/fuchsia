@@ -25,7 +25,7 @@ use {
     fuchsia_component::client::{connect_channel_to_protocol, connect_to_protocol},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        error::Error as RealmBuilderError, mock::MockHandles, ChildProperties, Event, RealmBuilder,
+        error::Error as RealmBuilderError, mock::MockHandles, ChildOptions, Event, RealmBuilder,
         RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon as zx,
@@ -1418,25 +1418,21 @@ async fn get_realm(
 ) -> Result<RealmBuilder, RealmBuilderError> {
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child(WRAPPER_ROOT_REALM_PATH, test_url, ChildProperties::new().eager())
+        .add_child(WRAPPER_ROOT_REALM_PATH, test_url, ChildOptions::new().eager())
         .await?
         .add_mock_child(
             "mocks-server",
             move |mock_handles| Box::pin(serve_mocks(archive_accessor.clone(), mock_handles)),
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         .add_mock_child(
             ENCLOSING_ENV,
             move |mock_handles: MockHandles| Box::pin(gen_enclosing_env(mock_handles)),
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
-        .add_child(
-            ARCHIVIST_REALM_PATH,
-            ARCHIVIST_FOR_EMBEDDING_URL,
-            ChildProperties::new().eager(),
-        )
+        .add_child(ARCHIVIST_REALM_PATH, ARCHIVIST_FOR_EMBEDDING_URL, ChildOptions::new().eager())
         .await?
         .add_route(
             RouteBuilder::protocol_marker::<fsys::EventSourceMarker>()

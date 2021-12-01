@@ -15,7 +15,7 @@
 use {
     fidl_fidl_test_components as ftest, fidl_fuchsia_io2 as fio2,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
     futures::prelude::*,
 };
 
@@ -26,7 +26,7 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
         .add_child(
             "component-manager",
             "fuchsia-pkg://fuchsia.com/boot-resolver-routing-tests#meta/component_manager.cm",
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .unwrap();
@@ -48,7 +48,7 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
                 }
                 .boxed()
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .unwrap();

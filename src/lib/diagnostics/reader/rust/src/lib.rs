@@ -460,7 +460,7 @@ mod tests {
     use diagnostics_hierarchy::assert_data_tree;
     use fidl_fuchsia_diagnostics as fdiagnostics;
     use fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     };
     use fuchsia_zircon as zx;
     use futures::TryStreamExt;
@@ -471,7 +471,7 @@ mod tests {
     async fn start_component() -> Result<RealmInstance, anyhow::Error> {
         let builder = RealmBuilder::new().await?;
         builder
-            .add_child("test_component", TEST_COMPONENT_URL, ChildProperties::new().eager())
+            .add_child("test_component", TEST_COMPONENT_URL, ChildOptions::new().eager())
             .await?
             .add_route(
                 RouteBuilder::protocol("fuchsia.logger.LogSink")

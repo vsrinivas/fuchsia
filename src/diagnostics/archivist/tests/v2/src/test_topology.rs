@@ -7,7 +7,7 @@ use cm_rust;
 use cm_rust::{ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget};
 use fidl_fuchsia_io2 as fio2;
 use fuchsia_component_test::{
-    error::Error, ChildProperties, Event, Moniker, RealmBuilder, RouteBuilder, RouteEndpoint,
+    error::Error, ChildOptions, Event, Moniker, RealmBuilder, RouteBuilder, RouteEndpoint,
 };
 
 /// Options for creating a test topology.
@@ -26,7 +26,7 @@ impl Default for Options {
 pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child("test/archivist", opts.archivist_url, ChildProperties::new().eager())
+        .add_child("test/archivist", opts.archivist_url, ChildOptions::new().eager())
         .await?
         .add_route(
             RouteBuilder::protocol("fuchsia.logger.LogSink")
@@ -133,7 +133,7 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
 pub async fn add_eager_child(builder: &RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
     let path = format!("test/{}", name);
     builder
-        .add_child(path.as_ref(), url, ChildProperties::new().eager())
+        .add_child(path.as_ref(), url, ChildOptions::new().eager())
         .await?
         .add_route(
             RouteBuilder::protocol("fuchsia.logger.LogSink")
@@ -147,7 +147,7 @@ pub async fn add_eager_child(builder: &RealmBuilder, name: &str, url: &str) -> R
 pub async fn add_lazy_child(builder: &RealmBuilder, name: &str, url: &str) -> Result<(), Error> {
     let path = format!("test/{}", name);
     builder
-        .add_child(path.as_ref(), url, ChildProperties::new())
+        .add_child(path.as_ref(), url, ChildOptions::new())
         .await?
         .add_route(
             RouteBuilder::protocol("fuchsia.logger.LogSink")

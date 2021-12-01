@@ -36,7 +36,7 @@ mod tests {
         anyhow::Error,
         fidl_fuchsia_io2 as fio2, fuchsia,
         fuchsia_component_test::{
-            mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+            mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
         },
         futures::{channel::mpsc, SinkExt, StreamExt},
         realmbuilder_mock_helpers::mock_dev,
@@ -73,7 +73,7 @@ mod tests {
                         mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
                     ))
                 },
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .expect("Failed adding mock /dev provider to topology");
@@ -86,7 +86,7 @@ mod tests {
                     let s = device_sender.clone();
                     Box::pin(mock_client(mock_handles, s.clone()))
                 },
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .expect("Failed adding mock client to topology");

@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_pkg_testing::make_packages_json,
     fuchsia_zircon as zx,
@@ -136,9 +136,9 @@ impl TestEnvBuilder {
         builder
             .add_child("system_update_checker",
                 "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-checker.cm",
-                ChildProperties::new().eager()).await.unwrap()
+                ChildOptions::new().eager()).await.unwrap()
             .add_child("system_update_committer",
-                "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-committer.cm", ChildProperties::new().eager()).await.unwrap()
+                "fuchsia-pkg://fuchsia.com/system-update-checker-integration-tests#meta/system-update-committer.cm", ChildOptions::new().eager()).await.unwrap()
             .add_mock_child(
                 "fake_capabilities",
                 move |mock_handles| {
@@ -149,7 +149,7 @@ impl TestEnvBuilder {
                         Ok(())
                     }.boxed()
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             ).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
                 .source(RouteEndpoint::AboveRoot)

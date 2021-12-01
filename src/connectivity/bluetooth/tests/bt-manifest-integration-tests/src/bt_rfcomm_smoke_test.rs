@@ -9,7 +9,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::add_fidl_service_handler,
@@ -77,7 +77,7 @@ async fn rfcomm_v2_component_topology() {
     let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
     let _ = builder
-        .add_child("rfcomm", RFCOMM_URL.to_string(), ChildProperties::new())
+        .add_child("rfcomm", RFCOMM_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding rfcomm to topology");
     // Mock Profile component to receive bredr.Profile requests.
@@ -88,7 +88,7 @@ async fn rfcomm_v2_component_topology() {
                 let sender = profile_tx.clone();
                 Box::pin(mock_profile_component(sender, mock_handles))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding profile mock to topology");
@@ -100,7 +100,7 @@ async fn rfcomm_v2_component_topology() {
                 let sender = fake_client_tx.clone();
                 Box::pin(mock_rfcomm_client(sender, mock_handles))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding rfcomm client mock to topology");

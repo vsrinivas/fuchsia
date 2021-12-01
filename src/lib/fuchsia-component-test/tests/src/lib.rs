@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, Moniker, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, Moniker, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
     std::convert::TryInto,
@@ -46,14 +46,10 @@ async fn protocol_with_uncle_test() -> Result<(), Error> {
                     mock_handles,
                 ))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
-        .add_child(
-            "parent/echo-client",
-            V2_ECHO_CLIENT_ABSOLUTE_URL,
-            ChildProperties::new().eager(),
-        )
+        .add_child("parent/echo-client", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildOptions::new().eager())
         .await?
         .add_route(
             RouteBuilder::protocol("fidl.examples.routing.echo.Echo")
@@ -97,14 +93,14 @@ async fn protocol_with_siblings_test() -> Result<(), Error> {
                     mock_handles,
                 ))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         // Add the echo client with a URL source
         .add_child(
             "b",
             "fuchsia-pkg://fuchsia.com/fuchsia-component-test-tests#meta/echo_client.cm",
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         // Route the fidl.examples.routing.echo.Echo protocol from a to b
@@ -141,10 +137,10 @@ async fn examples() -> Result<(), Error> {
         let builder = RealmBuilder::new().await?;
         builder
             // Add component `a` to the realm, which will be fetched with a URL
-            .add_child("a", "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm", ChildProperties::new())
+            .add_child("a", "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm", ChildOptions::new())
             .await?
             // Add component `b` to the realm, which will be fetched with a URL
-            .add_child("b", "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm", ChildProperties::new())
+            .add_child("b", "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm", ChildOptions::new())
             .await?;
         // [END add_a_and_b_example]
 
@@ -163,9 +159,9 @@ async fn examples() -> Result<(), Error> {
     {
         let builder = RealmBuilder::new().await?;
         builder
-            .add_child("a", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildProperties::new())
+            .add_child("a", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildOptions::new())
             .await?
-            .add_child("b", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildProperties::new())
+            .add_child("b", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildOptions::new())
             .await?;
         // [START route_logsink_example]
         // Routes `fuchsia.logger.LogSink` from above root to `a` and `b`
@@ -180,7 +176,7 @@ async fn examples() -> Result<(), Error> {
     }
     {
         let builder = RealmBuilder::new().await?;
-        builder.add_child("b", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildProperties::new()).await?;
+        builder.add_child("b", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildOptions::new()).await?;
         // [START route_to_above_root_example]
         // Adds a route for the protocol capability
         // `fidl.examples.routing.echo.EchoClientStats` from `b` to the realm's parent
@@ -209,7 +205,7 @@ async fn examples() -> Result<(), Error> {
     #[allow(unused_mut)]
     {
         let builder = RealmBuilder::new().await?;
-        builder.add_child("a/b", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildProperties::new()).await?;
+        builder.add_child("a/b", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildOptions::new()).await?;
 
         // [START mutate_generated_manifest_example]
         let mut root_manifest = builder.get_decl(Moniker::root()).await?;
@@ -230,11 +226,7 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
 
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child(
-            "parent-1/echo-client",
-            V2_ECHO_CLIENT_ABSOLUTE_URL,
-            ChildProperties::new().eager(),
-        )
+        .add_child("parent-1/echo-client", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildOptions::new().eager())
         .await?
         .add_mock_child(
             "parent-2/echo-server",
@@ -245,7 +237,7 @@ async fn protocol_with_cousins_test() -> Result<(), Error> {
                     mock_handles,
                 ))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         .add_route(
@@ -284,13 +276,13 @@ async fn mock_component_with_a_child() -> Result<(), Error> {
                     mock_handles,
                 ))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         .add_child(
             "echo-server/echo-client",
             V2_ECHO_CLIENT_ABSOLUTE_URL,
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         .add_route(
@@ -371,7 +363,7 @@ async fn mock_component_with_a_relative_dynamic_child() -> Result<(), Error> {
                     Ok(())
                 })
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?;
     let mut echo_client_decl = builder.get_decl("echo-client").await?;
@@ -409,7 +401,7 @@ async fn mock_component_with_a_relative_dynamic_child() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn relative_echo_realm() -> Result<(), Error> {
     let builder = RealmBuilder::new().await?;
-    builder.add_child(Moniker::root(), "#meta/echo_realm.cm", ChildProperties::new()).await?;
+    builder.add_child(Moniker::root(), "#meta/echo_realm.cm", ChildOptions::new()).await?;
     // This route will result in the imported echo_realm exposing this protocol, whereas before
     // it only offered it to echo_client
     builder
@@ -435,7 +427,7 @@ async fn altered_echo_client_args() -> Result<(), Error> {
 
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child("echo_client", V2_ECHO_CLIENT_RELATIVE_URL, ChildProperties::new())
+        .add_child("echo_client", V2_ECHO_CLIENT_RELATIVE_URL, ChildOptions::new())
         .await?
         .add_mock_child(
             "echo_server",
@@ -446,7 +438,7 @@ async fn altered_echo_client_args() -> Result<(), Error> {
                     mock_handles,
                 ))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?;
     builder
@@ -492,7 +484,7 @@ async fn setup_echo_client_realm(builder: &RealmBuilder) -> Result<mpsc::Receive
             move |h| {
                 Box::pin(echo_server_mock(DEFAULT_ECHO_STR, send_echo_server_called.clone(), h))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         .add_route(
@@ -519,7 +511,7 @@ async fn echo_clients() -> Result<(), Error> {
     // confirming that each client successfully connects to the server.
 
     let client_name = "echo-client";
-    let child_props = ChildProperties::new().eager();
+    let child_props = ChildOptions::new().eager();
     {
         let builder = RealmBuilder::new().await?;
         builder.add_legacy_child(client_name, V1_ECHO_CLIENT_URL, child_props.clone()).await?;
@@ -600,7 +592,7 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
     {
         let builder = RealmBuilder::new().await?;
         builder
-            .add_legacy_child("echo-client", V1_ECHO_CLIENT_URL, ChildProperties::new().eager())
+            .add_legacy_child("echo-client", V1_ECHO_CLIENT_URL, ChildOptions::new().eager())
             .await?;
         let mut receive_echo_server_called = setup_echo_client_realm(&builder).await?;
         let realm_instance =
@@ -617,7 +609,7 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
     {
         let builder = RealmBuilder::new().await?;
         builder
-            .add_child("echo-client", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildProperties::new().eager())
+            .add_child("echo-client", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildOptions::new().eager())
             .await?;
         let mut receive_echo_server_called = setup_echo_client_realm(&builder).await?;
         let realm_instance =
@@ -634,7 +626,7 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
     {
         let builder = RealmBuilder::new().await?;
         builder
-            .add_child("echo-client", V2_ECHO_CLIENT_RELATIVE_URL, ChildProperties::new().eager())
+            .add_child("echo-client", V2_ECHO_CLIENT_RELATIVE_URL, ChildOptions::new().eager())
             .await?;
         let mut receive_echo_server_called = setup_echo_client_realm(&builder).await?;
         let realm_instance =
@@ -656,7 +648,7 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
             .add_mock_child(
                 "echo-client",
                 move |h| Box::pin(echo_client_mock(send_echo_client_results.clone(), h)),
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await?;
         let mut receive_echo_server_called = setup_echo_client_realm(&builder).await?;
@@ -685,7 +677,7 @@ async fn setup_echo_server_realm(builder: &RealmBuilder) -> Result<mpsc::Receive
         .add_mock_child(
             "echo-client",
             move |h| Box::pin(echo_client_mock(send_echo_client_results.clone(), h)),
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         .add_route(
@@ -709,7 +701,7 @@ async fn setup_echo_server_realm(builder: &RealmBuilder) -> Result<mpsc::Receive
 #[fasync::run_singlethreaded(test)]
 async fn echo_servers() -> Result<(), Error> {
     let server_name = "echo-server";
-    let child_props = ChildProperties::new().eager();
+    let child_props = ChildOptions::new().eager();
 
     {
         let builder = RealmBuilder::new().await?;
@@ -805,10 +797,10 @@ async fn protocol_with_use_from_url_child_test() -> Result<(), Error> {
                     Ok(())
                 })
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
-        .add_child("echo-client/echo-server", V2_ECHO_SERVER_ABSOLUTE_URL, ChildProperties::new())
+        .add_child("echo-client/echo-server", V2_ECHO_SERVER_ABSOLUTE_URL, ChildOptions::new())
         .await?
         .add_route(
             RouteBuilder::protocol("fidl.examples.routing.echo.Echo")
@@ -846,7 +838,7 @@ async fn protocol_with_use_from_mock_child_test() -> Result<(), Error> {
                     Ok(())
                 })
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         .add_mock_child(
@@ -858,7 +850,7 @@ async fn protocol_with_use_from_mock_child_test() -> Result<(), Error> {
                     mock_handles,
                 ))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         .add_route(
@@ -892,12 +884,12 @@ async fn force_route_echo_server() -> Result<(), Error> {
 
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child("echo-server", "#meta/echo_server_empty.cm", ChildProperties::new())
+        .add_child("echo-server", "#meta/echo_server_empty.cm", ChildOptions::new())
         .await?
         .add_mock_child(
             "echo-client",
             move |h| Box::pin(echo_client_mock(send_echo_client_results.clone(), h)),
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         .add_route(
@@ -935,7 +927,7 @@ async fn force_route_echo_client() -> Result<(), Error> {
 
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child("echo-client", "#meta/echo_client_empty.cm", ChildProperties::new().eager())
+        .add_child("echo-client", "#meta/echo_client_empty.cm", ChildOptions::new().eager())
         .await?
         .add_mock_child(
             "echo-server",
@@ -946,7 +938,7 @@ async fn force_route_echo_client() -> Result<(), Error> {
                     mock_handles,
                 ))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         .add_route(
@@ -984,7 +976,7 @@ async fn no_force_doesnt_modify_package_local() -> Result<(), Error> {
 
     let builder = RealmBuilder::new().await?;
     builder
-        .add_child("echo-server", "#meta/echo_server_empty.cm", ChildProperties::new().eager())
+        .add_child("echo-server", "#meta/echo_server_empty.cm", ChildOptions::new().eager())
         .await?
         .add_mock_child(
             "echo-client",
@@ -1004,7 +996,7 @@ async fn no_force_doesnt_modify_package_local() -> Result<(), Error> {
                     Ok(())
                 })
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         .add_route(

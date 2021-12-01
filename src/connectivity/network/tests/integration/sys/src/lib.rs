@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_netstack as fnetstack,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon as zx,
     futures::{FutureExt as _, StreamExt as _},
@@ -65,7 +65,7 @@ async fn start_with_cache_no_space() {
 
     let builder = RealmBuilder::new().await.expect("failed to create realm builder");
     let _: &RealmBuilder = builder
-        .add_child(NETSTACK_MONIKER, Netstack2::VERSION.get_url(), ChildProperties::new())
+        .add_child(NETSTACK_MONIKER, Netstack2::VERSION.get_url(), ChildOptions::new())
         .await
         .expect("failed to add netstack component")
         .add_route(
@@ -103,7 +103,7 @@ async fn start_with_cache_no_space() {
                     Ok(())
                 })
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("failed to add mock cache component");

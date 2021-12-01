@@ -480,11 +480,14 @@ impl RealmInstance {
 
 /// The properties for a child being added to a realm
 #[derive(Debug, Clone)]
-pub struct ChildProperties {
+pub struct ChildOptions {
     startup: fdecl::StartupMode,
 }
 
-impl ChildProperties {
+// This is a temporary alias to support a soft migration from ChildProperties to ChildOptions.
+pub type ChildProperties = ChildOptions;
+
+impl ChildOptions {
     pub fn new() -> Self {
         Self { startup: fdecl::StartupMode::Lazy }
     }
@@ -519,12 +522,12 @@ impl ChildProperties {
 ///     .add_child(
 ///         "c",
 ///         "fuchsia-pkg://fuchsia.com/d#meta/d.cm",
-///         ChildProperties::new(),
+///         ChildOptions::new(),
 ///     ).await?
 ///     .add_mock_child(
 ///         "b",
 ///         move |h: MockHandles| { Box::pin(implementation_for_b(h)) },
-///         ChildProperties::new(),
+///         ChildOptions::new(),
 ///     ).await?
 ///     .add_route(
 ///         RouteBuilder::protocol("fuchsia.foobar")
@@ -605,7 +608,7 @@ impl RealmBuilder {
         &self,
         moniker: impl Into<Moniker>,
         mock_fn: M,
-        properties: ChildProperties,
+        properties: ChildOptions,
     ) -> Result<&Self, Error>
     where
         M: Fn(mock::MockHandles) -> BoxFuture<'static, Result<(), anyhow::Error>>
@@ -639,7 +642,7 @@ impl RealmBuilder {
         &self,
         moniker: impl Into<Moniker>,
         url: impl Into<String>,
-        properties: ChildProperties,
+        properties: ChildOptions,
     ) -> Result<&Self, Error> {
         let moniker: Moniker = moniker.into();
         if self.contains(moniker.clone()).await? {
@@ -664,7 +667,7 @@ impl RealmBuilder {
         &self,
         moniker: impl Into<Moniker>,
         legacy_url: impl Into<String>,
-        properties: ChildProperties,
+        properties: ChildOptions,
     ) -> Result<&Self, Error> {
         let moniker: Moniker = moniker.into();
         if self.contains(moniker.clone()).await? {
@@ -692,7 +695,7 @@ impl RealmBuilder {
         &self,
         moniker: impl Into<Moniker>,
         decl: cm_rust::ComponentDecl,
-        properties: ChildProperties,
+        properties: ChildOptions,
     ) -> Result<&Self, Error> {
         let moniker: Moniker = moniker.into();
         if self.contains(moniker.clone()).await? {
@@ -843,7 +846,7 @@ impl RealmBuilder {
             .add_child(
                 Moniker::root(),
                 component_manager_relative_url.to_string(),
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await?;
         let mut component_manager_decl = component_manager_realm.get_decl(Moniker::root()).await?;
@@ -1190,12 +1193,12 @@ mod tests {
     async fn double_add_a_component() {
         let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cm", ChildProperties::new())
+            .add_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cm", ChildOptions::new())
             .await
             .unwrap();
 
         let res = builder
-            .add_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cm", ChildProperties::new())
+            .add_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cm", ChildOptions::new())
             .await;
         assert_matches!(
             res,
@@ -1206,18 +1209,18 @@ mod tests {
             .add_mock_child(
                 "a",
                 |_h: mock::MockHandles| async move { Ok(()) }.boxed(),
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await;
         assert_matches!(res, Err(Error::Builder(BuilderError::ComponentAlreadyExists(_))));
 
         let res = builder
-            .add_legacy_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cmx", ChildProperties::new())
+            .add_legacy_child("a", "fuchsia-pkg://fuchsia.com/a#meta/a.cmx", ChildOptions::new())
             .await;
         assert_matches!(res, Err(Error::Builder(BuilderError::ComponentAlreadyExists(_))));
 
         let res = builder
-            .add_child_from_decl("a", cm_rust::ComponentDecl::default(), ChildProperties::new())
+            .add_child_from_decl("a", cm_rust::ComponentDecl::default(), ChildOptions::new())
             .await;
         assert_matches!(res, Err(Error::Builder(BuilderError::ComponentAlreadyExists(_))));
     }
@@ -1248,7 +1251,7 @@ mod tests {
                         Ok(())
                     })
                 },
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .expect("failed to add component_1")
@@ -1264,7 +1267,7 @@ mod tests {
                         Ok(())
                     })
                 },
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .expect("failed to add component_2");
@@ -1318,7 +1321,7 @@ mod tests {
                         Ok(())
                     })
                 },
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .expect("failed to add component_1");
@@ -1354,7 +1357,7 @@ mod tests {
                         Ok(())
                     })
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .expect("failed to add component_1");

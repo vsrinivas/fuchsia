@@ -213,7 +213,7 @@ mod tests {
         fuchsia_async as fasync,
         fuchsia_component::server as fserver,
         fuchsia_component_test::{
-            mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+            mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
         },
         fuchsia_zircon::Vmo,
         futures::{channel::mpsc, join, lock::Mutex},
@@ -294,7 +294,7 @@ mod tests {
             "fuchsia-pkg://fuchsia.com/test-pkg-request#meta/test-component.cm".to_string();
         let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
         builder
-            .add_child("universe-resolver", resolver_url, ChildProperties::new())
+            .add_child("universe-resolver", resolver_url, ChildOptions::new())
             .await
             .expect("Failed add universe-resolver to test topology")
             .add_mock_child(
@@ -305,7 +305,7 @@ mod tests {
                         Box::pin(mock_pkg_resolver(sender.clone(), mock_handles))
                     }
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .expect("Failed adding base resolver mock")
@@ -321,7 +321,7 @@ mod tests {
                         ))
                     }
                 },
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .expect("Failed adding mock request component")
@@ -405,7 +405,7 @@ mod tests {
             "fuchsia-pkg://fuchsia.com/test-pkg-request#meta/test-component.cm".to_string();
         let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
         builder
-            .add_child("universe-resolver", resolver_url, ChildProperties::new())
+            .add_child("universe-resolver", resolver_url, ChildOptions::new())
             .await
             .expect("Failed add universe-resolver to test topology")
             .add_mock_child(
@@ -416,7 +416,7 @@ mod tests {
                         Box::pin(mock_base_resolver(sender.clone(), mock_handles))
                     }
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .expect("Failed adding base resolver mock")
@@ -432,7 +432,7 @@ mod tests {
                         ))
                     }
                 },
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .expect("Failed adding mock request component")

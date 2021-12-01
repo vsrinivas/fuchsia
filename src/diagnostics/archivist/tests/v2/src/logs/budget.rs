@@ -23,7 +23,7 @@ use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async::{Task, Timer};
 use fuchsia_component::{client, server::ServiceFs};
 use fuchsia_component_test::{
-    mock::MockHandles, ChildProperties, RealmInstance, RouteBuilder, RouteEndpoint,
+    mock::MockHandles, ChildOptions, RealmInstance, RouteBuilder, RouteEndpoint,
 };
 use fuchsia_zircon as zx;
 use futures::{
@@ -89,7 +89,7 @@ impl PuppetEnv {
             .add_mock_child(
                 "mocks-server",
                 move |mock_handles: MockHandles| Box::pin(run_mocks(mock_handles, sender.clone())),
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .unwrap();
@@ -97,7 +97,7 @@ impl PuppetEnv {
         for i in 0..max_puppets {
             let name = format!("test/puppet-{}", i);
             builder
-                .add_child(name.clone(), SOCKET_PUPPET_COMPONENT_URL, ChildProperties::new())
+                .add_child(name.clone(), SOCKET_PUPPET_COMPONENT_URL, ChildOptions::new())
                 .await
                 .unwrap()
                 .add_route(

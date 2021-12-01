@@ -21,7 +21,7 @@ use fidl_fuchsia_sys2::EventSourceMarker;
 use fidl_fuchsia_sys_internal::{LogConnectorRequest, LogConnectorRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::{client, server::ServiceFs};
-use fuchsia_component_test::{mock::MockHandles, ChildProperties, RouteBuilder, RouteEndpoint};
+use fuchsia_component_test::{mock::MockHandles, ChildOptions, RouteBuilder, RouteEndpoint};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, lock::Mutex, SinkExt, StreamExt};
 use std::sync::Arc;
@@ -72,7 +72,7 @@ async fn test_logs_with_hanging_log_connector() {
             move |mock_handles| {
                 Box::pin(serve_mocks(mock_handles, recv.clone(), after_response_snd.clone()))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .unwrap()

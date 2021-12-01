@@ -15,7 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
     fuchsia_zircon::Status,
@@ -278,7 +278,7 @@ impl TestEnvBuilder {
             .add_child(
                 "system_updater",
                 "fuchsia-pkg://fuchsia.com/system-updater-integration-tests#meta/system-updater-isolated.cm",
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             ).await.unwrap()
             .add_mock_child(
                 "fake_capabilities",
@@ -290,7 +290,7 @@ impl TestEnvBuilder {
                         Ok(())
                     }.boxed()
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             ).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
                 .source(RouteEndpoint::AboveRoot)

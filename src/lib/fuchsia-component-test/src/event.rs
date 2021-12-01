@@ -240,7 +240,7 @@ fn add_offer_for_capability(
 mod tests {
     use {
         super::*,
-        crate::{error, mock, ChildProperties, RouteBuilder},
+        crate::{error, mock, ChildOptions, RouteBuilder},
         cm_rust::*,
         fidl_fuchsia_data as fdata,
         maplit::hashmap,
@@ -282,7 +282,7 @@ mod tests {
     async fn expose_event_from_child_error() {
         let builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
-        builder.add_child("a", "fuchsia-pkg://a", ChildProperties::new()).await.unwrap();
+        builder.add_child("a", "fuchsia-pkg://a", ChildOptions::new()).await.unwrap();
         let res = builder
             .add_route(
                 RouteBuilder::event(Event::Started, cm_rust::EventMode::Async)
@@ -303,10 +303,10 @@ mod tests {
         let builder = RealmBuilder::new().await.expect("failed to make RealmBuilder");
 
         builder
-            .add_child("a", "fuchsia-pkg://a", ChildProperties::new())
+            .add_child("a", "fuchsia-pkg://a", ChildOptions::new())
             .await
             .unwrap()
-            .add_child("b", "fuchsia-pkg://b", ChildProperties::new())
+            .add_child("b", "fuchsia-pkg://b", ChildOptions::new())
             .await
             .unwrap();
         let res = builder
@@ -331,14 +331,14 @@ mod tests {
             .add_mock_child(
                 "a",
                 |_: mock::MockHandles| Box::pin(async move { Ok(()) }),
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .unwrap()
             .add_mock_child(
                 "a/b",
                 |_: mock::MockHandles| Box::pin(async move { Ok(()) }),
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .unwrap()
@@ -509,7 +509,7 @@ mod tests {
             .add_mock_child(
                 "a",
                 |_: mock::MockHandles| Box::pin(async move { Ok(()) }),
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .unwrap()

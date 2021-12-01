@@ -12,7 +12,7 @@ use {
     fuchsia_audio_dai::test::mock_dai_dev_with_io_devices,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::{add_fidl_service_handler, mock_component, mock_dev},
@@ -94,7 +94,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
     let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
     let _ = builder
-        .add_child(HFP_MONIKER, HFP_AG_URL.to_string(), ChildProperties::new().eager())
+        .add_child(HFP_MONIKER, HFP_AG_URL.to_string(), ChildOptions::new().eager())
         .await
         .expect("Failed adding HFP-AG to topology");
     // Mock Profile component to receive `bredr.Profile` requests.
@@ -105,7 +105,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
             move |mock_handles: MockHandles| {
                 Box::pin(mock_component::<ProfileMarker, _>(sender_clone.clone(), mock_handles))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding profile mock to topology");
@@ -117,7 +117,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
             move |mock_handles: MockHandles| {
                 Box::pin(mock_audio_device_provider(sender_clone.clone(), mock_handles))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding AudioDevice mock to topology");
@@ -131,7 +131,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
                     mock_dai_dev_with_io_devices("input1".to_string(), "output1".to_string()),
                 ))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding mock /dev provider to topology");
@@ -144,7 +144,7 @@ async fn hfp_audio_gateway_v2_capability_routing() {
             move |mock_handles: MockHandles| {
                 Box::pin(mock_hfp_client(sender_clone.clone(), mock_handles))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding hfp client mock to topology");

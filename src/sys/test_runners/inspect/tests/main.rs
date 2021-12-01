@@ -11,7 +11,7 @@ use {
     ftest_manager::{CaseStatus, RunOptions, SuiteStatus},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint},
+    fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
     futures::prelude::*,
     paste::paste,
     pretty_assertions::assert_eq,
@@ -39,7 +39,7 @@ async fn run_test(
         .add_child(
             "test_manager",
             "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager_for_tests.cm",
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         .add_mock_child(
@@ -65,7 +65,7 @@ async fn run_test(
                 }
                 .boxed()
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         .add_route(

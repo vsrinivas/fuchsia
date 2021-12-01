@@ -5,7 +5,7 @@
 use anyhow::Error;
 use fidl_fuchsia_examples_inspect::{ReverserMarker, ReverserProxy};
 use fuchsia_component_test::{
-    ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+    ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
 };
 
 const FIZZBUZZ_URL: &'static str =
@@ -35,12 +35,12 @@ impl IntegrationTest {
                     "fuchsia-pkg://fuchsia.com/inspect_rust_codelab_integration_tests#meta/part_{}.cm",
                     part
                 ),
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await?;
         if options.include_fizzbuzz {
             builder
-                .add_child("fizzbuzz", FIZZBUZZ_URL, ChildProperties::new())
+                .add_child("fizzbuzz", FIZZBUZZ_URL, ChildOptions::new())
                 .await?
                 .add_route(
                     RouteBuilder::protocol("fuchsia.examples.inspect.FizzBuzz")

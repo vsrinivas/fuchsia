@@ -8,7 +8,7 @@ use cm_rust;
 use fidl_fuchsia_io2 as fio2;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_component_test::{
-    mock::MockHandles, ChildProperties, Event, Moniker, RealmBuilder, RealmInstance, RouteBuilder,
+    mock::MockHandles, ChildOptions, Event, Moniker, RealmBuilder, RealmInstance, RouteBuilder,
     RouteEndpoint,
 };
 use futures::{channel::mpsc, lock::Mutex, StreamExt};
@@ -25,16 +25,16 @@ pub async fn create() -> Result<RealmInstance, Error> {
         .add_mock_child(
             "mocks-server",
             move |mock_handles| Box::pin(serve_mocks(mock_handles)),
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
-        .add_child("wrapper/mock_cobalt", MOCK_COBALT_URL, ChildProperties::new())
+        .add_child("wrapper/mock_cobalt", MOCK_COBALT_URL, ChildOptions::new())
         .await?
-        .add_child("wrapper/single_counter", SINGLE_COUNTER_URL, ChildProperties::new())
+        .add_child("wrapper/single_counter", SINGLE_COUNTER_URL, ChildOptions::new())
         .await?
-        .add_child("wrapper/sampler", SAMPLER_URL, ChildProperties::new())
+        .add_child("wrapper/sampler", SAMPLER_URL, ChildOptions::new())
         .await?
-        .add_child("wrapper/test_case_archivist", ARCHIVIST_URL, ChildProperties::new())
+        .add_child("wrapper/test_case_archivist", ARCHIVIST_URL, ChildOptions::new())
         .await?
         .add_route(
             RouteBuilder::protocol("fuchsia.cobalt.test.LoggerQuerier")

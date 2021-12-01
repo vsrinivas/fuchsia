@@ -26,7 +26,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint, ScopedInstance,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint, ScopedInstance,
         ScopedInstanceFactory,
     },
     fuchsia_merkle::{Hash, MerkleTree},
@@ -451,8 +451,8 @@ where
 
         let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_child("pkg_cache", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cm", ChildProperties::new()).await.unwrap()
-            .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/system-update-committer.cm", ChildProperties::new()).await.unwrap()
+            .add_child("pkg_cache", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-cache.cm", ChildOptions::new()).await.unwrap()
+            .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/system-update-committer.cm", ChildOptions::new()).await.unwrap()
             .add_mock_child("service_reflector", move |mock_handles| {
                 let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
                 async {
@@ -460,9 +460,9 @@ where
                     let () = rfs.collect().await;
                     Ok::<(), anyhow::Error>(())
                 }.boxed()
-            }, ChildProperties::new()).await.unwrap()
-            .add_child("local_mirror", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cm", ChildProperties::new()).await.unwrap()
-            .add_child("pkg_resolver_wrapper", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-wrapper.cm", ChildProperties::new()).await.unwrap()
+            }, ChildOptions::new()).await.unwrap()
+            .add_child("local_mirror", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-local-mirror.cm", ChildOptions::new()).await.unwrap()
+            .add_child("pkg_resolver_wrapper", "fuchsia-pkg://fuchsia.com/pkg-resolver-integration-tests#meta/pkg-resolver-wrapper.cm", ChildOptions::new()).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
                 .source(RouteEndpoint::AboveRoot)
                 .targets(vec![

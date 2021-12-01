@@ -24,7 +24,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::add_fidl_service_handler,
@@ -195,7 +195,7 @@ async fn a2dp_v2_component_topology() {
 
     // The v2 component under test.
     let _ = builder
-        .add_child(A2DP_MONIKER, A2DP_URL.to_string(), ChildProperties::new())
+        .add_child(A2DP_MONIKER, A2DP_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding a2dp to topology");
 
@@ -207,7 +207,7 @@ async fn a2dp_v2_component_topology() {
                 let sender = service_tx.clone();
                 Box::pin(mock_component(sender, mock_handles))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding profile mock to topology");
@@ -221,7 +221,7 @@ async fn a2dp_v2_component_topology() {
                 let sender = fake_client_tx.clone();
                 Box::pin(mock_a2dp_client(sender, mock_handles))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding a2dp client mock to topology");

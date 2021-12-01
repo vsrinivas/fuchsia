@@ -15,7 +15,7 @@ use {
     fuchsia_bluetooth::{types as bt_types, util::CollectExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, Moniker, RealmBuilder, RealmInstance, RouteBuilder,
+        mock::MockHandles, ChildOptions, Moniker, RealmBuilder, RealmInstance, RouteBuilder,
         RouteEndpoint,
     },
     fuchsia_zircon as zx,
@@ -341,7 +341,7 @@ async fn add_profile_to_topology<'a>(
     // Specify the profile under test.
     {
         let _ = builder
-            .add_child(spec.name.to_string(), profile_url, ChildProperties::new().eager())
+            .add_child(spec.name.to_string(), profile_url, ChildOptions::new().eager())
             .await?;
     }
 
@@ -505,7 +505,7 @@ async fn add_mock_piconet_component(
                 let observer = observer.clone();
                 Box::pin(piconet_member(m, id, profile_svc_path.clone(), observer))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .map(|_| ())
@@ -678,7 +678,7 @@ async fn add_mock_piconet_server(builder: &RealmBuilder) -> String {
     let name = mock_piconet_server_moniker().to_string();
 
     let _ = builder
-        .add_child(name.clone(), MOCK_PICONET_SERVER_URL_V2, ChildProperties::new())
+        .add_child(name.clone(), MOCK_PICONET_SERVER_URL_V2, ChildOptions::new())
         .await
         .expect("failed to add");
 
@@ -699,7 +699,7 @@ async fn add_bt_rfcomm_intermediary(
     moniker: String,
     url: String,
 ) -> Result<(), Error> {
-    let _ = builder.add_child(moniker.clone(), url, ChildProperties::new().eager()).await?;
+    let _ = builder.add_child(moniker.clone(), url, ChildOptions::new().eager()).await?;
 
     let _ = builder
         .add_route(

@@ -6,7 +6,7 @@ use {
     anyhow::{self, Error},
     diagnostics_reader::{ArchiveReader, Logs},
     fidl_fuchsia_data as fdata,
-    fuchsia_component_test::{ChildProperties, Moniker, RealmBuilder},
+    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
     futures::StreamExt,
     std::fs::File,
     std::io::{self, BufRead},
@@ -16,9 +16,7 @@ use {
 async fn wisdom_integration_test() -> Result<(), Error> {
     // Create the test realm,
     let builder = RealmBuilder::new().await?;
-    builder
-        .add_child(Moniker::root(), "#meta/intl_wisdom_realm.cm", ChildProperties::new())
-        .await?;
+    builder.add_child(Moniker::root(), "#meta/intl_wisdom_realm.cm", ChildOptions::new()).await?;
 
     // Mark echo_client as eager so it starts automatically.
     builder.mark_as_eager("wisdom_client").await?;

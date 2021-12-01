@@ -15,7 +15,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
-        self as fcomponent, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        self as fcomponent, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon as zx,
@@ -199,7 +199,7 @@ async fn create_realm_instance(
                     Clone::clone(&devfs_proxy),
                 ))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?;
     for ChildDef { url, name, exposes, uses, program_args, eager, .. } in
@@ -207,7 +207,7 @@ async fn create_realm_instance(
     {
         let url = url.ok_or(CreateRealmError::UrlNotProvided)?;
         let name = name.ok_or(CreateRealmError::NameNotProvided)?;
-        let mut child = ChildProperties::new();
+        let mut child = ChildOptions::new();
         if eager.unwrap_or(false) {
             child = child.eager();
         }
@@ -823,11 +823,7 @@ async fn setup_network_realm(
         .driver_test_realm_setup()
         .await
         .context("error setting up the driver test realm")?
-        .add_child(
-            NETWORK_CONTEXT_COMPONENT_NAME,
-            network_context_package_url,
-            ChildProperties::new(),
-        )
+        .add_child(NETWORK_CONTEXT_COMPONENT_NAME, network_context_package_url, ChildOptions::new())
         .await
         .context("error adding network-context component")?
         .add_route(

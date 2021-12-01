@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_sys2 as fsys2,
     fuchsia_component::client::connect_to_named_protocol_at_dir_root,
     fuchsia_component_test::{
-        ChildProperties, Moniker, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, Moniker, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
 };
 
@@ -201,7 +201,7 @@ async fn new_test_context() -> Result<TestContext, Error> {
         .add_child(
             REGION_COMPONENT_NAME,
             "fuchsia-pkg://fuchsia.com/regulatory_region#meta/regulatory_region.cm",
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         // Route the logsink to `regulatory_region`, so it can inform us of any issues

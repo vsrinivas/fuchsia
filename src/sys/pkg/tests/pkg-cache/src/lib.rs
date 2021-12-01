@@ -22,7 +22,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_inspect::{reader::DiagnosticsHierarchy, testing::TreeAssertion},
     fuchsia_merkle::Hash,
@@ -397,8 +397,8 @@ where
 
         let builder = RealmBuilder::new().await.unwrap();
         builder
-            .add_child("pkg_cache", pkg_cache_manifest, ChildProperties::new()).await.unwrap()
-            .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm", ChildProperties::new()).await.unwrap()
+            .add_child("pkg_cache", pkg_cache_manifest, ChildOptions::new()).await.unwrap()
+            .add_child("system_update_committer", "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm", ChildOptions::new()).await.unwrap()
             .add_mock_child(
                 "service_reflector",
                 move |mock_handles| {
@@ -409,7 +409,7 @@ where
                         Ok(())
                     }.boxed()
                 },
-                ChildProperties::new()
+                ChildOptions::new()
             ).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
                 .source(RouteEndpoint::AboveRoot)

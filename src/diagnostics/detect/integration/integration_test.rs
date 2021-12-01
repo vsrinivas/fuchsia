@@ -33,7 +33,7 @@ use {
     fidl_fuchsia_io2 as fio2,
     fuchsia_component::server::*,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::BoxFuture, FutureExt, SinkExt, StreamExt},
@@ -249,7 +249,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
     let archive_accessor = FakeArchiveAccessor::new(&test_data.inspect_data, Some(event_signaler));
 
     let builder = RealmBuilder::new().await.unwrap();
-    builder.add_child("detect", DETECT_PROGRAM_URL, ChildProperties::new().eager()).await.unwrap();
+    builder.add_child("detect", DETECT_PROGRAM_URL, ChildOptions::new().eager()).await.unwrap();
 
     let mock_component = create_mock_component(
         test_data.clone(),
@@ -258,7 +258,7 @@ async fn run_a_test(test_data: TestData) -> Result<(), Error> {
         archive_accessor.clone(),
     );
 
-    builder.add_mock_child("mocks", mock_component, ChildProperties::new()).await.unwrap();
+    builder.add_mock_child("mocks", mock_component, ChildOptions::new()).await.unwrap();
 
     // Forward logging to debug test breakages.
     builder

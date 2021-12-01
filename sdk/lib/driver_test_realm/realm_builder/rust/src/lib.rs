@@ -6,7 +6,7 @@ use {
     anyhow::{anyhow, Result},
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io2 as fio2,
     fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
 };
 
@@ -29,7 +29,7 @@ pub trait DriverTestRealmBuilder {
 impl DriverTestRealmBuilder for RealmBuilder {
     async fn driver_test_realm_manifest_setup(&self, manifest_url: &str) -> Result<&Self> {
         let driver_realm = RouteEndpoint::component(COMPONENT_NAME);
-        self.add_child(COMPONENT_NAME, manifest_url, ChildProperties::new().eager())
+        self.add_child(COMPONENT_NAME, manifest_url, ChildOptions::new().eager())
             .await?
             .add_route(
                 RouteBuilder::protocol("fuchsia.logger.LogSink")

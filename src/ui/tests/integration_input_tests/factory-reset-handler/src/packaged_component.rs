@@ -4,7 +4,7 @@
 
 use {
     crate::traits::test_realm_component::TestRealmComponent,
-    fuchsia_component_test::{ChildProperties, Moniker, RealmBuilder},
+    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
 };
 
 enum LegacyOrModernUrl {
@@ -38,12 +38,12 @@ impl TestRealmComponent for PackagedComponent {
         match &self.source {
             LegacyOrModernUrl::LegacyUrl(url) => {
                 builder
-                    .add_legacy_child(self.moniker.clone(), url, ChildProperties::new())
+                    .add_legacy_child(self.moniker.clone(), url, ChildOptions::new())
                     .await
                     .unwrap();
             }
             LegacyOrModernUrl::ModernUrl(url) => {
-                builder.add_child(self.moniker.clone(), url, ChildProperties::new()).await.unwrap();
+                builder.add_child(self.moniker.clone(), url, ChildOptions::new()).await.unwrap();
             }
         }
     }

@@ -9,7 +9,7 @@ use {
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_driver_test as fdt, fidl_fuchsia_io2 as fio2,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_driver_test::DriverTestRealmInstance,
 };
@@ -52,7 +52,7 @@ async fn create_realm(
         .add_mock_child(
             "fake_filesystem",
             move |h: MockHandles| serve_fake_filesystem(system.clone(), pkgfs.clone(), h).boxed(),
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("mock component added");
@@ -61,7 +61,7 @@ async fn create_realm(
         .add_child(
             "driver_manager",
             "fuchsia-pkg://fuchsia.com/ddk-firmware-test#meta/driver-manager-realm.cm",
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?;
 

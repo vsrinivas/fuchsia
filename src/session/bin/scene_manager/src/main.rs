@@ -280,7 +280,7 @@ mod tests {
     use fidl_fuchsia_ui_views::ViewToken;
     use fuchsia_async as fasync;
     use fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     };
     use fuchsia_scenic as scenic;
     use futures::TryStreamExt;
@@ -296,10 +296,10 @@ mod tests {
     async fn setup_realm() -> Result<RealmInstance, anyhow::Error> {
         let builder = RealmBuilder::new().await?;
 
-        builder.add_child("mock_cobalt", MOCK_COBALT_URL, ChildProperties::new().eager()).await?;
+        builder.add_child("mock_cobalt", MOCK_COBALT_URL, ChildOptions::new().eager()).await?;
 
         builder
-            .add_child("hdcp", FAKE_HDCP_URL, ChildProperties::new().eager())
+            .add_child("hdcp", FAKE_HDCP_URL, ChildOptions::new().eager())
             .await?
             .add_route(
                 RouteBuilder::protocol("fuchsia.sysmem.Allocator")
@@ -315,7 +315,7 @@ mod tests {
             .await?;
 
         builder
-            .add_legacy_child("scenic", SCENIC_URL, ChildProperties::new().eager())
+            .add_legacy_child("scenic", SCENIC_URL, ChildOptions::new().eager())
             .await
             .expect("Failed to start scenic")
             .add_route(
@@ -374,7 +374,7 @@ mod tests {
             .await?;
 
         builder
-            .add_child("scene_manager", SCENE_MANAGER_URL, ChildProperties::new().eager())
+            .add_child("scene_manager", SCENE_MANAGER_URL, ChildOptions::new().eager())
             .await?
             .add_route(
                 RouteBuilder::protocol("fuchsia.ui.accessibility.view.Registry")

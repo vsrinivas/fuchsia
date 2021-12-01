@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_update_installer_ext as installer, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_inspect::{
         assert_data_tree,
@@ -254,13 +254,13 @@ impl TestEnvBuilder {
         let fs_holder = Mutex::new(Some(fs));
         let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
         builder
-            .add_child("omaha_client_service", OMAHA_CLIENT_CML, ChildProperties::new().eager())
+            .add_child("omaha_client_service", OMAHA_CLIENT_CML, ChildOptions::new().eager())
             .await
             .unwrap()
             .add_child(
                 "system_update_committer",
                 SYSTEM_UPDATE_COMMITTER_CML,
-                ChildProperties::new().eager(),
+                ChildOptions::new().eager(),
             )
             .await
             .unwrap()
@@ -278,11 +278,11 @@ impl TestEnvBuilder {
                     }
                     .boxed()
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await
             .unwrap()
-            .add_child("stash2", STASH_CML, ChildProperties::new())
+            .add_child("stash2", STASH_CML, ChildOptions::new())
             .await
             .unwrap()
             .add_route(
@@ -464,7 +464,7 @@ impl TestEnvBuilder {
 
         if use_real_system_updater {
             builder
-                .add_child("system_updater", SYSTEM_UPDATER_CML, ChildProperties::new().eager())
+                .add_child("system_updater", SYSTEM_UPDATER_CML, ChildOptions::new().eager())
                 .await
                 .unwrap()
                 .add_route(

@@ -306,7 +306,7 @@ mod test {
             PropertyProviderProxy, TemperatureUnit, TimeZoneId,
         },
         fuchsia_async as fasync,
-        fuchsia_component_test::{ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint},
+        fuchsia_component_test::{ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint},
         futures::{self, prelude::*},
         lazy_static::lazy_static,
     };
@@ -358,7 +358,7 @@ mod test {
             .add_child(
                 "intl_property_manager",
                 "#meta/intl_property_manager_without_flags.cm",
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await?
             .add_route(
@@ -428,7 +428,7 @@ mod test {
             .add_child(
                 "intl_property_manager",
                 "#meta/intl_property_manager.cm",
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await?
             .add_route(

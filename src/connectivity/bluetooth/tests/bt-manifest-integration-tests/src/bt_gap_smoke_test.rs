@@ -16,7 +16,7 @@ use {
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::{mock_dev, provide_bt_gap_uses},
@@ -152,11 +152,11 @@ async fn bt_gap_component_topology() {
 
     let _ = builder
         // Add bt-gap, the v2 component under test, to the topology.
-        .add_child(BT_GAP_MONIKER, BT_GAP_URL.to_string(), ChildProperties::new())
+        .add_child(BT_GAP_MONIKER, BT_GAP_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding bt-gap to topology")
         // Implementation of the Secure Store service for use by bt-gap.
-        .add_child(SECURE_STORE_MONIKER, SECURE_STORE_URL.to_string(), ChildProperties::new())
+        .add_child(SECURE_STORE_MONIKER, SECURE_STORE_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding secure store fake to topology")
         // Provides a mock implementation of the services used by bt-gap, and notifies the test of
@@ -167,7 +167,7 @@ async fn bt_gap_component_topology() {
                 let sender = mock_provider_tx.clone();
                 Box::pin(mock_provider(sender, mock_handles))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding mock provider to topology")
@@ -175,7 +175,7 @@ async fn bt_gap_component_topology() {
         .add_mock_child(
             MOCK_DEV_MONIKER,
             move |mock_handles: MockHandles| Box::pin(mock_dev(mock_handles, dev_bt_host())),
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding mock /dev provider to topology")
@@ -186,7 +186,7 @@ async fn bt_gap_component_topology() {
                 let sender = mock_client_tx.clone();
                 Box::pin(mock_client(sender, mock_handles))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding bt-gap client mock to topology");

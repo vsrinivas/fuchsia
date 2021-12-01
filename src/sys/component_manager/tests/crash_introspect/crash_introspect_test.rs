@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt},
 };
@@ -85,13 +85,13 @@ async fn crashed_component_generates_a_record() -> Result<(), Error> {
             move |mh| {
                 Box::pin(crash_receiver(mh, expected_crash_info.clone(), success_sender.clone()))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         .add_child(
             "report_then_panic_on_start",
             "fuchsia-pkg://fuchsia.com/crash-introspect-test#meta/report_then_panic_on_start.cm",
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await?
         .add_route(

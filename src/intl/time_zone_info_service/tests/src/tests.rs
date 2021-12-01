@@ -14,7 +14,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         fuchsia_component_test::{
-            ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+            ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
         },
         fuchsia_zircon as zx,
     };
@@ -31,7 +31,7 @@ mod tests {
 
         let builder = RealmBuilder::new().await?;
         builder
-            .add_legacy_child(MONIKER, SVC_URL.to_string(), ChildProperties::new())
+            .add_legacy_child(MONIKER, SVC_URL.to_string(), ChildOptions::new())
             .await?
             .add_route(
                 RouteBuilder::protocol_marker::<fintl::TimeZonesMarker>()

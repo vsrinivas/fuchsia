@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_stash::SecureStoreMarker,
     fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint, ScopedInstance,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint, ScopedInstance,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     futures::FutureExt,
@@ -59,13 +59,13 @@ impl CoreRealm {
         let builder = RealmBuilder::new().await?;
         let _ = builder.driver_test_realm_setup().await?;
         let _ = builder
-            .add_child(constants::bt_init::MONIKER, constants::bt_init::URL, ChildProperties::new())
+            .add_child(constants::bt_init::MONIKER, constants::bt_init::URL, ChildOptions::new())
             .await?
             // Required by bt-init/bt-gap.
             .add_child(
                 constants::secure_stash::MONIKER,
                 constants::secure_stash::URL,
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await?
             // Mock components for dependencies of bt-init/bt-gap to silence warnings about
@@ -81,7 +81,7 @@ impl CoreRealm {
                     })
                     .boxed()
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await?
             .add_mock_child(
@@ -94,7 +94,7 @@ impl CoreRealm {
                     })
                     .boxed()
                 },
-                ChildProperties::new(),
+                ChildOptions::new(),
             )
             .await?
             // Route required capabilities from AboveRoot to realm components.

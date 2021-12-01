@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_identity_account::{AccountManagerMarker, AccountManagerProxy, AccountMetadata},
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component_test::{
-        ChildProperties, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
+        ChildOptions, RealmBuilder, RealmInstance, RouteBuilder, RouteEndpoint,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon::{sys::zx_status_t, Status},
@@ -57,7 +57,7 @@ impl TestEnv {
     async fn build() -> TestEnv {
         let builder = RealmBuilder::new().await.unwrap();
         builder.driver_test_realm_setup().await.unwrap()
-            .add_child("password_authenticator", "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator.cm", ChildProperties::new()).await.unwrap()
+            .add_child("password_authenticator", "fuchsia-pkg://fuchsia.com/password-authenticator-integration-tests#meta/password-authenticator.cm", ChildOptions::new()).await.unwrap()
             .add_route(RouteBuilder::protocol("fuchsia.logger.LogSink")
                 .source(RouteEndpoint::AboveRoot)
                 .targets(vec![

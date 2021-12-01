@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Error},
     component_events::{events::*, matcher::*},
-    fuchsia_component_test::{ChildProperties, Moniker, RealmBuilder},
+    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
 };
 
 #[fuchsia::test]
@@ -22,7 +22,7 @@ async fn launch_realm_components() -> Result<(), Error> {
 
     // Create the test realm,
     let builder = RealmBuilder::new().await?;
-    builder.add_child(Moniker::root(), "#meta/echo_realm.cm", ChildProperties::new()).await?;
+    builder.add_child(Moniker::root(), "#meta/echo_realm.cm", ChildOptions::new()).await?;
 
     // Mark echo_client as eager so it starts automatically.
     builder.mark_as_eager("echo_client").await?;

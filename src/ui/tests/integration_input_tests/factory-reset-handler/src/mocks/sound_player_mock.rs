@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_media_sounds::{PlaySoundError, PlayerRequest, PlayerRequestStream},
-    fuchsia_component_test::{ChildProperties, Moniker, RealmBuilder},
+    fuchsia_component_test::{ChildOptions, Moniker, RealmBuilder},
     futures::{channel::mpsc::UnboundedSender, TryStreamExt},
 };
 

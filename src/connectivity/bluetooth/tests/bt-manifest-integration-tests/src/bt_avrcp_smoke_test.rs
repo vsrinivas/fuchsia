@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequest},
     fuchsia_async as fasync,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     futures::{channel::mpsc, SinkExt, StreamExt},
     realmbuilder_mock_helpers::mock_component,
@@ -70,7 +70,7 @@ async fn avrcp_v2_component_topology() {
     let builder = RealmBuilder::new().await.expect("Failed to create test realm builder");
     // The v2 component under test.
     let _ = builder
-        .add_child("avrcp", AVRCP_URL.to_string(), ChildProperties::new())
+        .add_child("avrcp", AVRCP_URL.to_string(), ChildOptions::new())
         .await
         .expect("Failed adding avrcp to topology");
     // Mock Profile component to receive bredr.Profile requests.
@@ -81,7 +81,7 @@ async fn avrcp_v2_component_topology() {
                 let sender = profile_tx.clone();
                 Box::pin(mock_component::<ProfileMarker, _>(sender, mock_handles))
             },
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await
         .expect("Failed adding profile mock to topology");
@@ -94,7 +94,7 @@ async fn avrcp_v2_component_topology() {
                 let sender = fake_client_tx.clone();
                 Box::pin(mock_avrcp_client(sender, mock_handles))
             },
-            ChildProperties::new().eager(),
+            ChildOptions::new().eager(),
         )
         .await
         .expect("Failed adding avrcp client mock to topology");
