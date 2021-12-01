@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
+
+import("//build/components.gni")
+
+config("wlan_drivers_components_cpp_config") {
+  include_dirs = [ "cpp/include" ]
+}
+
+source_set("cpp") {
+  public_configs = [ ":wlan_drivers_components_cpp_config" ]
+  public_deps = [ "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp" ]
+  sources = [
+    "cpp/frame.cc",
+    "cpp/frame_container.cc",
+  ]
+}
