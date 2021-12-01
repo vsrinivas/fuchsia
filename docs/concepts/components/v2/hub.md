@@ -48,7 +48,7 @@ Like other capabilities, hub access is requested with a `use` declaration in the
 [component manifest](component_manifests.md). This example shows the manifest
 file of a component that accesses its own hub.
 
-```
+```json5
 {
     program: {
         runner: "elf",
@@ -58,6 +58,7 @@ file of a component that accesses its own hub.
         {
             directory: "hub",
             from: "framework",
+            rights: [ "r*" ],
         },
     ]
 }
@@ -77,7 +78,7 @@ from `/hub`.
 
 The directory structure of `/hub` looks like:
 
-```
+```none
 /hub
 ├── children
 ├── deleting
@@ -113,7 +114,7 @@ Files:
 
 The directory structure of `/hub/children` looks like:
 
-```
+```none
 /hub/children
 ├── foo
 |   ├── children
@@ -153,7 +154,7 @@ The hub gives a name to each child’s hub directory based on this format:
 
 The directory structure of `/hub/deleting` looks like:
 
-```
+```none
 /hub/deleting
 ├── baz:qux:1
 |   ├── children
@@ -191,7 +192,7 @@ between them.
 
 The directory structure of `/hub/exec` looks like:
 
-```
+```none
 /hub/exec
 ├── exposed
 ├── in
@@ -239,7 +240,7 @@ path.
 
 The directory structure of `/hub/exec/runtime` looks like:
 
-```
+```none
 /hub/exec/runtime
 └── elf
     ├── args
@@ -278,12 +279,12 @@ can inspect information about its parent and siblings through `/parent_hub`.
 
 In the parent component manifest:
 
-```
+```json5
 {
     offer: [
         // Route the root hub to hub_client.
         {
-          directory: "/hub",
+          directory: "hub",
           from: "framework",
           to: "#hub_client",
         },
@@ -305,7 +306,7 @@ In the parent component manifest:
 
 In `hub_client.cml`:
 
-```
+```json5
 {
     program: {
         runner: "elf",
@@ -313,9 +314,10 @@ In `hub_client.cml`:
     },
     use: [
         {
-          directory: "/hub",
+          directory: "hub",
           from: "parent",
-          as: "/parent_hub"
+          rights: [ "r*" ],
+          path: "/parent_hub"
         }
     ]
 }
@@ -329,7 +331,7 @@ The realm, in turn, offers that view of the hub as `/sibling_hub` to
 
 In `hub_client_sibling.cml`:
 
-```
+```json5
 {
     program: {
         runner: "elf",
@@ -337,7 +339,7 @@ In `hub_client_sibling.cml`:
     },
     expose: [
         {
-            directory: "/hub",
+            directory: "hub",
             from: "framework",
         },
     ],
@@ -346,15 +348,15 @@ In `hub_client_sibling.cml`:
 
 In the parent component manifest file:
 
-```
+```json5
 {
     // Route hub_client_sibling's view of the hub to hub_client.
     offer: [
         {
-            directory: "/hub",
+            directory: "hub",
             from: "#hub_client_sibling",
             to: "#hub_client",
-            as: "/sibling_hub",
+            as: "sibling_hub",
         }
     ],
     children: [
@@ -372,9 +374,9 @@ In the parent component manifest file:
 }
 ```
 
-In hub_client.cml:
+In `hub_client.cml`:
 
-```
+```json5
 {
     program: {
         runner: "elf",
@@ -382,8 +384,10 @@ In hub_client.cml:
     },
     use: [
         {
-            directory: "/sibling_hub",
+            directory: "sibling_hub",
             from: "parent",
+            rights: [ "r*" ],
+            path: "/sibling_hub"
         }
     ]
 }
@@ -399,9 +403,9 @@ To illustrate how the hub changes in response to lifecycle events, consider an
 example involving 3 components named `A`, `B` and `C`. The manifest of each
 component is given below:
 
--   `A.cmx`
+-   `A.cml`
 
-    ```
+    ```json5
     {
         program: {
             runner: "elf",
@@ -409,8 +413,9 @@ component is given below:
         },
         use: [
             {
-                directory: "/hub",
+                directory: "hub",
                 from: "framework",
+                rights: [ "r*" ],
             },
         ]
         collections: [
@@ -422,9 +427,9 @@ component is given below:
     }
     ```
 
--   `B.cmx`
+-   `B.cml`
 
-    ```
+    ```json5
     {
         program: {
             binary: "bin/B"
@@ -439,10 +444,9 @@ component is given below:
     }
     ```
 
--   `C.cmx`
+-   `C.cml`
 
-    ```
-    // C.cmx
+    ```json5
     {
         program: {
             binary: "bin/C"
@@ -469,7 +473,7 @@ Also consider 3 instances, one for each component:
 `foo` can see its own hub by listing the contents of `/hub`. In Rust, this looks
 like:
 
-```
+```rust
 let entries = std::fs::read_dir("/hub")?;
 for entry in entries {
     println!("{}", entry?.path());
@@ -479,7 +483,7 @@ for entry in entries {
 Without making any changes to the component hierarchy, the hub will look like
 the following:
 
-```
+```none
 /hub
 ├── children
 ├── deleting
@@ -500,7 +504,7 @@ A component must connect to the
 [Realm framework protocol](realms.md#realm-framework-service) to manipulate its
 dynamic children. In Rust, this looks like:
 
-```
+```rust
 let realm = connect_to_protocol::<fsys::RealmMarker>()?;
 ```
 
@@ -509,7 +513,7 @@ let realm = connect_to_protocol::<fsys::RealmMarker>()?;
 `foo` can define an instance of `B` called `bar` under the
 [collection](realms.md#collections) `coll`. In Rust, this looks like:
 
-```
+```rust
 // Define the child and the collection
 let mut collection_ref = fsys::CollectionRef { name: String::from("coll") };
 let child_decl = fsys::ChildDecl {
@@ -524,7 +528,7 @@ realm.create_child(&mut collection_ref, child_decl).await??;
 
 After executing this code, the hub changes to the following:
 
-```
+```none
 /hub
 ├── children
 |    └── coll:bar
@@ -556,7 +560,7 @@ directory.
 `foo` can now bind to the instance `bar` and start it. In Rust, this looks like
 the following:
 
-```
+```rust
 // Create a reference to the dynamic child
 let mut child_ref = fsys::ChildRef {
     name: "bar".to_string(),
@@ -624,7 +628,7 @@ have been started.
 
 `foo` can destroy the instance `bar`. In Rust, this looks like the following:
 
-```
+```rust
 // Create a reference to the dynamic child
 let mut child_ref = fsys::ChildRef {
     name: "bar".to_string(),
@@ -641,7 +645,7 @@ changes several times.
 
 1.  `bar` is marked for deletion. The hub changes to the following:
 
-    ```
+    ```none
     /hub
     ├── children
     ├── deleting
@@ -685,7 +689,7 @@ changes several times.
 
 1.  `baz` is stopped. The hub changes to the following:
 
-    ```
+    ```none
     /hub
     ├── children
     ├── deleting
@@ -722,7 +726,7 @@ changes several times.
 
 1.  `bar` is stopped. The hub changes to the following:
 
-    ```
+    ```none
     /hub
     ├── children
     ├── deleting
@@ -752,7 +756,7 @@ changes several times.
 
 1.  `baz` is marked for deletion. The hub changes to the following:
 
-    ```
+    ```none
     /hub
     ├── children
     ├── deleting
@@ -782,7 +786,7 @@ changes several times.
 
 1.  `baz` is deleted. The hub changes to the following:
 
-    ```
+    ```none
     /hub
     ├── children
     ├── deleting
@@ -806,7 +810,7 @@ changes several times.
 
 1.  `bar` is deleted. The hub changes to the following:
 
-    ```
+    ```none
     /hub
     ├── children
     ├── deleting
