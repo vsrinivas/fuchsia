@@ -58,8 +58,9 @@ TEST_F(TimeoutTest, ScanTimeout) {
   sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, BCME_OK, client_ifc_.iface_id_);
 
   // Start a passive scan
-  env_->ScheduleNotification(
-      std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId, false), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId,
+                                       false, std::optional<const std::vector<uint8_t>>{}),
+                             zx::msec(10));
 
   env_->Run(kTestDuration);
 
@@ -138,8 +139,9 @@ TEST_F(TimeoutTest, ScanAfterAssocTimeout) {
   env_->ScheduleNotification(std::bind(&SimInterface::DeauthenticateFrom, &client_ifc_,
                                        kDefaultBssid, REASON_CODE_UNSPECIFIED_REASON),
                              zx::sec(1));
-  env_->ScheduleNotification(
-      std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId, false), zx::sec(3));
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kDefaultScanTxnId,
+                                       false, std::optional<const std::vector<uint8_t>>{}),
+                             zx::sec(3));
 
   env_->Run(kTestDuration);
 

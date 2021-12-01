@@ -16,16 +16,22 @@
 
 #include <functional>
 #include <memory>
+#include <new>
 #include <optional>
 #include <tuple>
+#include <vector>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
+using ::testing::_;
+using ::testing::ElementsAre;
 
 bool multicast_promisc_enabled = false;
 
@@ -110,6 +116,44 @@ struct SmeChannelTestContext {
     sme = std::move(new_sme);
   }
 
+  ~SmeChannelTestContext() {
+    auto scan_req = this->scan_req;
+    if (scan_req.has_value()) {
+      if (scan_req->channels_list != nullptr) {
+        delete[] const_cast<uint8_t*>(scan_req->channels_list);
+      }
+      if (scan_req->ssids_list != nullptr) {
+        delete[] const_cast<cssid_t*>(scan_req->ssids_list);
+      }
+    }
+  }
+
+  void CaptureIncomingScanRequest(const wlanif_scan_req_t* req) {
+    std::unique_ptr<uint8_t[]> channels_list_begin;
+    std::unique_ptr<cssid_t[]> cssids_list_begin;
+
+    this->scan_req = *req;
+
+    // Copy the dynamically allocated contents of wlanif_scan_req_t.
+    if (req->channels_count > 0) {
+      channels_list_begin = std::make_unique<uint8_t[]>(req->channels_count);
+      if (channels_list_begin == nullptr) {
+        FAIL();
+      }
+      memcpy(channels_list_begin.get(), req->channels_list, req->channels_count * sizeof(uint8_t));
+    }
+    this->scan_req->channels_list = channels_list_begin.release();  // deleted in destructor
+
+    if (req->ssids_count > 0) {
+      cssids_list_begin = std::make_unique<cssid_t[]>(req->ssids_count);
+      if (cssids_list_begin == nullptr) {
+        FAIL();
+      }
+      memcpy(cssids_list_begin.get(), req->ssids_list, req->ssids_count * sizeof(cssid_t));
+    }
+    this->scan_req->ssids_list = cssids_list_begin.release();  // deleted in destructor
+  }
+
   zx::channel mlme = {};
   zx::channel sme = {};
   std::optional<wlanif_scan_req_t> scan_req = {};
@@ -137,8 +181,24 @@ wlanif_impl_protocol_ops_t EmptyProtoOps() {
   };
 }
 
-TEST(SmeChannel, Bound) {
 #define SME_DEV(c) static_cast<SmeChannelTestContext*>(c)
+
+wlan_mlme::ScanRequest fake_mlme_scan_request(std::vector<uint8_t>&& channel_list,
+                                              std::vector<std::vector<uint8_t>>&& ssid_list) {
+  return {
+      .txn_id = 754,
+      .bss_type_selector = wlan_internal::BSS_TYPE_SELECTOR_ANY,
+      .bssid = {6, 6, 6, 6, 6, 6},
+      .scan_type = wlan_mlme::ScanTypes::PASSIVE,
+      .channel_list = std::move(channel_list),
+      .ssid_list = std::move(ssid_list),
+      .probe_delay = 0,
+      .min_channel_time = 0,
+      .max_channel_time = 100,
+  };
+}
+
+TEST(SmeChannel, ScanRequest) {
   wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
   proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
                        zx_handle_t* out_mlme_channel) -> zx_status_t {
@@ -148,10 +208,7 @@ TEST(SmeChannel, Bound) {
 
   // Capture incoming scan request.
   proto_ops.start_scan = [](void* ctx, const wlanif_scan_req_t* req) {
-    SME_DEV(ctx)->scan_req = {{
-        .bss_type_selector = req->bss_type_selector,
-        .scan_type = req->scan_type,
-    }};
+    SME_DEV(ctx)->CaptureIncomingScanRequest(req);
   };
 
   SmeChannelTestContext ctx;
@@ -168,22 +225,141 @@ TEST(SmeChannel, Bound) {
 
   // Send scan request to device.
   auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
-  mlme_proxy.StartScan(wlan_mlme::ScanRequest{
-      .bss_type_selector = wlan_internal::BSS_TYPE_SELECTOR_INFRASTRUCTURE,
-      .scan_type = wlan_mlme::ScanTypes::PASSIVE,
-  });
+  wlan_mlme::ScanRequest mlme_scan_request =
+      fake_mlme_scan_request({1, 36}, {{1, 2, 3}, {4, 5, 6, 7}});
+  mlme_proxy.StartScan(mlme_scan_request);
 
   // Wait for scan message to propagate through the system.
   ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.scan_req.has_value(); }));
 
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
-  ASSERT_EQ(ctx.scan_req->bss_type_selector,
-            fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE);
+  ASSERT_EQ(ctx.scan_req->txn_id, 754u);
+  ASSERT_EQ(ctx.scan_req->bss_type_selector, fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY);
+  ASSERT_THAT(ctx.scan_req->bssid, ElementsAre(6, 6, 6, 6, 6, 6));
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
+
+  ASSERT_EQ(ctx.scan_req->channels_count, 2u);
+  uint8_t expected_channels_list[] = {1, 36};
+  ASSERT_EQ(0,
+            std::memcmp(ctx.scan_req->channels_list, expected_channels_list, 2 * sizeof(uint8_t)));
+  ASSERT_EQ(ctx.scan_req->ssids_count, 2u);
+  ASSERT_EQ(ctx.scan_req->ssids_list[0].len, 3);
+  ASSERT_THAT(ctx.scan_req->ssids_list[0].data,
+              ElementsAre(1, 2, 3, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+                          _, _, _, _, _, _, _));
+  ASSERT_EQ(ctx.scan_req->ssids_list[1].len, 4);
+  ASSERT_THAT(ctx.scan_req->ssids_list[1].data,
+              ElementsAre(4, 5, 6, 7, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
+                          _, _, _, _, _, _, _));
+  ASSERT_EQ(ctx.scan_req->probe_delay, 0u);
+  ASSERT_EQ(ctx.scan_req->min_channel_time, 0u);
+  ASSERT_EQ(ctx.scan_req->max_channel_time, 100u);
 
   device->Unbind();
 }
+
+TEST(SmeChannel, ScanRequestEmptyChannelListFails) {
+  wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
+  proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = SME_DEV(ctx)->sme.release();
+    return ZX_OK;
+  };
+
+  // Capture incoming scan request.
+  proto_ops.start_scan = [](void* ctx, const wlanif_scan_req_t* req) {
+    SME_DEV(ctx)->CaptureIncomingScanRequest(req);
+  };
+
+  SmeChannelTestContext ctx;
+  wlanif_impl_protocol_t proto = {
+      .ops = &proto_ops,
+      .ctx = &ctx,
+  };
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+  auto mlme_ptr = wlan_mlme::MLMEPtr();
+  std::optional<wlan_mlme::ScanEnd> scan_end = {};
+  mlme_ptr.Bind(std::move(ctx.mlme), dispatcher);
+  mlme_ptr.events().OnScanEnd = [&scan_end, &loop](wlan_mlme::ScanEnd returned_scan_end) {
+    scan_end.emplace(std::move(returned_scan_end));
+    loop.Quit();
+  };
+
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
+  auto status = device->Bind();
+  ASSERT_EQ(status, ZX_OK);
+
+  // Send scan request to device.
+  wlan_mlme::ScanRequest mlme_scan_request = fake_mlme_scan_request({}, {{1, 2, 3}, {4, 5, 6, 7}});
+  mlme_ptr->StartScan(mlme_scan_request);
+  loop.Run();
+
+  // Verify no scan request sent and ScanEnd value.
+  ASSERT_FALSE(ctx.scan_req.has_value());
+  ASSERT_TRUE(scan_end.has_value());
+  ASSERT_EQ(scan_end.value().txn_id, 754u);
+  ASSERT_EQ(scan_end.value().code, wlan_mlme::ScanResultCode::INVALID_ARGS);
+
+  device->Unbind();
+}
+
+TEST(SmeChannel, ScanRequestEmptySsidList) {
+  wlanif_impl_protocol_ops_t proto_ops = EmptyProtoOps();
+  proto_ops.start = [](void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
+                       zx_handle_t* out_mlme_channel) -> zx_status_t {
+    *out_mlme_channel = SME_DEV(ctx)->sme.release();
+    return ZX_OK;
+  };
+
+  //  Capture incoming scan request.
+  proto_ops.start_scan = [](void* ctx, const wlanif_scan_req_t* req) {
+    SME_DEV(ctx)->CaptureIncomingScanRequest(req);
+  };
+
+  SmeChannelTestContext ctx;
+  wlanif_impl_protocol_t proto = {
+      .ops = &proto_ops,
+      .ctx = &ctx,
+  };
+
+  auto parent = MockDevice::FakeRootParent();
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  auto device = new wlanif::Device{parent.get(), proto};
+  auto status = device->Bind();
+  ASSERT_EQ(status, ZX_OK);
+
+  // Send scan request to device.
+  auto mlme_proxy = wlan_mlme::MLME_SyncProxy(std::move(ctx.mlme));
+  wlan_mlme::ScanRequest mlme_scan_request = fake_mlme_scan_request({1, 2, 3, 4, 5}, {});
+  mlme_proxy.StartScan(mlme_scan_request);
+
+  // Wait for scan message to propagate through the system.
+  ASSERT_TRUE(timeout_after(ZX_SEC(120), [&]() { return ctx.scan_req.has_value(); }));
+
+  // Verify scan request.
+  ASSERT_TRUE(ctx.scan_req.has_value());
+  ASSERT_EQ(ctx.scan_req->txn_id, 754u);
+  ASSERT_EQ(ctx.scan_req->bss_type_selector, fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY);
+  ASSERT_THAT(ctx.scan_req->bssid, ElementsAre(6, 6, 6, 6, 6, 6));
+  ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
+  ASSERT_EQ(ctx.scan_req->channels_count, 5u);
+  uint8_t expected_channels_list[] = {1, 2, 3, 4, 5};
+  ASSERT_EQ(0,
+            std::memcmp(ctx.scan_req->channels_list, expected_channels_list, 5 * sizeof(uint8_t)));
+  ASSERT_EQ(ctx.scan_req->ssids_count, 0u);
+  ASSERT_EQ(ctx.scan_req->probe_delay, 0u);
+  ASSERT_EQ(ctx.scan_req->min_channel_time, 0u);
+  ASSERT_EQ(ctx.scan_req->max_channel_time, 100u);
+
+  device->Unbind();
+}
+
+#undef SME_DEV
 
 // Tests that the device will be unbound following a failed device bind.
 TEST(SmeChannel, FailedBind) {

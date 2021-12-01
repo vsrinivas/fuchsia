@@ -59,7 +59,6 @@ class PassiveScanTestInterface : public SimInterface {
   void VerifyScanResult(wlanif_scan_result_t result);
 
   void OnScanResult(const wlanif_scan_result_t* result) override;
-  void OnScanEnd(const wlanif_scan_end_t* end) override;
 
   PassiveScanTest* test_ = nullptr;
 
@@ -138,10 +137,6 @@ void PassiveScanTestInterface::OnScanResult(const wlanif_scan_result_t* result) 
   VerifyScanResult(*result);
 }
 
-void PassiveScanTestInterface::OnScanEnd(const wlanif_scan_end_t* end) {
-  SimInterface::OnScanEnd(end);
-}
-
 constexpr wlan_channel_t kDefaultChannel = {
     .primary = 9, .cbw = CHANNEL_BANDWIDTH_CBW20, .secondary80 = 0};
 constexpr cssid_t kDefaultSsid = {.len = 15, .data = "Fuchsia Fake AP"};
@@ -160,9 +155,9 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
   StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
 
   // Request a future scan
-  env_->ScheduleNotification(
-      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
-      kScanStartTime);
+  env_->ScheduleNotification(std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId,
+                                       false, std::optional<const std::vector<uint8_t>>{}),
+                             kScanStartTime);
 
   // The lambda arg will be run on each result, inside PassiveScanTestInterface::VerifyScanResults.
   client_ifc_.AddVerifierFunction(
@@ -193,6 +188,33 @@ TEST_F(PassiveScanTest, BasicFunctionality) {
   env_->Run(kDefaultTestDuration);
 }
 
+// TODO(fxbug.dev/89484): The correct behavior is to default to scanning all supported channels.
+TEST_F(PassiveScanTest, EmptyChannelList) {
+  constexpr zx::duration kScanStartTime = zx::sec(1);
+  constexpr zx::duration kDefaultTestDuration = zx::sec(100);
+  constexpr uint64_t kScanId = 0x2012;
+
+  // Create our simulated device
+  Init();
+
+  // Start up a single AP
+  StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
+
+  // Request a future scan with an empty channel list
+  env_->ScheduleNotification(std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId,
+                                       false, std::optional<const std::vector<uint8_t>>{{}}),
+                             kScanStartTime);
+
+  // The driver should exit early and return no scan results.
+  client_ifc_.AddVerifierFunction([](const wlanif_scan_result_t& result) { FAIL(); });
+
+  env_->Run(kDefaultTestDuration);
+
+  auto result_code = client_ifc_.ScanResultCode(kScanId);
+  ASSERT_TRUE(result_code.has_value());
+  ASSERT_EQ(result_code.value(), WLAN_SCAN_RESULT_INVALID_ARGS);
+}
+
 TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
   const int64_t test_start_timestamp_nanos = zx::clock::get_monotonic().get();
   constexpr zx::duration kScanStartTime = zx::sec(1);
@@ -213,9 +235,9 @@ TEST_F(PassiveScanTest, ScanWithMalformedBeaconMissingSsidInformationElement) {
   StartFakeApWithErrInjBeacon(kDefaultBssid, kDefaultSsid, kDefaultChannel, beacon_mutator);
 
   // Request a future scan
-  env_->ScheduleNotification(
-      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
-      kScanStartTime);
+  env_->ScheduleNotification(std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId,
+                                       false, std::optional<const std::vector<uint8_t>>{}),
+                             kScanStartTime);
 
   client_ifc_.AddVerifierFunction(
       [&test_start_timestamp_nanos](const wlanif_scan_result_t& result) {
@@ -262,9 +284,9 @@ TEST_F(PassiveScanTest, ScanWhenFirmwareBusy) {
   sim->sim_fw->err_inj_.AddErrInjIovar("escan", ZX_OK, BCME_BUSY);
 
   // Request a future scan
-  env_->ScheduleNotification(
-      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
-      kScanStartTime);
+  env_->ScheduleNotification(std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId,
+                                       false, std::optional<const std::vector<uint8_t>>{}),
+                             kScanStartTime);
 
   env_->Run(kDefaultTestDuration);
 
@@ -288,9 +310,9 @@ TEST_F(PassiveScanTest, ScanWhileAssocInProgress) {
 
   client_ifc_.AssociateWith(aps_.front()->ap_, kAssocStartTime);
   // Request a future scan
-  env_->ScheduleNotification(
-      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
-      kScanStartTime);
+  env_->ScheduleNotification(std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId,
+                                       false, std::optional<const std::vector<uint8_t>>{}),
+                             kScanStartTime);
 
   env_->Run(kDefaultTestDuration);
 
@@ -313,9 +335,9 @@ TEST_F(PassiveScanTest, ScanAbortedInFirmware) {
   StartFakeAp(kDefaultBssid, kDefaultSsid, kDefaultChannel);
 
   // Request a future scan
-  env_->ScheduleNotification(
-      std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId, false),
-      kScanStartTime);
+  env_->ScheduleNotification(std::bind(&PassiveScanTestInterface::StartScan, &client_ifc_, kScanId,
+                                       false, std::optional<const std::vector<uint8_t>>{}),
+                             kScanStartTime);
 
   // Request an association right after the scan
   client_ifc_.AssociateWith(aps_.front()->ap_, kAssocStartTime);

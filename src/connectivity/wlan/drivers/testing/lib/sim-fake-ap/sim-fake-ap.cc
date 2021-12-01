@@ -232,6 +232,8 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
   using wlan_ieee80211::StatusCode;
 
   switch (mgmt_frame->MgmtFrameType()) {
+    // TODO(fxbug.dev/89334): A probe response should only be sent if the Probe Request
+    // contains the SSID of this AP.
     case SimManagementFrame::FRAME_TYPE_PROBE_REQ: {
       auto probe_req_frame = std::static_pointer_cast<const SimProbeReqFrame>(mgmt_frame);
       ScheduleProbeResp(probe_req_frame->src_addr_);

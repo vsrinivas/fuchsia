@@ -259,60 +259,60 @@ zx_status_t Device::Connect(zx::channel request) {
 }
 
 void Device::StartScan(wlan_mlme::ScanRequest req) {
-  wlanif_scan_req_t impl_req = {};
+  std::unique_ptr<uint8_t[]> channels_list_begin;
+  std::unique_ptr<cssid_t[]> cssids_list_begin;
 
-  // txn_id
-  impl_req.txn_id = req.txn_id;
-
-  // bss_type
-  impl_req.bss_type_selector = req.bss_type_selector;
-
-  // bssid
+  wlanif_scan_req_t impl_req = {
+      .txn_id = req.txn_id,
+      .bss_type_selector = req.bss_type_selector,
+      .scan_type = ConvertScanType(req.scan_type),
+      .channels_count = req.channel_list.size(),
+      .ssids_count = req.ssid_list.size(),
+      .probe_delay = req.probe_delay,
+      .min_channel_time = req.min_channel_time,
+      .max_channel_time = req.max_channel_time,
+  };
   std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);
 
-  // ssid
-  CopySSID(req.ssid, &impl_req.ssid);
+  if (impl_req.channels_count > 0) {
+    // Clone list of channels
+    channels_list_begin = std::make_unique<uint8_t[]>(impl_req.channels_count);
+    if (channels_list_begin == nullptr) {
+      wlan_mlme::ScanEnd fidl_end;
+      fidl_end.txn_id = req.txn_id;
+      fidl_end.code = wlan_mlme::ScanResultCode::INVALID_ARGS;
+      SendScanEndUnlocked(std::move(fidl_end));
+      return;
+    }
 
-  // scan_type
-  impl_req.scan_type = ConvertScanType(req.scan_type);
-
-  // probe_delay
-  impl_req.probe_delay = req.probe_delay;
-
-  // channel_list
-  std::vector<uint8_t> channel_list;
-  if (req.channel_list.has_value()) {
-    channel_list = std::move(req.channel_list.value());
-  }
-  if (channel_list.size() > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-    lwarn("truncating channel list from %lu to %du\n", channel_list.size(),
-          WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
-    impl_req.num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS;
+    memcpy(channels_list_begin.get(), req.channel_list.data(), impl_req.channels_count);
+    impl_req.channels_list = channels_list_begin.get();
   } else {
-    impl_req.num_channels = channel_list.size();
+    wlan_mlme::ScanEnd fidl_end;
+    fidl_end.txn_id = req.txn_id;
+    fidl_end.code = wlan_mlme::ScanResultCode::INVALID_ARGS;
+    SendScanEndUnlocked(std::move(fidl_end));
+    return;
   }
-  std::memcpy(impl_req.channel_list, channel_list.data(), impl_req.num_channels);
 
-  // min_channel_time
-  impl_req.min_channel_time = req.min_channel_time;
+  if (impl_req.ssids_count > 0) {
+    // Clone list of SSIDs encoded as vector<uint8_t> into a list of cssid_t
+    cssids_list_begin = std::make_unique<cssid_t[]>(impl_req.ssids_count);
+    if (cssids_list_begin == nullptr) {
+      wlan_mlme::ScanEnd fidl_end;
+      fidl_end.txn_id = req.txn_id;
+      fidl_end.code = wlan_mlme::ScanResultCode::INTERNAL_ERROR;
+      SendScanEndUnlocked(std::move(fidl_end));
+      return;
+    }
 
-  // max_channel_time
-  impl_req.max_channel_time = req.max_channel_time;
-
-  // ssid_list
-  std::vector<std::vector<uint8_t>> ssid_list;
-  if (req.ssid_list.has_value()) {
-    ssid_list = std::move(req.ssid_list.value());
+    cssid_t* cssids_list_ptr = cssids_list_begin.get();
+    for (auto ssid : req.ssid_list) {
+      CloneIntoCSsid(ssid, *cssids_list_ptr);
+      cssids_list_ptr++;
+    }
+    impl_req.ssids_list = cssids_list_begin.get();
   }
-  size_t num_ssids = ssid_list.size();
-  if (num_ssids > WLAN_SCAN_MAX_SSIDS_PER_REQUEST) {
-    lwarn("truncating SSID list from %zu to %d\n", num_ssids, WLAN_SCAN_MAX_SSIDS_PER_REQUEST);
-    num_ssids = WLAN_SCAN_MAX_SSIDS_PER_REQUEST;
-  }
-  for (size_t ndx = 0; ndx < num_ssids; ndx++) {
-    CopySSID(ssid_list[ndx], &impl_req.ssid_list[ndx]);
-  }
-  impl_req.num_ssids = num_ssids;
 
   wlanif_impl_start_scan(&wlanif_impl_, &impl_req);
 }
@@ -732,14 +732,22 @@ void Device::OnScanEnd(const wlanif_scan_end_t* end) {
   }
 
   wlan_mlme::ScanEnd fidl_end;
-
-  // txn_id
   fidl_end.txn_id = end->txn_id;
-
-  // code
   fidl_end.code = ConvertScanResultCode(end->code);
 
-  binding_->events().OnScanEnd(std::move(fidl_end));
+  SendScanEndLockedBindingChecked(std::move(fidl_end));
+}
+
+void Device::SendScanEndLockedBindingChecked(wlan_mlme::ScanEnd scan_end) {
+  binding_->events().OnScanEnd(std::move(scan_end));
+}
+
+void Device::SendScanEndUnlocked(::fuchsia::wlan::mlme::ScanEnd scan_end) {
+  std::lock_guard<std::mutex> lock(lock_);
+  if (binding_ == nullptr) {
+    return;
+  }
+  SendScanEndLockedBindingChecked(std::move(scan_end));
 }
 
 void Device::JoinConf(const wlanif_join_confirm_t* resp) {

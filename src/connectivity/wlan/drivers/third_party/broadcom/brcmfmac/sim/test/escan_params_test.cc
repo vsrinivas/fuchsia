@@ -18,14 +18,18 @@ constexpr zx::duration kSimulatedClockDuration = zx::sec(10);
 }  // namespace
 
 constexpr uint64_t kScanTxnId = 0x4a65616e6e65;
+const uint8_t kDefaultChannelsList[11] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 const wlanif_scan_req kDefaultScanReq = {
     .txn_id = kScanTxnId,
     .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
     .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-    .num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS,
+    .channels_list = kDefaultChannelsList,
+    .channels_count = 11,
+    .ssids_list = nullptr,
+    .ssids_count = 0,
     .min_channel_time = SimInterface::kDefaultActiveScanDwellTimeMs,
     .max_channel_time = SimInterface::kDefaultActiveScanDwellTimeMs,
-    .num_ssids = WLAN_SCAN_MAX_SSIDS_PER_REQUEST};
+};
 
 // For this test, we don't want to use the default scan handlers provided by SimInterface
 class EscanArgsIfc : public SimInterface {
@@ -66,30 +70,10 @@ void EscanArgsTest::RunScanTest(const wlanif_scan_req& req) {
   ASSERT_TRUE(client_ifc_.ScanCompleted());
 }
 
-// Verify that the driver is able to process a request that uses the maximum channels and ssids
-// allowed.
-TEST_F(EscanArgsTest, MaxArgs) {
-  Init();
-  RunScanTest(kDefaultScanReq);
-  EXPECT_EQ(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
-}
-
 // Verify that invalid scan params result in a failed scan result
 TEST_F(EscanArgsTest, BadScanArgs) {
   Init();
   wlanif_scan_req req;
-
-  // More than the allowed number of channels
-  req = kDefaultScanReq;
-  req.num_channels = WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS + 1;
-  RunScanTest(req);
-  EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
-
-  // More than the allowed number of SSIDs
-  req = kDefaultScanReq;
-  req.num_ssids = WLAN_SCAN_MAX_SSIDS_PER_REQUEST + 1;
-  RunScanTest(req);
-  EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
 
   // Dwell time of zero
   req = kDefaultScanReq;
@@ -118,6 +102,15 @@ TEST_F(EscanArgsTest, BadScanArgs) {
   req.bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_MESH;
   RunScanTest(req);
   EXPECT_NE(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_SUCCESS);
+}
+
+TEST_F(EscanArgsTest, EmptyChannelList) {
+  Init();
+  wlanif_scan_req req;
+  req = kDefaultScanReq;
+  req.channels_count = 0;
+  RunScanTest(req);
+  EXPECT_EQ(client_ifc_.ScanResult(), WLAN_SCAN_RESULT_INVALID_ARGS);
 }
 
 }  // namespace wlan::brcmfmac

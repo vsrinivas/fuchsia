@@ -33,6 +33,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 #include <optional>
 #include <vector>
 
@@ -146,6 +147,7 @@ const char* brcmf_get_connect_status_str(brcmf_connect_status_t connect_status) 
 #undef X
 
 static inline void fill_with_broadcast_addr(uint8_t* address) { memset(address, 0xff, ETH_ALEN); }
+static inline void fill_with_wildcard_ssid(struct brcmf_ssid_le* ssid_le) { *ssid_le = {}; }
 
 /* Traverse a string of 1-byte tag/1-byte length/variable-length value
  * triples, returning a pointer to the substring whose first element
@@ -894,13 +896,14 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
                                     const wlanif_scan_req_t* request) {
   uint32_t n_ssids;
   uint32_t n_channels;
-  int32_t i;
   int32_t offset;
   uint16_t chanspec;
-  char* ptr;
-  struct brcmf_ssid_le ssid_le;
 
   fill_with_broadcast_addr(params_le->bssid);
+
+  /* Wildcard SSID serves as a fallback value if ssid_list is empty. Otherwise,
+     this field is ignored. */
+  fill_with_wildcard_ssid(&params_le->ssid_le);
 
   switch (request->bss_type_selector) {
     case fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY:
@@ -928,64 +931,58 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   params_le->channel_num = 0;
   params_le->home_time = -1;
 
-  if (request->ssid.len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
-    BRCMF_ERR("Scan request SSID too long(no longer than %hhu bytes)",
-              wlan_ieee80211::MAX_SSID_BYTE_LEN);
-    return ZX_ERR_INVALID_ARGS;
-  }
-  params_le->ssid_le.SSID_len = request->ssid.len;
-  memcpy(params_le->ssid_le.SSID, request->ssid.data, request->ssid.len);
-
-  n_ssids = request->num_ssids;
-  n_channels = request->num_channels;
-
   /* Copy channel array if applicable */
+  n_channels = request->channels_count;
   BRCMF_DBG(SCAN, "### List of channelspecs to scan ### %d", n_channels);
   if (n_channels > 0) {
-    for (i = 0; i < (int32_t)n_channels; i++) {
+    for (uint32_t i = 0; i < n_channels; i++) {
       wlan_channel_t wlan_chan;
-      wlan_chan.primary = request->channel_list[i];
+      wlan_chan.primary = request->channels_list[i];
       wlan_chan.cbw = CHANNEL_BANDWIDTH_CBW20;
       wlan_chan.secondary80 = 0;
       chanspec = channel_to_chanspec(&cfg->d11inf, &wlan_chan);
-      BRCMF_DBG(SCAN, "Chan : %d, Channel spec: %x", request->channel_list[i], chanspec);
+      BRCMF_DBG(SCAN, "Chan : %d, Channel spec: %x", request->channels_list[i], chanspec);
       params_le->channel_list[i] = chanspec;
     }
   } else {
-    BRCMF_DBG(SCAN, "Scanning all channels");
+    BRCMF_ERR("Scan request contains empty channel list.");
+    return ZX_ERR_INVALID_ARGS;
   }
-  /* Copy ssid array if applicable */
+
+  /* Add number of channels to channel_num */
+  params_le->channel_num = n_channels & BRCMF_SCAN_PARAMS_COUNT_MASK;
+
+  /* Set SSID fields as applicable */
+  n_ssids = request->ssids_count;
   BRCMF_DBG(SCAN, "### List of SSIDs to scan ### %d", n_ssids);
+
+  /* Copy ssid_list if non-empty */
   if (n_ssids > 0) {
-    if (params_le->scan_type == BRCMF_SCANTYPE_ACTIVE) {
-      offset = offsetof(struct brcmf_scan_params_le, channel_list) + n_channels * sizeof(uint16_t);
-      offset = roundup(offset, sizeof(uint32_t));
-      ptr = (char*)params_le + offset;
-      for (i = 0; i < (int32_t)n_ssids; i++) {
-        if (request->ssid_list[i].len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
-          BRCMF_ERR("SSID in scan request SSID list too long(no longer than %hhu bytes)",
-                    wlan_ieee80211::MAX_SSID_BYTE_LEN);
-          return ZX_ERR_INVALID_ARGS;
-        }
-        memset(&ssid_le, 0, sizeof(ssid_le));
-        ssid_le.SSID_len = request->ssid_list[i].len;
-        memcpy(ssid_le.SSID, request->ssid_list[i].data, request->ssid_list[i].len);
-        if (!ssid_le.SSID_len) {
-          BRCMF_DBG(SCAN, "%d: Broadcast scan", i);
-        } else {
-          BRCMF_DBG(SCAN, "%d: Targeted scan", i);
+    offset = offsetof(struct brcmf_scan_params_le, channel_list) + n_channels * sizeof(uint16_t);
+    offset = roundup(offset, sizeof(uint32_t));
+    struct brcmf_ssid_le* ssid_le =
+        reinterpret_cast<struct brcmf_ssid_le*>(reinterpret_cast<char*>(params_le) + offset);
+    for (uint32_t i = 0; i < n_ssids; i++, ssid_le++) {
+      if (request->ssids_list[i].len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
+        BRCMF_ERR("SSID in scan request SSID list too long(no longer than %hhu bytes)",
+                  wlan_ieee80211::MAX_SSID_BYTE_LEN);
+        return ZX_ERR_INVALID_ARGS;
+      }
+      ssid_le->SSID_len = request->ssids_list[i].len;
+      memcpy(&ssid_le->SSID, request->ssids_list[i].data, request->ssids_list[i].len);
+      if (ssid_le->SSID_len == 0) {
+        BRCMF_DBG(SCAN, "%d: Broadcast scan", i);
+      } else {
+        BRCMF_DBG(SCAN, "%d: Targeted scan", i);
 #if !defined(NDEBUG)
-          BRCMF_DBG(SCAN, "  ssid:" FMT_SSID, FMT_SSID_BYTES(ssid_le.SSID, ssid_le.SSID_len));
+        BRCMF_DBG(SCAN, "  ssid:" FMT_SSID, FMT_SSID_BYTES(ssid_le->SSID, ssid_le->SSID_len));
 #endif /* !defined(NDEBUG) */
-        }
-        memcpy(ptr, &ssid_le, sizeof(ssid_le));
-        ptr += sizeof(ssid_le);
       }
     }
   }
-  /* Adding mask to channel numbers */
-  params_le->channel_num =
-      (n_ssids << BRCMF_SCAN_PARAMS_NSSID_SHIFT) | (n_channels & BRCMF_SCAN_PARAMS_COUNT_MASK);
+
+  /* Add number of SSIDs to channel_num. See comment at channel_num field declaration. */
+  params_le->channel_num |= n_ssids << BRCMF_SCAN_PARAMS_NSSID_SHIFT;
 
   return ZX_OK;
 }
@@ -1023,25 +1020,13 @@ static zx_status_t brcmf_run_escan(struct brcmf_cfg80211_info* cfg, struct brcmf
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Validate channel count
-  if (request->num_channels > WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS) {
-    BRCMF_ERR("Number of channels in escan request (%zu) exceeds maximum (%du)",
-              request->num_channels, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // Validate ssid count
-  if (request->num_ssids > WLAN_SCAN_MAX_SSIDS_PER_REQUEST) {
-    BRCMF_ERR("Number of SSIDs in escan request (%zu) exceeds maximum (%d)", request->num_ssids,
-              WLAN_SCAN_MAX_SSIDS_PER_REQUEST);
-    return ZX_ERR_INVALID_ARGS;
-  }
-
   // Calculate space needed for parameters
-  size_t params_size = brcmf_escan_params_size(request->num_channels, request->num_ssids);
+  size_t params_size = brcmf_escan_params_size(request->channels_count, request->ssids_count);
 
   // Validate command size
   size_t total_cmd_size = params_size + sizeof("escan");
+  // TODO(fxbug.dev/89549): This check seems to be roughly 32 bytes too long, but in practice
+  // we never expect to hit the limit.
   if (total_cmd_size >= BRCMF_DCMD_MEDLEN) {
     BRCMF_ERR("Escan params size (%zu) exceeds command max capacity (%d)", total_cmd_size,
               BRCMF_DCMD_MEDLEN);
@@ -3336,16 +3321,22 @@ void brcmf_if_start_scan(net_device* ndev, const wlanif_scan_req_t* req) {
   // because the sync_id would not match.
   std::lock_guard sync_id_lock(ndev->scan_sync_id_mutex);
   result = brcmf_cfg80211_scan(ndev, req, &sync_id);
-  if (result == ZX_OK) {
-    ndev->scan_txn_id = req->txn_id;
-    ndev->scan_sync_id = sync_id;
-  } else if (result == ZX_ERR_SHOULD_WAIT) {
-    BRCMF_INFO("Couldn't start scan because firmware is busy: %d %s", result,
-               zx_status_get_string(result));
-    brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_SHOULD_WAIT);
-  } else {
-    BRCMF_INFO("Couldn't start scan: %d %s", result, zx_status_get_string(result));
-    brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
+  switch (result) {
+    case ZX_OK:
+      ndev->scan_txn_id = req->txn_id;
+      ndev->scan_sync_id = sync_id;
+      break;
+    case ZX_ERR_SHOULD_WAIT:
+      BRCMF_INFO("Scan failed. Firmware busy: %d %s", result, zx_status_get_string(result));
+      brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_SHOULD_WAIT);
+      break;
+    case ZX_ERR_INVALID_ARGS:
+      BRCMF_ERR("Scan failed. Invalid arguments: %d %s", result, zx_status_get_string(result));
+      brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INVALID_ARGS);
+      break;
+    default:
+      BRCMF_INFO("Scan failed. Internal error: %d %s", result, zx_status_get_string(result));
+      brcmf_signal_scan_end(ndev, req->txn_id, WLAN_SCAN_RESULT_INTERNAL_ERROR);
   }
 }
 

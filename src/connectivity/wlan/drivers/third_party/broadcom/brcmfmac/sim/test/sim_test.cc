@@ -301,25 +301,25 @@ void SimInterface::DeauthenticateFrom(const common::MacAddr& bssid, reason_code_
   if_impl_ops_->deauth_req(if_impl_ctx_, &deauth_req);
 }
 
-void SimInterface::StartScan(uint64_t txn_id, bool active) {
+void SimInterface::StartScan(uint64_t txn_id, bool active,
+                             std::optional<const std::vector<uint8_t>> channels_arg) {
   ZX_ASSERT(if_impl_ops_);
   wlan_scan_type_t scan_type = active ? WLAN_SCAN_TYPE_ACTIVE : WLAN_SCAN_TYPE_PASSIVE;
   uint32_t dwell_time = active ? kDefaultActiveScanDwellTimeMs : kDefaultPassiveScanDwellTimeMs;
-  size_t num_channels = kDefaultScanChannels.size();
+  const std::vector<uint8_t> channels =
+      channels_arg.has_value() ? channels_arg.value() : kDefaultScanChannels;
+
   wlanif_scan_req_t req = {
       .txn_id = txn_id,
       .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
       .scan_type = scan_type,
-      .num_channels = num_channels,
+      .channels_list = channels.data(),
+      .channels_count = channels.size(),
+      .ssids_list = nullptr,
+      .ssids_count = 0,
       .min_channel_time = dwell_time,
       .max_channel_time = dwell_time,
-      .num_ssids = 0,
   };
-
-  // Initialize the channel list
-  ZX_ASSERT(num_channels <= WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS);
-  memcpy(req.channel_list, kDefaultScanChannels.data(), kDefaultScanChannels.size());
-  memset(&req.channel_list[num_channels], 0, WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS - num_channels);
 
   // Create an entry for tracking results
   ScanStatus scan_status;

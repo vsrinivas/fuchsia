@@ -131,7 +131,9 @@ class SimInterface {
   void DeauthenticateFrom(const common::MacAddr& bssid, reason_code_t reason);
 
   // Scan operations
-  void StartScan(uint64_t txn_id = 0, bool active = false);
+  void StartScan(uint64_t txn_id = 0, bool active = false,
+                 std::optional<const std::vector<uint8_t>> channels =
+                     std::optional<const std::vector<uint8_t>>{});
   std::optional<wlan_scan_result_t> ScanResultCode(uint64_t txn_id);
   const std::list<wlanif_scan_result_t>* ScanResultList(uint64_t txn_id);
 

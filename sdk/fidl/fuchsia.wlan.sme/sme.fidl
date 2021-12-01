@@ -100,9 +100,16 @@ type ScanRequest = strict union {
 type PassiveScanRequest = struct {};
 
 type ActiveScanRequest = struct {
-    // The SSIDs to scan for. Leave empty for a wildcard active scan.
-    ssids vector<ieee80211.Ssid>:16;
-    // Channels to scan on. Leave empty for all supported channels.
+    /// List of SSIDs to scan for. An empty list of ssids is the same as specifying
+    /// a list containing only the wildcard SSID.
+    ///
+    /// There is no limit on the number of SSIDs specified, but a large number of
+    /// SSIDs may result in extended scan times or the error ZX_ERR_INVALID_ARGS to be
+    /// returned.
+    ssids vector<ieee80211.Ssid>:MAX;
+    // TODO(fxbug.dev/89348): SME should instead require the higher layer to specify
+    // which channels to scan and return an error if the list is empty.
+    /// Channels to scan on. Leave empty for all supported channels.
     channels vector<uint8>:500;
 };
 

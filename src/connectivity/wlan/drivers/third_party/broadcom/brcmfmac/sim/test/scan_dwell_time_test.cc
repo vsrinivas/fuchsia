@@ -59,8 +59,9 @@ TEST_F(ScanTest, PassiveDwellTime) {
 
   for (size_t scan_attempt = 0; scan_attempt < kTotalScanCount; scan_attempt++) {
     zx_time_t start_timestamp = zx::clock::get_monotonic().get();
-    env_->ScheduleNotification(
-        std::bind(&SimInterface::StartScan, &client_ifc_, scan_attempt, false), kScanStartTime);
+    env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, scan_attempt,
+                                         false, std::optional<const std::vector<uint8_t>>{}),
+                               kScanStartTime);
     env_->Run(kScanMaxTime);
 
     // Check scan result code

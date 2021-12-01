@@ -53,13 +53,12 @@ pub fn fake_scan_request() -> fidl_mlme::ScanRequest {
         // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
         bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
         bssid: [8, 2, 6, 2, 1, 11],
-        ssid: vec![],
         scan_type: fidl_mlme::ScanTypes::Active,
+        channel_list: vec![11],
+        ssid_list: vec![],
         probe_delay: 5,
-        channel_list: Some(vec![11]),
         min_channel_time: 50,
         max_channel_time: 50,
-        ssid_list: None,
     }
 }
 

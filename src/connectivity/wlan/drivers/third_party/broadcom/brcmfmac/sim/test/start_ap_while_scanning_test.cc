@@ -111,7 +111,8 @@ void ScanAndApStartTest::StartAp() {
 TEST_F(ScanAndApStartTest, ScanApStartInterference) {
   Init();
 
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kFirstScanId, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kFirstScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(10));
   env_->ScheduleNotification(std::bind(&ScanAndApStartTest::StartAp, this), zx::msec(200));
 
@@ -136,7 +137,8 @@ TEST_F(ScanAndApStartTest, ScanAbortFailure) {
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SCAN, ZX_ERR_IO_REFUSED, BCME_OK,
                                      client_ifc_.iface_id_);
 
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kFirstScanId, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kFirstScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(10));
   env_->ScheduleNotification(std::bind(&ScanAndApStartTest::StartAp, this), zx::msec(200));
 
@@ -152,8 +154,9 @@ TEST_F(ScanAndApStartTest, ScanAbortFailure) {
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.size(), 1U);
   EXPECT_EQ(softap_ifc_.stats_.start_confirmations.back().result_code, WLAN_START_RESULT_SUCCESS);
 
-  env_->ScheduleNotification(
-      std::bind(&SimInterface::StartScan, &client_ifc_, kSecondScanId, false), zx::msec(10));
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kSecondScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
+                             zx::msec(10));
 
   // Run the test for another 50 seconds.
   static constexpr zx::duration kSecondRunDuration = zx::sec(50);
@@ -178,7 +181,8 @@ TEST_F(ScanAndApStartTest, ScanWhileApStart) {
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_OK, softap_ifc_.iface_id_);
 
   env_->ScheduleNotification(std::bind(&ScanAndApStartTest::StartAp, this), zx::msec(10));
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kFirstScanId, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kFirstScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(300));
 
   static constexpr zx::duration kTestDuration = zx::sec(50);

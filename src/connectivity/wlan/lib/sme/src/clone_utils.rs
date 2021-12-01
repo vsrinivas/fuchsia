@@ -85,12 +85,3 @@ pub fn clone_mesh_peering_common(c: &fidl_mlme::MeshPeeringCommon) -> fidl_mlme:
         ..*c
     }
 }
-
-pub fn clone_scan_request(sr: &fidl_mlme::ScanRequest) -> fidl_mlme::ScanRequest {
-    fidl_mlme::ScanRequest {
-        ssid: sr.ssid.clone(),
-        channel_list: sr.channel_list.clone(),
-        ssid_list: sr.ssid_list.clone(),
-        ..*sr
-    }
-}

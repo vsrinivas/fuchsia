@@ -139,6 +139,16 @@ void ConvertBssDescription(bss_description_t* banjo_desc,
   banjo_desc->snr_db = fidl_desc.snr_db;
 }
 
+// This function is only guaranteed to produce a valid fuchsia.wlan.ieee80211/CSsid,
+// i.e., an SSID with a valid byte length, if the input argument came from a
+// fuchsia.wlan.ieee80211/Ssid.
+void CloneIntoCSsid(const ::std::vector<uint8_t>& ssid, cssid_t& out_cssid) {
+  // fuchsia.wlan.ieee80211/Ssid is guaranteed to have no more than 32 bytes,
+  // so its size will fit in a uint8_t.
+  out_cssid.len = static_cast<uint8_t>(ssid.size());
+  memcpy(&out_cssid.data, ssid.data(), out_cssid.len);
+}
+
 wlan_internal::BssType ConvertBssType(uint8_t bss_type) {
   switch (bss_type) {
     case BSS_TYPE_INFRASTRUCTURE:

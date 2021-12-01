@@ -6,7 +6,7 @@
 
 // Arbitrary values used to uniquely identify scan requests (and results)
 constexpr uint64_t kFirstScanId = 0x4f4a;
-constexpr uint64_t kSecondScanId =  0x414a;
+constexpr uint64_t kSecondScanId = 0x414a;
 
 namespace wlan::brcmfmac {
 namespace {
@@ -23,9 +23,11 @@ TEST_F(SimTest, ScanWhileScanning) {
   SimInterface client_ifc;
   StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &client_ifc);
 
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kFirstScanId, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kFirstScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(10));
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kSecondScanId, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc, kSecondScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(100));
 
   env_->Run(kSimulatedClockDuration);

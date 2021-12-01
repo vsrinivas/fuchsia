@@ -95,14 +95,15 @@ wlan_internal::BssDescription CreateBssDescription(bool rsne, wlan_channel_t cha
   return bss_desc;
 }
 
-wlan_mlme::ScanRequest CreateScanRequest(uint32_t max_channel_time) {
+wlan_mlme::ScanRequest CreatePassiveScanRequest(uint32_t max_channel_time) {
   wlan_mlme::ScanRequest req;
   req.txn_id = 0;
   req.bss_type_selector = wlan_internal::BSS_TYPE_SELECTOR_ANY;
   std::memcpy(req.bssid.data(), kBroadcastBssid, sizeof(kBroadcastBssid));
-  req.ssid = {0};
   req.scan_type = wlan_mlme::ScanTypes::PASSIVE;
-  req.channel_list.emplace({11});
+  req.channel_list = {11};
+  req.ssid_list = {};
+  req.min_channel_time = 0;
   req.max_channel_time = max_channel_time;
   return req;
 }

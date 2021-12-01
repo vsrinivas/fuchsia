@@ -106,9 +106,15 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
 
  private:
   zx_status_t AddDevice();
+  // Suffixes in these function names have the following meanings:
+  //   Locked: Assumes lock_ already acquired prior to this function being called.
+  //   Unlocked: Acquires lock_ at the beginning at the beginning of the function.
+  //   BindingChecked: Assumes binding_ is not equal to nullptr.
   void SetEthernetStatusLocked(bool online) __TA_REQUIRES(lock_);
   void SetEthernetStatusUnlocked(bool online) __TA_EXCLUDES(lock_);
-
+  void SendScanEndLockedBindingChecked(::fuchsia::wlan::mlme::ScanEnd scan_end)
+      __TA_REQUIRES(lock_);
+  void SendScanEndUnlocked(::fuchsia::wlan::mlme::ScanEnd scan_end) __TA_EXCLUDES(lock_);
   void SendStartConfLocked(wlan_start_result_t result_code) __TA_REQUIRES(lock_);
 
   std::mutex lock_;

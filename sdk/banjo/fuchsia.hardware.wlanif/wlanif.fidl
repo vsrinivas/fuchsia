@@ -16,8 +16,6 @@ type WlanScanType = strict enum : uint8 {
     PASSIVE = 2;
 };
 
-const WLAN_SCAN_MAX_SSIDS_PER_REQUEST uint32 = 32;
-
 // LINT.IfChange
 /// WFA WMM v1.2, 2.2.2 Table 5
 /// Length of the WMM Parameter Element body. This does not include IE and vendor IE headers,
@@ -29,15 +27,23 @@ type WlanifScanReq = struct {
     txn_id uint64;
     bss_type_selector fuchsia.wlan.internal.BssTypeSelector;
     bssid ieee80211.MacAddr;
-    ssid ieee80211.CSsid;
     scan_type WlanScanType;
+    /// List of channels to scan on. An empty list of channels will cause a
+    /// scan request to immediately return a WlanifScanEnd with code INVALID_ARGS.
+    ///
+    /// There is no limit on the number of channels specified, but invalid channels
+    /// may be ignored or cause the error ZX_ERR_INVALID_ARGS to be returned.
+    channels vector<uint8>:MAX;
+    /// List of SSIDs to scan for. An empty list of ssids is the same as specifying
+    /// a list containing only the wildcard SSID.
+    ///
+    /// There is no limit on the number of SSIDs specified, but a large number of
+    /// SSIDs may result in extended scan times or the error ZX_ERR_INVALID_ARGS to be
+    /// returned.
+    ssids vector<ieee80211.CSsid>:MAX;
     probe_delay uint32;
-    num_channels uint64;
-    channel_list array<uint8, fuchsia.hardware.wlanphyinfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
     min_channel_time uint32;
     max_channel_time uint32;
-    num_ssids uint64;
-    ssid_list array<ieee80211.CSsid, WLAN_SCAN_MAX_SSIDS_PER_REQUEST>;
 };
 
 /// IEEE Std 802.11-2016, Table 9-19

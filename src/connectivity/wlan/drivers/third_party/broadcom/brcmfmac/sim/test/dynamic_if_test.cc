@@ -888,7 +888,8 @@ TEST_F(DynamicIfTest, RejectScanWhenApStartReqIsPending) {
                                        SimInterface::kDefaultSoftApSsid, kDefaultChannel, 100, 100),
                              zx::msec(30));
   // The timeout of AP start is 1000 msec, so a scan request before zx::msec(1030) will be rejected.
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(100));
 
   env_->Run(kTestDuration);

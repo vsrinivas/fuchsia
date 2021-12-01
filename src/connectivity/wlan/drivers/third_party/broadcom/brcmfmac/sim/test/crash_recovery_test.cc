@@ -125,7 +125,8 @@ TEST_F(CrashRecoveryTest, ConnectAfterCrashDuringScan) {
   constexpr uint64_t kScanId = 0x18c5f;
 
   Init();
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(10));
   // Crash before the first scan result is sent up.
   ScheduleCrash(zx::msec(15));
@@ -183,7 +184,8 @@ TEST_F(CrashRecoveryTest, ScanAfterCrashAfterConnect) {
   ScheduleCrash(zx::msec(20));
   env_->ScheduleNotification(std::bind(&CrashRecoveryTest::RecreateClientIface, this),
                              zx::msec(30));
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, kScanId, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(40));
 
   env_->Run(kTestDuration);

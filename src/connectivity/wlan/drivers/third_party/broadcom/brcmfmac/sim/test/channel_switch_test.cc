@@ -228,7 +228,8 @@ TEST_F(ChannelSwitchTest, ChannelSwitchWhileScanning) {
   client_ifc_.AssociateWith(ap, zx::msec(10));
 
   constexpr uint32_t kScanStartTimeMs = 20;
-  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, 0, false),
+  env_->ScheduleNotification(std::bind(&SimInterface::StartScan, &client_ifc_, 0, false,
+                                       std::optional<const std::vector<uint8_t>>{}),
                              zx::msec(kScanStartTimeMs));
 
   constexpr uint32_t kCsaBeaconDelayMs =

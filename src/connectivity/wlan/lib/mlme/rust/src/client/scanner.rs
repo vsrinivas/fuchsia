@@ -38,8 +38,6 @@ pub enum ScanError {
     Busy,
     #[error("invalid arg: empty channel list")]
     EmptyChannelList,
-    #[error("invalid arg: channel list too large")]
-    ChannelListTooLarge,
     #[error("invalid arg: max_channel_time < min_channel_time")]
     MaxChannelTimeLtMin,
     #[error("invalid arg: SSID too long")]
@@ -57,7 +55,6 @@ impl From<ScanError> for zx::Status {
         match e {
             ScanError::Busy => zx::Status::UNAVAILABLE,
             ScanError::EmptyChannelList
-            | ScanError::ChannelListTooLarge
             | ScanError::MaxChannelTimeLtMin
             | ScanError::SsidTooLong
             | ScanError::UnsupportedBssTypeSelector => zx::Status::INVALID_ARGS,
@@ -72,7 +69,6 @@ impl From<ScanError> for fidl_mlme::ScanResultCode {
         match e {
             ScanError::Busy => fidl_mlme::ScanResultCode::NotSupported,
             ScanError::EmptyChannelList
-            | ScanError::ChannelListTooLarge
             | ScanError::MaxChannelTimeLtMin
             | ScanError::SsidTooLong
             | ScanError::UnsupportedBssTypeSelector => fidl_mlme::ScanResultCode::InvalidArgs,
@@ -155,13 +151,8 @@ impl<'a> BoundScanner<'a> {
         if self.scanner.ongoing_scan.is_some() {
             send_scan_end_and_return!(req.txn_id, ScanError::Busy, self);
         }
-
-        let channel_list = req.channel_list.as_ref().map(|list| list.as_slice()).unwrap_or(&[][..]);
-        if channel_list.is_empty() {
+        if req.channel_list.is_empty() {
             send_scan_end_and_return!(req.txn_id, ScanError::EmptyChannelList, self);
-        }
-        if channel_list.len() > banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize {
-            send_scan_end_and_return!(req.txn_id, ScanError::ChannelListTooLarge, self);
         }
         if req.max_channel_time < req.min_channel_time {
             send_scan_end_and_return!(req.txn_id, ScanError::MaxChannelTimeLtMin, self);
@@ -179,17 +170,27 @@ impl<'a> BoundScanner<'a> {
                 banjo_wlan_mac::WlanHwScanType::PASSIVE
             };
             let mut channels = [0; banjo_hw_wlaninfo::WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize];
-            channels[..channel_list.len()].copy_from_slice(channel_list);
+            channels[..req.channel_list.len()].copy_from_slice(&req.channel_list[..]);
 
+            // TODO(fxbug.dev/88651): Fix hw_scan to support scanning for multiple SSIDs.
+            if req.ssid_list.len() > 1 {
+                error!("Only using the first SSID specified for hw_scan");
+            }
             // fuchsia.wlan.mlme/ScanRequest.ssid is always at most fidl_ieee80211::MAX_SSID_BYTE_LEN bytes
-            let mut ssid = [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize];
-            ssid[..req.ssid.len()].copy_from_slice(&req.ssid[..]);
+            let mut data = [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize];
+            let len = if req.ssid_list.len() > 0 {
+                data[..req.ssid_list[0].len()].copy_from_slice(&req.ssid_list[0][..]);
+                req.ssid_list[0].len() as u8
+            } else {
+                0 as u8
+            };
+            let first_ssid = banjo_ieee80211::CSsid { len, data };
 
             let config = banjo_wlan_mac::WlanHwScanConfig {
                 scan_type,
-                num_channels: channel_list.len() as u8,
+                num_channels: req.channel_list.len() as u8,
                 channels,
-                ssid: banjo_ieee80211::CSsid { len: req.ssid.len() as u8, data: ssid },
+                ssid: first_ssid,
             };
             if let Err(status) = self.ctx.device.start_hw_scan(&config) {
                 self.scanner.ongoing_scan.take();
@@ -197,7 +198,8 @@ impl<'a> BoundScanner<'a> {
             }
             self.scanner.ongoing_scan = Some(OngoingScan { req, probe_delay_timeout_id: None });
         } else {
-            let channels = channel_list
+            let channels = req
+                .channel_list
                 .iter()
                 .map(|c| banjo_common::WlanChannel {
                     primary: *c,
@@ -248,12 +250,14 @@ impl<'a> BoundScanner<'a> {
 
     /// Notify scanner about end of probe-delay timeout so that it sends out probe request.
     pub fn handle_probe_delay_timeout(&mut self, channel: banjo_common::WlanChannel) {
-        let ssid = match &self.scanner.ongoing_scan {
-            Some(OngoingScan { req, .. }) => req.ssid.clone(),
+        let ssid_list = match &self.scanner.ongoing_scan {
+            Some(OngoingScan { req, .. }) => req.ssid_list.clone(),
             None => return,
         };
-        if let Err(e) = self.send_probe_req(&ssid[..], channel) {
-            error!("{}", e);
+        for ssid in ssid_list {
+            if let Err(e) = self.send_probe_req(&ssid[..], channel) {
+                error!("{}", e);
+            }
         }
     }
 
@@ -282,9 +286,10 @@ impl<'a> BoundScanner<'a> {
         };
         if req.scan_type == fidl_mlme::ScanTypes::Active {
             if req.probe_delay == 0 {
-                let ssid = req.ssid.clone();
-                if let Err(e) = self.send_probe_req(&ssid[..], channel) {
-                    error!("{}", e);
+                for ssid in req.ssid_list.clone() {
+                    if let Err(e) = self.send_probe_req(&ssid[..], channel) {
+                        error!("{}", e);
+                    }
                 }
             } else {
                 let timeout_id = self.ctx.timer.schedule_after(
@@ -387,8 +392,9 @@ mod tests {
             test_utils::MockWlanRxInfo,
         },
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
+        ieee80211::Ssid,
         lazy_static::lazy_static,
-        std::{cell::RefCell, rc::Rc},
+        std::{cell::RefCell, convert::TryFrom, rc::Rc},
         wlan_common::{
             assert_variant,
             sequence::SequenceManager,
@@ -413,13 +419,12 @@ mod tests {
             txn_id: 1337,
             bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
             bssid: BSSID.0,
-            ssid: b"ssid".to_vec(),
             scan_type: fidl_mlme::ScanTypes::Passive,
+            channel_list: vec![6],
+            ssid_list: vec![Ssid::try_from("ssid").unwrap().into()],
             probe_delay: 0,
-            channel_list: Some(vec![6]),
             min_channel_time: 100,
             max_channel_time: 300,
-            ssid_list: None,
         }
     }
 
@@ -624,41 +629,13 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
-        let scan_req = fidl_mlme::ScanRequest { channel_list: Some(vec![]), ..scan_req() };
+        let scan_req = fidl_mlme::ScanRequest { channel_list: vec![], ..scan_req() };
         let result = scanner.bind(&mut ctx).on_sme_scan(
             scan_req,
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
         );
         assert_variant!(result, Err(ScanError::EmptyChannelList));
-        let scan_end = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanEnd>()
-            .expect("error reading MLME ScanEnd");
-        assert_eq!(
-            scan_end,
-            fidl_mlme::ScanEnd { txn_id: 1337, code: fidl_mlme::ScanResultCode::InvalidArgs }
-        );
-    }
-
-    #[test]
-    fn test_handle_scan_req_long_channel_list() {
-        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let mut m = MockObjects::new(&exec);
-        let mut ctx = m.make_ctx();
-        let mut scanner = Scanner::new(IFACE_MAC);
-
-        let mut channel_list = vec![];
-        for i in 1..=65 {
-            channel_list.push(i);
-        }
-        let scan_req = fidl_mlme::ScanRequest { channel_list: Some(channel_list), ..scan_req() };
-        let result = scanner.bind(&mut ctx).on_sme_scan(
-            scan_req,
-            m.listener_state.create_channel_listener_fn(),
-            &mut m.chan_sched,
-        );
-        assert_variant!(result, Err(ScanError::ChannelListTooLarge));
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()

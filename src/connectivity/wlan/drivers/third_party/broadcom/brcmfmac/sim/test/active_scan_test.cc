@@ -82,7 +82,17 @@ class ActiveScanTest : public SimTest {
   ClientIfc client_ifc_;
 
   // The default active scan request
-  wlanif_scan_req_t default_scan_req_;
+  const uint8_t default_channels_list_[5] = {1, 2, 3, 4, 5};
+  wlanif_scan_req_t default_scan_req_ = {
+      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
+      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+      .channels_list = default_channels_list_,
+      .channels_count = 5,
+      .ssids_list = nullptr,
+      .ssids_count = 0,
+      .min_channel_time = kDwellTimeMs,
+      .max_channel_time = kDwellTimeMs,
+  };
 
  private:
   // StationIfc methods
@@ -119,16 +129,6 @@ void ActiveScanTest::Init() {
 
   // Get the interface MAC address
   client_ifc_.GetMacAddr(&sim_fw_mac_);
-
-  default_scan_req_ = {
-      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
-      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-      .num_channels = 5,
-      .channel_list = {1, 2, 3, 4, 5},
-      .min_channel_time = kDwellTimeMs,
-      .max_channel_time = kDwellTimeMs,
-      .num_ssids = 0,
-  };
 }
 
 void ActiveScanTest::StartFakeAp(const common::MacAddr& bssid, const cssid_t& ssid,
@@ -305,7 +305,7 @@ TEST_F(ActiveScanTest, ScanTwice) {
 TEST_F(ActiveScanTest, CheckNumProbeReqsSent) {
   Init();
   default_scan_req_.txn_id = ++client_ifc_.scan_txn_id_;
-  default_scan_req_.num_channels = 1;
+  default_scan_req_.channels_count = 1;
 
   env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &default_scan_req_),
                              kScanStartTime);
@@ -318,11 +318,44 @@ TEST_F(ActiveScanTest, CheckNumProbeReqsSent) {
   EXPECT_EQ(client_ifc_.scan_result_code_, ZX_OK);
 }
 
+// This test is to verify brcmfmac driver will return an error when an empty list
+// of channels is indicated in active scan test request.
+TEST_F(ActiveScanTest, EmptyChannelList) {
+  constexpr zx::duration kScanStartTime = zx::sec(1);
+
+  Init();
+
+  StartFakeAp(kAp1Bssid, kAp1Ssid, kDefaultChannel1);
+
+  // Case contains empty channels_list.
+  wlanif_scan_req_t req_empty_channels_list = {
+      .txn_id = ++client_ifc_.scan_txn_id_,
+      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
+      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
+      .channels_list = nullptr,
+      .channels_count = 0,
+      .ssids_list = nullptr,
+      .ssids_count = 0,
+      .min_channel_time = kDwellTimeMs,
+      .max_channel_time = kDwellTimeMs,
+  };
+
+  // Two active scans are scheduled,
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &req_empty_channels_list),
+                             kScanStartTime);
+
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::EndSimulation, this),
+                             kSimulatedClockDuration);
+  env_->Run(kSimulatedClockDuration);
+
+  VerifyScanResults();
+  EXPECT_EQ(client_ifc_.scan_result_code_, WLAN_SCAN_RESULT_INVALID_ARGS);
+}
+
 // This test is to verify brcmfmac driver will return an error when an invalid ssid list
 // is indicated in active scan test request.
-TEST_F(ActiveScanTest, OverSizeSsid) {
-  constexpr zx::duration kFirstScanStartTime = zx::sec(1);
-  constexpr zx::duration kSecondScanStartTime = zx::sec(2);
+TEST_F(ActiveScanTest, SsidTooLong) {
+  constexpr zx::duration kScanStartTime = zx::sec(1);
 
   Init();
 
@@ -338,43 +371,31 @@ TEST_F(ActiveScanTest, OverSizeSsid) {
       .data = "Fuchsia Fake AP1",
   };
 
-  // Case contains over-size ssid in ssid field of request.
-  wlanif_scan_req_t req_break_ssid = {
+  // Case contains over-size ssid in ssids_list in request.
+  const uint8_t channels_list[] = {1, 2, 3, 4, 5};
+  const cssid_t ssids_list[] = {valid_scan_ssid, invalid_scan_ssid};
+  wlanif_scan_req_t req_break_ssids_list = {
       .txn_id = ++client_ifc_.scan_txn_id_,
       .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
-      .ssid = invalid_scan_ssid,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-      .num_channels = 5,
-      .channel_list = {1, 2, 3, 4, 5},
+      .channels_list = channels_list,
+      .channels_count = 5,
+      .ssids_list = ssids_list,
+      .ssids_count = 2,
       .min_channel_time = kDwellTimeMs,
       .max_channel_time = kDwellTimeMs,
-      .num_ssids = 0,
   };
 
-  // Case contains over-size ssid in ssid_list in request.
-  wlanif_scan_req_t req_break_ssid_list = {
-      .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
-      .scan_type = WLAN_SCAN_TYPE_ACTIVE,
-      .num_channels = 5,
-      .channel_list = {1, 2, 3, 4, 5},
-      .min_channel_time = kDwellTimeMs,
-      .max_channel_time = kDwellTimeMs,
-      .num_ssids = 2,
-      .ssid_list = {valid_scan_ssid, invalid_scan_ssid}};
-
   // Two active scans are scheduled,
-  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid),
-                             kFirstScanStartTime);
-  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &req_break_ssid_list),
-                             kSecondScanStartTime);
+  env_->ScheduleNotification(std::bind(&ActiveScanTest::StartScan, this, &req_break_ssids_list),
+                             kScanStartTime);
 
   env_->ScheduleNotification(std::bind(&ActiveScanTest::EndSimulation, this),
                              kSimulatedClockDuration);
   env_->Run(kSimulatedClockDuration);
 
   VerifyScanResults();
-  EXPECT_EQ(client_ifc_.scan_result_code_, WLAN_SCAN_RESULT_INTERNAL_ERROR);
+  EXPECT_EQ(client_ifc_.scan_result_code_, WLAN_SCAN_RESULT_INVALID_ARGS);
 }
 
 // This test case verifies that the driver returns SHOULD_WAIT as the scan result code when firmware

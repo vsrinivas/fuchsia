@@ -2395,6 +2395,7 @@ zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
   hw_.SetChannel(channel);
 
   // Do an active scan using random mac
+  // TODO(fxbug.dev/89334): SSIDs in scan request are ignored
   if (scan_state_.opts->is_active) {
     scan_state_.active_scan_attempts = 1;
     simulation::SimProbeReqFrame probe_req_frame(pfn_mac_addr_);
@@ -2837,6 +2838,8 @@ void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
       continue;
     }
     switch (ie->IeType()) {
+      // TODO(fxbug.dev/89334): scan_state_.opts should contain SSIDs which would determine
+      // whether to report this scan result or not.
       case simulation::InformationElement::IE_TYPE_SSID: {
         const auto ssid_ie = std::static_pointer_cast<simulation::SsidInformationElement>(ie);
         std::vector<uint8_t> current_ie_buf = ssid_ie->ToRawIe();
