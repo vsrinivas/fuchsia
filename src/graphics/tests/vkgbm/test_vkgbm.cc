@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <drm_fourcc.h>
 #include <fcntl.h>
 #include <gbm.h>
+
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -39,8 +42,10 @@ class VkGbm : public testing::Test {
   }
 
   void TearDown() override {
-    gbm_device_destroy(device_);
-    device_ = nullptr;
+    if (device_) {
+      gbm_device_destroy(device_);
+      device_ = nullptr;
+    }
 
     close(fd_);
     fd_ = -1;
@@ -124,12 +129,17 @@ constexpr uint32_t kPattern = 0xaabbccdd;
 
 using UniqueGbmBo = std::unique_ptr<struct gbm_bo, decltype(&gbm_bo_destroy)>;
 
-using UseLinearDst = bool;
+struct ImportParam {
+  // Use explicit format modifier create info, or the modifier list create info.
+  bool use_explicit_create_info;
+  // Allocate destination BO with GBM_BO_USE_LINEAR (src is always linear)
+  bool use_linear_dst;
+};
 
-class VkGbmWithParam : public VkGbm, public ::testing::WithParamInterface<UseLinearDst> {};
+class VkGbmImportWithParam : public VkGbm, public ::testing::WithParamInterface<ImportParam> {};
 
-TEST_P(VkGbmWithParam, ImportImageCopy) {
-  bool useLinearDst = GetParam();
+TEST_P(VkGbmImportWithParam, ImportImageCopy) {
+  ImportParam param = GetParam();
 
   auto src_bo =
       UniqueGbmBo(gbm_bo_create(device(), kDefaultWidth, kDefaultHeight, kDefaultGbmFormat,
@@ -137,10 +147,10 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
                   gbm_bo_destroy);
   ASSERT_TRUE(src_bo);
 
-  auto dst_bo =
-      UniqueGbmBo(gbm_bo_create(device(), kDefaultWidth, kDefaultHeight, kDefaultGbmFormat,
-                                GBM_BO_USE_RENDERING | (useLinearDst ? GBM_BO_USE_LINEAR : 0)),
-                  gbm_bo_destroy);
+  auto dst_bo = UniqueGbmBo(
+      gbm_bo_create(device(), kDefaultWidth, kDefaultHeight, kDefaultGbmFormat,
+                    GBM_BO_USE_RENDERING | (param.use_linear_dst ? GBM_BO_USE_LINEAR : 0)),
+      gbm_bo_destroy);
   ASSERT_TRUE(dst_bo);
 
   vk::UniqueImage src_image;
@@ -148,13 +158,24 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
   uint64_t src_row_bytes;
 
   {
-    std::array<uint64_t, 1> modifiers{gbm_bo_get_modifier(src_bo.get())};
-    auto format_modifier_create_info =
-        vk::ImageDrmFormatModifierListCreateInfoEXT().setDrmFormatModifiers(modifiers);
+    uint64_t modifier = gbm_bo_get_modifier(src_bo.get());
+
+    auto mod_list_create_info = vk::ImageDrmFormatModifierListCreateInfoEXT();
+    auto mod_explicit_info = vk::ImageDrmFormatModifierExplicitCreateInfoEXT();
+    auto subresource_layouts = std::array<vk::SubresourceLayout, 1>(
+        {vk::SubresourceLayout(gbm_bo_get_offset(src_bo.get(), 0), 0 /*size*/,
+                               gbm_bo_get_stride_for_plane(src_bo.get(), 0))});
 
     auto external_create_info = vk::ExternalMemoryImageCreateInfo().setHandleTypes(
         vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
-    external_create_info.setPNext(&format_modifier_create_info);
+
+    if (param.use_explicit_create_info) {
+      mod_explicit_info.setDrmFormatModifier(modifier).setPlaneLayouts(subresource_layouts);
+      external_create_info.setPNext(&mod_explicit_info);
+    } else {
+      mod_list_create_info.setDrmFormatModifierCount(1).setPDrmFormatModifiers(&modifier);
+      external_create_info.setPNext(&mod_list_create_info);
+    }
 
     auto create_info = vk::ImageCreateInfo()
                            .setImageType(vk::ImageType::e2D)
@@ -186,8 +207,8 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
             ->device()
             ->getImageMemoryRequirements2<vk::MemoryRequirements2, vk::MemoryDedicatedRequirements>(
                 src_image.get());
-    // Validate that image creation did not allocate a magma image
-    EXPECT_FALSE(
+    // Validate that external image creation requires dedicated image
+    EXPECT_TRUE(
         memory_reqs_chain.get<vk::MemoryDedicatedRequirements>().requiresDedicatedAllocation);
 
     auto &mem_reqs = memory_reqs_chain.get<vk::MemoryRequirements2>().memoryRequirements;
@@ -196,8 +217,12 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
     int fd = gbm_bo_get_fd(src_bo.get());
     EXPECT_GE(fd, 0);
 
-    auto import_info = vk::ImportMemoryFdInfoKHR().setFd(fd).setHandleType(
-        vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
+    auto dedicated_info = vk::MemoryDedicatedAllocateInfo().setImage(*src_image);
+
+    auto import_info = vk::ImportMemoryFdInfoKHR()
+                           .setFd(fd)
+                           .setHandleType(vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd)
+                           .setPNext(&dedicated_info);
 
     auto alloc_info = vk::MemoryAllocateInfo()
                           .setAllocationSize(mem_reqs.size)
@@ -223,13 +248,24 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
   uint64_t dst_row_bytes;
 
   {
-    std::array<uint64_t, 1> modifiers{gbm_bo_get_modifier(dst_bo.get())};
-    auto format_modifier_create_info =
-        vk::ImageDrmFormatModifierListCreateInfoEXT().setDrmFormatModifiers(modifiers);
+    uint64_t modifier = gbm_bo_get_modifier(dst_bo.get());
+
+    auto mod_list_create_info = vk::ImageDrmFormatModifierListCreateInfoEXT();
+    auto mod_explicit_info = vk::ImageDrmFormatModifierExplicitCreateInfoEXT();
+    auto subresource_layouts = std::array<vk::SubresourceLayout, 1>(
+        {vk::SubresourceLayout(gbm_bo_get_offset(dst_bo.get(), 0), 0 /*size*/,
+                               gbm_bo_get_stride_for_plane(dst_bo.get(), 0))});
 
     auto external_create_info = vk::ExternalMemoryImageCreateInfo().setHandleTypes(
         vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
-    external_create_info.setPNext(&format_modifier_create_info);
+
+    if (param.use_explicit_create_info) {
+      mod_explicit_info.setDrmFormatModifier(modifier).setPlaneLayouts(subresource_layouts);
+      external_create_info.setPNext(&mod_explicit_info);
+    } else {
+      mod_list_create_info.setDrmFormatModifierCount(1).setPDrmFormatModifiers(&modifier);
+      external_create_info.setPNext(&mod_list_create_info);
+    }
 
     auto create_info = vk::ImageCreateInfo()
                            .setImageType(vk::ImageType::e2D)
@@ -244,9 +280,18 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
                            .setInitialLayout(vk::ImageLayout::eUndefined)
                            .setPNext(&external_create_info);
 
-    auto result = context()->device()->createImageUnique(create_info);
-    ASSERT_EQ(vk::Result::eSuccess, result.result);
-    dst_image = std::move(result.value);
+    {
+      auto result = context()->device()->createImageUnique(create_info);
+      ASSERT_EQ(vk::Result::eSuccess, result.result);
+      dst_image = std::move(result.value);
+    }
+
+    {
+      auto result = context()->device()->getImageDrmFormatModifierPropertiesEXT(
+          *dst_image, context()->loader());
+      ASSERT_EQ(vk::Result::eSuccess, result.result);
+      EXPECT_EQ(result.value.drmFormatModifier, modifier);
+    }
 
     auto subresource = vk::ImageSubresource().setAspectMask(vk::ImageAspectFlagBits::ePlane0KHR);
     auto layout = context()->device()->getImageSubresourceLayout(dst_image.get(), subresource);
@@ -261,18 +306,22 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
             ->device()
             ->getImageMemoryRequirements2<vk::MemoryRequirements2, vk::MemoryDedicatedRequirements>(
                 dst_image.get());
-    // Validate that image creation did not allocate a magma image
-    EXPECT_FALSE(
+    // Validate that external image creation requires dedicated image
+    EXPECT_TRUE(
         memory_reqs_chain.get<vk::MemoryDedicatedRequirements>().requiresDedicatedAllocation);
 
     auto &mem_reqs = memory_reqs_chain.get<vk::MemoryRequirements2>().memoryRequirements;
     uint32_t memory_type_index = __builtin_ctz(mem_reqs.memoryTypeBits);
 
+    auto dedicated_info = vk::MemoryDedicatedAllocateInfo().setImage(*dst_image);
+
     int fd = gbm_bo_get_fd(dst_bo.get());
     EXPECT_GE(fd, 0);
 
-    auto import_info = vk::ImportMemoryFdInfoKHR().setFd(fd).setHandleType(
-        vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
+    auto import_info = vk::ImportMemoryFdInfoKHR()
+                           .setFd(fd)
+                           .setHandleType(vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd)
+                           .setPNext(&dedicated_info);
 
     auto alloc_info = vk::MemoryAllocateInfo()
                           .setAllocationSize(mem_reqs.size)
@@ -288,7 +337,7 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
 
     IsMemoryTypeCoherent(memory_type_index, &dst_is_coherent);
 
-    if (useLinearDst)
+    if (param.use_linear_dst)
       WriteLinearImage(dst_memory.get(), dst_is_coherent, dst_row_bytes, kDefaultHeight,
                        0xffffffff);
   }
@@ -400,8 +449,222 @@ TEST_P(VkGbmWithParam, ImportImageCopy) {
 
   context()->queue().waitIdle();
 
-  if (useLinearDst)
+  if (param.use_linear_dst)
     CheckLinearImage(dst_memory.get(), dst_is_coherent, dst_row_bytes, kDefaultHeight, kPattern);
 }
 
-INSTANTIATE_TEST_SUITE_P(, VkGbmWithParam, ::testing::Bool());
+INSTANTIATE_TEST_SUITE_P(
+    , VkGbmImportWithParam,
+    ::testing::Values(ImportParam{.use_explicit_create_info = true, .use_linear_dst = true},
+                      ImportParam{.use_explicit_create_info = true, .use_linear_dst = false},
+                      ImportParam{.use_explicit_create_info = false, .use_linear_dst = true},
+                      ImportParam{.use_explicit_create_info = false, .use_linear_dst = false}),
+    [](testing::TestParamInfo<ImportParam> info) {
+      return std::string(info.param.use_explicit_create_info ? "ExplicitCreateInfo_"
+                                                             : "ListCreateInfo_") +
+             std::string(info.param.use_linear_dst ? "LinearDst" : "");
+    });
+
+class VkGbmExportTest : public VkGbm {
+ public:
+  void AllocateAndBindMemory(vk::UniqueImage &image, vk::UniqueDeviceMemory *memory_out) {
+    vk::UniqueDeviceMemory memory;
+
+    {
+      auto memory_reqs_chain =
+          context()
+              ->device()
+              ->getImageMemoryRequirements2<vk::MemoryRequirements2,
+                                            vk::MemoryDedicatedRequirements>(*image);
+      // Validate that external images require dedicated allocation.
+      EXPECT_TRUE(
+          memory_reqs_chain.get<vk::MemoryDedicatedRequirements>().requiresDedicatedAllocation);
+
+      auto &mem_reqs = memory_reqs_chain.get<vk::MemoryRequirements2>().memoryRequirements;
+      uint32_t memory_type_index = __builtin_ctz(mem_reqs.memoryTypeBits);
+
+      auto dedicated_info = vk::MemoryDedicatedAllocateInfo().setImage(*image);
+
+      auto export_info = vk::ExportMemoryAllocateInfo()
+                             .setHandleTypes(vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd)
+                             .setPNext(&dedicated_info);
+
+      auto alloc_info = vk::MemoryAllocateInfo()
+                            .setAllocationSize(mem_reqs.size)
+                            .setMemoryTypeIndex(memory_type_index)
+                            .setPNext(&export_info);
+
+      {
+        auto result = context()->device()->allocateMemoryUnique(alloc_info);
+        ASSERT_EQ(result.result, vk::Result::eSuccess);
+        memory = std::move(result.value);
+      }
+
+      ASSERT_EQ(vk::Result::eSuccess, context()->device()->bindImageMemory(*image, *memory, 0u));
+    }
+
+    *memory_out = std::move(memory);
+  }
+
+  void ExportToGbm(vk::UniqueDeviceMemory &memory, vk::SubresourceLayout &layout,
+                   uint64_t drm_format_modifier) {
+    int fd;
+    {
+      auto get_fd_info = vk::MemoryGetFdInfoKHR()
+                             .setHandleType(vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd)
+                             .setMemory(*memory);
+
+      auto result = context()->device()->getMemoryFdKHR(get_fd_info, context()->loader());
+      ASSERT_EQ(result.result, vk::Result::eSuccess);
+      fd = result.value;
+    }
+
+    EXPECT_GE(fd, 0);
+
+    auto stride = static_cast<unsigned int>(layout.rowPitch);
+    EXPECT_EQ(stride, layout.rowPitch);
+
+    auto offset = static_cast<unsigned int>(layout.offset);
+    EXPECT_EQ(offset, layout.offset);
+
+    {
+      struct gbm_import_fd_modifier_data import_data {
+        .width = kDefaultWidth, .height = kDefaultHeight, .format = kDefaultGbmFormat, .num_fds = 1,
+        .fds = {fd}, .strides = {static_cast<int>(stride)}, .offsets = {static_cast<int>(offset)},
+        .modifier = drm_format_modifier,
+      };
+
+      struct gbm_bo *bo =
+          gbm_bo_import(device(), GBM_BO_IMPORT_FD_MODIFIER, &import_data, GBM_BO_USE_RENDERING);
+      ASSERT_TRUE(bo);
+
+      gbm_bo_destroy(bo);
+    }
+  }
+};
+
+class VkGbmExportWithTiling : public VkGbmExportTest,
+                              public ::testing::WithParamInterface<vk::ImageTiling> {};
+
+TEST_P(VkGbmExportWithTiling, ExportWithTiling) {
+  vk::ImageTiling tiling = GetParam();
+
+  vk::UniqueImage image;
+  vk::UniqueDeviceMemory memory;
+
+  auto external_create_info = vk::ExternalMemoryImageCreateInfo().setHandleTypes(
+      vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
+
+  auto create_info = vk::ImageCreateInfo()
+                         .setImageType(vk::ImageType::e2D)
+                         .setFormat(kDefaultVkFormat)
+                         .setExtent(vk::Extent3D(kDefaultWidth, kDefaultHeight, 1))
+                         .setMipLevels(1)
+                         .setArrayLayers(1)
+                         .setSamples(vk::SampleCountFlagBits::e1)
+                         .setTiling(tiling)
+                         .setUsage(vk::ImageUsageFlagBits::eTransferSrc)
+                         .setSharingMode(vk::SharingMode::eExclusive)
+                         .setInitialLayout(vk::ImageLayout::ePreinitialized)
+                         .setPNext(&external_create_info);
+
+  auto result = context()->device()->createImageUnique(create_info);
+  ASSERT_EQ(vk::Result::eSuccess, result.result);
+  image = std::move(result.value);
+
+  AllocateAndBindMemory(image, &memory);
+}
+
+INSTANTIATE_TEST_SUITE_P(VkGbmExportWithTiling, VkGbmExportWithTiling,
+                         ::testing::Values(vk::ImageTiling::eLinear, vk::ImageTiling::eOptimal),
+                         [](testing::TestParamInfo<vk::ImageTiling> info) {
+                           switch (info.param) {
+                             case vk::ImageTiling::eLinear:
+                               return "Linear";
+                             case vk::ImageTiling::eOptimal:
+                               return "Optimal";
+                             default:
+                               return "Unknown";
+                           }
+                         });
+
+class VkGbmExportWithDrm : public VkGbmExportTest,
+                           public ::testing::WithParamInterface<std::vector<uint64_t>> {};
+
+TEST_P(VkGbmExportWithDrm, ExportWithDrm) {
+  std::vector<uint64_t> modifiers = GetParam();
+
+  vk::UniqueImage image;
+  vk::UniqueDeviceMemory memory;
+  uint64_t modifier;
+
+  auto format_modifier_create_info =
+      vk::ImageDrmFormatModifierListCreateInfoEXT().setDrmFormatModifiers(modifiers);
+
+  auto external_create_info = vk::ExternalMemoryImageCreateInfo().setHandleTypes(
+      vk::ExternalMemoryHandleTypeFlagBitsKHR::eOpaqueFd);
+  external_create_info.setPNext(&format_modifier_create_info);
+
+  auto create_info = vk::ImageCreateInfo()
+                         .setImageType(vk::ImageType::e2D)
+                         .setFormat(kDefaultVkFormat)
+                         .setExtent(vk::Extent3D(kDefaultWidth, kDefaultHeight, 1))
+                         .setMipLevels(1)
+                         .setArrayLayers(1)
+                         .setSamples(vk::SampleCountFlagBits::e1)
+                         .setTiling(vk::ImageTiling::eDrmFormatModifierEXT)
+                         .setUsage(vk::ImageUsageFlagBits::eTransferSrc)
+                         .setSharingMode(vk::SharingMode::eExclusive)
+                         .setInitialLayout(vk::ImageLayout::ePreinitialized)
+                         .setPNext(&external_create_info);
+
+  {
+    auto result = context()->device()->createImageUnique(create_info);
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+    image = std::move(result.value);
+  }
+
+  {
+    auto result =
+        context()->device()->getImageDrmFormatModifierPropertiesEXT(*image, context()->loader());
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+
+    modifier = result.value.drmFormatModifier;
+    EXPECT_NE(modifiers.end(), std::find(modifiers.begin(), modifiers.end(), modifier));
+  }
+
+  AllocateAndBindMemory(image, &memory);
+
+  {
+    auto subresource = vk::ImageSubresource().setAspectMask(vk::ImageAspectFlagBits::ePlane0KHR);
+    auto layout = context()->device()->getImageSubresourceLayout(*image, subresource);
+
+    ExportToGbm(memory, layout, modifier);
+  }
+}
+
+std::map<uint64_t, std::string> ModifierNames(
+    {{DRM_FORMAT_MOD_LINEAR, "DRM_FORMAT_MOD_LINEAR_"},
+     {I915_FORMAT_MOD_X_TILED, "I915_FORMAT_MOD_X_TILED_"},
+     {I915_FORMAT_MOD_Y_TILED, "I915_FORMAT_MOD_Y_TILED_"}});
+
+auto ModListNamer = [](testing::TestParamInfo<std::vector<uint64_t>> info) {
+  std::string name;
+  for (auto &modifier : info.param) {
+    auto iter = ModifierNames.find(modifier);
+    name += (iter != ModifierNames.end()) ? iter->second : "Unknown_";
+  }
+  return name;
+};
+
+INSTANTIATE_TEST_SUITE_P(VkGbmExportSingleModifier, VkGbmExportWithDrm,
+                         ::testing::Values(std::vector<uint64_t>({DRM_FORMAT_MOD_LINEAR}),
+                                           std::vector<uint64_t>({I915_FORMAT_MOD_X_TILED}),
+                                           std::vector<uint64_t>({I915_FORMAT_MOD_Y_TILED})),
+                         ModListNamer);
+
+INSTANTIATE_TEST_SUITE_P(VkGbmExportMultipleModifier, VkGbmExportWithDrm,
+                         ::testing::Values(std::vector<uint64_t>({DRM_FORMAT_MOD_LINEAR,
+                                                                  I915_FORMAT_MOD_X_TILED,
+                                                                  I915_FORMAT_MOD_Y_TILED})),
+                         ModListNamer);

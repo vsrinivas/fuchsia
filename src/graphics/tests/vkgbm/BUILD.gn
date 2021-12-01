@@ -12,5 +12,6 @@ executable("vkgbm") {
     "//src/graphics/tests/common",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
+    "//third_party/mesa/include:drm-uapi",
   ]
 }
