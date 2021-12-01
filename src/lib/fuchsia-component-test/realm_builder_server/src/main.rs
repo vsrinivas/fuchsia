@@ -5,7 +5,7 @@
 use {
     anyhow::{self, Context},
     cm_rust::{FidlIntoNative, NativeIntoFidl},
-    fidl::endpoints::{ProtocolMarker, RequestStream},
+    fidl::endpoints::{ProtocolMarker, RequestStream, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
@@ -132,6 +132,7 @@ async fn handle_realm_builder_factory_stream(
                     runner: runner.clone(),
                     runner_proxy_placeholder: runner_proxy_placeholder.clone(),
                     realm_path: vec![],
+                    execution_scope: execution_scope.clone(),
                 };
 
                 execution_scope.spawn(async move {
@@ -207,6 +208,7 @@ struct Realm {
     runner: Arc<runner::Runner>,
     runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
     realm_path: Vec<String>,
+    execution_scope: ExecutionScope,
 }
 
 impl Realm {
@@ -259,9 +261,14 @@ impl Realm {
                         }
                     }
                 }
-                // TODO(88429)
-                ftest::RealmRequest::AddChildRealm { .. } => {
-                    unimplemented!();
+                ftest::RealmRequest::AddChildRealm { name, options, child_realm, responder } => {
+                    match self.add_child_realm(name.clone(), options, child_realm).await {
+                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Err(e) => {
+                            warn!("unable to add child realm {:?}: {:?}", name, e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
                 }
                 // TODO(dgonyeo): add a test for this
                 ftest::RealmRequest::GetComponentDecl { name, responder } => {
@@ -330,7 +337,7 @@ impl Realm {
             new_decl_with_program_entries(vec![(runner::LEGACY_URL_KEY.to_string(), legacy_url)]),
             true,
         );
-        self.realm_node.add_child(name.clone(), options, child_realm_node).await
+        self.realm_node.add_child(name, options, child_realm_node).await
     }
 
     async fn add_child_from_decl(
@@ -343,7 +350,7 @@ impl Realm {
             return Err(RealmBuilderError::InvalidComponentDecl(name, e));
         }
         let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), true);
-        self.realm_node.add_child(name.clone(), options, child_realm_node).await
+        self.realm_node.add_child(name, options, child_realm_node).await
     }
 
     async fn add_local_child(
@@ -362,7 +369,55 @@ impl Realm {
             ]),
             true,
         );
-        self.realm_node.add_child(name.clone(), options, child_realm_node).await
+        self.realm_node.add_child(name, options, child_realm_node).await
+    }
+
+    // `Realm::handle_stream` calls `Realm::add_child_realm` which calls `Realm::handle_stream`.
+    // Cycles are not allowed in constructed futures, so we need to place this in a `BoxFuture` to
+    // break the cycle.
+    fn add_child_realm(
+        &self,
+        name: String,
+        options: ftest::ChildOptions,
+        child_realm_server_end: ServerEnd<ftest::RealmMarker>,
+    ) -> BoxFuture<'static, Result<(), RealmBuilderError>> {
+        let mut child_path = self.realm_path.clone();
+        child_path.push(name.clone());
+
+        let child_realm_node = RealmNode2::new();
+
+        let child_realm = Realm {
+            pkg_dir: Clone::clone(&self.pkg_dir),
+            realm_node: child_realm_node.clone(),
+            registry: self.registry.clone(),
+            runner: self.runner.clone(),
+            runner_proxy_placeholder: self.runner_proxy_placeholder.clone(),
+            realm_path: child_path.clone(),
+            execution_scope: self.execution_scope.clone(),
+        };
+
+        let self_realm_node = self.realm_node.clone();
+        let self_execution_scope = self.execution_scope.clone();
+
+        async move {
+            let child_realm_stream = child_realm_server_end
+                .into_stream()
+                .map_err(RealmBuilderError::InvalidChildRealmHandle)?;
+            self_realm_node.add_child(name, options, child_realm_node).await?;
+
+            self_execution_scope.spawn(async move {
+                if let Err(e) = child_realm.handle_stream(child_realm_stream).await {
+                    error!(
+                        "error encountered while handling requests for child realm {:?}: {:?}",
+                        child_path.join("/"),
+                        e,
+                    );
+                }
+            });
+
+            Ok(())
+        }
+        .boxed()
     }
 
     async fn get_component_decl(
@@ -1113,6 +1168,10 @@ enum RealmBuilderError {
 
     #[error("invalid capability received: {0:?}")]
     CapabilityInvalid(anyhow::Error),
+
+    /// The handle the client provided is not usable
+    #[error("unable to use the provided handle: {0:?}")]
+    InvalidChildRealmHandle(fidl::Error),
 }
 
 impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
@@ -1132,6 +1191,7 @@ impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
             RealmBuilderError::DeclReadError(_, _) => Self::DeclReadError,
             RealmBuilderError::BuildAlreadyCalled => Self::BuildAlreadyCalled,
             RealmBuilderError::CapabilityInvalid(_) => Self::CapabilityInvalid,
+            RealmBuilderError::InvalidChildRealmHandle(_) => Self::InvalidChildRealmHandle,
         }
     }
 }
@@ -2372,7 +2432,8 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::{
-            create_endpoints, create_proxy_and_stream, create_request_stream, ClientEnd,
+            create_endpoints, create_proxy, create_proxy_and_stream, create_request_stream,
+            ClientEnd,
         },
         fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
         matches::assert_matches,
@@ -2520,7 +2581,7 @@ mod tests {
 
     impl RealmAndBuilderTask {
         fn new() -> Self {
-            let (realm_proxy, realm_strealm) =
+            let (realm_proxy, realm_stream) =
                 create_proxy_and_stream::<ftest::RealmMarker>().unwrap();
             let pkg_dir = io_util::open_directory_in_namespace(
                 "/pkg",
@@ -2546,10 +2607,11 @@ mod tests {
                 runner: runner.clone(),
                 runner_proxy_placeholder,
                 realm_path: vec![],
+                execution_scope: ExecutionScope::new(),
             };
 
             let realm_and_builder_task = fasync::Task::local(async move {
-                realm.handle_stream(realm_strealm).await.expect("failed to handle realm stream");
+                realm.handle_stream(realm_stream).await.expect("failed to handle realm stream");
                 builder_task.await;
             });
             let (runner_client_end, runner_stream) =
@@ -3711,6 +3773,47 @@ mod tests {
         assert_eq!(expected_tree, tree_from_resolver);
     }
 
+    #[fuchsia::test]
+    async fn add_child_to_child_realm() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+        let (child_realm_proxy, child_realm_server_end) =
+            create_proxy::<ftest::RealmMarker>().unwrap();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child_realm("a", ftest::ChildOptions::EMPTY, child_realm_server_end)
+            .await
+            .expect("failed to call add_child_realm")
+            .expect("add_child_realm returned an error");
+        child_realm_proxy
+            .add_child("b", "test:///b", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl::default(),
+            children: vec![(
+                "a".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree {
+                    decl: cm_rust::ComponentDecl {
+                        children: vec![cm_rust::ChildDecl {
+                            name: "b".to_string(),
+                            url: "test:///b".to_string(),
+                            startup: fsys::StartupMode::Lazy,
+                            on_terminate: None,
+                            environment: None,
+                        }],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                    children: vec![],
+                },
+            )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
     #[test_case(vec![
         create_valid_capability()],
         fcdecl::Ref::Child(fcdecl::ChildRef {
@@ -3788,6 +3891,61 @@ mod tests {
             type_: None,
             ..ftest::Protocol::EMPTY
         })
+    }
+
+    #[fuchsia::test]
+    async fn add_local_child_to_child_realm() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+        let (child_realm_proxy, child_realm_server_end) =
+            create_proxy::<ftest::RealmMarker>().unwrap();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child_realm("a", ftest::ChildOptions::EMPTY, child_realm_server_end)
+            .await
+            .expect("failed to call add_child_realm")
+            .expect("add_child_realm returned an error");
+        child_realm_proxy
+            .add_local_child("b", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let b_decl = cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                info: fdata::Dictionary {
+                    entries: Some(vec![
+                        fdata::DictionaryEntry {
+                            key: runner::LOCAL_COMPONENT_ID_KEY.to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                        },
+                        fdata::DictionaryEntry {
+                            key: runner::LOCAL_COMPONENT_NAME_KEY.to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("a/b".to_string()))),
+                        },
+                    ]),
+                    ..fdata::Dictionary::EMPTY
+                },
+            }),
+            ..cm_rust::ComponentDecl::default()
+        };
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl::default(),
+            children: vec![(
+                "a".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree {
+                    decl: cm_rust::ComponentDecl::default(),
+                    children: vec![(
+                        "b".to_string(),
+                        ftest::ChildOptions::EMPTY,
+                        ComponentTree { decl: b_decl, children: vec![] },
+                    )],
+                },
+            )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
     }
 
     // Everything below this line are tests for the old fuchsia.component.test.RealmBuilder logic,

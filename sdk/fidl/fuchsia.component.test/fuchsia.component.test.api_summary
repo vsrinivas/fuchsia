@@ -96,6 +96,7 @@ enum/member fuchsia.component.test/RealmBuilderError2.CHILD_ALREADY_EXISTS 0
 enum/member fuchsia.component.test/RealmBuilderError2.CHILD_DECL_NOT_VISIBLE 4
 enum/member fuchsia.component.test/RealmBuilderError2.DECL_NOT_FOUND 10
 enum/member fuchsia.component.test/RealmBuilderError2.DECL_READ_ERROR 11
+enum/member fuchsia.component.test/RealmBuilderError2.INVALID_CHILD_REALM_HANDLE 14
 enum/member fuchsia.component.test/RealmBuilderError2.INVALID_COMPONENT_DECL 2
 enum/member fuchsia.component.test/RealmBuilderError2.INVALID_MANIFEST_EXTENSION 1
 enum/member fuchsia.component.test/RealmBuilderError2.NO_SUCH_CHILD 3

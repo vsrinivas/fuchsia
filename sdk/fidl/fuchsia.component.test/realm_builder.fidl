@@ -333,6 +333,9 @@ type RealmBuilderError2 = strict enum : uint32 {
     /// A capability is invalid. This may occur if a required field is empty or
     /// if an unsupported type is received.
     CAPABILITY_INVALID = 13;
+
+    /// The handle the client provided for the child realm is not usable
+    INVALID_CHILD_REALM_HANDLE = 14;
 };
 
 protocol Builder {
