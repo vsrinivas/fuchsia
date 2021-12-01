@@ -6,6 +6,7 @@
 
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -41,6 +42,10 @@ constexpr const char* kDefaultContainerUser = "machina";
 constexpr const char* kLinuxUriScheme = "linux://";
 constexpr const char* kVshTerminalComponent =
     "fuchsia-pkg://fuchsia.com/terminal#meta/vsh-terminal.cmx";
+constexpr const char* kWaylandBridgePackage =
+    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
+constexpr const char* kLegacyWaylandBridgePackage =
+    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/legacy_wayland_bridge.cmx";
 
 #if defined(USE_VOLATILE_BLOCK)
 constexpr bool kForceVolatileWrites = true;
@@ -154,6 +159,17 @@ std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t stateful_
   return devices;
 }
 
+const char* GetBridgePackage(sys::ComponentContext* context) {
+  TRACE_DURATION("linux_runner", "GetBridgePackage");
+  fuchsia::ui::scenic::ScenicSyncPtr scenic;
+  zx_status_t status = context->svc()->Connect(scenic.NewRequest());
+  FX_CHECK(status == ZX_OK) << "Failed to connect to Scenic: " << status;
+  bool scenic_uses_flatland = false;
+  scenic->UsesFlatland(&scenic_uses_flatland);
+  FX_LOGS(INFO) << "scenic_uses_flatland: " << scenic_uses_flatland;
+  return scenic_uses_flatland ? kWaylandBridgePackage : kLegacyWaylandBridgePackage;
+}
+
 }  // namespace
 
 namespace linux_runner {
@@ -177,7 +193,8 @@ Guest::Guest(sys::ComponentContext* context, GuestConfig config,
       executor_(async_),
       config_(config),
       guest_env_(std::move(env)),
-      wayland_dispatcher_(context, fit::bind_member(this, &Guest::OnNewView),
+      wayland_dispatcher_(context, GetBridgePackage(context),
+                          fit::bind_member(this, &Guest::OnNewView),
                           fit::bind_member(this, &Guest::OnShutdownView)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   executor_.schedule_task(Start());

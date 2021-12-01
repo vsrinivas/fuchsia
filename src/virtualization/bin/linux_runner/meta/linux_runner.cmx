@@ -12,6 +12,7 @@
         "services": [
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.scenic.Scenic",
             "fuchsia.virtualization.Manager"
         ]
     }

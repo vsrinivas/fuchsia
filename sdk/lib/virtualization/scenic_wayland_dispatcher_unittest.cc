@@ -14,12 +14,8 @@
 
 namespace guest {
 
-static constexpr const char* kWaylandDispatcherUrl =
-#ifdef USE_LEGACY_WAYLAND_BRIDGE
-    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/legacy_wayland_bridge.cmx";
-#else
+static constexpr const char* kWaylandBridgeUrl =
     "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
-#endif
 
 class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
                        public fuchsia::wayland::ViewProducer {
@@ -30,8 +26,8 @@ class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
   }
 
   // Register to be launched with a fake URL
-  void Register(sys::testing::FakeLauncher& fake_launcher) {
-    component_.Register(kWaylandDispatcherUrl, fake_launcher);
+  void Register(const char* fake_url, sys::testing::FakeLauncher& fake_launcher) {
+    component_.Register(fake_url, fake_launcher);
   }
 
   size_t BindingCount() const { return bindings_.size(); }
@@ -78,12 +74,13 @@ class ScenicWaylandDispatcherTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
     dispatcher_.reset(new ScenicWaylandDispatcher(
-        provider_.context(), fit::bind_member(this, &ScenicWaylandDispatcherTest::OnNewView),
+        provider_.context(), kWaylandBridgeUrl,
+        fit::bind_member(this, &ScenicWaylandDispatcherTest::OnNewView),
         fit::bind_member(this, &ScenicWaylandDispatcherTest::OnShutdownView)));
     provider_.service_directory_provider()->AddService(fake_launcher_.GetHandler());
 
     fake_dispatcher_impl_.reset(new FakeDispatcher());
-    fake_dispatcher_impl_->Register(fake_launcher_);
+    fake_dispatcher_impl_->Register(kWaylandBridgeUrl, fake_launcher_);
   }
 
   void TearDown() override { TestLoopFixture::TearDown(); }

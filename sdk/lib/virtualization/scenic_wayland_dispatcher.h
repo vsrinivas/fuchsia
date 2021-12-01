@@ -23,9 +23,11 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
       fit::function<void(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>, uint32_t)>;
   using ShutdownViewListener = fit::function<void(uint32_t)>;
 
-  explicit ScenicWaylandDispatcher(sys::ComponentContext* context, ViewListener listener = nullptr,
-                                   ShutdownViewListener shutdown_listener = nullptr)
+  ScenicWaylandDispatcher(sys::ComponentContext* context, const char* bridge_package_url,
+                          ViewListener listener = nullptr,
+                          ShutdownViewListener shutdown_listener = nullptr)
       : context_(context),
+        bridge_package_url_(bridge_package_url),
         listener_(std::move(listener)),
         shutdown_listener_(std::move(shutdown_listener)) {}
 
@@ -46,6 +48,7 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
   fuchsia::virtualization::WaylandDispatcher* GetOrStartBridge();
 
   sys::ComponentContext* context_ = nullptr;
+  const char* const bridge_package_url_;
 
   // Constructor-defined behaviors.
   ViewListener listener_;

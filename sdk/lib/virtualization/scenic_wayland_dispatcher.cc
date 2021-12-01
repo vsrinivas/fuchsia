@@ -7,13 +7,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/virtualization/scenic_wayland_dispatcher.h>
 
-static constexpr char kWaylandDispatcherPackage[] =
-#ifdef USE_LEGACY_WAYLAND_BRIDGE
-    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/legacy_wayland_bridge.cmx";
-#else
-    "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge.cmx";
-#endif
-
 namespace guest {
 
 void ScenicWaylandDispatcher::OnNewConnection(zx::channel channel) {
@@ -26,7 +19,7 @@ fuchsia::virtualization::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartB
     zx::channel request;
     auto services = sys::ServiceDirectory::CreateWithRequest(&request);
     fuchsia::sys::LaunchInfo launch_info{
-        .url = kWaylandDispatcherPackage,
+        .url = bridge_package_url_,
         .directory_request = std::move(request),
     };
     ConnectToLauncher()->CreateComponent(std::move(launch_info), bridge_.NewRequest());

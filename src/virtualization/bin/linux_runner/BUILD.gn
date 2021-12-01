@@ -75,6 +75,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.wayland",
     "//sdk/lib/fit-promise",
