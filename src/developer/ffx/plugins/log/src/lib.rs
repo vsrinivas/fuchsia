@@ -17,6 +17,7 @@ use {
     ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{DaemonProxy, StreamMode, TimeBound},
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
+    fidl_fuchsia_diagnostics::LogSettingsProxy,
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
     std::{iter::Iterator, time::SystemTime},
     termion::{color, style},
@@ -39,6 +40,10 @@ To view logs for an offline target, provide a target explicitly using `ffx --tar
 or set a default with `ffx target default set <nodename or IP>` and try again.
 
 Alternatively, if you expected a target to be connected, verify that it is listed in `ffx target list`. If it remains disconnected, try running `ffx doctor`.";
+
+const SELECT_FAILURE_MESSAGE: &str = "--select was provided, but ffx could not get a proxy to the LogSettings service.
+
+Confirm that your chosen target is online with `ffx target list`. Note that you cannot use `--select` with an offline target.";
 
 fn get_timestamp() -> Result<Timestamp> {
     Ok(Timestamp::from(
@@ -391,16 +396,21 @@ This likely means that your logs will not be symbolized."
     }
 }
 
-#[ffx_plugin("proactive_log.enabled")]
+#[ffx_plugin(
+    "proactive_log.enabled",
+    LogSettingsProxy = "bootstrap:expose:fuchsia.diagnostics.LogSettings"
+)]
 pub async fn log(
     daemon_proxy: DaemonProxy,
     #[ffx(machine = Vec<JsonTargets>)] writer: Writer,
     rcs_proxy: Option<RemoteControlProxy>,
+    log_settings: Option<LogSettingsProxy>,
     cmd: LogCommand,
 ) -> Result<()> {
     log_impl(
         daemon_proxy,
         rcs_proxy,
+        log_settings,
         cmd,
         &mut std::io::stdout(),
         LogOpts { is_machine: writer.is_machine() },
@@ -411,6 +421,7 @@ pub async fn log(
 pub async fn log_impl<W: std::io::Write>(
     daemon_proxy: DaemonProxy,
     rcs_proxy: Option<RemoteControlProxy>,
+    log_settings: Option<LogSettingsProxy>,
     cmd: LogCommand,
     writer: &mut W,
     opts: LogOpts,
@@ -450,16 +461,27 @@ pub async fn log_impl<W: std::io::Write>(
         };
     }
 
-    log_cmd(daemon_proxy, rcs_proxy, &mut formatter, cmd, writer).await
+    log_cmd(daemon_proxy, rcs_proxy, log_settings, &mut formatter, cmd, writer).await
 }
 
 pub async fn log_cmd<W: std::io::Write>(
     daemon_proxy: DaemonProxy,
     rcs_opt: Option<RemoteControlProxy>,
+    log_settings: Option<LogSettingsProxy>,
     log_formatter: &mut impl LogFormatter,
     cmd: LogCommand,
     writer: &mut W,
 ) -> Result<()> {
+    if !cmd.select.is_empty() {
+        if let Some(log_settings) = log_settings {
+            log_settings
+                .register_interest(&mut cmd.select.clone().iter_mut())
+                .map_err(|e| anyhow!("failed to register log interest selector: {}", e))?;
+        } else {
+            ffx_bail!("{}", SELECT_FAILURE_MESSAGE);
+        }
+    }
+
     let sub_command = cmd.sub_command.unwrap_or(LogSubCommand::Watch(WatchCommand {}));
     let stream_mode = if matches!(sub_command, LogSubCommand::Dump(..)) {
         StreamMode::SnapshotAll
@@ -549,6 +571,10 @@ mod test {
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlRequest,
         },
+        fidl_fuchsia_diagnostics::{
+            Interest, LogInterestSelector, LogSettingsRequest, Severity as FidlSeverity,
+        },
+        selectors::parse_component_selector,
         std::{sync::Arc, time::Duration},
     };
 
@@ -597,6 +623,16 @@ mod test {
                 );
             }
         }
+    }
+
+    fn setup_fake_log_settings_proxy(
+        expected_selectors: Vec<LogInterestSelector>,
+    ) -> Option<LogSettingsProxy> {
+        Some(setup_fake_log_settings(move |req| match req {
+            LogSettingsRequest::RegisterInterest { selectors, .. } => {
+                assert_eq!(selectors, expected_selectors)
+            }
+        }))
     }
 
     fn setup_fake_rcs() -> Option<RemoteControlProxy> {
@@ -662,6 +698,7 @@ mod test {
             until: None,
             until_monotonic: None,
             sub_command: None,
+            select: vec![],
         }
     }
 
@@ -724,6 +761,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
+            setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -762,6 +800,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
+            setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -801,6 +840,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
+            setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -876,6 +916,7 @@ mod test {
             log_cmd(
                 setup_fake_daemon_server(params, Arc::new(expected_responses)),
                 setup_fake_rcs(),
+                setup_fake_log_settings_proxy(vec![]),
                 &mut formatter,
                 cmd,
                 &mut writer,
@@ -887,6 +928,75 @@ mod test {
         let output = String::from_utf8(writer).unwrap();
         assert!(output.is_empty());
         formatter.assert_same_logs(vec![Ok(log1), Ok(log2)])
+    }
+
+    #[fuchsia::test]
+    async fn test_watch_with_select() {
+        let mut formatter = FakeLogFormatter::new();
+        let selectors = vec![LogInterestSelector {
+            selector: parse_component_selector("core/my_component").unwrap(),
+            interest: Interest { min_severity: Some(FidlSeverity::Info), ..Interest::EMPTY },
+        }];
+        let cmd = LogCommand { select: selectors.clone(), ..empty_log_command() };
+        let params = DaemonDiagnosticsStreamParameters {
+            stream_mode: Some(StreamMode::SnapshotRecentThenSubscribe),
+            ..DaemonDiagnosticsStreamParameters::EMPTY
+        };
+        let log1 = make_log_entry(LogData::FfxEvent(EventType::LoggingStarted));
+        let log2 = make_log_entry(LogData::MalformedTargetLog("text".to_string()));
+        let log3 = make_log_entry(LogData::MalformedTargetLog("text2".to_string()));
+
+        let expected_responses = vec![
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log1).unwrap(),
+                serde_json::to_string(&log2).unwrap(),
+            ]),
+            FakeArchiveIteratorResponse::new_with_values(vec![
+                serde_json::to_string(&log3).unwrap()
+            ]),
+        ];
+
+        let mut writer = Vec::new();
+        log_cmd(
+            setup_fake_daemon_server(params, Arc::new(expected_responses)),
+            setup_fake_rcs(),
+            setup_fake_log_settings_proxy(selectors),
+            &mut formatter,
+            cmd,
+            &mut writer,
+        )
+        .await
+        .unwrap();
+
+        let output = String::from_utf8(writer).unwrap();
+        assert!(output.is_empty());
+        formatter.assert_same_logs(vec![Ok(log1), Ok(log2), Ok(log3)])
+    }
+
+    #[fuchsia::test]
+    async fn test_watch_with_select_params_but_no_proxy() {
+        let mut formatter = FakeLogFormatter::new();
+        let selectors = vec![LogInterestSelector {
+            selector: parse_component_selector("core/my_component").unwrap(),
+            interest: Interest { min_severity: Some(FidlSeverity::Info), ..Interest::EMPTY },
+        }];
+        let cmd = LogCommand { select: selectors.clone(), ..empty_log_command() };
+        let params = DaemonDiagnosticsStreamParameters {
+            stream_mode: Some(StreamMode::SnapshotRecentThenSubscribe),
+            ..DaemonDiagnosticsStreamParameters::EMPTY
+        };
+
+        let mut writer = Vec::new();
+        assert!(log_cmd(
+            setup_fake_daemon_server(params, Arc::new(vec![])),
+            setup_fake_rcs(),
+            None,
+            &mut formatter,
+            cmd,
+            &mut writer,
+        )
+        .await
+        .is_err())
     }
 
     #[fuchsia::test]
@@ -1297,6 +1407,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
+            setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -1329,6 +1440,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
+            setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -1355,6 +1467,7 @@ mod test {
         assert!(log_cmd(
             setup_fake_daemon_server(DaemonDiagnosticsStreamParameters::EMPTY, Arc::new(vec![])),
             setup_fake_rcs(),
+            setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -1383,6 +1496,7 @@ mod test {
         assert!(log_cmd(
             setup_fake_daemon_server(DaemonDiagnosticsStreamParameters::EMPTY, Arc::new(vec![])),
             setup_fake_rcs(),
+            setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,

@@ -960,6 +960,7 @@
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.diagnostics.LogSettings",
                 "fuchsia.logger.Log",
                 "fuchsia.logger.LogSink",
             ],

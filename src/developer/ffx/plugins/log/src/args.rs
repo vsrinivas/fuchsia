@@ -9,6 +9,7 @@ use {
     diagnostics_data::Severity,
     ffx_core::ffx_command,
     fidl_fuchsia_developer_bridge::SessionSpec,
+    fidl_fuchsia_diagnostics::{Interest, LogInterestSelector, Severity as FidlSeverity},
     std::time::Duration,
 };
 
@@ -139,6 +140,24 @@ pub struct LogCommand {
     /// if provided, logs will not be symbolized
     #[argh(switch)]
     pub no_symbols: bool,
+
+    /// specify the runtime log level for components as 'component interest'
+    /// using the form <component>#<interest> where component is the
+    /// component selector (a component moniker that may include wildcards or a recursive
+    /// glob in its last segment) and interest is the specified selection criteria,
+    /// e.g. 'log-level' as one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE.
+    ///
+    /// Example: --select core/audio#DEBUG --select core/session-*/my_component#WARN
+    /// Note 1: This flag changes the settings with which logs are emitted
+    /// on the component/producer side.
+    ///
+    /// Note 2: In the event that multiple log listeners provide selector
+    /// arguments via --select, the minimum severity provided across all active clients
+    /// will be used. When a client disconnects, the new minimum severity across the remaining
+    /// clients will be used. See https://fuchsia.dev/reference/fidl/fuchsia.diagnostics?hl=en#LogSettings
+    /// for a full explanation of the semantics.
+    #[argh(option, from_str_fn(parse_log_interest_selector))]
+    pub select: Vec<LogInterestSelector>,
 }
 
 #[derive(FromArgs, Clone, PartialEq, Debug)]
@@ -201,9 +220,38 @@ pub fn parse_session_spec(value: &str) -> Result<SessionSpec, String> {
     }
 }
 
+pub fn parse_log_interest_selector(selector: &str) -> Result<LogInterestSelector, String> {
+    let invalid_selector = format!("Invalid component interest selector: '{}'.", selector);
+    let mut parts = selector.split('#');
+
+    // Split each arg into sub string vectors containing strings
+    // for component [0] and interest [1] respectively.
+    let component = parts.next().ok_or_else(|| invalid_selector.clone())?;
+    let interest = parts.next().ok_or_else(|| invalid_selector.clone())?;
+    if let Some(_extra) = parts.next() {
+        return Err(invalid_selector.clone());
+    }
+    let selector = match selectors::parse_component_selector(component) {
+        Ok(s) => s,
+        _ => return Err(invalid_selector.clone()),
+    };
+
+    let min_severity = match interest.to_uppercase().as_ref() {
+        "TRACE" => Some(FidlSeverity::Trace),
+        "DEBUG" => Some(FidlSeverity::Debug),
+        "INFO" => Some(FidlSeverity::Info),
+        "WARN" => Some(FidlSeverity::Warn),
+        "ERROR" => Some(FidlSeverity::Error),
+        "FATAL" => Some(FidlSeverity::Fatal),
+        "" => None,
+        _ => return Err(invalid_selector),
+    };
+    Ok(LogInterestSelector { selector, interest: Interest { min_severity, ..Interest::EMPTY } })
+}
+
 #[cfg(test)]
 mod test {
-    use super::*;
+    use {super::*, selectors::parse_component_selector};
 
     #[test]
     fn test_session_spec_non_zero() {
@@ -220,5 +268,29 @@ mod test {
     fn test_session_spec_error() {
         assert!(parse_session_spec("~abc").is_err());
         assert!(parse_session_spec("abc").is_err());
+    }
+
+    #[test]
+    fn test_log_interest_selector() {
+        assert_eq!(
+            parse_log_interest_selector("core/network#FATAL").unwrap(),
+            LogInterestSelector {
+                selector: parse_component_selector("core/network").unwrap(),
+                interest: Interest { min_severity: Some(FidlSeverity::Fatal), ..Interest::EMPTY }
+            }
+        );
+        assert_eq!(
+            parse_log_interest_selector("any/component#INFO").unwrap(),
+            LogInterestSelector {
+                selector: parse_component_selector("any/component").unwrap(),
+                interest: Interest { min_severity: Some(FidlSeverity::Info), ..Interest::EMPTY }
+            }
+        );
+    }
+    #[test]
+    fn test_log_interest_selector_error() {
+        assert!(parse_log_interest_selector("anything////#FATAL").is_err());
+        assert!(parse_log_interest_selector("core/network").is_err());
+        assert!(parse_log_interest_selector("core/network#FAKE").is_err());
     }
 }
