@@ -430,6 +430,17 @@ static_assert(sizeof(fidl_xunion_v2_t) == 16, "");
 
 // Messages.
 
+// Wire format metadata
+
+// This structure has the right alignment and can be used to pass the metadata
+// separately from the FIDL payload over the wire (e.g. driver interfaces).
+// It is C, and has a stable ABI.
+typedef struct fidl_opaque_wire_format_metadata {
+  uint64_t metadata;
+} fidl_opaque_wire_format_metadata_t;
+
+// FidlWireFormatVersion is used internally between the C/C++ bindings to signal
+// the wire format version of a message. It is not part of the FIDL ABI.
 typedef uint32_t FidlWireFormatVersion;
 
 #define FIDL_WIRE_FORMAT_VERSION_V1 ((uint32_t)1)

@@ -78,7 +78,10 @@ class MlmeMsg : public BaseMlmeMsg {
     fidl::HLCPPIncomingMessage msg(fidl::BytePart(payload.data(), payload.size(), payload.size()),
                                    fidl::HandleInfoPart());
     const char* err_msg = nullptr;
-    zx_status_t status = msg.Decode(M::FidlType, &err_msg);
+    // TODO(fxbug.dev/82681): This uses an internal type to decode the payload based on flags
+    // specified in the FIDL message header. Move to public API when FIDL-at-rest is ready.
+    zx_status_t status = msg.Decode(
+        ::fidl::internal::WireFormatMetadata::FromTransactionalHeader(*h), M::FidlType, &err_msg);
     if (status != ZX_OK) {
       errorf("could not decode received message: %s\n", err_msg);
       return {};

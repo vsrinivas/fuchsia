@@ -33,6 +33,7 @@ test("fidl_llcpp_message_container_tests_bin") {
     "incoming_message_test.cc",
     "outgoing_message_test.cc",
     "outgoing_to_incoming_message_test.cc",
+    "wire_format_metadata_test.cc",
   ]
   deps = [
     ":fidl.llcpp.linearized.test_llcpp",

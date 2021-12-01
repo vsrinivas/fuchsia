@@ -109,6 +109,14 @@ class HLCPPIncomingMessage {
                                                         const fidl_type_t* type,
                                                         const char** error_msg_out);
 
+  // Decodes the message in-place when the metadata is not part of the byte
+  // message and instead specified as an argument. Otherwise identical to
+  // Decode().
+  //
+  // |metadata| describes features/revision information about the wire format.
+  zx_status_t Decode(const internal::WireFormatMetadata& metadata, const fidl_type_t* type,
+                     const char** error_msg_out);
+
   // Read a message from the given channel.
   //
   // The bytes read from the channel are stored in bytes() and the handles

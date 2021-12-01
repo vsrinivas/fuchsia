@@ -19,9 +19,12 @@ namespace fidl {
 namespace test {
 namespace util {
 
-constexpr fidl_message_header_t kV1Header = {};
+constexpr fidl_message_header_t kV1Header = {
+    .magic_number = kFidlWireFormatMagicNumberInitial,
+};
 constexpr fidl_message_header_t kV2Header = {
     .flags = {FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2, 0, 0},
+    .magic_number = kFidlWireFormatMagicNumberInitial,
 };
 
 inline bool operator==(zx_handle_disposition_t a, zx_handle_disposition_t b) {

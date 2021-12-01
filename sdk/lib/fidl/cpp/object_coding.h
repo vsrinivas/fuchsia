@@ -27,7 +27,11 @@ zx_status_t DecodeObject(uint8_t* bytes, size_t bytes_length, T* object,
   HLCPPIncomingMessage msg(
       BytePart(bytes, static_cast<uint32_t>(bytes_length), static_cast<uint32_t>(bytes_length)),
       HandleInfoPart());
-  zx_status_t status = msg.Decode(T::FidlType, error_msg_out);
+  constexpr fidl_message_header_t kV1Header = {
+      .magic_number = kFidlWireFormatMagicNumberInitial,
+  };
+  zx_status_t status =
+      msg.DecodeWithExternalHeader_InternalMayBreak(kV1Header, T::FidlType, error_msg_out);
   if (status != ZX_OK) {
     return status;
   }
