@@ -37,8 +37,7 @@ PhysicalPageProvider::PhysicalPageProvider(uint64_t size) : size_(size) { LTRACE
 
 PhysicalPageProvider::~PhysicalPageProvider() {
   LTRACEF("%p\n", this);
-  DEBUG_ASSERT(detached_);
-  DEBUG_ASSERT(closed_);
+  // In error paths we can destruct without detached_ or closed_ becoming true.
 }
 
 const PageSourceProperties& PhysicalPageProvider::properties() const { return kProperties; }
@@ -149,7 +148,9 @@ void PhysicalPageProvider::OnClose() {
   closed_ = true;
   // By the time OnClose() is called, VmCowPages::fbl_recycle() has already loaned all the pages,
   // so we can do pmm_delete_lender() on the whole range here.
-  pmm_delete_lender(phys_base_, size_ / PAGE_SIZE);
+  if (phys_base_ != kInvalidPhysBase) {
+    pmm_delete_lender(phys_base_, size_ / PAGE_SIZE);
+  }
 }
 
 bool PhysicalPageProvider::DequeueRequest(uint64_t* request_offset, uint64_t* request_length) {

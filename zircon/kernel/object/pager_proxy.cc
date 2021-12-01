@@ -41,7 +41,7 @@ PagerProxy::PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> 
 
 PagerProxy::~PagerProxy() {
   LTRACEF("%p\n", this);
-  DEBUG_ASSERT(closed_);
+  // In error paths shortly after construction, we can destruct without closed_ becoming true.
   DEBUG_ASSERT(!complete_pending_);
 }
 
