@@ -7,7 +7,7 @@
 
 #![allow(unused_imports, non_camel_case_types)]
 
-use fuchsia_zircon_status as zircon;
+use fuchsia_zircon_types as zircon_types;
 use banjo_banjo_examples_callback2 as banjo_examples_callback2;
 use banjo_examples_callback2::*;
 

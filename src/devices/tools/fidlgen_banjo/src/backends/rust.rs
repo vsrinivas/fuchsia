@@ -139,7 +139,7 @@ fn type_to_rust_str(
         Type::Primitive { ref subtype } => primitive_type_to_rust_str(subtype),
         Type::Identifier { identifier, nullable } => {
             if identifier.is_base_type() {
-                return Ok(format!("zircon::sys::zx_{}_t", identifier.get_name()));
+                return Ok(format!("zircon_types::zx_{}_t", identifier.get_name()));
             }
             match ir.get_declaration(identifier)? {
                 Declaration::Const => {
@@ -159,7 +159,7 @@ fn type_to_rust_str(
                 _ => Err(anyhow!("Can't handle declaration of {:?}", identifier)),
             }
         }
-        Type::Handle { .. } => Ok(format!("zircon::sys::zx_handle_t")),
+        Type::Handle { .. } => Ok(format!("zircon_types::zx_handle_t")),
         _ => Err(anyhow!("Can't handle type {:?}", ty)),
     }
 }
@@ -200,7 +200,7 @@ fn field_to_rust_str(field: &StructMember, ir: &FidlIr) -> Result<String, Error>
 fn get_base_type_from_alias(alias: &Option<&String>) -> Option<String> {
     if let Some(name) = alias {
         if name.starts_with("zx/") {
-            return Some(format!("zircon::sys::zx_{}_t", &name[3..]));
+            return Some(format!("zircon_types::zx_{}_t", &name[3..]));
         }
     }
     None
@@ -402,25 +402,12 @@ fn has_zircon_dep(ir: &FidlIr) -> bool {
     ir.library_dependencies.iter().find(|library| library.name.0.as_str() == "zx").is_some()
 }
 
-fn uses_zircon_handles(ir: &FidlIr) -> bool {
-    // Ignore tables because we don't generate those.
-    ir.struct_declarations
-        .iter()
-        .filter(|decl| decl.resource && !decl.is_request_or_response)
-        .count()
-        + ir.union_declarations.iter().filter(|decl| decl.resource).count()
-        > 0
-}
-
 impl<'a, W: io::Write> Backend<'a, W> for RustBackend<'a, W> {
     fn codegen(&mut self, ir: FidlIr) -> Result<(), Error> {
         let decl_order = get_declarations(&ir)?;
 
-        let zircon_include = match (has_zircon_dep(&ir), uses_zircon_handles(&ir)) {
-            (false, _) => "",
-            (true, true) => "use fuchsia_zircon as zircon;",
-            (true, false) => "use fuchsia_zircon_status as zircon;",
-        };
+        let zircon_include =
+            if has_zircon_dep(&ir) { "use fuchsia_zircon_types as zircon_types;" } else { "" };
 
         self.w.write_fmt(format_args!(
             include_str!("templates/rust/header.rs"),

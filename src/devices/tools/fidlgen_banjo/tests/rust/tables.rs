@@ -7,13 +7,13 @@
 
 #![allow(unused_imports, non_camel_case_types)]
 
-use fuchsia_zircon as zircon;
+use fuchsia_zircon_types as zircon_types;
 
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct C {
-    pub baz: zircon::sys::zx_handle_t,
+    pub baz: zircon_types::zx_handle_t,
 }
 
 #[repr(C)]

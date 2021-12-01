@@ -7,7 +7,7 @@
 
 #![allow(unused_imports, non_camel_case_types)]
 
-use fuchsia_zircon_status as zircon;
+use fuchsia_zircon_types as zircon_types;
 
 pub const ARRAY_SIZE: u32 = 32;
 

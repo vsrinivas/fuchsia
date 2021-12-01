@@ -307,12 +307,9 @@ template("_fidl_banjo_rust") {
 
     deps = [
       "//src/lib/fuchsia-async",
-      "//src/lib/zircon/rust:fuchsia-zircon-status",
+      "//src/lib/zircon/rust:fuchsia-zircon-types",
       "//third_party/rust_crates:futures",
     ]
-    if (is_fuchsia) {
-      deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
-    }
 
     configs -= [ "//build/config/rust:allow_unused_results" ]
 

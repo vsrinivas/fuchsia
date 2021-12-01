@@ -7,13 +7,13 @@
 
 #![allow(unused_imports, non_camel_case_types)]
 
-use fuchsia_zircon_status as zircon;
+use fuchsia_zircon_types as zircon_types;
 
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StructWithZxField {
-    pub status: zircon::sys::zx_status_t,
+    pub status: zircon_types::zx_status_t,
 }
 
 #[repr(C)]
