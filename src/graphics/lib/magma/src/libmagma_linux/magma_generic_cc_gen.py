@@ -211,13 +211,14 @@ def generate_export(export, gen_debug_prints):
     ret += '    request.hdr.type = VIRTIO_MAGMA_CMD_' + name.upper() + ';\n'
     ret += generate_copy_in(inputs)
 
+    ret += '    bool success = virtmagma_send_command(file_descriptor, &request, sizeof(request), &response, sizeof(response));\n'
+
     if ('release' in name) and (name != 'release_context'):
         ret += '    delete ' + last_wrapped_parameter + ';\n'
 
-    ret += '    if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response, sizeof(response)))\n'
+    ret += '    if (!success)\n'
     ret += '        ' + err + ';\n'
-    ret += '    if (response.hdr.type != VIRTIO_MAGMA_RESP_' + name.upper(
-    ) + ')\n'
+    ret += '    if (response.hdr.type != VIRTIO_MAGMA_RESP_' + name.upper() + ')\n'
     ret += '        ' + err + ';\n'
     ret += generate_copy_out(outputs, export['type'])
     ret += wrap_code
