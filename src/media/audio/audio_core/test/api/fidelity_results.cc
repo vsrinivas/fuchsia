@@ -119,7 +119,7 @@ const std::array<double, HermeticFidelityTest::kNumReferenceFreqs>
         // clang-format on
 };
 
-// (5) 96k stream, resampled to 48k
+// (5) 96k stream synchronizing to a custom clock, resampled to 48k
 const std::array<double, HermeticFidelityTest::kNumReferenceFreqs>
     FidelityResults::k96kMicro48kLimitsDb = {
         // clang-format off

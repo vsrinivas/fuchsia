@@ -285,8 +285,8 @@ TEST_F(AudioCore48kFidelityTest, DISABLED_44100To48k) {
   });
 }
 
-// 44.1k float32 stereo stream to 48k stereo mix stage (SincSampler), with custom clock.
-// Because audio_core must chase a custom clock at non-unity rate, SiNAD results slightly differ.
+// 44.1k float32 stereo stream (with custom ref clock) to 48k stereo mix stage (SincSampler).
+// audio_core chases a custom clock at non-trivial conversion ratio, so SiNAD is slightly lower.
 TEST_F(AudioCore48kFidelityTest, DISABLED_44100Micro48k) {
   constexpr uint32_t kSourceRate = 44100;
 
@@ -312,7 +312,7 @@ TEST_F(AudioCore48kFidelityTest, DISABLED_44100Micro48k) {
   });
 }
 
-// 96k float32 stereo stream to a 48k stereo mix stage, with custom ref clock
+// 96k float32 stereo stream (with custom ref clock) to a 48k stereo mix stage.
 TEST_F(AudioCore48kFidelityTest, 96kMicro48k) {
   constexpr uint32_t kSourceRate = 96000;
 

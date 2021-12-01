@@ -19,10 +19,11 @@
 
 namespace media::audio {
 
-// Enable logging of sync-related clock adjustments. Log every time source position error >= 500ns,
-// otherwise every ~100th time (which in practice is approx once per second).
+// Enable logging of sync-related clock adjustments.
 constexpr bool kLogClockTuning = true;
+// (if enabled) log all source position errors that are equal to or greater than this threshold.
 constexpr zx::duration kLogClockTuningPositionErrorThreshold = zx::nsec(500);
+// (if enabled) otherwise, log the first of every ~100 errors (in practice this is approx 1/sec).
 constexpr int64_t kClockTuneLoggingStride = 97;  // make strides prime, to avoid periodicity
 
 //
