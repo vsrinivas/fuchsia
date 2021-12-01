@@ -51,9 +51,9 @@ test("pci-driver") {
   deps = [
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_c",
     "//sdk/lib/fdio",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxtest",
   ]

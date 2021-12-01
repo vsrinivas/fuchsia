@@ -6,9 +6,13 @@
 #define SRC_DEVICES_TESTING_DRIVER_INTEGRATION_TEST_SHIM_INCLUDE_LIB_DRIVER_INTEGRATION_TEST_FIXTURE_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <fuchsia/diagnostics/cpp/fidl.h>
+#include <fuchsia/driver/test/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
+
+#include <vector>
 
 #include <ddk/metadata/test.h>
 #include <fbl/string.h>
@@ -29,6 +33,7 @@ class IsolatedDevmgr {
   struct Args {
     // A list of vid/pid/did triplets to spawn in their own devhosts.
     fbl::Vector<board_test::DeviceEntry> device_list;
+    std::vector<fuchsia::driver::test::DriverLog> log_level;
   };
 
   // Launch a new isolated devmgr.  The instance will be destroyed when

@@ -38,6 +38,8 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
   fuchsia::driver::test::Realm_Start_Result realm_result;
   auto realm_args = fuchsia::driver::test::RealmArgs();
   realm_args.set_root_driver("fuchsia-boot:///#driver/platform-bus.so");
+  realm_args.set_driver_log_level(args->log_level);
+
   status = driver_test_realm->Start(std::move(realm_args), &realm_result);
   if (status != ZX_OK) {
     return status;
