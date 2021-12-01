@@ -921,6 +921,14 @@ impl<T: ReadableBlockContainer + WritableBlockContainer + BlockContainerEq> Bloc
         Ok(())
     }
 
+    pub fn set_parent(&self, new_parent_index: u32) -> Result<(), Error> {
+        self.check_any_value()?;
+        let mut header = self.read_header();
+        header.set_value_parent_index(new_parent_index);
+        self.write_header(header);
+        Ok(())
+    }
+
     /// Initializes a *_VALUE block header.
     fn write_value_header(
         &self,

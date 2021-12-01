@@ -3,19 +3,19 @@
 // found in the LICENSE file.
 
 use crate::writer::{
-    BoolProperty, BytesProperty, DoubleArrayProperty, DoubleExponentialHistogramProperty,
-    DoubleLinearHistogramProperty, DoubleProperty, Error, Inner, InnerType, InspectType,
-    InspectTypeInternal, Inspector, IntArrayProperty, IntExponentialHistogramProperty,
-    IntLinearHistogramProperty, IntProperty, LazyNode, State, StringProperty, StringReference,
-    UintArrayProperty, UintExponentialHistogramProperty, UintLinearHistogramProperty, UintProperty,
-    ValueList,
+    private::InspectTypeInternal, BoolProperty, BytesProperty, DoubleArrayProperty,
+    DoubleExponentialHistogramProperty, DoubleLinearHistogramProperty, DoubleProperty, Error,
+    Inner, InnerType, InspectType, InspectTypeReparentable, Inspector, IntArrayProperty,
+    IntExponentialHistogramProperty, IntLinearHistogramProperty, IntProperty, LazyNode, State,
+    StringProperty, StringReference, UintArrayProperty, UintExponentialHistogramProperty,
+    UintLinearHistogramProperty, UintProperty, ValueList,
 };
 use diagnostics_hierarchy::{
     ArrayFormat, ExponentialHistogramParams, LinearHistogramParams, LinkNodeDisposition,
 };
 use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, FutureExt};
-use inspect_format::PropertyFormat;
+use inspect_format::{constants, PropertyFormat};
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -34,19 +34,7 @@ pub struct Node {
 
 impl InspectType for Node {}
 
-impl InspectTypeInternal for Node {
-    fn new(state: State, block_index: u32) -> Self {
-        Self { inner: Inner::new(state, block_index) }
-    }
-
-    fn is_valid(&self) -> bool {
-        self.inner.is_valid()
-    }
-
-    fn new_no_op() -> Self {
-        Self { inner: Inner::None }
-    }
-}
+crate::impl_inspect_type_internal!(Node);
 
 impl Node {
     /// Create a weak reference to the original node. All operations on a weak
@@ -542,6 +530,11 @@ impl Node {
         self.record(property);
     }
 
+    /// Takes a child from its parent and adopts it into its own tree.
+    pub fn adopt<T: InspectTypeReparentable>(&self, child: &T) -> Result<(), Error> {
+        child.reparent(self)
+    }
+
     /// Returns the [`Block`][Block] associated with this value.
     #[cfg(test)]
     pub(crate) fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
@@ -556,12 +549,7 @@ impl Node {
 
     /// Creates a new root node.
     pub(crate) fn new_root(state: State) -> Node {
-        Node::new(state, 0)
-    }
-
-    /// Returns the inner state where operations in this node write.
-    pub(crate) fn state(&self) -> Option<State> {
-        self.inner.inner_ref().map(|inner_ref| inner_ref.state.clone())
+        Node::new(state, constants::ROOT_INDEX)
     }
 }
 
@@ -573,7 +561,7 @@ impl InnerType for InnerNodeType {
     type Data = ValueList;
 
     fn free(state: &State, block_index: u32) -> Result<(), Error> {
-        if block_index == 0 {
+        if block_index == constants::ROOT_INDEX {
             return Ok(());
         }
         let mut state_lock = state.try_lock()?;
@@ -586,7 +574,7 @@ mod tests {
     use super::*;
     use crate::{
         reader,
-        writer::{testing_utils::get_state, Error, NumericProperty},
+        writer::{private::InspectTypeInternal, testing_utils::get_state, Error, NumericProperty},
     };
     use diagnostics_hierarchy::{assert_data_tree, DiagnosticsHierarchy};
     use fuchsia_zircon::{AsHandleRef, Peered};
@@ -666,6 +654,71 @@ mod tests {
                 "recorded-lazy-child": true,
             },
             "recorded-lazy-values": true,
+        });
+    }
+
+    #[fuchsia::test]
+    fn test_adoption() {
+        let insp = Inspector::new();
+        let root = insp.root();
+        let a = root.create_child("a");
+        let b = root.create_child("b");
+        let c = b.create_child("c");
+
+        assert_data_tree!(insp, root: {
+            a: {},
+            b: {
+                c: {},
+            },
+        });
+
+        a.adopt(&b).unwrap();
+
+        assert_data_tree!(insp, root: {
+            a: {
+                b: {
+                    c: {},
+                },
+            },
+        });
+
+        assert!(c.adopt(&a).is_err());
+        assert!(c.adopt(&b).is_err());
+        assert!(b.adopt(&a).is_err());
+        assert!(a.adopt(root).is_err());
+        assert!(a.adopt(&a).is_err());
+
+        {
+            let d = root.create_int("d", 4);
+
+            assert_data_tree!(insp, root: {
+                a: {
+                    b: {
+                        c: {},
+                    },
+                },
+                d: 4i64,
+            });
+
+            c.adopt(&d).unwrap();
+
+            assert_data_tree!(insp, root: {
+                a: {
+                    b: {
+                        c: {
+                            d: 4i64,
+                        },
+                    },
+                },
+            });
+        }
+
+        assert_data_tree!(insp, root: {
+            a: {
+                b: {
+                    c: {},
+                },
+            },
         });
     }
 

@@ -18,7 +18,7 @@
 //! let mut stats = stats::Node::new(&inspector, root);
 //! ```
 
-use super::{InspectType, Inspector, LazyNode, State};
+use super::{private::InspectTypeInternal, InspectType, Inspector, LazyNode, State};
 use futures::FutureExt;
 
 /// Contains information about inspect such as size and number of dynamic children.

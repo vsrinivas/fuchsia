@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::writer::{
-    ArithmeticArrayProperty, ArrayProperty, Inner, InnerValueType, InspectType,
-    InspectTypeInternal, State,
-};
+use crate::writer::{ArithmeticArrayProperty, ArrayProperty, Inner, InnerValueType, InspectType};
 use tracing::error;
 
 #[cfg(test)]
@@ -24,19 +21,7 @@ pub struct UintArrayProperty {
 
 impl InspectType for UintArrayProperty {}
 
-impl InspectTypeInternal for UintArrayProperty {
-    fn new(state: State, block_index: u32) -> Self {
-        Self { inner: Inner::new(state, block_index) }
-    }
-
-    fn is_valid(&self) -> bool {
-        self.inner.is_valid()
-    }
-
-    fn new_no_op() -> Self {
-        Self { inner: Inner::None }
-    }
-}
+crate::impl_inspect_type_internal!(UintArrayProperty);
 
 impl ArrayProperty for UintArrayProperty {
     type Type = u64;

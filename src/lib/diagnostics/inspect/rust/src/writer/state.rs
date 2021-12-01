@@ -243,6 +243,12 @@ pub struct State {
     inner: Arc<Mutex<InnerState>>,
 }
 
+impl PartialEq for State {
+    fn eq(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.inner, &other.inner)
+    }
+}
+
 impl State {
     /// Create a |State| object wrapping the given Heap. This will cause the
     /// heap to be initialized with a header.
@@ -394,6 +400,10 @@ impl<'a> LockedStateGuard<'a> {
         parent_index: u32,
     ) -> Result<Block<Arc<Mapping>>, Error> {
         self.inner_lock.create_property(name, value, format, parent_index)
+    }
+
+    pub fn reparent(&self, being_reparented: u32, new_parent: u32) -> Result<(), Error> {
+        self.inner_lock.reparent(being_reparented, new_parent)
     }
 
     /// Allocate a STRING_REFERENCE block and necessary EXTENTs.
@@ -754,6 +764,45 @@ impl InnerState {
         Ok(())
     }
 
+    fn check_lineage(&self, being_reparented: u32, new_parent: u32) -> Result<(), Error> {
+        // you cannot adopt the root node
+        if being_reparented == constants::ROOT_INDEX {
+            return Err(Error::AdoptAncestor);
+        }
+
+        let mut being_checked = new_parent;
+        while being_checked != constants::ROOT_INDEX {
+            if being_checked == being_reparented {
+                return Err(Error::AdoptAncestor);
+            }
+
+            being_checked = self.heap.get_block(being_checked)?.parent_index()?;
+        }
+
+        Ok(())
+    }
+
+    fn reparent(&self, being_reparented: u32, new_parent: u32) -> Result<(), Error> {
+        self.check_lineage(being_reparented, new_parent)?;
+        let being_reparented_block = self.heap.get_block(being_reparented)?;
+        let original_parent_idx = being_reparented_block.parent_index()?;
+        if original_parent_idx != constants::ROOT_INDEX {
+            let original_parent_block = self.heap.get_block(original_parent_idx)?;
+            let child_count = original_parent_block.child_count()? - 1;
+            original_parent_block.set_child_count(child_count)?;
+        }
+
+        being_reparented_block.set_parent(new_parent)?;
+
+        if new_parent != constants::ROOT_INDEX {
+            let new_parent_block = self.heap.get_block(new_parent)?;
+            let child_count = new_parent_block.child_count()? + 1;
+            new_parent_block.set_child_count(child_count)?;
+        }
+
+        Ok(())
+    }
+
     fn create_bool<'b>(
         &mut self,
         name: impl Into<StringReference<'b>>,
@@ -833,7 +882,7 @@ impl InnerState {
     fn delete_value(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
         // Decrement parent child count.
         let parent_index = block.parent_index()?;
-        if parent_index != constants::HEADER_INDEX {
+        if parent_index != constants::ROOT_INDEX {
             let parent = self.heap.get_block(parent_index).unwrap();
             let child_count = parent.child_count().unwrap() - 1;
             if parent.block_type() == BlockType::Tombstone && child_count == 0 {
@@ -877,7 +926,7 @@ impl InnerState {
 
     fn free_extents(&mut self, head_extent_index: u32) -> Result<(), Error> {
         let mut index = head_extent_index;
-        while index != constants::HEADER_INDEX {
+        while index != constants::ROOT_INDEX {
             let block = self.heap.get_block(index).unwrap();
             index = block.next_extent()?;
             self.heap.free_block(block)?;
@@ -888,7 +937,7 @@ impl InnerState {
     fn write_extents(&mut self, value: &[u8]) -> Result<u32, Error> {
         if value.len() == 0 {
             // Invalid index
-            return Ok(constants::HEADER_INDEX);
+            return Ok(constants::ROOT_INDEX);
         }
         let mut offset = 0;
         let total_size = value.len().to_usize().unwrap();
@@ -941,6 +990,62 @@ mod tests {
         let mut state = outer.try_lock().expect("lock state");
         let block = state.create_string_reference("a value").unwrap();
         assert_eq!(state.load_string(block.index()).unwrap(), "a value");
+    }
+
+    #[fuchsia::test]
+    fn test_check_lineage() {
+        let core_state = get_state(4096);
+        let mut state = core_state.try_lock().expect("lock state");
+        let parent = state.create_node("", 0).unwrap();
+        let child = state.create_node("", parent.index()).unwrap();
+        let uncle = state.create_node("", 0).unwrap();
+
+        state.inner_lock.check_lineage(parent.index(), child.index()).unwrap_err();
+        state.inner_lock.check_lineage(0, child.index()).unwrap_err();
+        state.inner_lock.check_lineage(child.index(), uncle.index()).unwrap();
+    }
+
+    #[fuchsia::test]
+    fn test_reparent() {
+        let core_state = get_state(4096);
+        let mut state = core_state.try_lock().expect("lock state");
+
+        let a = state.create_node("a", 0).unwrap();
+        let b = state.create_node("b", 0).unwrap();
+
+        assert_eq!(a.parent_index().unwrap(), 0);
+        assert_eq!(b.parent_index().unwrap(), 0);
+
+        assert_eq!(a.child_count().unwrap(), 0);
+        assert_eq!(b.child_count().unwrap(), 0);
+
+        state.reparent(b.index(), a.index()).unwrap();
+
+        assert_eq!(a.parent_index().unwrap(), 0);
+        assert_eq!(b.parent_index().unwrap(), a.index());
+
+        assert_eq!(a.child_count().unwrap(), 1);
+        assert_eq!(b.child_count().unwrap(), 0);
+
+        let c = state.create_node("c", a.index()).unwrap();
+
+        assert_eq!(a.parent_index().unwrap(), 0);
+        assert_eq!(b.parent_index().unwrap(), a.index());
+        assert_eq!(c.parent_index().unwrap(), a.index());
+
+        assert_eq!(a.child_count().unwrap(), 2);
+        assert_eq!(b.child_count().unwrap(), 0);
+        assert_eq!(c.child_count().unwrap(), 0);
+
+        state.reparent(c.index(), b.index()).unwrap();
+
+        assert_eq!(a.parent_index().unwrap(), 0);
+        assert_eq!(b.parent_index().unwrap(), a.index());
+        assert_eq!(c.parent_index().unwrap(), b.index());
+
+        assert_eq!(a.child_count().unwrap(), 1);
+        assert_eq!(b.child_count().unwrap(), 1);
+        assert_eq!(c.child_count().unwrap(), 0);
     }
 
     #[fuchsia::test]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::writer::{Error, Inner, InnerType, InspectType, InspectTypeInternal, State};
+use crate::writer::{Error, Inner, InnerType, InspectType, State};
 
 #[cfg(test)]
 use {inspect_format::Block, mapped_vmo::Mapping, std::sync::Arc};
@@ -19,19 +19,7 @@ pub struct LazyNode {
 
 impl InspectType for LazyNode {}
 
-impl InspectTypeInternal for LazyNode {
-    fn new(state: State, block_index: u32) -> Self {
-        Self { inner: Inner::new(state, block_index) }
-    }
-
-    fn is_valid(&self) -> bool {
-        self.inner.is_valid()
-    }
-
-    fn new_no_op() -> Self {
-        Self { inner: Inner::None }
-    }
-}
+crate::impl_inspect_type_internal!(LazyNode);
 
 #[derive(Default, Debug)]
 struct InnerLazyNodeType;

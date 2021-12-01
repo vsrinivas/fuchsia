@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::writer::{Error, Heap, InspectTypeInternal, Node, State};
+use crate::writer::{private::InspectTypeInternal, Error, Heap, Node, State};
 use diagnostics_hierarchy::{testing::DiagnosticsHierarchyGetter, DiagnosticsHierarchy};
 use fuchsia_zircon::{self as zx, HandleBased};
 use inspect_format::constants;

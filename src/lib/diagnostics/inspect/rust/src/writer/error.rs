@@ -95,6 +95,12 @@ pub enum Error {
 
     #[error("Format error")]
     VmoFormat(#[source] FormatError),
+
+    #[error("Cannot adopt into different VMO")]
+    AdoptionIntoWrongVmo,
+
+    #[error("Cannot adopt ancestor")]
+    AdoptAncestor,
 }
 
 impl From<FormatError> for Error {

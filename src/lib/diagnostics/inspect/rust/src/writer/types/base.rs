@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::writer::{Error, State};
+use crate::writer::{Error, Node, State};
 use derivative::Derivative;
+use private::InspectTypeInternal;
 use std::{
     fmt::Debug,
     sync::{Arc, Weak},
@@ -12,13 +13,85 @@ use std::{
 /// Trait implemented by all inspect types.
 pub trait InspectType: Send + Sync {}
 
-/// Trait implemented by all inspect types. It provides constructor functions that are not
-/// intended for use outside the crate.
-pub(crate) trait InspectTypeInternal {
-    fn new(state: State, block_index: u32) -> Self;
-    fn new_no_op() -> Self;
-    fn is_valid(&self) -> bool;
+pub(crate) mod private {
+    use crate::writer::State;
+
+    /// Trait implemented by all inspect types. It provides constructor functions that are not
+    /// intended for use outside the crate.
+    /// Use `impl_inspect_type_internal` for easy implementation.
+    pub trait InspectTypeInternal {
+        fn new(state: State, block_index: u32) -> Self;
+        fn new_no_op() -> Self;
+        fn is_valid(&self) -> bool;
+        fn block_index(&self) -> Option<u32>;
+        fn state(&self) -> Option<State>;
+    }
 }
+
+/// Trait allowing a `Node` to adopt any Inspect type as its child, removing
+/// it from the original parent's tree.
+///
+/// This trait is not implementable by external types.
+pub trait InspectTypeReparentable: private::InspectTypeInternal {
+    #[doc(hidden)]
+    /// This function is called by a child with the new parent as an argument.
+    /// The child will be removed from its current parent and added to the tree
+    /// under new_parent.
+    fn reparent(&self, new_parent: &Node) -> Result<(), Error> {
+        if let (
+            Some(child_state),
+            Some(child_index),
+            Some(new_parent_state),
+            Some(new_parent_index),
+        ) = (self.state(), self.block_index(), new_parent.state(), new_parent.block_index())
+        {
+            if new_parent_state != child_state {
+                return Err(Error::AdoptionIntoWrongVmo);
+            }
+
+            new_parent_state
+                .try_lock()
+                .and_then(|state| state.reparent(child_index, new_parent_index))?;
+        }
+
+        Ok(())
+    }
+}
+
+impl<T: private::InspectTypeInternal> InspectTypeReparentable for T {}
+
+/// Macro to generate private::InspectTypeInternal
+macro_rules! impl_inspect_type_internal {
+    ($type_name:ident) => {
+        impl $crate::private::InspectTypeInternal for $type_name {
+            fn new(state: $crate::writer::State, block_index: u32) -> $type_name {
+                $type_name { inner: $crate::writer::types::base::Inner::new(state, block_index) }
+            }
+
+            fn is_valid(&self) -> bool {
+                self.inner.is_valid()
+            }
+
+            fn new_no_op() -> $type_name {
+                $type_name { inner: $crate::writer::types::base::Inner::None }
+            }
+
+            fn state(&self) -> Option<$crate::writer::State> {
+                Some(self.inner.inner_ref()?.state.clone())
+            }
+
+            fn block_index(&self) -> Option<u32> {
+                if let Some(ref inner_ref) = self.inner.inner_ref() {
+                    Some(inner_ref.block_index)
+                } else {
+                    None
+                }
+            }
+        }
+    };
+}
+
+pub(crate) use impl_inspect_type_internal;
 
 /// An inner type of all inspect nodes and properties. Each variant implies a
 /// different relationship with the underlying inspect VMO.
@@ -127,5 +200,47 @@ impl InnerType for InnerValueType {
     fn free(state: &State, block_index: u32) -> Result<(), Error> {
         let mut state_lock = state.try_lock()?;
         state_lock.free_value(block_index).map_err(|err| Error::free("value", block_index, err))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Inspector;
+    use diagnostics_hierarchy::assert_data_tree;
+
+    #[fuchsia::test]
+    fn test_reparent_from_state() {
+        let insp = Inspector::new();
+        let root = insp.root();
+        let a = root.create_child("a");
+        let b = a.create_child("b");
+
+        assert_data_tree!(insp, root: {
+            a: {
+                b: {},
+            },
+        });
+
+        b.reparent(root).unwrap();
+
+        assert_data_tree!(insp, root: {
+            b: {},
+            a: {},
+        });
+    }
+
+    #[fuchsia::test]
+    fn reparent_from_wrong_state() {
+        let insp1 = Inspector::new();
+        let insp2 = Inspector::new();
+
+        assert!(insp1.root().reparent(insp2.root()).is_err());
+
+        let a = insp1.root().create_child("a");
+        let b = insp2.root().create_child("b");
+
+        assert!(a.reparent(&b).is_err());
+        assert!(b.reparent(&a).is_err());
     }
 }
