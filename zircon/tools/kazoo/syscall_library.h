@@ -449,6 +449,8 @@ class SyscallLibraryLoader {
   static bool FromJson(const std::string& json_ir, SyscallLibrary* library);
 
  private:
+  static bool ExtractPayload(Struct& payload, const std::string& type_name,
+                             const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadBits(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadEnums(const rapidjson::Document& document, SyscallLibrary* library);
   static bool LoadInterfaces(const rapidjson::Document& document, SyscallLibrary* library);

@@ -566,6 +566,40 @@ std::unique_ptr<Enum> SyscallLibraryLoader::ConvertBitsOrEnumMember(const rapidj
 }
 
 // static
+bool SyscallLibraryLoader::ExtractPayload(Struct& payload, const std::string& type_name,
+                                          const rapidjson::Document& document,
+                                          SyscallLibrary* library) {
+  for (const auto& struct_json : document["struct_declarations"].GetArray()) {
+    std::string struct_name = struct_json["name"].GetString();
+    if (struct_name == type_name) {
+      for (const auto& arg : struct_json["members"].GetArray()) {
+        Struct* strukt = &payload;
+        const auto* type_alias = arg.HasMember("experimental_maybe_from_type_alias")
+                                     ? &arg["experimental_maybe_from_type_alias"]
+                                     : nullptr;
+        strukt->members_.emplace_back(arg["name"].GetString(),
+                                      TypeFromJson(*library, arg["type"], type_alias),
+                                      std::map<std::string, std::string>{});
+        if (arg.HasMember("maybe_attributes")) {
+          for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
+            const auto attrib_name = attrib["name"].GetString();
+            const MaybeValue maybe_value = GetAttributeStandaloneArgValue(arg, attrib_name);
+            strukt->members_.back().attributes_[CamelToSnake(attrib_name)] =
+                maybe_value.has_value() && maybe_value.value().get().IsString()
+                    ? maybe_value.value().get().GetString()
+                    : "";
+          }
+        }
+      }
+
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// static
 bool SyscallLibraryLoader::LoadBits(const rapidjson::Document& document, SyscallLibrary* library) {
   for (const auto& bits_json : document["bits_declarations"].GetArray()) {
     library->bits_.push_back(ConvertBitsOrEnumMember(bits_json));
@@ -620,36 +654,28 @@ bool SyscallLibraryLoader::LoadInterfaces(const rapidjson::Document& document,
 
       ZX_ASSERT(method["has_request"].GetBool());  // Events are not expected in syscalls.
 
-      auto add_struct_members = [&library](Struct* strukt, const rapidjson::Value& arg) {
-        const auto* type_alias = arg.HasMember("experimental_maybe_from_type_alias")
-                                     ? &arg["experimental_maybe_from_type_alias"]
-                                     : nullptr;
-        strukt->members_.emplace_back(arg["name"].GetString(),
-                                      TypeFromJson(*library, arg["type"], type_alias),
-                                      std::map<std::string, std::string>{});
-        if (arg.HasMember("maybe_attributes")) {
-          for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
-            const auto attrib_name = attrib["name"].GetString();
-            const MaybeValue maybe_value = GetAttributeStandaloneArgValue(arg, attrib_name);
-            strukt->members_.back().attributes_[CamelToSnake(attrib_name)] =
-                maybe_value.has_value() && maybe_value.value().get().IsString()
-                    ? maybe_value.value().get().GetString()
-                    : "";
-          }
-        }
-      };
-
       Struct& req = syscall->request_;
       req.id_ = syscall->original_name_ + "#request";
-      for (const auto& arg : method["maybe_request"].GetArray()) {
-        add_struct_members(&req, arg);
+      if (method.HasMember("maybe_request_payload")) {
+        if (!ExtractPayload(req, method["maybe_request_payload"]["identifier"].GetString(),
+                            document, library)) {
+          return false;
+        }
       }
 
       if (method["has_response"].GetBool()) {
         Struct& resp = syscall->response_;
         resp.id_ = syscall->original_name_ + "#response";
-        for (const auto& arg : method["maybe_response"].GetArray()) {
-          add_struct_members(&resp, arg);
+        if (method.HasMember("maybe_response_success_type")) {
+          if (!ExtractPayload(resp, method["maybe_response_success_type"]["identifier"].GetString(),
+                              document, library)) {
+            return false;
+          }
+        } else if (method.HasMember("maybe_response_payload")) {
+          if (!ExtractPayload(resp, method["maybe_response_payload"]["identifier"].GetString(),
+                              document, library)) {
+            return false;
+          }
         }
       }
 
