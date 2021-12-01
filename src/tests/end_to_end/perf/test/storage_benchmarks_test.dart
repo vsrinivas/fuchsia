@@ -10,7 +10,6 @@ import 'package:test/test.dart';
 
 import 'helpers.dart';
 
-const _testName = 'fuchsia.storage.benchmarks';
 const _appPath = 'fuchsia-pkg://fuchsia.com/odu#meta/odu.cmx';
 const _catapultConverterPath = 'runtime_deps/catapult_converter';
 const _trace2jsonPath = 'runtime_deps/trace2json';
@@ -27,28 +26,35 @@ List<TestCaseResults> _storageBenchmarksMetricsProcessor(
   final Map<String, TestCaseResults> results = {};
 
   for (final event in allEvents) {
-    results[event.name] ??= TestCaseResults(
+    final result = results[event.name] ??= TestCaseResults(
       event.name,
       Unit.milliseconds,
       [],
     );
-    results[event.name].values.add(event.duration.toMillisecondsF());
+    result.values.add(event.duration.toMillisecondsF());
   }
 
   return results.values.toList();
 }
 
-Future<void> runStorageTest(PerfTestHelper helper, int blockSize, int maxIoSize,
+Future<void> runOdu(PerfTestHelper helper, int fileSize, int ioSize,
     String operation, String cleanup, String target) async {
+  // Only read/write the entire file once. Most filesystems cache reads and
+  // writes in memory so quickly hitting the same block multiple times would
+  // be entirely served from memory and water down the results.
+  expect(fileSize % ioSize, equals(0));
+  final operationCount = fileSize ~/ ioSize;
   final result = await helper.component.launch(_appPath, [
-    '--operations=$operation',
     '--target=$target',
-    '--max_io_count=500',
+    '--target_length=$fileSize',
+    '--operations=$operation',
+    '--max_io_count=$operationCount',
+    '--block_size=$ioSize',
+    '--max_io_size=$ioSize',
     '--sequential=true',
-    '--block_size=$blockSize',
     '--log_ftrace=true',
-    '--max_io_size=$maxIoSize',
     '--align=true',
+    '--thread_count=1',
     '--cleanup=$cleanup'
   ]);
   if (result != 'Success') {
@@ -56,10 +62,13 @@ Future<void> runStorageTest(PerfTestHelper helper, int blockSize, int maxIoSize,
   }
 }
 
-void main() {
-  enableLoggingOutput();
+void _addTest(String filesystem, String directory) {
+  final testName = 'fuchsia.storage.benchmarks.$filesystem';
+  final filename = '$directory/odu-sequential-block-aligned';
+  const fileSize = 10 * 1024 * 1024;
+  const ioSize = 8192;
 
-  test(_testName, () async {
+  test(testName, () async {
     final helper = await PerfTestHelper.make();
 
     final traceSession =
@@ -67,28 +76,22 @@ void main() {
     await traceSession.start();
 
     // Run sequential write perf tests.
-    await runStorageTest(helper, 8192, 8192, 'write', 'false',
-        '/data/odu-sequential-block-aligned');
-    await runStorageTest(
-        helper, 1, 512, 'write', 'false', '/data/odu-sequential-unaligned');
+    await runOdu(helper, fileSize, ioSize, 'write', 'false', filename);
 
     // Run sequential read perf tests on the same set of files created by write tests above.
-    await runStorageTest(helper, 8192, 8192, 'read', 'true',
-        '/data/odu-sequential-block-aligned');
-    await runStorageTest(
-        helper, 1, 512, 'read', 'true', '/data/odu-sequential-unaligned');
+    await runOdu(helper, fileSize, ioSize, 'read', 'true', filename);
 
     // TODO(fxbug.dev/54931): Explicitly stop tracing.
     // await traceSession.stop();
 
-    final fxtTraceFile = await traceSession.terminateAndDownload(_testName);
+    final fxtTraceFile = await traceSession.terminateAndDownload(testName);
     final jsonTraceFile = await helper.performance
         .convertTraceFileToJson(_trace2jsonPath, fxtTraceFile);
 
     await helper.performance.processTrace(
       MetricsSpecSet(
         metricsSpecs: [MetricsSpec(name: 'storage')],
-        testName: _testName,
+        testName: testName,
       ),
       jsonTraceFile,
       converterPath: _catapultConverterPath,
@@ -97,4 +100,10 @@ void main() {
       },
     );
   }, timeout: Timeout.none);
+}
+
+void main() {
+  enableLoggingOutput();
+  _addTest('minfs', '/data');
+  _addTest('memfs', '/tmp');
 }
