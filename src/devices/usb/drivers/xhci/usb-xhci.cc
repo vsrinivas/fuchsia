@@ -1765,10 +1765,14 @@ int UsbXhci::InitThread() {
 zx_status_t UsbXhci::HciFinalize() {
   hcc_ = HCCPARAMS1::Get().ReadFrom(&mmio_.value());
   HCSPARAMS1 hcsparams1 = HCSPARAMS1::Get().ReadFrom(&mmio_.value());
-  // Reset Warm Reset Change bit
+
+  // Reset Warm Reset Change (WRC) bit if necessary (see Table 5-27, bit 19 in Section 5.4.8,
+  // xHCI specification). This is done to acknowledge any warm reset done during bootup.
   for (uint16_t i = 0; i < hcsparams1.MaxPorts(); i++) {
-    auto sc = PORTSC::Get(cap_length_, i).ReadFrom(&mmio_.value());
-    sc.set_WRC(sc.WRC()).WriteTo(&mmio_.value());
+    auto sc = PORTSC::Get(cap_length_, i + 1).ReadFrom(&mmio_.value());
+    if (sc.WRC()) {
+      sc.set_WRC(sc.WRC()).WriteTo(&mmio_.value());
+    }
   }
 
   is_32bit_ = !hcc_.AC64();
