@@ -7,7 +7,6 @@ use {
     errors::ffx_bail,
     ffx_daemon::is_daemon_running_at_path,
     fuchsia_async::TimeoutExt,
-    once_cell::sync::OnceCell,
     serde::Serialize,
     serde_json::Value,
     std::borrow::Cow,
@@ -20,9 +19,6 @@ use {
 };
 
 pub mod asserts;
-
-const FUCHSIA_SSH_KEY: &'static str = "FUCHSIA_SSH_KEY";
-static SSH_KEY_PATH: OnceCell<String> = OnceCell::new();
 
 /// Get the target nodename we're expected to interact with in this test, or
 /// pick the first discovered target. If nodename is set via $FUCHSIA_NODENAME
@@ -166,13 +162,7 @@ impl Isolate {
         for (var, val) in std::env::vars() {
             if var.contains("TEMP") || var.contains("TMP") {
                 cmd.env(var, val);
-            } else if var == FUCHSIA_SSH_KEY {
-                cmd.env(var, val);
             }
-        }
-
-        if let Some(key) = SSH_KEY_PATH.get() {
-            cmd.env(FUCHSIA_SSH_KEY, key);
         }
 
         cmd.env("HOME", &*self.home_dir);
@@ -189,6 +179,15 @@ impl Isolate {
 
     pub async fn ffx(&self, args: &[&str]) -> Result<CommandOutput> {
         let mut cmd = self.ffx_cmd(args);
+
+        // On developer systems, FUCHSIA_SSH_KEY is normally not set, and so ffx
+        // looks up an ssh key via a $HOME heuristic, however that is broken by
+        // isolation. ffx also however respects the FUCHSIA_SSH_KEY environment
+        // variable natively, so, fetching the ssh key path from the config, and
+        // then passing that expanded path along explicitly is sufficient to
+        // ensure that the isolate has a viable key path.
+        cmd.env("FUCHSIA_SSH_KEY", ffx_config::get::<String, _>("ssh.priv").await?);
+
         fuchsia_async::unblock(move || {
             let out = cmd.output().context("failed to execute")?;
             let stdout = String::from_utf8(out.stdout).context("convert from utf8")?;
@@ -265,18 +264,9 @@ async fn cleanup() -> Result<()> {
 
 /// run runs the given set of tests printing results to stdout and exiting
 /// with 0 or 1 if the tests passed or failed, respectively.
-pub async fn run(
-    tests: Vec<TestCase>,
-    timeout: Duration,
-    case_timeout: Duration,
-    ssh_key_path: Option<String>,
-) -> Result<()> {
+pub async fn run(tests: Vec<TestCase>, timeout: Duration, case_timeout: Duration) -> Result<()> {
     let mut writer = std::io::stdout();
     let color = is_tty(&writer);
-
-    if let Some(path) = ssh_key_path {
-        SSH_KEY_PATH.set(path).map_err(|_| anyhow!("Attempted to set SSH_KEY_PATH twice"))?;
-    }
 
     let test_result = async {
         let num_tests = tests.len();

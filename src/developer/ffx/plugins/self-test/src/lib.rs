@@ -43,13 +43,7 @@ pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
         tests.append(&mut target_tests);
     }
 
-    run(
-        tests,
-        Duration::from_secs(cmd.timeout),
-        Duration::from_secs(cmd.case_timeout),
-        cmd.ssh_key_path,
-    )
-    .await
+    run(tests, Duration::from_secs(cmd.timeout), Duration::from_secs(cmd.case_timeout)).await
 }
 
 async fn test_isolated() -> Result<()> {
