@@ -547,6 +547,17 @@ pub const ZX_FIFO_MAX_SIZE_BYTES: u32 = 4096;
 // Page size constant
 pub const ZX_PAGE_SIZE: u32 = 4096;
 
+// Min/max page size constants
+#[cfg(target_arch = "x86_64")]
+pub const ZX_MIN_PAGE_SHIFT: u32 = 12;
+#[cfg(target_arch = "x86_64")]
+pub const ZX_MAX_PAGE_SHIFT: u32 = 21;
+
+#[cfg(target_arch = "aarch64")]
+pub const ZX_MIN_PAGE_SHIFT: u32 = 12;
+#[cfg(target_arch = "aarch64")]
+pub const ZX_MAX_PAGE_SHIFT: u32 = 16;
+
 // Task response codes if a process is externally killed
 pub const ZX_TASK_RETCODE_SYSCALL_KILL: i64 = -1024;
 pub const ZX_TASK_RETCODE_OOM_KILL: i64 = -1025;
