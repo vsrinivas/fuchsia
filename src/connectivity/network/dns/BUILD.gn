@@ -79,6 +79,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
+    "//third_party/rust_crates:unicode-xid",
   ]
 
   test_deps = [ "//src/connectivity/lib/net-declare" ]

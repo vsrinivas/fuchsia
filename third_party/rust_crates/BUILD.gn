@@ -912,6 +912,10 @@ group("unicode-width") {
   deps = [ ":unicode-width-v0_1_5" ]
 }
 
+group("unicode-xid") {
+  deps = [ ":unicode-xid-v0_2_0" ]
+}
+
 group("untrusted") {
   deps = [ ":untrusted-v0_7_1" ]
 }

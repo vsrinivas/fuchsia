@@ -1371,6 +1371,7 @@ dependencies = [
  "unicode-normalization",
  "unicode-segmentation",
  "unicode-width",
+ "unicode-xid 0.2.0",
  "untrusted",
  "url 2.1.0",
  "utf8parse",

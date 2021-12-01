@@ -42,6 +42,7 @@ use {
         error::{ResolveError, ResolveErrorKind},
         lookup, lookup_ip,
     },
+    unicode_xid::UnicodeXID as _,
 };
 
 struct SharedResolver<T>(RwLock<Rc<T>>);
@@ -145,7 +146,30 @@ impl NoRecordsFoundStats {
     fn increment(&mut self, response_code: &ResponseCode) {
         let NoRecordsFoundStats { response_code_counts } = self;
         let count = response_code_counts.entry((*response_code).into()).or_insert(0);
-        *count += 1;
+        *count += 1
+    }
+}
+
+#[derive(Default, Debug, PartialEq)]
+struct UnhandledResolveErrorKindStats {
+    resolve_error_kind_counts: HashMap<String, u64>,
+}
+
+impl UnhandledResolveErrorKindStats {
+    fn increment(&mut self, resolve_error_kind: &ResolveErrorKind) {
+        let Self { resolve_error_kind_counts } = self;
+        // We just want to keep the part of the debug string that indicates
+        // which enum variant this is.
+        // See https://doc.rust-lang.org/reference/identifiers.html
+        let truncated_debug = {
+            let debug = format!("{:?}", resolve_error_kind);
+            match debug.find(|c: char| !c.is_xid_continue() && !c.is_xid_start()) {
+                Some(i) => debug[..i].to_string(),
+                None => debug,
+            }
+        };
+        let count = resolve_error_kind_counts.entry(truncated_debug).or_insert(0);
+        *count += 1
     }
 }
 
@@ -159,11 +183,19 @@ struct FailureStats {
     io: u64,
     proto: u64,
     timeout: u64,
+    unhandled_resolve_error_kind: UnhandledResolveErrorKindStats,
 }
 
 impl FailureStats {
     fn increment(&mut self, kind: &ResolveErrorKind) {
-        let FailureStats { message, no_records_found, io, proto, timeout } = self;
+        let FailureStats {
+            message,
+            no_records_found,
+            io,
+            proto,
+            timeout,
+            unhandled_resolve_error_kind,
+        } = self;
         match kind {
             ResolveErrorKind::Message(error) => {
                 let _: &str = error;
@@ -192,7 +224,12 @@ impl FailureStats {
             // ResolveErrorKind is marked #[non_exhaustive] in trust-dns:
             // https://github.com/bluejekyll/trust-dns/blob/v0.21.0-alpha.1/crates/resolver/src/error.rs#L29
             // So we have to include a wildcard match.
-            kind => error!("unhandled variant {:?}", kind),
+            // TODO(https://github.com/rust-lang/rust/issues/89554): remove once
+            // we're able to apply the non_exhaustive_omitted_patterns lint
+            kind => {
+                error!("unhandled variant {:?}", kind);
+                unhandled_resolve_error_kind.increment(kind)
+            }
         }
     }
 }
@@ -907,7 +944,18 @@ fn add_query_stats_inspect(
                     *failure_elapsed_time,
                     *failure_count,
                 );
-                let FailureStats { message, no_records_found: NoRecordsFoundStats { response_code_counts }, io, proto, timeout } = failure_stats;
+                let FailureStats {
+                    message,
+                    no_records_found: NoRecordsFoundStats {
+                        response_code_counts,
+                    },
+                    io,
+                    proto,
+                    timeout,
+                    unhandled_resolve_error_kind: UnhandledResolveErrorKindStats {
+                        resolve_error_kind_counts,
+                    },
+                } = failure_stats;
                 let errors = child.create_child("errors");
                 let () = errors.record_uint("Message", *message);
                 let () = errors.record_uint("Io", *io);
@@ -916,9 +964,15 @@ fn add_query_stats_inspect(
 
                 let no_records_found_response_codes = errors.create_child("NoRecordsFoundResponseCodeCounts");
                 for (HashableResponseCode { response_code }, count) in response_code_counts {
-                  let () = no_records_found_response_codes.record_uint(format!("{:?}", response_code), *count);
+                    let () = no_records_found_response_codes.record_uint(format!("{:?}", response_code), *count);
                 }
                 let () = errors.record(no_records_found_response_codes);
+
+                let unhandled_resolve_error_kinds = errors.create_child("UnhandledResolveErrorKindCounts");
+                for (error_kind, count) in resolve_error_kind_counts {
+                    let () = unhandled_resolve_error_kinds.record_uint(error_kind, *count);
+                }
+                let () = errors.record(unhandled_resolve_error_kinds);
 
                 let () = child.record(errors);
 
@@ -1011,8 +1065,8 @@ mod tests {
         rr::{Name, RData, Record},
     };
     use trust_dns_resolver::{
-        lookup::Ipv4Lookup, lookup::Ipv6Lookup, lookup::Lookup, lookup::ReverseLookup,
-        lookup_ip::LookupIp,
+        error::ResolveErrorKind, lookup::Ipv4Lookup, lookup::Ipv6Lookup, lookup::Lookup,
+        lookup::ReverseLookup, lookup_ip::LookupIp,
     };
 
     use super::*;
@@ -1593,6 +1647,22 @@ mod tests {
         });
     }
 
+    #[test]
+    fn test_unhandled_resolve_error_kind_stats() {
+        use ResolveErrorKind::{Msg, Timeout};
+        let mut unhandled_resolve_error_kind_stats = UnhandledResolveErrorKindStats::default();
+        unhandled_resolve_error_kind_stats.increment(&Msg(String::from("abcdefgh")));
+        unhandled_resolve_error_kind_stats.increment(&Msg(String::from("ijklmn")));
+        unhandled_resolve_error_kind_stats.increment(&Timeout);
+        assert_eq!(
+            unhandled_resolve_error_kind_stats,
+            UnhandledResolveErrorKindStats {
+                resolve_error_kind_counts: [(String::from("Msg"), 2), (String::from("Timeout"), 1)]
+                    .into()
+            }
+        )
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_query_stats_updated() {
         let env = TestEnvironment::new();
@@ -1649,6 +1719,7 @@ mod tests {
                         Io: 0u64,
                         Proto: 0u64,
                         Timeout: 0u64,
+                        UnhandledResolveErrorKindCounts: {},
                     },
                 },
             }
@@ -1712,6 +1783,7 @@ mod tests {
                     Io: 0u64,
                     Proto: 0u64,
                     Timeout: 0u64,
+                    UnhandledResolveErrorKindCounts: {},
                 },
             });
             expected.add_child_assertion(child);
@@ -1758,6 +1830,7 @@ mod tests {
                         Io: 0u64,
                         Proto: 0u64,
                         Timeout: FAILED_QUERY_COUNT,
+                        UnhandledResolveErrorKindCounts: {},
                     },
                 },
             }
@@ -1821,6 +1894,7 @@ mod tests {
                         Io: 0u64,
                         Proto: 0u64,
                         Timeout: 0u64,
+                        UnhandledResolveErrorKindCounts: {},
                     },
                 },
             }
@@ -1872,6 +1946,7 @@ mod tests {
                     Io: 0u64,
                     Proto: 0u64,
                     Timeout: 0u64,
+                    UnhandledResolveErrorKindCounts: {},
                 },
             });
             expected.add_child_assertion(child);
@@ -2059,6 +2134,7 @@ mod tests {
                     io: 1,
                     proto: 1,
                     timeout: 1,
+                    unhandled_resolve_error_kind: Default::default(),
                 },
             ),
             (
@@ -2081,6 +2157,7 @@ mod tests {
                     io: 1,
                     proto: 1,
                     timeout: 1,
+                    unhandled_resolve_error_kind: Default::default(),
                 },
             ),
             (
@@ -2103,6 +2180,7 @@ mod tests {
                     io: 1,
                     proto: 1,
                     timeout: 1,
+                    unhandled_resolve_error_kind: Default::default(),
                 },
             ),
         ][..]
