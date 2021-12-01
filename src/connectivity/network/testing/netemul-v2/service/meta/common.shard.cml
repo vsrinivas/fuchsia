@@ -16,7 +16,7 @@
     collections: [
         {
             name: "netemul",
-            environment: "#realm_builder_env",
+            environment: "#netemul_env",
             durability: "transient",
         },
     ],
@@ -43,6 +43,30 @@
             storage: "data",
             from: "parent",
             to: "#netemul",
+        },
+    ],
+    environments: [
+        {
+            name: "netemul_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "realm_builder",
+                    from: "#realm_builder_server",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "realm_builder_resolver",
+                    from: "#realm_builder_server",
+                    scheme: "realm-builder",
+                },
+            ],
+
+            // Prevent timing flakiness in CQ by setting a 10min stop timeout,
+            // so tests that exercise lifecycle control can check for clean
+            // exit.
+            __stop_timeout_ms: 600000,
         },
     ],
 }
