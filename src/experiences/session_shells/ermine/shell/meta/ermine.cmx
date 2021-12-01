@@ -1,0 +1,50 @@
+{
+    "program": {
+        "data": "data/ermine"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "isolated-persistent-storage"
+        ],
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.accessibility.semantics.SemanticsManager",
+            "fuchsia.buildinfo.Provider",
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.element.Manager",
+            "fuchsia.feedback.CrashReporter",
+            "fuchsia.fonts.Provider",
+            "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.media",
+            "fuchsia.media.Audio",
+            "fuchsia.media.AudioCore",
+            "fuchsia.memory.Monitor",
+            "fuchsia.net.interfaces.State",
+            "fuchsia.power.BatteryManager",
+            "fuchsia.settings.Intl",
+            "fuchsia.settings.Privacy",
+            "fuchsia.ssh.AuthorizedKeys",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.activity.Provider",
+            "fuchsia.ui.activity.Tracker",
+            "fuchsia.ui.brightness.Control",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.input.InputDeviceRegistry",
+            "fuchsia.ui.input.PointerCaptureListenerRegistry",
+            "fuchsia.ui.input3.Keyboard",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.shortcut.Registry",
+            "fuchsia.update.Manager",
+            "fuchsia.update.channelcontrol.ChannelControl",
+            "fuchsia.wlan.common",
+            "fuchsia.wlan.policy",
+            "fuchsia.wlan.policy.ClientProvider"
+        ]
+    }
+}

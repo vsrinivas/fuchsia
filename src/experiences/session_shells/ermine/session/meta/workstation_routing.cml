@@ -5,7 +5,6 @@
             name: "workstation_session",
             url: "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_session.cm",
             startup: "eager",
-            environment: "#elements_env",
         },
         {
             name: "scene_manager",
@@ -38,6 +37,15 @@
             startup: "lazy",
         },
     ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.element.Manager",
+                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.ui.accessibility.view.Registry",
+            ],
+        },
+    ],
     offer: [
         {
             protocol: [
@@ -64,41 +72,19 @@
         },
         {
             protocol: [
-                "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.buildinfo.Provider",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.feedback.CrashReporter",
-                "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",
-                "fuchsia.media.AudioCore",
-                "fuchsia.memory.Monitor",
-                "fuchsia.net.interfaces.State",
                 "fuchsia.posix.socket.Provider",
-                "fuchsia.power.BatteryManager",
-                "fuchsia.settings.Intl",
-                "fuchsia.settings.Privacy",
-                "fuchsia.ssh.AuthorizedKeys",
-
-                // TODO(fxbug.dev/89048): remove once Flutter no longer depends on fuchsia.sys.Environment
-                "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.activity.Provider",
-                "fuchsia.ui.activity.Tracker",
-                "fuchsia.ui.brightness.Control",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input.PointerCaptureListenerRegistry",
                 "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
-                "fuchsia.ui.shortcut.Registry",
                 "fuchsia.ui.views.ViewRefInstalled",
-                "fuchsia.update.channelcontrol.ChannelControl",
-                "fuchsia.update.Manager",
-                "fuchsia.wlan.policy.ClientProvider",
             ],
             from: "parent",
             to: [ "#workstation_session" ],
@@ -136,14 +122,9 @@
         },
         {
             protocol: [
-                "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.fonts.Provider",
-                "fuchsia.memorypressure.Provider",
-                "fuchsia.settings.Intl",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.vulkan.loader.Loader",
             ],
@@ -161,13 +142,7 @@
                 "#dart_jit_runner",
                 "#flutter_aot_runner",
                 "#flutter_jit_runner",
-                "#workstation_session",
             ],
-        },
-        {
-            storage: "data",
-            from: "parent",
-            to: "#workstation_session",
         },
 
         // The session manually proxies protocols between #element_manager and the shell.
