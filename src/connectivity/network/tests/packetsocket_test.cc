@@ -103,16 +103,13 @@ TEST_F(PacketSocketTest, Getsockname) {
     EXPECT_EQ(errno, EFAULT) << strerror(errno);
     errno = 0;
   }
-// TODO(https://github.com/google/sanitizers/issues/1451): Run with ASan once Asan
-// gracefully handles getsockname receiving nullptr for its address length parameter.
-#if !__has_feature(address_sanitizer)
+
   {
     sockaddr_ll addr;
     ASSERT_EQ(getsockname(fd.get(), reinterpret_cast<sockaddr*>(&addr), nullptr), -1);
     EXPECT_EQ(errno, EFAULT) << strerror(errno);
     errno = 0;
   }
-#endif
 
   {
     // addr should not be modified since we pass 0 for its length.

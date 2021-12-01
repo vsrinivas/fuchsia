@@ -5093,9 +5093,6 @@ void TestGetname(const fbl::unique_fd& fd, F getname, const sockaddr* sa, const 
   EXPECT_EQ(ss_with_extra.unused, -1);
 }
 
-// TODO(https://github.com/google/sanitizers/issues/1451): Run with ASan once Asan
-// gracefully handles getsockname receiving nullptr for its address length parameter.
-#if !__has_feature(address_sanitizer)
 TEST_P(SocketKindTest, Getsockname) {
   socklen_t len;
   sockaddr_storage ss;
@@ -5112,7 +5109,6 @@ TEST_P(SocketKindTest, Getsockname) {
 
   ASSERT_NO_FATAL_FAILURE(TestGetname(fd, getsockname, reinterpret_cast<sockaddr*>(&ss), len));
 }
-#endif  // !__has_feature(address_sanitizer)
 
 TEST_P(SocketKindTest, Getpeername) {
   auto const& [domain, protocol] = GetParam();
