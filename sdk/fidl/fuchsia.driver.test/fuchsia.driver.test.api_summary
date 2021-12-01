@@ -1,6 +1,15 @@
+struct/member fuchsia.driver.test/DriverLog.log_level fuchsia.diagnostics/Severity
+struct/member fuchsia.driver.test/DriverLog.name string
+struct fuchsia.driver.test/DriverLog
 protocol/member fuchsia.driver.test/Realm.Start(fuchsia.driver.test/RealmArgs args) -> (fuchsia.driver.test/Realm_Start_Result result)
 protocol fuchsia.driver.test/Realm
 table/member fuchsia.driver.test/RealmArgs.boot fuchsia.io/Directory
+table/member fuchsia.driver.test/RealmArgs.driver_bind_eager vector<string>
+table/member fuchsia.driver.test/RealmArgs.driver_disable vector<string>
+table/member fuchsia.driver.test/RealmArgs.driver_log_level vector<fuchsia.driver.test/DriverLog>
+table/member fuchsia.driver.test/RealmArgs.driver_tests_disable vector<string>
+table/member fuchsia.driver.test/RealmArgs.driver_tests_enable vector<string>
+table/member fuchsia.driver.test/RealmArgs.driver_tests_enable_all bool
 table/member fuchsia.driver.test/RealmArgs.root_driver string
 table/member fuchsia.driver.test/RealmArgs.use_driver_framework_v2 bool
 resource table fuchsia.driver.test/RealmArgs

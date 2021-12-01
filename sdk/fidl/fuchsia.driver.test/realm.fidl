@@ -6,6 +6,16 @@ library fuchsia.driver.test;
 
 using zx;
 using fuchsia.io;
+using fuchsia.diagnostics;
+
+/// A driver name is the name defined in ZIRCON_DRIVER_BEGIN begin macro
+/// for a specific driver.
+alias DriverName = string:MAX;
+
+type DriverLog = struct {
+    name DriverName;
+    log_level fuchsia.diagnostics.Severity;
+};
 
 /// A list of arguments that can be used to configure DriverTestRealm.
 type RealmArgs = resource table {
@@ -22,6 +32,36 @@ type RealmArgs = resource table {
     /// If this is true, then DriverManager will load DFv2 drivers.
     /// Default: false
     3: use_driver_framework_v2 bool;
+
+    /// If this is true, then DriverManager will enable the unit tests
+    /// for each driver that is loaded.
+    /// Default: false
+    4: driver_tests_enable_all bool;
+
+    /// If this is true, then DriverManager will enable the unit tests
+    /// for each driver in this vector.
+    /// Default: empty
+    5: driver_tests_enable vector<DriverName>:MAX;
+
+    /// If this is true, then DriverManager will disable the unit tests
+    /// for each driver in this vector. This overrides both a specific
+    /// request for enabling a test and the 'driver_tests_enable_all'
+    /// parameter.
+    /// Default: empty
+    6: driver_tests_disable vector<DriverName>:MAX;
+
+    /// Set a log level for the specific driver.
+    /// Default: Log levels are set to INFO
+    7: driver_log_level vector<DriverLog>:MAX;
+
+    /// Disable specific drivers. These drivers will not be bound or loaded.
+    /// Default: empty
+    8: driver_disable vector<DriverName>:MAX;
+
+    /// Specify drivers to bind 'eagerly'. This turns a driver that normally
+    /// binds as a fallback driver into a driver that will be bound normally.
+    /// Default: empty
+    9: driver_bind_eager vector<DriverName>:MAX;
 };
 
 /// This protocol is for the DriverTestRealm. It is an integration test

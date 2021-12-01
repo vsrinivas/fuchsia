@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.diagnostics/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -36,6 +37,7 @@
 #include <vector>
 
 #include <ddk/metadata/test.h>
+#include <fbl/string_printf.h>
 #include <mock-boot-arguments/server.h>
 
 #include "lib/vfs/cpp/pseudo_dir.h"
@@ -47,6 +49,23 @@
 namespace {
 
 constexpr zx_signals_t kDriverTestRealmStartSignal = ZX_USER_SIGNAL_1;
+
+const char* LogLevelToString(fuchsia_diagnostics::wire::Severity severity) {
+  switch (severity) {
+    case fuchsia_diagnostics::wire::Severity::kTrace:
+      return "TRACE";
+    case fuchsia_diagnostics::wire::Severity::kDebug:
+      return "DEBUG";
+    case fuchsia_diagnostics::wire::Severity::kInfo:
+      return "INFO";
+    case fuchsia_diagnostics::wire::Severity::kWarn:
+      return "WARN";
+    case fuchsia_diagnostics::wire::Severity::kError:
+      return "ERROR";
+    case fuchsia_diagnostics::wire::Severity::kFatal:
+      return "FATAL";
+  }
+}
 
 // This board driver knows how to interpret the metadata for which devices to
 // spawn.
@@ -279,23 +298,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
       return;
     }
 
-    bool is_dfv2 = false;
-    if (request->args.has_use_driver_framework_v2()) {
-      is_dfv2 = request->args.use_driver_framework_v2();
-    }
-
-    std::map<std::string, std::string> boot_args;
-    boot_args["devmgr.require-system"] = "true";
-    if (is_dfv2) {
-      boot_args["driver_manager.use_driver_framework_v2"] = "true";
-    }
-    if (request->args.has_root_driver()) {
-      boot_args["driver_manager.root-driver"] =
-          std::string(request->args.root_driver().data(), request->args.root_driver().size());
-    } else {
-      boot_args["driver_manager.root-driver"] = "fuchsia-boot:///#driver/test-parent-sys.so";
-    }
-    boot_arguments_ = mock_boot_arguments::Server(std::move(boot_args));
+    boot_arguments_ = mock_boot_arguments::Server(CreateBootArgs(request));
 
     fidl::ClientEnd<fuchsia_io::Directory> boot_dir;
     if (request->args.has_boot()) {
@@ -368,6 +371,70 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
     }
 
     return ZX_OK;
+  }
+
+  std::map<std::string, std::string> CreateBootArgs(StartRequestView& request) {
+    std::map<std::string, std::string> boot_args;
+
+    bool is_dfv2 = false;
+    if (request->args.has_use_driver_framework_v2()) {
+      is_dfv2 = request->args.use_driver_framework_v2();
+    }
+
+    boot_args["devmgr.require-system"] = "true";
+    if (is_dfv2) {
+      boot_args["driver_manager.use_driver_framework_v2"] = "true";
+    }
+    if (request->args.has_root_driver()) {
+      boot_args["driver_manager.root-driver"] =
+          std::string(request->args.root_driver().data(), request->args.root_driver().size());
+    } else {
+      boot_args["driver_manager.root-driver"] = "fuchsia-boot:///#driver/test-parent-sys.so";
+    }
+
+    if (request->args.has_driver_tests_enable_all() && request->args.driver_tests_enable_all()) {
+      boot_args["driver.tests.enable"] = "true";
+    }
+
+    if (request->args.has_driver_tests_enable()) {
+      for (auto& driver : request->args.driver_tests_enable()) {
+        auto string = fbl::StringPrintf("driver.%s.tests.enable", driver.data());
+        boot_args[string.data()] = "true";
+      }
+    }
+
+    if (request->args.has_driver_tests_disable()) {
+      for (auto& driver : request->args.driver_tests_disable()) {
+        auto string = fbl::StringPrintf("driver.%s.tests.enable", driver.data());
+        boot_args[string.data()] = "false";
+      }
+    }
+
+    if (request->args.has_driver_log_level()) {
+      for (auto& driver : request->args.driver_log_level()) {
+        auto string = fbl::StringPrintf("driver.%s.log", driver.name.data());
+        boot_args[string.data()] = LogLevelToString(driver.log_level);
+      }
+    }
+
+    if (request->args.has_driver_disable()) {
+      for (auto& driver : request->args.driver_disable()) {
+        auto string = fbl::StringPrintf("driver.%s.disable", driver.data());
+        boot_args[string.data()] = "true";
+      }
+    }
+
+    if (request->args.has_driver_bind_eager()) {
+      std::string drivers = "";
+      for (auto& driver : request->args.driver_bind_eager()) {
+        drivers += std::string(driver.data()) + ",";
+      }
+      // Remove the last ",".
+      drivers.pop_back();
+
+      boot_args["devmgr.bind-eager"] = drivers;
+    }
+    return boot_args;
   }
 
   zx_status_t InitializeDirectories() {
