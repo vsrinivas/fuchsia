@@ -56,7 +56,7 @@
     {
         "event_code": 7,
         "name": "Web",
-        "process": "web_engine_exe:.*",
+        "process": "(web_engine_exe)|(chrome):.*",
         "vmo": ""
     },
     {
