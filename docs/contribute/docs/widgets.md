@@ -50,7 +50,7 @@ Creates a bulleted list of a table of contents (TOC) based on a `_toc.yaml` file
   * {Rendered}
 
      {% set tocmeta | yamlloads %}
-     {% include "docs/reference/documentation/_toc.yaml" %}
+     {% include "docs/contribute/docs/_toc.yaml" %}
      {% endset %}
      {{ widgets.inline_toc () }}
 
@@ -59,7 +59,7 @@ Creates a bulleted list of a table of contents (TOC) based on a `_toc.yaml` file
      {% verbatim %}
      {% set tocmeta | yamlloads %}
 
-     {% include "docs/reference/documentation/_toc.yaml" %}
+     {% include "docs/contribute/docs/_toc.yaml" %}
 
      {% endset %}
 
