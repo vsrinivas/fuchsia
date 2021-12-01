@@ -544,9 +544,6 @@ pub const ZX_CHANNEL_MAX_MSG_BYTES: u32 = 65536;
 // fifo write size constants
 pub const ZX_FIFO_MAX_SIZE_BYTES: u32 = 4096;
 
-// Page size constant
-pub const ZX_PAGE_SIZE: u32 = 4096;
-
 // Min/max page size constants
 #[cfg(target_arch = "x86_64")]
 pub const ZX_MIN_PAGE_SHIFT: u32 = 12;
