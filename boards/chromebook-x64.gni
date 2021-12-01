@@ -25,6 +25,8 @@ fshost_watch_for_nand = true
 
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:chromebook-x64",
+  "//src/devices/mcu/drivers/chromiumos-ec-core",
+  "//src/devices/mcu/drivers/chromiumos-ec-lpc",
   "//src/devices/misc/drivers/chromeos-acpi",
   "//src/devices/nand/drivers/intel-spi-flash",
   "//src/devices/tpm/drivers/cr50-spi",
@@ -53,11 +55,6 @@ board_package_labels += [
   "//src/ui/scenic/config:chromebook",
   "//src/chromium/web_engine/config:chromebook",
   "//src/media/audio/config:chromebook",
-]
-
-board_system_image_deps += [
-  "//src/devices/mcu/drivers/chromiumos-ec-core",
-  "//src/devices/mcu/drivers/chromiumos-ec-lpc",
 ]
 
 # Partitions for fx flash to flash.
