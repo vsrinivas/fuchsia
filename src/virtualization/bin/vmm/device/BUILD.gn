@@ -12,6 +12,7 @@ group("tests") {
     ":device_tests_package",
     ":device_unittests_package",
     ":request_watchdog_unittests_package",
+    "virtio_sound:tests",
   ]
 }
 

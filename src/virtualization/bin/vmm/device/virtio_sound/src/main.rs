@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod reply;
+mod sequencer;
 mod service;
 mod wire;
 mod wire_convert;
