@@ -103,7 +103,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -165,7 +187,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -383,7 +427,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -445,7 +511,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,

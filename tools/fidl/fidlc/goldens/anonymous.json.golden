@@ -398,7 +398,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/SomeProtocolSomeMethodRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 40,
+              "alignment": 8,
+              "depth": 3,
+              "max_handles": 0,
+              "max_out_of_line": 72,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 32,
+              "alignment": 8,
+              "depth": 3,
+              "max_handles": 0,
+              "max_out_of_line": 48,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 56,
             "alignment": 8,
@@ -460,7 +482,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.anonymous/SomeProtocolSomeMethodTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,

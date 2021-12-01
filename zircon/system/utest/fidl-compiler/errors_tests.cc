@@ -23,10 +23,14 @@ protocol Example {
   auto methods = &library.LookupProtocol("Example")->methods;
   ASSERT_EQ(methods->size(), 1);
   auto method = &methods->at(0);
-  auto response = method->maybe_response_payload;
+  auto response = method->maybe_response.get();
   ASSERT_NOT_NULL(response);
-  ASSERT_EQ(response->members.size(), 1);
-  auto response_member = &response->members.at(0);
+
+  auto id = static_cast<const fidl::flat::IdentifierType*>(response->type);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  ASSERT_EQ(as_struct->members.size(), 1);
+
+  auto response_member = &as_struct->members.at(0);
   ASSERT_EQ(response_member->type_ctor->type->kind, fidl::flat::Type::Kind::kIdentifier);
   auto result_identifier =
       static_cast<const fidl::flat::IdentifierType*>(response_member->type_ctor->type);
@@ -79,10 +83,11 @@ protocol MyProtocol {
 
   auto& method = protocol->methods[0];
   EXPECT_TRUE(method.has_request);
-  EXPECT_NULL(method.maybe_request_payload);
-  ASSERT_TRUE(method.has_response && method.maybe_response_payload);
+  EXPECT_NULL(method.maybe_request.get());
+  ASSERT_TRUE(method.has_response && method.maybe_response.get());
 
-  auto response = method.maybe_response_payload;
+  auto id = static_cast<const fidl::flat::IdentifierType*>(method.maybe_response->type);
+  auto response = static_cast<const fidl::flat::Struct*>(id->type_decl);
   EXPECT_TRUE(response->kind == fidl::flat::Decl::Kind::kStruct);
   ASSERT_EQ(response->members.size(), 1);
 }

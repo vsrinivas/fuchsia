@@ -984,16 +984,16 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 		HasRequest:      val.HasRequest,
 		HasResponse:     val.HasResponse,
 	}
-	if val.HasRequest && val.RequestPayload != "" {
-		requestStruct, ok := c.requestResponseStructs[val.RequestPayload]
+	if val.HasRequest && val.RequestPayload != nil {
+		requestStruct, ok := c.requestResponseStructs[val.RequestPayload.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown request struct: %v", val.RequestPayload))
 		}
 		requestStruct.Name = c.compileCompoundIdentifier(protocolName, false, WithCtxSuffix+methodName+"Request")
 		r.Request = &requestStruct
 	}
-	if val.HasResponse && val.ResponsePayload != "" {
-		responseStruct, ok := c.requestResponseStructs[val.ResponsePayload]
+	if val.HasResponse && val.ResponsePayload != nil {
+		responseStruct, ok := c.requestResponseStructs[val.ResponsePayload.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown response struct: %v", val.ResponsePayload))
 		}

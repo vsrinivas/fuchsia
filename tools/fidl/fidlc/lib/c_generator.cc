@@ -126,11 +126,18 @@ bool TypeAllowed(const flat::Library* library, const flat::Type* type) {
   return true;
 }
 
-bool MessageStructAllowed(const flat::Library* library, const flat::Struct* args) {
-  if (!args) {
+bool PayloadStructAllowed(const flat::Library* library,
+                          const std::unique_ptr<flat::TypeConstructor>& payload) {
+  if (!payload) {
     return true;
   }
-  for (const auto& member : args->members) {
+
+  auto id = static_cast<const flat::IdentifierType*>(payload->type);
+
+  // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+  auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+
+  for (const auto& member : as_struct->members) {
     if (!TypeAllowed(library, member.type_ctor->type)) {
       return false;
     }
@@ -139,9 +146,8 @@ bool MessageStructAllowed(const flat::Library* library, const flat::Struct* args
 }
 
 bool MethodAllowed(const flat::Library* library, const flat::Protocol::Method& method) {
-  return MethodAlwaysAllowed(method) ||
-         (MessageStructAllowed(library, method.maybe_request_payload) &&
-          MessageStructAllowed(library, method.maybe_response_payload));
+  return MethodAlwaysAllowed(method) || (PayloadStructAllowed(library, method.maybe_request) &&
+                                         PayloadStructAllowed(library, method.maybe_response));
 }
 
 CGenerator::Member MessageHeader() {
@@ -983,11 +989,17 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
       if (method.has_request) {
         std::string c_name = NameMessage(method_name, types::MessageKind::kRequest);
         std::string coded_name = NameTable(c_name);
-        const auto typeshape = method.maybe_request_payload
-                                   ? method.maybe_request_payload->typeshape(WireFormat::kV1NoEe)
-                                   : TypeShape::ForEmptyPayload();
-        const auto* members =
-            method.maybe_request_payload ? &method.maybe_request_payload->members : nullptr;
+        TypeShape typeshape = TypeShape::ForEmptyPayload();
+        const std::vector<flat::Struct::Member>* members = nullptr;
+        if (method.maybe_request) {
+          auto id = static_cast<const flat::IdentifierType*>(method.maybe_request->type);
+
+          // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+          auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+          typeshape = as_struct->typeshape(WireFormat::kV1NoEe);
+          members = &as_struct->members;
+        }
+
         // TODO(fxbug.dev/76316): remove this assert once this generator is able
         //  to properly handle empty structs as payloads.  Since no new uses of
         //  the C bindings are allowed, it may be prudent to leave this assert
@@ -1001,11 +1013,17 @@ std::map<const flat::Decl*, CGenerator::NamedProtocol> CGenerator::NameProtocols
             method.has_request ? types::MessageKind::kResponse : types::MessageKind::kEvent;
         std::string c_name = NameMessage(method_name, message_kind);
         std::string coded_name = NameTable(c_name);
-        const auto typeshape = method.maybe_response_payload != nullptr
-                                   ? method.maybe_response_payload->typeshape(WireFormat::kV1NoEe)
-                                   : TypeShape::ForEmptyPayload();
-        const auto* members =
-            method.maybe_response_payload ? &method.maybe_response_payload->members : nullptr;
+        TypeShape typeshape = TypeShape::ForEmptyPayload();
+        const std::vector<flat::Struct::Member>* members = nullptr;
+        if (method.maybe_response) {
+          auto id = static_cast<const flat::IdentifierType*>(method.maybe_response->type);
+
+          // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+          auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+          typeshape = as_struct->typeshape(WireFormat::kV1NoEe);
+          members = &as_struct->members;
+        }
+
         // TODO(fxbug.dev/76316): remove this assert once this generator is able
         //  to properly handle empty structs as payloads.  Since no new uses of
         //  the C bindings are allowed, it may be prudent to leave this assert

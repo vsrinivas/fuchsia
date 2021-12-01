@@ -1445,13 +1445,23 @@ bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
     }
     case AttributePlacement::kMethod: {
       auto method = static_cast<const Protocol::Method*>(attributable);
-      if (method->maybe_request_payload &&
-          !SimpleLayoutConstraint(reporter, attr, method->maybe_request_payload)) {
-        ok = false;
+      if (method->maybe_request) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
+          ok = false;
+        }
       }
-      if (method->maybe_response_payload &&
-          !SimpleLayoutConstraint(reporter, attr, method->maybe_response_payload)) {
-        ok = false;
+      if (method->maybe_response) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!SimpleLayoutConstraint(reporter, attr, as_struct)) {
+          ok = false;
+        }
       }
       break;
     }
@@ -1519,13 +1529,23 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
     case AttributePlacement::kMethod: {
       auto method = static_cast<const Protocol::Method*>(attributable);
       bool ok = true;
-      if (method->maybe_request_payload &&
-          !MaxBytesConstraint(reporter, attribute, method->maybe_request_payload)) {
-        ok = false;
+      if (method->maybe_request) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!MaxBytesConstraint(reporter, attribute, as_struct)) {
+          ok = false;
+        }
       }
-      if (method->maybe_response_payload &&
-          !MaxBytesConstraint(reporter, attribute, method->maybe_response_payload)) {
-        ok = false;
+      if (method->maybe_response) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!MaxBytesConstraint(reporter, attribute, as_struct)) {
+          ok = false;
+        }
       }
       return ok;
     }
@@ -1583,13 +1603,23 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
     case AttributePlacement::kMethod: {
       auto method = static_cast<const Protocol::Method*>(attributable);
       bool ok = true;
-      if (method->maybe_request_payload &&
-          !MaxHandlesConstraint(reporter, attribute, method->maybe_request_payload)) {
-        ok = false;
+      if (method->maybe_request) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!MaxHandlesConstraint(reporter, attribute, as_struct)) {
+          ok = false;
+        }
       }
-      if (method->maybe_response_payload &&
-          !MaxHandlesConstraint(reporter, attribute, method->maybe_response_payload)) {
-        ok = false;
+      if (method->maybe_response) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        if (!MaxHandlesConstraint(reporter, attribute, as_struct)) {
+          ok = false;
+        }
       }
       return ok;
     }
@@ -2316,9 +2346,10 @@ std::unique_ptr<TypeConstructor> IdentifierTypeForDecl(const Decl* decl) {
 
 bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
                                  SourceSpan response_span, raw::ProtocolMethod* method,
-                                 Struct* success_variant, Struct** out_response) {
+                                 std::unique_ptr<TypeConstructor> success_variant,
+                                 std::unique_ptr<TypeConstructor>* out_payload) {
   // Compile the error type.
-  std::unique_ptr<flat::TypeConstructor> error_type_ctor;
+  std::unique_ptr<TypeConstructor> error_type_ctor;
   if (!ConsumeTypeConstructor(std::move(method->maybe_error_ctor), err_variant_context,
                               &error_type_ctor))
     return false;
@@ -2329,7 +2360,7 @@ bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_varia
   Union::Member success_member{
       std::make_unique<raw::Ordinal64>(sourceElement,
                                        1),  // success case explicitly has ordinal 1
-      IdentifierTypeForDecl(success_variant), success_variant_context->name(),
+      std::move(success_variant), success_variant_context->name(),
       std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{})};
   Union::Member error_member{
       std::make_unique<raw::Ordinal64>(sourceElement, 2),  // error case explicitly has ordinal 2
@@ -2359,14 +2390,16 @@ bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_varia
                      std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{})));
 
   const auto& response_context = result_context->parent();
+  const Name response_name = Name::CreateAnonymous(this, response_span, response_context);
   auto struct_decl = std::make_unique<Struct>(
       /* attributes = */ std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>{}),
-      Name::CreateAnonymous(this, response_span, response_context), std::move(response_members),
+      response_name, std::move(response_members),
       /* resourceness = */ std::nullopt, /* is_request_or_response = */ true);
-  auto struct_decl_ptr = struct_decl.get();
+  auto payload = IdentifierTypeForDecl(struct_decl.get());
   if (!RegisterDecl(std::move(struct_decl)))
     return false;
-  *out_response = struct_decl_ptr;
+
+  *out_payload = std::move(payload);
   return true;
 }
 
@@ -2405,7 +2438,7 @@ void Library::ConsumeProtocolDeclaration(
 
     SourceSpan method_name = method->identifier->span();
     bool has_request = method->maybe_request != nullptr;
-    Struct* maybe_request = nullptr;
+    std::unique_ptr<TypeConstructor> maybe_request;
     if (has_request) {
       bool result = ConsumeParameterList(method_name, protocol_context->EnterRequest(method_name),
                                          std::move(method->maybe_request), true, &maybe_request);
@@ -2413,7 +2446,7 @@ void Library::ConsumeProtocolDeclaration(
         return;
     }
 
-    Struct* maybe_response = nullptr;
+    std::unique_ptr<TypeConstructor> maybe_response;
     bool has_response = method->maybe_response != nullptr;
     bool has_error = false;
     if (has_response) {
@@ -2460,9 +2493,10 @@ void Library::ConsumeProtocolDeclaration(
       // The context for the user specified type within the response part of the method
       // (i.e. `Foo() -> («this source») ...`) is either the top level response context
       // or that of the success variant of the result type
+      std::unique_ptr<TypeConstructor> result_payload;
       auto ctx = has_error ? success_variant_context : response_context;
       bool result = ConsumeParameterList(method_name, ctx, std::move(method->maybe_response),
-                                         !has_error, &maybe_response);
+                                         !has_error, &result_payload);
       if (!result)
         return;
 
@@ -2470,15 +2504,18 @@ void Library::ConsumeProtocolDeclaration(
         assert(err_variant_context != nullptr &&
                "compiler bug: error type contexts should have been computed");
         // we move out of `response_context` only if !has_error, so it's safe to use here
-        if (!CreateMethodResult(err_variant_context, response_span, method.get(), maybe_response,
-                                &maybe_response))
+        if (!CreateMethodResult(err_variant_context, response_span, method.get(),
+                                std::move(result_payload), &maybe_response))
           return;
+      } else {
+        maybe_response = std::move(result_payload);
       }
     }
 
     assert(has_request || has_response);
     methods.emplace_back(std::move(attributes), std::move(method->identifier), method_name,
-                         has_request, maybe_request, has_response, maybe_response, has_error);
+                         has_request, std::move(maybe_request), has_response,
+                         std::move(maybe_response), has_error);
   }
 
   std::unique_ptr<AttributeList> attributes;
@@ -2492,7 +2529,8 @@ void Library::ConsumeProtocolDeclaration(
 
 bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
                                    std::unique_ptr<raw::ParameterList> parameter_layout,
-                                   bool is_request_or_response, Struct** out_struct_decl) {
+                                   bool is_request_or_response,
+                                   std::unique_ptr<TypeConstructor>* out_payload) {
   // If the payload is empty, like the request in `Foo()` or the response in
   // `Foo(...) -> ()` or the success variant in `Foo(...) -> () error uint32`:
   if (!parameter_layout->type_ctor) {
@@ -2534,7 +2572,7 @@ bool Library::ConsumeParameterList(SourceSpan method_name, std::shared_ptr<Namin
     }
   }
 
-  *out_struct_decl = struct_declarations_.back().get();
+  *out_payload = std::move(type_ctor);
   return true;
 }
 
@@ -3636,11 +3674,15 @@ bool Library::DeclDependencies(const Decl* decl, std::set<const Decl*>* out_edge
         }
       }
       for (const auto& method : protocol_decl->methods) {
-        if (method.maybe_request_payload != nullptr) {
-          edges.insert(method.maybe_request_payload);
+        if (method.maybe_request != nullptr) {
+          if (auto type_decl = LookupDeclByName(method.maybe_request->name); type_decl) {
+            edges.insert(type_decl);
+          }
         }
-        if (method.maybe_response_payload != nullptr) {
-          edges.insert(method.maybe_response_payload);
+        if (method.maybe_response != nullptr) {
+          if (auto type_decl = LookupDeclByName(method.maybe_response->name); type_decl) {
+            edges.insert(type_decl);
+          }
         }
       }
       break;
@@ -4377,11 +4419,25 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
   CheckScopes(protocol_declaration, CheckScopes);
 
   for (auto& method : protocol_declaration->methods) {
-    if (method.maybe_request_payload) {
-      CompileDecl(method.maybe_request_payload);
+    if (method.maybe_request != nullptr) {
+      const Name name = method.maybe_request->name;
+      CompileTypeConstructor(method.maybe_request.get());
+      Decl* decl = LookupDeclByName(name);
+      if (!method.maybe_request->type || !decl) {
+        Fail(ErrUnknownType, name, name);
+        continue;
+      }
+      CompileDecl(decl);
     }
-    if (method.maybe_response_payload) {
-      CompileDecl(method.maybe_response_payload);
+    if (method.maybe_response != nullptr) {
+      const Name name = method.maybe_response->name;
+      CompileTypeConstructor(method.maybe_response.get());
+      Decl* decl = LookupDeclByName(name);
+      if (!method.maybe_response->type || !decl) {
+        Fail(ErrUnknownType, name, name);
+        continue;
+      }
+      CompileDecl(decl);
     }
   }
 }
@@ -4943,13 +4999,23 @@ std::set<const Library*, LibraryComparator> Library::DirectDependencies() const 
   // cross-library protocol composition.
   for (const auto& protocol : protocol_declarations_) {
     for (const auto method_with_info : protocol->all_methods) {
-      if (auto request = method_with_info.method->maybe_request_payload) {
-        for (const auto& member : request->members) {
+      if (method_with_info.method->maybe_request) {
+        auto id =
+            static_cast<const flat::IdentifierType*>(method_with_info.method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        for (const auto& member : as_struct->members) {
           add_type_ctor_deps(*member.type_ctor);
         }
       }
-      if (auto response = method_with_info.method->maybe_response_payload) {
-        for (const auto& member : response->members) {
+      if (method_with_info.method->maybe_response) {
+        auto id =
+            static_cast<const flat::IdentifierType*>(method_with_info.method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        for (const auto& member : as_struct->members) {
           add_type_ctor_deps(*member.type_ctor);
         }
       }

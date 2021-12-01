@@ -89,7 +89,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 32,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 2,
+              "max_handles": 0,
+              "max_out_of_line": 32,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -183,7 +205,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,

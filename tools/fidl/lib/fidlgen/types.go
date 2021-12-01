@@ -853,28 +853,22 @@ type ServiceMember struct {
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
-	Ordinal             uint64                    `json:"ordinal"`
-	Name                Identifier                `json:"name"`
-	IsComposed          bool                      `json:"is_composed"`
-	HasRequest          bool                      `json:"has_request"`
-	Request             []Parameter               `json:"maybe_request,omitempty"`
-	RequestPayload      EncodedCompoundIdentifier `json:"maybe_request_payload,omitempty"`
-	RequestTypeShapeV1  TypeShape                 `json:"maybe_request_type_shape_v1,omitempty"`
-	RequestTypeShapeV2  TypeShape                 `json:"maybe_request_type_shape_v2,omitempty"`
-	RequestPadding      bool                      `json:"maybe_request_has_padding,omitempty"`
-	RequestFlexible     bool                      `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
-	HasResponse         bool                      `json:"has_response"`
-	Response            []Parameter               `json:"maybe_response,omitempty"`
-	ResponsePayload     EncodedCompoundIdentifier `json:"maybe_response_payload,omitempty"`
-	ResponseTypeShapeV1 TypeShape                 `json:"maybe_response_type_shape_v1,omitempty"`
-	ResponseTypeShapeV2 TypeShape                 `json:"maybe_response_type_shape_v2,omitempty"`
-	ResponsePadding     bool                      `json:"maybe_response_has_padding,omitempty"`
-	ResponseFlexible    bool                      `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
-	HasError            bool                      `json:"has_error"`
-	ResultType          *Type                     `json:"maybe_response_result_type,omitempty"`
-	ValueType           *Type                     `json:"maybe_response_success_type,omitempty"`
-	ValueStruct         *Struct                   `json:"maybe_response_success_struct,omitempty"`
-	ErrorType           *Type                     `json:"maybe_response_err_type,omitempty"`
+	Ordinal         uint64      `json:"ordinal"`
+	Name            Identifier  `json:"name"`
+	IsComposed      bool        `json:"is_composed"`
+	HasRequest      bool        `json:"has_request"`
+	Request         []Parameter `json:"maybe_request,omitempty"`
+	RequestPayload  *Type       `json:"maybe_request_payload,omitempty"`
+	RequestPadding  bool        `json:"maybe_request_has_padding,omitempty"`
+	RequestFlexible bool        `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
+	HasResponse     bool        `json:"has_response"`
+	Response        []Parameter `json:"maybe_response,omitempty"`
+	ResponsePayload *Type       `json:"maybe_response_payload,omitempty"`
+	HasError        bool        `json:"has_error"`
+	ResultType      *Type       `json:"maybe_response_result_type,omitempty"`
+	ValueType       *Type       `json:"maybe_response_success_type,omitempty"`
+	ValueStruct     *Struct     `json:"maybe_response_success_struct,omitempty"`
+	ErrorType       *Type       `json:"maybe_response_err_type,omitempty"`
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.

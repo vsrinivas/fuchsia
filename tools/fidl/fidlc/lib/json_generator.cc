@@ -369,17 +369,19 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
     if (!value.attributes->Empty())
       GenerateObjectMember("maybe_attributes", value.attributes);
     if (value.has_request) {
-      GenerateRequest("maybe_request", value.maybe_request_payload);
+      GenerateRequest("maybe_request", TypeKind::kRequestPayload, value.maybe_request.get());
     }
     GenerateObjectMember("has_response", value.has_response);
     if (value.has_response) {
-      GenerateRequest("maybe_response", value.maybe_response_payload);
+      GenerateRequest("maybe_response", TypeKind::kResponsePayload, value.maybe_response.get());
     }
     GenerateObjectMember("is_composed", method_with_info.is_composed);
     GenerateObjectMember("has_error", value.has_error);
     if (value.has_error) {
-      const auto* result_union_type = static_cast<const flat::IdentifierType*>(
-          value.maybe_response_payload->members[0].type_ctor->type);
+      auto response_id = static_cast<const flat::IdentifierType*>(value.maybe_response->type);
+      auto response_struct = static_cast<const flat::Struct*>(response_id->type_decl);
+      const auto* result_union_type =
+          static_cast<const flat::IdentifierType*>(response_struct->members[0].type_ctor->type);
       const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
       const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
           result_union->members[0].maybe_used->type_ctor->type);
@@ -430,7 +432,26 @@ void JSONGenerator::GenerateTypeAndFromTypeAlias(TypeKind parent_type_kind,
     return;
   }
 
-  std::string key = parent_type_kind == TypeKind::kConcrete ? "type" : "element_type";
+  std::string key;
+  switch (parent_type_kind) {
+    case kConcrete: {
+      key = "type";
+      break;
+    }
+    case kParameterized: {
+      key = "element_type";
+      break;
+    }
+    case kRequestPayload: {
+      key = "maybe_request_payload";
+      break;
+    }
+    case kResponsePayload: {
+      key = "maybe_response_payload";
+      break;
+    }
+  }
+
   GenerateObjectMember(key, type, position);
   GenerateExperimentalMaybeFromTypeAlias(invocation);
 }
@@ -502,11 +523,8 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
   });
 }
 
-void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struct* value) {
-  // TODO(fxbug.dev/76316): remove this assert once this generator is able to
-  //  properly handle empty structs as payloads.
-  assert((!value || (value && !value->members.empty())) && "cannot process empty message payloads");
-
+void JSONGenerator::GenerateRequest(const std::string& prefix, const TypeKind payload_kind,
+                                    const flat::TypeConstructor* value) {
   // Temporarily hardcode the generation of request/response struct members to use the old
   // wire format, in order to maintain compatibility during the transition for fxbug.dev/7704.
   // This block of code is copied from JsonWriter::GenerateArray (with the difference
@@ -514,30 +532,41 @@ void JSONGenerator::GenerateRequest(const std::string& prefix, const flat::Struc
   GenerateObjectPunctuation(Position::kSubsequent);
   EmitObjectKey(prefix);
   EmitArrayBegin();
-  if (value) {
-    if (value->members.begin() != value->members.end()) {
-      Indent();
-      EmitNewlineWithIndent();
-    }
-    for (auto it = value->members.begin(); it != value->members.end(); ++it) {
-      if (it != value->members.begin())
-        EmitArraySeparator();
-      // call Generate with is_request_response = true on each struct member
-      Generate(*it, true);
-    }
-    if (value->members.begin() != value->members.end()) {
-      Outdent();
-      EmitNewlineWithIndent();
-    }
+  if (!value) {
+    EmitArrayEnd();
+    GenerateTypeShapes(prefix, nullptr);
+    return;
   }
-  EmitArrayEnd();
 
-  if (value) {
-    if (!value->members.empty()) {
-      GenerateObjectMember(prefix + "_payload", value->name);
-    }
+  auto id = static_cast<const flat::IdentifierType*>(value->type);
+
+  // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+  assert(id->type_decl->kind == flat::Decl::Kind::kStruct &&
+         "must be a struct until fxbug.dev/88343 lands");
+  auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+
+  // TODO(fxbug.dev/76316): remove this assert once this generator is able to
+  //  properly handle empty structs as payloads.
+  assert(!as_struct->members.empty() && "cannot process empty message payloads");
+
+  if (as_struct->members.begin() != as_struct->members.end()) {
+    Indent();
+    EmitNewlineWithIndent();
   }
-  GenerateTypeShapes(prefix, value);
+  for (auto it = as_struct->members.begin(); it != as_struct->members.end(); ++it) {
+    if (it != as_struct->members.begin())
+      EmitArraySeparator();
+    // call Generate with is_request_response = true on each struct member
+    Generate(*it, true);
+  }
+  if (as_struct->members.begin() != as_struct->members.end()) {
+    Outdent();
+    EmitNewlineWithIndent();
+  }
+
+  EmitArrayEnd();
+  GenerateTypeAndFromTypeAlias(payload_kind, value, Position::kSubsequent);
+  GenerateTypeShapes(prefix, as_struct);
 }
 
 void JSONGenerator::Generate(const flat::Resource::Property& value) {
@@ -975,11 +1004,19 @@ std::vector<const flat::Struct*> AllStructs(const flat::Library* library) {
       if (!method_with_info.is_composed)
         continue;
       const auto& method = method_with_info.method;
-      if (method->maybe_request_payload) {
-        all_structs.push_back(method->maybe_request_payload);
+      if (method->maybe_request) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        all_structs.push_back(as_struct);
       }
-      if (method->maybe_response_payload) {
-        all_structs.push_back(method->maybe_response_payload);
+      if (method->maybe_response) {
+        auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
+
+        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+        all_structs.push_back(as_struct);
       }
     }
   }

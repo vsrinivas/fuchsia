@@ -700,15 +700,15 @@ class Protocol final : public TypeDecl {
     Method& operator=(Method&&) = default;
 
     Method(std::unique_ptr<AttributeList> attributes, std::unique_ptr<raw::Identifier> identifier,
-           SourceSpan name, bool has_request, Struct* maybe_request, bool has_response,
-           Struct* maybe_response, bool has_error)
+           SourceSpan name, bool has_request, std::unique_ptr<TypeConstructor> maybe_request,
+           bool has_response, std::unique_ptr<TypeConstructor> maybe_response, bool has_error)
         : Attributable(AttributePlacement::kMethod, std::move(attributes)),
           identifier(std::move(identifier)),
           name(name),
           has_request(has_request),
-          maybe_request_payload(maybe_request),
+          maybe_request(std::move(maybe_request)),
           has_response(has_response),
-          maybe_response_payload(maybe_response),
+          maybe_response(std::move(maybe_response)),
           has_error(has_error),
           generated_ordinal64(nullptr) {
       assert(this->has_request || this->has_response);
@@ -717,9 +717,9 @@ class Protocol final : public TypeDecl {
     std::unique_ptr<raw::Identifier> identifier;
     SourceSpan name;
     bool has_request;
-    Struct* maybe_request_payload;
+    std::unique_ptr<TypeConstructor> maybe_request;
     bool has_response;
-    Struct* maybe_response_payload;
+    std::unique_ptr<TypeConstructor> maybe_response;
     bool has_error;
     // This is set to the |Protocol| instance that owns this |Method|,
     // when the |Protocol| is constructed.
@@ -1263,10 +1263,12 @@ class Library : Attributable {
   bool ConsumeResourceDeclaration(std::unique_ptr<raw::ResourceDeclaration> resource_declaration);
   bool ConsumeParameterList(SourceSpan method_name, std::shared_ptr<NamingContext> context,
                             std::unique_ptr<raw::ParameterList> parameter_layout,
-                            bool is_request_or_response, Struct** out_struct_decl);
+                            bool is_request_or_response,
+                            std::unique_ptr<TypeConstructor>* out_payload);
   bool CreateMethodResult(const std::shared_ptr<NamingContext>& err_variant_context,
                           SourceSpan response_span, raw::ProtocolMethod* method,
-                          Struct* success_variant, Struct** out_response);
+                          std::unique_ptr<TypeConstructor> success_variant,
+                          std::unique_ptr<TypeConstructor>* out_payload);
   void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
 
   bool ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,

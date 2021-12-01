@@ -11,6 +11,8 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+const kMessageHeaderSize = 16
+
 //
 // Generate code for sending and receiving FIDL messages i.e. the messaging API.
 //
@@ -561,13 +563,33 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		methodMarker := protocolName.nest(name.Wire.Name())
 
 		var requestChildren []ScopedLayout
-		if val, ok := c.requestResponsePayload[v.RequestPayload]; ok {
-			requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
+		var requestTypeShapeV1 fidlgen.TypeShape
+		var requestTypeShapeV2 fidlgen.TypeShape
+		if v.RequestPayload != nil {
+			requestTypeShapeV1 = v.RequestPayload.TypeShapeV1
+			requestTypeShapeV2 = v.RequestPayload.TypeShapeV2
+			if val, ok := c.requestResponsePayload[v.RequestPayload.Identifier]; ok {
+				requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
+			}
+		}
+		if v.HasRequest {
+			requestTypeShapeV1.InlineSize += kMessageHeaderSize
+			requestTypeShapeV2.InlineSize += kMessageHeaderSize
 		}
 
 		var responseChildren []ScopedLayout
-		if val, ok := c.requestResponsePayload[v.ResponsePayload]; ok {
-			responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
+		var responseTypeShapeV1 fidlgen.TypeShape
+		var responseTypeShapeV2 fidlgen.TypeShape
+		if v.ResponsePayload != nil {
+			responseTypeShapeV1 = v.ResponsePayload.TypeShapeV1
+			responseTypeShapeV2 = v.ResponsePayload.TypeShapeV2
+			if val, ok := c.requestResponsePayload[v.ResponsePayload.Identifier]; ok {
+				responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
+			}
+		}
+		if v.HasResponse {
+			responseTypeShapeV1.InlineSize += kMessageHeaderSize
+			responseTypeShapeV2.InlineSize += kMessageHeaderSize
 		}
 
 		method := newMethod(methodInner{
@@ -577,10 +599,10 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			// reserved words logic, since that's the behavior in fidlc.
 			baseCodingTableName: codingTableName + string(v.Name),
 			Marker:              methodMarker,
-			requestTypeShapeV1:  TypeShape{v.RequestTypeShapeV1},
-			requestTypeShapeV2:  TypeShape{v.RequestTypeShapeV2},
-			responseTypeShapeV1: TypeShape{v.ResponseTypeShapeV1},
-			responseTypeShapeV2: TypeShape{v.ResponseTypeShapeV2},
+			requestTypeShapeV1:  TypeShape{requestTypeShapeV1},
+			requestTypeShapeV2:  TypeShape{requestTypeShapeV2},
+			responseTypeShapeV1: TypeShape{responseTypeShapeV1},
+			responseTypeShapeV2: TypeShape{responseTypeShapeV2},
 			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
 			Attributes:          Attributes{v.Attributes},
 			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go

@@ -786,8 +786,8 @@
                     "type": "array"
                 },
                 "maybe_request_payload": {
-                    "$ref": "#/definitions/compound-identifier",
-                    "description": "Optional name of the request type"
+                    "$ref": "#/definitions/identifier-type",
+                    "description": "Optional request type"
                 },
                 "maybe_request_type_shape_v1": {
                     "$ref": "#/definitions/typeshape",
@@ -805,8 +805,8 @@
                     "type": "array"
                 },
                 "maybe_response_payload": {
-                    "$ref": "#/definitions/compound-identifier",
-                    "description": "Optional name of the response type"
+                    "$ref": "#/definitions/identifier-type",
+                    "description": "Optional response type"
                 },
                 "maybe_response_type_shape_v1": {
                     "$ref": "#/definitions/typeshape",

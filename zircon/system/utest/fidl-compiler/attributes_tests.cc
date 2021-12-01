@@ -115,10 +115,12 @@ type ExampleUnion = union {
   ASSERT_NOT_NULL(example_child_protocol);
   EXPECT_TRUE(example_child_protocol->attributes->Get("on_protocol"));
   EXPECT_TRUE(example_child_protocol->methods.front().attributes->Get("on_method"));
-  ASSERT_NOT_NULL(example_child_protocol->methods.front().maybe_request_payload);
-  EXPECT_TRUE(example_child_protocol->methods.front()
-                  .maybe_request_payload->members.front()
-                  .attributes->Get("on_parameter"));
+  ASSERT_NOT_NULL(example_child_protocol->methods.front().maybe_request.get());
+
+  auto id = static_cast<const fidl::flat::IdentifierType*>(
+      example_child_protocol->methods.front().maybe_request->type);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  EXPECT_TRUE(as_struct->members.front().attributes->Get("on_parameter"));
 
   auto example_parent_protocol = library.LookupProtocol("ExampleParentProtocol");
   ASSERT_NOT_NULL(example_parent_protocol);

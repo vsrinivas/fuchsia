@@ -2337,11 +2337,15 @@ protocol Test {
   ASSERT_NOT_NULL(protocol);
   ASSERT_EQ(protocol->methods.size(), 1);
   auto& method = protocol->methods[0];
-  auto method_request = method.maybe_request_payload;
+  auto method_request = method.maybe_request.get();
   EXPECT_EQ(method.has_request, true);
   ASSERT_NOT_NULL(method_request);
 
-  ASSERT_NO_FAILURES(CheckTypeShape(method_request,
+  auto id = static_cast<const fidl::flat::IdentifierType*>(method_request->type);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  EXPECT_NOT_NULL(as_struct);
+
+  ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
@@ -2367,11 +2371,11 @@ protocol Test {
                                         .has_padding = true,
                                     }));
 
-  ASSERT_EQ(method_request->members.size(), 2);
+  ASSERT_EQ(as_struct->members.size(), 2);
   ASSERT_NO_FAILURES(
-      CheckFieldShape(method_request->members[0], ExpectedField{.offset = 0, .padding = 0}));
+      CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 0}));
   ASSERT_NO_FAILURES(
-      CheckFieldShape(method_request->members[1], ExpectedField{.offset = 2, .padding = 4}));
+      CheckFieldShape(as_struct->members[1], ExpectedField{.offset = 2, .padding = 4}));
 }
 
 TEST(TypeshapeTests, GoodSimpleResponse) {
@@ -2387,11 +2391,15 @@ protocol Test {
   ASSERT_NOT_NULL(protocol);
   ASSERT_EQ(protocol->methods.size(), 1);
   auto& method = protocol->methods[0];
-  auto method_response = method.maybe_response_payload;
+  auto method_response = method.maybe_response.get();
   EXPECT_EQ(method.has_response, true);
   ASSERT_NOT_NULL(method_response);
 
-  ASSERT_NO_FAILURES(CheckTypeShape(method_response,
+  auto id = static_cast<const fidl::flat::IdentifierType*>(method_response->type);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  EXPECT_NOT_NULL(as_struct);
+
+  ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
@@ -2417,11 +2425,11 @@ protocol Test {
                                         .has_padding = true,
                                     }));
 
-  ASSERT_EQ(method_response->members.size(), 2);
+  ASSERT_EQ(as_struct->members.size(), 2);
   ASSERT_NO_FAILURES(
-      CheckFieldShape(method_response->members[0], ExpectedField{.offset = 0, .padding = 0}));
+      CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 0}));
   ASSERT_NO_FAILURES(
-      CheckFieldShape(method_response->members[1], ExpectedField{.offset = 2, .padding = 4}));
+      CheckFieldShape(as_struct->members[1], ExpectedField{.offset = 2, .padding = 4}));
 }
 
 TEST(TypeshapeTests, GoodRecursiveRequest) {
@@ -2455,10 +2463,15 @@ protocol MessagePort {
   ASSERT_NOT_NULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
-  auto post_message_request = post_message.maybe_request_payload;
+  auto post_message_request = post_message.maybe_request.get();
   EXPECT_EQ(post_message.has_request, true);
   ASSERT_NOT_NULL(post_message_request);
-  ASSERT_NO_FAILURES(CheckTypeShape(post_message_request,
+
+  auto id = static_cast<const fidl::flat::IdentifierType*>(post_message_request->type);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  EXPECT_NOT_NULL(as_struct);
+
+  ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
@@ -2483,9 +2496,9 @@ protocol MessagePort {
                                         .max_handles = 1,
                                         .has_padding = true,
                                     }));
-  ASSERT_EQ(post_message_request->members.size(), 1);
+  ASSERT_EQ(as_struct->members.size(), 1);
   ASSERT_NO_FAILURES(
-      CheckFieldShape(post_message_request->members[0], ExpectedField{.offset = 0, .padding = 4}));
+      CheckFieldShape(as_struct->members[0], ExpectedField{.offset = 0, .padding = 4}));
 }
 
 TEST(TypeshapeTests, GoodRecursiveOptRequest) {
@@ -2517,10 +2530,14 @@ protocol MessagePort {
   ASSERT_NOT_NULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
-  auto post_message_request = post_message.maybe_request_payload;
+  auto post_message_request = post_message.maybe_request.get();
   EXPECT_EQ(post_message.has_request, true);
-  ASSERT_NOT_NULL(post_message_request);
-  ASSERT_NO_FAILURES(CheckTypeShape(post_message_request,
+
+  auto id = static_cast<const fidl::flat::IdentifierType*>(post_message_request->type);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  EXPECT_NOT_NULL(as_struct);
+
+  ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
@@ -2576,10 +2593,14 @@ protocol MessagePort {
   ASSERT_NOT_NULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
-  auto post_message_request = post_message.maybe_request_payload;
+  auto post_message_request = post_message.maybe_request.get();
   EXPECT_EQ(post_message.has_request, true);
-  ASSERT_NOT_NULL(post_message_request);
-  ASSERT_NO_FAILURES(CheckTypeShape(post_message_request,
+
+  auto id = static_cast<const fidl::flat::IdentifierType*>(post_message_request->type);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  EXPECT_NOT_NULL(as_struct);
+
+  ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
@@ -2635,10 +2656,14 @@ protocol MessagePort {
   ASSERT_NOT_NULL(message_port);
   ASSERT_EQ(message_port->methods.size(), 1);
   auto& post_message = message_port->methods[0];
-  auto post_message_request = post_message.maybe_request_payload;
+  auto post_message_request = post_message.maybe_request.get();
   EXPECT_EQ(post_message.has_request, true);
-  ASSERT_NOT_NULL(post_message_request);
-  ASSERT_NO_FAILURES(CheckTypeShape(post_message_request,
+
+  auto id = static_cast<const fidl::flat::IdentifierType*>(post_message_request->type);
+  auto as_struct = static_cast<const fidl::flat::Struct*>(id->type_decl);
+  EXPECT_NOT_NULL(as_struct);
+
+  ASSERT_NO_FAILURES(CheckTypeShape(as_struct,
                                     Expected{
                                         .inline_size = 24,
                                         .alignment = 8,
@@ -2920,7 +2945,7 @@ protocol Child {
   ASSERT_NOT_NULL(child);
   ASSERT_EQ(child->all_methods.size(), 1);
   auto& sync_with_info = child->all_methods[0];
-  auto sync_request = sync_with_info.method->maybe_request_payload;
+  auto sync_request = sync_with_info.method->maybe_request.get();
   EXPECT_EQ(sync_with_info.method->has_request, true);
   ASSERT_NULL(sync_request);
 }

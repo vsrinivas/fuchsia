@@ -470,13 +470,13 @@ func (c *compiler) typeExprForMethod(val fidlgen.Method, request []StructMember,
 		responseSizeV1 = 0
 		responseSizeV2 = 0
 	)
-	if val.RequestPayload != "" {
-		payload := c.getPayload(val.RequestPayload)
+	if val.RequestPayload != nil {
+		payload := c.getPayload(val.RequestPayload.Identifier)
 		requestSizeV1 = payload.TypeShapeV1.InlineSize
 		requestSizeV2 = payload.TypeShapeV2.InlineSize
 	}
-	if val.ResponsePayload != "" {
-		payload := c.getPayload(val.ResponsePayload)
+	if val.ResponsePayload != nil {
+		payload := c.getPayload(val.ResponsePayload.Identifier)
 		responseSizeV1 = payload.TypeShapeV1.InlineSize
 		responseSizeV2 = payload.TypeShapeV2.InlineSize
 	}
@@ -866,10 +866,12 @@ func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	return b
 }
 
-func (c *compiler) compileParameterArray(payload fidlgen.EncodedCompoundIdentifier) []StructMember {
+func (c *compiler) compileParameterArray(payload *fidlgen.Type) []StructMember {
 	var parameters []StructMember
-	for _, v := range c.getPayload(payload).Members {
-		parameters = append(parameters, c.compileStructMember(v))
+	if payload != nil {
+		for _, v := range c.getPayload(payload.Identifier).Members {
+			parameters = append(parameters, c.compileStructMember(v))
+		}
 	}
 	return parameters
 }
@@ -923,10 +925,10 @@ func (c *compiler) compileMethod(val fidlgen.Method, protocol Protocol, fidlProt
 		asyncResponseClass string
 		asyncResponseType  string
 	)
-	if val.HasRequest && val.RequestPayload != "" {
+	if val.HasRequest {
 		request = c.compileParameterArray(val.RequestPayload)
 	}
-	if val.HasResponse && val.ResponsePayload != "" {
+	if val.HasResponse {
 		response = c.compileMethodResponse(val)
 	}
 

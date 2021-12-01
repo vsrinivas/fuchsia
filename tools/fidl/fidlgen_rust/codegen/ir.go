@@ -889,11 +889,11 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 			Result:         foundResult,
 			IsTransitional: v.IsTransitional(),
 		}
-		if v.RequestPayload != "" {
-			m.Request = c.compileParameterArray(v.RequestPayload)
+		if v.RequestPayload != nil {
+			m.Request = c.compileParameterArray(v.RequestPayload.Identifier)
 		}
-		if v.ResponsePayload != "" {
-			m.Response = c.compileParameterArray(v.ResponsePayload)
+		if v.ResponsePayload != nil {
+			m.Response = c.compileParameterArray(v.ResponsePayload.Identifier)
 		}
 		r.Methods = append(r.Methods, m)
 	}

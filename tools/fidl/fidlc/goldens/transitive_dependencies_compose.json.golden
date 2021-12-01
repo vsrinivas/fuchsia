@@ -124,7 +124,29 @@
               }
             }
           ],
-          "maybe_response_payload": "bottom/BottomGetFooTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "bottom/BottomGetFooTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,

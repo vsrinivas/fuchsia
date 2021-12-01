@@ -457,7 +457,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -530,7 +552,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -604,7 +648,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -697,7 +763,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -758,7 +846,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -865,7 +975,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 4294967295,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -971,7 +1103,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 24,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 24,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -1133,7 +1287,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -1295,7 +1471,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -1458,7 +1656,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithErrorSyntaxHandleInResultTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithErrorSyntaxHandleInResultTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 1,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,
@@ -1683,7 +1903,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/ChannelProtocolMethodARequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ChannelProtocolMethodARequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -1797,7 +2039,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/ChannelProtocolEventARequest",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ChannelProtocolEventARequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -1909,7 +2173,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/ChannelProtocolMethodBRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ChannelProtocolMethodBRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -1970,7 +2256,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/ChannelProtocolMethodBTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ChannelProtocolMethodBTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2046,7 +2354,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/ChannelProtocolTakeHandleRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ChannelProtocolTakeHandleRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2142,7 +2472,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/ChannelProtocolMutateSocketRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ChannelProtocolMutateSocketRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2206,7 +2558,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/ChannelProtocolMutateSocketTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ChannelProtocolMutateSocketTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2363,7 +2737,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/SyscallProtocolMethodCRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/SyscallProtocolMethodCRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -2461,7 +2857,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/TransitionalRequestRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/TransitionalRequestRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2522,7 +2940,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/TransitionalRequestTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/TransitionalRequestTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2607,7 +3047,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/TransitionalOneWayRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/TransitionalOneWayRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2694,7 +3156,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/TransitionalEventRequest",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/TransitionalEventRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2839,7 +3323,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/HandleRightsProtocolNoResponseMethodRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/HandleRightsProtocolNoResponseMethodRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2916,7 +3422,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/HandleRightsProtocolResponseMethodRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/HandleRightsProtocolResponseMethodRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -2980,7 +3508,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -3057,7 +3607,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/HandleRightsProtocolAnEventRequest",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/HandleRightsProtocolAnEventRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -3143,7 +3715,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/WithProtocolEndsClientEndsRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithProtocolEndsClientEndsRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -3205,7 +3799,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithProtocolEndsClientEndsTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -3279,7 +3895,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/WithProtocolEndsServerEndsRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithProtocolEndsServerEndsRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -3341,7 +3979,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithProtocolEndsServerEndsTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,
@@ -3415,7 +4075,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithProtocolEndsStructContainingEndsRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 4,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 4,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -3477,7 +4159,29 @@
               }
             }
           ],
-          "maybe_response_payload": "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+          "maybe_response_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 4,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 4,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_response_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -4141,7 +4845,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/ManyParametersFifteenRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/ManyParametersFifteenRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 32,
             "alignment": 8,
@@ -4228,7 +4954,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.protocols/MethodWithUnionUnionMethodRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.protocols/MethodWithUnionUnionMethodRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 24,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 8,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            },
+            "type_shape_v2": {
+              "inline_size": 16,
+              "alignment": 8,
+              "depth": 1,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": true
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 40,
             "alignment": 8,

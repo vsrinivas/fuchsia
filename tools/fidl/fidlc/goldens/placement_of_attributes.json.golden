@@ -299,7 +299,29 @@
               }
             }
           ],
-          "maybe_request_payload": "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
+          "maybe_request_payload": {
+            "kind": "identifier",
+            "identifier": "fidl.test.placementofattributes/ExampleProtocolMethodRequest",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 8,
+              "alignment": 8,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": true,
+              "has_flexible_envelope": false
+            }
+          },
           "maybe_request_type_shape_v1": {
             "inline_size": 24,
             "alignment": 8,

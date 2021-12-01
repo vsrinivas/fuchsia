@@ -335,20 +335,23 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
       for (const auto& method_with_info : protocol_decl->all_methods) {
         assert(method_with_info.method != nullptr);
         const auto& method = *method_with_info.method;
-        auto CompileMessage = [&](const flat::Struct* message) -> void {
+        auto CompileMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload) -> void {
           std::unique_ptr<coded::MessageType>& coded_message =
               coded_protocol->messages_during_compile[i++];
           std::vector<coded::StructElement>& request_elements = coded_message->elements;
           uint32_t field_num = 0;
           bool is_noop = true;
+          if (payload) {
+            auto id = static_cast<const flat::IdentifierType*>(payload->type);
 
-          // TODO(fxbug.dev/76316): remove this assert once this generator is able to
-          //  properly handle empty structs as payloads.
-          assert((!message || (message && !message->members.empty())) &&
-                 "cannot process empty message payloads");
+            // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+            auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
 
-          if (message) {
-            for (const auto& no_header_parameter : FlattenedStructMembers(*message)) {
+            // TODO(fxbug.dev/76316): remove this assert once this generator is able to
+            //  properly handle empty structs as payloads.
+            assert(!as_struct->members.empty() && "cannot process empty message payloads");
+
+            for (const auto& no_header_parameter : FlattenedStructMembers(*as_struct)) {
               const auto parameter = no_header_parameter.PrependTransactionHeader();
               auto coded_parameter_type =
                   CompileType(parameter.type, coded::CodingContext::kOutsideEnvelope);
@@ -378,10 +381,10 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
               static_cast<const coded::MessageType*>(coded_types_.back().get()));
         };
         if (method.has_request) {
-          CompileMessage(method.maybe_request_payload);
+          CompileMessage(method.maybe_request);
         }
         if (method.has_response) {
-          CompileMessage(method.maybe_response_payload);
+          CompileMessage(method.maybe_response);
         }
       }
       break;
@@ -524,34 +527,38 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
         const auto& method = *method_with_info.method;
         std::string method_name = NameMethod(protocol_name, method);
         std::string method_qname = NameMethod(protocol_qname, method);
-        auto CreateMessage = [&](const flat::Struct* message, types::MessageKind kind) -> void {
+        auto CreateMessage = [&](const std::unique_ptr<flat::TypeConstructor>& payload,
+                                 types::MessageKind kind) -> void {
           std::string message_name = NameMessage(method_name, kind);
           std::string message_qname = NameMessage(method_qname, kind);
+          auto typeshape_v1 = TypeShape::ForEmptyPayload();
+          auto typeshape_v2 = TypeShape::ForEmptyPayload();
+          if (payload) {
+            auto id = static_cast<const flat::IdentifierType*>(payload->type);
 
-          // TODO(fxbug.dev/76316): remove this assert once this generator is
-          //  able to properly handle empty structs as payloads.
-          assert((!message || (message && !message->members.empty())) &&
-                 "cannot process empty message payloads");
+            // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+            auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
 
-          auto typeshape_v1 =
-              message != nullptr
-                  ? message->typeshape(WireFormat::kV1NoEe).PrependTransactionHeader()
-                  : TypeShape::ForEmptyPayload();
-          auto typeshape_v2 = message != nullptr
-                                  ? message->typeshape(WireFormat::kV2).PrependTransactionHeader()
-                                  : TypeShape::ForEmptyPayload();
+            // TODO(fxbug.dev/76316): remove this assert once this generator is
+            //  able to properly handle empty structs as payloads.
+            assert(!as_struct->members.empty() && "cannot process empty message payloads");
+
+            typeshape_v1 = as_struct->typeshape(WireFormat::kV1NoEe).PrependTransactionHeader();
+            typeshape_v2 = as_struct->typeshape(WireFormat::kV2).PrependTransactionHeader();
+          }
+
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
               std::move(message_name), std::vector<coded::StructElement>(),
               typeshape_v1.InlineSize(), typeshape_v2.InlineSize(), typeshape_v1.HasEnvelope(),
               std::move(message_qname)));
         };
         if (method.has_request) {
-          CreateMessage(method.maybe_request_payload, types::MessageKind::kRequest);
+          CreateMessage(method.maybe_request, types::MessageKind::kRequest);
         }
         if (method.has_response) {
           auto kind =
               method.has_request ? types::MessageKind::kResponse : types::MessageKind::kEvent;
-          CreateMessage(method.maybe_response_payload, kind);
+          CreateMessage(method.maybe_response, kind);
         }
       }
       named_coded_types_.emplace(
