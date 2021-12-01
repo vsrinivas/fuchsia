@@ -16,8 +16,8 @@ use std::sync::atomic::{AtomicU8, Ordering};
 
 use fidl_fuchsia_hardware_network as netdev;
 use fuchsia_runtime::vmar_root_self;
-use fuchsia_zircon::{self as zx, sys::ZX_PAGE_SIZE};
-use static_assertions::const_assert_eq;
+use fuchsia_zircon::{self as zx, sys::ZX_MIN_PAGE_SHIFT};
+use static_assertions::{const_assert, const_assert_eq};
 
 use crate::{
     error::{Error, Result},
@@ -35,9 +35,17 @@ pub(super) const NETWORK_DEVICE_DESCRIPTOR_LENGTH: usize =
 
 // Ensure that the descriptor length is always a multiple of 8.
 const_assert_eq!(NETWORK_DEVICE_DESCRIPTOR_LENGTH % std::mem::size_of::<u64>(), 0);
-// Ensure the alignment for BufferDescriptor allows accessing from page boundary.
-const_assert_eq!(ZX_PAGE_SIZE as usize % std::mem::align_of::<Descriptor<Tx>>(), 0);
-const_assert_eq!(ZX_PAGE_SIZE as usize % std::mem::align_of::<Descriptor<Rx>>(), 0);
+// Ensure the alignment for BufferDescriptor allows accessing from page boundary. As pages are
+// always a power of 2, we just need to ensure the alignment is a power of 2, and that the alignment
+// is not larger than the minimum possible page size.
+const_assert!(
+    std::mem::align_of::<Descriptor<Tx>>().count_ones() == 1
+        && std::mem::align_of::<Descriptor<Tx>>() <= (1 << ZX_MIN_PAGE_SHIFT)
+);
+const_assert!(
+    std::mem::align_of::<Descriptor<Rx>>().count_ones() == 1
+        && std::mem::align_of::<Descriptor<Rx>>() <= (1 << ZX_MIN_PAGE_SHIFT)
+);
 
 /// A network device descriptor.
 #[repr(transparent)]
@@ -325,7 +333,7 @@ impl Drop for Descriptors {
         // descriptor should have a small size and count is max 512 for now,
         // this can't overflow even on a 16-bit platform.
         let len = NETWORK_DEVICE_DESCRIPTOR_LENGTH * usize::from(self.count);
-        let page_size = usize::try_from(zx::sys::ZX_PAGE_SIZE).unwrap();
+        let page_size = usize::try_from(zx::system_get_page_size()).unwrap();
         let aligned = (len + page_size - 1) / page_size * page_size;
         unsafe {
             vmar_root_self()
