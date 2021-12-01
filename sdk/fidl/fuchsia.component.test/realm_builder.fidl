@@ -336,6 +336,12 @@ type RealmBuilderError2 = strict enum : uint32 {
 
     /// The handle the client provided for the child realm is not usable
     INVALID_CHILD_REALM_HANDLE = 14;
+
+    /// `ReplaceComponentDecl` was called on a legacy or local component with a
+    /// program declaration that did not match the one from the old component
+    /// declaration. This could render a legacy or local component
+    /// non-functional, and is disallowed.
+    IMMUTABLE_PROGRAM = 15;
 };
 
 protocol Builder {
