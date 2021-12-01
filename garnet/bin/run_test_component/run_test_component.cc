@@ -11,7 +11,6 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <limits.h>
 
-#include <regex>
 #include <sstream>
 #include <string>
 
