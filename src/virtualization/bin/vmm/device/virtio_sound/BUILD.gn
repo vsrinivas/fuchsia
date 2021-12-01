@@ -1,0 +1,42 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("virtio_sound_bin") {
+  name = "virtio_sound"
+
+  sources = [
+    "src/main.rs",
+    "src/reply.rs",
+    "src/service.rs",
+    "src/wire.rs",
+    "src/wire_convert.rs",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog",
+    "//src/lib/zerocopy",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/virtualization/lib/machina-virtio-device",
+    "//src/virtualization/lib/virtio-device",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:iota",
+    "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:tracing",
+  ]
+}
+
+fuchsia_package_with_single_component("virtio_sound") {
+  manifest = "../../meta/virtio_sound.cmx"
+  deps = [ ":virtio_sound_bin" ]
+}

@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 library fuchsia.virtualization.hardware;
 
+using fuchsia.hardware.ethernet;
 using fuchsia.io;
+using fuchsia.media;
+using fuchsia.sysmem;
+using fuchsia.ui.composition;
 using fuchsia.ui.gfx;
 using fuchsia.ui.input;
 using fuchsia.virtualization;
-using fuchsia.hardware.ethernet;
-using fuchsia.ui.composition;
-using fuchsia.sysmem;
 using zx;
 
 // The following EVENT_* constants indicate which user signal is associated with an event.
@@ -200,6 +201,31 @@ protocol VirtioRng {
     Start(resource struct {
         start_info StartInfo;
     }) -> ();
+};
+
+@discoverable
+protocol VirtioSound {
+    compose VirtioDevice;
+
+    /// Start the sound device.
+    /// The response contains the device's expected static configuration.
+    ///
+    /// + request `start_info` basic info to start the device
+    /// + request `audio` connection to an audio server (used to play and
+    ///     capture audio)
+    /// - response `features` supported features
+    /// - response `jacks` the virtio_snd_config.jacks value to advertise
+    /// - response `streams` the virtio_snd_config.streams value to advertise
+    /// - response `chmaps` the virtio_snd_config.chaps value to advertise
+    Start(resource struct {
+        start_info StartInfo;
+        audio client_end:fuchsia.media.Audio;
+    }) -> (struct {
+        features uint32;
+        jacks uint32;
+        streams uint32;
+        chmaps uint32;
+    });
 };
 
 /// Sufficient to contain the opaque image info.

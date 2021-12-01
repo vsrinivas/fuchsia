@@ -26,6 +26,7 @@ group("packages") {
     ":virtio_wl",
     "virtio_net",
     "virtio_rng",
+    "virtio_sound",
   ]
 }
 
@@ -338,6 +339,7 @@ executable("device_tests") {
     "virtio_queue_fake.h",
     "virtio_queue_test.cc",
     "virtio_rng_test.cc",
+    "virtio_sound_test.cc",
     "virtio_wl_unittest.cc",
   ]
 
@@ -353,6 +355,7 @@ executable("device_tests") {
     "//src/graphics/lib/magma/include:magma",
     "//src/graphics/lib/magma/include/virtio:headers",
     "//src/lib/fsl",
+    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/mesa/include:drm-uapi",
     "//zircon/system/ulib/fzl",

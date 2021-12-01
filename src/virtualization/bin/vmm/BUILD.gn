@@ -40,6 +40,8 @@ source_set("lib") {
     "controller/virtio_net.h",
     "controller/virtio_rng.cc",
     "controller/virtio_rng.h",
+    "controller/virtio_sound.cc",
+    "controller/virtio_sound.h",
     "controller/virtio_wl.cc",
     "controller/virtio_wl.h",
     "dev_mem.h",
