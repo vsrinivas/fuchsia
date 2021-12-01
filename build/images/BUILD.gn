@@ -571,10 +571,31 @@ fastboot_credentials = []
 archive_fastboot_credentials = []
 
 foreach(cred_path, board_fastboot_unlock_credentials) {
-  basename = get_path_info(cred_path, "file")
-  fastboot_credentials +=
-      [ rebase_path("$root_out_dir/board_tools/$basename", root_build_dir) ]
-  archive_fastboot_credentials += [ "$basename.script" ]
+  name = get_path_info(cred_path, "name")
+  ext = get_path_info(cred_path, "extension")
+  target_name = "unlock_creds_${name}"
+  out_path = "unlock_creds/${name}.${ext}"
+
+  copy(target_name) {
+    sources = [ rebase_path(cred_path, root_build_dir) ]
+    outputs = [ "${root_out_dir}/${out_path}" ]
+
+    metadata = {
+      images = [
+        {
+          label = get_label_info(":${target_name}", "label_with_toolchain")
+          archive = true
+          name = name
+          path = out_path
+          type = ext
+        },
+      ]
+    }
+  }
+
+  default_image_deps += [ ":${target_name}" ]
+  fastboot_credentials += [ out_path ]
+  archive_fastboot_credentials += [ get_path_info(out_path, "file") ]
 }
 
 flash_manifest_products = [
