@@ -324,6 +324,9 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
   // evicting pages with always_need set if we encounter them in LRU order.
   const VmCowPages::EvictionHintAction hint_action = VmCowPages::EvictionHintAction::Follow;
 
+  // We stack-own loaned pages from RemovePageForEviction() to FreeList() below.
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
   DEBUG_ASSERT(page_queues_);
   while (count < target_pages) {
     // TODO(rashaeqbal): The sequence of actions in PeekPagerBacked() and RemovePageForEviction()

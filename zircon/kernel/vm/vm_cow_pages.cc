@@ -275,6 +275,10 @@ void VmCowPages::fbl_recycle() {
 
     RemoveFromDiscardableListLocked();
 
+    // We stack-own loaned pages between removing the page from PageQueues and freeing the page via
+    // call to FreePages().
+    __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
     // Cleanup page lists and page sources.
     list_node_t list;
     list_initialize(&list);
@@ -2152,6 +2156,9 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
     }
   });
 
+  // We stack-own loaned pages from SwapPageLocked() to pmm_free().
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
   // This is separate from pin_cleanup because we never cancel this one.
   list_node_t freed_list;
   list_initialize(&freed_list);
@@ -3207,6 +3214,9 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
   }
   uint64_t end = offset + len;
 
+  // We stack-own loaned pages below from allocation for page replacement to AddPageLocked().
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
   list_node freed_list;
   list_initialize(&freed_list);
 
@@ -3391,6 +3401,9 @@ fbl::RefPtr<PageSource> VmCowPages::GetRootPageSourceLocked() const {
 void VmCowPages::DetachSourceLocked() {
   DEBUG_ASSERT(page_source_);
   page_source_->Detach();
+
+  // We stack-own loaned pages from UnmapAndRemovePagesLocked() to FreePages().
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   list_node_t freed_list;
   list_initialize(&freed_list);
@@ -3601,6 +3614,11 @@ zx_status_t VmCowPages::ReplacePage(vm_page_t* page, uint64_t offset, bool with_
   } else {
     pmm_alloc_flags &= ~PMM_ALLOC_FLAG_CAN_BORROW;
   }
+
+  // We stack-own a loaned page from pmm_alloc_page() to SwapPageLocked() OR from SwapPageLocked()
+  // until pmm_free_page().
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
   vm_page_t* new_page;
   zx_status_t status = pmm_alloc_page(pmm_alloc_flags, &new_page);
   if (status != ZX_OK) {

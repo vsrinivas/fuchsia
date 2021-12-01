@@ -227,6 +227,10 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
           // have PANIC()ed in fact).
           DEBUG_ASSERT(cow_container.get() != cow_pages_->raw_container());
 
+          // We stack-own loaned pages from RemovePageForEviction() to pmm_free_page().  This
+          // interval is for the benefit of asserts in vm_page_t, not for any functional purpose.
+          __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
           // We specify EvictionHintAction::Follow, but a page will never be both borrowed and
           // ALWAYS_NEED, so Follow doesn't actually matter here.
           //
