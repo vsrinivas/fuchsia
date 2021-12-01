@@ -35,11 +35,11 @@ use std::sync::Arc;
 
 pub struct Cr50 {
     proxy: TpmDeviceProxy,
-    power_button: Arc<PowerButton>,
+    power_button: Option<Arc<PowerButton>>,
 }
 
 impl Cr50 {
-    pub fn new(proxy: TpmDeviceProxy, power_button: Arc<PowerButton>) -> Arc<Self> {
+    pub fn new(proxy: TpmDeviceProxy, power_button: Option<Arc<PowerButton>>) -> Arc<Self> {
         Arc::new(Cr50 { proxy, power_button })
     }
 
@@ -125,7 +125,7 @@ impl Cr50 {
         }
     }
 
-    /// Spawn a task that does polls for physical presence check updates.
+    /// Spawn a task that polls for physical presence check updates.
     /// Returns a client which will receive events when physical presence check state
     /// changes.
     async fn handle_physical_presence(
@@ -136,10 +136,20 @@ impl Cr50 {
             fidl::endpoints::create_request_stream::<PhysicalPresenceNotifierMarker>()
                 .context("Creating request stream")?;
         let proxy = self.proxy.clone();
-        let power_button = Arc::clone(&self.power_button);
-        // Inhibit the power button now so that if something goes wrong we can propagte the error
-        // back to the client.
-        let inhibitor = power_button.inhibit().await.context("Inhibiting power button")?;
+        let inhibitor =
+            if let Some(power_button) = self.power_button.as_ref().map(|v| Arc::clone(v)) {
+                // Inhibit the power button now so that if something goes wrong we can propagate the
+                // error back to the client.
+                Some(power_button.inhibit().await.context("Inhibiting power button")?)
+            } else {
+                // No power button inhibitor is available. Print out a warning but continue - the TPM
+                // will do the presence check even if the AP powers off.
+                fx_log_warn!(
+                    "Power button inhibitor is unavailable. Device may power off when physical \
+                    presence check starts, check TPM console for physical presence status"
+                );
+                None
+            };
 
         fasync::Task::spawn(async move {
             // Tie the lifetime of the inhibitor to this async task.

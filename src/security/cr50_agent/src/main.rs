@@ -88,11 +88,10 @@ async fn main() -> Result<(), anyhow::Error> {
         }
     };
     let power_button = match PowerButton::new_from_namespace() {
-        Ok(btn) => btn,
+        Ok(btn) => Some(btn),
         Err(e) => {
             fx_log_warn!("Could not connect to power button monitor: {:?}", e);
-            component::health().set_unhealthy("no power button monitor");
-            return Ok(());
+            None
         }
     };
     let cr50 = Cr50::new(proxy, power_button);
