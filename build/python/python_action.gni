@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Declares an action() that uses python for the script
+import("//build/compiled_action.gni")
+
+# Declares an action() that uses a python_binary for the script
 #
 # This sets up the python module search path using the GN paths specified, and
 # otherwise is the same as an action(), forwarding all invoker vars to the
@@ -10,54 +12,44 @@
 #
 # Parameters:
 #
-#   modules (optional)
-#     [list of GN paths] The GN paths to python module source files that the
-#       script needs to use.
+#   binary_label
+#    [label] Label (without host toolchain), to python binary that is to be
+#    executed by the action.
 #
 #   all others are passed to action() as expected,
 #
 template("python_action") {
-  if (defined(invoker.modules)) {
-    # Rebase the paths to get filesystem paths
-    module_path_list = rebase_path(invoker.modules, root_build_dir)
+  assert(
+      defined(invoker.binary_label),
+      "The label of the python_binary() to use to perform the action must be specified.")
 
-    # Strip the filenames
-    module_dir_list = get_path_info(module_path_list, "dir")
+  # force the binary_label into the host toolchain
+  binary_label_no_toolchain =
+      get_label_info(invoker.binary_label, "label_no_toolchain")
+  binary_label = "${binary_label_no_toolchain}(${host_toolchain})"
 
-    # Concatenate the directories into a search path
-    module_search_path = string_join(":", module_dir_list)
-
-    module_args = [
-      "--module_path",
-      module_search_path,
-    ]
-  }
+  binary_label_name = get_label_info(binary_label, "name")
+  binary_tool_output_dir = get_label_info(binary_label, "target_out_dir")
+  binary_tool_output_name = "${binary_tool_output_dir}/${binary_label_name}.pyz"
 
   action(target_name) {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "modules",
+                             "args",
+                             "deps",
+                             "binary_label",
                              "script",
                              "args",
-                             "inputs",
                            ])
 
-    script = "//build/python/python_action_runner.py"
-    args = module_args + [
-             "--script",
-             rebase_path(invoker.script, root_build_dir),
-             "--",
-           ] + invoker.args
-
-    # set all the modules as inputs so Ninja, and the action tracer, are
-    # aware of them.
-    inputs = [ invoker.script ]
-    if (defined(invoker.modules)) {
-      inputs += invoker.modules
-    }
-    if (defined(invoker.inputs)) {
-      inputs += invoker.inputs
+    script = binary_tool_output_name
+    deps = [
+      "//build/python:interpreter($host_toolchain)",
+      binary_label,
+    ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
     }
   }
 }

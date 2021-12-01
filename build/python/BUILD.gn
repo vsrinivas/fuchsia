@@ -24,7 +24,6 @@ if (is_host) {
 group("tests") {
   testonly = true
   deps = [
-    "tests/action:tests",
     "tests/bin",
     "tests/depfile:tests($host_toolchain)",
     "tests/host_test:py_host_test_with_lib($host_toolchain)",
