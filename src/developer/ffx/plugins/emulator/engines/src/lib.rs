@@ -196,3 +196,111 @@ pub async fn get_all_instances(ffx_config: &FfxConfigWrapper) -> Result<Vec<Path
     }
     return Ok(result);
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use tempfile::tempdir;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_instance_dir() -> Result<()> {
+        let mut config = FfxConfigWrapper::new();
+        let temp_dir = tempdir()
+            .expect("Couldn't get a temporary directory for testing.")
+            .path()
+            .to_str()
+            .expect("Couldn't convert Path to str")
+            .to_string();
+        config.overrides.insert(EMU_INSTANCE_ROOT_DIR, temp_dir.clone());
+
+        // Create a new directory.
+        let path1 = get_instance_dir(&config, "create_me", true).await?;
+        assert_eq!(path1, PathBuf::from(&temp_dir).join("create_me"));
+        assert!(path1.exists());
+
+        // Look for a dir that doesn't exist, but don't create it.
+        let path2 = get_instance_dir(&config, "dont_create", false).await?;
+        assert!(!path2.exists());
+
+        // Look for a dir that already exists, but don't allow creation.
+        let mut path3 = get_instance_dir(&config, "create_me", false).await?;
+        assert_eq!(path3, PathBuf::from(&temp_dir).join("create_me"));
+        assert!(path3.exists());
+
+        // Get an existing directory, but set the create flag too. Make sure it didn't get replaced.
+        path3 = path3.join("foo.txt");
+        let _ = File::create(&path3)?;
+        let path4 = get_instance_dir(&config, "create_me", true).await?;
+        assert!(path4.exists());
+        assert!(path3.exists());
+        assert_eq!(path4, PathBuf::from(&temp_dir).join("create_me"));
+        for entry in path4.as_path().read_dir()? {
+            assert_eq!(entry?.path(), path3);
+        }
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_all_instances() -> Result<()> {
+        let mut config = FfxConfigWrapper::new();
+        let temp_dir = tempdir()
+            .expect("Couldn't get a temporary directory for testing.")
+            .path()
+            .to_str()
+            .expect("Couldn't convert Path to str")
+            .to_string();
+        config.overrides.insert(EMU_INSTANCE_ROOT_DIR, temp_dir.clone());
+        let path1 = PathBuf::from(&temp_dir).join("path1");
+        create_dir_all(path1.as_path())?;
+        let path2 = PathBuf::from(&temp_dir).join("path2");
+        create_dir_all(path2.as_path())?;
+        let path3 = PathBuf::from(&temp_dir).join("path3");
+        create_dir_all(path3.as_path())?;
+
+        let instances = get_all_instances(&config).await?;
+        assert!(instances.contains(&path1));
+        assert!(instances.contains(&path2));
+        assert!(instances.contains(&path3));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_clean_up_instance_dir() -> Result<()> {
+        let mut config = FfxConfigWrapper::new();
+        let temp_dir = tempdir()
+            .expect("Couldn't get a temporary directory for testing.")
+            .path()
+            .to_str()
+            .expect("Couldn't convert Path to str")
+            .to_string();
+        config.overrides.insert(EMU_INSTANCE_ROOT_DIR, temp_dir.clone());
+
+        let path1 = PathBuf::from(&temp_dir).join("path1");
+        create_dir_all(path1.as_path())?;
+        assert!(path1.exists());
+
+        let path2 = PathBuf::from(&temp_dir).join("path2");
+        create_dir_all(path2.as_path())?;
+        assert!(path2.exists());
+
+        let file_path = path2.join("foo.txt");
+        let _ = File::create(&file_path)?;
+        assert!(file_path.exists());
+
+        // Clean up an existing, empty directory
+        assert!(clean_up_instance_dir(&path1).await.is_ok());
+        assert!(!path1.exists());
+
+        // Clean up an existing, populated directory
+        assert!(clean_up_instance_dir(&path2).await.is_ok());
+        assert!(!path2.exists());
+        assert!(!file_path.exists());
+
+        // Clean up an non-existing directory
+        assert!(clean_up_instance_dir(&path1).await.is_ok());
+        assert!(!path1.exists());
+        Ok(())
+    }
+}
