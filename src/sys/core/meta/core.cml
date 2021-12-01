@@ -43,7 +43,7 @@
             on_terminate: "reboot",
         },
         {
-            name: "bt-init",
+            name: "bluetooth-core",
             url: "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cm",
         },
 
@@ -271,7 +271,7 @@
             protocol: [ "fuchsia.device.NameProvider" ],
             from: "parent",
             to: [
-                "#bt-init",
+                "#bluetooth-core",
                 "#network",
             ],
         },
@@ -314,7 +314,7 @@
             protocol: "fuchsia.stash.SecureStore",
             from: "#stash_secure",
             to: [
-                "#bt-init",
+                "#bluetooth-core",
                 "#network",
             ],
         },
@@ -449,9 +449,9 @@
             from: "parent",
             to: [
                 "#activity",
+                "#bluetooth-core",
                 "#brightness_manager",
                 "#bt-avrcp",
-                "#bt-init",
                 "#cobalt",
                 "#debug_serial",
                 "#detect",
@@ -872,18 +872,18 @@
         },
         {
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
-            from: "#bt-init",
+            from: "#bluetooth-core",
             to: "#bt-avrcp",
         },
         {
             directory: "dev",
             from: "parent",
-            to: "#bt-init",
+            to: "#bluetooth-core",
         },
         {
             protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
             from: "self",
-            to: "#bt-init",
+            to: "#bluetooth-core",
             dependency: "weak_for_migration",
         },
         {

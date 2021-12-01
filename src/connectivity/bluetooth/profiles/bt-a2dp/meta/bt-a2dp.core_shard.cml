@@ -43,7 +43,7 @@
         },
         {
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
-            from: "#bt-init",
+            from: "#bluetooth-core",
             to: [ "#bt-a2dp" ],
         },
         {

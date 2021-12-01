@@ -280,7 +280,7 @@
                 "fuchsia.bluetooth.sys.Configuration",
                 "fuchsia.bluetooth.sys.HostWatcher",
             ],
-            from: "#bt-init",
+            from: "#bluetooth-core",
         },
         {
             protocol: [

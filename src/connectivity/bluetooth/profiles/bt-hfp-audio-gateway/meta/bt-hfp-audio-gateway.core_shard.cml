@@ -42,7 +42,7 @@
         },
         {
             protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
-            from: "#bt-init",
+            from: "#bluetooth-core",
             to: [ "#bt-hfp-audio-gateway" ],
         },
     ],
