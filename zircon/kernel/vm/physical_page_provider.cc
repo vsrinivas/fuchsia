@@ -245,6 +245,8 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
             // The page is at least on the way toward FREE, but we need to know it has reached FREE
             // before calling pmm_end_loan.
             StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(page);
+          } else {
+            pmm_free_page(page);
           }
           // Either this thread made it FREE, or this thread waited for it to be FREE.
           DEBUG_ASSERT(page->is_free());
