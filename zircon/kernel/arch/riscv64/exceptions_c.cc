@@ -152,16 +152,51 @@ static void riscv64_page_fault_handler(long cause, struct iframe_t *frame) {
 }
 
 static bool riscv64_is_floating_point_instruction(long instruction) {
-  // All floating point instructions have the following bit patterns in the
-  // 7 lsb "opcode" portion of the instruction:
+  // Instructions are divided into 4 quadrants based on the two LSBs of the
+  // instruction's bits.  The first three quadrants (00, 01, 10) are used
+  // by 16-bit instructions.  The last quadrant (11) holds all 32-bit or larger
+  // instructions.
   //
-  //    0000111 LOAD-FP (width determined by bits 12-14)
-  //    0100111 STORE-FP (width determined by bits 12-14)
-  //    1010011 OP-FP (specific FP instruction determined by other bits)
-  //    1000011 FMADD
-  //    1000111 FMSUB
-  //    1001011 FNMSUB
-  //    1001111 FNMADD
+  // The 16-bit floating point instructions are:
+  //
+  //           | Quadrant         | Opcode
+  //  Name     | instruction[1:0] | instruction[15:13]
+  //  ---------+------------------+--------------------
+  //  c.fld    | 00               | 001
+  //  c.flw    | 00               | 011     (RV32 only)
+  //  c.fsd    | 00               | 101
+  //  c.fsw    | 00               | 111     (RV32 only)
+  //  c.fldsp  | 10               | 001
+  //  c.flwsp  | 10               | 011     (RV32 only)
+  //  c.fsdsp  | 10               | 101
+  //  c.fswsp  | 10               | 111     (RV32 only)
+  //
+  // The 32-bit floating point instructions use seven major opcodes stored
+  // in bits instruction[6:2]:
+  //
+  //    Opcode
+  //    instruction[6:2] | Name
+  //    -----------------+-------------
+  //    00001            | LOAD-FP (width determined by instruction[26:25])
+  //    01001            | STORE-FP (width determined by instruction[26:25])
+  //    10100            | OP-FP
+  //    10000            | MADD
+  //    10001            | MSUB
+  //    10010            | NMSUB
+  //    10011            | NMADD
+  //
+  // Note that fuchsia supports only RV64 so RV32 instructions can be ignored.
+  // See section 16.8 "RVC Instruction Set Listings" in the "The RISC-V
+  // Instruction Set Manual Volume I: Unprivileged ISA" V20191213 spec for
+  // complete details.
+
+  long quad = instruction & 0b11;
+  if (quad == 0b01) {
+    return false;
+  } else if (quad == 0b00 || quad == 0b10) {
+    long opcode = (instruction >> 13) & 0b111;
+    return opcode == 0b001 || opcode == 0b101;
+  }
 
   instruction &= 0b1111111;
   return (instruction == 0b0000111) ||  // LOAD-FP
