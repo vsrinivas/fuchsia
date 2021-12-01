@@ -223,20 +223,25 @@ async fn register_target(
         .get(&target_info.repo_name)
         .ok_or_else(|| bridge::RepositoryError::NoMatchingRepository)?;
 
-    let (target, proxy) = cx
-        .open_target_proxy_with_info::<RepositoryManagerMarker>(
+    let (target, proxy) = futures::select! {
+        res = cx.open_target_proxy_with_info::<RepositoryManagerMarker>(
             target_info.target_identifier.clone(),
             REPOSITORY_MANAGER_SELECTOR,
-        )
-        .await
-        .map_err(|err| {
-            log::error!(
-                "failed to open target proxy with target name {:?}: {:#?}",
-                target_info.target_identifier,
-                err
-            );
-            bridge::RepositoryError::TargetCommunicationFailure
-        })?;
+        ).fuse() => {
+            res.map_err(|err| {
+                log::error!(
+                    "failed to open target proxy with target name {:?}: {:#?}",
+                    target_info.target_identifier,
+                    err
+                );
+                bridge::RepositoryError::TargetCommunicationFailure
+            })?
+        }
+        _ = fasync::Timer::new(TARGET_CONNECT_TIMEOUT).fuse() => {
+            log::error!("Timed out connecting to target name {:?}", target_info.target_identifier);
+            return Err(bridge::RepositoryError::TargetCommunicationFailure);
+        }
+    };
 
     let target_nodename = target.nodename.ok_or_else(|| {
         log::error!("target {:?} does not have a nodename", target_info.target_identifier);
@@ -247,7 +252,7 @@ async fn register_target(
         Some(listen_addr) => listen_addr,
         None => {
             log::error!("repository server is not running");
-            return Err(bridge::RepositoryError::InternalError);
+            return Err(bridge::RepositoryError::ServerNotRunning);
         }
     };
 

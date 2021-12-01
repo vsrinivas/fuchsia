@@ -196,4 +196,6 @@ type RepositoryError = strict enum : uint32 {
     EXPIRED_REPOSITORY_METADATA = 10;
     /// No repository registration matches the provided repository and target.
     NO_MATCHING_REGISTRATION = 11;
+    /// The server is not running.
+    SERVER_NOT_RUNNING = 12;
 };

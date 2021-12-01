@@ -175,6 +175,9 @@ pub enum RepositoryError {
 
     #[error("repository registration does not exist")]
     NoMatchingRegistration,
+
+    #[error("repository server is not running")]
+    ServerNotRunning,
 }
 
 impl From<fidl::RepositoryError> for RepositoryError {
@@ -201,6 +204,7 @@ impl From<fidl::RepositoryError> for RepositoryError {
             fidl::RepositoryError::NoMatchingRegistration => {
                 RepositoryError::NoMatchingRegistration
             }
+            fidl::RepositoryError::ServerNotRunning => RepositoryError::ServerNotRunning,
         }
     }
 }
@@ -229,6 +233,7 @@ impl From<RepositoryError> for fidl::RepositoryError {
             RepositoryError::NoMatchingRegistration => {
                 fidl::RepositoryError::NoMatchingRegistration
             }
+            RepositoryError::ServerNotRunning => fidl::RepositoryError::ServerNotRunning,
         }
     }
 }

@@ -49,11 +49,15 @@ async fn register(
         .await
         .context("communicating with daemon")?
         .map_err(|e| match e {
-            RepositoryError::TargetCommunicationFailure=>
-                anyhow!(ffx_error!("Failed to communicate with the target. Ensure that a target is running and connected with `ffx target list`")),
-            _ =>
-                anyhow!("failed to register repository: {:?}", e),
-
+            RepositoryError::TargetCommunicationFailure => {
+                anyhow!(ffx_error!("Failed to communicate with the target. Ensure that a target is running and connected with `ffx target list`"))
+            }
+            RepositoryError::ServerNotRunning => {
+                anyhow!(ffx_error!("Failed to register repository because the repository server is not running"))
+            }
+            _ => {
+                anyhow!("failed to register repository: {:?}", e)
+            }
         })
 }
 
