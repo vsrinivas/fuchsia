@@ -11,7 +11,6 @@
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
 #include <netdb.h>
-#include <netinet/if_ether.h>
 #include <poll.h>
 #include <sys/socket.h>
 #include <zircon/device/vfs.h>
@@ -19,7 +18,6 @@
 
 #include <cerrno>
 #include <cstdarg>
-#include <cstring>
 #include <mutex>
 
 #include <fbl/auto_lock.h>
@@ -457,33 +455,34 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   const fnet_name::wire::LookupLookupIpResult& wire_result = fidl_result.value().result;
   switch (wire_result.which()) {
     case fnet_name::wire::LookupLookupIpResult::Tag::kResponse: {
-      int count = 0;
       const fnet_name::wire::LookupResult& result = wire_result.response().result;
-      if (result.has_addresses()) {
-        for (const fnet::wire::IpAddress& addr : result.addresses()) {
-          switch (addr.which()) {
-            case fnet::wire::IpAddress::Tag::kIpv4: {
-              buf[count].family = AF_INET;
-              buf[count].scopeid = 0;
-              const auto& octets = addr.ipv4().addr;
-              std::copy(octets.begin(), octets.end(), buf[count].addr);
-              buf[count].sortkey = 0;
-              count++;
-            } break;
-            case fnet::wire::IpAddress::Tag::kIpv6: {
-              buf[count].family = AF_INET6;
-              // TODO(https://fxbug.dev/21415): Figure out a way to expose scope ID for IPv6
-              // addresses.
-              buf[count].scopeid = 0;
-              const auto& octets = addr.ipv6().addr;
-              std::copy(octets.begin(), octets.end(), buf[count].addr);
-              buf[count].sortkey = 0;
-              count++;
-            } break;
-          }
+      if (!result.has_addresses()) {
+        return 0;
+      }
+      int count = 0;
+      for (const fnet::wire::IpAddress& addr : result.addresses()) {
+        address& address = buf[count++];
+        switch (addr.which()) {
+          case fnet::wire::IpAddress::Tag::kIpv4: {
+            address = {
+                .family = AF_INET,
+            };
+            const auto& octets = addr.ipv4().addr;
+            static_assert(sizeof(address.addr) >= sizeof(octets));
+            std::copy(octets.begin(), octets.end(), address.addr);
+          } break;
+          case fnet::wire::IpAddress::Tag::kIpv6: {
+            // TODO(https://fxbug.dev/21415): Figure out a way to expose scope ID for IPv6
+            // addresses.
+            address = {
+                .family = AF_INET6,
+            };
+            const auto& octets = addr.ipv6().addr;
+            static_assert(sizeof(address.addr) >= sizeof(octets));
+            std::copy(octets.begin(), octets.end(), address.addr);
+          } break;
         }
       }
-
       return count;
     }
     case fnet_name::wire::LookupLookupIpResult::Tag::kErr:
@@ -717,9 +716,8 @@ int getifaddrs(struct ifaddrs** ifap) {
 
 __EXPORT
 void freeifaddrs(struct ifaddrs* ifp) {
-  struct ifaddrs* n;
   while (ifp) {
-    n = ifp->ifa_next;
+    ifaddrs* n = ifp->ifa_next;
     free(ifp);
     ifp = n;
   }
