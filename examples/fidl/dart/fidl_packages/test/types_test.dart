@@ -23,7 +23,7 @@ void main() {
 
   // [START enums]
   test('enums', () {
-    final museum = fidl_examples.LocationType.museum;
+    const museum = fidl_examples.LocationType.museum;
     expect(fidl_examples.LocationType(1), equals(museum));
     expect(fidl_examples.LocationType.$valueOf('museum'), equals(museum));
     expect(museum.toString(), 'LocationType.museum');
