@@ -15,19 +15,19 @@
 
 inline bool virtmagma_handshake(int32_t file_descriptor) {
   if (fcntl(file_descriptor, F_GETFD) == -1) {
-    DMESSAGE("Invalid file descriptor: %d\n", errno);
+    DMESSAGE("Invalid file descriptor: %d", errno);
     return false;
   }
 
   virtmagma_ioctl_args_handshake handshake{};
   handshake.handshake_inout = VIRTMAGMA_HANDSHAKE_SEND;
   if (ioctl(file_descriptor, VIRTMAGMA_IOCTL_HANDSHAKE, &handshake)) {
-    DMESSAGE("ioctl(HANDSHAKE) failed: %d\n", errno);
+    DMESSAGE("ioctl(HANDSHAKE) failed: %d", errno);
     return false;
   }
 
   if (handshake.handshake_inout != VIRTMAGMA_HANDSHAKE_RECV) {
-    DMESSAGE("Handshake failed: 0x%08X\n", handshake.handshake_inout);
+    DMESSAGE("Handshake failed: 0x%08X", handshake.handshake_inout);
     return false;
   }
 
@@ -35,7 +35,7 @@ inline bool virtmagma_handshake(int32_t file_descriptor) {
   uint32_t version_minor = 0;
   uint32_t version_patch = 0;
   VIRTMAGMA_GET_VERSION(handshake.version_out, version_major, version_minor, version_patch);
-  DMESSAGE("Successfully connected to virtio-magma driver (version %d.%d.%d)\n", version_major,
+  DMESSAGE("Successfully connected to virtio-magma driver (version %d.%d.%d)", version_major,
            version_minor, version_patch);
 
   return true;
@@ -49,7 +49,7 @@ inline bool virtmagma_send_command(int32_t file_descriptor, void* request, size_
   command.response_address = (uint64_t)response;
   command.response_size = response_size;
   if (ioctl(file_descriptor, VIRTMAGMA_IOCTL_MAGMA_COMMAND, &command)) {
-    DMESSAGE("ioctl(MAGMA_COMMAND) failed: %d\n", errno);
+    DMESSAGE("virtmagma ioctl fd %d failed: %d", file_descriptor, errno);
     return false;
   }
   return true;
