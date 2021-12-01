@@ -556,25 +556,27 @@ void HermeticFidelityTest::Run(
 
   // Process each frequency completely, one at a time
   for (Frequency freq : frequencies_to_test) {
-    if (freq.display_val * 2 > tc.input_format.frames_per_second()) {
+    auto adjusted_periods = source_rate_adjustment_factor * static_cast<double>(freq.periods);
+
+    if (freq.display_val * 2 > tc.input_format.frames_per_second() ||
+        adjusted_periods * 2.0 > static_cast<double>(input_signal_len)) {
       continue;
     }
 
-    // Write input signal to input buffer. This starts with silence for pre-ramp-in (which aligns
-    // the input and output WAV files, if enabled); we also prepend / append signal to account for
-    // stabilization periods corresponding to input signal start and end.
-    auto adjusted_periods = source_rate_adjustment_factor * static_cast<double>(freq.periods);
-    auto amplitude = SampleFormatTraits<InputFormat>::kUnityValue -
-                     SampleFormatTraits<InputFormat>::kSilentValue;
     // To make it easier to debug the generation of the input signal, include a phase offset so that
     // the beginning of the signal section is aligned with the exact beginning of the cosine signal.
     // But don't apply any phase offset if the frequency is zero.
     auto phase = freq.periods ? (-2.0 * M_PI * static_cast<double>(init_stabilization_len) *
                                  adjusted_periods / static_cast<double>(input_signal_len))
                               : 0.0;
+    auto amplitude = SampleFormatTraits<InputFormat>::kUnityValue -
+                     SampleFormatTraits<InputFormat>::kSilentValue;
     auto signal_section =
         GenerateCosineAudio(input_type_mono, input_signal_len, adjusted_periods, amplitude, phase);
 
+    // Write input signal to input buffer. This starts with silence for pre-ramp-in (which aligns
+    // input and output WAV files, if enabled). Before/after signal_section, we include additional
+    // signal to account for the stabilization periods corresponding to input signal start and end.
     auto input_mono = init_silence;
     input_mono.Append(AudioBufferSlice(&signal_section));
     input_mono.Append(AudioBufferSlice(&final_silence));
