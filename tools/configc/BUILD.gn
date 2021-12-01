@@ -1,0 +1,29 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("configc") {
+  name = "configc"
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/sys/lib/cm_rust",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:serde_json5",
+    "//tools/lib/config_value_file",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+install_host_tools("install") {
+  deps = [ ":configc" ]
+
+  outputs = [ "configc" ]
+}

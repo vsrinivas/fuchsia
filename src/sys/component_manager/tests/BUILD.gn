@@ -30,6 +30,7 @@ group("tests") {
     "services:tests",
     "shutdown:shutdown_integration_test",
     "storage:storage_integration_test",
+    "structured_config:tests",
     "utc-time:tests",
   ]
 }

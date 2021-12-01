@@ -1,0 +1,123 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_component.gni")
+import("//tools/configc/build/cvf.gni")
+
+# Defines a configuration value file for a Fuchsia component.
+#
+# A config value file is produced from a component manifest that contains a schema
+# and a JSON5 file with concrete configuration values.
+#
+# For example, if a component manifest defines the `enable_foo` flag:
+#
+# ```
+# // ./meta/my_component.cml
+# {
+#   // ...
+#   config: {
+#     enable_foo: { type: "bool" }
+#   }
+# }
+# ```
+#
+# The definition file will need to contain an entry for it and any other fields
+# in its manifest:
+#
+# ```
+# // ./config/my_component.json5
+# {
+#   enable_foo: true
+# }
+# ```
+#
+# Building the config value file requires the compiled manifest:
+#
+# ```
+# # ./BUILD.gn
+# fuchsia_component("my_component") {
+#   manifest = "meta/my_component.cml"
+# }
+#
+# fuchsia_structured_config_values("my_component_config") {
+#   component = ":my_component"
+#   values = "config/my_component.json5"
+# }
+# ```
+#
+# Finally, the package must include the value file alongside the manifest:
+#
+# ```
+# # ./BUILD.gn
+# fuchsia_package("my_package") {
+#   deps = [
+#     ":my_component",
+#     ":my_component_config",
+#   ]
+# }
+# ```
+#
+# Parameters
+#
+#   component (required)
+#     The component target for which the definition file will be generated.
+#     Type: GN target
+#
+#   values (required)
+#     The JSON5 file containing the concrete values for the generated file.
+#     TODO(https://fxbug.dev/87988) document this format properly.
+#     Type: path
+#
+#   component_name (optional)
+#     The basename of the component manifest within the package. If not provided, derived
+#     from the `component` parameter's target info.
+#
+#   testonly (optional)
+#     Standard GN meaning.
+template("fuchsia_structured_config_values") {
+  if (current_toolchain == default_toolchain) {
+    assert(defined(invoker.component),
+           "must provide a component with a configuration declaration")
+    assert(defined(invoker.values),
+           "must provide a JSON5 file with config values defined")
+
+    # TODO(https://fxbug.dev/86798) allow defining manifest in separate gn mod from config
+    component_outputs = get_target_outputs(invoker.component)
+    compiled_manifest = component_outputs[0]
+
+    if (defined(invoker.component_name)) {
+      component_name = invoker.component_name
+    } else {
+      component_name = get_path_info(compiled_manifest, "name")
+    }
+
+    manifest_resource_target = "${target_name}_manifest_resource"
+
+    # compile the value file
+    cvf(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      cm = compiled_manifest
+      value_file = invoker.values
+      deps = [
+        ":$manifest_resource_target",
+        "${invoker.component}",
+      ]
+    }
+
+    # package the value file
+    resource(manifest_resource_target) {
+      forward_variables_from(invoker, [ "testonly" ])
+      sources = get_target_outputs(":${invoker.target_name}")
+      outputs = [ "meta/$component_name.cvf" ]
+      visibility = [ ":*" ]
+    }
+  } else {
+    # need to have a nop target that can be depended upon by host toolchain targets
+    group(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker, "*")
+  }
+}

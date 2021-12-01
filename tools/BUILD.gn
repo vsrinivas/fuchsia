@@ -18,6 +18,7 @@ group("tools") {
     "//tools/cmc:install($host_toolchain)",
     "//tools/component_id_index($host_toolchain)",
     "//tools/component_manager_config($host_toolchain)",
+    "//tools/configc:install($host_toolchain)",
     "//tools/create:install($host_toolchain)",
     "//tools/dart-strict-deps:strict_deps($host_toolchain)",
     "//tools/debroot($host_toolchain)",

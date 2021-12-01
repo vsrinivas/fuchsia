@@ -1,0 +1,68 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Compile a configuration value file.
+#
+# Parameters
+#
+#   cm (required)
+#     Compiled manifest for which the value file should be compiled.
+#     Type: path
+#
+#   value_file (required)
+#     A JSON5 file containing the configuration values to be compiled.
+#     Type: path
+#
+#   deps (optional)
+#   metadata (optional)
+#   output_name (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+template("cvf") {
+  input_manifest = invoker.cm
+  value_file = invoker.value_file
+
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "metadata",
+                             "output_name",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+
+    tool = "//tools/configc"
+    tool_output_name = "configc"
+
+    compiled_output = "${target_out_dir}/${output_name}.cvf"
+    inputs = [
+      input_manifest,
+      value_file,
+    ]
+    outputs = [ compiled_output ]
+
+    args = [
+      "--cm",
+      rebase_path(input_manifest, root_build_dir),
+      "--values",
+      rebase_path(value_file, root_build_dir),
+      "--output",
+      rebase_path(compiled_output, root_build_dir),
+    ]
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    deps += [ "//tools/cmc/build/restricted_features:structured_config" ]
+  }
+}

@@ -26,6 +26,7 @@ group("dynamic_offers") {
 group("structured_config") {
   visibility = [
     "//src/sys/component_manager/tests/hub:*",
+    "//src/sys/component_manager/tests/structured_config/basic_integration:*",
     "//tools/cmc:*",
   ]
 }
