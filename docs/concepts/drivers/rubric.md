@@ -23,3 +23,39 @@ named appropriately and include a drivers folder under it.
 As with any other code in Fuchsia an OWNER must approve the addition
 of a new driver. The OWNERS file to check for approval depends on the
 location where the driver is added.
+
+## Driver Info
+
+When adding a driver to the Fuchsia tree, a driver info file must be created, and the
+`fuchsia_driver_component` target must include an `info = <some-driver-info.json>` entry. The JSON
+file listed in `info` must include at least a `short_description` text and an `areas` list with
+entries from [areas](/build/drivers/areas.txt). For example,
+[aml-g12-tdm-dai-info.json](/src/media/audio/drivers/aml-g12-tdm/aml-g12-tdm-dai-info.json)
+includes:
+
+```json
+{
+    "short_description": "AMLogic g12 audio subsystem DAI TDM driver",
+    "manufacturer": "AMLogic",
+    "families": [
+        "g12"
+    ],
+    "models": [
+        "S905D2",
+        "T931",
+        "S905D3"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}
+```
+
+Note that this file automatically created by `fx create driver`, see [Creating a new
+driver][creating-a-new-drider].
+
+
+<!-- xrefs -->
+
+[creating-a-new-drider]: /docs/development/drivers/developer_guide/driver-development.md#creating_a_new_driver
