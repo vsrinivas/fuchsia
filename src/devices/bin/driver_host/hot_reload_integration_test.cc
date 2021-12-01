@@ -9,7 +9,6 @@
 #include <fuchsia/driver/development/cpp/fidl.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -42,22 +41,11 @@ void SetupEnvironment(board_test::DeviceEntry dev, driver_integration_test::Isol
   args.device_list.push_back(dev);
 
   ASSERT_OK(IsolatedDevmgr::Create(&args, devmgr));
-  ASSERT_NE(devmgr->svc_root_dir().channel(), ZX_HANDLE_INVALID);
 
-  zx::channel device_channel, remote;
-  ASSERT_EQ(zx::channel::create(0, &device_channel, &remote), ZX_OK);
-
-  // Connect to the DriverDevelopment service.
-  zx::channel local;
+  zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
-
-  std::string svc_name =
-      fxl::StringPrintf("svc/%s", fuchsia::driver::development::DriverDevelopment::Name_);
-  zx::status svc = service::Clone(devmgr->svc_root_dir());
-  ASSERT_EQ(svc.status_value(), ZX_OK);
-  sys::ServiceDirectory svc_dir(svc->TakeChannel());
-  zx_status_t status = svc_dir.Connect(svc_name, std::move(remote));
-  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(ZX_OK, devmgr->Connect(fuchsia::driver::development::DriverDevelopment::Name_,
+                                   std::move(remote)));
 
   development_->Bind(std::move(local));
 }

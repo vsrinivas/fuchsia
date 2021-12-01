@@ -287,7 +287,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBind) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-  args.boot_args.emplace("driver.tests.enable", "true");
+  args.driver_tests_enable_all = true;
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -314,7 +314,7 @@ TEST(DeviceControllerIntegrationTest, AllTestsEnabledBindFail) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-  args.boot_args.emplace("driver.tests.enable", "true");
+  args.driver_tests_enable_all = true;
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -342,7 +342,7 @@ TEST(DeviceControllerIntegrationTest, SpecificTestEnabledBindFail) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-  args.boot_args.emplace("driver.unit_test_fail.tests.enable", "true");
+  args.driver_tests_enable.push_back("unit_test_fail");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);
@@ -395,8 +395,8 @@ TEST(DeviceControllerIntegrationTest, SpecificTestDisabledBind) {
   auto args = IsolatedDevmgr::DefaultArgs();
 
   args.sys_device_driver = "/boot/driver/test-parent-sys.so";
-  args.boot_args.emplace("driver.tests.enable", "true");
-  args.boot_args.emplace("driver.unit_test_fail.tests.enable", "false");
+  args.driver_tests_enable_all = true;
+  args.driver_tests_disable.push_back("unit_test_fail");
 
   zx_status_t status = IsolatedDevmgr::Create(std::move(args), &devmgr);
   ASSERT_OK(status);

@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_TESTING_DEVMGR_INTEGRATION_TEST_SHIM_INCLUDE_LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 #define SRC_DEVICES_TESTING_DEVMGR_INTEGRATION_TEST_SHIM_INCLUDE_LIB_DEVMGR_INTEGRATION_TEST_FIXTURE_H_
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
+#include <fuchsia/driver/test/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -18,6 +20,9 @@ namespace devmgr_launcher {
 
 struct Args {
   const char* sys_device_driver = nullptr;
+  bool driver_tests_enable_all = false;
+  std::vector<std::string> driver_tests_enable;
+  std::vector<std::string> driver_tests_disable;
 };
 }  // namespace devmgr_launcher
 

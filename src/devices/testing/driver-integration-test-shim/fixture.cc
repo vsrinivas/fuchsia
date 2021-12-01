@@ -81,6 +81,8 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
     entry.vid = device.vid;
     entry.pid = device.pid;
     entry.did = device.did;
+    std::vector<uint8_t> metadata(device.metadata, device.metadata + device.metadata_size);
+    entry.metadata = fidl::VectorView<uint8_t>::FromExternal(metadata);
     auto status = client->CreateDevice(entry);
     if (status.status() != ZX_OK) {
       return status.status();

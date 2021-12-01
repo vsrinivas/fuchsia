@@ -6,6 +6,7 @@ library fuchsia.board.test;
 
 type Entry = struct {
     name string:MAX;
+    metadata vector<uint8>:MAX;
     vid uint32;
     pid uint32;
     did uint32;

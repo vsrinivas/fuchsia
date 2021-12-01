@@ -8,6 +8,7 @@ library_headers("devmgr-integration-test-shim-headers") {
   testonly = true
   headers = [ "lib/devmgr-integration-test/fixture.h" ]
   public_deps = [
+    "//sdk/fidl/fuchsia.driver.test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/device-watcher/cpp",

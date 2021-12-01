@@ -30,7 +30,6 @@ zx_library("driver-integration-test") {
 
   # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
   visibility = [
-    "//src/devices/bin/driver_host/*",
     "//src/devices/block/drivers/zxcrypt/*",
     "//src/devices/tests/ddk-fallback-test/*",
     "//src/devices/tests/ddk-power/*",

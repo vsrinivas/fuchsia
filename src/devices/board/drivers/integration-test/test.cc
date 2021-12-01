@@ -48,6 +48,14 @@ class TestBoard : public TestBoardType {
     device.pid = request->entry.pid;
     device.did = request->entry.did;
 
+    pbus_metadata_t metadata{
+        .type = DEVICE_METADATA_TEST,
+        .data_buffer = request->entry.metadata.data(),
+        .data_size = request->entry.metadata.count(),
+    };
+    device.metadata_list = &metadata;
+    device.metadata_count = 1;
+
     zx_status_t status = pbus_.DeviceAdd(&device);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to add device: %s: %d", device.name, status);

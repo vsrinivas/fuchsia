@@ -93,6 +93,9 @@ zx_status_t IsolatedDevmgr::Create(devmgr_launcher::Args args, async_dispatcher_
   fuchsia::driver::test::Realm_Start_Result realm_result;
   auto realm_args = fuchsia::driver::test::RealmArgs();
   realm_args.set_root_driver(PathToUrl(args.sys_device_driver));
+  realm_args.set_driver_tests_enable_all(args.driver_tests_enable_all);
+  realm_args.set_driver_tests_enable(args.driver_tests_enable);
+  realm_args.set_driver_tests_disable(args.driver_tests_disable);
   status = driver_test_realm->Start(std::move(realm_args), &realm_result);
   if (status != ZX_OK) {
     return status;

@@ -23,8 +23,9 @@
 #include "sdk/lib/driver_test_realm/realm_builder/cpp/lib.h"
 
 namespace devmgr_integration_test {
+using device_watcher::DirWatcher;
 using device_watcher::RecursiveWaitForFile;
-}
+}  // namespace devmgr_integration_test
 
 namespace driver_integration_test {
 
@@ -36,6 +37,8 @@ class IsolatedDevmgr {
     std::vector<fuchsia::driver::test::DriverLog> log_level;
   };
 
+  static Args DefaultArgs() { return Args{}; }
+
   // Launch a new isolated devmgr.  The instance will be destroyed when
   // |*out|'s dtor runs.
   static zx_status_t Create(Args* args, IsolatedDevmgr* out);
@@ -43,6 +46,10 @@ class IsolatedDevmgr {
   // Get a fd to the root of the isolate devmgr's devfs.  This fd
   // may be used with openat() and fdio_watch_directory().
   const fbl::unique_fd& devfs_root() const { return devfs_root_; }
+
+  zx_status_t Connect(const std::string& interface_name, zx::channel channel) {
+    return realm_->Connect(interface_name, std::move(channel));
+  }
 
  private:
   std::unique_ptr<async::Loop> loop_;
