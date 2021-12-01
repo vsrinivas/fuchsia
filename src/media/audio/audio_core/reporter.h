@@ -101,6 +101,7 @@ class Reporter {
     virtual void SetMute(bool muted) = 0;
     virtual void SetMinLeadTime(zx::duration min_lead_time) = 0;
     virtual void SetPtsContinuityThreshold(float threshold_seconds) = 0;
+    virtual void SetPtsUnits(uint32_t numerator, uint32_t denominator) = 0;
 
     virtual void AddPayloadBuffer(uint32_t buffer_id, uint64_t size) = 0;
     virtual void RemovePayloadBuffer(uint32_t buffer_id) = 0;

@@ -116,6 +116,9 @@ class BaseRenderer : public AudioObject,
   int64_t frames_received() const { return frames_received_; }
 
  private:
+  static constexpr uint32_t kDefaultPtsTicksPerSecondNumerator = 1'000'000'000;
+  static constexpr uint32_t kDefaultPtsTicksPerSecondDenominator = 1;
+
   // Recompute the minimum clock lead time based on the current set of outputs
   // we are linked to.  If this requirement is different from the previous
   // requirement, report it to our users (if they care).

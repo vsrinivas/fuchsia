@@ -31,12 +31,16 @@ BaseRenderer::BaseRenderer(
     : AudioObject(Type::AudioRenderer),
       context_(*context),
       audio_renderer_binding_(this, std::move(audio_renderer_request)),
-      pts_ticks_per_second_(1'000'000'000, 1),
+      pts_ticks_per_second_(kDefaultPtsTicksPerSecondNumerator,
+                            kDefaultPtsTicksPerSecondDenominator),
       reference_clock_to_fractional_frames_(fbl::MakeRefCounted<VersionedTimelineFunction>()),
       packet_allocator_(kMaxPacketAllocatorSlabs, true),
       reporter_(Reporter::Singleton().CreateRenderer()) {
   TRACE_DURATION("audio", "BaseRenderer::BaseRenderer");
   FX_DCHECK(context);
+
+  // Set the default immediately: don't require Reporter to maintain the default values.
+  reporter_->SetPtsUnits(kDefaultPtsTicksPerSecondNumerator, kDefaultPtsTicksPerSecondDenominator);
 
   // Our default clock starts as an adjustable clone of MONOTONIC, but ultimately it will track the
   // clock of the device where the renderer is routed.
@@ -287,25 +291,26 @@ void BaseRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
   TRACE_DURATION("audio", "BaseRenderer::SetPtsUnits");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  FX_LOGS(DEBUG) << " (pts ticks per sec: " << std::dec << tick_per_second_numerator << " / "
-                 << tick_per_second_denominator << ")";
+  FX_LOGS(DEBUG) << "PTS ticks per sec: " << tick_per_second_numerator << " / "
+                 << tick_per_second_denominator;
 
   if (IsOperating()) {
-    FX_LOGS(ERROR) << "Attempted to set PTS units while in operational mode.";
+    FX_LOGS(ERROR) << "PTS ticks per second cannot be set while in operational mode.";
     return;
   }
 
   if (!tick_per_second_numerator || !tick_per_second_denominator) {
     FX_LOGS(ERROR) << "Bad PTS ticks per second (" << tick_per_second_numerator << "/"
-                   << tick_per_second_denominator << ")";
+                   << tick_per_second_denominator
+                   << "): both numerator and denominator must be non-zero";
     return;
   }
 
-  pts_ticks_per_second_ = TimelineRate(tick_per_second_numerator, tick_per_second_denominator);
+  auto pts_ticks_per_sec = TimelineRate(tick_per_second_numerator, tick_per_second_denominator);
 
   // Sanity checks to ensure that Scale() operations cannot overflow.
   // Must have at most 1 tick per nanosecond. Ticks should not have higher resolution than clocks.
-  if (auto t = pts_ticks_per_second_.Scale(1, TimelineRate::RoundingMode::Ceiling);
+  if (auto t = pts_ticks_per_sec.Scale(1, TimelineRate::RoundingMode::Ceiling);
       t > 1'000'000'000 || t == TimelineRate::kOverflow) {
     FX_LOGS(ERROR) << "PTS ticks per second too high (" << tick_per_second_numerator << "/"
                    << tick_per_second_denominator << ")";
@@ -313,11 +318,15 @@ void BaseRenderer::SetPtsUnits(uint32_t tick_per_second_numerator,
   }
   // Must have at least 1 tick per minute. This limit is somewhat arbitrary. We need *some* limit
   // here and we expect this is way more headroom than will be needed in practice.
-  if (auto t = pts_ticks_per_second_.Scale(60); t == 0) {
+  if (auto t = pts_ticks_per_sec.Scale(60); t == 0) {
     FX_LOGS(ERROR) << "PTS ticks per second too low (" << tick_per_second_numerator << "/"
                    << tick_per_second_denominator << ")";
     return;
   }
+
+  reporter_->SetPtsUnits(tick_per_second_numerator, tick_per_second_denominator);
+
+  pts_ticks_per_second_ = std::move(pts_ticks_per_sec);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will
   // have to be revalidated as we move into the operational phase of our life.
@@ -329,10 +338,10 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   TRACE_DURATION("audio", "BaseRenderer::SetPtsContinuityThreshold");
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
-  FX_LOGS(DEBUG) << " (" << threshold_seconds << " sec)";
+  FX_LOGS(DEBUG) << "PTS continuity threshold: " << threshold_seconds << " sec";
 
   if (IsOperating()) {
-    FX_LOGS(ERROR) << "Attempted to set PTS cont threshold while in operational mode.";
+    FX_LOGS(ERROR) << "PTS continuity threshold cannot be set while in operational mode.";
     return;
   }
 
@@ -342,7 +351,7 @@ void BaseRenderer::SetPtsContinuityThreshold(float threshold_seconds) {
   }
 
   if (threshold_seconds < 0.0) {
-    FX_LOGS(ERROR) << "Invalid PTS continuity threshold (" << threshold_seconds << ")";
+    FX_LOGS(ERROR) << "PTS continuity threshold (" << threshold_seconds << ") cannot be negative";
     return;
   }
 

@@ -105,6 +105,7 @@ class RendererNop : public Reporter::Renderer {
   void SetMute(bool muted) override {}
   void SetMinLeadTime(zx::duration min_lead_time) override {}
   void SetPtsContinuityThreshold(float threshold_seconds) override {}
+  void SetPtsUnits(uint32_t numerator, uint32_t denominator) override {}
 
   void AddPayloadBuffer(uint32_t buffer_id, uint64_t size) override {}
   void RemovePayloadBuffer(uint32_t buffer_id) override {}
@@ -825,6 +826,8 @@ class Reporter::RendererImpl : public Reporter::Renderer {
                      ObjectTracker(impl, AudioObjectsCreatedMetricDimensionObjectType::Renderer)),
         min_lead_time_ns_(node_.CreateUint("min lead time (ns)", 0)),
         pts_continuity_threshold_seconds_(node_.CreateDouble("pts continuity threshold (s)", 0.0)),
+        pts_units_per_second_numerator_(node_.CreateUint("pts units numerator", 1'000'000'000)),
+        pts_units_per_second_denominator_(node_.CreateUint("pts units denominator", 1)),
         final_stream_gain_(node_.CreateDouble("final stream gain (post-volume) dbfs", 0.0)),
         usage_(node_.CreateString("usage", "default")),
         underflows_(std::make_unique<OverflowUnderflowTracker>(OverflowUnderflowTracker::Args{
@@ -864,6 +867,10 @@ class Reporter::RendererImpl : public Reporter::Renderer {
   void SetPtsContinuityThreshold(float threshold_seconds) override {
     pts_continuity_threshold_seconds_.Set(threshold_seconds);
   }
+  void SetPtsUnits(uint32_t numerator, uint32_t denominator) override {
+    pts_units_per_second_numerator_.Set(numerator);
+    pts_units_per_second_denominator_.Set(denominator);
+  }
 
   void AddPayloadBuffer(uint32_t buffer_id, uint64_t size) override {
     client_port_.AddPayloadBuffer(buffer_id, size);
@@ -884,6 +891,8 @@ class Reporter::RendererImpl : public Reporter::Renderer {
   inspect::LazyNode time_since_death_;
   inspect::UintProperty min_lead_time_ns_;
   inspect::DoubleProperty pts_continuity_threshold_seconds_;
+  inspect::UintProperty pts_units_per_second_numerator_;
+  inspect::UintProperty pts_units_per_second_denominator_;
   inspect::DoubleProperty final_stream_gain_;
   inspect::StringProperty usage_;
   std::unique_ptr<OverflowUnderflowTracker> underflows_;

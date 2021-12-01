@@ -490,6 +490,7 @@ TEST_F(ReporterTest, RendererMetrics) {
                       DoubleIs("gain db", 0.0), BoolIs("muted", false),
                       UintIs("calls to SetGainWithRamp", 0), UintIs("min lead time (ns)", 0),
                       DoubleIs("pts continuity threshold (s)", 0.0),
+                      UintIs("pts units denominator", 1), UintIs("pts units numerator", 1000000000),
                       DoubleIs("final stream gain (post-volume) dbfs", 0),
                       StringIs("usage", "default"))))))))))));
 
@@ -512,6 +513,7 @@ TEST_F(ReporterTest, RendererMetrics) {
   renderer->SetMute(true);
   renderer->SetMinLeadTime(zx::nsec(1000000));
   renderer->SetPtsContinuityThreshold(5.0);
+  renderer->SetPtsUnits(1234567, 3);
   renderer->SetFinalGain(-6.0);
 
   renderer->StartSession(zx::time(0));
@@ -547,6 +549,7 @@ TEST_F(ReporterTest, RendererMetrics) {
                       DoubleIs("gain db", -1.0), BoolIs("muted", true),
                       UintIs("calls to SetGainWithRamp", 2), UintIs("min lead time (ns)", 1000000),
                       DoubleIs("pts continuity threshold (s)", 5.0),
+                      UintIs("pts units denominator", 3), UintIs("pts units numerator", 1234567),
                       DoubleIs("final stream gain (post-volume) dbfs", -6.0),
                       StringIs("usage", "RenderUsage::MEDIA"))))))))))));
 }
