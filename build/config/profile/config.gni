@@ -15,3 +15,11 @@ declare_args() {
   # [`profile_source_files`](#profile_source_files) is also set, both are used.
   profile_source_files_list_files = []
 }
+
+# This helps build code discern whether all code is being instrumented by
+# default or not.  If it's true, then additional -fprofile-list=... switches
+# may be required to ensure particular code (e.g. in tests) gets instrumented.
+#
+# Type: bool
+selective_profiling =
+    profile_source_files + profile_source_files_list_files != []

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/config/profile/config.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 
@@ -40,21 +41,53 @@ if (!is_kernel) {
     ]
   }
 
+  example_public = [ "coverage-example.h" ]
+  example_sources = [ "coverage-example.cc" ]
+
   # This one file is always compiled with relocatable coverage support,
   # regardless of the prevailing variant.
   source_set("coverage-example") {
     testonly = true
-    public = [ "coverage-example.h" ]
-    sources = [ "coverage-example.cc" ]
-    configs += [ ":coverage" ]
+    public = example_public
+    sources = example_sources
+    deps = [ ":coverage-example.deps" ]
 
     # Make sure the LinkTimeDeadFunction is really dead at link time.
     configs -= [ "//build/config:default_linker_gc" ]
     configs += [ "//build/config:linker_gc" ]
   }
 
-  config("coverage") {
+  # When an instrumented variant might be using selective instrumentation, this
+  # could prevent the example code from being instrumented.  So in that case,
+  # extra compilation switches ensure that it will be.
+
+  group("coverage-example.deps") {
     visibility = [ ":*" ]
+    testonly = true
+    public_configs = [ ":coverage-example.config" ]
+    if (selective_profiling) {
+      public_deps = [ ":coverage-example.list" ]
+    }
+  }
+
+  if (selective_profiling) {
+    # The compiler switch requires an input file, so generate one.
+    generated_file("coverage-example.list") {
+      visibility = [ ":*" ]
+      testonly = true
+      outputs = [ "$target_gen_dir/$target_name" ]
+      output_conversion = "list lines"
+      contents = []
+      foreach(file,
+              rebase_path(example_sources + example_public, root_build_dir)) {
+        contents += [ "src:$file" ]
+      }
+    }
+  }
+
+  config("coverage-example.config") {
+    visibility = [ ":*" ]
+
     cflags = [
       "-fprofile-instr-generate",
       "-fcoverage-mapping",
@@ -65,12 +98,26 @@ if (!is_kernel) {
         "-runtime-counter-relocation=true",
       ]
     }
+
+    # Explicitly select these source files to be instrumented.  When no
+    # -fprofile-list switches are passed, everything is instrumented.  But if
+    # the ambient configs used -fprofile-list, then only things selected in
+    # -fprofile-list files will be instrumented.  Additional -fprofile-list
+    # files always add together, so adding another file with an explicit source
+    # file list adds those to the inclusion list.  But note that including this
+    # file if no other -fprofile-list files prevents functions in other source
+    # files (i.e. headers used by the example sources) form being instrumented.
+    if (selective_profiling) {
+      inputs = get_target_outputs(":coverage-example.list")
+      cflags += [ "-fprofile-list=" + rebase_path(inputs[0], root_build_dir) ]
+    }
   }
 
   # When built in a variant without the instrumentation, the library code is
   # stubbed out.  For tests, use a separate compilation of its code that still
-  # lacks instrumentation itself but has the full runtime support enabled.  The
-  # coverage-example code's data will be the only instrumentation data it finds.
+  # lacks instrumentation itself but has the full runtime support enabled.
+  # The coverage-example code's data will be the only instrumentation data it
+  # finds.
   if (have_profdata == 0) {
     source_set("llvm-profdata-for-test") {
       sources = [ "llvm-profdata.cc" ]
