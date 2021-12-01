@@ -2328,6 +2328,67 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_information_request_retransmission() {
+        let (mut client, actions) = ClientStateMachine::start_stateless(
+            [0, 1, 2],
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+        assert_matches!(
+            actions[..],
+            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_INFO_REQ_TIMEOUT)]
+        );
+
+        let actions = client.handle_timeout(ClientTimerType::Retransmission);
+        // Following exponential backoff defined in https://tools.ietf.org/html/rfc8415#section-15.
+        assert_matches!(
+            actions[..],
+            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, timeout)] if timeout == 2 * INITIAL_INFO_REQ_TIMEOUT
+        );
+    }
+
+    #[test]
+    fn test_information_request_refresh() {
+        let (mut client, _) = ClientStateMachine::start_stateless(
+            [0, 1, 2],
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &[]);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+
+        // Transition to InformationReceived state.
+        assert_eq!(
+            client.handle_message_receive(msg)[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
+            ]
+        );
+
+        // Refresh should start another round of information request.
+        let actions = client.handle_timeout(ClientTimerType::Refresh);
+        let builder = v6::MessageBuilder::new(
+            v6::MessageType::InformationRequest,
+            client.transaction_id,
+            &[],
+        );
+        let mut want_buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut want_buf);
+        assert_eq!(
+            actions[..],
+            [
+                Action::SendMessage(want_buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_INFO_REQ_TIMEOUT)
+            ]
+        );
+    }
+
     fn to_configured_addresses(
         address_count: u32,
         preferred_addresses: Vec<Ipv6Addr>,
@@ -4004,67 +4065,6 @@ mod tests {
         assert_matches!(
             &client.state,
             Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
-        );
-    }
-
-    #[test]
-    fn test_information_request_retransmission() {
-        let (mut client, actions) = ClientStateMachine::start_stateless(
-            [0, 1, 2],
-            Vec::new(),
-            StepRng::new(std::u64::MAX / 2, 0),
-        );
-        assert_matches!(
-            actions[..],
-            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_INFO_REQ_TIMEOUT)]
-        );
-
-        let actions = client.handle_timeout(ClientTimerType::Retransmission);
-        // Following exponential backoff defined in https://tools.ietf.org/html/rfc8415#section-15.
-        assert_matches!(
-            actions[..],
-            [_, Action::ScheduleTimer(ClientTimerType::Retransmission, timeout)] if timeout == 2 * INITIAL_INFO_REQ_TIMEOUT
-        );
-    }
-
-    #[test]
-    fn test_information_request_refresh() {
-        let (mut client, _) = ClientStateMachine::start_stateless(
-            [0, 1, 2],
-            Vec::new(),
-            StepRng::new(std::u64::MAX / 2, 0),
-        );
-
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &[]);
-        let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-
-        // Transition to InformationReceived state.
-        assert_eq!(
-            client.handle_message_receive(msg)[..],
-            [
-                Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
-            ]
-        );
-
-        // Refresh should start another round of information request.
-        let actions = client.handle_timeout(ClientTimerType::Refresh);
-        let builder = v6::MessageBuilder::new(
-            v6::MessageType::InformationRequest,
-            client.transaction_id,
-            &[],
-        );
-        let mut want_buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut want_buf);
-        assert_eq!(
-            actions[..],
-            [
-                Action::SendMessage(want_buf),
-                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_INFO_REQ_TIMEOUT)
-            ]
         );
     }
 
