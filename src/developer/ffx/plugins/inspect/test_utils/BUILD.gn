@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("ffx_inspect_test_utils") {
   name = "ffx_inspect_test_utils"
   version = "0.1.0"
-  edition = "2020"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [

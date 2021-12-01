@@ -7,7 +7,7 @@ import("//build/rust/rustc_library.gni")
 rustc_library("ffx_inspect_common") {
   name = "ffx_inspect_common"
   version = "0.1.0"
-  edition = "2020"
+  edition = "2021"
 
   deps = [
     "//garnet/lib/rust/files_async",

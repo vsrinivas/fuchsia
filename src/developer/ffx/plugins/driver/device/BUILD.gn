@@ -6,7 +6,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_driver_device") {
   version = "0.1.0"
-  edition = "2020"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [
