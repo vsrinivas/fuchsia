@@ -243,9 +243,10 @@ impl Interface {
                         });
                     }
                     Interface::NightMode => {
+                        let seeder = seeder.clone();
                         let _ =
                             service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
-                                crate::night_mode::fidl_io::spawn(delegate.clone(), stream);
+                                seeder.seed(stream);
                             });
                     }
                     Interface::Privacy => {
