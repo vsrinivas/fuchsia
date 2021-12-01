@@ -73,8 +73,8 @@ class PointSamplerTest : public testing::Test {
     int64_t dest_offset = 0;
     auto source_offset = Fixed(0);
 
-    auto& info = mixer->bookkeeping();
-    info.gain.SetSourceGain(gain_db);
+    auto& bk = mixer->bookkeeping();
+    bk.gain.SetSourceGain(gain_db);
 
     bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf, num_frames,
                                  &source_offset, accumulate);
@@ -879,8 +879,8 @@ TEST_F(PointSamplerPositionTest, SourceOffsetAtEnd) {
   std::array<float, 4> accum{0.0f};
   int64_t dest_offset = 0;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = kOneFrame;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = kOneFrame;
 
   EXPECT_TRUE(mixer->Mix(accum.data(), accum.size(), &dest_offset, source.data(), source.size(),
                          &source_offset, false));

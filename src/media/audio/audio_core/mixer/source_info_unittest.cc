@@ -164,12 +164,12 @@ TEST_F(SourceInfoTest, UpdateRunningPositions_WithRateModulo) {
 void SourceInfoTest::TestPositionAdvanceNegative(bool advance_source_pos_modulo) {
   auto& bookkeeping = mixer_.bookkeeping();
   bookkeeping.step_size = kOneFrame + Fixed::FromRaw(2);
+  bookkeeping.source_pos_modulo = 0;
   bookkeeping.SetRateModuloAndDenominator(2, 5);
 
   auto& info = mixer_.source_info();
   info.next_dest_frame = 12;
   info.next_source_frame = Fixed(3);
-  bookkeeping.source_pos_modulo = 0;
 
   // Advance by -3 dest frames at a step_size of [1 frame + 2 subframes + mod 2/5]
   // For -3 dest frames, this is an "advance" of -3 frames, -6 subframes, -6/5 mod.

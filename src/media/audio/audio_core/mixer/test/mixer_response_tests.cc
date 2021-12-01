@@ -219,10 +219,10 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
   AudioBuffer accum(format, num_dest_frames);
 
   // We use this to keep ongoing source_pos_modulo across multiple Mix() calls.
-  auto& info = mixer->bookkeeping();
-  info.step_size = (kOneFrame * source_frames) / num_dest_frames;
-  info.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * source_frames - info.step_size * num_dest_frames).raw_value(),
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = (kOneFrame * source_frames) / num_dest_frames;
+  bk.SetRateModuloAndDenominator(
+      Fixed(kOneFrame * source_frames - bk.step_size * num_dest_frames).raw_value(),
       num_dest_frames);
 
   bool use_full_set = FrequencySet::UseFullFrequencySet;
@@ -257,12 +257,11 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
     // Populate the source buffer with a sinusoid at each reference frequency.
     source = GenerateCosineAudio(format, source_frames, frequency_to_measure);
 
-    // Use this to keep ongoing source_pos_modulo across multiple Mix() calls, but then reset it
-    // each time we start testing a new input signal frequency.
-    info.source_pos_modulo = 0;
-
+    // Start testing each input signal frequency at exactly the same position.
+    // Maintain ongoing source_pos_modulo across multiple Mix() calls for that frequency.
     int64_t dest_frames, dest_offset = 0;
     auto source_frames = source.NumFrames();
+    bk.source_pos_modulo = 0;
 
     // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
     // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
@@ -718,12 +717,11 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   auto accum = AudioBuffer(dest_format, num_dest_frames);
 
   // We use this to keep ongoing source_pos_modulo across multiple Mix() calls.
-  auto& info = mixer->bookkeeping();
-  info.step_size = (kOneFrame * source_frames) / num_dest_frames;
-  info.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * source_frames - info.step_size * num_dest_frames).raw_value(),
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = (kOneFrame * source_frames) / num_dest_frames;
+  bk.SetRateModuloAndDenominator(
+      Fixed(kOneFrame * source_frames - bk.step_size * num_dest_frames).raw_value(),
       num_dest_frames);
-  info.source_pos_modulo = 0;
 
   int64_t dest_frames, dest_offset = 0;
 

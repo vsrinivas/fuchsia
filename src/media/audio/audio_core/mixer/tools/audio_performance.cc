@@ -431,10 +431,10 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   auto accum = std::make_unique<float[]>(dest_frame_count * cfg.num_output_chans);
   int64_t dest_offset, previous_dest_offset;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = Fixed(cfg.source_rate) / cfg.dest_rate;
-  info.SetRateModuloAndDenominator(
-      Fixed(cfg.source_rate).raw_value() - (info.step_size.raw_value() * cfg.dest_rate),
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = Fixed(cfg.source_rate) / cfg.dest_rate;
+  bk.SetRateModuloAndDenominator(
+      Fixed(cfg.source_rate).raw_value() - (bk.step_size.raw_value() * cfg.dest_rate),
       cfg.dest_rate);
 
   float gain_db;
@@ -459,7 +459,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
       break;
   }
 
-  info.gain.SetDestGain(Gain::kUnityGainDb);
+  bk.gain.SetDestGain(Gain::kUnityGainDb);
   auto source_frames_fixed = Fixed(source_frames);
 
   Stats stats(results ? results->AddTestCase("fuchsia.audio.mixing",
@@ -471,17 +471,18 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   size_t iterations = 0;
   while (iterations < limits.min_runs_per_config ||
          (stats.total < limits.duration_per_config && iterations < limits.runs_per_config)) {
-    info.gain.SetSourceGain(source_mute ? fuchsia::media::audio::MUTED_GAIN_DB : gain_db);
+    bk.gain.SetSourceGain(source_mute ? fuchsia::media::audio::MUTED_GAIN_DB : gain_db);
 
     if (cfg.gain_type == GainType::Ramped) {
       // Ramp within the "greater than Mute but less than Unity" range. Ramp duration assumes a mix
       // duration of less than two secs.
-      info.gain.SetSourceGainWithRamp(Gain::kMinGainDb + 1.0f, zx::sec(2));
+      bk.gain.SetSourceGainWithRamp(Gain::kMinGainDb + 1.0f, zx::sec(2));
     }
 
+    // For repeatability, start each run at exactly the same position.
     dest_offset = 0;
     auto source_offset = Fixed(0);
-    info.source_pos_modulo = 0;
+    bk.source_pos_modulo = 0;
 
     auto t0 = zx::clock::get_monotonic();
 
@@ -492,8 +493,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
                      source_frames, &source_offset, cfg.accumulate);
 
       // Mix() might process less than all of accum, so Advance() after each.
-      info.gain.Advance(dest_offset - previous_dest_offset,
-                        TimelineRate(cfg.source_rate, ZX_SEC(1)));
+      bk.gain.Advance(dest_offset - previous_dest_offset, TimelineRate(cfg.source_rate, ZX_SEC(1)));
 
       if (buffer_consumed) {
         source_offset -= source_frames_fixed;

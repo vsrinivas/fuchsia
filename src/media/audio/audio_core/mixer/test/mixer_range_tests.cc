@@ -28,8 +28,8 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_d
   int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
-  auto& info = mixer->bookkeeping();
-  info.gain.SetSourceGain(gain_db);
+  auto& bk = mixer->bookkeeping();
+  bk.gain.SetSourceGain(gain_db);
 
   mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
              kFreqTestBufSize, &source_offset, false);
@@ -235,8 +235,8 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   auto source_offset = Fixed(0);
 
   // -6.0206 dB leads to 0.500 scale (exactly 50%), to be mixed with itself
-  auto& info = mixer->bookkeeping();
-  info.gain.SetSourceGain(-6.0205999f);
+  auto& bk = mixer->bookkeeping();
+  bk.gain.SetSourceGain(-6.0205999f);
 
   EXPECT_TRUE(mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
                          kFreqTestBufSize, &source_offset, false));

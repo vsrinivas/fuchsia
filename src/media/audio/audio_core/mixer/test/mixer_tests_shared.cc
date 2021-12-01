@@ -66,8 +66,8 @@ void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumula
   int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
-  auto& info = mixer->bookkeeping();
-  info.gain.SetSourceGain(gain_db);
+  auto& bk = mixer->bookkeeping();
+  bk.gain.SetSourceGain(gain_db);
 
   bool mix_result = mixer->Mix(accum_buf, num_frames, &dest_offset, source_buf, num_frames,
                                &source_offset, accumulate);

@@ -212,8 +212,8 @@ TEST_F(SincSamplerOutputTest, UnityConstant) {
     source[idx] = 1.0f;
   }
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = kOneFrame;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = kOneFrame;
 
   // Mix the first half of the destination
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
@@ -258,11 +258,10 @@ TEST_F(SincSamplerOutputTest, DownSampleConstant) {
     source[idx] = 1.0f;
   }
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = (kOneFrame * kSourceRate) / kDestRate;
-  info.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * kSourceRate - info.step_size * kDestRate).raw_value(), kDestRate);
-  info.source_pos_modulo = 0;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = (kOneFrame * kSourceRate) / kDestRate;
+  bk.SetRateModuloAndDenominator(
+      Fixed(kOneFrame * kSourceRate - bk.step_size * kDestRate).raw_value(), kDestRate);
 
   // Mix the first half of the destination
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
@@ -306,11 +305,10 @@ TEST_F(SincSamplerOutputTest, UpSampleConstant) {
     source[idx] = 1.0f;
   }
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = (kOneFrame * kSourceRate) / kDestRate;
-  info.SetRateModuloAndDenominator(
-      kOneFrame.raw_value() * kSourceRate - info.step_size.raw_value() * kDestRate, kDestRate);
-  info.source_pos_modulo = 0;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = (kOneFrame * kSourceRate) / kDestRate;
+  bk.SetRateModuloAndDenominator(
+      kOneFrame.raw_value() * kSourceRate - bk.step_size.raw_value() * kDestRate, kDestRate);
 
   // Mix the first half of the destination
   source_is_consumed = mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(), kSourceLen,
@@ -510,8 +508,8 @@ void SincSamplerPositionTest::TestFractionalPositionAtFrameBoundary(bool mute) {
   Fixed expect_source_offset = source_offset + Fixed(expect_advance);
   int64_t expect_dest_offset = dest_offset + expect_advance;
 
-  auto& info = mixer->bookkeeping();
-  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  auto& bk = mixer->bookkeeping();
+  bk.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
   bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
                                source_frames, &source_offset, true);
 
@@ -547,8 +545,8 @@ void SincSamplerPositionTest::TestFractionalPositionJustBeforeFrameBoundary(bool
   Fixed expect_source_offset = source_offset + Fixed(expect_advance);
   int64_t expect_dest_offset = dest_offset + expect_advance;
 
-  auto& info = mixer->bookkeeping();
-  info.gain.SetSourceMute(mute);
+  auto& bk = mixer->bookkeeping();
+  bk.gain.SetSourceMute(mute);
   bool mix_result = mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(),
                                source_frames, &source_offset, true);
 
@@ -580,10 +578,10 @@ void SincSamplerPositionTest::TestSourceOffsetAtEnd(bool mute) {
   int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = kOneFrame;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = kOneFrame;
 
-  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  bk.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
   EXPECT_TRUE(mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames,
                          &source_offset, false));
   EXPECT_EQ(dest_offset, 0);
@@ -610,17 +608,16 @@ void SincSamplerPositionTest::TestRateModulo(bool include_rate_modulo, bool mute
   int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = (kOneFrame * 2) / 3;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = (kOneFrame * 2) / 3;
 
   if (include_rate_modulo) {
-    info.SetRateModuloAndDenominator(Fixed(2).raw_value() - info.step_size.raw_value() * 3, 3);
-    info.source_pos_modulo = 0;
-    ASSERT_EQ(info.rate_modulo(),
-              static_cast<uint64_t>(Fixed(Fixed(2) - (info.step_size * 3)).raw_value()));
+    bk.SetRateModuloAndDenominator(Fixed(2).raw_value() - bk.step_size.raw_value() * 3, 3);
+    ASSERT_EQ(bk.rate_modulo(),
+              static_cast<uint64_t>(Fixed(Fixed(2) - (bk.step_size * 3)).raw_value()));
   }
 
-  info.gain.SetSourceMute(mute);
+  bk.gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
 
@@ -655,17 +652,16 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroNoRollover(bool mute) {
   int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = kOneFrame;
-  info.SetRateModuloAndDenominator(3333, 10000);
-  info.source_pos_modulo = 0;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = kOneFrame;
+  bk.SetRateModuloAndDenominator(3333, 10000);
 
-  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  bk.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(info.source_pos_modulo, 9999u);
+  EXPECT_EQ(bk.source_pos_modulo, 9999u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroAlmostRollover) {
   TestPositionModuloFromZeroNoRollover(false);
@@ -687,17 +683,17 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroNoRollover(bool mute)
   int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = kOneFrame;
-  info.SetRateModuloAndDenominator(3332, 10000);
-  info.source_pos_modulo = 3;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = kOneFrame;
+  bk.SetRateModuloAndDenominator(3332, 10000);
+  bk.source_pos_modulo = 3;
 
-  info.gain.SetSourceMute(mute);
+  bk.gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(info.source_pos_modulo, 9999u);
+  EXPECT_EQ(bk.source_pos_modulo, 9999u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroAlmostRollover) {
   TestPositionModuloFromNonZeroNoRollover(false);
@@ -721,17 +717,16 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroRollover(bool mute) {
   int64_t dest_frames = accum.size();
   int64_t dest_offset = 1;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = kOneFrame;
-  info.SetRateModuloAndDenominator(5000, 10000);
-  info.source_pos_modulo = 0;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = kOneFrame;
+  bk.SetRateModuloAndDenominator(5000, 10000);
 
-  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  bk.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, static_cast<int64_t>(dest_frames));
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(info.source_pos_modulo, 0u);
+  EXPECT_EQ(bk.source_pos_modulo, 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroExactRollover) {
   TestPositionModuloFromZeroRollover(false);
@@ -753,17 +748,17 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroRollover(bool mute) {
   int64_t dest_frames = accum.size();
   int64_t dest_offset = 1;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = kOneFrame;
-  info.SetRateModuloAndDenominator(3332, 10000);
-  info.source_pos_modulo = 3336;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = kOneFrame;
+  bk.SetRateModuloAndDenominator(3332, 10000);
+  bk.source_pos_modulo = 3336;
 
-  info.gain.SetSourceMute(mute);
+  bk.gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(info.source_pos_modulo, 0u);
+  EXPECT_EQ(bk.source_pos_modulo, 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroExactRollover) {
   TestPositionModuloFromNonZeroRollover(false);
@@ -789,18 +784,18 @@ void SincSamplerPositionTest::TestSourcePosModuloExactRolloverForCompletion(bool
   int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& info = mixer->bookkeeping();
-  info.step_size = kOneFrame - Fixed::FromRaw(1);
-  info.SetRateModuloAndDenominator(2, 3);
-  info.source_pos_modulo = 2;
+  auto& bk = mixer->bookkeeping();
+  bk.step_size = kOneFrame - Fixed::FromRaw(1);
+  bk.SetRateModuloAndDenominator(2, 3);
+  bk.source_pos_modulo = 2;
 
-  info.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
+  bk.gain.SetSourceGain(mute ? Gain::kMinGainDb : Gain::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, 2);
   EXPECT_EQ(source_offset, Fixed(Fixed(source_frames) - mixer->pos_filter_width()))
       << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(info.source_pos_modulo, 0u);
+  EXPECT_EQ(bk.source_pos_modulo, 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloExactRolloverCausesEarlyComplete) {
   TestSourcePosModuloExactRolloverForCompletion(false);
