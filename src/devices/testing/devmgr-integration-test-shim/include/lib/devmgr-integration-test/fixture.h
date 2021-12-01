@@ -8,12 +8,18 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
-#include <lib/devmgr-launcher/launch.h>
 
 #include <fbl/unique_fd.h>
 
 #include "sdk/lib/device-watcher/cpp/device-watcher.h"
 #include "sdk/lib/driver_test_realm/realm_builder/cpp/lib.h"
+
+namespace devmgr_launcher {
+
+struct Args {
+  const char* sys_device_driver = nullptr;
+};
+}  // namespace devmgr_launcher
 
 namespace devmgr_integration_test {
 

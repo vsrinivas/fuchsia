@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
-#include <lib/devmgr-launcher/launch.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/zx/vmo.h>
@@ -30,9 +29,7 @@ using devmgr_integration_test::RecursiveWaitForFile;
 
 TEST(PbusTest, Enumeration) {
   devmgr_launcher::Args args;
-  args.sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so",
-  args.load_drivers.push_back("/boot/driver/fragment.so");
-  args.load_drivers.push_back("/boot/driver/fragment.proxy.so");
+  args.sys_device_driver = "fuchsia-boot:///#driver/platform-bus.so";
 
   IsolatedDevmgr devmgr;
   ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr));

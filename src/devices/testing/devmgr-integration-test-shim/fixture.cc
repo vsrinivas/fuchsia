@@ -10,7 +10,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
-#include <lib/devmgr-launcher/launch.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>

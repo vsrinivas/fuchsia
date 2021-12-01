@@ -27,9 +27,6 @@ void IntegrationTest::DoSetup() {
   // only do this once for the whole suite, because it is currently an
   // expensive process.  Ideally we'd do this between every test.
   auto args = IsolatedDevmgr::DefaultArgs();
-  args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
-  args.load_drivers.push_back("/boot/driver/fragment.so");
-  args.load_drivers.push_back("/boot/driver/fragment.proxy.so");
 
   zx_status_t status =
       IsolatedDevmgr::Create(std::move(args), loop_.dispatcher(), &IntegrationTest::devmgr_);

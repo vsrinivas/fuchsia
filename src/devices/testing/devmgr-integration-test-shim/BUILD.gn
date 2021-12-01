@@ -17,7 +17,6 @@ library_headers("devmgr-integration-test-shim-headers") {
     "//sdk/lib/vfs/cpp",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]
