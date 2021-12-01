@@ -80,6 +80,22 @@
             "metric_type": "Occurrence",
             "selector": "bootstrap/fshost:root/minfs_upgrade:3_finished",
             "use_legacy_cobalt": true
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 4008,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/fshost:root/minfs:out_of_space_events"
+        },
+        {
+            "event_codes": [
+                3
+            ],
+            "metric_id": 9004,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/fshost:root/minfs:recovered_space_events"
         }
     ],
     "poll_rate_sec": 600,
