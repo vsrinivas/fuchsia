@@ -36,8 +36,8 @@ impl InputHandler for TextSettingsHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(mut event),
                 device_descriptor,
                 event_time,
-                handled: _,
-            } => {
+                handled,
+            } if handled == input_device::Handled::No => {
                 // Maybe instead just pass in the keymap ID directly?
                 let keymap_id = match *self.keymap_id.borrow() {
                     Some(ref id) => match id {
@@ -132,15 +132,20 @@ mod tests {
         })
     }
 
-    fn get_fake_key_event(keymap: Option<String>) -> input_device::InputEvent {
+    fn get_fake_key_event(
+        keymap: Option<String>,
+        handled: input_device::Handled,
+    ) -> input_device::InputEvent {
         let descriptor = get_fake_descriptor();
-        testing_utilities::create_keyboard_event(
+        testing_utilities::create_keyboard_event_with_handled(
             fidl_fuchsia_input::Key::A,
             fidl_fuchsia_ui_input3::KeyEventType::Pressed,
             /* modifiers= */ None,
             42 as input_device::EventTime,
             &descriptor,
             keymap,
+            None,
+            handled,
         )
     }
 
@@ -150,26 +155,51 @@ mod tests {
         struct Test {
             keymap_id: Option<finput::KeymapId>,
             expected: Option<String>,
+            handled: input_device::Handled,
         }
         let tests = vec![
-            Test { keymap_id: None, expected: Some("US_QWERTY".to_owned()) },
+            Test {
+                keymap_id: None,
+                expected: Some("US_QWERTY".to_owned()),
+                handled: input_device::Handled::No,
+            },
             Test {
                 keymap_id: Some(finput::KeymapId::UsQwerty),
                 expected: Some("US_QWERTY".to_owned()),
+                handled: input_device::Handled::No,
             },
             Test {
                 keymap_id: Some(finput::KeymapId::FrAzerty),
                 expected: Some("FR_AZERTY".to_owned()),
+                handled: input_device::Handled::No,
             },
             Test {
                 keymap_id: Some(finput::KeymapId::UsDvorak),
                 expected: Some("US_DVORAK".to_owned()),
+                handled: input_device::Handled::No,
+            },
+            Test { keymap_id: None, expected: None, handled: input_device::Handled::Yes },
+            Test {
+                keymap_id: Some(finput::KeymapId::UsQwerty),
+                expected: None,
+                handled: input_device::Handled::Yes,
+            },
+            Test {
+                keymap_id: Some(finput::KeymapId::FrAzerty),
+                expected: None,
+                handled: input_device::Handled::Yes,
+            },
+            Test {
+                keymap_id: Some(finput::KeymapId::UsDvorak),
+                expected: None,
+                handled: input_device::Handled::Yes,
             },
         ];
         for test in tests {
             let handler = TextSettingsHandler::new(test.keymap_id.clone());
-            let expected = get_fake_key_event(test.expected.clone());
-            let result = handler.handle_input_event(get_fake_key_event(None)).await;
+            let expected = get_fake_key_event(test.expected.clone(), test.handled.clone());
+            let result =
+                handler.handle_input_event(get_fake_key_event(None, test.handled.clone())).await;
             assert_eq!(vec![expected], result, "for: {:?}", &test);
         }
     }
@@ -186,15 +216,19 @@ mod tests {
         handler.clone().get_serving_fn()(server_end);
 
         // Send one input event and verify that it is properly decorated.
-        let result = handler.clone().handle_input_event(get_fake_key_event(None)).await;
-        let expected = get_fake_key_event(Some("US_QWERTY".to_owned()));
+        let result = handler
+            .clone()
+            .handle_input_event(get_fake_key_event(None, input_device::Handled::No))
+            .await;
+        let expected = get_fake_key_event(Some("US_QWERTY".to_owned()), input_device::Handled::No);
         assert_eq!(vec![expected], result);
 
         // Now change the configuration, send another input event and verify
         // that a modified keymap has been attached to the event.
         client_end.set_layout(finput::KeymapId::FrAzerty).await.unwrap();
-        let result = handler.handle_input_event(get_fake_key_event(None)).await;
-        let expected = get_fake_key_event(Some("FR_AZERTY".to_owned()));
+        let result =
+            handler.handle_input_event(get_fake_key_event(None, input_device::Handled::No)).await;
+        let expected = get_fake_key_event(Some("FR_AZERTY".to_owned()), input_device::Handled::No);
         assert_eq!(vec![expected], result);
     }
 }

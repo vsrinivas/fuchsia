@@ -40,8 +40,10 @@ impl InputHandler for KeymapHandler {
                 device_event: input_device::InputDeviceEvent::Keyboard(event),
                 device_descriptor,
                 event_time,
-                handled: _,
-            } => self.process_keyboard_event(event, device_descriptor, event_time),
+                handled,
+            } if handled == input_device::Handled::No => {
+                self.process_keyboard_event(event, device_descriptor, event_time, handled)
+            }
             // Pass other events unchanged.
             _ => vec![input_event],
         }
@@ -60,6 +62,7 @@ impl KeymapHandler {
         event: keyboard_binding::KeyboardEvent,
         device_descriptor: input_device::InputDeviceDescriptor,
         event_time: input_device::EventTime,
+        handled: input_device::Handled,
     ) -> Vec<input_device::InputEvent> {
         let (key, event_type) = (event.get_key(), event.get_event_type());
         fx_log_debug!(
@@ -81,7 +84,7 @@ impl KeymapHandler {
             ),
             device_descriptor,
             event_time,
-            handled: input_device::Handled::No,
+            handled: handled,
         }]
     }
 }
@@ -93,11 +96,12 @@ mod tests {
     use crate::{consumer_controls_binding, testing_utilities};
     use fuchsia_async as fasync;
 
-    // A mod-specific version of `testing_utilities::create_keyboard_event`.
-    fn create_keyboard_event(
+    // A mod-specific version of `testing_utilities::create_keyboard_event` with `handled`.
+    fn create_keyboard_event_with_handled(
         key: fidl_fuchsia_input::Key,
         event_type: fidl_fuchsia_ui_input3::KeyEventType,
         keymap: Option<String>,
+        handled: input_device::Handled,
     ) -> input_device::InputEvent {
         let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
             keyboard_binding::KeyboardDeviceDescriptor {
@@ -105,14 +109,25 @@ mod tests {
             },
         );
         let (_, event_time_u64) = testing_utilities::event_times();
-        testing_utilities::create_keyboard_event(
+        testing_utilities::create_keyboard_event_with_handled(
             key,
             event_type,
             /* modifiers= */ None,
             event_time_u64,
             &device_descriptor,
             keymap,
+            None,
+            handled,
         )
+    }
+
+    // A mod-specific version of `testing_utilities::create_keyboard_event`.
+    fn create_keyboard_event(
+        key: fidl_fuchsia_input::Key,
+        event_type: fidl_fuchsia_ui_input3::KeyEventType,
+        keymap: Option<String>,
+    ) -> input_device::InputEvent {
+        create_keyboard_event_with_handled(key, event_type, keymap, input_device::Handled::No)
     }
 
     fn get_key_meaning(
@@ -197,6 +212,41 @@ mod tests {
                     )),
                     Some(fidl_fuchsia_ui_input3::KeyMeaning::Codepoint(97)), // a
                 ],
+            },
+            TestCase {
+                events: vec![
+                    create_keyboard_event_with_handled(
+                        fidl_fuchsia_input::Key::A,
+                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                        Some("US_QWERTY".into()),
+                        input_device::Handled::Yes,
+                    ),
+                    create_keyboard_event_with_handled(
+                        fidl_fuchsia_input::Key::LeftShift,
+                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                        Some("US_QWERTY".into()),
+                        input_device::Handled::Yes,
+                    ),
+                    create_keyboard_event_with_handled(
+                        fidl_fuchsia_input::Key::A,
+                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                        Some("US_QWERTY".into()),
+                        input_device::Handled::Yes,
+                    ),
+                    create_keyboard_event_with_handled(
+                        fidl_fuchsia_input::Key::Tab,
+                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                        Some("US_QWERTY".into()),
+                        input_device::Handled::Yes,
+                    ),
+                    create_keyboard_event_with_handled(
+                        fidl_fuchsia_input::Key::A,
+                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                        Some("US_QWERTY".into()),
+                        input_device::Handled::Yes,
+                    ),
+                ],
+                expected: vec![None; 5],
             },
         ];
         for test in &tests {

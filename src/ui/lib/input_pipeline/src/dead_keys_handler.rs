@@ -86,6 +86,7 @@ struct StoredEvent {
     event: KeyboardEvent,
     device_descriptor: InputDeviceDescriptor,
     event_time: EventTime,
+    handled: Handled,
 }
 
 impl fmt::Display for StoredEvent {
@@ -103,7 +104,7 @@ impl Into<InputEvent> for StoredEvent {
             device_event: InputDeviceEvent::Keyboard(self.event),
             device_descriptor: self.device_descriptor,
             event_time: self.event_time,
-            handled: Handled::No,
+            handled: self.handled,
         }
     }
 }
@@ -137,6 +138,7 @@ impl StoredEvent {
             event,
             device_descriptor: self.device_descriptor,
             event_time: self.event_time,
+            handled: self.handled,
         }
     }
 
@@ -322,9 +324,9 @@ impl Handler {
                 device_event: InputDeviceEvent::Keyboard(event),
                 device_descriptor,
                 event_time,
-                handled: _,
-            } => {
-                let event = StoredEvent { event, device_descriptor, event_time };
+                handled,
+            } if handled == Handled::No => {
+                let event = StoredEvent { event, device_descriptor, event_time, handled };
                 // Separated into two statements to ensure the logs are not truncated.
                 fx_log_debug!("state: {:?}", self.state.borrow());
                 fx_log_debug!("event: {}", &event);
@@ -745,13 +747,14 @@ mod tests {
     use fidl_fuchsia_input::Key;
     use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
 
-    // Creates a new keyboard event for testing.
-    fn new_event(
+    // Creates a new keyboard event for testing with handled state.
+    fn new_event_with_handled(
         key: Key,
         event_type: KeyEventType,
         key_meaning: Option<KeyMeaning>,
+        handled: Handled,
     ) -> InputEvent {
-        testing_utilities::create_keyboard_event_with_key_meaning(
+        testing_utilities::create_keyboard_event_with_handled(
             key,
             event_type,
             /*modifiers=*/ None,
@@ -759,7 +762,17 @@ mod tests {
             &InputDeviceDescriptor::Fake,
             /*keymap=*/ None,
             key_meaning,
+            handled,
         )
+    }
+
+    // Creates a new keyboard event for testing.
+    fn new_event(
+        key: Key,
+        event_type: KeyEventType,
+        key_meaning: Option<KeyMeaning>,
+    ) -> InputEvent {
+        new_event_with_handled(key, event_type, key_meaning, Handled::No)
     }
 
     // Tests some common keyboard input use cases with dead keys actuation.
@@ -1201,6 +1214,57 @@ mod tests {
                         Key::LeftShift,
                         KeyEventType::Released,
                         Some(KeyMeaning::Codepoint(0)),
+                    ),
+                ],
+            },
+            TestCase {
+                name: "'handled' circumflex is ignored- dead key first, then live key",
+                inputs: vec![
+                    new_event_with_handled(
+                        Key::Key5,
+                        KeyEventType::Pressed,
+                        Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
+                        Handled::Yes,
+                    ),
+                    new_event_with_handled(
+                        Key::Key5,
+                        KeyEventType::Released,
+                        Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
+                        Handled::Yes,
+                    ),
+                    new_event(
+                        Key::A,
+                        KeyEventType::Pressed,
+                        Some(KeyMeaning::Codepoint('A' as u32)),
+                    ),
+                    new_event(
+                        Key::A,
+                        KeyEventType::Released,
+                        Some(KeyMeaning::Codepoint('A' as u32)),
+                    ),
+                ],
+                expected: vec![
+                    new_event_with_handled(
+                        Key::Key5,
+                        KeyEventType::Pressed,
+                        Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
+                        Handled::Yes,
+                    ),
+                    new_event_with_handled(
+                        Key::Key5,
+                        KeyEventType::Released,
+                        Some(KeyMeaning::Codepoint(CIRCUMFLEX as u32)),
+                        Handled::Yes,
+                    ),
+                    new_event(
+                        Key::A,
+                        KeyEventType::Pressed,
+                        Some(KeyMeaning::Codepoint('A' as u32)),
+                    ),
+                    new_event(
+                        Key::A,
+                        KeyEventType::Released,
+                        Some(KeyMeaning::Codepoint('A' as u32)),
                     ),
                 ],
             },

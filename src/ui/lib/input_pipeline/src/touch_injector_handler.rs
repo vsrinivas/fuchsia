@@ -69,7 +69,7 @@ impl InputHandler for TouchInjectorHandler {
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Touch(touch_device_descriptor),
                 event_time,
-                handled: _,
+                handled: input_device::Handled::No,
             } => {
                 // Create a new injector if this is the first time seeing device_id.
                 self.ensure_injector_registered(&touch_device_descriptor).await;

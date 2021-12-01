@@ -357,7 +357,7 @@ impl InputHandler for FactoryResetHandler {
                 device_event: input_device::InputDeviceEvent::ConsumerControls(ref event),
                 device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
                 event_time: _,
-                handled: _,
+                handled: input_device::Handled::No,
             } => {
                 match self.factory_reset_state() {
                     FactoryResetState::Idle => {
@@ -849,5 +849,36 @@ mod tests {
         let reset_state = countdown_proxy.watch().await.expect("Failed to get countdown state");
         assert!(reset_state.scheduled_reset_time.is_none());
         assert_eq!(reset_handler.factory_reset_state(), FactoryResetState::Idle);
+    }
+
+    #[fuchsia::test]
+    fn factory_reset_handler_ignores_handled_events() -> Result<(), Error> {
+        let mut executor = TestExecutor::new_with_fake_time().unwrap();
+        let reset_handler = FactoryResetHandler::new();
+        let countdown_proxy = create_factory_reset_countdown_proxy(reset_handler.clone());
+
+        // The initial state should be no scheduled reset time and the
+        // FactoryRestHandler state should be FactoryResetState::Idle
+        let countdown_state = get_countdown_state(&countdown_proxy, &mut executor);
+        let handler_state = reset_handler.factory_reset_state();
+        assert!(countdown_state.scheduled_reset_time.is_none());
+        assert_eq!(handler_state, FactoryResetState::Idle);
+
+        // Send a "handled" reset event
+        let mut reset_event = create_reset_input_event();
+        reset_event.handled = input_device::Handled::Yes;
+        let handle_input_event_fut = reset_handler.clone().handle_input_event(reset_event);
+        pin_mut!(handle_input_event_fut);
+        assert!(executor.run_until_stalled(&mut handle_input_event_fut).is_ready());
+
+        // The state should not change.
+        let countdown_state_fut =
+            async move { countdown_proxy.watch().await.expect("Failed to get countdown state") };
+        pin_mut!(countdown_state_fut);
+        assert_matches!(executor.run_until_stalled(&mut countdown_state_fut), Poll::Pending);
+        let handler_state = reset_handler.factory_reset_state();
+        assert_eq!(handler_state, FactoryResetState::Idle);
+
+        Ok(())
     }
 }
