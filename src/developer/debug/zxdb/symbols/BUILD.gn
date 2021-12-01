@@ -174,6 +174,11 @@ static_library("symbols") {
     "//third_party/rapidjson",
   ]
 
+  # zxdb will be 500% slower in loading symbols if compiled with no optimization,
+  # which is not desirable for in-tree developers. Optimize us for speed by default.
+  configs -= [ "//build/config:default_optimize" ]
+  configs += [ "//build/config:optimize_speed" ]
+
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
