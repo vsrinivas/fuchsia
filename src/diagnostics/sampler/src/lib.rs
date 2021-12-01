@@ -74,7 +74,10 @@ pub async fn main(opt: Args) -> Result<(), Error> {
             Ok(())
         }
         Err(e) => {
-            warn!("Failed to parse sampler configurations from /config/data/metrics: {:?}", e);
+            warn!(
+                "Failed to parse sampler configurations from /config/data/(metrics|fire): {:?}",
+                e
+            );
             Ok(())
         }
     }

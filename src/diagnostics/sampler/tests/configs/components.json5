@@ -1,10 +1,12 @@
 [
     {
         id: 101,
+        label: "101_1",
         moniker: "integer_1",
     },
     {
         id: 102,
+        label: "102_2",
         moniker: "integer_2",
 
         // Make sure Sampler can ignore extra fields

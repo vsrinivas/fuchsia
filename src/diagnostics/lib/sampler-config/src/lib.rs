@@ -170,6 +170,9 @@ struct ComponentIdInfoList(Vec<ComponentIdInfo>);
 struct ComponentIdInfo {
     moniker: String,
     id: u32,
+    // Not used by Sampler, but we need to validate it
+    #[allow(unused)]
+    label: String,
 }
 
 impl std::ops::Deref for ComponentIdInfoList {
@@ -640,6 +643,7 @@ mod tests {
             r#"[
                 {
                     "id": 42,
+                    "label": "Foo_42",
                     "moniker": "core/foo42"
                 }
             ]"#,
@@ -650,6 +654,7 @@ mod tests {
             r#"[
                 {
                     id: 43,
+                    label: "Bar_43",
                     moniker: "bar43.cmx",
                 },
             ]"#,
