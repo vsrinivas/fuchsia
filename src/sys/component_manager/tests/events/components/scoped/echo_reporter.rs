@@ -13,13 +13,13 @@ async fn main() {
     let mut event_stream =
         event_source.take_static_event_stream("ScopedEventStream").await.unwrap();
     EventMatcher::ok()
-        .moniker_regex("./echo_server:0")
+        .moniker_regex("./echo_server")
         .wait::<Started>(&mut event_stream)
         .await
         .unwrap();
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./echo_server:0")
+        .moniker_regex("./echo_server")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

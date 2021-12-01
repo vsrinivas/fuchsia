@@ -23,7 +23,7 @@ pub const KERNEL_URL: &str = "fuchsia-boot://kernel";
 lazy_static! {
     pub static ref KERNEL_IDENTITY: ComponentIdentity = {
         ComponentIdentity::from_identifier_and_url(
-            ComponentIdentifier::parse_from_moniker("./klog:0").unwrap(),
+            ComponentIdentifier::parse_from_moniker("./klog").unwrap(),
             KERNEL_URL,
         )
     };

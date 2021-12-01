@@ -27,7 +27,7 @@ async fn advanced_routing() {
 
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./reporter:0")
+        .moniker_regex("./reporter")
         .wait::<Stopped>(&mut event_stream)
         .await
         .unwrap();

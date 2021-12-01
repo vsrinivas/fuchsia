@@ -47,9 +47,9 @@ async fn test_stop_timeouts() {
         // We don't know what "X" is for sure, it will tend to be "1", but there
         // is no contract around this and the validation logic does not accept
         // generic regexes.
-        let moniker_stem = format!("./{}:{}:", collection_name, instance.child_name().to_string());
-        let custom_timeout_child = format!("{}\\d+/custom-timeout-child:\\d+$", moniker_stem);
-        let inherited_timeout_child = format!("{}\\d+/inherited-timeout-child:\\d+$", moniker_stem);
+        let moniker_stem = format!("./{}:{}", collection_name, instance.child_name().to_string());
+        let custom_timeout_child = format!("{}/custom-timeout-child$", moniker_stem);
+        let inherited_timeout_child = format!("{}/inherited-timeout-child$", moniker_stem);
         let target_monikers = [moniker_stem, custom_timeout_child, inherited_timeout_child];
         for _ in 0..target_monikers.len() {
             let _ = EventMatcher::ok()

@@ -42,7 +42,7 @@ fn run_main_event_stream(
     fasync::Task::spawn(async move {
         let mut capability_request =
             EventMatcher::ok().expect_match::<CapabilityRequested>(&mut event_stream).await;
-        assert_eq!("./trigger_client:0", capability_request.target_moniker());
+        assert_eq!("./trigger_client", capability_request.target_moniker());
         assert_eq!(
             "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
             capability_request.component_url());
@@ -78,7 +78,7 @@ fn run_second_event_stream(mut event_stream: EventStream, mut tx: mpsc::Unbounde
 fn run_resolved_event_stream(mut event_stream: EventStream, mut tx: mpsc::UnboundedSender<()>) {
     fasync::Task::spawn(async move {
         EventMatcher::ok()
-            .moniker_regex("./stub:0")
+            .moniker_regex("./stub")
             .expect_match::<Resolved>(&mut event_stream)
             .await;
         tx.send(()).await.expect("Could not send response");

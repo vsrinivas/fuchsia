@@ -40,7 +40,7 @@ async fn base_resolver_disabled_test() {
 
     // // Expect start failure for echo_server because we shouldn't resolve the component
     EventMatcher::err()
-        .moniker_regex("./echo_server:0")
+        .moniker_regex("./echo_server")
         .expect_match::<Resolved>(&mut event_stream)
         .await;
 }

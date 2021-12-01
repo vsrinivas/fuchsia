@@ -41,7 +41,7 @@ async fn test_exit_detection() {
 
     let _ = instance.connect_to_binder().unwrap();
 
-    let target_moniker = format!("./{}:{}:*", collection_name, instance.child_name());
+    let target_moniker = format!("./{}:{}", collection_name, instance.child_name());
 
     EventSequence::new()
         .then(EventMatcher::ok().r#type(events::Stopped::TYPE).moniker_regex(&target_moniker))

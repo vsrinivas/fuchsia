@@ -979,7 +979,7 @@ pub async fn run_test_manager_info_server(
     // This ensures all monikers are relative to test_manager and supports capturing the top-level
     // name of the test realm.
     let collection_names = TEST_TYPE_REALM_MAP.values().map(|v| *v).collect::<Vec<_>>();
-    let re = Regex::new(&format!(r"^\./(?:{}):(.*?):.*$", collection_names.join("|"))).unwrap();
+    let re = Regex::new(&format!(r"^\./(?:{}):(.*?)(/.*)*?$", collection_names.join("|"))).unwrap();
     while let Some(event) = stream.try_next().await.map_err(TestManagerError::Stream)? {
         match event {
             ftest_internal::InfoRequest::GetTestUrl { moniker, responder } => {
@@ -1925,35 +1925,32 @@ mod tests {
         .detach();
         test_map.insert("my_test".into(), "my_test_url".into());
         assert_eq!(
-            proxy.get_test_url("./tests:not_available_realm:0/test_wrapper").await.unwrap(),
+            proxy.get_test_url("./tests:not_available_realm/test_wrapper").await.unwrap(),
             Err(zx::sys::ZX_ERR_NOT_FOUND)
         );
         assert_eq!(
-            proxy.get_test_url("./tests:my_test:0/test_wrapper").await.unwrap(),
+            proxy.get_test_url("./tests:my_test/test_wrapper").await.unwrap(),
             Ok("my_test_url".into())
         );
         assert_eq!(
-            proxy.get_test_url("./tests:my_test:0/test_wrapper:0/my_component:0").await.unwrap(),
+            proxy.get_test_url("./tests:my_test/test_wrapper/my_component").await.unwrap(),
             Ok("my_test_url".into())
         );
         assert_eq!(
-            proxy
-                .get_test_url("./system-tests:my_test:0/test_wrapper:0/my_component:0")
-                .await
-                .unwrap(),
+            proxy.get_test_url("./system-tests:my_test/test_wrapper/my_component").await.unwrap(),
             Ok("my_test_url".into())
         );
         assert_eq!(
-            proxy.get_test_url("./tests/my_test:0/test_wrapper:0/my_component:0").await.unwrap(),
+            proxy.get_test_url("./tests/my_test/test_wrapper/my_component").await.unwrap(),
             Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
         );
         assert_eq!(
-            proxy.get_test_url("/tests:my_test:0/test_wrapper:0/my_component:0").await.unwrap(),
+            proxy.get_test_url("/tests:my_test/test_wrapper/my_component").await.unwrap(),
             Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
         );
         assert_eq!(
             proxy
-                .get_test_url("./some-other-collection:my_test:0/test_wrapper:0/my_component:0")
+                .get_test_url("./some-other-collection:my_test/test_wrapper/my_component")
                 .await
                 .unwrap(),
             Err(zx::sys::ZX_ERR_NOT_SUPPORTED)

@@ -32,12 +32,12 @@ async fn launch_realm_components() -> Result<(), Error> {
 
     // Verify that both client and server components started
     EventMatcher::ok()
-        .moniker_regex("./echo_client:0")
+        .moniker_regex("./echo_client")
         .wait::<Started>(&mut event_stream)
         .await
         .context("failed to observe client start")?;
     EventMatcher::ok()
-        .moniker_regex("./echo_server:0")
+        .moniker_regex("./echo_server")
         .wait::<Started>(&mut event_stream)
         .await
         .context("failed to observe server start")?;
@@ -45,7 +45,7 @@ async fn launch_realm_components() -> Result<(), Error> {
     // Verify that the client component exits successfully
     EventMatcher::ok()
         .stop(Some(ExitStatusMatcher::Clean))
-        .moniker_regex("./echo_client:0")
+        .moniker_regex("./echo_client")
         .wait::<Stopped>(&mut event_stream)
         .await
         .context("failed to observe client exit")?;
