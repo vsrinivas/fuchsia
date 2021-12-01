@@ -328,8 +328,9 @@ class VmObject : public VmHierarchyBase,
   // any way unless the range has also been pinned by the caller.
   // Ranges of length zero are considered invalid and will return ZX_ERR_INVALID_ARGS. The lookup_fn
   // can terminate iteration early by returning ZX_ERR_STOP.
-  virtual zx_status_t Lookup(uint64_t offset, uint64_t len,
-                             fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) {
+  using LookupFunction =
+      fbl::SizedFunction<zx_status_t(uint64_t offset, paddr_t pa), 4 * sizeof(void*)>;
+  virtual zx_status_t Lookup(uint64_t offset, uint64_t len, LookupFunction lookup_fn) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

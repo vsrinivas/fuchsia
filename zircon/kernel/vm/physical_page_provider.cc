@@ -13,9 +13,6 @@
 #include <kernel/range_check.h>
 #include <object/thread_dispatcher.h>
 
-#include "include/vm/pmm.h"
-#include "include/vm/vm_page_list.h"
-
 #define LOCAL_TRACE 0
 
 KCOUNTER(physical_reclaim_total_requests, "physical.reclaim.total_requests")

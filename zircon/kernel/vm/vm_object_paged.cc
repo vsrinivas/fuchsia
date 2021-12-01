@@ -292,18 +292,6 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     return status;
   }
 
-  // We already added the pages, so this will just cause them to be pinned.
-  status = vmo->cow_pages_locked()->PinRangeLocked(0, size);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // VmCowPages will remove the implicit pin_count tally added above during delete of VmCowPages.
-  // We need the VmCowPages to do this in case the VmObjectPaged is deleted before a child slice
-  // is deleted, since the child slice should remain contiguous after the parent VMO handle is
-  // closed.
-  vmo->cow_pages_locked()->SetUnpinOnDeleteLocked();
-
   physical_page_provider_ptr->Init(vmo->cow_pages_locked(), page_source_ptr, pa);
 
   *obj = ktl::move(vmo);
@@ -909,11 +897,26 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
   }
 
   // Now that we have a page aligned range we can try hand over to the cow pages zero method.
-  // Always increment the gen count as it's possible for ZeroPagesLocked to fail part way through
+  // Increment the gen count as it's possible for ZeroPagesLocked to fail part way through
   // and it doesn't unroll its actions.
+  //
+  // Zeroing pages of a contiguous VMO doesn't commit or de-commit any pages currently, but we
+  // increment the generation count anyway in case that changes in future.
   IncrementHierarchyGenerationCountLocked();
 
-  return cow_pages_locked()->ZeroPagesLocked(start, end);
+  // Currently we want ZeroPagesLocked() to not decommit any pages from a contiguous VMO.  In debug
+  // we can assert that (not a super fast assert, but seems worthwhile; it's debug only).
+#if DEBUG_ASSERT_IMPLEMENTED
+  uint64_t page_count_before = is_contiguous() ? cow_pages_locked()->DebugGetPageCountLocked() : 0;
+#endif
+  zx_status_t result = cow_pages_locked()->ZeroPagesLocked(start, end);
+#if DEBUG_ASSERT_IMPLEMENTED
+  if (is_contiguous()) {
+    uint64_t page_count_after = cow_pages_locked()->DebugGetPageCountLocked();
+    DEBUG_ASSERT(page_count_after == page_count_before);
+  }
+#endif
+  return result;
 }
 
 zx_status_t VmObjectPaged::Resize(uint64_t s) {
@@ -921,6 +924,8 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
 
   LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
 
+  DEBUG_ASSERT(!is_contiguous() || !is_resizable());
+  // Also rejects contiguous VMOs.
   if (!is_resizable()) {
     return ZX_ERR_UNAVAILABLE;
   }
@@ -1099,9 +1104,8 @@ zx_status_t VmObjectPaged::Write(const void* _ptr, uint64_t offset, size_t len) 
   return ReadWriteInternalLocked(offset, len, true, write_routine, &guard);
 }
 
-zx_status_t VmObjectPaged::Lookup(
-    uint64_t offset, uint64_t len,
-    fbl::Function<zx_status_t(uint64_t offset, paddr_t pa)> lookup_fn) {
+zx_status_t VmObjectPaged::Lookup(uint64_t offset, uint64_t len,
+                                  VmObject::LookupFunction lookup_fn) {
   canary_.Assert();
   if (unlikely(len == 0)) {
     return ZX_ERR_INVALID_ARGS;
@@ -1125,30 +1129,37 @@ zx_status_t VmObjectPaged::LookupContiguous(uint64_t offset, uint64_t len, paddr
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (unlikely(is_contiguous())) {
-    // Already checked that the entire requested range is valid, and since we know all our pages are
-    // contiguous we can simply lookup one page.
-    len = PAGE_SIZE;
-  } else if (unlikely(len != PAGE_SIZE)) {
+  if (unlikely(!is_contiguous() && (len != PAGE_SIZE))) {
     // Multi-page lookup only supported for contiguous VMOs.
     return ZX_ERR_BAD_STATE;
   }
 
-  // Lookup the one page / first page of contiguous VMOs.
-  paddr_t paddr = 0;
-  zx_status_t status =
-      cow_pages_locked()->LookupLocked(offset, len, [&paddr](uint64_t offset, paddr_t pa) {
-        paddr = pa;
-        return ZX_ERR_STOP;
+  // Verify that all pages are present, and assert that the present pages are contiguous since we
+  // only support len > PAGE_SIZE for contiguous VMOs.
+  bool page_seen = false;
+  uint64_t first_offset = 0;
+  paddr_t first_paddr = 0;
+  uint64_t count = 0;
+  // This has to work for child slices with non-zero parent_offset_ also, which means even if all
+  // pages are present, the first cur_offset can be offset + parent_offset_.
+  zx_status_t status = cow_pages_locked()->LookupLocked(
+      offset, len,
+      [&page_seen, &first_offset, &first_paddr, &count](uint64_t cur_offset, paddr_t pa) mutable {
+        ++count;
+        if (!page_seen) {
+          first_offset = cur_offset;
+          first_paddr = pa;
+          page_seen = true;
+        }
+        ASSERT(first_paddr + (cur_offset - first_offset) == pa);
+        return ZX_ERR_NEXT;
       });
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (paddr == 0) {
-    return ZX_ERR_NO_MEMORY;
+  ASSERT(status == ZX_OK);
+  if (count != len / PAGE_SIZE) {
+    return ZX_ERR_NOT_FOUND;
   }
   if (out_paddr) {
-    *out_paddr = paddr;
+    *out_paddr = first_paddr;
   }
   return ZX_OK;
 }
@@ -1225,7 +1236,11 @@ zx_status_t VmObjectPaged::TakePages(uint64_t offset, uint64_t len, VmPageSplice
   // This is only used by the userpager API, which has significant restrictions on
   // what sorts of vmos are acceptable. If splice starts being used in more places,
   // then this restriction might need to be lifted.
+  //
   // TODO: Check that the region is locked once locking is implemented
+  if (is_contiguous()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   if (children_list_len_) {
     return ZX_ERR_BAD_STATE;
   }
@@ -1276,11 +1291,7 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
     // Similarly it's not a problem if there aren't actually any committed pages.
     return ZX_ERR_BAD_STATE;
   }
-  // If we are contiguous we 'pre pinned' all the pages, but this doesn't count for pinning as far
-  // as the user and potential DMA is concerned. Take this into account when checking if the user
-  // pinned any pages.
-  uint64_t expected_pin_count = (is_contiguous() ? (size_locked() / PAGE_SIZE) : 0);
-  if (cow_pages_locked()->pinned_page_count_locked() > expected_pin_count) {
+  if (cow_pages_locked()->pinned_page_count_locked() > 0) {
     return ZX_ERR_BAD_STATE;
   }
   if (!mapping_list_.is_empty()) {
@@ -1298,8 +1309,8 @@ zx_status_t VmObjectPaged::SetMappingCachePolicy(const uint32_t cache_policy) {
   if (cache_policy_ == ARCH_MMU_FLAG_CACHED && cache_policy != ARCH_MMU_FLAG_CACHED) {
     // No need to perform clean/invalidate if size is zero because there can be no pages.
     if (size_locked() > 0) {
-      zx_status_t status =
-          cow_pages_locked()->LookupLocked(0, size_locked(), [](uint64_t offset, paddr_t pa) {
+      zx_status_t status = cow_pages_locked()->LookupLocked(
+          0, size_locked(), [](uint64_t offset, paddr_t pa) mutable {
             arch_clean_invalidate_cache_range((vaddr_t)paddr_to_physmap(pa), PAGE_SIZE);
             return ZX_ERR_NEXT;
           });
