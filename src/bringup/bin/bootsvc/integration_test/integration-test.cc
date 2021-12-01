@@ -108,19 +108,17 @@ TEST(BootsvcIntegrationTest, Namespace) {
   EXPECT_STR_EQ(ns->path[1], "/svc");
   free(ns);
 
-  // /boot should be RX and /svc should be RW. We use kOpenFlagPosix + fuchsia.io.Node.NodeGetFlags
-  // to check that these are also the maximum rights supported.
+  // /boot should be RX and /svc should be RW. The call to fdio_open_fd should fail if that is not
+  // the case, but we also use fuchsia.io.Node.NodeGetFlags to validate the returned set of rights.
   fbl::unique_fd fd;
-  EXPECT_EQ(ZX_OK, fdio_open_fd("/boot",
-                                fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable |
-                                    fio::wire::kOpenFlagPosix,
-                                fd.reset_and_get_address()));
+  EXPECT_EQ(ZX_OK,
+            fdio_open_fd("/boot", fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
+                         fd.reset_and_get_address()));
   EXPECT_EQ(fd_get_flags(std::move(fd)),
             fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable);
-  EXPECT_EQ(ZX_OK, fdio_open_fd("/svc",
-                                fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                                    fio::wire::kOpenFlagPosix,
-                                fd.reset_and_get_address()));
+  EXPECT_EQ(ZX_OK,
+            fdio_open_fd("/svc", fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
+                         fd.reset_and_get_address()));
   EXPECT_EQ(fd_get_flags(std::move(fd)),
             fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable);
 }
