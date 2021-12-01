@@ -22,6 +22,7 @@ rustc_binary("realm_builder_server_bin") {
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
@@ -41,14 +42,12 @@ rustc_binary("realm_builder_server_bin") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:test-case",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",
   ]
-  test_deps = [
-    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
-    "//third_party/rust_crates:matches",
-  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
 }
 
 fuchsia_component("realm_builder_server_component") {

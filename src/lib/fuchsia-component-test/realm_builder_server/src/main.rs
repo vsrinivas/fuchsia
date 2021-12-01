@@ -8,7 +8,8 @@ use {
     fidl::endpoints::{ProtocolMarker, RequestStream},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_component::server as fserver,
     fuchsia_zircon_status as zx_status,
     futures::{future::BoxFuture, join, lock::Mutex, FutureExt, StreamExt, TryStreamExt},
@@ -18,6 +19,8 @@ use {
         collections::HashMap,
         convert::{TryFrom, TryInto},
         fmt::{self, Display},
+        ops::{Deref, DerefMut},
+        path::PathBuf,
         sync::Arc,
     },
     thiserror::{self, Error},
@@ -280,9 +283,16 @@ impl Realm {
                         }
                     }
                 }
-                // TODO(88426)
-                ftest::RealmRequest::AddRoute { .. } => {
-                    unimplemented!();
+                ftest::RealmRequest::AddRoute { capabilities, from, to, responder } => {
+                    match self.realm_node.route_capabilities(capabilities, from, to).await {
+                        Ok(()) => {
+                            responder.send(&mut Ok(()))?;
+                        }
+                        Err(e) => {
+                            warn!("unable to add route: {:?}", e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
                 }
             }
         }
@@ -316,10 +326,10 @@ impl Realm {
         if !is_legacy_url(&legacy_url) {
             return Err(RealmBuilderError::InvalidManifestExtension);
         }
-        let child_realm_node = RealmNode2::new_from_decl(new_decl_with_program_entries(vec![(
-            runner::LEGACY_URL_KEY.to_string(),
-            legacy_url,
-        )]));
+        let child_realm_node = RealmNode2::new_from_decl(
+            new_decl_with_program_entries(vec![(runner::LEGACY_URL_KEY.to_string(), legacy_url)]),
+            true,
+        );
         self.realm_node.add_child(name.clone(), options, child_realm_node).await
     }
 
@@ -332,7 +342,7 @@ impl Realm {
         if let Err(e) = cm_fidl_validator::fdecl::validate(&component_decl) {
             return Err(RealmBuilderError::InvalidComponentDecl(name, e));
         }
-        let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native());
+        let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), true);
         self.realm_node.add_child(name.clone(), options, child_realm_node).await
     }
 
@@ -345,10 +355,13 @@ impl Realm {
             self.runner.register_local_component(self.runner_proxy_placeholder.clone()).await;
         let mut child_path = self.realm_path.clone();
         child_path.push(name.clone());
-        let child_realm_node = RealmNode2::new_from_decl(new_decl_with_program_entries(vec![
-            (runner::LOCAL_COMPONENT_ID_KEY.to_string(), local_component_id.into()),
-            (runner::LOCAL_COMPONENT_NAME_KEY.to_string(), child_path.join("/").to_string()),
-        ]));
+        let child_realm_node = RealmNode2::new_from_decl(
+            new_decl_with_program_entries(vec![
+                (runner::LOCAL_COMPONENT_ID_KEY.to_string(), local_component_id.into()),
+                (runner::LOCAL_COMPONENT_NAME_KEY.to_string(), child_path.join("/").to_string()),
+            ]),
+            true,
+        );
         self.realm_node.add_child(name.clone(), options, child_realm_node).await
     }
 
@@ -441,6 +454,16 @@ impl RealmNodeState {
             },
         });
     }
+
+    // Returns children whose manifest must be updated during invocations to
+    // AddRoute.
+    fn get_updateable_children(&mut self) -> HashMap<String, &mut RealmNode2> {
+        self.mutable_children
+            .iter_mut()
+            .map(|(key, (_options, child))| (key.clone(), child))
+            .filter(|(_k, c)| c.update_decl_in_add_route)
+            .collect::<HashMap<_, _>>()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -450,6 +473,10 @@ struct RealmNode2 {
     /// We shouldn't mutate component decls that are loaded from the test package. Track the source
     /// of this component declaration here, so we know when to treat it as immutable.
     component_loaded_from_pkg: bool,
+
+    /// Flag used to determine if this component's manifest should be updated
+    /// when a capability is routed to or from it during invocations of AddRoute.
+    pub update_decl_in_add_route: bool,
 }
 
 impl RealmNode2 {
@@ -457,14 +484,15 @@ impl RealmNode2 {
         Self {
             state: Arc::new(Mutex::new(RealmNodeState::default())),
             component_loaded_from_pkg: false,
+            update_decl_in_add_route: false,
         }
     }
 
-    #[allow(unused)]
-    fn new_from_decl(decl: cm_rust::ComponentDecl) -> Self {
+    fn new_from_decl(decl: cm_rust::ComponentDecl, update_decl_in_add_route: bool) -> Self {
         Self {
             state: Arc::new(Mutex::new(RealmNodeState { decl, ..RealmNodeState::default() })),
             component_loaded_from_pkg: false,
+            update_decl_in_add_route,
         }
     }
 
@@ -549,7 +577,7 @@ impl RealmNode2 {
             cm_fidl_validator::fdecl::validate(&fidl_decl)
                 .map_err(|e| RealmBuilderError::InvalidComponentDecl(relative_url, e))?;
 
-            let mut self_ = RealmNode2::new_from_decl(fidl_decl.fidl_into_native());
+            let mut self_ = RealmNode2::new_from_decl(fidl_decl.fidl_into_native(), false);
             self_.component_loaded_from_pkg = true;
             let mut state_guard = self_.state.lock().await;
 
@@ -594,6 +622,58 @@ impl RealmNode2 {
             .cloned()
             .map(|(_, r)| r)
             .ok_or(RealmBuilderError::NoSuchChild(child_name.clone()))
+    }
+
+    async fn route_capabilities(
+        &self,
+        capabilities: Vec<ftest::Capability2>,
+        from: fcdecl::Ref,
+        to: Vec<fcdecl::Ref>,
+    ) -> Result<(), RealmBuilderError> {
+        if capabilities.is_empty() {
+            return Err(RealmBuilderError::CapabilitiesEmpty);
+        }
+
+        let mut state_guard = self.state.lock().await;
+        if !contains_child(state_guard.deref(), &from) {
+            return Err(RealmBuilderError::NoSuchSource(from));
+        }
+
+        for capability in capabilities {
+            for target in &to {
+                if &from == target {
+                    return Err(RealmBuilderError::SourceAndTargetMatch(from));
+                }
+
+                if !contains_child(state_guard.deref(), target) {
+                    return Err(RealmBuilderError::NoSuchTarget(target.clone()));
+                }
+
+                if is_parent_ref(&target) {
+                    let decl = create_expose_decl(capability.clone(), from.clone())?;
+                    state_guard.decl.exposes.push(decl);
+                } else {
+                    let decl = create_offer_decl(capability.clone(), from.clone(), target.clone())?;
+                    state_guard.decl.offers.push(decl);
+                }
+
+                let () = add_use_decl_if_needed(
+                    state_guard.deref_mut(),
+                    target.clone(),
+                    capability.clone(),
+                )
+                .await?;
+            }
+
+            let () = add_expose_decl_if_needed(
+                state_guard.deref_mut(),
+                from.clone(),
+                capability.clone(),
+            )
+            .await?;
+        }
+
+        Ok(())
     }
 
     fn build(
@@ -646,6 +726,237 @@ impl RealmNode2 {
         }
         .boxed()
     }
+}
+
+async fn add_use_decl_if_needed(
+    realm: &mut RealmNodeState,
+    ref_: fcdecl::Ref,
+    capability: ftest::Capability2,
+) -> Result<(), RealmBuilderError> {
+    if let fcdecl::Ref::Child(child) = ref_ {
+        if let Some(child) = realm.get_updateable_children().get(&child.name) {
+            let mut decl = child.get_decl().await;
+            decl.uses.push(create_use_decl(capability)?);
+            let () = child.replace_decl(decl).await?;
+        }
+    }
+
+    Ok(())
+}
+
+async fn add_expose_decl_if_needed(
+    realm: &mut RealmNodeState,
+    ref_: fcdecl::Ref,
+    capability: ftest::Capability2,
+) -> Result<(), RealmBuilderError> {
+    if let fcdecl::Ref::Child(child) = ref_ {
+        if let Some(child) = realm.get_updateable_children().get(&child.name) {
+            let mut decl = child.get_decl().await;
+            decl.capabilities.push(create_capability_decl(capability.clone())?);
+            decl.exposes
+                .push(create_expose_decl(capability, fcdecl::Ref::Self_(fcdecl::SelfRef {}))?);
+            let () = child.replace_decl(decl).await?;
+        }
+    }
+
+    Ok(())
+}
+
+fn create_capability_decl(
+    capability: ftest::Capability2,
+) -> Result<cm_rust::CapabilityDecl, RealmBuilderError> {
+    Ok(match capability {
+        ftest::Capability2::Protocol(protocol) => {
+            let name = protocol.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `name` received was empty: {:?}", protocol.clone()),
+            ))?;
+            cm_rust::CapabilityDecl::Protocol(cm_rust::ProtocolDecl {
+                name: cm_rust::CapabilityName(name.clone()),
+                source_path: Some(to_capability_path(protocol.as_, "/svc", name.clone())?),
+            })
+        }
+        ftest::Capability2::Directory(directory) => {
+            let name = directory.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!(
+                    "capability `name` received was empty: {:?}",
+                    directory.clone()
+                ),
+            ))?;
+            cm_rust::CapabilityDecl::Directory(cm_rust::DirectoryDecl {
+                name: cm_rust::CapabilityName(name.clone()),
+                source_path: Some(to_capability_path(directory.as_, "/", name.clone())?),
+                rights: directory.rights.unwrap_or(fio2::RW_STAR_DIR),
+            })
+        }
+        _ => {
+            return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "encountered unsupported capability variant: {:?}",
+                capability.clone()
+            )));
+        }
+    })
+}
+
+fn create_offer_decl(
+    capability: ftest::Capability2,
+    source: fcdecl::Ref,
+    target: fcdecl::Ref,
+) -> Result<cm_rust::OfferDecl, RealmBuilderError> {
+    let source: cm_rust::OfferSource = source.fidl_into_native();
+    let target: cm_rust::OfferTarget = target.fidl_into_native();
+
+    Ok(match capability {
+        ftest::Capability2::Protocol(protocol) => {
+            let name = protocol.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `name` received was empty: {:?}", protocol.clone()),
+            ))?;
+            cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                source,
+                source_name: cm_rust::CapabilityName(name.clone()),
+                target,
+                target_name: cm_rust::CapabilityName(protocol.as_.unwrap_or(name.clone())),
+                dependency_type: cm_rust::DependencyType::Strong,
+            })
+        }
+        ftest::Capability2::Directory(directory) => {
+            let name = directory.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!(
+                    "capability `name` received was empty: {:?}",
+                    directory.clone()
+                ),
+            ))?;
+            cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                source,
+                source_name: cm_rust::CapabilityName(name.clone()),
+                target,
+                target_name: cm_rust::CapabilityName(directory.as_.unwrap_or(name.clone())),
+                rights: directory.rights,
+                subdir: directory.subdir.map(PathBuf::from),
+                dependency_type: cm_rust::DependencyType::Strong,
+            })
+        }
+        _ => {
+            return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "encountered unsupported capability variant: {:?}",
+                capability.clone()
+            )));
+        }
+    })
+}
+
+fn create_expose_decl(
+    capability: ftest::Capability2,
+    source: fcdecl::Ref,
+) -> Result<cm_rust::ExposeDecl, RealmBuilderError> {
+    let source: cm_rust::ExposeSource = source.fidl_into_native();
+
+    Ok(match capability {
+        ftest::Capability2::Protocol(protocol) => {
+            let name = protocol.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `name` received was empty: {:?}", protocol.clone()),
+            ))?;
+            cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                source: source.clone(),
+                source_name: cm_rust::CapabilityName(name.clone()),
+                target: cm_rust::ExposeTarget::Parent,
+                target_name: cm_rust::CapabilityName(protocol.as_.unwrap_or(name.clone())),
+            })
+        }
+        ftest::Capability2::Directory(directory) => {
+            let name = directory.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!(
+                    "capability `name` received was empty: {:?}",
+                    directory.clone()
+                ),
+            ))?;
+            cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
+                source: source.clone(),
+                source_name: cm_rust::CapabilityName(name.clone()),
+                target: cm_rust::ExposeTarget::Parent,
+                target_name: cm_rust::CapabilityName(directory.as_.unwrap_or(name.clone())),
+                rights: directory.rights,
+                subdir: directory.subdir.map(PathBuf::from),
+            })
+        }
+        _ => {
+            return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "encountered unsupported capability variant: {:?}",
+                capability.clone()
+            )));
+        }
+    })
+}
+
+fn create_use_decl(capability: ftest::Capability2) -> Result<cm_rust::UseDecl, RealmBuilderError> {
+    Ok(match capability {
+        ftest::Capability2::Protocol(protocol) => {
+            let name = protocol.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!("capability `name` received was empty: {:?}", protocol.clone()),
+            ))?;
+            cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name: cm_rust::CapabilityName(name.clone()),
+                target_path: to_capability_path(protocol.as_, "/svc", name.clone())?,
+                dependency_type: cm_rust::DependencyType::Strong,
+            })
+        }
+        ftest::Capability2::Directory(directory) => {
+            let name = directory.name.as_ref().ok_or(RealmBuilderError::CapabilityInvalid(
+                anyhow::format_err!(
+                    "capability `name` received was empty: {:?}",
+                    directory.clone()
+                ),
+            ))?;
+            cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
+                source: cm_rust::UseSource::Parent,
+                source_name: cm_rust::CapabilityName(name.clone()),
+                target_path: to_capability_path(directory.as_, "/", name.clone())?,
+                rights: directory.rights.unwrap_or(fio2::RW_STAR_DIR),
+                subdir: directory.subdir.map(PathBuf::from),
+                dependency_type: cm_rust::DependencyType::Strong,
+            })
+        }
+        _ => {
+            return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "encountered unsupported capability variant: {:?}",
+                capability.clone()
+            )));
+        }
+    })
+}
+
+fn contains_child(realm: &RealmNodeState, ref_: &fcdecl::Ref) -> bool {
+    match ref_ {
+        fcdecl::Ref::Child(child) => {
+            let children = realm
+                .decl
+                .children
+                .iter()
+                .map(|c| c.name.clone())
+                .chain(realm.mutable_children.iter().map(|(name, _)| name.clone()))
+                .collect::<Vec<_>>();
+            children.contains(&child.name)
+        }
+        _ => true,
+    }
+}
+
+fn is_parent_ref(ref_: &fcdecl::Ref) -> bool {
+    match ref_ {
+        fcdecl::Ref::Parent(_) => true,
+        _ => false,
+    }
+}
+
+fn to_capability_path(
+    as_: Option<String>,
+    dirname: &str,
+    default: String,
+) -> Result<cm_rust::CapabilityPath, RealmBuilderError> {
+    let path = format!("{}/{}", dirname, as_.unwrap_or(default));
+    path.as_str().try_into().map_err(|e| {
+        RealmBuilderError::CapabilityInvalid(anyhow::format_err!("invalid_path: {:?}", e))
+    })
 }
 
 async fn handle_realm_builder_stream(
@@ -799,6 +1110,9 @@ enum RealmBuilderError {
     /// The `Build` function has been called multiple times on this channel.
     #[error("the build function was called multiple times")]
     BuildAlreadyCalled,
+
+    #[error("invalid capability received: {0:?}")]
+    CapabilityInvalid(anyhow::Error),
 }
 
 impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
@@ -817,6 +1131,7 @@ impl From<RealmBuilderError> for ftest::RealmBuilderError2 {
             RealmBuilderError::DeclNotFound(_) => Self::DeclNotFound,
             RealmBuilderError::DeclReadError(_, _) => Self::DeclReadError,
             RealmBuilderError::BuildAlreadyCalled => Self::BuildAlreadyCalled,
+            RealmBuilderError::CapabilityInvalid(_) => Self::CapabilityInvalid,
         }
     }
 }
@@ -2062,6 +2377,7 @@ mod tests {
         fidl_fuchsia_io2 as fio2, fuchsia_async as fasync,
         matches::assert_matches,
         std::convert::TryInto,
+        test_case::test_case,
     };
 
     const EXAMPLE_LEGACY_URL: &'static str = "fuchsia-pkg://fuchsia.com/a#meta/a.cmx";
@@ -2125,7 +2441,7 @@ mod tests {
 
     fn tree_to_realm_node(tree: ComponentTree) -> BoxFuture<'static, RealmNode2> {
         async move {
-            let node = RealmNode2::new_from_decl(tree.decl);
+            let node = RealmNode2::new_from_decl(tree.decl, false);
             for (child_name, options, tree) in tree.children {
                 let child_node = tree_to_realm_node(tree).await;
                 node.state.lock().await.mutable_children.insert(child_name, (options, child_node));
@@ -2265,6 +2581,29 @@ mod tests {
             ComponentTree::new_from_resolver(url, self.registry.clone())
                 .await
                 .expect("tree missing from resolver")
+        }
+
+        async fn add_child_or_panic(&self, name: &str, url: &str, options: ftest::ChildOptions) {
+            let () = self
+                .realm_proxy
+                .add_child(name, url, options)
+                .await
+                .expect("failed to make Realm.AddChild call")
+                .expect("failed to add child");
+        }
+
+        async fn add_route_or_panic(
+            &self,
+            mut capabilities: Vec<ftest::Capability2>,
+            mut from: fcdecl::Ref,
+            mut tos: Vec<fcdecl::Ref>,
+        ) {
+            let () = self
+                .realm_proxy
+                .add_route(&mut capabilities.iter_mut(), &mut from, &mut tos.iter_mut())
+                .await
+                .expect("failed to make Realm.AddRoute call")
+                .expect("failed to add route");
         }
     }
 
@@ -3094,6 +3433,361 @@ mod tests {
             .expect("failed to call add_child")
             .expect_err("add_local_child was supposed to error");
         assert_eq!(err, ftest::RealmBuilderError2::ChildAlreadyExists);
+    }
+
+    #[fuchsia::test]
+    async fn add_route() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .add_child_or_panic("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await;
+        realm_and_builder_task
+            .add_child_or_panic("b", "test:///b", ftest::ChildOptions::EMPTY)
+            .await;
+
+        // Assert that parent -> child capabilities generate proper offer decls.
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![
+                    ftest::Capability2::Protocol(ftest::Protocol {
+                        name: Some("fuchsia.examples.Hippo".to_owned()),
+                        as_: Some("fuchsia.examples.Elephant".to_owned()),
+                        type_: Some(fcdecl::DependencyType::Strong),
+                        ..ftest::Protocol::EMPTY
+                    }),
+                    ftest::Capability2::Directory(ftest::Directory {
+                        name: Some("config-data".to_owned()),
+                        rights: Some(fio2::RW_STAR_DIR),
+                        subdir: Some("component".to_owned()),
+                        ..ftest::Directory::EMPTY
+                    }),
+                ],
+                fcdecl::Ref::Parent(fcdecl::ParentRef {}),
+                vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "a".to_owned(),
+                    collection: None,
+                })],
+            )
+            .await;
+
+        // Assert that child -> child capabilities generate proper offer decls.
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                    name: Some("fuchsia.examples.Echo".to_owned()),
+                    ..ftest::Protocol::EMPTY
+                })],
+                fcdecl::Ref::Child(fcdecl::ChildRef { name: "a".to_owned(), collection: None }),
+                vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "b".to_owned(),
+                    collection: None,
+                })],
+            )
+            .await;
+
+        // Assert that child -> parent capabilities generate proper expose decls.
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                    name: Some("fuchsia.examples.Echo".to_owned()),
+                    type_: Some(fcdecl::DependencyType::Weak),
+                    ..ftest::Protocol::EMPTY
+                })],
+                fcdecl::Ref::Child(fcdecl::ChildRef { name: "a".to_owned(), collection: None }),
+                vec![fcdecl::Ref::Parent(fcdecl::ParentRef {})],
+            )
+            .await;
+
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                children: vec![
+                    cm_rust::ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                        on_terminate: None,
+                        environment: None,
+                    },
+                    cm_rust::ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                        on_terminate: None,
+                        environment: None,
+                    },
+                ],
+                offers: vec![
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "a".to_owned(),
+                            collection: None,
+                        }),
+                        target_name: cm_rust::CapabilityName(
+                            "fuchsia.examples.Elephant".to_owned(),
+                        ),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                    }),
+                    cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: cm_rust::CapabilityName("config-data".to_owned()),
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "a".to_owned(),
+                            collection: None,
+                        }),
+                        target_name: cm_rust::CapabilityName("config-data".to_owned()),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        rights: Some(fio2::RW_STAR_DIR),
+                        subdir: Some(PathBuf::from("component")),
+                    }),
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
+                            name: "a".to_owned(),
+                            collection: None,
+                        }),
+                        source_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "b".to_owned(),
+                            collection: None,
+                        }),
+                        target_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                    }),
+                ],
+                exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                    source: cm_rust::ExposeSource::Child("a".to_owned()),
+                    source_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                    target: cm_rust::ExposeTarget::Parent,
+                    target_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                })],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_route_mutates_decl() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+
+        realm_and_builder_task
+            .realm_proxy
+            .add_child_from_decl("a", fcdecl::Component::EMPTY, ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call AddChildFromDecl")
+            .expect("call failed");
+        realm_and_builder_task
+            .add_child_or_panic("b", "test:///b", ftest::ChildOptions::EMPTY)
+            .await;
+        realm_and_builder_task
+            .add_child_or_panic("c", "test:///c", ftest::ChildOptions::EMPTY)
+            .await;
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                    name: Some("fuchsia.examples.Echo".to_owned()),
+                    ..ftest::Protocol::EMPTY
+                })],
+                fcdecl::Ref::Child(fcdecl::ChildRef { name: "a".to_owned(), collection: None }),
+                vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "b".to_owned(),
+                    collection: None,
+                })],
+            )
+            .await;
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                    name: Some("fuchsia.examples.RandonNumberGenerator".to_owned()),
+                    ..ftest::Protocol::EMPTY
+                })],
+                fcdecl::Ref::Child(fcdecl::ChildRef { name: "c".to_owned(), collection: None }),
+                vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "a".to_owned(),
+                    collection: None,
+                })],
+            )
+            .await;
+
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                children: vec![
+                    cm_rust::ChildDecl {
+                        name: "b".to_owned(),
+                        url: "test:///b".to_owned(),
+                        startup: fsys::StartupMode::Lazy,
+                        on_terminate: None,
+                        environment: None,
+                    },
+                    cm_rust::ChildDecl {
+                        name: "c".to_owned(),
+                        url: "test:///c".to_owned(),
+                        startup: fsys::StartupMode::Lazy,
+                        on_terminate: None,
+                        environment: None,
+                    },
+                ],
+                offers: vec![
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
+                            name: "a".to_owned(),
+                            collection: None,
+                        }),
+                        source_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "b".to_owned(),
+                            collection: None,
+                        }),
+                        target_name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                    }),
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
+                            name: "c".to_owned(),
+                            collection: None,
+                        }),
+                        source_name: cm_rust::CapabilityName(
+                            "fuchsia.examples.RandonNumberGenerator".to_owned(),
+                        ),
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "a".to_owned(),
+                            collection: None,
+                        }),
+                        target_name: cm_rust::CapabilityName(
+                            "fuchsia.examples.RandonNumberGenerator".to_owned(),
+                        ),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                    }),
+                ],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![(
+                "a".to_owned(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree {
+                    decl: cm_rust::ComponentDecl {
+                        capabilities: vec![cm_rust::CapabilityDecl::Protocol(
+                            cm_rust::ProtocolDecl {
+                                name: cm_rust::CapabilityName("fuchsia.examples.Echo".to_owned()),
+                                source_path: Some(cm_rust::CapabilityPath {
+                                    dirname: "/svc".to_owned(),
+                                    basename: "fuchsia.examples.Echo".to_owned(),
+                                }),
+                            },
+                        )],
+                        uses: vec![cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                            source: cm_rust::UseSource::Parent,
+                            source_name: cm_rust::CapabilityName(
+                                "fuchsia.examples.RandonNumberGenerator".to_owned(),
+                            ),
+                            target_path: cm_rust::CapabilityPath {
+                                dirname: "/svc".to_owned(),
+                                basename: "fuchsia.examples.RandonNumberGenerator".to_owned(),
+                            },
+                            dependency_type: cm_rust::DependencyType::Strong,
+                        })],
+                        exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                            source: cm_rust::ExposeSource::Self_,
+                            source_name: cm_rust::CapabilityName(
+                                "fuchsia.examples.Echo".to_owned(),
+                            ),
+                            target: cm_rust::ExposeTarget::Parent,
+                            target_name: cm_rust::CapabilityName(
+                                "fuchsia.examples.Echo".to_owned(),
+                            ),
+                        })],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                    children: vec![],
+                },
+            )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[test_case(vec![
+        create_valid_capability()],
+        fcdecl::Ref::Child(fcdecl::ChildRef {
+            name: "unknown".to_owned(),
+            collection: None
+        }),
+        vec![],
+        ftest::RealmBuilderError2::NoSuchSource ; "no_such_source")]
+    #[test_case(vec![
+        create_valid_capability()],
+        fcdecl::Ref::Child(fcdecl::ChildRef {
+            name: "a".to_owned(),
+            collection: None
+        }),
+        vec![
+            fcdecl::Ref::Child(fcdecl::ChildRef {
+                name: "unknown".to_owned(),
+                collection: None
+            }),
+        ],
+        ftest::RealmBuilderError2::NoSuchTarget ; "no_such_target")]
+    #[test_case(vec![
+        create_valid_capability()],
+        fcdecl::Ref::Child(fcdecl::ChildRef {
+            name: "a".to_owned(),
+            collection: None
+        }),
+        vec![
+            fcdecl::Ref::Child(fcdecl::ChildRef {
+                name: "a".to_owned(),
+                collection: None
+            }),
+        ],
+        ftest::RealmBuilderError2::SourceAndTargetMatch ; "source_and_target_match")]
+    #[test_case(vec![],
+        fcdecl::Ref::Child(fcdecl::ChildRef {
+            name: "a".to_owned(),
+            collection: None
+        }),
+        vec![fcdecl::Ref::Parent(fcdecl::ParentRef {})],
+        ftest::RealmBuilderError2::CapabilitiesEmpty ; "capabilities_empty")]
+    #[test_case(vec![ftest::Capability2::unknown(100, vec![])],
+        fcdecl::Ref::Child(fcdecl::ChildRef {
+            name: "a".to_owned(),
+            collection: None
+        }),
+        vec![fcdecl::Ref::Parent(fcdecl::ParentRef {})],
+        ftest::RealmBuilderError2::CapabilityInvalid ; "invalid_capability")]
+    #[fuchsia::test]
+    async fn add_route_error(
+        mut capabilities: Vec<ftest::Capability2>,
+        mut from: fcdecl::Ref,
+        mut to: Vec<fcdecl::Ref>,
+        expected_err: ftest::RealmBuilderError2,
+    ) {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .add_child_or_panic("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await;
+
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_route(&mut capabilities.iter_mut(), &mut from, &mut to.iter_mut())
+            .await
+            .expect("failed to call AddRoute")
+            .expect_err("AddRoute succeeded unexpectedly");
+
+        assert_eq!(err, expected_err);
+    }
+
+    fn create_valid_capability() -> ftest::Capability2 {
+        ftest::Capability2::Protocol(ftest::Protocol {
+            name: Some("fuchsia.examples.Hippo".to_owned()),
+            as_: None,
+            type_: None,
+            ..ftest::Protocol::EMPTY
+        })
     }
 
     // Everything below this line are tests for the old fuchsia.component.test.RealmBuilder logic,

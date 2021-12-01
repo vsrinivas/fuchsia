@@ -91,6 +91,7 @@ enum/member fuchsia.component.test/RealmBuilderError.VALIDATION_ERROR 10
 strict enum fuchsia.component.test/RealmBuilderError uint32
 enum/member fuchsia.component.test/RealmBuilderError2.BUILD_ALREADY_CALLED 12
 enum/member fuchsia.component.test/RealmBuilderError2.CAPABILITIES_EMPTY 7
+enum/member fuchsia.component.test/RealmBuilderError2.CAPABILITY_INVALID 13
 enum/member fuchsia.component.test/RealmBuilderError2.CHILD_ALREADY_EXISTS 0
 enum/member fuchsia.component.test/RealmBuilderError2.CHILD_DECL_NOT_VISIBLE 4
 enum/member fuchsia.component.test/RealmBuilderError2.DECL_NOT_FOUND 10

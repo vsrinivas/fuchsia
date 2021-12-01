@@ -329,6 +329,10 @@ type RealmBuilderError2 = strict enum : uint32 {
 
     /// The `Build` function has been called multiple times on this channel.
     BUILD_ALREADY_CALLED = 12;
+
+    /// A capability is invalid. This may occur if a required field is empty or
+    /// if an unsupported type is received.
+    CAPABILITY_INVALID = 13;
 };
 
 protocol Builder {
