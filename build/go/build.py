@@ -39,8 +39,6 @@ def main():
     parser.add_argument(
         '--target', help='The compiler target to use', required=False)
     parser.add_argument(
-        '--depfile', help='The path to the depfile', required=False)
-    parser.add_argument(
         '--current-cpu',
         help='Target architecture.',
         choices=['x64', 'arm64'],
@@ -159,10 +157,7 @@ def main():
         os.path.join(os.path.join(abs_golibs_dir, 'vendor'), 'modules.txt'),
         os.path.join(dst_vendor, 'modules.txt'))
 
-    link_to_source_list = []
     if args.go_dep_files:
-        link_to_source = {}
-
         # Create a GOPATH for the packages dependency tree.
         for dst, src in sorted(get_sources(args.go_dep_files).items()):
             # This path is later used in go commands that run in cwd=gopath_src.
@@ -218,7 +213,6 @@ def main():
                         # Hardlinking may fail, for example if `src` is in a
                         # separate filesystem on a mounted device.
                         shutil.copyfile(src, dstdir)
-                link_to_source[dstdir] = src
             else:
                 # Map individual files since the dependency is only on the
                 # package itself, not Go subpackages. The only exception is
@@ -228,12 +222,6 @@ def main():
                     src_file = os.path.join(src, filename)
                     if filename == 'testdata' or os.path.isfile(src_file):
                         os.symlink(src_file, os.path.join(dstdir, filename))
-                        link_to_source[os.path.join(dstdir, filename)] = src
-
-        # Create a sorted list of (link, src) pairs, with longest paths before
-        # short one. This ensures that 'foobar' will appear before 'foo'.
-        link_to_source_list = sorted(
-            link_to_source.items(), key=lambda x: x[0], reverse=True)
 
     cflags = []
     if args.sysroot:
@@ -402,55 +390,6 @@ def main():
     go_list_args += [args.package]
     output = subprocess.check_output(
         go_list_args, env=env, cwd=gopath_src, text=True)
-    with open(args.depfile, 'w') as into:
-        into.write(os.path.relpath(dist))
-        into.write(':')
-        while output:
-            try:
-                package = json.loads(output)
-                output = output[:0]
-            except json.JSONDecodeError as e:
-                package = json.loads(output[:e.pos])
-                output = output[e.pos:]
-
-            files_fields = [
-                'GoFiles',
-                'CgoFiles',
-                'CompiledGoFiles',
-                'CFiles',
-                'CXXFiles',
-                'MFiles',
-                'HFiles',
-                'FFiles',
-                'SFiles',
-                'SwigFiles',
-                'SwigCXXFiles',
-                'SysoFiles',
-            ]
-            if 'ForTest' in package:
-                files_fields += [
-                    'TestGoFiles',
-                    'XTestGoFiles',
-                ]
-
-            src_dir = package['Dir']
-            for f, t in link_to_source_list:
-                if src_dir.startswith(f):
-                    src_dir = t + src_dir[len(f):]
-                    break
-
-            # When files from gocache are printed in the output they have
-            # normalized absolute paths, so use absolute path to filter them.
-            abs_go_cache = os.path.abspath(args.go_cache)
-            src_dir = os.path.relpath(src_dir)
-            for field in files_fields:
-                files = package.get(field)
-                if files:
-                    for file in files:
-                        if abs_go_cache in file:
-                            continue
-                        into.write(' ')
-                        into.write(os.path.join(src_dir, file))
 
     return 0
 

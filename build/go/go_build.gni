@@ -126,6 +126,62 @@ template("go_build") {
     stripped_output_path = "${output_dir}/${output_name}"
   }
 
+  use_prebuilt_go = !is_fuchsia
+  if (defined(invoker.use_prebuilt_go)) {
+    use_prebuilt_go = invoker.use_prebuilt_go
+  }
+  goroot_deps = []
+  if (use_prebuilt_go) {
+    goroot = rebase_path("//prebuilt/third_party/go/${host_platform}",
+                         root_build_dir)
+  } else {
+    goroot = rebase_path("$host_tools_dir/goroot", root_build_dir)
+    goroot_deps = [ "//third_party/go:go_runtime" ]
+  }
+
+  if (defined(invoker.deps)) {
+    go_deps_paths = []
+    go_deps_inputs = []
+    foreach(dep, invoker.deps) {
+      gen_dir = get_label_info(dep, "target_gen_dir")
+      name = get_label_info(dep, "name")
+      path = "${gen_dir}/${name}.go_deps"
+      go_deps_paths += [ rebase_path(path, root_build_dir) ]
+      go_deps_inputs += [ path ]
+    }
+  }
+
+  hermetic_inputs_target_name = "${main_target_name}_hermetic_inputs"
+  hermetic_inputs_target_output =
+      "${target_gen_dir}/${output_name}.hermetic_inputs"
+  hermetic_inputs_action(hermetic_inputs_target_name) {
+    visibility = [ ":${main_target_name}" ]
+    forward_variables_from(invoker, [ "testonly" ])
+
+    script = "//build/go/gen_hermetic_inputs.py"
+    sources = [ "//build/go/gen_library_metadata.py" ]
+    outputs = [ hermetic_inputs_target_output ]
+    args = [
+      "--output",
+      rebase_path(hermetic_inputs_target_output, root_build_dir),
+      "--go-root",
+      goroot,
+    ]
+
+    deps = goroot_deps
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+      args += [ "--go-dep-files" ]
+      args += go_deps_paths
+      inputs = go_deps_inputs
+    }
+
+    if (is_test) {
+      testonly = true
+      args += [ "--is-test=true" ]
+    }
+  }
+
   variant_target("action") {
     target_name = main_target_name
     _variant_shared = false
@@ -137,7 +193,7 @@ template("go_build") {
                            ])
     forward_variables_from(concurrent_jobs.local, "*")
 
-    deps = []
+    deps = goroot_deps
     if (defined(invoker.non_go_deps)) {
       deps += invoker.non_go_deps
     }
@@ -161,9 +217,10 @@ template("go_build") {
     not_needed([ "output_dir" ])
 
     script = "//build/go/build.py"
-    depfile = "${output_path}.d"
-
     sources = [ "//build/go/gen_library_metadata.py" ]
+
+    hermetic_inputs_target = ":${hermetic_inputs_target_name}"
+    hermetic_inputs_file = hermetic_inputs_target_output
 
     if (is_fuchsia) {
       # For Fuchsia binaries, use a Go-specific sysroot instead of the
@@ -175,8 +232,6 @@ template("go_build") {
     args = [
       "--root-out-dir",
       rebase_path(root_out_dir, root_build_dir),
-      "--depfile",
-      rebase_path(depfile, root_build_dir),
       "--current-cpu",
       current_cpu,
       "--current-os",
@@ -187,6 +242,8 @@ template("go_build") {
       rebase_path(output_path, root_build_dir),
       "--go-cache",
       rebase_path(gocache_dir, root_build_dir),
+      "--go-root",
+      goroot,
       "--cc",
       "$rebased_clang_prefix/clang",
       "--cxx",
@@ -330,24 +387,6 @@ template("go_build") {
       }
     }
 
-    use_prebuilt_go = !is_fuchsia
-    if (defined(invoker.use_prebuilt_go)) {
-      use_prebuilt_go = invoker.use_prebuilt_go
-    }
-    if (use_prebuilt_go) {
-      args += [
-        "--go-root",
-        rebase_path("//prebuilt/third_party/go/${host_platform}",
-                    root_build_dir),
-      ]
-    } else {
-      args += [
-        "--go-root",
-        rebase_path("$host_tools_dir/goroot", root_build_dir),
-      ]
-      deps += [ "//third_party/go:go_runtime" ]
-    }
-
     if (!carchive) {
       # Add needed arguments for the buildidtool. We should add the stamp file
       # output by buildidtool to the list of outputs for this action but because
@@ -371,13 +410,8 @@ template("go_build") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
       args += [ "--go-dep-files" ]
-      inputs = []
-      foreach(dep, invoker.deps) {
-        gen_dir = get_label_info(dep, "target_gen_dir")
-        name = get_label_info(dep, "name")
-        args += [ rebase_path("$gen_dir/$name.go_deps", root_build_dir) ]
-        inputs += [ "$gen_dir/$name.go_deps" ]
-      }
+      args += go_deps_paths
+      inputs = go_deps_inputs
     }
 
     foreach(gopackage, invoker.gopackages) {
