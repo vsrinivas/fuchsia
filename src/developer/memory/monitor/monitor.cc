@@ -540,6 +540,9 @@ void Monitor::PressureLevelChanged(Level level) {
   }
   FX_LOGS(INFO) << "Memory pressure level changed from " << kLevelNames[level_] << " to "
                 << kLevelNames[level];
+  TRACE_INSTANT("memory_monitor", "MemoryPressureLevelChange", TRACE_SCOPE_THREAD, "from",
+                kLevelNames[level_], "to", kLevelNames[level]);
+
   level_ = level;
   logger_.SetPressureLevel(level_);
 }
