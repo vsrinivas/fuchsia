@@ -24,9 +24,8 @@ type ChildDecl = table {
 
     /// The environment assigned to this child.
     ///
-    /// Must be non-empty, reference an environment defined in the containing
-    /// `ComponentDecl`, and contain only the following characters:
-    /// [a-z0-9-_.].
+    /// Must reference an environment defined in the `ComponentDecl`.
+    /// Contains only the following characters: [a-z0-9-_.].
     4: environment fuchsia.component.name;
 
     /// The action to take if this component instance terminates unexpectedly.
