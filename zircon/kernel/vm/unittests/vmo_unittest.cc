@@ -1194,6 +1194,9 @@ static bool vmo_eviction_test() {
   ASSERT_FALSE(vmo2->DebugGetCowPages()->RemovePageForEviction(
       page, 0, VmCowPages::EvictionHintAction::Follow));
 
+  // We stack-own loaned pages from RemovePageForEviction() to pmm_free_page().
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
   // Eviction should actually drop the number of committed pages.
   EXPECT_EQ(1u, vmo2->AttributedPages());
   ASSERT_TRUE(vmo2->DebugGetCowPages()->RemovePageForEviction(
@@ -1486,6 +1489,9 @@ static bool vmo_attribution_evict_test() {
 
   uint64_t expected_gen_count = 2;
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 1u));
+
+  // We stack-own loaned pages from RemovePageForEviction() to pmm_free_page().
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   // Evicting the page should increment the generation count.
   ASSERT_TRUE(vmo->DebugGetCowPages()->RemovePageForEviction(
