@@ -43,7 +43,7 @@ impl InputHandler for MediaButtonsHandler {
                 device_event: input_device::InputDeviceEvent::ConsumerControls(media_buttons_event),
                 device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
                 event_time: _,
-                handled: _,
+                handled: input_device::Handled::No,
             } => {
                 let media_buttons_event = Self::create_media_buttons_event(media_buttons_event);
 
@@ -326,5 +326,40 @@ mod tests {
             media_buttons_listener_request_stream:
                 vec![first_listener_stream, second_listener_stream],
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handler_ignores_handled_events() {
+        let media_buttons_handler = MediaButtonsHandler::new();
+        let device_listener_proxy =
+            spawn_device_listener_registry_server(media_buttons_handler.clone());
+
+        // Register a listener.
+        let (listener, listener_stream) =
+            fidl::endpoints::create_request_stream::<fidl_ui_policy::MediaButtonsListenerMarker>()
+                .unwrap();
+        let _ = device_listener_proxy.register_listener(listener).await;
+
+        // Setup events and expectations.
+        let descriptor = testing_utilities::consumer_controls_device_descriptor();
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let input_events = vec![testing_utilities::create_consumer_controls_event_with_handled(
+            vec![
+                fidl_input_report::ConsumerControlButton::VolumeUp,
+                fidl_input_report::ConsumerControlButton::VolumeDown,
+                fidl_input_report::ConsumerControlButton::Pause,
+                fidl_input_report::ConsumerControlButton::MicMute,
+                fidl_input_report::ConsumerControlButton::CameraDisable,
+            ],
+            event_time,
+            &descriptor,
+            input_device::Handled::Yes,
+        )];
+        testing_utilities::assert_handler_ignores_input_event_sequence(
+            media_buttons_handler,
+            input_events,
+            listener_stream,
+        )
+        .await;
     }
 }

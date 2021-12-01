@@ -40,7 +40,7 @@ impl InputHandler for GfxTouchHandler {
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Touch(touch_device_descriptor),
                 event_time,
-                handled: _,
+                handled: input_device::Handled::No,
             } => {
                 self.handle_touch_event(touch_event, touch_device_descriptor, event_time);
                 // Consume the event (i.e., don't forward it to the next handler).
@@ -187,7 +187,10 @@ impl GfxTouchHandler {
 mod tests {
     use {
         super::*,
-        crate::testing_utilities::{create_touch_contact, create_touch_event},
+        crate::testing_utilities::{
+            assert_handler_ignores_input_event_sequence, create_touch_contact, create_touch_event,
+            create_touch_event_with_handled,
+        },
         crate::utils::Position,
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -438,5 +441,44 @@ mod tests {
             scenic_session_request_stream: session_request_stream,
             assert_command: verify_pointer_event,
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handler_ignores_handled_events() {
+        const TOUCH_ID: u32 = 1;
+        let (session_proxy, session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+        let touch_handler = GfxTouchHandler::new(
+            scenic_session.clone(),
+            SCENIC_COMPOSITOR_ID,
+            Size { width: SCENIC_DISPLAY_WIDTH, height: SCENIC_DISPLAY_HEIGHT },
+        )
+        .await
+        .expect("Failed to create GfxTouchHandler.");
+
+        let descriptor = get_touch_device_descriptor();
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let input_events = vec![create_touch_event_with_handled(
+            hashmap! {
+                fidl_ui_input::PointerEventPhase::Add
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
+                fidl_ui_input::PointerEventPhase::Down
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
+                fidl_ui_input::PointerEventPhase::Move
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 40.0, y: 80.0 })]
+            },
+            event_time,
+            &descriptor,
+            input_device::Handled::Yes,
+        )];
+
+        assert_handler_ignores_input_event_sequence(
+            touch_handler,
+            input_events,
+            session_request_stream,
+        )
+        .await;
     }
 }

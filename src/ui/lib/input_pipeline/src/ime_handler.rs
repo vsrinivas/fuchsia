@@ -39,7 +39,7 @@ impl InputHandler for ImeHandler {
                 device_descriptor:
                     input_device::InputDeviceDescriptor::Keyboard(_keyboard_device_descriptor),
                 event_time,
-                handled: _,
+                handled: input_device::Handled::No,
             } => {
                 self.modifier_tracker.borrow_mut().update(
                     keyboard_device_event.get_event_type(),
@@ -678,5 +678,47 @@ mod tests {
                 fidl_ui_input3::NonPrintableKeyUnknown!() => true,
             }
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn handler_ignores_handled_events() {
+        let (proxy, request_stream) = connect_to_key_event_injector();
+        let ime_handler =
+            ImeHandler::new_handler(proxy).await.expect("Failed to create ImeHandler.");
+        let device_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+            keyboard_binding::KeyboardDeviceDescriptor {
+                keys: vec![fidl_input::Key::LeftCtrl, fidl_input::Key::Tab],
+            },
+        );
+        let (_, event_time_u64) = testing_utilities::event_times();
+        let input_events: Vec<input_device::InputEvent> = vec![
+            testing_utilities::create_keyboard_event_with_handled(
+                fidl_input::Key::LeftCtrl,
+                fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                None,
+                event_time_u64,
+                &device_descriptor,
+                None,
+                None,
+                input_device::Handled::Yes,
+            ),
+            testing_utilities::create_keyboard_event_with_handled(
+                fidl_input::Key::Tab,
+                fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                None,
+                event_time_u64,
+                &device_descriptor,
+                None,
+                None,
+                input_device::Handled::Yes,
+            ),
+        ];
+
+        testing_utilities::assert_handler_ignores_input_event_sequence(
+            ime_handler,
+            input_events,
+            request_stream,
+        )
+        .await;
     }
 }

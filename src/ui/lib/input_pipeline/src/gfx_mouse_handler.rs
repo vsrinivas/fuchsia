@@ -47,7 +47,7 @@ impl InputHandler for GfxMouseHandler {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
                 device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
-                handled: _,
+                handled: input_device::Handled::No,
             } => {
                 self.update_cursor_position(&mouse_event, &mouse_descriptor).await;
                 self.send_events_to_scenic(
@@ -198,9 +198,15 @@ impl GfxMouseHandler {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::testing_utilities::create_mouse_event, crate::utils::Position,
+        super::*,
+        crate::testing_utilities::{
+            assert_handler_ignores_input_event_sequence, create_mouse_event,
+            create_mouse_event_with_handled,
+        },
+        crate::utils::Position,
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
-        fuchsia_async as fasync, fuchsia_zircon as zx, futures::StreamExt,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
+        futures::StreamExt,
     };
 
     const SCENIC_COMPOSITOR_ID: u32 = 1;
@@ -526,5 +532,44 @@ mod tests {
             Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
             _ => assert!(false),
         };
+    }
+
+    // Tests that a mouse move event that has already been handled is not forwarded to scenic.
+    #[fasync::run_singlethreaded(test)]
+    async fn handler_ignores_handled_events() {
+        const DEVICE_ID: u32 = 1;
+
+        let (session_proxy, session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+
+        let (sender, _) = futures::channel::mpsc::channel(1);
+        let mouse_handler = GfxMouseHandler::new(
+            Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
+            sender,
+            scenic_session.clone(),
+            SCENIC_COMPOSITOR_ID,
+        );
+
+        let cursor_relative_position = Position { x: 50.0, y: 75.0 };
+        let cursor_location = mouse_binding::MouseLocation::Relative(cursor_relative_position);
+        let descriptor = mouse_device_descriptor(DEVICE_ID);
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let input_events = vec![create_mouse_event_with_handled(
+            cursor_location,
+            fidl_ui_input::PointerEventPhase::Move,
+            HashSet::<mouse_binding::MouseButton>::new(),
+            event_time,
+            &descriptor,
+            input_device::Handled::Yes,
+        )];
+
+        assert_handler_ignores_input_event_sequence(
+            mouse_handler,
+            input_events,
+            session_request_stream,
+        )
+        .await;
     }
 }

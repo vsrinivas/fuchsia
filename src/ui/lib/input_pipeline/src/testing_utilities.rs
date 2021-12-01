@@ -6,11 +6,14 @@
 use {
     crate::utils::Position,
     crate::{
-        consumer_controls_binding, input_device, keyboard_binding, mouse_binding, touch_binding,
+        consumer_controls_binding, input_device, input_handler, keyboard_binding, mouse_binding,
+        touch_binding,
     },
+    core::task::Context,
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input3 as fidl_ui_input3, fidl_fuchsia_ui_pointerinjector as pointerinjector,
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::Future,
     maplit::hashmap,
     std::collections::HashMap,
     std::collections::HashSet,
@@ -233,11 +236,13 @@ pub fn create_consumer_control_input_report(
 /// - `pressed_buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
+/// - `handled`: Whether the event has been consumed.
 #[cfg(test)]
-pub fn create_consumer_controls_event(
+pub fn create_consumer_controls_event_with_handled(
     pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
+    handled: input_device::Handled,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
         device_event: input_device::InputDeviceEvent::ConsumerControls(
@@ -245,8 +250,28 @@ pub fn create_consumer_controls_event(
         ),
         device_descriptor: device_descriptor.clone(),
         event_time,
-        handled: input_device::Handled::No,
+        handled,
     }
+}
+
+/// Creates a [`consumer_controls_binding::ConsumerControlsEvent`] with the provided parameters.
+///
+/// # Parameters
+/// - `pressed_buttons`: The buttons to report in the event.
+/// - `event_time`: The time of event.
+/// - `device_descriptor`: The device descriptor to add to the event.
+#[cfg(test)]
+pub fn create_consumer_controls_event(
+    pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
+    event_time: input_device::EventTime,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+) -> input_device::InputEvent {
+    create_consumer_controls_event_with_handled(
+        pressed_buttons,
+        event_time,
+        device_descriptor,
+        input_device::Handled::No,
+    )
 }
 
 /// Creates a [`fidl_input_report::InputReport`] with a mouse report.
@@ -295,6 +320,32 @@ pub fn create_mouse_input_report(
         ..fidl_input_report::InputReport::EMPTY
     }
 }
+/// Creates a [`mouse_binding::MouseEvent`] with the provided parameters.
+///
+/// # Parameters
+/// - `location`: The mouse location to report in the event.
+/// - `phase`: The phase of the buttons in the event.
+/// - `buttons`: The buttons to report in the event.
+/// - `event_time`: The time of event.
+/// - `device_descriptor`: The device descriptor to add to the event.
+#[cfg(test)]
+pub fn create_mouse_event_with_handled(
+    location: mouse_binding::MouseLocation,
+    phase: fidl_ui_input::PointerEventPhase,
+    buttons: HashSet<mouse_binding::MouseButton>,
+    event_time: input_device::EventTime,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+    handled: input_device::Handled,
+) -> input_device::InputEvent {
+    input_device::InputEvent {
+        device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
+            location, phase, buttons,
+        )),
+        device_descriptor: device_descriptor.clone(),
+        event_time,
+        handled,
+    }
+}
 
 /// Creates a [`mouse_binding::MouseEvent`] with the provided parameters.
 ///
@@ -312,14 +363,14 @@ pub fn create_mouse_event(
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
-    input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
-            location, phase, buttons,
-        )),
-        device_descriptor: device_descriptor.clone(),
+    create_mouse_event_with_handled(
+        location,
+        phase,
+        buttons,
         event_time,
-        handled: input_device::Handled::No,
-    }
+        device_descriptor,
+        input_device::Handled::No,
+    )
 }
 
 /// Creates a [`fidl_input_report::InputReport`] with a touch report.
@@ -359,11 +410,13 @@ pub fn create_touch_contact(id: u32, position: Position) -> touch_binding::Touch
 /// - `contacts`: The contacts in the touch report.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
+/// - `handled`: Whether the event has been consumed.
 #[cfg(test)]
-pub fn create_touch_event(
+pub fn create_touch_event_with_handled(
     mut contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
     event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
+    handled: input_device::Handled,
 ) -> input_device::InputEvent {
     contacts.entry(fidl_ui_input::PointerEventPhase::Add).or_insert(vec![]);
     contacts.entry(fidl_ui_input::PointerEventPhase::Down).or_insert(vec![]);
@@ -386,8 +439,28 @@ pub fn create_touch_event(
         }),
         device_descriptor: device_descriptor.clone(),
         event_time: event_time,
-        handled: input_device::Handled::No,
+        handled: handled,
     }
+}
+
+/// Creates a [`touch_binding::TouchEvent`] with the provided parameters.
+///
+/// # Parameters
+/// - `contacts`: The contacts in the touch report.
+/// - `event_time`: The time of event.
+/// - `device_descriptor`: The device descriptor to add to the event.
+#[cfg(test)]
+pub fn create_touch_event(
+    contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
+    event_time: input_device::EventTime,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+) -> input_device::InputEvent {
+    create_touch_event_with_handled(
+        contacts,
+        event_time,
+        device_descriptor,
+        input_device::Handled::No,
+    )
 }
 
 /// Creates a [`fidl_ui_scenic::Command`] representing the given touch contact.
@@ -559,4 +632,26 @@ macro_rules! assert_input_event_sequence_generates_media_buttons_events {
             }
         }
     };
+}
+
+/// Asserts that the given sequence of input events are ignored by the provided handler and request stream.
+#[cfg(test)]
+pub async fn assert_handler_ignores_input_event_sequence(
+    // The handler processing events.
+    input_handler: std::rc::Rc<dyn input_handler::InputHandler>,
+    // The InputEvents to handle.
+    input_events: Vec<input_device::InputEvent>,
+    // The listener request stream.
+    mut request_stream: impl futures::StreamExt + std::marker::Unpin,
+) {
+    for input_event in input_events {
+        assert_eq!(input_handler.clone().handle_input_event(input_event).await.len(), 1);
+    }
+
+    // The request stream should not receive any events.
+    let request_stream_fut = request_stream.next();
+    fasync::pin_mut!(request_stream_fut);
+    assert!(request_stream_fut
+        .poll(&mut Context::from_waker(futures::task::noop_waker_ref()))
+        .is_pending());
 }
