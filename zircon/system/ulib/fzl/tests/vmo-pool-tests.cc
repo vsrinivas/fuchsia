@@ -157,8 +157,11 @@ class VmoPoolTester : public zxtest::Test {
   }
 
   void CheckAccounting(size_t filled_count) {
+    EXPECT_EQ(kNumVmos, pool_.total_buffers());
+    EXPECT_EQ(kNumVmos - filled_count, pool_.free_buffers());
     CheckFillingPool(filled_count);
     CheckEmptyPool(0);
+    EXPECT_EQ(kNumVmos, pool_.free_buffers());
   }
 
   // Shuffles the free list, psuedo-randomly.

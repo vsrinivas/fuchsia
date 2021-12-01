@@ -88,6 +88,12 @@ class VmoPool {
   // ZX_ERROR_INVALID_ARGS will be returned.
   zx_status_t ReleaseBuffer(uint32_t buffer_index);
 
+  // Returns the total number of buffers in this pool.
+  size_t total_buffers() const { return buffers_.size(); }
+
+  // Returns the number of free buffers in this pool.
+  size_t free_buffers() const { return free_buffers_.size(); }
+
   ~VmoPool();
 
   // The Buffer class offers an object-oriented way to accessing the buffers
@@ -187,7 +193,7 @@ class VmoPool {
   // VMO / mapping / pinning backing each buffer.
   fbl::Array<ListableBuffer> buffers_;
   // The list of free buffers.
-  fbl::SinglyLinkedList<ListableBuffer*> free_buffers_;
+  fbl::SizedSinglyLinkedList<ListableBuffer*> free_buffers_;
 };
 
 }  // namespace fzl
