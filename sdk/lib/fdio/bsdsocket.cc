@@ -448,12 +448,8 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
       return EAI_FAMILY;
   }
 
-  // Explicitly allocating message buffers to avoid heap allocation.
-  fidl::SyncClientBuffer<fnet_name::Lookup::LookupIp> fidl_buffer;
-  const fidl::WireUnownedResult fidl_result =
-      name_lookup.value()
-          .buffer(fidl_buffer.view())
-          ->LookupIp(fidl::StringView::FromExternal(name), options);
+  const fidl::WireResult fidl_result =
+      name_lookup.value()->LookupIp(fidl::StringView::FromExternal(name), options);
   if (!fidl_result.ok()) {
     errno = fdio_status_to_errno(fidl_result.status());
     return EAI_SYSTEM;
