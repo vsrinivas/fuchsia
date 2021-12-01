@@ -184,15 +184,7 @@ def main():
                 # When a directory and all its subdirectories must be made available, map
                 # the directory directly.
                 map_directly = True
-
-                # - src can have a '/...' suffix like with 'github.com/google/go-cmp/...'.
-                #   - This means all subpackages are being symlinked to the GOPATH.
-                # - dst have the suffix when defining a package.
-                # - src can only have the suffix if dst has it too.
-                assert dst.endswith('/...') >= src.endswith('/...'), (dst, src)
                 dst = dst[:-4]
-                if src.endswith('/...'):
-                    src = src[:-4]
             elif os.path.isfile(src):
                 # When sources are explicitly listed in the BUILD.gn file, each `src` will
                 # be a path to a file that must be mapped directly.
