@@ -518,7 +518,7 @@ static void arm_gic_v2_init_deny_regions(const void* driver_data, uint32_t lengt
                                          ZX_RSRC_KIND_MMIO);
   }
   if (driver->gicv_offset) {
-    root_resource_filter_add_deny_region(driver->mmio_phys + driver->gich_offset, GICV_REG_SIZE,
+    root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicv_offset, GICV_REG_SIZE,
                                          ZX_RSRC_KIND_MMIO);
   }
   if (driver->msi_frame_phys) {
