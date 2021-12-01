@@ -105,7 +105,6 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.power",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ssh",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.activity",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.brightness",
@@ -142,7 +141,7 @@ flutter_component("component") {
     main_dart = "main.dart"
   }
   component_name = "ermine"
-  manifest = "meta/ermine.cmx"
+  manifest = "meta/ermine.cml"
   deps = [
     ":app_launch_entries_resource",
     ":lib",

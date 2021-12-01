@@ -53,10 +53,13 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.ssh",
@@ -81,7 +84,9 @@ dart_library("lib") {
 flutter_component("component") {
   main_dart = "main.dart"
   component_name = "login"
-  manifest = "meta/login.cmx"
+
+  manifest = "meta/login.cml"
+
   deps = [
     ":images",
     ":lib",
@@ -94,13 +99,6 @@ flutter_component("component") {
     deps += [ ":default_config" ]
   }
 }
-
-# fuchsia_package("login") {
-#   deps = [
-#     ":component",
-#     ":images",
-#   ]
-# }
 
 resource("resources") {
   sources = [
@@ -116,7 +114,9 @@ resource("resources") {
 config_data("default_config") {
   for_pkg = "ermine"
 
-  sources = [ "config/default_config.json" ]
+  sources = [
+    "//src/experiences/session_shells/ermine/login/config/default_config.json",
+  ]
   outputs = [ "startup_config.json" ]
 }
 
@@ -124,7 +124,9 @@ config_data("default_config") {
 config_data("oobe_config") {
   for_pkg = "ermine"
 
-  sources = [ "config/oobe_config.json" ]
+  sources = [
+    "//src/experiences/session_shells/ermine/login/config/oobe_config.json",
+  ]
   outputs = [ "startup_config.json" ]
 }
 

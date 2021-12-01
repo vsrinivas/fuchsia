@@ -68,7 +68,7 @@ class CrashReportingRunner {
 
     // Generate [CrashReport] from errorType, errorMessage and stackTrace.
     final report = CrashReport(
-      programName: 'ermine.cmx',
+      programName: 'ermine.cm',
       programUptime: uptime.inMilliseconds * 1000,
       specificReport: SpecificCrashReport.withDart(
         RuntimeCrashReport(

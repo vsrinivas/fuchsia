@@ -22,7 +22,7 @@ import 'package:login/src/states/oobe_state.dart';
 
 /// Defines an implementation of [OobeState].
 class OobeStateImpl with Disposable implements OobeState {
-  static const kDefaultConfigJson = '/config/data/startup_config.json';
+  static const kDefaultConfigJson = '/config/data/ermine/startup_config.json';
   static const kStartupConfigJson = '/data/startup_config.json';
 
   final ComponentContext componentContext;
@@ -51,7 +51,6 @@ class OobeStateImpl with Disposable implements OobeState {
           }
           _updateChannelsAvailable.value = connected;
         });
-    shellService.advertise(componentContext.outgoing);
     componentContext.outgoing.serveFromStartupInfo();
 
     // We cannot load MaterialIcons font file from pubspec.yaml. So load it

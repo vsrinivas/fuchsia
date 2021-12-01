@@ -1,29 +1,21 @@
 {
     include: [
-        "//sdk/lib/inspect/client.shard.cml",
+        // Enable system logging.
         "syslog/client.shard.cml",
     ],
     program: {
-        data: "data/workstation_session",
+        data: "data/login",
     },
     children: [
         {
-            name: "login_shell",
-            url: "fuchsia-pkg://fuchsia.com/ermine#meta/login.cm",
-            startup: "eager",
+            name: "ermine_shell",
+            url: "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cm",
+            startup: "lazy",
         },
     ],
     capabilities: [
         {
-            directory: "account_dir",
-            rights: [ "rw*" ],
-            path: "/account_data",
-        },
-        {
-            storage: "account",
-            from: "self",
-            backing_dir: "account_dir",
-            storage_id: "static_instance_id_or_moniker",
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
         },
     ],
     use: [
@@ -33,12 +25,19 @@
         },
         {
             protocol: [
-                "fuchsia.identity.account.AccountManager",
-                "fuchsia.session.scene.Manager",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.keyboard.focus.Controller",
-                "fuchsia.ui.shortcut.Manager",
-                "fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.fonts.Provider",
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Privacy",
+                "fuchsia.ssh.AuthorizedKeys",
+
+                // TODO(fxbug.dev/89048): remove once Flutter no longer depends on fuchsia.sys.Environment
+                "fuchsia.sys.Environment",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
             ],
         },
         {
@@ -47,23 +46,28 @@
             rights: [ "r*" ],
             path: "/config/data",
         },
+        {
+            storage: "data",
+            path: "/data",
+        },
     ],
     offer: [
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
-                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.element.Manager",
                 "fuchsia.feedback.CrashReporter",
+                "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",
-                "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.logger.LogSink",
+                "fuchsia.media",
+                "fuchsia.media.Audio",
                 "fuchsia.media.AudioCore",
                 "fuchsia.memory.Monitor",
                 "fuchsia.net.interfaces.State",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.power.BatteryManager",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Privacy",
@@ -71,40 +75,46 @@
 
                 // TODO(fxbug.dev/89048): remove once Flutter no longer depends on fuchsia.sys.Environment
                 "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.activity.Provider",
                 "fuchsia.ui.activity.Tracker",
                 "fuchsia.ui.brightness.Control",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input.InputDeviceRegistry",
                 "fuchsia.ui.input.PointerCaptureListenerRegistry",
-                "fuchsia.ui.keyboard.focus.Controller",
+                "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Registry",
-                "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.update.channelcontrol.ChannelControl",
                 "fuchsia.update.Manager",
+                "fuchsia.wlan.common",
+                "fuchsia.wlan.policy",
                 "fuchsia.wlan.policy.ClientProvider",
             ],
             from: "parent",
-            to: [ "#login_shell" ],
+            to: [ "#ermine_shell" ],
         },
         {
             directory: "config-data",
             from: "parent",
-            to: "#login_shell",
+            to: "#ermine_shell",
         },
         {
             storage: "data",
             from: "parent",
-            to: "#login_shell",
+            to: "#ermine_shell",
         },
     ],
     expose: [
         {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "self",
+            to: "parent",
+        },
+        {
             protocol: [ "fuchsia.element.GraphicalPresenter" ],
-            from: "#login_shell",
+            from: "#ermine_shell",
+            to: "parent",
         },
     ],
 }

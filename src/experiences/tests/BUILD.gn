@@ -23,6 +23,7 @@ dart_library("ermine_driver") {
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/git/flutter/packages/fuchsia_remote_debug_protocol",
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/test",
   ]

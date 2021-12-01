@@ -7,7 +7,6 @@ import("//build/components.gni")
 group("ermine") {
   public_deps = [
     ":ermine-pkg",
-    "session:workstation_routing",
     "session:workstation_session",
   ]
 }
