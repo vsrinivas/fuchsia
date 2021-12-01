@@ -2,6 +2,7 @@
     include: [
         "//sdk/cts/test_realm/meta/cts_test_realm.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/lib/vulkan/vulkan_test_realm.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {

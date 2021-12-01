@@ -1,0 +1,56 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    collections: [
+        {
+            name: "vulkan-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            // These hermetic protocols are offered to be used by tests.
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#vulkan-tests" ],
+        },
+
+        // These system capabilities are offered for use by the vulkan tests.
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#vulkan-tests",
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [ "#vulkan-tests" ],
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: [ "#vulkan-tests" ],
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#vulkan-tests" ],
+        },
+        {
+            storage: "custom_artifacts",
+            from: "self",
+            to: "#vulkan-tests",
+        },
+    ],
+}

@@ -63,12 +63,14 @@ const ARCHIVIST_FOR_EMBEDDING_URL: &'static str =
 const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
 const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
 const CTS_TESTS_COLLECTION: &'static str = "cts-tests";
+const VULKAN_TESTS_COLLECTION: &'static str = "vulkan-tests";
 
 lazy_static! {
     static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> = [
         ("hermetic", HERMETIC_TESTS_COLLECTION),
         ("system", SYSTEM_TESTS_COLLECTION),
-        ("cts", CTS_TESTS_COLLECTION)
+        ("cts", CTS_TESTS_COLLECTION),
+        ("vulkan", VULKAN_TESTS_COLLECTION)
     ]
     .iter()
     .copied()
@@ -2353,6 +2355,23 @@ mod tests {
             ..fdata::Dictionary::EMPTY
         });
         assert_eq!(get_test_realm(&decl).unwrap(), CTS_TESTS_COLLECTION);
+
+        decl.facets = Some(fdata::Dictionary {
+            entries: vec![
+                fdata::DictionaryEntry { key: "somekey".into(), value: None },
+                fdata::DictionaryEntry {
+                    key: format!("{}.somekey", TEST_FACET),
+                    value: Some(fdata::DictionaryValue::Str("some_string".into()).into()),
+                },
+                fdata::DictionaryEntry {
+                    key: TEST_TYPE_FACET_KEY.into(),
+                    value: Some(fdata::DictionaryValue::Str("vulkan".into()).into()),
+                },
+            ]
+            .into(),
+            ..fdata::Dictionary::EMPTY
+        });
+        assert_eq!(get_test_realm(&decl).unwrap(), VULKAN_TESTS_COLLECTION);
 
         // invalid facets
         decl.facets = Some(fdata::Dictionary {
