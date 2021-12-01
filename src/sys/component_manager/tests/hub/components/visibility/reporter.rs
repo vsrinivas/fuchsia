@@ -10,7 +10,7 @@ async fn main() {
     expect_dir_listing("/hub/children", vec!["child"]).await;
     expect_dir_listing(
         "/hub/children/child",
-        vec!["children", "component_type", "debug", "deleting", "id", "url"],
+        vec!["children", "component_type", "debug", "id", "url"],
     )
     .await;
     expect_dir_listing("/hub/children/child/children", vec![]).await;
