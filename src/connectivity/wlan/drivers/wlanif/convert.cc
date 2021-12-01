@@ -28,6 +28,16 @@ namespace wlan_internal = ::fuchsia::wlan::internal;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
+// This function is only guaranteed to produce a valid fuchsia.wlan.ieee80211/CSsid,
+// i.e., an SSID with a valid byte length, if the input argument came from a
+// fuchsia.wlan.ieee80211/Ssid.
+void CloneIntoCSsid(const ::std::vector<uint8_t>& ssid, cssid_t& out_cssid) {
+  // fuchsia.wlan.ieee80211/Ssid is guaranteed to have no more than 32 bytes,
+  // so its size will fit in a uint8_t.
+  out_cssid.len = static_cast<uint8_t>(ssid.size());
+  memcpy(&out_cssid.data, ssid.data(), out_cssid.len);
+}
+
 uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type) {
   switch (scan_type) {
     case wlan_mlme::ScanTypes::ACTIVE:
@@ -66,16 +76,6 @@ void ConvertWlanChan(wlan_channel_t* wlanif_channel, const wlan_common::WlanChan
 
   // secondary80
   wlanif_channel->secondary80 = fidl_channel.secondary80;
-}
-
-void CopySSID(const ::std::vector<uint8_t>& in_ssid, cssid_t* out_ssid) {
-  size_t ssid_len = in_ssid.size();
-  if (ssid_len > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
-    lwarn("truncating ssid from %zu to %d\n", ssid_len, wlan_ieee80211::MAX_SSID_BYTE_LEN);
-    ssid_len = wlan_ieee80211::MAX_SSID_BYTE_LEN;
-  }
-  std::memcpy(out_ssid->data, in_ssid.data(), ssid_len);
-  out_ssid->len = ssid_len;
 }
 
 void CopyCountry(const ::std::vector<uint8_t>& in_country, uint8_t* out_country,
@@ -137,16 +137,6 @@ void ConvertBssDescription(bss_description_t* banjo_desc,
 
   // snr_db
   banjo_desc->snr_db = fidl_desc.snr_db;
-}
-
-// This function is only guaranteed to produce a valid fuchsia.wlan.ieee80211/CSsid,
-// i.e., an SSID with a valid byte length, if the input argument came from a
-// fuchsia.wlan.ieee80211/Ssid.
-void CloneIntoCSsid(const ::std::vector<uint8_t>& ssid, cssid_t& out_cssid) {
-  // fuchsia.wlan.ieee80211/Ssid is guaranteed to have no more than 32 bytes,
-  // so its size will fit in a uint8_t.
-  out_cssid.len = static_cast<uint8_t>(ssid.size());
-  memcpy(&out_cssid.data, ssid.data(), out_cssid.len);
 }
 
 wlan_internal::BssType ConvertBssType(uint8_t bss_type) {

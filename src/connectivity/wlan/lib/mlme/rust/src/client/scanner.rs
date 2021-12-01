@@ -40,8 +40,6 @@ pub enum ScanError {
     EmptyChannelList,
     #[error("invalid arg: max_channel_time < min_channel_time")]
     MaxChannelTimeLtMin,
-    #[error("invalid arg: SSID too long")]
-    SsidTooLong,
     #[error("fail starting hw scan: {}", _0)]
     StartHwScanFails(zx::Status),
     #[error("hw scan aborted")]
@@ -56,7 +54,6 @@ impl From<ScanError> for zx::Status {
             ScanError::Busy => zx::Status::UNAVAILABLE,
             ScanError::EmptyChannelList
             | ScanError::MaxChannelTimeLtMin
-            | ScanError::SsidTooLong
             | ScanError::UnsupportedBssTypeSelector => zx::Status::INVALID_ARGS,
             ScanError::StartHwScanFails(status) => status,
             ScanError::HwScanAborted => zx::Status::INTERNAL,
@@ -70,7 +67,6 @@ impl From<ScanError> for fidl_mlme::ScanResultCode {
             ScanError::Busy => fidl_mlme::ScanResultCode::NotSupported,
             ScanError::EmptyChannelList
             | ScanError::MaxChannelTimeLtMin
-            | ScanError::SsidTooLong
             | ScanError::UnsupportedBssTypeSelector => fidl_mlme::ScanResultCode::InvalidArgs,
             ScanError::StartHwScanFails(..) | ScanError::HwScanAborted => {
                 fidl_mlme::ScanResultCode::InternalError

@@ -14,13 +14,13 @@
 
 namespace wlanif {
 
+void CloneIntoCSsid(const ::std::vector<uint8_t>& ssid, cssid_t& out_cssid);
 uint8_t ConvertScanType(::fuchsia::wlan::mlme::ScanTypes scan_type);
 uint8_t ConvertCBW(::fuchsia::wlan::common::ChannelBandwidth cbw);
 void ConvertWlanChan(wlan_channel_t* wlanif_channel,
                      const ::fuchsia::wlan::common::WlanChannel& fidl_channel);
 void ConvertWlanChan(::fuchsia::wlan::common::WlanChannel* fidl_channel,
                      const wlan_channel_t& wlanif_channel);
-void CopySSID(const ::std::vector<uint8_t>& in_ssid, cssid_t* out_ssid);
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len);
 void CopyVendorSpecificIE(const ::std::vector<uint8_t>& in_vendor_ie, uint8_t* out_vendor_ie,
                           size_t* out_vendor_ie_len);
@@ -38,7 +38,6 @@ void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
                              const ::fuchsia::wlan::mlme::SetKeyDescriptor& fidl_key_desc);
 void ConvertDeleteKeyDescriptor(delete_key_descriptor_t* key_desc,
                                 const ::fuchsia::wlan::mlme::DeleteKeyDescriptor& fidl_key_desc);
-void CloneIntoCSsid(const ::std::vector<uint8_t>& ssid, cssid_t& out_cssid);
 ::fuchsia::wlan::internal::BssType ConvertBssType(uint8_t bss_type);
 ::fuchsia::wlan::common::ChannelBandwidth ConvertCBW(channel_bandwidth_t cbw);
 ::fuchsia::wlan::mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type);

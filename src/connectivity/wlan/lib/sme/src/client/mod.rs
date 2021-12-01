@@ -490,12 +490,8 @@ impl ClientSme {
     ) -> ConnectTransactionStream {
         let (mut connect_txn_sink, connect_txn_stream) = ConnectTransactionSink::new_unbounded();
 
+        // fuchsia.wlan.sme/ConnectRequest.ssid is always at most fidl_ieee80211::MAX_SSID_BYTE_LEN bytes
         let ssid = Ssid::from_bytes_unchecked(req.ssid);
-        if ssid.len() > (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) {
-            // TODO(fxbug.dev/42081): Use a more accurate error (InvalidSsidArg) for this error.
-            connect_txn_sink.send_connect_result(SelectNetworkFailure::NoScanResultWithSsid.into());
-            return connect_txn_stream;
-        }
         // Cancel any ongoing connect attempt
         self.state = self.state.take().map(|state| state.cancel_ongoing_connect(&mut self.context));
 

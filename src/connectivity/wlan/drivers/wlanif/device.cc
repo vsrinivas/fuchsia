@@ -474,7 +474,7 @@ void Device::StartReq(wlan_mlme::StartRequest req) {
   wlanif_start_req_t impl_req = {};
 
   // ssid
-  CopySSID(req.ssid, &impl_req.ssid);
+  CloneIntoCSsid(req.ssid, impl_req.ssid);
 
   // bss_type
   impl_req.bss_type = static_cast<bss_type_t>(req.bss_type);
@@ -498,9 +498,7 @@ void Device::StopReq(wlan_mlme::StopRequest req) {
   SetEthernetStatusUnlocked(false);
 
   wlanif_stop_req_t impl_req = {};
-
-  // ssid
-  CopySSID(req.ssid, &impl_req.ssid);
+  CloneIntoCSsid(req.ssid, impl_req.ssid);
 
   wlanif_impl_stop_req(&wlanif_impl_, &impl_req);
 }
