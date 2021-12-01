@@ -4,6 +4,7 @@
 
 use {
     anyhow::Result,
+    fidl::endpoints::Proxy,
     fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
     fuchsia_component_test::RealmBuilder,
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
@@ -44,3 +45,28 @@ async fn test_platform_bus() -> Result<()> {
     Ok(())
 }
 // [END example]
+
+#[fasync::run_singlethreaded(test)]
+async fn test_create_device() -> Result<()> {
+    // Create the RealmBuilder.
+    let builder = RealmBuilder::new().await?;
+    builder.driver_test_realm_setup().await?;
+    // Build the Realm.
+    let instance = builder.build().await?;
+    // Start DriverTestRealm
+    instance.driver_test_realm_start(fdt::RealmArgs::EMPTY).await?;
+    // Connect to our driver.
+    let dev = instance.driver_test_realm_connect_to_dev()?;
+    let node = device_watcher::recursive_wait_and_open_node(&dev, "sys/test/test").await?;
+
+    // Turn the Node connection into the driver's FIDL.
+    let driver = fidl_fuchsia_device_test::RootDeviceProxy::new(node.into_channel().unwrap());
+
+    // Call a FIDL method on the driver.
+    let (status, _) = driver.create_device("my-new-device", None).await.unwrap();
+
+    // Verify that FIDL method created a device.
+    assert!(status == 0);
+    device_watcher::recursive_wait_and_open_node(&dev, "sys/test/test/my-new-device").await?;
+    Ok(())
+}

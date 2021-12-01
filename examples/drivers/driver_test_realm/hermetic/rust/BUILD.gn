@@ -18,6 +18,7 @@ rustc_test("driver_test_realm_example_realm_builder_rust") {
   source_root = "test.rs"
   sources = [ "test.rs" ]
   deps = [
+    "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
