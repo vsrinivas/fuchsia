@@ -28,9 +28,10 @@ usually invoke it with [`ffx log`](/docs/reference/tools/sdk/ffx.md).
    </td>
    <td>
        Specify the runtime log level for components as 'component interest' using the form
-       <code>&lt;component>#&lt;interest></code> where component is the component moniker and
-       interest is the specified selection criteria, e.g. 'log-level' as one of
-       FATAL|ERROR|WARN|INFO|DEBUG|TRACE. Multiple component interest selections are delimited by
+       <code>&lt;component>#&lt;interest></code> where component is a component selector
+       (a component moniker that might include wildcards or a recursive glob in the last segment)
+       and interest is the specified selection criteria, one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE
+       giving the desired 'log-level'. Multiple component interest selections are delimited by
        commas.
    </td>
   </tr>

@@ -359,9 +359,10 @@ fn help(name: &str) -> String {
 
         --select <comma-separated-component-interests>
             Specify the runtime log level for components as 'component interest'
-            using the form <component>#<interest> where component is the
-            component moniker and interest is the specified selection criteria,
-            e.g. 'log-level' as one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE.
+            using the form <component>#<interest> where component is a
+            component selector (a component moniker that may include wildcards or a recursive
+            glob in its last segment) and interest is the specified selection criteria,
+            one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE giving the desired 'log-level'.
             Multiple component interest selections are delimited by commas.
             Example: --select audio_core.cmx#DEBUG,scenic.cmx#WARN
             NOTE 1: This flag changes the settings with which logs are emitted
@@ -372,7 +373,7 @@ fn help(name: &str) -> String {
             --select foo.cmx#DEBUG,bar.cmx#TRACE (ok)
             Note 2: In the event that multiple log listeners provide selector
             arguments via --select, those provided by the last client will
-            override any previous selectors but will not change the severity
+            override any previous selectors but will not change the `severity`
             setting of this listener.
 
         --begin <comma-separated-words>
