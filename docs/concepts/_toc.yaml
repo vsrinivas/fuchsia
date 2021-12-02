@@ -22,9 +22,6 @@ toc:
 - title: "Bluetooth"
   section:
   - include: /docs/concepts/bluetooth/_toc.yaml
-- title: "Booting"
-  section:
-  - include: /docs/concepts/booting/_toc.yaml
 - title: "Build system"
   section:
   - include: /docs/concepts/build_system/_toc.yaml

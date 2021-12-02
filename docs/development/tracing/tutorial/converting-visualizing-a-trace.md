@@ -141,7 +141,7 @@ This command runs `du` in a loop, sets a recording buffer size of 64 megabytes,
 records all tracing categories, and launches `du` with `fdio_spawn()`.
 
 Note: For more information on creating a process in Fuchsia, see
-[Process creation](/docs/concepts/booting/process_creation.md).
+[Process creation](/docs/concepts/process/process_creation.md).
 
 Once the command finishes running, it creates an HTML file:
 

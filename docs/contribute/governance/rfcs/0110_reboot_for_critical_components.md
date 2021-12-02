@@ -492,7 +492,7 @@ revisions for the events API.
 [fidl-shutdown]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#fuchsia.sys2/SystemController.Shutdown
 [doc-critical-components]: /docs/concepts/components/v1/sysmgr.md#critical_components
 [doc-events]: /docs/concepts/components/v2/capabilities/event.md
-[doc-graceful-reboot]: /docs/concepts/booting/why_fuchsia_devices_reboot.md#graceful_reboot
+[doc-graceful-reboot]: /docs/concepts/process/why_fuchsia_devices_reboot.md#graceful_reboot
 [doc-main-process-critical]: /docs/concepts/components/v2/elf_runner.md#using_the_elf_runner
 [doc-manifests]: /docs/concepts/components/v2/component_manifests.md
 [doc-migration-guide]: /docs/development/components/v2/migration.md

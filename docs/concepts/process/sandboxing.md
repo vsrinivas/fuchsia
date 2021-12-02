@@ -11,7 +11,7 @@ usually created with some initial resources and capabilities.
 Most commonly, a process starts executing some code with an initial stack, some
 command line arguments, some environment variables, and a set of initial
 handles.
-[Zircon program loading and dynamic linking](/docs/concepts/booting/program_loading.md)
+[Zircon program loading and dynamic linking](/docs/concepts/process/program_loading.md)
 describes the resources provided to programs when starting.
 
 ## Namespaces are the gateway to the world

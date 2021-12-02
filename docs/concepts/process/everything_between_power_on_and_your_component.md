@@ -224,7 +224,7 @@ appmgr.
 [appmgr-pkg]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/appmgr/BUILD.gn#159
 [appmgr-uses]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/appmgr/meta/appmgr.cml#40
 [blobfs]: /docs/concepts/filesystems/blobfs.md
-[bootloader-and-kernel]: /docs/concepts/booting/userboot.md#boot_loader_and_kernel_startup
+[bootloader-and-kernel]: /docs/concepts/process/userboot.md#boot_loader_and_kernel_startup
 [component-manager]: /docs/concepts/components/v2/introduction.md#component-manager
 [critical-processes]: /docs/reference/syscalls/job_set_critical.md
 [devfs]: /docs/concepts/drivers/device_driver_model/device-model.md
@@ -240,12 +240,12 @@ appmgr.
 [micro-kernel]: https://en.wikipedia.org/wiki/Microkernel
 [minfs]: /docs/concepts/filesystems/minfs.md
 [pkgfs-delayed]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/fshost.cml#18
-[process-bootstrap]: /docs/concepts/booting/program_loading.md
+[process-bootstrap]: /docs/concepts/process/program_loading.md
 [sysmgr-config]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/sysmgr/sysmgr-configuration.md
 [sysmgr]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/sysmgr/README.md
 [system-delayed]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/sys/root/meta/fshost.cml#19
-[userboot-loading]: /docs/concepts/booting/userboot.md#kernel_loads_userboot
-[userboot]: /docs/concepts/booting/userboot.md
+[userboot-loading]: /docs/concepts/process/userboot.md#kernel_loads_userboot
+[userboot]: /docs/concepts/process/userboot.md
 [userspace]: https://en.wikipedia.org/wiki/User_space
 [wait-for-system]: https://fuchsia.googlesource.com/fuchsia/+/5a6fe7db58d2869ccfbb22caf53343d40e57c6ba/src/devices/driver_manager/system-instance.cc#726
 [zxcrypt]: /docs/concepts/filesystems/zxcrypt.md

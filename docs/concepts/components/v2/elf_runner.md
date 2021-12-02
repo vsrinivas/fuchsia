@@ -161,7 +161,7 @@ and `red`.
 [lc-example]: /examples/components/lifecycle
 [lc-proto]: /sdk/fidl/fuchsia.process.lifecycle/lifecycle.fidl
 [lifecycle]: lifecycle.md
-[program-loading]: /docs/concepts/booting/program_loading.md
+[program-loading]: /docs/concepts/process/program_loading.md
 [job-set-critical]: /docs/reference/syscalls/job_set_critical.md
 [job-set-policy]: /docs/reference/syscalls/job_set_policy.md
 [process-create]: /docs/reference/syscalls/process_create.md

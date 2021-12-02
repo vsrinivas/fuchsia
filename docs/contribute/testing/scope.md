@@ -395,7 +395,7 @@ See also:
 [timer-slack]: /docs/concepts/kernel/timer_slack.md
 [timer-tests]: /zircon/kernel/tests/timer_tests.cc
 [timers-test]: https://fuchsia.googlesource.com/fuchsia/+/main/src/zircon/tests/timers/timers.cc
-[userboot]: /docs/concepts/booting/userboot.md
+[userboot]: /docs/concepts/process/userboot.md
 [utest-core]: /zircon/system/utest/core/README.md
 [vdso]: /docs/concepts/kernel/vdso.md
 [wikipedia-dependency-injection]: https://en.m.wikipedia.org/wiki/Dependency_injection

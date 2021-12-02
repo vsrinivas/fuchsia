@@ -238,11 +238,11 @@ platform interfaces are observed and respected.
 [open-life]: /docs/concepts/system/life_of_an_open.md#fidl
 [package]: /docs/concepts/packages/package.md
 [package-url]: /docs/concepts/packages/package_url.md
-[procargs]: /docs/concepts/booting/program_loading.md#the_processargs_protocol
+[procargs]: /docs/concepts/process/program_loading.md#the_processargs_protocol
 [process]: /docs/reference/kernel_objects/process.md
-[process-launcher]: /docs/concepts/booting/process_creation.md#fuchsiaprocesslauncher
+[process-launcher]: /docs/concepts/process/process_creation.md#fuchsiaprocesslauncher
 [process-launcher-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.process#Launcher
-[program-loading]: /docs/concepts/booting/program_loading.md
+[program-loading]: /docs/concepts/process/program_loading.md
 [rfc-0002]: /docs/contribute/governance/rfcs/0002_platform_versioning.md
 [rfc-0021]: /docs/contribute/governance/rfcs/0021_soft_transitions_methods_add_remove.md
 [rfc-0033]: /docs/contribute/governance/rfcs/0033_handling_unknown_fields_strictness.md

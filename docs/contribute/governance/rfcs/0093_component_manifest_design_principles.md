@@ -227,7 +227,7 @@ component's manifest is shipped as a blob in this package, usually in `meta/`.
 [component-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
 [ComponentDecl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
 [DSL]: https://en.wikipedia.org/wiki/Domain-specific_language
-[elf]: /docs/concepts/booting/program_loading.md#elf_and_the_system_abi
+[elf]: /docs/concepts/process/program_loading.md#elf_and_the_system_abi
 [elf-runner]: /docs/concepts/components/v2/elf_runner.md
 [FIDL]: /docs/development/languages/fidl/README.md
 [fidl-envelope]: /docs/reference/fidl/language/wire-format/README.md#envelopes

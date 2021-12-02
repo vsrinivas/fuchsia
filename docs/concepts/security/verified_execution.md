@@ -215,7 +215,7 @@ for verification and kernel rollback protection.
 content-addressed filesystem purpose-built to support verified execution. BlobFS
 is the sole storage system for executable code and associated read-only data
 (with exceptions for pre-kernel code, the kernel, and its
-[bootfs](/docs/concepts/booting/userboot.md#bootfs)) ramdisk, all of which are
+[bootfs](/docs/concepts/process/userboot.md#bootfs)) ramdisk, all of which are
 stored in the ZBI). Each blob in BlobFS is uniquely represented and accessed by
 a hash ([Merkle root](/docs/concepts/packages/merkleroot.md)), and a Merkle tree
 structure allows for random blob access. It is computationally infeasible for an

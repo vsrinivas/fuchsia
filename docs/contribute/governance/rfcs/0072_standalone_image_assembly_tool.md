@@ -295,7 +295,7 @@ The core library will have unit tests which covers:
 The `ffx` interface for this tool will need to be documented.
 
 [blobfs-docs]: /docs/concepts/filesystems/blobfs.md
-[bootstrap]: /docs/concepts/booting/everything_between_power_on_and_your_component.md
+[bootstrap]: /docs/concepts/process/everything_between_power_on_and_your_component.md
 [build_images_BUILD_gn]: https://fuchsia.googlesource.com/fuchsia/+/7461d8882167e7a9d1b494e3b1734d2c063830fc/build/resources/BUILD.gn#221
 [build_package_gni]: https://fuchsia.googlesource.com/fuchsia/+/7461d8882167e7a9d1b494e3b1734d2c063830fc/build/package.gni#604
 [fuchsia.git]: https://fuchsia.googlesource.com/fuchsia/

@@ -98,12 +98,12 @@ Threads represent threads of execution (CPU registers, stack, etc) within an
 address space that is owned by the Process in which they exist.  Processes are
 owned by Jobs, which define various resource limitations.  Jobs are owned by
 parent Jobs, all the way up to the Root Job, which was created by the kernel at
-boot and passed to [`userboot`, the first userspace Process to begin execution](/docs/concepts/booting/userboot.md).
+boot and passed to [`userboot`, the first userspace Process to begin execution](/docs/concepts/process/userboot.md).
 
 Without a Job Handle, it is not possible for a Thread within a Process to create another
 Process or another Job.
 
-[Program loading](/docs/concepts/booting/program_loading.md) is provided by userspace facilities and
+[Program loading](/docs/concepts/process/program_loading.md) is provided by userspace facilities and
 protocols above the kernel layer.
 
 See: [`zx_process_create()`](/docs/reference/syscalls/process_create.md),

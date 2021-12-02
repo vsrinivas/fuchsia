@@ -201,7 +201,7 @@ Reach out for questions or for status updates:
 [fuchsia-sys2]: https://fuchsia.dev/reference/fidl/fuchsia.sys2
 [fuchsia-sys]: https://fuchsia.dev/reference/fidl/fuchsia.sys
 [gn-cmx-allowlist]: /build/components/cmx/BUILD.gn
-[initial-processes]: /docs/concepts/booting/everything_between_power_on_and_your_component.md#initial-processes
+[initial-processes]: /docs/concepts/process/everything_between_power_on_and_your_component.md#initial-processes
 [intro]: /docs/concepts/components/v2/introduction.md
 [label-cf-v2-migration]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=label%3Acf-v2-migration
 [lib-fuchsia-component]: /src/lib/fuchsia-component/README.md

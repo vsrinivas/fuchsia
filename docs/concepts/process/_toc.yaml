@@ -12,3 +12,17 @@ toc:
   path: /docs/concepts/process/namespaces.md
 - title: "Sandboxing"
   path: /docs/concepts/process/sandboxing.md
+- title: "Booting"
+  section:
+  - title: "Bootsvc"
+    path: /docs/concepts/process/bootsvc.md
+  - title: "Everything between power on and your component"
+    path: /docs/concepts/process/everything_between_power_on_and_your_component.md
+  - title: "Process creation"
+    path: /docs/concepts/process/process_creation.md
+  - title: "Program loading"
+    path: /docs/concepts/process/program_loading.md
+  - title: "Userspace bootstrapping"
+    path: /docs/concepts/process/userboot.md
+  - title: "Why Fuchsia devices reboot"
+    path: /docs/concepts/process/why_fuchsia_devices_reboot.md

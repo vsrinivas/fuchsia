@@ -143,7 +143,7 @@ executable running in the process, but some of the initial structure of the
 process is controlled by the system and part of the system ABI.
 
 For additional details, see
-[Program Loading](/docs/concepts/booting/program_loading.md).
+[Program Loading](/docs/concepts/process/program_loading.md).
 
 #### ELF loader
 

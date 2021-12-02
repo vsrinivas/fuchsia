@@ -589,7 +589,7 @@ Components in the test realm may play various roles in the test, as follows:
 [runners]: /docs/concepts/components/v2/capabilities/runners.md
 [test-suite-protocol]: /docs/concepts/components/v2/realms.md
 [unit-tests]: /docs/development/components/build.md#unit_tests_with_generated_manifests
-[loader-service]: /docs/concepts/booting/program_loading.md#the_loader_service
+[loader-service]: /docs/concepts/process/program_loading.md#the_loader_service
 [caching-loader-service]: /src/sys/test_runners/src/elf/elf_component.rs
 [framework-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md#framework
 [sys-migration-guide]: /docs/development/components/v2/migration.md

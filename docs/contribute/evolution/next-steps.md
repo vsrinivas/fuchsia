@@ -239,7 +239,7 @@ even if CTS coverage never reaches 100% of the platform surface.
 [oot-component-testing]: /docs/contribute/roadmap/2021/oot_component_testing.md
 [oot-system-testing]: /docs/contribute/roadmap/2021/oot_system_testing.md
 [package-url]: /docs/concepts/packages/package_url.md
-[procargs]: /docs/concepts/booting/program_loading.md#the_processargs_protocol
+[procargs]: /docs/concepts/process/program_loading.md#the_processargs_protocol
 [rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
 [sdk-tools]: /docs/reference/tools/sdk/README.md
 [selectors]: /docs/reference/diagnostics/selectors.md
