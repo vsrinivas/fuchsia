@@ -1,7 +1,7 @@
 # Zircon fundamentals
 
 [Zircon][glossary.zircon] is the core that powers Fuchsia.
-It is composed of a microkernel and a small set of userspace services, drivers,
+It is composed of a kernel and a small set of userspace services, drivers,
 and libraries necessary for core system functions such as booting.
 
 Although [Zircon][glossary.zircon] applies many of the concepts popularized by

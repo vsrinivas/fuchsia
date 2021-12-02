@@ -19,10 +19,10 @@ The following architectural principles guide Fuchsia's design and development:
   Fuchsia is not a science experiment, it's a production-grade operating system
   that must adhere to fundamentals, like performance.
 
-The core of the system is [Zircon][glossary.zircon], a
-microkernel and collection of libraries for handling system startup and
-bootstrapping. All other system components are implemented in user space and
-isolated, reinforcing the **principle of least privilege**. This includes:
+The core of the system is [Zircon][glossary.zircon], a kernel and collection of
+libraries for handling system startup and bootstrapping.
+All other system components are implemented in user space and isolated,
+reinforcing the **principle of least privilege**. This includes:
 
 *   Device drivers
 *   Filesystems
