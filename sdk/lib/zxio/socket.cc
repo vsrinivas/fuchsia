@@ -91,7 +91,7 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
     return ZX_OK;
   };
   ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = zxio_datagram_socket(io).client.client_end().borrow().handle();
+    *out_handle = zxio_datagram_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
@@ -140,7 +140,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     return ZX_OK;
   };
   ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = zxio_stream_socket(io).client.client_end().borrow().handle();
+    *out_handle = zxio_stream_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
@@ -250,7 +250,7 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
     return ZX_OK;
   };
   ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = zxio_raw_socket(io).client.client_end().borrow().handle();
+    *out_handle = zxio_raw_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
@@ -298,7 +298,7 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     return ZX_OK;
   };
   ops.borrow = [](zxio_t* io, zx_handle_t* out_handle) {
-    *out_handle = zxio_packet_socket(io).client.client_end().borrow().handle();
+    *out_handle = zxio_packet_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {

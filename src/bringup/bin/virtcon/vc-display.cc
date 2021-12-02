@@ -612,7 +612,7 @@ zx_status_t dc_callback_handler(zx_signals_t signals) {
 void initialize_display_channel(fidl::ClientEnd<fhd::Controller> channel) {
   dc_client = fidl::WireSyncClient<fhd::Controller>(fidl::BindSyncClient(std::move(channel)));
 
-  dc_wait.set_object(dc_client.client_end().borrow().handle());
+  dc_wait.set_object(dc_client.client_end().borrow().channel()->get());
 }
 
 #else

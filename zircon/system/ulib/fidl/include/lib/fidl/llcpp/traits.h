@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_TRAITS_H_
 
 #include <lib/fidl/internal.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #ifdef __Fuchsia__
 #include <lib/zx/object.h>
 #endif
@@ -183,9 +184,11 @@ struct ContainsHandle<T, typename std::enable_if<std::is_base_of<zx::object_base
     : std::true_type {};
 #endif
 
-template <typename Protocol>
+template <typename Protocol, typename Transport = internal::ChannelTransport>
 class ClientEnd;
-template <typename Protocol>
+template <typename Protocol, typename Transport = internal::ChannelTransport>
+class UnownedClientEnd;
+template <typename Protocol, typename Transport = internal::ChannelTransport>
 class ServerEnd;
 
 template <typename Protocol>

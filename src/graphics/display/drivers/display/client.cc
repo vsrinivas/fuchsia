@@ -130,7 +130,7 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
   dc_image.type = request->image_config.type;
 
   zx_status_t status = controller_->dc()->ImportImage(
-      &dc_image, collection.client_end().borrow().handle(), request->index);
+      &dc_image, collection.client_end().borrow().channel()->get(), request->index);
   if (status != ZX_OK) {
     _completer.Reply(status, 0);
     return;
@@ -291,7 +291,7 @@ void Client::SetBufferCollectionConstraints(
   dc_image.type = request->config.type;
 
   zx_status_t status = controller_->dc()->SetBufferCollectionConstraints(
-      &dc_image, it->second.driver.client_end().borrow().handle());
+      &dc_image, it->second.driver.client_end().borrow().channel()->get());
 
   if (status == ZX_OK && use_kernel_framebuffer_) {
     ZX_ASSERT(it->second.kernel.is_valid());
@@ -844,7 +844,7 @@ void Client::ImportImageForCapture(ImportImageForCaptureRequestView request,
   // capture start/release.
   image_t capture_image = {};
   zx_status_t status = controller_->dc_capture()->ImportImageForCapture(
-      collection.client_end().borrow().handle(), request->index, &capture_image.handle);
+      collection.client_end().borrow().channel()->get(), request->index, &capture_image.handle);
   if (status == ZX_OK) {
     auto release_image = fit::defer([this, &capture_image]() {
       controller_->dc_capture()->ReleaseCapture(capture_image.handle);

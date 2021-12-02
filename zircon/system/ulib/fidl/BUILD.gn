@@ -106,6 +106,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/wire_messaging.h",
                     "lib/fidl/llcpp/wire_types.h",
                     "lib/fidl/llcpp/internal/client_details.h",
+                    "lib/fidl/llcpp/internal/transport_end.h",
                     "lib/fidl/llcpp/internal/server_details.h",
                     "lib/fidl/llcpp/internal/thread_checker.h",
                     "lib/fidl/llcpp/internal/transport.h",
@@ -115,6 +116,7 @@ if (is_fuchsia) {
     sdk_non_public_headers =
         [
           "include/lib/fidl/llcpp/internal/client_details.h",
+          "include/lib/fidl/llcpp/internal/transport_end.h",
           "include/lib/fidl/llcpp/internal/server_details.h",
           "include/lib/fidl/llcpp/internal/thread_checker.h",
           "include/lib/fidl/llcpp/internal/transport.h",

@@ -75,7 +75,7 @@ void SocketDevice::Start(StartRequestView request, StartCompleter::Sync& complet
     RemoveCallbacksLocked();
   }
   callbacks_ = fidl::BindSyncClient(std::move(request->cb));
-  callback_closed_handler_.set_object(callbacks_.client_end().borrow().handle());
+  callback_closed_handler_.set_object(callbacks_.client_end().borrow().channel()->get());
   callback_closed_handler_.set_trigger(ZX_SOCKET_PEER_CLOSED);
   callback_closed_handler_.Begin(dispatch_loop_.dispatcher());
 

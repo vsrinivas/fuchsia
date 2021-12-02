@@ -127,7 +127,6 @@ TEST(UnownedClientEnd, BorrowFromClientEnd) {
 TEST(UnownedClientEnd, Comparisons) {
   // Because unowned client ends do not own their wrapped handles,
   // we may use placeholder handle values in this unit test.
-  static_assert(std::is_trivially_destructible_v<fidl::UnownedClientEnd<llcpp_test::Frobinator>>);
   fidl::UnownedClientEnd<llcpp_test::Frobinator> one(1);
   fidl::UnownedClientEnd<llcpp_test::Frobinator> small(1);
   fidl::UnownedClientEnd<llcpp_test::Frobinator> large(42);

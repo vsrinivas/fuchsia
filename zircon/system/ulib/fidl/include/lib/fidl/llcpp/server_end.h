@@ -6,60 +6,48 @@
 #define LIB_FIDL_LLCPP_SERVER_END_H_
 
 #include <lib/fidl/epitaph.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/internal/transport_end.h>
 #include <lib/fidl/llcpp/soft_migration.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
 namespace fidl {
+namespace internal {
 
-// The server endpoint of a FIDL channel.
+template <typename Protocol, typename Transport>
+class ServerEndBase : public TransportEnd<Protocol, Transport> {
+  using TransportEnd = TransportEnd<Protocol, Transport>;
+
+ public:
+  using TransportEnd::TransportEnd;
+};
+
+}  // namespace internal
+
+// The server endpoint of a FIDL handle.
 //
-// The remote (client) counterpart of the channel expects this end of the
-// channel to serve the protocol represented by |Protocol|. This type is the
+// The remote (client) counterpart of the handle expects this end of the
+// handle to serve the protocol represented by |Protocol|. This type is the
 // dual of |ClientEnd|.
 //
 // |ServerEnd| is thread-compatible: the caller should not use the underlying
-// channel (e.g. sending an event) while the server-end object is being mutated
+// handle (e.g. sending an event) while the server-end object is being mutated
 // in a different thread.
 template <typename Protocol>
-class ServerEnd final {
+class ServerEnd<Protocol, internal::ChannelTransport> final
+    : public internal::ServerEndBase<Protocol, internal::ChannelTransport> {
+  using ServerEndBase = internal::ServerEndBase<Protocol, internal::ChannelTransport>;
+
  public:
-  using ProtocolType = Protocol;
+  using ServerEndBase::ServerEndBase;
 
-  // Creates a |ServerEnd| whose underlying channel is invalid.
-  //
-  // Both optional and non-optional server endpoints in FIDL declarations map
-  // to this same type. If this ServerEnd is passed to a method or FIDL
-  // protocol that requires valid channels, those operations will fail at
-  // run-time.
-  ServerEnd() = default;
-
-  // Creates an |ServerEnd| that wraps the given |channel|.
-  // The caller must ensure the |channel| is a server endpoint speaking
-  // a protocol compatible with |Protocol|.
-  // TODO(fxbug.dev/65212): Make the conversion explicit as users migrate to
-  // typed channels.
-  // NOLINTNEXTLINE
-  FIDL_CONDITIONALLY_EXPLICIT_CONVERSION ServerEnd(zx::channel channel)
-      : channel_(std::move(channel)) {}
-
-  ServerEnd(ServerEnd&& other) noexcept = default;
-  ServerEnd& operator=(ServerEnd&& other) noexcept = default;
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return channel_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
-
-  // Close the underlying channel if any,
-  // and reset the object back to an invalid state.
-  void reset() { channel_.reset(); }
-
-  // The underlying channel.
-  const zx::channel& channel() const { return channel_; }
-  zx::channel& channel() { return channel_; }
+  const zx::channel& channel() const { return ServerEndBase::handle_; }
+  zx::channel& channel() { return ServerEndBase::handle_; }
 
   // Transfers ownership of the underlying channel to the caller.
-  zx::channel TakeChannel() { return std::move(channel_); }
+  zx::channel TakeChannel() { return ServerEndBase::TakeHandle(); }
 
   // Sends an epitaph over the underlying channel, then closes the channel.
   // An epitaph is a final optional message sent over a server-end towards
@@ -69,15 +57,12 @@ class ServerEnd final {
   // The server-end must be holding a valid underlying channel.
   // Returns the status of the channel write operation.
   zx_status_t Close(zx_status_t epitaph_value) {
-    if (!is_valid()) {
+    if (!ServerEndBase::is_valid()) {
       ZX_PANIC("Cannot close an invalid ServerEnd.");
     }
     zx::channel channel = TakeChannel();
     return fidl_epitaph_write(channel.get(), epitaph_value);
   }
-
- private:
-  zx::channel channel_;
 };
 
 }  // namespace fidl

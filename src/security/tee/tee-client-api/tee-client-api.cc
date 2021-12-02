@@ -970,7 +970,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   }
 
   session->imp.session_id = out_session_id;
-  session->imp.application_channel = app_client_end.handle();
+  session->imp.application_channel = app_client_end.channel()->get();
 
   return static_cast<uint32_t>(out_result.return_code());
 }

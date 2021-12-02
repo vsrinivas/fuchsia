@@ -163,7 +163,7 @@ void DriverHost::Start(StartRequestView request, StartCompleter::Sync& completer
     completer.Close(endpoints.error_value());
     return;
   }
-  zx_status_t status = fdio_open_at(pkg->handle(), binary->data(),
+  zx_status_t status = fdio_open_at(pkg->channel()->get(), binary->data(),
                                     fio::wire::kOpenRightReadable | fio::wire::kOpenRightExecutable,
                                     endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {

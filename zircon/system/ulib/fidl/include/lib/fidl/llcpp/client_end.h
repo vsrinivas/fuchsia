@@ -6,15 +6,50 @@
 #define LIB_FIDL_LLCPP_CLIENT_END_H_
 
 #include <lib/fidl/epitaph.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
+#include <lib/fidl/llcpp/internal/transport_end.h>
 #include <lib/fidl/llcpp/soft_migration.h>
+#include <lib/fidl/llcpp/traits.h>
 #include <lib/zx/channel.h>
-#include <utility>
 #include <zircon/assert.h>
 
-namespace fidl {
+#include <utility>
 
-template <typename Protocol>
-class UnownedClientEnd;
+namespace fidl {
+namespace internal {
+
+template <typename Protocol, typename Transport>
+class ClientEndBase : public TransportEnd<Protocol, Transport> {
+  using TransportEnd = TransportEnd<Protocol, Transport>;
+
+ public:
+  using TransportEnd::TransportEnd;
+
+  // Returns a type-safe copy of the underlying handle in this |ClientEndBase|
+  // that does not claim ownership.
+  UnownedClientEnd<Protocol, Transport> borrow() const {
+    return UnownedClientEnd<Protocol, Transport>(TransportEnd::handle_.borrow());
+  }
+};
+
+template <typename Protocol, typename Transport>
+class UnownedClientEndBase : public UnownedTransportEnd<Protocol, Transport> {
+  using UnownedTransportEnd = UnownedTransportEnd<Protocol, Transport>;
+
+ public:
+  using UnownedTransportEnd::UnownedTransportEnd;
+
+  // An unowned client end can only be constructed from an existing handle.
+  //
+  // This constructor defines an implicit conversion to facilitate invoking
+  // generated FIDL APIs with either an unowned client end, or a const
+  // reference to a |TransportEndSubclass|.
+  // NOLINTNEXTLINE
+  UnownedClientEndBase(const ClientEnd<Protocol, Transport>& owner)
+      : UnownedClientEndBase(owner.handle()->get()) {}
+};
+
+}  // namespace internal
 
 // The client endpoint of a FIDL channel.
 //
@@ -25,54 +60,19 @@ class UnownedClientEnd;
 // |ClientEnd| is thread-compatible: it may be transferred to another thread
 // or another process.
 template <typename Protocol>
-class ClientEnd final {
+class ClientEnd<Protocol, internal::ChannelTransport> final
+    : public internal::ClientEndBase<Protocol, internal::ChannelTransport> {
+  using ClientEndBase = internal::ClientEndBase<Protocol, internal::ChannelTransport>;
+
  public:
-  using ProtocolType = Protocol;
-
-  // Creates a |ClientEnd| whose underlying channel is invalid.
-  //
-  // Both optional and non-optional client endpoints in FIDL declarations map
-  // to this same type. If this ClientEnd is passed to a method or FIDL
-  // protocol that requires valid channels, those operations will fail at
-  // run-time.
-  ClientEnd() = default;
-
-  // Creates an |ClientEnd| that wraps the given |channel|.
-  // The caller must ensure the |channel| is a client endpoint speaking
-  // a protocol compatible with |Protocol|.
-  //
-  // TODO(fxbug.dev/65212): Make the conversion explicit as users migrate to
-  // typed channels.
-  // NOLINTNEXTLINE
-  FIDL_CONDITIONALLY_EXPLICIT_CONVERSION ClientEnd(zx::channel channel)
-      : channel_(std::move(channel)) {}
-
-  ClientEnd(ClientEnd&& other) noexcept = default;
-  ClientEnd& operator=(ClientEnd&& other) noexcept = default;
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return channel_.is_valid(); }
-  explicit operator bool() const { return is_valid(); }
-
-  // Close the underlying channel if any,
-  // and reset the object back to an invalid state.
-  void reset() { channel_.reset(); }
+  using ClientEndBase::ClientEndBase;
 
   // The underlying channel.
-  const zx::channel& channel() const { return channel_; }
-  zx::channel& channel() { return channel_; }
+  const zx::channel& channel() const { return ClientEndBase::handle_; }
+  zx::channel& channel() { return ClientEndBase::handle_; }
 
   // Transfers ownership of the underlying channel to the caller.
-  zx::channel TakeChannel() { return std::move(channel_); }
-
-  // Returns a type-safe copy of the underlying channel in this |ClientEnd|
-  // that does not claim ownership.
-  fidl::UnownedClientEnd<Protocol> borrow() const {
-    return UnownedClientEnd<Protocol>(channel_.borrow());
-  }
-
- private:
-  zx::channel channel_;
+  zx::channel TakeChannel() { return std::move(ClientEndBase::handle_); }
 };
 
 // A typed client endpoint that does not claim ownership. It is typically
@@ -86,116 +86,78 @@ class ClientEnd final {
 // |fidl::UnownedClientEnd<Protocol>| has the additional flexibility of being
 // able to be stored in a member variable or field, while still remembering
 // the associated FIDL protocol.
-template <typename Protocol>
-class UnownedClientEnd final {
+template <typename Protocol, typename Transport>
+class UnownedClientEnd final : public internal::UnownedClientEndBase<Protocol, Transport> {
+  using UnownedClientEndBase = internal::UnownedClientEndBase<Protocol, Transport>;
+
  public:
-  using ProtocolType = Protocol;
+  using UnownedClientEndBase::UnownedClientEndBase;
 
-  // An unowned client end can only be constructed from an existing channel.
-  //
-  // This constructor defines an implicit conversion to facilitate invoking
-  // generated FIDL APIs with either an unowned client end, or a const
-  // reference to a |fidl::ClientEnd<Protocol>|.
-  // NOLINTNEXTLINE
-  UnownedClientEnd(const ClientEnd<Protocol>& owner) : UnownedClientEnd(owner.channel().get()) {}
-
-  // Creates an |UnownedClientEnd| from a raw zircon handle.
-  // Prefer only using this constructor when interfacing with C APIs.
-  constexpr explicit UnownedClientEnd(zx_handle_t h) : channel_(h) {}
-
-  // Creates an |UnownedClientEnd| from a |zx::unowned_channel|.
-  //
-  // Using this constructor is discouraged since it tends to erase the actual
-  // type of the underlying protocol.
-  // Consider declaring the type of the input variable as a
-  // |fidl::UnownedClientEnd<Protocol>| instead.
-  //
-  // TODO(fxbug.dev/65212): Make the conversion explicit as users migrate to
-  // typed channels.
-  // NOLINTNEXTLINE
-  FIDL_CONDITIONALLY_EXPLICIT_CONVERSION UnownedClientEnd(const zx::unowned_channel& h)
-      : channel_(h->get()) {}
-
-  // The unowned client end is copyable - it simply copies the handle value.
-  UnownedClientEnd(const UnownedClientEnd& other) = default;
-  UnownedClientEnd& operator=(const UnownedClientEnd& other) = default;
-
-  // Whether the underlying channel is valid.
-  bool is_valid() const { return channel_ != ZX_HANDLE_INVALID; }
-  explicit operator bool() const { return is_valid(); }
-
-  // The underlying channel.
-  zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
-
-  // The underlying channel, as a |zx_handle_t|.
-  zx_handle_t handle() const { return channel_; }
-
- private:
-  zx_handle_t channel_;
+  zx::unowned_channel channel() const { return zx::unowned_channel(UnownedClientEndBase::handle_); }
 };
 
 // Comparison operators between client-end objects.
-// These comparisons have the same semantics as the comparison operators
-// on the wrapped |zx::channel|s.
+// For the channel transport, these comparisons have the same semantics
+// as the comparison operators on the wrapped |zx::channel|s.
 
-template <typename T>
-bool operator==(const ClientEnd<T>& a, const ClientEnd<T>& b) {
-  return a.channel() == b.channel();
+template <typename T, typename U>
+bool operator==(const ClientEnd<T, U>& a, const ClientEnd<T, U>& b) {
+  return a.handle() == b.handle();
 }
 
-template <typename T>
-bool operator!=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator!=(const ClientEnd<T, U>& a, const ClientEnd<T, U>& b) {
   return !(a == b);
 }
 
-template <typename T>
-bool operator<(const ClientEnd<T>& a, const ClientEnd<T>& b) {
-  return a.channel() < b.channel();
+template <typename T, typename U>
+bool operator<(const ClientEnd<T, U>& a, const ClientEnd<T, U>& b) {
+  return a.handle() < b.handle();
 }
 
-template <typename T>
-bool operator>(const ClientEnd<T>& a, const ClientEnd<T>& b) {
-  return a.channel() > b.channel();
+template <typename T, typename U>
+bool operator>(const ClientEnd<T, U>& a, const ClientEnd<T, U>& b) {
+  return a.handle() > b.handle();
 }
 
-template <typename T>
-bool operator<=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
-  return a.channel() <= b.channel();
+template <typename T, typename U>
+bool operator<=(const ClientEnd<T, U>& a, const ClientEnd<T, U>& b) {
+  return a.handle() <= b.handle();
 }
 
-template <typename T>
-bool operator>=(const ClientEnd<T>& a, const ClientEnd<T>& b) {
-  return a.channel() >= b.channel();
+template <typename T, typename U>
+bool operator>=(const ClientEnd<T, U>& a, const ClientEnd<T, U>& b) {
+  return a.handle() >= b.handle();
 }
 
-template <typename T>
-bool operator==(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
-  return a.channel() == b.channel();
+template <typename T, typename U>
+bool operator==(const UnownedClientEnd<T, U>& a, const UnownedClientEnd<T, U>& b) {
+  return a.handle() == b.handle();
 }
 
-template <typename T>
-bool operator!=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
+template <typename T, typename U>
+bool operator!=(const UnownedClientEnd<T, U>& a, const UnownedClientEnd<T, U>& b) {
   return !(a == b);
 }
 
-template <typename T>
-bool operator<(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
-  return a.channel() < b.channel();
+template <typename T, typename U>
+bool operator<(const UnownedClientEnd<T, U>& a, const UnownedClientEnd<T, U>& b) {
+  return a.handle() < b.handle();
 }
 
-template <typename T>
-bool operator>(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
-  return a.channel() > b.channel();
+template <typename T, typename U>
+bool operator>(const UnownedClientEnd<T, U>& a, const UnownedClientEnd<T, U>& b) {
+  return a.handle() > b.handle();
 }
 
-template <typename T>
-bool operator<=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
-  return a.channel() <= b.channel();
+template <typename T, typename U>
+bool operator<=(const UnownedClientEnd<T, U>& a, const UnownedClientEnd<T, U>& b) {
+  return a.handle() <= b.handle();
 }
 
-template <typename T>
-bool operator>=(const UnownedClientEnd<T>& a, const UnownedClientEnd<T>& b) {
-  return a.channel() >= b.channel();
+template <typename T, typename U>
+bool operator>=(const UnownedClientEnd<T, U>& a, const UnownedClientEnd<T, U>& b) {
+  return a.handle() >= b.handle();
 }
 
 }  // namespace fidl

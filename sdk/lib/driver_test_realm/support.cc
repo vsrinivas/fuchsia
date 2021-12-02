@@ -242,7 +242,7 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_sys2::ComponentRe
       return;
     }
     zx_status_t status =
-        fdio_open_at(pkg_dir_->GetRemote().handle(), std::string(relative_path).data(),
+        fdio_open_at(pkg_dir_->GetRemote().channel()->get(), std::string(relative_path).data(),
                      fuchsia_io::wire::kOpenRightReadable, file->server.channel().release());
     if (status != ZX_OK) {
       completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
@@ -257,7 +257,7 @@ class FakeBootResolver final : public fidl::WireServer<fuchsia_sys2::ComponentRe
     data.set_buffer(result->buffer);
 
     fidl::ClientEnd<fuchsia_io::Directory> directory(
-        zx::channel(fdio_service_clone(pkg_dir_->GetRemote().handle())));
+        zx::channel(fdio_service_clone(pkg_dir_->GetRemote().channel()->get())));
     if (!directory.is_valid()) {
       completer.ReplyError(fuchsia_sys2::wire::ResolverError::kInternal);
       return;

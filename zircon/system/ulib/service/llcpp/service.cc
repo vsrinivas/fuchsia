@@ -36,7 +36,7 @@ zx::status<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Director
     return zx::error(status);
   }
   if (zx_status_t status =
-          fdio_service_connect_at(svc_dir.handle(), protocol_name, server_end.release());
+          fdio_service_connect_at(svc_dir.handle()->get(), protocol_name, server_end.release());
       status != ZX_OK) {
     return zx::error(status);
   }

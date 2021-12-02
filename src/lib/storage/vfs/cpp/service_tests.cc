@@ -80,7 +80,8 @@ TEST(Service, ServeDirectory) {
   // open client
   zx::channel c1, c2;
   EXPECT_EQ(ZX_OK, zx::channel::create(0u, &c1, &c2));
-  EXPECT_EQ(ZX_OK, fdio_service_connect_at(root->client.borrow().handle(), "abc", c2.release()));
+  EXPECT_EQ(ZX_OK,
+            fdio_service_connect_at(root->client.borrow().channel()->get(), "abc", c2.release()));
 
   // Close client. We test the semantic that a pending open is processed even if the client has been
   // closed.
