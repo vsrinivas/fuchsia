@@ -35,7 +35,7 @@ use packet::{Buf, BufferMut, Serializer};
 use crate::bindings::{
     context::Lockable,
     devices::{DeviceInfo, Devices},
-    socket::udp::UdpSocketIpExt,
+    socket::datagram::UdpSocketIpExt,
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsDispatcher, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
 };

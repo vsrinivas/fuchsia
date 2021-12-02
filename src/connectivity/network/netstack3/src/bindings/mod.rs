@@ -42,7 +42,6 @@ use util::ConversionContext;
 
 use context::Lockable;
 use devices::{DeviceInfo, Devices, ToggleError};
-use socket::udp::{UdpSocketCollection, UdpSocketIpExt};
 use timers::TimerDispatcher;
 
 use netstack3_core::{
@@ -81,7 +80,7 @@ pub(crate) struct BindingsDispatcher {
     devices: Devices,
     timers: timers::TimerDispatcher<TimerId>,
     rng: OsRng,
-    udp_sockets: socket::udp::UdpSocketCollection,
+    udp_sockets: socket::datagram::UdpSocketCollection,
 }
 
 impl BindingsDispatcher {
@@ -137,14 +136,14 @@ impl<'a> Lockable<'a, Ctx<BindingsDispatcher>> for Netstack {
     }
 }
 
-impl AsRef<UdpSocketCollection> for BindingsDispatcher {
-    fn as_ref(&self) -> &UdpSocketCollection {
+impl AsRef<socket::datagram::UdpSocketCollection> for BindingsDispatcher {
+    fn as_ref(&self) -> &socket::datagram::UdpSocketCollection {
         &self.udp_sockets
     }
 }
 
-impl AsMut<UdpSocketCollection> for BindingsDispatcher {
-    fn as_mut(&mut self) -> &mut UdpSocketCollection {
+impl AsMut<socket::datagram::UdpSocketCollection> for BindingsDispatcher {
+    fn as_mut(&mut self) -> &mut socket::datagram::UdpSocketCollection {
         &mut self.udp_sockets
     }
 }
@@ -291,7 +290,7 @@ impl<I: IcmpIpExt, B: BufferMut> BufferIcmpContext<I, B> for BindingsDispatcher 
     }
 }
 
-impl<I: UdpSocketIpExt + IcmpIpExt> UdpContext<I> for BindingsDispatcher {
+impl<I: socket::datagram::UdpSocketIpExt + IcmpIpExt> UdpContext<I> for BindingsDispatcher {
     fn receive_icmp_error(
         &mut self,
         id: Result<UdpConnId<I>, UdpListenerId<I>>,
@@ -301,7 +300,9 @@ impl<I: UdpSocketIpExt + IcmpIpExt> UdpContext<I> for BindingsDispatcher {
     }
 }
 
-impl<I: UdpSocketIpExt + IpExt, B: BufferMut> BufferUdpContext<I, B> for BindingsDispatcher {
+impl<I: socket::datagram::UdpSocketIpExt + IpExt, B: BufferMut> BufferUdpContext<I, B>
+    for BindingsDispatcher
+{
     fn receive_udp_from_conn(
         &mut self,
         conn: UdpConnId<I>,

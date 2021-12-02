@@ -4,7 +4,7 @@
 
 //! Socket features exposed by netstack3.
 
-pub(crate) mod udp;
+pub(crate) mod datagram;
 
 use std::num::NonZeroU16;
 
@@ -41,7 +41,7 @@ pub(crate) async fn serve<C>(
 ) -> Result<(), fidl::Error>
 where
     C: LockableContext,
-    C::Dispatcher: udp::UdpWorkerDispatcher,
+    C::Dispatcher: datagram::UdpWorkerDispatcher,
     C: Clone + Send + Sync + 'static,
 {
     stream
@@ -66,7 +66,7 @@ where
                     let mut response = (|| {
                         let (client, request_stream) = fidl::endpoints::create_request_stream()
                             .map_err(|_: fidl::Error| Errno::Enobufs)?;
-                        let () = udp::spawn_worker(
+                        let () = datagram::spawn_worker(
                             domain,
                             proto,
                             ctx.clone(),
