@@ -206,7 +206,7 @@ async fn test_logs_lifecycle() {
     eprintln!("DEBUG5");
     let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
     reader.retry_if_empty(true);
-    for i in 1..100 {
+    for i in 1..50 {
         eprintln!("DEBUG6");
         // launch our child and wait for it to exit before asserting on its logs
         let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
