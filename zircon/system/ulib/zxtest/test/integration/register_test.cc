@@ -55,14 +55,14 @@ TEST_P(ParamTestChild, BasicTest) {
 TEST_P(ParamTestChild, SameName) {}
 
 INSTANTIATE_TEST_SUITE_P(SomePrefix, ParamTestChild, ::zxtest::Values(1, 3, 5, 7, 8),
-                         [](const auto info) { return "prefix" + std::to_string(info.index); })
+                         [](const auto info) { return "prefix" + std::to_string(info.index); });
 
 enum __enum_type {
   VALUE_1 = 1,
   VALUE_2 = 3,
 };
 
-INSTANTIATE_TEST_SUITE_P(Enum, ParamTestChild, ::zxtest::Values(VALUE_1, VALUE_2))
+INSTANTIATE_TEST_SUITE_P(Enum, ParamTestChild, ::zxtest::Values(VALUE_1, VALUE_2));
 
 class EnumContainer {
  public:
@@ -87,7 +87,7 @@ TEST_P(EnumTest, SomeName) {}
 INSTANTIATE_TEST_SUITE_P(EnumClass, EnumTest,
                          ::zxtest::Combine(::zxtest::Values(EnumContainer::Enum::kFoo,
                                                             EnumContainer::Enum::kBar),
-                                           ::zxtest::Values(EnumContainer::Enum::kFoo)))
+                                           ::zxtest::Values(EnumContainer::Enum::kFoo)));
 
 using StringAndBool = std::tuple<std::string, bool>;
 class StringAndBoolParent : public zxtest::TestWithParam<StringAndBool> {};
@@ -104,5 +104,5 @@ INSTANTIATE_TEST_SUITE_P(
                                        ")", "=", "+", "{", "}", "[", "]", "|", "?", ";", "'", "\"",
                                        "<", ">", ",",
                                        "fuchsia-pkg://fuchsia.com/abcd#meta/abcd.cmx"),
-                      ::zxtest::Bool()))
+                      ::zxtest::Bool()));
 }  // namespace

@@ -151,7 +151,8 @@
             zxtest::internal::AddInstantiationDelegateImpl<TestSuite, TestSuite::ParamType>>(), \
         #Prefix, {.filename = __FILE__, .line_number = __LINE__}, provider,                     \
         LIB_ZXTEST_INSTANTIATION_NAME_FN(__VA_ARGS__));                                         \
-  }
+  }                                                                                             \
+  static int LIB_ZXTEST_TEST_REF(Prefix, TestSuite) __attribute__((unused)) = 0
 
 // Definition of operations used to evaluate assertion conditions.
 #define LIB_ZXTEST_EQ(actual, expected) \
