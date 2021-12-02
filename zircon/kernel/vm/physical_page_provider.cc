@@ -208,7 +208,7 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
       // execute up to once.
       uint32_t iterations = 0;
       while (!page->is_free()) {
-        if (iterations++ % 10 == 0) {
+        if (++iterations % 10 == 0) {
           dprintf(INFO, "PhysicalPageProvider::WaitOnEvent() looping more than expected\n");
         }
         auto maybe_vmo_backlink = pmm_page_queues()->GetCowWithReplaceablePage(page, cow_pages_);
@@ -248,6 +248,7 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
           } else {
             pmm_free_page(page);
           }
+          pmm_free_page(page);
           // Either this thread made it FREE, or this thread waited for it to be FREE.
           DEBUG_ASSERT(page->is_free());
           // The page has been replaced with a different page that doesn't have loan_cancelled set.

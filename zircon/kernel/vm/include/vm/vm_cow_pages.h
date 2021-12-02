@@ -419,6 +419,10 @@ class VmCowPages final
   bool DebugIsReclaimable() const;
   bool DebugIsUnreclaimable() const;
   bool DebugIsDiscarded() const;
+  bool DebugIsPage(uint64_t offset) const;
+  bool DebugIsMarker(uint64_t offset) const;
+  bool DebugIsEmpty(uint64_t offset) const;
+  vm_page_t* DebugGetPage(uint64_t offset) const;
 
   // Discard all the pages from a discardable vmo in the |kReclaimable| state. For this call to
   // succeed, the vmo should have been in the reclaimable state for at least
@@ -499,11 +503,15 @@ class VmCowPages final
     // become dirty, it'll be replaced with a non-loaned page.  If we replaced instead of evicting
     // to reclaim, we'd be able to borrow the loaned page while the contents are dirty.
     //
+    // Exclude is_latency_sensitive_ to avoid adding latency due to reclaim.
+    //
     // Exclude ShouldTrapDirtyTransitions() for now to prevent write-back and borrowing from
     // interesecting until we get a chance to fix that up.
     bool result = page_source_ && page_source_->properties().is_preserving_page_content &&
+                  !is_latency_sensitive_ &&
                   !page_source_->ShouldTrapDirtyTransitions();
     DEBUG_ASSERT(result == (debug_is_user_pager_backed_locked() &&
+                            !is_latency_sensitive_ &&
                             !page_source_->ShouldTrapDirtyTransitions()));
     return result;
   }
