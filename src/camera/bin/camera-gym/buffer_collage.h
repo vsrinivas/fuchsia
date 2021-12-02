@@ -132,6 +132,10 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
     }
   }
 
+  void set_controller_dispatcher(async_dispatcher_t* dispatcher) {
+    controller_dispatcher_ = dispatcher;
+  }
+
   // Manual mode entry points:
   void CommandSuccessNotify();
   void ExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
@@ -178,6 +182,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
                              fuchsia::ui::views::ViewRef view_ref) override;
 
   async::Loop loop_;
+  async_dispatcher_t* controller_dispatcher_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::sysmem::AllocatorPtr allocator_;
   fuchsia::ui::policy::PresenterPtr presenter_;

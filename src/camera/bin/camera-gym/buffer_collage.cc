@@ -807,8 +807,12 @@ BitmapImageNode::BitmapImageNode(scenic::Session* session, std::string filename,
 void BufferCollage::CommandSuccessNotify() {
   CommandStatusHandler command_status_handler = std::move(command_status_handler_);
   if (command_status_handler) {
-    fuchsia::camera::gym::Controller_SendCommand_Result result;
-    command_status_handler(result.WithResponse({}));
+    ZX_ASSERT(controller_dispatcher_ != nullptr);
+    async::PostTask(controller_dispatcher_,
+                    [command_status_handler = std::move(command_status_handler)]() mutable {
+                      fuchsia::camera::gym::Controller_SendCommand_Result result;
+                      command_status_handler(result.WithResponse({}));
+                    });
   }
 }
 
@@ -819,7 +823,8 @@ void BufferCollage::ExecuteCommand(Command command, BufferCollage::CommandStatus
                   });
 }
 
-void BufferCollage::PostedExecuteCommand(Command command, BufferCollage::CommandStatusHandler handler) {
+void BufferCollage::PostedExecuteCommand(Command command,
+                                         BufferCollage::CommandStatusHandler handler) {
   command_status_handler_ = std::move(handler);
   switch (command.Which()) {
     case Command::Tag::kSetDescription:
@@ -830,7 +835,8 @@ void BufferCollage::PostedExecuteCommand(Command command, BufferCollage::Command
   }
 }
 
-void BufferCollage::ExecuteSetDescriptionCommand(fuchsia::camera::gym::SetDescriptionCommand& command) {
+void BufferCollage::ExecuteSetDescriptionCommand(
+    fuchsia::camera::gym::SetDescriptionCommand& command) {
   set_show_description(command.enable);
   UpdateLayout();
   CommandSuccessNotify();

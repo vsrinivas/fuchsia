@@ -42,6 +42,10 @@ class StreamCycler {
   using CommandStatusHandler =
       fit::function<void(fuchsia::camera::gym::Controller_SendCommand_Result)>;
 
+  void set_controller_dispatcher(async_dispatcher_t* dispatcher) {
+    controller_dispatcher_ = dispatcher;
+  }
+
   // Manual mode entry points:
   void ExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
 
@@ -95,6 +99,7 @@ class StreamCycler {
   void CommandFailureNotify(::fuchsia::camera::gym::CommandError status);
 
   async_dispatcher_t* dispatcher_;
+  async_dispatcher_t* controller_dispatcher_;
   fuchsia::camera3::DeviceWatcherPtr watcher_;
   fuchsia::sysmem::AllocatorPtr allocator_;
   fuchsia::camera3::DevicePtr device_;
@@ -140,6 +145,7 @@ class StreamCycler {
               ComplexConfiguration_ManualMode_ExecuteSetConfigCommand_DifferentConfig);
   FRIEND_TEST(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteAddStreamCommand);
   FRIEND_TEST(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetCropCommand);
+  FRIEND_TEST(StreamCyclerTest, CommandSuccessNotify);
 };
 
 }  // namespace camera

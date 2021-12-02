@@ -75,9 +75,7 @@ class TokenHandleProvider {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-void NotImplemented(const std::string& name) {
-  ZX_ASSERT(false);
-}
+void NotImplemented(const std::string& name) { ZX_ASSERT(false); }
 
 // FAKE FIDL SERVICES
 //
@@ -556,6 +554,17 @@ void FakeStreamServ::OnNewRequest(StreamRequest request) {
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+class ExtraLoop : public gtest::TestLoopFixture {
+ public:
+  void SetUp() override { TestLoopFixture::SetUp(); }
+  void TearDown() override { TestLoopFixture::TearDown(); }
+  void RunUntilIdle() { RunLoopUntilIdle(); }
+  async_dispatcher_t* get_dispatcher() { return dispatcher(); }
+
+ private:
+  void TestBody() override {}
+};
+
 class StreamCyclerTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
@@ -565,6 +574,8 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     device_watcher_serv_.reset(new FakeDeviceWatcherServ(provider_.context()));
     device_serv_.reset(new FakeDeviceServ(provider_.context()));
     stream_serv_.reset(new FakeStreamServ(provider_.context()));
+
+    controller_loop_.reset(new ExtraLoop);
 
     SetupImplHandlers();
   }
@@ -644,6 +655,7 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     EXPECT_FALSE(cycler_result.is_error());
     ZX_ASSERT(!(cycler_result.is_error()));  // Do not continue if StreamCycler can't be created.
     auto cycler = cycler_result.take_value();
+    cycler->set_controller_dispatcher(controller_loop_->get_dispatcher());
     return cycler;
   }
 
@@ -894,6 +906,8 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     execute_add_stream_command_result_ = std::move(result);
   }
 
+  void RunControllerLoopUntilIdle() { controller_loop_->RunUntilIdle(); }
+
  private:
   // Need to be alive for duration of use of context.
   sys::testing::ComponentContextProvider provider_;
@@ -912,6 +926,8 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
   std::unique_ptr<FakeDeviceWatcherServ> device_watcher_serv_;
   std::unique_ptr<FakeDeviceServ> device_serv_;
   std::unique_ptr<FakeStreamServ> stream_serv_;
+
+  std::unique_ptr<ExtraLoop> controller_loop_;
 
   float on_add_collection_width_ = 0.0;
   float on_add_collection_height_ = 0.0;
@@ -992,7 +1008,8 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_AutomaticMode_ConnectToStream) {
   auto cycler = SetupCyclerStopAtGetNextFrame(false /* manual_mode */, kStreamCount);
   SetupFakeComplexConfigurations();
 
-  // TEST: WatchDevices(), WatchCurrentConfigurationCallback() and ConnectToStream() should be called.
+  // TEST: WatchDevices(), WatchCurrentConfigurationCallback() and ConnectToStream() should be
+  // called.
   RunLoopUntilIdle();
 
   // VERIFY:
@@ -1074,6 +1091,12 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand
   SetupFakeComplexConfigurations();
   RunLoopUntilIdle();  // Should run until WatchCurrentConfiguration().
 
+  // The callback should not be called yet.
+  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+
+  RunControllerLoopUntilIdle();
+
+  // The callback should not be called yet.
   EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
 
   cycler->current_config_index_ = 2U;  // Make current_config_index same.
@@ -1081,6 +1104,11 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand
   // TEST: Call SetConfigCommand
   SetupAndInvokeExecuteSetConfigCommand(cycler.get(), 2U /* config_id */);
   RunLoopUntilIdle();  // Should run until end of ExecuteSetConfigCommand().
+
+  // The callback should not be called yet.
+  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+
+  RunControllerLoopUntilIdle();
 
   // VERIFY:
   // The callback must be called.
@@ -1095,6 +1123,7 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand
   SetupFakeComplexConfigurations();
   RunLoopUntilIdle();  // Should run until WatchCurrentConfiguration().
 
+  // The callback should not be called yet.
   EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
 
   cycler->current_config_index_ = 1U;  // Make current_config_index different.
@@ -1103,10 +1132,21 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetConfigCommand
   SetupAndInvokeExecuteSetConfigCommand(cycler.get(), 2U /* config_id */);
   RunLoopUntilIdle();  // Should run until end of ExecuteSetConfigCommand().
 
+  // The callback should not be called yet.
+  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+
+  RunControllerLoopUntilIdle();
+
+  // The callback should not be called yet.
   EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
 
   // Emulate WatchCurrentConfiguration() callback which occurs because the config id changed.
   cycler->WatchCurrentConfigurationCallback(2U);
+
+  // The callback should not be called yet.
+  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+
+  RunControllerLoopUntilIdle();
 
   // VERIFY:
   // The callback must be called.
@@ -1132,6 +1172,11 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteAddStreamCommand
   // Emulate WatchCurrentConfiguration() callback which occurs because the config id changed.
   cycler->WatchCurrentConfigurationCallback(2U);
 
+  // The callback should not be called yet.
+  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+
+  RunControllerLoopUntilIdle();
+
   // The callback must be called.
   EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 1U);
 
@@ -1140,6 +1185,13 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteAddStreamCommand
 
   EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 0U);
   RunLoopUntilIdle();  // Should run until GetNextFrame().
+
+  // The callback should not be called yet.
+  EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 0U);
+
+  RunControllerLoopUntilIdle();
+
+  // The callback must be called.
   EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 1U);
 
   // VERIFY:
@@ -1167,6 +1219,11 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetCropCommand) 
   // Emulate WatchCurrentConfiguration() callback which occurs because the config id changed.
   cycler->WatchCurrentConfigurationCallback(2U);
 
+  // The callback should not be called yet.
+  EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 0U);
+
+  RunControllerLoopUntilIdle();
+
   // The callback must be called.
   EXPECT_EQ(execute_set_config_command_stat()->call_counter(), 1U);
 
@@ -1175,6 +1232,13 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetCropCommand) 
 
   EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 0U);
   RunLoopUntilIdle();  // Should run until GetNextFrame().
+
+  // The callback should not be called yet.
+  EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 0U);
+
+  RunControllerLoopUntilIdle();
+
+  // The callback must be called.
   EXPECT_EQ(execute_add_stream_command_stat()->call_counter(), 1U);
 
   EXPECT_EQ(stream_impl(0)->watch_crop_region_stat()->call_counter(), 0U);
@@ -1193,6 +1257,7 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetCropCommand) 
                                       99.0,    // y
                                       333.0,   // width
                                       222.0);  // height
+
   RunLoopUntilIdle();  // Should run until SetCropRegion().
 
   // Emulate WatchCropRegion() callback.
@@ -1202,6 +1267,7 @@ TEST_F(StreamCyclerTest, ComplexConfiguration_ManualMode_ExecuteSetCropCommand) 
                                  222.0};  // height
   auto region_ptr = std::make_unique<fuchsia::math::RectF>(std::move(region));
   cycler->WatchCropRegionCallback(1U, std::move(region_ptr));
+
   RunLoopUntilIdle();  // Should run until SetCropRegion().
 
   // VERIFY:

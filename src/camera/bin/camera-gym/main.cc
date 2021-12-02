@@ -153,6 +153,8 @@ int main(int argc, char* argv[]) {
   std::unique_ptr<camera::ControllerReceiver> controller_receiver;
   if (manual_mode) {
     controller_receiver = std::make_unique<camera::ControllerReceiver>();
+    cycler->set_controller_dispatcher(loop.dispatcher());
+    collage->set_controller_dispatcher(loop.dispatcher());
 
     FX_LOGS(INFO) << "Running in manual mode.";
 

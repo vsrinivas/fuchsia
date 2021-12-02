@@ -257,16 +257,24 @@ void StreamCycler::WatchCropRegionCallback(uint32_t stream_index,
 void StreamCycler::CommandSuccessNotify() {
   CommandStatusHandler command_status_handler = std::move(command_status_handler_);
   if (command_status_handler) {
-    fuchsia::camera::gym::Controller_SendCommand_Result result;
-    command_status_handler(result.WithResponse({}));
+    ZX_ASSERT(controller_dispatcher_ != nullptr);
+    async::PostTask(controller_dispatcher_,
+                    [command_status_handler = std::move(command_status_handler)]() mutable {
+                      fuchsia::camera::gym::Controller_SendCommand_Result result;
+                      command_status_handler(result.WithResponse({}));
+                    });
   }
 }
 
 void StreamCycler::CommandFailureNotify(::fuchsia::camera::gym::CommandError status) {
   CommandStatusHandler command_status_handler = std::move(command_status_handler_);
   if (command_status_handler) {
-    fuchsia::camera::gym::Controller_SendCommand_Result result;
-    command_status_handler(result.WithErr(::fuchsia::camera::gym::CommandError::OUT_OF_RANGE));
+    ZX_ASSERT(controller_dispatcher_ != nullptr);
+    async::PostTask(controller_dispatcher_, [command_status_handler =
+                                                 std::move(command_status_handler)]() mutable {
+      fuchsia::camera::gym::Controller_SendCommand_Result result;
+      command_status_handler(result.WithErr(::fuchsia::camera::gym::CommandError::OUT_OF_RANGE));
+    });
   }
 }
 
