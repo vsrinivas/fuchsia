@@ -720,6 +720,7 @@ remote_inputs=(
 
 # List inputs in a file to avoid exceeding shell limit.
 inputs_file_list="$output".inputs
+mkdir -p "$(dirname "$inputs_file_list")"
 for f in "${remote_inputs[@]}"
 do echo "$f"
 done > "$inputs_file_list"
