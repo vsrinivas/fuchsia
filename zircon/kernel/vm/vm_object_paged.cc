@@ -901,7 +901,8 @@ zx_status_t VmObjectPaged::ZeroRange(uint64_t offset, uint64_t len) {
   // and it doesn't unroll its actions.
   //
   // Zeroing pages of a contiguous VMO doesn't commit or de-commit any pages currently, but we
-  // increment the generation count anyway in case that changes in future.
+  // increment the generation count anyway in case that changes in future, and to keep the tests
+  // more consistent.
   IncrementHierarchyGenerationCountLocked();
 
   // Currently we want ZeroPagesLocked() to not decommit any pages from a contiguous VMO.  In debug

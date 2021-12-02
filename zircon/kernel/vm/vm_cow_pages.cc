@@ -3213,6 +3213,7 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
   if (!InRange(offset, len, size_)) {
     return ZX_ERR_OUT_OF_RANGE;
   }
+
   uint64_t end = offset + len;
 
   // We stack-own loaned pages below from allocation for page replacement to AddPageLocked().
@@ -3234,6 +3235,35 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
     // explicit markers to actually resolve the pager fault.
     if (src_page.IsEmpty()) {
       src_page = VmPageOrMarker::Marker();
+    }
+
+    // We don't technically need to check is_borrowing_enabled() here since pmm will check also, but
+    // by checking here, we minimize the amount of code that will run when !is_borrowing_enabled()
+    // (in case we have it disabled due to late discovery of a problem with borrowing).
+    if (pmm_physical_page_borrowing_config()->is_borrowing_enabled() && can_borrow_locked() &&
+        src_page.IsPage()) {
+      // Assert some things we implicitly know are true (currently).  We can avoid explicitly
+      // checking these in the if condition for now.
+      DEBUG_ASSERT(!is_source_supplying_specific_physical_pages_locked());
+      DEBUG_ASSERT(!pmm_is_loaned(src_page.Page()));
+      DEBUG_ASSERT(!new_zeroed_pages);
+      // Try to replace src_page with a loaned page.  We allocate the loaned page one page at a time
+      // to avoid failing the allocation due to asking for more loaned pages than there are free
+      // loaned pages.
+      uint32_t pmm_alloc_flags = pmm_alloc_flags_;
+      pmm_alloc_flags |= PMM_ALLOC_FLAG_MUST_BORROW | PMM_ALLOC_FLAG_CAN_BORROW;
+      vm_page_t* new_page;
+      zx_status_t alloc_status = pmm_alloc_page(pmm_alloc_flags, &new_page);
+      // If we got a loaned page, replace the page in src_page, else just continue with src_page
+      // unmodified since pmm has no more loaned free pages or !is_borrowing_enabled().
+      if (alloc_status == ZX_OK) {
+        InitializeVmPage(new_page);
+        CopyPageForReplacementLocked(new_page, src_page.Page());
+        vm_page_t* old_page = src_page.ReleasePage();
+        list_add_tail(&freed_list, &old_page->queue_node);
+        src_page = VmPageOrMarker::Page(new_page);
+      }
+      DEBUG_ASSERT(src_page.IsPage());
     }
 
     // Defer individual range updates so we can do them in blocks.
@@ -4199,6 +4229,37 @@ bool VmCowPages::DebugIsDiscarded() const {
     return false;
   }
   return DebugIsInDiscardableListLocked(/*reclaim_candidate=*/false);
+}
+
+bool VmCowPages::DebugIsPage(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  Guard<Mutex> guard{&lock_};
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
+  return p && p->IsPage();
+}
+
+bool VmCowPages::DebugIsMarker(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  Guard<Mutex> guard{&lock_};
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
+  return p && p->IsMarker();
+}
+
+bool VmCowPages::DebugIsEmpty(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  Guard<Mutex> guard{&lock_};
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
+  return !p || p->IsEmpty();
+}
+
+vm_page_t* VmCowPages::DebugGetPage(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  Guard<Mutex> guard{&lock_};
+  const VmPageOrMarker* p = page_list_.Lookup(offset);
+  if (p && p->IsPage()) {
+    return p->Page();
+  }
+  return nullptr;
 }
 
 VmCowPages::DiscardablePageCounts VmCowPages::GetDiscardablePageCounts() const {

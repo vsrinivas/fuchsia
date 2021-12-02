@@ -462,6 +462,183 @@ static bool vmo_create_contiguous_test() {
   END_TEST;
 }
 
+// Make sure decommitting pages from a contiguous VMO is allowed, and that we get back the correct
+// pages when committing pages back into a contiguous VMO, even if another VMO was (temporarily)
+// using those pages.
+static bool vmo_contiguous_decommit_test() {
+  BEGIN_TEST;
+
+  bool loaning_was_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
+  bool borrowing_was_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+  pmm_physical_page_borrowing_config()->set_loaning_enabled(true);
+  pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+  auto cleanup = fit::defer([loaning_was_enabled, borrowing_was_enabled] {
+    pmm_physical_page_borrowing_config()->set_loaning_enabled(loaning_was_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_enabled(borrowing_was_enabled);
+  });
+
+  static const size_t alloc_size = PAGE_SIZE * 16;
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, alloc_size, 0, &vmo);
+  ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
+  ASSERT_TRUE(vmo, "vmobject creation\n");
+
+  paddr_t base_pa = static_cast<paddr_t>(-1);
+  status = vmo->Lookup(0, PAGE_SIZE, [&base_pa](size_t offset, paddr_t pa) {
+    DEBUG_ASSERT(base_pa == static_cast<paddr_t>(-1));
+    DEBUG_ASSERT(offset == 0);
+    base_pa = pa;
+    return ZX_ERR_NEXT;
+  });
+  ASSERT_EQ(status, ZX_OK, "stash base pa works\n");
+  ASSERT_TRUE(base_pa != static_cast<paddr_t>(-1));
+
+  bool borrowed_seen = false;
+
+  bool page_expected[alloc_size / PAGE_SIZE];
+  for (bool& present : page_expected) {
+    // Default to true.
+    present = true;
+  }
+  // Make sure expected pages (and only expected pages) are present and consistent with start
+  // physical address of contiguous VMO.
+  auto verify_expected_pages = [vmo, base_pa, &borrowed_seen, &page_expected]() {
+    auto cow = vmo->DebugGetCowPages();
+    bool page_seen[alloc_size / PAGE_SIZE] = {};
+    auto lookup_func = [base_pa, &page_seen](size_t offset, paddr_t pa) {
+      DEBUG_ASSERT(!page_seen[offset / PAGE_SIZE]);
+      page_seen[offset / PAGE_SIZE] = true;
+      if (pa - base_pa != offset) {
+        return ZX_ERR_BAD_STATE;
+      }
+      return ZX_ERR_NEXT;
+    };
+    zx_status_t status = vmo->Lookup(0, alloc_size, lookup_func);
+    if (status != ZX_OK) {
+      printf("vmo->Lookup() failed - status: %d\n", status);
+      return false;
+    }
+    for (uint64_t offset = 0; offset < alloc_size; offset += PAGE_SIZE) {
+      uint64_t page_index = offset / PAGE_SIZE;
+      if (page_expected[page_index] != page_seen[page_index]) {
+        printf("page_expected[page_index] != page_seen[page_index]\n");
+        return false;
+      }
+      vm_page_t* page_from_cow = cow->DebugGetPage(offset);
+      vm_page_t* page_from_pmm = paddr_to_vm_page(base_pa + offset);
+      DEBUG_ASSERT(page_from_pmm);
+      if (page_expected[page_index]) {
+        DEBUG_ASSERT(page_from_cow);
+        DEBUG_ASSERT(page_from_cow == page_from_pmm);
+        DEBUG_ASSERT(cow->DebugIsPage(offset));
+        DEBUG_ASSERT(!page_from_pmm->loaned);
+      } else {
+        DEBUG_ASSERT(!page_from_cow);
+        DEBUG_ASSERT(cow->DebugIsEmpty(offset));
+        DEBUG_ASSERT(page_from_pmm->loaned);
+        if (!page_from_pmm->is_free()) {
+          // It's not in cow, and it's not free, so note that we observed a borrowed page.
+          borrowed_seen = true;
+        }
+      }
+      DEBUG_ASSERT(!page_from_pmm->loan_cancelled);
+    }
+    return true;
+  };
+  verify_expected_pages();
+  auto track_decommit = [vmo, &page_expected, &verify_expected_pages](uint64_t start_offset,
+                                                                      uint64_t size) {
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+    uint64_t end_offset = start_offset + size;
+    for (uint64_t offset = start_offset; offset < end_offset; offset += PAGE_SIZE) {
+      page_expected[offset / PAGE_SIZE] = false;
+    }
+    verify_expected_pages();
+  };
+  auto track_commit = [vmo, &page_expected, &verify_expected_pages](uint64_t start_offset,
+                                                                    uint64_t size) {
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+    uint64_t end_offset = start_offset + size;
+    for (uint64_t offset = start_offset; offset < end_offset; offset += PAGE_SIZE) {
+      page_expected[offset / PAGE_SIZE] = true;
+    }
+    verify_expected_pages();
+  };
+
+  status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
+  ASSERT_EQ(status, ZX_OK, "decommit of contiguous VMO pages works\n");
+  track_decommit(PAGE_SIZE, 4 * PAGE_SIZE);
+
+  status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
+  ASSERT_EQ(status, ZX_OK,
+            "decommit of contiguous VMO pages overlapping non-present pages works\n");
+  track_decommit(0, 4 * PAGE_SIZE);
+
+  status = vmo->DecommitRange(alloc_size - PAGE_SIZE, PAGE_SIZE);
+  ASSERT_EQ(status, ZX_OK, "decommit at end of contiguous VMO works\n");
+  track_decommit(alloc_size - PAGE_SIZE, PAGE_SIZE);
+
+  // Due to concurrent activity of the system, we may not be able to allocate the loaned pages into
+  // a VMO we're creating here, and depending on timing, we may also not observe the pages being
+  // borrowed.  However, it shouldn't take many tries, if we continue to allocate non-pinned pages
+  // to a VMO repeatedly, since loaned pages are preferred for allocations that can use them.
+  //
+  // We pay attention to whether ASAN is enabled in order to apply a strategy that's optimized for
+  // pages being put on the head (normal) or tail (ASAN) of the free list
+  // (PmmNode::free_loaned_list_).
+
+  zx_time_t complain_deadline = current_time() + ZX_SEC(5);
+  while (!borrowed_seen) {
+    // Not super small, in case we end up needing to do multiple iterations of the loop to see the
+    // pages being borrowed, and ASAN is enabled which could require more iterations of this loop
+    // if this size were smaller.  Also hopefully not big enough to fail on small-ish devices.
+    constexpr uint64_t kBorrowingVmoPages = 64;
+    vm_page_t* pages[kBorrowingVmoPages];
+    fbl::RefPtr<VmObjectPaged> borrowing_vmo;
+    status = make_committed_pager_vmo(kBorrowingVmoPages, &pages[0], &borrowing_vmo);
+    ASSERT_EQ(status, ZX_OK);
+
+    // Updates borrowing_seen to true, if any pages of vmo are seen to be borrowed (maybe by
+    // borrowing_vmo, or maybe by some other VMO; we don't care which here).
+    verify_expected_pages();
+
+    if (!borrowed_seen) {
+      if constexpr (!__has_feature(address_sanitizer)) {
+        // By committing and de-committing in the loop, we put the pages we're paying attention to
+        // back at the head of the free_loaned_list_, so the next iteration of the loop is more
+        // likely to see them being borrowed (by allocating them).
+        status = vmo->CommitRange(0, 4 * PAGE_SIZE);
+        ASSERT_EQ(status, ZX_OK, "temp commit back to contiguous VMO, to remove from free list\n");
+        track_commit(0, 4 * PAGE_SIZE);
+
+        status = vmo->DecommitRange(0, 4 * PAGE_SIZE);
+        ASSERT_EQ(status, ZX_OK, "decommit back to free list at head of free list\n");
+        track_decommit(0, 4 * PAGE_SIZE);
+      } else {
+        // By _not_ committing and de-committing in the loop, the pages we're allocating in a loop
+        // will eventually work through the free_loaned_list_, even if a large contiguous VMO was
+        // decomitted at an inconvenient time.
+      }
+      zx_time_t now = current_time();
+      if (now > complain_deadline) {
+        dprintf(INFO, "!borrowed_seen is persisting longer than expected; still trying...\n");
+        complain_deadline = now + ZX_SEC(5);
+      }
+    }
+  }
+
+  status = vmo->DecommitRange(0, alloc_size);
+  ASSERT_EQ(status, ZX_OK, "decommit after cancel loan\n");
+
+  status = vmo->CommitRange(0, alloc_size);
+  ASSERT_EQ(status, ZX_OK, "committed pages back into contiguous VMO\n");
+  track_commit(0, alloc_size);
+
+  END_TEST;
+}
+
 static bool vmo_contiguous_decommit_disabled_test() {
   BEGIN_TEST;
 
@@ -2751,6 +2928,7 @@ VM_UNITTEST(vmo_odd_size_commit_test)
 VM_UNITTEST(vmo_create_physical_test)
 VM_UNITTEST(vmo_physical_pin_test)
 VM_UNITTEST(vmo_create_contiguous_test)
+VM_UNITTEST(vmo_contiguous_decommit_test)
 VM_UNITTEST(vmo_contiguous_decommit_disabled_test)
 VM_UNITTEST(vmo_contiguous_decommit_enabled_test)
 VM_UNITTEST(vmo_precommitted_map_test)
