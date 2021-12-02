@@ -13,6 +13,7 @@ zx_library("elfldltl") {
   sdk = "source"
   sdk_headers = [
     "lib/elfldltl/constants.h",
+    "lib/elfldltl/diagnostics.h",
     "lib/elfldltl/field.h",
     "lib/elfldltl/fuzzer.h",
     "lib/elfldltl/layout.h",
@@ -44,6 +45,7 @@ test("elfldltl-unittests") {
 # These pure unit tests can be included in a standalone ZBI test binary too.
 source_set("unittests") {
   sources = [
+    "diagnostics-tests.cc",
     "field-tests.cc",
     "layout-tests.cc",
     "note-tests.cc",
