@@ -9,6 +9,7 @@ ffx_plugin("ffx_component_show") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/lib/component_hub",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
