@@ -182,7 +182,7 @@ FUNCTION(_start)
     adr_global x2, __code_start
     adr_global x3, _end
     sub     x3, x3, x2
-    movlit  x4, MMU_PTE_KERNEL_RWX_FLAGS
+    mov     x4, MMU_PTE_KERNEL_RWX_FLAGS
     bl      arm64_boot_map
 
     /* Prepare tt_trampoline page table.

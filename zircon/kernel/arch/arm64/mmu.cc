@@ -132,19 +132,9 @@ pte_t mmu_flags_to_s1_pte_attr(uint flags) {
       break;
   }
 
-  if (flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
-    if (flags & ARCH_MMU_FLAG_PERM_USER) {
-      // User executable page, marked privileged execute never.
-      attr |= MMU_PTE_ATTR_PXN;
-    } else {
-      // Privileged executable page, marked user execute never.
-      attr |= MMU_PTE_ATTR_UXN;
-    }
-  } else {
-    // All non executable pages are marked both privileged and user execute never.
+  if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
     attr |= MMU_PTE_ATTR_UXN | MMU_PTE_ATTR_PXN;
   }
-
   if (flags & ARCH_MMU_FLAG_NS) {
     attr |= MMU_PTE_ATTR_NON_SECURE;
   }
@@ -186,21 +176,9 @@ uint s1_pte_attr_to_mmu_flags(pte_t pte) {
       break;
   }
 
-  // Based on whether or not this is a user page, check UXN or PXN bit to determine
-  // if it's an executable page.
-  if (mmu_flags & ARCH_MMU_FLAG_PERM_USER) {
-    if ((pte & MMU_PTE_ATTR_UXN) == 0) {
-      mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
-    }
-  } else if ((pte & MMU_PTE_ATTR_PXN) == 0) {
-    // Privileged page, check the PXN bit.
+  if (!((pte & MMU_PTE_ATTR_UXN) && (pte & MMU_PTE_ATTR_PXN))) {
     mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
   }
-
-  // TODO: fxbug.dev/88451
-  // Add additional asserts here that the translation table entries are correctly formed
-  // with regards to UXN and PXN bits and possibly other unhandled and/or ambiguous bits.
-
   if (pte & MMU_PTE_ATTR_NON_SECURE) {
     mmu_flags |= ARCH_MMU_FLAG_NS;
   }

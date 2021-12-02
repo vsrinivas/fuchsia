@@ -118,7 +118,6 @@ if (toolchain_environment == "physmem" ||
       "mexec.S",
       "mexec.cc",
       "mmu.cc",
-      "mmu_tests.cc",
       "mp.cc",
       "perf_mon.cc",
       "periphmap.cc",
