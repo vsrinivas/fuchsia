@@ -132,6 +132,7 @@ otError otPlatSettingsDelete(otInstance *instance, uint16_t key, int index) {
 
 static otError platformSettingsDelete(otInstance *instance, uint16_t key, int index) {
   OT_UNUSED_VARIABLE(instance);
+  FX_LOGS(INFO) << "Deleting settings for key: " << key << " index: " << index;
   std::string key_str(std::to_string(key));
   ThreadConfigMgrError err;
   if (index < -1) {
@@ -152,6 +153,7 @@ static otError platformSettingsDelete(otInstance *instance, uint16_t key, int in
 
 void otPlatSettingsWipe(otInstance *instance) {
   OT_UNUSED_VARIABLE(instance);
+  FX_LOGS(INFO) << "Clearing all settings during otPlatSettingsWipe!";
   if (config_manager == nullptr) {
     return;
   }
