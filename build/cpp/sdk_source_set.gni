@@ -88,12 +88,6 @@ template("sdk_source_set") {
     if (defined(visibility)) {
       visibility += [ ":$sdk_target_name" ]
     }
-
-    # Ensure this sdk_source_set() is instrumented for coverage when
-    # building in the 'coverage-cts' build variant.
-    if (toolchain_variant.name == "coverage-cts") {
-      configs += [ "//build/config/profile:coverage-cts-source-config" ]
-    }
   }
 
   # Identify dependencies and their metadata files.

@@ -343,12 +343,6 @@ template("fidl_cpp_family") {
     forward_variables_from(common_options, "*")
     forward_variables_from(natural_types_options, "*")
     additional_public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
-
-    # building in the 'coverage-cts' build variant.
-    if (toolchain_variant.name == "coverage-cts") {
-      additional_configs =
-          [ "//build/config/profile:coverage-cts-source-config" ]
-    }
   }
 
   # Define HLCPP target.

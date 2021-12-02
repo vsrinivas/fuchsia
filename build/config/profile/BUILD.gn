@@ -53,46 +53,29 @@ variant("coverage") {
   }
 }
 
-# This variant is similar to `coverage` but is used to only compile sdk_source_set()
-# and FIDL C++ binding source_set() targets with coverage instrumentation.
-# This works as follows:
-#
-# - Unlike `coverage`, this variant does not add assembler and compiler flags
-#   to enable profiling instrumentation.
-#
-# - The sdk_source_set() and FIDL C++ source_set() templates add the
-#   "coverage-cts-source-config" config to its inner target when they are built
-#   in the "coverage-cts" variant. This adds the necessary cflags/asmflags when
-#   building the target.
-#
-# - All final binaries (executables and shared libraries) are linked to the
-#   profiling runtime. Even if none of their code is actually instrumented.
-#
-# - Since this is an instrumented build variant, the libdir is 'lib/coverage-cts'.
-#
+# This variant is similar to `coverage` but only instruments sources that are
+# interesting for measuring CTS coverage.
 variant("coverage-cts") {
+  common_flags = _coverage_common_flags
   inputs = _coverage_inputs
+
+  common_flags +=
+      [ "-fprofile-list=" + rebase_path("profile-cts.list", root_build_dir) ]
+  inputs += [ "profile-cts.list" ]
 
   if (!is_kernel && is_fuchsia) {
     # The statically-linked profiling runtime depends on libzircon.
     # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
     deps = [ "//src/zircon/lib/zircon" ]
+
+    dynamic_linker_flags = "-dynamic-linker=coverage/ld.so.1"
+    ldflags = [ "-Wl,$dynamic_linker_flags" ]
+    rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
+
+    # TODO(fxbug.dev/83653): Remove this workaround after we diagnose and address
+    # the compiler issue, see the bug for more details.
+    libs = [ "./llvm_profile_counter_bias.ld" ]
   }
-
-  # All instrumented build variants place their dynamic loader and dependency
-  # libraries under lib/<variant>/ so ensure generated executables will find
-  # it here. See toolchain_variant.libprefix definition.
-  dynamic_linker_flags = "-dynamic-linker=coverage-cts/ld.so.1"
-  ldflags = [ "-Wl,$dynamic_linker_flags" ]
-  rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
-
-  ldflags += [ "-fprofile-instr-generate" ]
-}
-
-# This config should only be added to sdk_source_set() targets.
-config("coverage-cts-source-config") {
-  cflags = _coverage_common_flags
-  asmflags = _coverage_common_flags
 }
 
 variant("profile") {
