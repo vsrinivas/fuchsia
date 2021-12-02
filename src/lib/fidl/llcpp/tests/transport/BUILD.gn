@@ -9,6 +9,7 @@ group("transport") {
   testonly = true
   deps = [
     ":fidl_llcpp_channel_transport_tests",
+    ":fidl_llcpp_transport_integration_tests",
     ":fidl_llcpp_transport_tests",
   ]
 }
@@ -46,4 +47,25 @@ test("fidl_llcpp_channel_transport_tests_bin") {
 
 fuchsia_unittest_package("fidl_llcpp_channel_transport_tests") {
   deps = [ ":fidl_llcpp_channel_transport_tests_bin" ]
+}
+
+test("fidl_llcpp_transport_integration_tests_bin") {
+  output_name = "fidl_llcpp_transport_integration_tests"
+  sources = [
+    "socket_integration_test.cc",
+    "transport_socket.cc",
+  ]
+  deps = [
+    "//sdk/lib/stdcompat",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fidl_llcpp_transport_integration_tests") {
+  deps = [ ":fidl_llcpp_transport_integration_tests_bin" ]
 }
