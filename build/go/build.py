@@ -170,58 +170,44 @@ def main():
             else:
                 dst = os.path.join('vendor', dst)
 
-            # Determine if the src path should
-            # - be mapped as-is which, if src is a directory, includes all subdirectories
-            # - have its contents enumerated and mapped directly
-            map_directly = False
-
             if dst.endswith('/...'):
                 # When a directory and all its subdirectories must be made available, map
                 # the directory directly.
-                map_directly = True
                 dst = dst[:-4]
             elif os.path.isfile(src):
                 # When sources are explicitly listed in the BUILD.gn file, each `src` will
                 # be a path to a file that must be mapped directly.
-                map_directly = True
+                #
                 # Paths with /.../ in the middle designate go packages that include
                 # subpackages, but also explicitly list all their source files.
                 #
                 # The construction of these paths is done in the go list invocation, so we
                 # remove these sentinel values here.
                 dst = dst.replace('/.../', '/')
+            else:
+                raise ValueError(f'Invalid go_dep entry: {dst=}, {src=}')
 
             dstdir = os.path.join(gopath_src, dst)
 
-            if map_directly:
-                # Make a symlink to the src directory or file.
-                parent = os.path.dirname(dstdir)
-                if not os.path.exists(parent):
-                    os.makedirs(parent)
-                # hardlink regular files instead of symlinking to handle non-Go
-                # files that we want to embed using //go:embed, which doesn't
-                # support symlinks.
-                # TODO(https://fxbug.dev/81748): Add a separate mechanism for
-                # declaring embedded files, and only hardlink those files
-                # instead of hardlinking all sources.
-                if os.path.isdir(src):
-                    os.symlink(src, dstdir)
-                else:
-                    try:
-                        os.link(src, dstdir)
-                    except OSError:
-                        # Hardlinking may fail, for example if `src` is in a
-                        # separate filesystem on a mounted device.
-                        shutil.copyfile(src, dstdir)
+            # Make a symlink to the src directory or file.
+            parent = os.path.dirname(dstdir)
+            if not os.path.exists(parent):
+                os.makedirs(parent)
+            # hardlink regular files instead of symlinking to handle non-Go
+            # files that we want to embed using //go:embed, which doesn't
+            # support symlinks.
+            # TODO(https://fxbug.dev/81748): Add a separate mechanism for
+            # declaring embedded files, and only hardlink those files
+            # instead of hardlinking all sources.
+            if os.path.isdir(src):
+                os.symlink(src, dstdir)
             else:
-                # Map individual files since the dependency is only on the
-                # package itself, not Go subpackages. The only exception is
-                # 'testdata'.
-                os.makedirs(dstdir)
-                for filename in os.listdir(src):
-                    src_file = os.path.join(src, filename)
-                    if filename == 'testdata' or os.path.isfile(src_file):
-                        os.symlink(src_file, os.path.join(dstdir, filename))
+                try:
+                    os.link(src, dstdir)
+                except OSError:
+                    # Hardlinking may fail, for example if `src` is in a
+                    # separate filesystem on a mounted device.
+                    shutil.copyfile(src, dstdir)
 
     cflags = []
     if args.sysroot:

@@ -83,17 +83,18 @@ def main():
     current_sources = []
     if args.sources:
         for source in args.sources:
+            p = os.path.join(args.source_dir, source)
+            # Explicit sources must be files.
+            if not os.path.isfile(p):
+                raise ValueError(f'Source {p} is not a file')
             current_sources.append(
-                Source(
-                    os.path.join(name, source),
-                    os.path.join(args.source_dir, source), args.output))
+                Source(os.path.join(name, source), p, args.output))
         if not name.endswith('/...'):
             for s in args.sources:
                 if os.path.dirname(s):
                     raise ValueError(
                         f'Source "{s}" for "{name}" comes from a subdirectory.'
-                        f' Specify source_dir instead.'
-                    )
+                        f' Specify source_dir instead.')
 
             # TODO: Use `glob.glob("*.go", root_dir=args.source_dir)` instead of
             # os.listdir after upgrading to Python 3.10.
