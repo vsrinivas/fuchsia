@@ -154,7 +154,7 @@ pub struct LogCommand {
     /// Note 2: In the event that multiple log listeners provide selector
     /// arguments via --select, the minimum severity provided across all active clients
     /// will be used. When a client disconnects, the new minimum severity across the remaining
-    /// clients will be used. See https://fuchsia.dev/reference/fidl/fuchsia.diagnostics?hl=en#LogSettings
+    /// clients will be used. See https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#LogSettings
     /// for a full explanation of the semantics.
     #[argh(option, from_str_fn(parse_log_interest_selector))]
     pub select: Vec<LogInterestSelector>,
