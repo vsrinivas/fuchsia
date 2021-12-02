@@ -29,7 +29,8 @@ pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     SSID: <ssid-666F6F>, \
     HTTP: http://fuchsia.dev/fuchsia/testing?q=Test, \
     HTTPS: https://fuchsia.dev/fuchsia/testing?q=Test, \
-    HEX: 1234567890abcdefABCDEF0123456789,";
+    HEX: 1234567890abcdefABCDEF0123456789, \
+    obfuscatedGaiaId: 106986199446298680449";
 
 // NOTE: The integers in this string are brittle but deterministic. See the comment in the impl
 // of Redactor for explanation.
@@ -39,7 +40,7 @@ pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     IPv462: ::ffff:<REDACTED-IPV4: 7>, \
     IPv6: <REDACTED-IPV6: 5>, IPv6_WithPort: [<REDACTED-IPV6: 5>]:8080, IPv6C: <REDACTED-IPV6: 6>, IPv6LL: fe80::<REDACTED-IPV6-LL: 4>, \
     UUID: <REDACTED-UUID>, MAC: de:ad:BE:<REDACTED-MAC: 8>, SSID: <REDACTED-SSID: 9>, \
-    HTTP: <REDACTED-URL>, HTTPS: <REDACTED-URL>, HEX: <REDACTED-HEX: 10>,";
+    HTTP: <REDACTED-URL>, HTTPS: <REDACTED-URL>, HEX: <REDACTED-HEX: 10>, obfuscatedGaiaId: <REDACTED-OBFUSCATED-GAIA-ID: 11>";
 
 pub fn emit_canary() {
     tracing::info!("{}", UNREDACTED_CANARY_MESSAGE);
@@ -179,6 +180,12 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
     RedactionPattern {
         matcher: r#"\b[0-9a-fA-F]{32}\b"#,
         replacement: "<REDACTED-HEX: {}>",
+        use_map: MapType::ReplaceAll,
+    },
+    // Obfuscated gaia ids
+    RedactionPattern {
+        matcher: r#"\b1[0-9]{20}\b"#,
+        replacement: "<REDACTED-OBFUSCATED-GAIA-ID: {}>",
         use_map: MapType::ReplaceAll,
     },
 ];
@@ -343,6 +350,7 @@ mod test {
         long_hex: "456 1234567890abcdefABCDEF0123456789 1.2.3.4" => 
                   "456 <REDACTED-HEX: 2> <REDACTED-IPV4: 1>",
         canary: UNREDACTED_CANARY_MESSAGE => REDACTED_CANARY_MESSAGE,
+        obfuscated_gaia_id: "obfuscated_gaia_id: 106986199446298680449" => "obfuscated_gaia_id: <REDACTED-OBFUSCATED-GAIA-ID: 1>",
     }
 
     // A single Redactor is used for every line in the stream, so the numbers grow.
