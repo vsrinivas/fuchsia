@@ -15,7 +15,6 @@ use {
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
     futures::{lock::Mutex, prelude::*},
     std::sync::{atomic::AtomicU32, Arc},
-    system_image::StaticPackages,
 };
 
 mod base_packages;
@@ -106,19 +105,20 @@ async fn main_inner() -> Result<(), Error> {
             )
             .context("deserialize data/cache_packages")?;
 
-            index::load_cache_packages(&mut package_index, cache_packages, &pkgfs_versions).await
+            Ok(index::load_cache_packages(&mut package_index, cache_packages, &blobfs).await)
         };
 
-        let base_packages_fut = load_base_packages(
+        let base_packages_fut = BasePackages::new(
+            &blobfs,
             &system_image,
-            &pkgfs_versions,
             inspector.root().create_child("base-packages"),
         );
 
         let (cache_packages_res, base_packages_res) =
             join!(load_cache_packages_fut, base_packages_fut);
-        let () = cache_packages_res
-            .unwrap_or_else(|e| fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e)));
+        let () = cache_packages_res.unwrap_or_else(|e: anyhow::Error| {
+            fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e))
+        });
 
         (
             load_executability_restrictions(&system_image),
@@ -199,23 +199,6 @@ async fn main_inner() -> Result<(), Error> {
     cobalt_fut.await;
 
     Ok(())
-}
-
-async fn load_base_packages(
-    system_image: &package_directory::RootDir,
-    pkgfs_versions: &pkgfs::versions::Client,
-    node: finspect::Node,
-) -> Result<BasePackages, Error> {
-    let static_packages = system_image
-        .read_file("data/static_packages")
-        .await
-        .context("failed to read data/static_packages from system_image package")?;
-    let static_packages = StaticPackages::deserialize(static_packages.as_slice())
-        .context("error deserializing data/static_packages")?;
-
-    Ok(BasePackages::new(pkgfs_versions, static_packages, system_image.hash(), node)
-        .await
-        .context("loading base packages")?)
 }
 
 async fn get_system_image_hash(

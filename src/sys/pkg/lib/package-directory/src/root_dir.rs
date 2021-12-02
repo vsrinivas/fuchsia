@@ -130,6 +130,12 @@ impl RootDir {
         &self.hash
     }
 
+    /// Returns an iterator of the hashes of files stored externally to the package meta.far.
+    /// May return duplicates.
+    pub fn external_file_hashes(&self) -> impl ExactSizeIterator<Item = &fuchsia_hash::Hash> {
+        self.non_meta_files.values()
+    }
+
     pub(crate) async fn meta_far_vmo(&self) -> Result<&zx::Vmo, anyhow::Error> {
         Ok(if let Some(vmo) = self.meta_far_vmo.get() {
             vmo
@@ -466,6 +472,21 @@ mod tests {
         assert!(root_dir.has_file("resource"));
         assert!(root_dir.has_file("meta/file"));
         assert_eq!(root_dir.has_file("missing"), false);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn external_file_hashes() {
+        let (_env, root_dir) = TestEnv::new().await;
+
+        let mut actual = root_dir.external_file_hashes().copied().collect::<Vec<_>>();
+        actual.sort();
+        assert_eq!(
+            actual,
+            vec![
+                "5f615dd575994fcbcc174974311d59de258d93cd523d5cb51f0e139b53c33201".parse().unwrap(),
+                "bd905f783ceae4c5ba8319703d7505ab363733c2db04c52c8405603a02922b15".parse().unwrap()
+            ]
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

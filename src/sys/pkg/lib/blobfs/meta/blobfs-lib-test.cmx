@@ -16,6 +16,9 @@
         "services": [
             "fuchsia.process.Launcher",
             "fuchsia.test.IsolatedDevmgr"
+        ],
+        "features": [
+            "isolated-temp"
         ]
     }
 }

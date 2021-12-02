@@ -106,6 +106,38 @@ impl Client {
         (Self { proxy }, mock::Mock { stream })
     }
 
+    /// Creates a new *read-only* client backed by the returned `TempDirFake`.
+    /// `TempDirFake` is a thin wrapper around a `tempfile::TempDir` and therefore *does not*
+    /// replicate many of the important properties of blobfs, including:
+    ///   * requiring truncate before write
+    ///   * requiring file names be hashes of contents
+    ///
+    /// This should therefore generally only be used to test read-only clients of blobfs (i.e.
+    /// tests in which only the test harness itself is writing to blobfs and the code-under-test is
+    /// only reading from blobfs).
+    ///
+    /// To help enforce this, the DirectoryProxy used to create the `Client` is opened with only
+    /// OPEN_RIGHT_READABLE.
+    ///
+    /// Requires a RW directory at "/tmp" in the component namespace.
+    ///
+    /// This constructor should not be used outside of tests.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error
+    pub fn new_temp_dir_fake() -> (Self, TempDirFake) {
+        let blobfs_dir = tempfile::TempDir::new().unwrap();
+        let blobfs = Client::new(
+            io_util::directory::open_in_namespace(
+                blobfs_dir.path().to_str().unwrap(),
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+            )
+            .unwrap(),
+        );
+        (blobfs, TempDirFake { dir: blobfs_dir })
+    }
+
     /// Returns the list of known blobs in blobfs.
     pub async fn list_known_blobs(&self) -> Result<HashSet<Hash>, BlobfsError> {
         let entries = files_async::readdir(&self.proxy).await.map_err(BlobfsError::ReadDir)?;
@@ -258,6 +290,36 @@ impl Client {
     pub async fn sync(&self) -> Result<(), BlobfsError> {
         let status = self.proxy.sync().await?;
         zx::Status::ok(status).map_err(BlobfsError::Sync)
+    }
+}
+
+/// `TempDirFake` is a thin wrapper around a `tempfile::TempDir` and therefore *does not*
+/// replicate many of the important properties of blobfs, including:
+///   * requiring truncate before write
+///   * requiring file names be hashes of contents
+///
+/// This should therefore generally only be used to test read-only clients of blobfs (i.e.
+/// tests in which only the test harness itself is writing to blobfs and the code-under-test is
+/// only reading from blobfs).
+pub struct TempDirFake {
+    dir: tempfile::TempDir,
+}
+
+impl TempDirFake {
+    /// Access the backing `tempfile::TempDir`.
+    pub fn backing_temp_dir(&self) -> &tempfile::TempDir {
+        &self.dir
+    }
+
+    /// Access the backing directory as an `openat::Dir`.
+    ///
+    /// # Panics
+    ///
+    /// Panics on error.
+    pub fn backing_dir_as_openat_dir(&self) -> openat::Dir {
+        let file = std::fs::File::open(self.dir.path()).unwrap();
+        let handle = fdio::transfer_fd(file).unwrap();
+        fdio::create_fd(handle).unwrap()
     }
 }
 
@@ -642,5 +704,44 @@ mod tests {
 
         assert_matches!(client.sync().await, Ok(()));
         assert_eq!(counter.load(std::sync::atomic::Ordering::SeqCst), 1);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn temp_dir_fake_backing_dir() {
+        let (blobfs, fake) = Client::new_temp_dir_fake();
+
+        std::fs::File::create(
+            fake.backing_temp_dir()
+                .path()
+                .join("0000000000000000000000000000000000000000000000000000000000000000"),
+        )
+        .unwrap();
+
+        let actual = blobfs.list_known_blobs().await.unwrap();
+
+        assert_eq!(actual, hashset! {[0u8; 32].into()});
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn temp_dir_fake_backing_dir_as_openat_dir() {
+        let (blobfs, fake) = Client::new_temp_dir_fake();
+
+        fake.backing_dir_as_openat_dir()
+            .write_file("0000000000000000000000000000000000000000000000000000000000000000", 0o600)
+            .unwrap();
+
+        let actual = blobfs.list_known_blobs().await.unwrap();
+
+        assert_eq!(actual, hashset! {[0u8; 32].into()});
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn temp_dir_fake_read_only() {
+        let (blobfs, _fake) = Client::new_temp_dir_fake();
+
+        assert_matches!(
+            blobfs.open_blob_for_write(&Hash::from([0; 32])).await,
+            Err(blob::CreateError::AlreadyExists)
+        );
     }
 }

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context as _, Error},
+    anyhow::anyhow,
     fuchsia_inspect as finspect,
     fuchsia_merkle::Hash,
     fuchsia_pkg::{PackageName, PackagePath},
@@ -232,26 +232,65 @@ impl DynamicIndex {
 pub async fn load_cache_packages(
     index: &mut DynamicIndex,
     cache_packages: CachePackages,
-    versions: &pkgfs::versions::Client,
-) -> Result<(), Error> {
-    for (path, package_hash) in cache_packages.into_contents() {
-        let package = match versions.open_package(&package_hash).await {
-            Ok(package) => package,
-            Err(pkgfs::versions::OpenError::NotFound) => continue,
-            Err(err) => {
-                return Err(err)
-                    .with_context(|| format!("error opening package of {}", package_hash))
+    blobfs: &blobfs::Client,
+) {
+    // This function is called before anything writes to or deletes from blobfs, so if it needs
+    // to be sped up, it might be possible to:
+    //   1. get the list of all available blobs with `blobfs.list_known_blobs()`
+    //   2. for each cache package, check the list for the meta.far and the necessary content
+    //      blobs (obtained with `RootDir::external_file_hashes()`)
+    // This alternate approach requires that blobfs responds to `fuchsia.io/Directory.ReadDirents`
+    // with *only* blobs that are readable, i.e. blobs for which the `USER_0` signal is set (which
+    // is currently checked per-package per-blob by `blobfs.filter_to_missing_blobs()`). Would need
+    // to confirm with the storage team that blobfs meets this requirement.
+    for (path, hash) in cache_packages.into_contents() {
+        let required_blobs = match super::enumerate_package_blobs(blobfs, &hash).await {
+            Ok(Some((path_from_far, required_blobs))) => {
+                if path_from_far != path {
+                    fx_log_err!(
+                        "load_cache_packages: path mismatch for {} from manifest {} from far {}",
+                        hash,
+                        path,
+                        path_from_far
+                    );
+                    continue;
+                }
+                required_blobs
+            }
+            Ok(None) => continue,
+            Err(e) => {
+                fx_log_err!(
+                    "load_cache_packages: enumerate_package_blobs of {} {} failed: {:#}",
+                    hash,
+                    path,
+                    anyhow!(e)
+                );
+                continue;
             }
         };
-        let required_blobs = package
-            .blobs()
-            .await
-            .with_context(|| format!("error reading package blobs of {}", package_hash))?
-            .collect();
-
-        index.add_package(package_hash, Package::Active { path, required_blobs });
+        if !blobfs.filter_to_missing_blobs(&required_blobs).await.is_empty() {
+            continue;
+        }
+        let () = index.start_install(hash);
+        if let Err(e) = index.fulfill_meta_far(hash, path, required_blobs) {
+            fx_log_err!(
+                "load_cache_packages: fulfill_meta_far of {} failed: {:#}",
+                hash,
+                anyhow!(e)
+            );
+            let () = index.cancel_install(&hash);
+            continue;
+        }
+        if let Err(e) = index.complete_install(hash) {
+            fx_log_err!(
+                "load_cache_packages: complete_install of {} failed: {:#}",
+                hash,
+                anyhow!(e)
+            );
+            let () = index.cancel_install(&hash);
+            continue;
+        }
     }
-    Ok(())
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -317,17 +356,11 @@ impl Package {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_io::DirectoryProxy,
         fuchsia_async as fasync,
-        fuchsia_pkg::MetaContents,
+        fuchsia_pkg_testing::PackageBuilder,
         maplit::{hashmap, hashset},
         matches::assert_matches,
-        std::{
-            collections::HashMap,
-            fs::{create_dir, create_dir_all, File},
-            str::FromStr,
-        },
-        tempfile::TempDir,
+        std::str::FromStr,
     };
 
     #[test]
@@ -618,125 +651,88 @@ mod tests {
         assert_eq!(dynamic_index.packages(), hashmap! { Hash::from([2; 32]) => Package::Pending });
     }
 
-    struct TestPkgfs {
-        pkgfs_root: TempDir,
-    }
-
-    impl TestPkgfs {
-        fn new(
-            cache_packages: &CachePackages,
-            versions_contents: &HashMap<Hash, MetaContents>,
-        ) -> Self {
-            let pkgfs_root = TempDir::new().unwrap();
-            create_dir_all(pkgfs_root.path().join("system/data")).unwrap();
-            cache_packages
-                .serialize(
-                    File::create(pkgfs_root.path().join("system/data/cache_packages")).unwrap(),
-                )
-                .unwrap();
-
-            create_dir(pkgfs_root.path().join("versions")).unwrap();
-            for (hash, contents) in versions_contents {
-                let meta_path = pkgfs_root.path().join(format!("versions/{}/meta", hash));
-                create_dir_all(&meta_path).unwrap();
-                contents.serialize(&mut File::create(meta_path.join("contents")).unwrap()).unwrap();
-            }
-
-            Self { pkgfs_root }
-        }
-
-        fn root_proxy(&self) -> DirectoryProxy {
-            DirectoryProxy::new(
-                fuchsia_async::Channel::from_channel(
-                    fdio::transfer_fd(File::open(self.pkgfs_root.path()).unwrap()).unwrap().into(),
-                )
-                .unwrap(),
-            )
-        }
-
-        fn versions(&self) -> pkgfs::versions::Client {
-            pkgfs::versions::Client::open_from_pkgfs_root(&self.root_proxy()).unwrap()
-        }
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_load_cache_packages() {
-        let fake_package_hash = Hash::from([1; 32]);
-        let fake_package_path = PackagePath::from_name_and_variant(
-            "fake-package".parse().unwrap(),
-            "0".parse().unwrap(),
-        );
-        let not_present_package_hash = Hash::from([2; 32]);
-        let not_present_package_path = PackagePath::from_name_and_variant(
-            "not-present-package".parse().unwrap(),
-            "0".parse().unwrap(),
-        );
-        let share_blob_package_hash = Hash::from([3; 32]);
-        let share_blob_package_path = PackagePath::from_name_and_variant(
-            "share-blob-package".parse().unwrap(),
-            "1".parse().unwrap(),
-        );
-        let cache_packages = CachePackages::from_entries(vec![
-            (fake_package_path.clone(), fake_package_hash),
-            (not_present_package_path, not_present_package_hash),
-            (share_blob_package_path.clone(), share_blob_package_hash),
-        ]);
-        let some_blob_hash = Hash::from([4; 32]);
-        let other_blob_hash = Hash::from([5; 32]);
-        let yet_another_blob_hash = Hash::from([6; 32]);
-        let versions_contents = hashmap! {
-            fake_package_hash =>
-                MetaContents::from_map(
-                    hashmap! {
-                        "some-blob".to_string() => some_blob_hash,
-                        "other-blob".to_string() => other_blob_hash
-                    }
-                ).unwrap(),
-            share_blob_package_hash =>
-                MetaContents::from_map(
-                    hashmap! {
-                        "some-blob".to_string() => some_blob_hash,
-                        "yet-another-blob".to_string() => yet_another_blob_hash
-                    }
-                ).unwrap()
-        };
-        let pkgfs = TestPkgfs::new(&cache_packages, &versions_contents);
-        let inspector = finspect::Inspector::new();
-        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
-        load_cache_packages(&mut dynamic_index, cache_packages, &pkgfs.versions()).await.unwrap();
+        let present_package0 = PackageBuilder::new("present0")
+            .add_resource_at("present-blob0", &b"contents0"[..])
+            .build()
+            .await
+            .unwrap();
+        let missing_content_blob = PackageBuilder::new("missing-content-blob")
+            .add_resource_at("missing-blob", &b"missing-contents"[..])
+            .build()
+            .await
+            .unwrap();
+        let missing_meta_far = PackageBuilder::new("missing-meta-far")
+            .add_resource_at("other-present-blob", &b"other-present-contents"[..])
+            .build()
+            .await
+            .unwrap();
+        let present_package1 = PackageBuilder::new("present1")
+            .add_resource_at("present-blob1", &b"contents1"[..])
+            .build()
+            .await
+            .unwrap();
 
-        let fake_package = Package::Active {
-            path: fake_package_path.clone(),
-            required_blobs: hashset! { some_blob_hash, other_blob_hash },
+        let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().unwrap();
+        let blobfs_dir = blobfs.root_dir().unwrap();
+
+        present_package0.write_to_blobfs_dir(&blobfs_dir);
+        missing_content_blob.write_to_blobfs_dir(&blobfs_dir);
+        missing_meta_far.write_to_blobfs_dir(&blobfs_dir);
+        present_package1.write_to_blobfs_dir(&blobfs_dir);
+
+        for blob in missing_content_blob.contents().1 {
+            blobfs_dir.remove_file(blob.merkle.to_string()).unwrap();
+        }
+        blobfs_dir.remove_file(missing_meta_far.contents().0.merkle.to_string()).unwrap();
+
+        let cache_packages = CachePackages::from_entries(vec![
+            ("present0/0".parse().unwrap(), *present_package0.meta_far_merkle_root()),
+            (
+                "missing-content-blob/0".parse().unwrap(),
+                *missing_content_blob.meta_far_merkle_root(),
+            ),
+            ("missing-meta-far/0".parse().unwrap(), *missing_meta_far.meta_far_merkle_root()),
+            ("present1/0".parse().unwrap(), *present_package1.meta_far_merkle_root()),
+        ]);
+
+        let mut dynamic_index =
+            DynamicIndex::new(finspect::Inspector::new().root().create_child("index"));
+
+        let () = load_cache_packages(&mut dynamic_index, cache_packages, &blobfs.client()).await;
+
+        let present0 = Package::Active {
+            path: "present0/0".parse().unwrap(),
+            required_blobs: present_package0.contents().1.into_iter().map(|bc| bc.merkle).collect(),
         };
-        let share_blob_package = Package::Active {
-            path: share_blob_package_path.clone(),
-            required_blobs: hashset! { some_blob_hash, yet_another_blob_hash },
+        let present1 = Package::Active {
+            path: "present1/0".parse().unwrap(),
+            required_blobs: present_package1.contents().1.into_iter().map(|bc| bc.merkle).collect(),
         };
 
         assert_eq!(
             dynamic_index.packages(),
             hashmap! {
-                fake_package_hash => fake_package,
-                share_blob_package_hash => share_blob_package
+                *present_package0.meta_far_merkle_root() => present0,
+                *present_package1.meta_far_merkle_root() => present1
             }
         );
         assert_eq!(
             dynamic_index.active_packages(),
             hashmap! {
-                fake_package_path => fake_package_hash,
-                share_blob_package_path => share_blob_package_hash
+                "present0/0".parse().unwrap() => *present_package0.meta_far_merkle_root(),
+                "present1/0".parse().unwrap() => *present_package1.meta_far_merkle_root(),
             }
         );
         assert_eq!(
             dynamic_index.all_blobs(),
-            hashset! {
-                fake_package_hash,
-                share_blob_package_hash,
-                some_blob_hash,
-                other_blob_hash,
-                yet_another_blob_hash,
-            }
+            present_package0
+                .list_blobs()
+                .unwrap()
+                .into_iter()
+                .chain(present_package1.list_blobs().unwrap().into_iter())
+                .collect()
         );
     }
 

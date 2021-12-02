@@ -51,8 +51,10 @@ async fn enumerate_package_blobs(
         Err(e) => return Err(QueryPackageMetadataError::OpenBlob(e)),
     };
 
-    let mut meta_far =
-        fuchsia_archive::AsyncReader::new(io_util::file::AsyncFile::from_proxy(file)).await?;
+    let mut meta_far = fuchsia_archive::AsyncReader::new(io_util::file::BufferedAsyncReadAt::new(
+        io_util::file::AsyncFile::from_proxy(file),
+    ))
+    .await?;
     let meta_package = MetaPackage::deserialize(&meta_far.read_file("meta/package").await?[..])?;
     let meta_contents = MetaContents::deserialize(&meta_far.read_file("meta/contents").await?[..])?;
 

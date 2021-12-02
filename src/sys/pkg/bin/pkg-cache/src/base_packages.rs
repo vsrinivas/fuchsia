@@ -9,7 +9,6 @@ use {
     fuchsia_merkle::Hash,
     fuchsia_pkg::PackagePath,
     futures::{StreamExt, TryStreamExt},
-    pkgfs::versions::Client as Versions,
     std::collections::HashSet,
     system_image::StaticPackages,
 };
@@ -43,11 +42,17 @@ impl BaseBlobs {
 
 impl BasePackages {
     pub async fn new(
-        versions: &Versions,
-        static_packages: StaticPackages,
-        system_image_hash: &Hash,
+        blobfs: &blobfs::Client,
+        system_image: &package_directory::RootDir,
         node: finspect::Node,
     ) -> Result<Self, anyhow::Error> {
+        let static_packages = system_image
+            .read_file("data/static_packages")
+            .await
+            .context("failed to read data/static_packages from system_image package")?;
+        let static_packages = StaticPackages::deserialize(static_packages.as_slice())
+            .context("error deserializing data/static_packages")?;
+
         // Add the system image package to the set of static packages to create the set of base
         // packages. If we're constructing BasePackages, we must have a system image package.
         // However, not all systems have a system image, like recovery, which starts pkg-cache with
@@ -59,11 +64,11 @@ impl BasePackages {
                     SYSTEM_IMAGE_NAME.parse().unwrap(),
                     SYSTEM_IMAGE_VARIANT.parse().unwrap(),
                 ),
-                system_image_hash.clone(),
+                system_image.hash().clone(),
             )))
             .collect();
 
-        match Self::load_base_blobs(versions, paths_to_hashes.iter().map(|p| p.1)).await {
+        match Self::load_base_blobs(blobfs, paths_to_hashes.iter().map(|p| p.1)).await {
             Ok(blobs) => Ok(Self {
                 base_blobs: BaseBlobs::new(blobs, node.create_child("base-blobs")),
                 paths_to_hashes,
@@ -78,11 +83,11 @@ impl BasePackages {
     }
 
     async fn load_base_blobs(
-        versions: &Versions,
+        blobfs: &blobfs::Client,
         base_package_hashes: impl Iterator<Item = Hash>,
     ) -> Result<HashSet<Hash>, Error> {
         let mut futures =
-            futures::stream::iter(base_package_hashes.map(|p| Self::package_blobs(versions, p)))
+            futures::stream::iter(base_package_hashes.map(|p| Self::package_blobs(blobfs, p)))
                 .buffer_unordered(1000);
 
         let mut ret = HashSet::new();
@@ -95,19 +100,14 @@ impl BasePackages {
 
     // Return all blobs that make up `package`, including the meta.far.
     async fn package_blobs(
-        versions: &Versions,
+        blobfs: &blobfs::Client,
         package: Hash,
     ) -> Result<impl Iterator<Item = Hash>, Error> {
-        let package_dir = versions
-            .open_package(&package)
+        let package_dir = package_directory::RootDir::new(blobfs.clone(), package)
             .await
-            .with_context(|| format!("failing to open package: {}", package))?;
-        let blobs = package_dir
-            .blobs()
-            .await
-            .with_context(|| format!("error reading package blobs of {}", package))?;
-
-        Ok(std::iter::once(package.clone()).chain(blobs))
+            .with_context(|| format!("making RootDir for {}", package))?;
+        let external_hashes = package_dir.external_file_hashes().copied().collect::<Vec<_>>();
+        Ok(std::iter::once(package.clone()).chain(external_hashes))
     }
 
     /// Iterator over the mapping of package paths to hashes.
@@ -141,96 +141,76 @@ impl BasePackages {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        fuchsia_inspect::assert_data_tree,
-        fuchsia_pkg::{MetaContents, PackagePath},
-        maplit::hashmap,
-        std::{
-            collections::HashMap,
-            fs::{create_dir, create_dir_all, File},
-            io::Write as _,
-        },
-        system_image::StaticPackages,
-        tempfile::TempDir,
+        super::*, fuchsia_inspect::assert_data_tree, fuchsia_pkg::PackagePath,
+        fuchsia_pkg_testing::PackageBuilder, maplit::hashset,
     };
 
-    struct TestPkgfs {
-        pkgfs_root: TempDir,
+    struct TestEnv {
+        _blobfs_fake: blobfs::TempDirFake,
+        system_image: fuchsia_pkg_testing::Package,
+        inspector: finspect::types::Inspector,
     }
 
-    impl TestPkgfs {
-        fn new(system_image_hash: &Hash, versions_contents: &HashMap<Hash, MetaContents>) -> Self {
-            let pkgfs_root = TempDir::new().unwrap();
-            create_dir(pkgfs_root.path().join("system")).unwrap();
-            File::create(pkgfs_root.path().join("system/meta"))
-                .unwrap()
-                .write_all(system_image_hash.to_string().as_bytes())
-                .unwrap();
-
-            create_dir(pkgfs_root.path().join("versions")).unwrap();
-            for (hash, contents) in versions_contents.iter() {
-                let meta_path = pkgfs_root.path().join(format!("versions/{}/meta", hash));
-                create_dir_all(&meta_path).unwrap();
-                contents.serialize(&mut File::create(meta_path.join("contents")).unwrap()).unwrap();
+    impl TestEnv {
+        async fn new(static_packages: &[&fuchsia_pkg_testing::Package]) -> (Self, BasePackages) {
+            let (blobfs_client, blobfs_fake) = blobfs::Client::new_temp_dir_fake();
+            let blobfs_dir = blobfs_fake.backing_dir_as_openat_dir();
+            for p in static_packages.iter() {
+                p.write_to_blobfs_dir(&blobfs_dir);
             }
 
-            Self { pkgfs_root }
-        }
+            let system_image = fuchsia_pkg_testing::SystemImageBuilder::new()
+                .static_packages(static_packages)
+                .build()
+                .await;
+            system_image.write_to_blobfs_dir(&blobfs_dir);
 
-        fn versions(&self) -> Versions {
-            Versions::open_from_pkgfs_root(&fidl_fuchsia_io::DirectoryProxy::new(
-                fuchsia_async::Channel::from_channel(
-                    fdio::transfer_fd(File::open(self.pkgfs_root.path()).unwrap()).unwrap().into(),
+            let inspector = finspect::Inspector::new();
+
+            let base_packages = BasePackages::new(
+                &blobfs_client,
+                &package_directory::RootDir::new(
+                    blobfs_client.clone(),
+                    *system_image.meta_far_merkle_root(),
                 )
+                .await
                 .unwrap(),
-            ))
-            .unwrap()
+                inspector.root().create_child("base-packages"),
+            )
+            .await
+            .unwrap();
+
+            (Self { _blobfs_fake: blobfs_fake, system_image, inspector }, base_packages)
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn inspect_correct_blob_count() {
-        let system_image_hash: Hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let fake_package_hash: Hash =
-            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
-        let static_packages = StaticPackages::from_entries(vec![(
-            PackagePath::from_name_and_variant(
-                "fake-package".parse().unwrap(),
-                "0".parse().unwrap(),
-            ),
-            fake_package_hash,
-        )]);
+    async fn identifies_all_blobs() {
+        let a_base_package = PackageBuilder::new("a-base-package")
+            .add_resource_at("a-base-blob", &b"a-base-blob-contents"[..])
+            .build()
+            .await
+            .unwrap();
+        let a_base_package_blobs = a_base_package.list_blobs().unwrap();
+        let (env, base_packages) = TestEnv::new(&[&a_base_package]).await;
 
-        let versions_contents = hashmap! {
-            system_image_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "some-blob".to_string() =>
-                        "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
-                }
-            ).unwrap(),
-            fake_package_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "other-blob".to_string() =>
-                        "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap()
-                }
-            ).unwrap()
-        };
-        let env = TestPkgfs::new(&system_image_hash, &versions_contents);
-        let inspector = finspect::Inspector::new();
+        let expected_blobs = env
+            .system_image
+            .list_blobs()
+            .unwrap()
+            .into_iter()
+            .chain(a_base_package_blobs.into_iter())
+            .collect();
+        assert_eq!(base_packages.list_blobs(), &expected_blobs);
 
-        let _base_packages = BasePackages::new(
-            &env.versions(),
-            static_packages,
-            &system_image_hash,
-            inspector.root().create_child("base-packages"),
-        )
-        .await;
+        for blob in expected_blobs.iter() {
+            assert!(base_packages.is_blob_in_base(blob));
+        }
 
-        assert_data_tree!(inspector, root: {
+        assert_data_tree!(env.inspector, root: {
             "base-packages": {
                 "base-blobs": {
-                    count: 4u64,
+                    "count": 4u64,
                 }
             }
         });
@@ -238,219 +218,89 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn inspect_correct_blob_count_shared_blob() {
-        let system_image_hash: Hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let fake_package_hash: Hash =
-            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
-        let static_packages = StaticPackages::from_entries(vec![(
-            PackagePath::from_name_and_variant(
-                "fake-package".parse().unwrap(),
-                "0".parse().unwrap(),
-            ),
-            fake_package_hash,
-        )]);
+        let a_base_package0 = PackageBuilder::new("a-base-package0")
+            .add_resource_at("a-base-blob0", &b"duplicate-blob-contents"[..])
+            .build()
+            .await
+            .unwrap();
+        let a_base_package1 = PackageBuilder::new("a-base-package1")
+            .add_resource_at("a-base-blob1", &b"duplicate-blob-contents"[..])
+            .build()
+            .await
+            .unwrap();
+        let (env, _base_packages) = TestEnv::new(&[&a_base_package0, &a_base_package1]).await;
 
-        let versions_contents = hashmap! {
-            system_image_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "shared-blob".to_string() =>
-                        "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
-                }
-            ).unwrap(),
-            fake_package_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "secretly-the-same-blob".to_string() =>
-                        "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap()
-                }
-            ).unwrap()
-        };
-        let env = TestPkgfs::new(&system_image_hash, &versions_contents);
-        let inspector = finspect::Inspector::new();
-
-        let _base_packages = BasePackages::new(
-            &env.versions(),
-            static_packages,
-            &system_image_hash,
-            inspector.root().create_child("base-packages"),
-        )
-        .await;
-
-        assert_data_tree!(inspector, root: {
+        // Expect 5 blobs:
+        //   * system_image meta.far
+        //   * system_image data/static_packages
+        //   * a-base-package0 meta.far
+        //   * a-base-package0 a-base-blob0
+        //   * a-base-package1 meta.far -> differs with a-base-package0 meta.far because
+        //       meta/package and meta/contents differ
+        //   * a-base-package1 a-base-blob1 -> duplicate of a-base-package0 a-base-blob0
+        assert_data_tree!(env.inspector, root: {
             "base-packages": {
                 "base-blobs": {
-                    count: 3u64,
+                    "count": 5u64,
                 }
             }
         });
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn base_packages_fails_when_loading_fails() {
-        let system_image_hash: Hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let static_packages = StaticPackages::from_entries(vec![]);
-        // system_image not in versions, so loading will fail
-        let versions_contents = HashMap::new();
-        let env = TestPkgfs::new(&system_image_hash, &versions_contents);
-        let inspector = finspect::Inspector::new();
-
-        let base_packages_result = BasePackages::new(
-            &env.versions(),
-            static_packages,
-            &system_image_hash,
-            inspector.root().create_child("base-packages"),
-        )
-        .await;
-
-        assert!(base_packages_result.is_err());
-
-        assert_data_tree!(inspector, root: {});
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn is_blob_in_base_when_loading_succeeds() {
-        let system_image_hash: Hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let fake_package_hash: Hash =
-            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
-        let static_packages = StaticPackages::from_entries(vec![(
-            PackagePath::from_name_and_variant(
-                "fake-package".parse().unwrap(),
-                "0".parse().unwrap(),
-            ),
-            fake_package_hash,
-        )]);
-
-        let some_blob_hash =
-            "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap();
-        let other_blob_hash =
-            "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap();
-        let versions_contents = hashmap! {
-            system_image_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "some-blob".to_string() => some_blob_hash
-                }
-            ).unwrap(),
-            fake_package_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "other-blob".to_string() => other_blob_hash
-                }
-            ).unwrap()
-        };
-        let env = TestPkgfs::new(&system_image_hash, &versions_contents);
-
-        let base_packages = BasePackages::new(
-            &env.versions(),
-            static_packages,
-            &system_image_hash,
-            finspect::Inspector::new().root().create_child("base-packages"),
-        )
-        .await
-        .unwrap();
-
-        assert_eq!(base_packages.is_blob_in_base(&system_image_hash), true);
-        assert_eq!(base_packages.is_blob_in_base(&fake_package_hash), true);
-        assert_eq!(base_packages.is_blob_in_base(&some_blob_hash), true);
-        assert_eq!(base_packages.is_blob_in_base(&other_blob_hash), true);
-        assert_eq!(
-            base_packages.is_blob_in_base(
-                &"4444444444444444444444444444444444444444444444444444444444444444"
-                    .parse()
-                    .unwrap(),
-            ),
-            false
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
     async fn paths_to_hashes_includes_system_image() {
-        let system_image_hash: Hash =
-            "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
-        let fake_package_hash: Hash =
-            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
-        let fake_package_path = PackagePath::from_name_and_variant(
-            "fake-package".parse().unwrap(),
-            "0".parse().unwrap(),
-        );
-        let static_packages =
-            StaticPackages::from_entries(vec![(fake_package_path.clone(), fake_package_hash)]);
-
-        let some_blob_hash =
-            "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap();
-        let other_blob_hash =
-            "3333333333333333333333333333333333333333333333333333333333333333".parse().unwrap();
-        let versions_contents = hashmap! {
-            system_image_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "some-blob".to_string() => some_blob_hash
-                }
-            ).unwrap(),
-            fake_package_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "other-blob".to_string() => other_blob_hash
-                }
-            ).unwrap()
-        };
-        let env = TestPkgfs::new(&system_image_hash, &versions_contents);
-
-        let base_packages = BasePackages::new(
-            &env.versions(),
-            static_packages,
-            &system_image_hash,
-            finspect::Inspector::new().root().create_child("base-packages"),
-        )
-        .await
-        .unwrap();
-
-        let system_image_path = PackagePath::from_name_and_variant(
-            "system_image".parse().unwrap(),
-            "0".parse().unwrap(),
-        );
+        let a_base_package = PackageBuilder::new("a-base-package")
+            .add_resource_at("a-base-blob", &b"a-base-blob-contents"[..])
+            .build()
+            .await
+            .unwrap();
+        let a_base_package_hash = *a_base_package.meta_far_merkle_root();
+        let (env, base_packages) = TestEnv::new(&[&a_base_package]).await;
 
         assert_eq!(
-            base_packages.paths_to_hashes().cloned().collect::<Vec<(PackagePath, Hash)>>(),
-            vec![(fake_package_path, fake_package_hash), (system_image_path, system_image_hash)]
+            base_packages.paths_to_hashes().cloned().collect::<HashSet<(PackagePath, Hash)>>(),
+            hashset! {
+                ("system_image/0".parse().unwrap(), *env.system_image.meta_far_merkle_root()),
+                ("a-base-package/0".parse().unwrap(), a_base_package_hash)
+            }
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn paths_to_hashes_includes_system_image_even_if_no_static_packages() {
-        let static_packages = StaticPackages::from_entries(vec![]);
+        let (env, base_packages) = TestEnv::new(&[]).await;
 
-        let system_image_path = PackagePath::from_name_and_variant(
-            "system_image".parse().unwrap(),
-            "0".parse().unwrap(),
+        assert_eq!(
+            base_packages.paths_to_hashes().cloned().collect::<HashSet<(PackagePath, Hash)>>(),
+            hashset! {
+                ("system_image/0".parse().unwrap(), *env.system_image.meta_far_merkle_root()),
+            }
         );
-        let system_image_hash: Hash =
-            "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
+    }
 
-        let some_blob_hash =
-            "2222222222222222222222222222222222222222222222222222222222222222".parse().unwrap();
-        let versions_contents = hashmap! {
-            system_image_hash.clone() => MetaContents::from_map(
-                hashmap! {
-                    "some-blob".to_string() => some_blob_hash
-                }
-            ).unwrap(),
-        };
-        let env = TestPkgfs::new(&system_image_hash, &versions_contents);
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn base_packages_fails_when_loading_fails() {
+        let (blobfs_client, blobfs_fake) = blobfs::Client::new_temp_dir_fake();
+        let blobfs_dir = blobfs_fake.backing_dir_as_openat_dir();
+        // system_image package has no data/static_packages file
+        let system_image = PackageBuilder::new("system_image").build().await.unwrap();
+        system_image.write_to_blobfs_dir(&blobfs_dir);
+
         let inspector = finspect::Inspector::new();
 
-        let base_packages_result = BasePackages::new(
-            &env.versions(),
-            static_packages,
-            &system_image_hash,
+        let base_packages_res = BasePackages::new(
+            &blobfs_client,
+            &package_directory::RootDir::new(
+                blobfs_client.clone(),
+                *system_image.meta_far_merkle_root(),
+            )
+            .await
+            .unwrap(),
             inspector.root().create_child("base-packages"),
         )
         .await;
 
-        assert_eq!(
-            base_packages_result
-                .unwrap()
-                .paths_to_hashes()
-                .cloned()
-                .collect::<Vec<(PackagePath, Hash)>>(),
-            vec![(system_image_path, system_image_hash)]
-        );
+        assert!(base_packages_res.is_err());
+        assert_data_tree!(inspector, root: {});
     }
 }

@@ -198,25 +198,24 @@ impl Package {
             dir: &openat::Dir,
             merkle: &fuchsia_merkle::Hash,
             mut source: impl std::io::Read,
-        ) -> Result<(), anyhow::Error> {
+        ) {
             let mut bytes = vec![];
-            source.read_to_end(&mut bytes)?;
+            source.read_to_end(&mut bytes).unwrap();
             let mut file = match dir.write_file(merkle.to_string(), 0o777) {
                 Ok(file) => file,
                 Err(e) if e.kind() == io::ErrorKind::PermissionDenied => {
                     // blobfs already aware of this blob (e.g. blob is written or write is in-flight)
-                    return Ok(());
+                    return;
                 }
-                Err(e) => Err(e)?,
+                Err(e) => Err(e).unwrap(),
             };
-            file.set_len(bytes.len().try_into().unwrap())?;
-            file.write_all(&bytes)?;
-            Ok(())
+            file.set_len(bytes.len().try_into().unwrap()).unwrap();
+            file.write_all(&bytes).unwrap();
         }
 
-        write_blob(dir, &self.meta_far_merkle_root(), self.meta_far().unwrap()).unwrap();
+        write_blob(dir, &self.meta_far_merkle_root(), self.meta_far().unwrap());
         for blob in self.content_blob_files() {
-            write_blob(dir, &blob.merkle, blob.file).unwrap();
+            write_blob(dir, &blob.merkle, blob.file);
         }
     }
 
