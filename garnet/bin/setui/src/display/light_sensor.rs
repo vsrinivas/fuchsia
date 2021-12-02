@@ -13,7 +13,7 @@ use std::path::Path;
 use std::sync::Arc;
 use std::{fs, io};
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use fidl_fuchsia_input_report::{
     DeviceInfo, InputDeviceMarker, InputDeviceProxy, InputReport, InputReportsReaderMarker,
     InputReportsReaderProxy, SensorAxis, SensorType,
@@ -69,11 +69,14 @@ pub async fn open_sensor(
 ) -> Result<Sensor, Error> {
     const INPUT_DEVICES_DIRECTORY: &str = "/dev/class/input-report";
     let path = Path::new(INPUT_DEVICES_DIRECTORY);
-    let entries = fs::read_dir(path)?;
+    let entries = fs::read_dir(path).context("Failed to read /dev/class/input-report dir")?;
     for entry in entries {
-        let path = entry?.path();
+        let path = entry.context("Failed to process entry in /dev/class/input-report")?.path();
         let path = path.to_str().expect("Bad path");
-        let proxy = service_context.connect_path::<InputDeviceMarker>(path).await?;
+        let proxy = service_context
+            .connect_path::<InputDeviceMarker>(path)
+            .await
+            .with_context(|| format!("Failed to connect to InputDevice path at {:?}", path))?;
         let res = proxy.call_async(InputDeviceProxy::get_descriptor).await;
         if let Ok(device_descriptor) = res {
             if let Some(DeviceInfo { vendor_id, product_id, .. }) = device_descriptor.device_info {
