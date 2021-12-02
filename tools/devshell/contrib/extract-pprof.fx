@@ -21,7 +21,7 @@
 ## profiling data is extracted into a temporary directory whose path is printed
 ## on success.
 ##
-## usage: fx extract_pprof --inspect FILE --component MONIKER
+## usage: fx extract-pprof --inspect FILE --component MONIKER
 ##
 ##   --inspect   Path to the inspect.json file
 ##   --component Moniker to extract pprof data for (e.g. core/network/netstack)
