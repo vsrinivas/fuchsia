@@ -79,6 +79,11 @@ class Realm final {
   // channel.
   zx_status_t Connect(const std::string& interface_name, zx::channel request) const;
 
+  // Return a handle to the exposed directory of the root component.
+  fidl::InterfaceHandle<fuchsia::io::Directory> CloneRoot() const {
+    return root_.CloneExposedDir();
+  }
+
   // Get the child name of the root component.
   std::string GetChildName() const;
 

@@ -90,6 +90,11 @@ class ScopedChild final {
   // Get the child name of this instance.
   std::string GetChildName() const;
 
+  // Clone the exposed directory.
+  fidl::InterfaceHandle<fuchsia::io::Directory> CloneExposedDir() const {
+    return exposed_dir_.CloneChannel();
+  }
+
  private:
   explicit ScopedChild(fuchsia::component::RealmSyncPtr,
                        fuchsia::component::decl::ChildRef child_ref_, ServiceDirectory exposed_dir);
