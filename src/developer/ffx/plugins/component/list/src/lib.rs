@@ -30,7 +30,7 @@ pub async fn list(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentListCommand) 
 pub async fn try_get_component_list(hub_dir: Directory) -> Result<Component> {
     let mut attempt_number = 1;
     loop {
-        match Component::parse("/".to_string(), hub_dir.clone()).await {
+        match Component::parse("/".to_string(), hub_dir.clone()?).await {
             Ok(component) => return Ok(component),
             Err(e) => {
                 if attempt_number > NUM_ATTEMPTS {

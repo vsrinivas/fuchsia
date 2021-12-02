@@ -83,3 +83,10 @@ async fn select() {
     let component = components.remove(0);
     assert!(component.is_root());
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn clone() {
+    let hub_path = PathBuf::from("/hub");
+    let hub_dir = Directory::from_namespace(hub_path).unwrap();
+    assert!(hub_dir.clone().is_ok());
+}

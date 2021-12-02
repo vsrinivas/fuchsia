@@ -10,18 +10,23 @@ use {
     fidl_fuchsia_io as fio,
     files_async::readdir,
     fuchsia_zircon_status::Status,
+    futures::lock::Mutex,
     io_util::{
-        directory::{open_directory_no_describe, open_file_no_describe},
+        directory::{clone_no_describe, open_directory_no_describe, open_file_no_describe},
         file::{close, read, read_to_string, write},
     },
     std::path::{Path, PathBuf},
 };
 
 // A convenience wrapper over a FIDL DirectoryProxy.
-#[derive(Clone)]
 pub struct Directory {
     path: PathBuf,
     proxy: fio::DirectoryProxy,
+    // The `fuchsia.io.Directory` protocol is stateful in readdir, and the associated `files_async`
+    // library used for enumerating the directory has no mechanism for synchronization of readdir
+    // operations, as such this mutex must be held throughout directory enumeration in order to
+    // avoid race conditions from concurrent rewinds and reads.
+    readdir_mutex: Mutex<()>,
 }
 
 impl Directory {
@@ -35,13 +40,13 @@ impl Directory {
             .ok_or_else(|| format_err!("Could not convert path to string"))?;
         let proxy = io_util::directory::open_in_namespace(path_str, fio::OPEN_RIGHT_READABLE)?;
         let path = path.as_ref().to_path_buf();
-        Ok(Self { path, proxy })
+        Ok(Self { path, proxy, readdir_mutex: Mutex::new(()) })
     }
 
     // Create a Directory object from a proxy
     pub fn from_proxy(proxy: fio::DirectoryProxy) -> Self {
         let path = PathBuf::from(".");
-        Self { path, proxy }
+        Self { path, proxy, readdir_mutex: Mutex::new(()) }
     }
 
     // Open a directory at the given `relative_path` as readable.
@@ -57,7 +62,7 @@ impl Directory {
             None => return Err(format_err!("Could not convert relative path to &str")),
         };
         match open_directory_no_describe(&self.proxy, relative_path, flags) {
-            Ok(proxy) => Ok(Self { path, proxy }),
+            Ok(proxy) => Ok(Self { path, proxy, readdir_mutex: Mutex::new(()) }),
             Err(e) => Err(format_err!("Could not open dir `{}`: {}", path.as_path().display(), e)),
         }
     }
@@ -190,6 +195,7 @@ impl Directory {
 
     // Return a list of directory entries in the directory
     pub async fn entries(&self) -> Result<Vec<String>> {
+        let _lock = self.readdir_mutex.lock().await;
         match readdir(&self.proxy).await {
             Ok(entries) => Ok(entries.into_iter().map(|e| e.name).collect()),
             Err(e) => Err(format_err!(
@@ -198,5 +204,10 @@ impl Directory {
                 e
             )),
         }
+    }
+
+    pub fn clone(&self) -> Result<Self> {
+        let proxy = clone_no_describe(&self.proxy, Some(fio::OPEN_RIGHT_READABLE))?;
+        Ok(Self { path: self.path.clone(), proxy, readdir_mutex: Mutex::new(()) })
     }
 }

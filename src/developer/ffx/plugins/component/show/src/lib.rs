@@ -31,7 +31,7 @@ pub async fn show(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentShowCommand) 
 pub async fn try_get_components(query: String, hub_dir: Directory) -> Result<Vec<Component>> {
     let mut attempt_number = 1;
     loop {
-        match find_components(query.clone(), hub_dir.clone()).await {
+        match find_components(query.clone(), hub_dir.clone()?).await {
             Ok(components) => return Ok(components),
             Err(e) => {
                 if attempt_number > NUM_ATTEMPTS {
