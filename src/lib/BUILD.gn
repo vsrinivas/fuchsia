@@ -98,6 +98,7 @@ group("tests") {
     "fuchsia-component-test:tests",
     "fuchsia-cxx:tests",
     "fuchsia-hyper:tests",
+    "fuchsia-image-format:tests",
     "fuchsia-runtime:tests",
     "fuchsia-url:tests",
     "fuzzing:tests",
