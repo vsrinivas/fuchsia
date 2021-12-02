@@ -74,6 +74,14 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
+    // SDIO test rig on the J4 GPIO header. May or may not be connected.
+    {
+        .bus_id = 1,
+        .address = 0x32,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
 #if 0  // placeholder until driver implemented and vid/pid/did assigned
        // bus_ids and addresses are correct
     // KXTJ3 (U18) 3 axis accelerometer
