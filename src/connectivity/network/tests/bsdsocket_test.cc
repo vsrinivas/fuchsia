@@ -403,14 +403,14 @@ class SocketOptsTest : public SocketKindTest {
     };
   }
 
-  static SockOption GetNoChecksum() {
+  constexpr static SockOption GetNoChecksum() {
     return {
         .level = SOL_SOCKET,
         .option = SO_NO_CHECK,
     };
   }
 
-  static SockOption GetTimestamp() {
+  constexpr static SockOption GetTimestamp() {
     return {
         .level = SOL_SOCKET,
         .option = SO_TIMESTAMP,
