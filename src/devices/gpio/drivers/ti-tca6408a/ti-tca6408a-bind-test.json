@@ -1,0 +1,19 @@
+[
+    {
+        "name": "Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.TCA6408A"
+        }
+    },
+    {
+        "name": "Bad protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.TCA6408A"
+        }
+    }
+]

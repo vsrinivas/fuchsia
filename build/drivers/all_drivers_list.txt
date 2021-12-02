@@ -119,6 +119,7 @@
 //src/devices/gpio/drivers/aml-axg-gpio:aml-axg-gpio-driver
 //src/devices/gpio/drivers/gpio-test:gpio-test-driver
 //src/devices/gpio/drivers/gpio:gpio-driver
+//src/devices/gpio/drivers/ti-tca6408a:ti-tca6408a-driver
 //src/devices/i2c/drivers/aml-i2c:aml-i2c-driver
 //src/devices/i2c/drivers/i2c:i2c-driver
 //src/devices/i2c/drivers/intel-i2c:intel-i2c-driver

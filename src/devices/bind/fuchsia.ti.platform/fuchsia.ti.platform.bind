@@ -26,4 +26,5 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   TEMPERATURE = 0x06,
   TAS5720 = 0x07,
   INA231 = 0x08,
+  TCA6408A = 0x09,
 };

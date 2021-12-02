@@ -1,0 +1,68 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+driver_bind_rules("ti-tca6408a-bind") {
+  rules = "ti-tca6408a.bind"
+  header_output = "ti-tca6408a-bind.h"
+  tests = "ti-tca6408a-bind-test.json"
+  deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
+}
+
+source_set("common") {
+  public_deps = [
+    ":ti-tca6408a-bind",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/zxc",
+  ]
+}
+
+fuchsia_driver("ti-tca6408a-driver") {
+  output_name = "ti-tca6408a"
+  sources = [ "ti-tca6408a.cc" ]
+  deps = [ ":common" ]
+}
+
+fuchsia_driver_component("ti-tca6408a") {
+  info = "ti-tca6408a-info.json"
+  deps = [ ":ti-tca6408a-driver" ]
+}
+
+test("ti-tca6408a-test-bin") {
+  output_name = "ti-tca6408a-test"
+  sources = [
+    "ti-tca6408a-test.cc",
+    "ti-tca6408a.cc",
+  ]
+  deps = [
+    ":common",
+    "//src/devices/i2c/testing/fake-i2c",
+    "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("ti-tca6408a-test") {
+  deps = [ ":ti-tca6408a-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":ti-tca6408a-bind_test",
+    ":ti-tca6408a-test",
+  ]
+}

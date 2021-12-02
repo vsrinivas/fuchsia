@@ -9,5 +9,6 @@ group("tests") {
     "aml-axg-gpio:tests",
     "gpio:tests",
     "gpio-test:tests",
+    "ti-tca6408a:tests",
   ]
 }

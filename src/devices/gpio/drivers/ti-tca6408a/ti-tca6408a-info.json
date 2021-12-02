@@ -1,0 +1,11 @@
+{
+    "short_description": "Texas Instruments TCA6408a GPIO expander driver",
+    "manufacturer": "Texas Instruments",
+    "families": [],
+    "models": [
+        "TCA6408a"
+    ],
+    "areas": [
+        "GPIO"
+    ]
+}

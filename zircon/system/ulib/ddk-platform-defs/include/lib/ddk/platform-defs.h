@@ -238,6 +238,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_TI_TEMPERATURE     0x06
 #define PDEV_DID_TI_TAS5720         0x07
 #define PDEV_DID_TI_INA231          0x08
+#define PDEV_DID_TI_TCA6408A        0x09
 
 // Test
 #define PDEV_VID_TEST               0x11
