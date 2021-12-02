@@ -109,7 +109,7 @@ func (r ninjaRunner) run(ctx context.Context, args []string, stdout, stderr io.W
 // before writing to the underlying writer.
 type withoutNinjaExplain struct {
 	buf *bytes.Buffer
-	w   *bufio.Writer
+	w   io.Writer
 }
 
 // Write implements io.Writer for withoutNinjaExplain.
@@ -149,7 +149,7 @@ func (w *withoutNinjaExplain) Flush() error {
 			break
 		}
 	}
-	return w.w.Flush()
+	return nil
 }
 
 // stripNinjaExplain returns a writer that strips all Ninja explain outputs and
@@ -157,8 +157,7 @@ func (w *withoutNinjaExplain) Flush() error {
 func stripNinjaExplain(w io.Writer) *withoutNinjaExplain {
 	return &withoutNinjaExplain{
 		buf: new(bytes.Buffer),
-		// Buffer output while printing it to stdio for efficiency.
-		w: bufio.NewWriter(w),
+		w:   w,
 	}
 }
 
@@ -272,8 +271,7 @@ func runNinja(
 		if explain {
 			targets = append(targets, "-d", "explain")
 		}
-		stdout := stripNinjaExplain(streams.Stdout(ctx))
-		stderr := stripNinjaExplain(streams.Stderr(ctx))
+		stdout, stderr := stripNinjaExplain(streams.Stdout(ctx)), stripNinjaExplain(streams.Stderr(ctx))
 		err := r.run(
 			ctx,
 			targets,
@@ -290,13 +288,16 @@ func runNinja(
 			io.MultiWriter(stdout, stdioWriter),
 			io.MultiWriter(stderr, stdioWriter),
 		)
-		if flushErr := stdout.Flush(); flushErr != nil {
-			return fmt.Errorf("flushing stdout writer: %w", flushErr)
+		if err != nil {
+			return err
 		}
-		if flushErr := stderr.Flush(); flushErr != nil {
-			return fmt.Errorf("flushing stderr writer: %w", flushErr)
+		if err := stdout.Flush(); err != nil {
+			return fmt.Errorf("flushing stdout writer: %w", err)
 		}
-		return err
+		if err := stderr.Flush(); err != nil {
+			return fmt.Errorf("flushing stderr writer: %w", err)
+		}
+		return nil
 	}()
 	// Wait for parsing to complete.
 	if parserErr := <-parserErrs; parserErr != nil {
