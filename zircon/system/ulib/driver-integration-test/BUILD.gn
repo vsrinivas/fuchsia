@@ -33,7 +33,6 @@ zx_library("driver-integration-test") {
     "//src/devices/tests/ddk-power/*",
     "//src/diagnostics/validator/logs/ddk/sink/puppet/cpp/*",
     "//zircon/system/ulib/driver-integration-test/test/*",
-    "//zircon/system/ulib/usb-virtual-bus-launcher/*",
   ]
 }
 

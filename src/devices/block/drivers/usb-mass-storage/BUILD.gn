@@ -98,6 +98,12 @@ fuchsia_unittest_package("ums-test") {
   deps = [ ":ums" ]
 }
 
+fuchsia_test_component("ums-integration-component") {
+  component_name = "ums-integration-test"
+  manifest = "tests/meta/ums_integration_test.cml"
+  deps = [ ":ums-integration" ]
+}
+
 test("ums-integration") {
   output_name = "ums-integration-test"
   sources = [ "tests/ums-test.cc" ]
@@ -136,11 +142,9 @@ test("ums-integration") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-fuchsia_unittest_package("ums-integration-test") {
-  deps = [
-    ":ums-integration",
-    ":usb-mass-storage",
-  ]
+fuchsia_test_package("ums-integration-test") {
+  test_components = [ ":ums-integration-component" ]
+  deps = [ ":usb-mass-storage" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

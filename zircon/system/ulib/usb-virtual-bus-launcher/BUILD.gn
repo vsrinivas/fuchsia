@@ -18,16 +18,17 @@ zx_library("usb-virtual-bus-launcher") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
-    "//zircon/system/ulib/driver-integration-test",
+    "//src/devices/testing/driver-integration-test-shim",
+    "//zircon/system/ulib/ddk-platform-defs",
     "//zircon/system/ulib/zxtest",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/usb-peripheral-utils",
