@@ -153,27 +153,6 @@ static void platform_save_bootloader_data(void) {
         mandatory_memset(payload.data(), 0, payload.size());
         break;
       }
-      case ZBI_TYPE_KERNEL_DRIVER: {
-        switch (header->extra) {
-          case KDRV_I8250_PIO_UART: {
-            if (payload.size() >= sizeof(dcfg_simple_pio_t)) {
-              dcfg_simple_pio_t pio;
-              memcpy(&pio, payload.data(), sizeof(pio));
-              bootloader.uart = pio;
-            }
-            break;
-          }
-          case KDRV_I8250_MMIO_UART: {
-            if (payload.size() >= sizeof(dcfg_simple_t)) {
-              dcfg_simple_t mmio;
-              memcpy(&mmio, payload.data(), sizeof(mmio));
-              bootloader.uart = mmio;
-            }
-            break;
-          }
-        };
-        break;
-      }
       case ZBI_TYPE_CRASHLOG: {
         crashlog_impls::efi.SetLastCrashlogLocation(
             {reinterpret_cast<char*>(payload.data()), payload.size()});
@@ -314,32 +293,6 @@ zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
       zbitl::PrintViewError(result.error_value());
       return error(result.error_value());
     }
-  }
-
-  auto add_uart = [&](uint32_t extra, auto bytes) -> zx_status_t {
-    auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_KERNEL_DRIVER, .extra = extra}, bytes);
-    if (result.is_error()) {
-      printf("mexec: failed to append UART data to data ZBI: ");
-      zbitl::PrintViewError(result.error_value());
-      return error(result.error_value());
-    }
-    return ZX_OK;
-  };
-  if (auto pio_uart = ktl::get_if<dcfg_simple_pio_t>(&bootloader.uart)) {
-    if (zx_status_t status =
-            add_uart(KDRV_I8250_PIO_UART, zbitl::AsBytes(pio_uart, sizeof(*pio_uart)));
-        status != ZX_OK) {
-      return status;
-    }
-  } else if (auto mmio_uart = ktl::get_if<dcfg_simple_t>(&bootloader.uart)) {
-    if (zx_status_t status =
-            add_uart(KDRV_I8250_MMIO_UART, zbitl::AsBytes(mmio_uart, sizeof(*mmio_uart)));
-        status != ZX_OK) {
-      return status;
-    }
-  } else {
-    ZX_DEBUG_ASSERT_MSG(ktl::get_if<ktl::monostate>(&bootloader.uart),
-                        "bootloader.uart in impossible ktl::variant state???");
   }
 
   return ZX_OK;

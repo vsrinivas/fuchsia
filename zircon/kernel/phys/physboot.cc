@@ -20,6 +20,7 @@
 #include <phys/handoff.h>
 #include <phys/kernel-package.h>
 #include <phys/main.h>
+#include <phys/stdio.h>
 #include <phys/symbolize.h>
 
 #include "handoff-prep.h"
@@ -146,9 +147,13 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   prep.SummarizeMiscZbiItems(boot.DataZbi().storage());
   gBootTimes.SampleNow(PhysBootTimes::kZbiDone);
 
-  // This is the last thing copied into the PhysHandoff object, so that it
-  // includes all the time samples collected along the way.
+  // Now that all time samples have been collected, copy gBootTimes into the
+  // hand-off.
   prep.handoff()->times = gBootTimes;
+
+  // Access the associated uart::all::Driver via GetUartDriver(), as that copy
+  // carries the post-Init() state (unlike gBootOptions->serial).
+  GetUartDriver().Visit([&prep](const auto& driver) { prep.handoff()->serial = driver.uart(); });
 
   // Even though the kernel is still a ZBI and mostly using the ZBI protocol
   // for booting, the PhysHandoff pointer (physical address) is now the

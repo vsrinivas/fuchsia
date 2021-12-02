@@ -20,6 +20,7 @@
 #include <ktl/byte.h>
 #include <ktl/span.h>
 #include <ktl/type_traits.h>
+#include <ktl/variant.h>
 #include <lk/init.h>
 #include <phys/handoff.h>
 #include <vm/vm_object.h>
@@ -53,6 +54,27 @@ void ConstructMexecDataZbi(uint level) {
       result.is_error()) {
     abort();
   }
+
+  // Appends the appropriate UART config, as encoded in the hand-off, which is
+  // given as variant of libuart driver types, each with methods to indicate
+  // the ZBI item type and payload.
+  constexpr auto append_uart_item = [](const auto& uart) {
+    if (uart.extra() == 0) {  // The null driver.
+      return;
+    }
+    const zbi_header_t header = {
+        .type = ZBI_TYPE_KERNEL_DRIVER,
+        .extra = uart.extra(),
+    };
+    auto result = gImageAtHandoff.Append(header, zbitl::AsBytes(uart.config()));
+    if (result.is_error()) {
+      printf("mexec: could not append UART driver config: ");
+      zbitl::PrintViewError(result.error_value());
+      abort();
+    }
+  };
+
+  ktl::visit(append_uart_item, gPhysHandoff->serial);
 
   if (gPhysHandoff->nvram) {
     auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_NVRAM},

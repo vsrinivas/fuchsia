@@ -80,7 +80,6 @@ zx_library("pc") {
 source_set("tests") {
   # TODO: testonly = true
   sources = [
-    "debug_test.cc",
     "efi_test.cc",
     "interrupts_test.cc",
   ]

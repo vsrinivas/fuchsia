@@ -443,6 +443,9 @@ source_set("handoff") {
   public_deps = [
     # handoff.h has #include <lib/arch/ticks.h>.
     "//zircon/kernel/lib/arch",
+
+    # handoff.h has #include <lib/uart/all.h>.
+    "//zircon/system/ulib/uart",
   ]
   public_configs = [ ":includes" ]
 }

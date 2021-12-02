@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_HANDOFF_H_
 
 #include <lib/arch/ticks.h>
+#include <lib/uart/all.h>
 #include <stddef.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
@@ -68,6 +69,12 @@ struct PhysHandoff {
 
   PhysBootTimes times;
   static_assert(ktl::is_default_constructible_v<PhysBootTimes>);
+
+  // TODO(fxbug.dev/89183): Once BootOptions is encoded within the hand-off,
+  // this field will be redundant and its contents will be accessible as
+  // `BootOptions::serial`.
+  uart::all::Driver serial;
+  static_assert(ktl::is_default_constructible_v<uart::all::Driver>);
 
   // Physical address of the data ZBI.
   uint64_t zbi = 0;
