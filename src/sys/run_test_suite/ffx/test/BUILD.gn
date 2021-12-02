@@ -19,6 +19,7 @@ ffx_plugin("ffx_test") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:signal-hook",
     "//third_party/rust_crates:thiserror",
   ]
 

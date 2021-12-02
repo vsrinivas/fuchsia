@@ -18,8 +18,13 @@ use {
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{RunBuilderMarker, RunBuilderProxy},
+    futures::FutureExt,
     lazy_static::lazy_static,
     output_directory::{DirectoryError, DirectoryId, DirectoryManager},
+    signal_hook::{
+        consts::signal::{SIGINT, SIGTERM},
+        iterator::Signals,
+    },
     std::fs::File,
     std::io::{stdout, Write},
     std::path::PathBuf,
@@ -145,6 +150,20 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
     };
     let test_definitions = test_params_from_args(cmd, std::io::stdin, json_input_experiment)?;
 
+    let (cancel_sender, cancel_receiver) = futures::channel::oneshot::channel::<()>();
+    let mut signals = Signals::new(&[SIGINT, SIGTERM]).unwrap();
+    // signals.forever() is blocking, so we need to spawn a thread rather than use async.
+    let _signal_handle_thread = std::thread::spawn(move || {
+        for signal in signals.forever() {
+            match signal {
+                SIGINT | SIGTERM => {
+                    let _ = cancel_sender.send(());
+                    break;
+                }
+                _ => unreachable!(),
+            }
+        }
+    });
     match run_test_suite_lib::run_tests_and_get_outcome(
         builder_connector.connect().await,
         test_definitions,
@@ -152,6 +171,7 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
         min_log_severity,
         filter_ansi,
         output_directory,
+        cancel_receiver.map(|_| ()),
     )
     .await
     {

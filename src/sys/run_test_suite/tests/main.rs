@@ -89,6 +89,7 @@ async fn run_test_once<W: Write + Send>(
             min_log_severity,
             writer,
             &mut reporter,
+            futures::future::pending(),
         )
         .await?;
         let mut results = streams.collect::<Vec<_>>().await;
@@ -153,6 +154,7 @@ async fn launch_and_test_passing_v2_test() {
         None,
         &mut output,
         &mut reporter,
+        futures::future::pending(),
     )
     .await
     .expect("run test");
@@ -244,6 +246,7 @@ async fn launch_and_test_stderr_test() {
         None,
         &mut output,
         &mut reporter,
+        futures::future::pending(),
     )
     .await
     .expect("run test");
@@ -341,7 +344,8 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
                 ); 10],
                 new_run_params(),
             None,&mut output,
-            &mut reporter
+            &mut reporter,
+            futures::future::pending(),
         )
     .await.expect("run test");
     let run_results = streams.collect::<Vec<_>>().await;
@@ -414,7 +418,8 @@ async fn launch_and_test_multiple_passing_tests() {
             ],
             new_run_params(),
             None, &mut output,
-            &mut reporter
+            &mut reporter,
+            futures::future::pending(),
         )
     .await.expect("run test");
     let run_results = streams.collect::<Vec<_>>().await;
@@ -726,7 +731,7 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 ); 10],
                 new_run_params(),
-                None,&mut output, &mut reporter
+                None,&mut output, &mut reporter, futures::future::pending(),
         )
     .await.expect("run test");
     let run_results = streams.collect::<Vec<_>>().await;
@@ -887,6 +892,7 @@ async fn test_timeout_multiple_times() {
         None,
         &mut output,
         &mut reporter,
+        futures::future::pending(),
     )
     .await
     .expect("run test");
@@ -933,6 +939,7 @@ async fn test_coninue_on_timeout() {
         None,
         &mut output,
         &mut reporter,
+        futures::future::pending(),
     )
     .await
     .expect("run test");
@@ -965,7 +972,7 @@ async fn test_stop_after_n_failures() {
                     timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
                     stop_after_failures: Some(5u16.try_into().unwrap()),
                 },
-                None,&mut output, &mut reporter
+                None, &mut output, &mut reporter, futures::future::pending(),
         )
     .await.expect("run test");
     let run_results = streams.collect::<Vec<_>>().await;
@@ -1088,6 +1095,7 @@ async fn test_stdout_and_log_filter_ansi() {
             Some(Severity::Info),
             &mut ansi_filter,
             &mut reporter,
+            futures::future::pending(),
         )
         .await
         .unwrap();
@@ -1207,6 +1215,7 @@ async fn test_stdout_to_directory() {
         None,
         false,
         Some(output_dir.path().to_path_buf()),
+        futures::future::pending(),
     )
     .await;
 
@@ -1272,6 +1281,7 @@ async fn test_syslog_to_directory() {
         None,
         false,
         Some(output_dir.path().to_path_buf()),
+        futures::future::pending(),
     )
     .await;
 
@@ -1328,6 +1338,7 @@ async fn test_custom_artifacts_to_directory() {
         None,
         false,
         Some(output_dir.path().to_path_buf()),
+        futures::future::pending(),
     )
     .await;
 
@@ -1365,4 +1376,47 @@ async fn test_custom_artifacts_to_directory() {
         &suite_results,
         &expected_test_suites,
     );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_terminate_signal() {
+    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
+    );
+
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        vec![test_params],
+        new_run_params(),
+        None,
+        false,
+        Some(output_dir.path().to_path_buf()),
+        futures::future::ready(()),
+    )
+    .await;
+
+    assert_eq!(outcome, Outcome::Inconclusive);
+
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Inconclusive);
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+
+    // Based on the exact timing, it's possible some test cases were reported, so manually assert
+    // only on the fields that shouldn't vary.
+    assert_eq!(suite_results.len(), 1);
+    let directory::SuiteResult::V0 { outcome: suite_outcome, name: suite_name, .. } =
+        suite_results.into_iter().next().unwrap();
+    assert_eq!(suite_outcome, directory::Outcome::Inconclusive);
+    assert_eq!(
+        suite_name,
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
+    );
+
+    // TODO(satsukiu): add a `Reporter` implementation for tests that signals on events and use it
+    // to make more sophisticated tests. Since we need to make assertions on the directory reporter
+    // simultaneously, we'll need to support writing to multiple reporters at once as well.
 }

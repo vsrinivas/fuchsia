@@ -10,7 +10,13 @@ use {
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
-    futures::{channel::mpsc, future::BoxFuture, prelude::*, stream::LocalBoxStream, StreamExt},
+    futures::{
+        channel::mpsc,
+        future::{BoxFuture, Either},
+        prelude::*,
+        stream::LocalBoxStream,
+        StreamExt,
+    },
     log::{error, warn},
     std::collections::{HashMap, HashSet, VecDeque},
     std::convert::TryInto,
@@ -86,6 +92,9 @@ pub struct SuiteRunResult {
     /// Suite protocol completed without error.
     pub successful_completion: bool,
 
+    /// Whether or not execution of the suite was cancelled by the user.
+    pub cancelled: bool,
+
     /// restricted logs produced by this suite run which exceed expected log level.
     pub restricted_logs: Vec<String>,
 }
@@ -132,11 +141,12 @@ pub enum TimeoutBehavior {
     Continue,
 }
 
-async fn collect_results_for_suite(
+async fn collect_results_for_suite<F: Future<Output = ()>>(
     mut running_suite: RunningSuite,
     mut artifact_sender: ArtifactSender,
     suite_reporter: &SuiteReporter<'_>,
     log_opts: diagnostics::LogCollectionOptions,
+    cancel_fut: F,
 ) -> Result<SuiteRunResult, RunTestSuiteError> {
     let mut test_cases = HashMap::new();
     let mut test_case_reporters = HashMap::new();
@@ -150,15 +160,27 @@ async fn collect_results_for_suite(
     let mut test_cases_failed = HashSet::new();
     let mut restricted_logs = vec![];
     let mut successful_completion = false;
+    let mut cancelled = false;
     let mut tasks = vec![];
 
-    while let Some(event_result) = running_suite.next_event().await {
-        match event_result {
-            Err(e) => {
+    futures::pin_mut!(cancel_fut);
+
+    loop {
+        let cancellation_or_event_result =
+            futures::future::select(&mut cancel_fut, running_suite.next_event().boxed()).await;
+        match cancellation_or_event_result {
+            // cancel invoked.
+            Either::Left(((), _)) => {
+                cancelled = true;
+                break;
+            }
+            // stream completes normally.
+            Either::Right((None, _)) => break,
+            Either::Right((Some(Err(e)), _)) => {
                 suite_reporter.stopped(&output::ReportedOutcome::Error, Timestamp::Unknown)?;
                 return Err(e);
             }
-            Ok(event) => {
+            Either::Right((Some(Ok(event)), _)) => {
                 let timestamp = Timestamp::from_nanos(event.timestamp);
                 match event.payload.expect("event cannot be None") {
                     ftest_manager::SuiteEventPayload::CaseFound(CaseFound {
@@ -614,6 +636,22 @@ async fn collect_results_for_suite(
         }
     }
 
+    if cancelled {
+        match outcome {
+            Outcome::Passed | Outcome::Failed => {
+                outcome = Outcome::Inconclusive;
+            }
+            _ => {}
+        }
+        artifact_sender
+            .send_test_stdout_msg(format!(
+                "\nExecution of test {} was cancelled.",
+                running_suite.url()
+            ))
+            .await
+            .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+    }
+
     let mut test_cases_executed = test_cases_executed
         .into_iter()
         .map(|i| test_cases.get(&i).unwrap().clone())
@@ -634,20 +672,27 @@ async fn collect_results_for_suite(
         passed: test_cases_passed,
         failed: test_cases_failed,
         successful_completion,
+        cancelled,
         restricted_logs,
     })
 }
 
-async fn run_suite_and_collect_logs<Out: Write>(
+async fn run_suite_and_collect_logs<Out: Write, F: Future<Output = ()>>(
     suite: RunningSuite,
     suite_reporter: &SuiteReporter<'_>,
     log_opts: &diagnostics::LogCollectionOptions,
     stdout_writer: &mut Out,
+    cancel_fut: F,
 ) -> Result<SuiteRunResult, RunTestSuiteError> {
     let (artifact_sender, mut artifact_recv) = mpsc::channel(1024);
 
-    let fut1 =
-        collect_results_for_suite(suite, artifact_sender.into(), &suite_reporter, log_opts.clone());
+    let fut1 = collect_results_for_suite(
+        suite,
+        artifact_sender.into(),
+        &suite_reporter,
+        log_opts.clone(),
+        cancel_fut,
+    );
     let fut2 = async {
         let mut syslog_writer = match suite_reporter.new_artifact(&ArtifactType::Syslog) {
             Ok(writer) => writer,
@@ -763,13 +808,14 @@ impl RunningSuite {
 }
 
 /// Runs the tests in `test_params`, and writes logs to writer.
-pub async fn run_test<'a, Out: Write>(
+pub async fn run_test<'a, Out: Write, F: 'a + Future<Output = ()>>(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
     run_params: RunParams,
     min_severity_logs: Option<Severity>,
     stdout_writer: &'a mut Out,
     run_reporter: &'a mut RunReporter,
+    cancel_fut: F,
 ) -> Result<SuiteResults<'a>, RunTestSuiteError> {
     let mut suite_start_futs = vec![];
     for params in test_params.into_iter() {
@@ -806,7 +852,7 @@ pub async fn run_test<'a, Out: Write>(
     let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
     builder_proxy.build(run_server_end)?;
 
-    struct FoldArgs<'a, Out: Write> {
+    struct FoldArgs<'a, Out: Write, F: 'a + Future<Output = ()>> {
         suite_start_futs: Vec<BoxFuture<'a, RunningSuite>>,
         run_controller: ftest_manager::RunControllerProxy,
         next_suite_id: u32,
@@ -815,6 +861,7 @@ pub async fn run_test<'a, Out: Write>(
         min_severity_logs: Option<Severity>,
         run_params: RunParams,
         num_failed: u16,
+        cancel_fut: futures::future::Shared<F>,
     }
 
     let args = FoldArgs {
@@ -826,6 +873,7 @@ pub async fn run_test<'a, Out: Write>(
         min_severity_logs,
         run_params,
         num_failed: 0,
+        cancel_fut: cancel_fut.shared(),
     };
 
     // Handle suite events. Note this assumes that suites are run in serial - it waits to
@@ -849,6 +897,7 @@ pub async fn run_test<'a, Out: Write>(
                     &suite_reporter,
                     &log_options,
                     args.stdout_writer,
+                    args.cancel_fut.clone(),
                 )
                 .await;
                 // We should always persist results, even if something failed.
@@ -867,8 +916,9 @@ pub async fn run_test<'a, Out: Write>(
                     Some(threshold) => accumulated_failures >= threshold.get(),
                     None => false,
                 };
+                let stop_due_to_cancellation = result.cancelled;
 
-                if stop_due_to_timeout || stop_due_to_failures {
+                if stop_due_to_timeout || stop_due_to_failures || stop_due_to_cancellation {
                     args.run_controller.stop()?;
                     // Drop remaining controllers, which is the same as calling kill on
                     // each controller.
@@ -916,6 +966,7 @@ async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
                 passed,
                 failed,
                 successful_completion,
+                cancelled,
                 restricted_logs,
             })) => {
                 println!("\n");
@@ -927,8 +978,11 @@ async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
                 if executed.is_empty() {
                     println!("WARN: No test cases were executed!");
                 }
-                if !successful_completion {
+                if !successful_completion && !cancelled {
                     println!("{} did not complete successfully.", &url);
+                }
+                if cancelled {
+                    println!("{} was cancelled before completion.", &url);
                 }
                 if restricted_logs.len() > 0 {
                     if outcome == Outcome::Passed {
@@ -962,13 +1016,14 @@ async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
 /// Runs the test and writes logs to stdout.
 /// |count|: Number of times to run this test.
 /// |filter_ansi|: Whether or not to filter out ANSI escape sequences from stdout.
-pub async fn run_tests_and_get_outcome(
+pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     builder_proxy: RunBuilderProxy,
     test_params: Vec<TestParams>,
     run_params: RunParams,
     min_severity_logs: Option<Severity>,
     filter_ansi: bool,
     record_directory: Option<PathBuf>,
+    cancel_fut: F,
 ) -> Outcome {
     let mut stdout_for_results: Box<dyn Write + Send + Sync> = match filter_ansi {
         true => Box::new(AnsiFilterWriter::new(io::stdout())),
@@ -995,6 +1050,7 @@ pub async fn run_tests_and_get_outcome(
         min_severity_logs,
         &mut stdout_for_results,
         &mut reporter,
+        cancel_fut,
     )
     .await
     {

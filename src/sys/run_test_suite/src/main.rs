@@ -104,6 +104,7 @@ async fn main() {
         min_severity_logs,
         filter_ansi,
         None,
+        futures::future::pending(),
     )
     .await
     {
