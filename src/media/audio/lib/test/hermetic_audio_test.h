@@ -34,6 +34,11 @@ namespace media::audio::test {
 //
 class HermeticAudioTest : public TestFixture {
  protected:
+  // Tests that require real-time response should have no data loss from overflow or underflow if
+  // run in a capable environment, but known issues can prevent this.
+  // TODO(fxbug.dev/80003): re-enable underflow detection once outstanding bugs are resolved.
+  static constexpr bool kEnableAllOverflowAndUnderflowChecksInRealtimeTests = false;
+
   // TestSuite functions are run once per test suite; a suite can configure
   // HermeticAudioEnvironment::Options for all tests by calling `SetTestSuiteEnvironmentOptions()`
   // in an override of `SetUpTestSuite()`.

@@ -27,7 +27,13 @@ namespace media::audio::test {
 class AudioLoopbackStressTest : public HermeticAudioTest {
  protected:
   void TearDown() override {
-    ExpectNoOverflowsOrUnderflows();
+    if constexpr (kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      ExpectNoOverflowsOrUnderflows();
+    } else {
+      // We expect no renderer underflows: we pre-submit the whole signal. Keep that check enabled.
+      ExpectNoRendererUnderflows();
+    }
+
     HermeticAudioTest::TearDown();
   }
 

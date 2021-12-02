@@ -19,8 +19,10 @@ namespace media::audio::test {
 class HermeticPipelineTest : public HermeticAudioTest {
  public:
   void TearDown() override {
-    // None of these tests should have overflows or underflows.
-    ExpectNoOverflowsOrUnderflows();
+    if constexpr (kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      // None of these tests should have overflows or underflows.
+      ExpectNoOverflowsOrUnderflows();
+    }
     HermeticAudioTest::TearDown();
   }
 

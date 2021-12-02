@@ -47,8 +47,14 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
 
   ClockSyncPipelineTest() : format_(Format::Create<ASF::FLOAT>(1, kFrameRate).value()) {}
 
-  void TearDown() {
-    ExpectNoOverflowsOrUnderflows();
+  void TearDown() override {
+    if constexpr (kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      ExpectNoOverflowsOrUnderflows();
+    } else {
+      // We expect no renderer underflows: we pre-submit the whole signal. Keep that check enabled.
+      ExpectNoRendererUnderflows();
+    }
+
     HermeticAudioTest::TearDown();
   }
 

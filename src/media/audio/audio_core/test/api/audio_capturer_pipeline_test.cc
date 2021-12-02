@@ -152,8 +152,13 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
   AudioLoopbackPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
 
   void TearDown() override {
-    // None of our tests should overflow or underflow.
-    ExpectNoOverflowsOrUnderflows();
+    if constexpr (kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      ExpectNoOverflowsOrUnderflows();
+    } else {
+      // We expect no renderer underflows: we pre-submit the whole signal. Keep that check enabled.
+      ExpectNoRendererUnderflows();
+    }
+
     HermeticAudioTest::TearDown();
   }
 

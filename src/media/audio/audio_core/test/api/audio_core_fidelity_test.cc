@@ -52,8 +52,6 @@ class AudioCoreFidelityTest : public HermeticFidelityTest {
 
  private:
   static size_t LeadTimeFramesFromSourceRate(int32_t source_rate) {
-    // Why "* 2"? The renderer lead time caused by mixers is essentially 2x kMixProfilePeriod:
-    // 1x for mixing to occur, plus 1x of padding to ensure that packets are not late.
     return static_cast<size_t>(source_rate * DriverOutput::kDefaultHighWaterDuration.to_nsecs() /
                                zx::sec(1).to_nsecs());
   }

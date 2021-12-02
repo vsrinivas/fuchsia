@@ -36,6 +36,16 @@ class HermeticImpulseTest : public HermeticPipelineTest {
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
   void Run(const TestCase<InputFormat, OutputFormat>& tc);
+
+ protected:
+  void TearDown() override {
+    if constexpr (!kEnableAllOverflowAndUnderflowChecksInRealtimeTests) {
+      // Even if the system cannot guarantee real-time response, we expect no renderer underflows
+      // because we submit the whole signal before calling Play(). Keep that check enabled.
+      ExpectNoRendererUnderflows();
+    }
+    HermeticPipelineTest::TearDown();
+  }
 };
 
 }  // namespace media::audio::test
