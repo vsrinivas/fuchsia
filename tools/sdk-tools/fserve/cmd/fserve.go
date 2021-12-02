@@ -8,6 +8,7 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/md5"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -34,6 +35,12 @@ var (
 	OsStat = os.Stat
 	// Logger level.
 	level = logger.InfoLevel
+)
+
+const (
+	ffxConfigServerModeKey string = "fserve.server-mode"
+
+	defaultServerMode string = "pm"
 )
 
 var osExit = os.Exit
@@ -96,7 +103,7 @@ func main() {
 	deviceIPFlag := flag.String("device-ip", "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
 	  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.`)
 	sshConfigFlag := flag.String("sshconfig", "", "Use the specified sshconfig file instead of fssh's version.")
-	serverMode := flag.String("server-mode", "pm", "Specify the server mode 'pm' or 'ffx'")
+	serverMode := flag.String("server-mode", "", "Specify the server mode 'pm' or 'ffx'.")
 
 	flag.Parse()
 
@@ -143,6 +150,18 @@ func main() {
 
 	if *versionFlag == "" && *packageArchiveFlag == "" {
 		log.Fatalf("SDK version not known. Use --version to specify it manually.\n")
+	}
+
+	// If the server mode was not passed in on the CLI, try to read it from the ffx config.
+	if *serverMode == "" {
+		*serverMode, err = getServerModeFromConfig(sdk)
+		if err != nil {
+			log.Fatalf("Error reading the server mode from FFX config: %v", err)
+		}
+
+		if *serverMode == "" {
+			*serverMode = defaultServerMode
+		}
 	}
 
 	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
@@ -286,6 +305,29 @@ type pmServer struct {
 	privateKey    string
 	persist       bool
 	sshPort       string
+}
+
+func getServerModeFromConfig(sdk sdkProvider) (string, error) {
+	args := []string{"config", "get", ffxConfigServerModeKey}
+	output, err := sdk.RunFFX(args, false)
+	if err != nil {
+		// Exit code of 2 means no value was found.
+		if exiterr, ok := err.(*exec.ExitError); ok && exiterr.ExitCode() == 2 {
+			return "", nil
+		}
+		return "", fmt.Errorf("Error reading %s: %w %v", ffxConfigServerModeKey, err, output)
+	}
+
+	if len(output) == 0 {
+		return "", nil
+	}
+
+	serverMode := ""
+	if err := json.Unmarshal([]byte(output), &serverMode); err != nil {
+		return "", err
+	}
+
+	return serverMode, nil
 }
 
 // startServer starts the `pm serve` command and returns the command object.

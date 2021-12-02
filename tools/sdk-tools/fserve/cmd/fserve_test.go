@@ -771,6 +771,7 @@ func TestMain(t *testing.T) {
 		ffxDefaultDevice                  string
 		ffxTargetList                     string
 		ffxTargetDefault                  string
+		ffxConfigServerMode               string
 		expectedPMArgs                    string
 		expectedAddSrcArgs                string
 		expectedRuleReplaceArgs           string
@@ -957,6 +958,23 @@ func TestMain(t *testing.T) {
 			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
 		},
 		{
+			testName:                "server mode pm works from ffx config",
+			args:                    []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			ffxConfigServerMode:     "\"pm\"",
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
+		},
+		{
+			testName:                          "server mode ffx works from ffx config",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			ffxConfigServerMode:               "\"ffx\"",
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm --repository devhost " + filepath.Join(dataDir, "<unknown>/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
+		},
+		{
 			testName:                          "server mode ffx supports custom repository names",
 			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--name", "test-devhost", "--image", "test-image", "--version", "1.0.0"},
 			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -1055,6 +1073,7 @@ func TestMain(t *testing.T) {
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
+			os.Setenv("_FAKE_FFX_CONFIG_GET_SERVER_MODE", test.ffxConfigServerMode)
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 			osExit = func(code int) {
 				if code != test.expectedExitCode {
@@ -1205,6 +1224,13 @@ func fakeFFX(args []string) {
 		} else if args[2] == "DeviceConfiguration.remote-target-name" {
 			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)
 			os.Exit(0)
+		} else if args[2] == ffxConfigServerModeKey {
+			if v, ok := os.LookupEnv("_FAKE_FFX_CONFIG_GET_SERVER_MODE"); ok {
+				fmt.Printf(v)
+				os.Exit(0)
+			} else {
+				os.Exit(2)
+			}
 		}
 
 	}
