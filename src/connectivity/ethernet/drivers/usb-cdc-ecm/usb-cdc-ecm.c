@@ -402,8 +402,6 @@ static zx_status_t ecm_ethernet_impl_set_param(void* cookie, uint32_t param, int
   zx_status_t status;
   ecm_ctx_t* ctx = cookie;
 
-  mtx_lock(&ctx->tx_mutex);
-
   switch (param) {
     case ETHERNET_SETPARAM_PROMISC:
       status = ecm_ethernet_impl_manipulate_bits(ctx, USB_CDC_PACKET_TYPE_PROMISCUOUS, (bool)value);
@@ -411,8 +409,6 @@ static zx_status_t ecm_ethernet_impl_set_param(void* cookie, uint32_t param, int
     default:
       status = ZX_ERR_NOT_SUPPORTED;
   }
-
-  mtx_unlock(&ctx->tx_mutex);
 
   return status;
 }

@@ -27,7 +27,7 @@ zx_status_t EthDev::PromiscHelperLogicLocked(bool req_on, uint32_t state_bit, ui
     (*requesters_count)++;
     state_ |= state_bit;
     if (*requesters_count == 1) {
-      status = edev0_->mac_.SetParam(param_id, true, nullptr, 0);
+      status = edev0_->SetMacParam(param_id, true, nullptr, 0);
       if (status != ZX_OK) {
         (*requesters_count)--;
         state_ &= ~state_bit;
@@ -37,7 +37,7 @@ zx_status_t EthDev::PromiscHelperLogicLocked(bool req_on, uint32_t state_bit, ui
     (*requesters_count)--;
     state_ &= ~state_bit;
     if (*requesters_count == 0) {
-      status = edev0_->mac_.SetParam(param_id, false, nullptr, 0);
+      status = edev0_->SetMacParam(param_id, false, nullptr, 0);
       if (status != ZX_OK) {
         (*requesters_count)++;
         state_ |= state_bit;
@@ -65,15 +65,15 @@ zx_status_t EthDev::RebuildMulticastFilterLocked() {
   for (auto& edev_i : edev0_->list_active_) {
     for (uint32_t i = 0; i < edev_i.num_multicast_; i++) {
       if (n_multicast == kMulticastListLimit) {
-        return edev0_->mac_.SetParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
-                                     ETHERNET_MULTICAST_FILTER_OVERFLOW, nullptr, 0);
+        return edev0_->SetMacParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
+                                   ETHERNET_MULTICAST_FILTER_OVERFLOW, nullptr, 0);
       }
       memcpy(multicast[n_multicast], edev_i.multicast_[i], ETH_MAC_SIZE);
       n_multicast++;
     }
   }
-  return edev0_->mac_.SetParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_multicast,
-                               reinterpret_cast<uint8_t*>(multicast), n_multicast * ETH_MAC_SIZE);
+  return edev0_->SetMacParam(ETHERNET_SETPARAM_MULTICAST_FILTER, n_multicast,
+                             reinterpret_cast<uint8_t*>(multicast), n_multicast * ETH_MAC_SIZE);
 }
 
 int EthDev::MulticastAddressIndex(const uint8_t* mac) {
@@ -96,11 +96,9 @@ zx_status_t EthDev::AddMulticastAddressLocked(const uint8_t* mac) {
     memcpy(multicast_[num_multicast_], mac, ETH_MAC_SIZE);
     num_multicast_++;
     return RebuildMulticastFilterLocked();
-  } else {
-    return edev0_->mac_.SetParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
-                                 ETHERNET_MULTICAST_FILTER_OVERFLOW, nullptr, 0);
   }
-  return ZX_OK;
+  return edev0_->SetMacParam(ETHERNET_SETPARAM_MULTICAST_FILTER, ETHERNET_MULTICAST_FILTER_OVERFLOW,
+                             nullptr, 0);
 }
 
 zx_status_t EthDev::DelMulticastAddressLocked(const uint8_t* mac) {
@@ -532,9 +530,7 @@ zx_status_t EthDev::StartLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
   return status;
 }
 
-// The thread safety analysis cannot reason through the aliasing of
-// edev0 and edev->edev0_, so disable it.
-void EthDev::ClearFilteringLocked() TA_NO_THREAD_SAFETY_ANALYSIS {
+void EthDev::ClearFilteringLocked() {
   // The next three lines clean up promisc, multicast-promisc, and multicast-filter, in case
   // this ethdev had any state set. Ignore failures, which may come from drivers not
   // supporting the feature.
@@ -702,7 +698,7 @@ void EthDev::DumpRegisters(DumpRegistersRequestView request,
                            DumpRegistersCompleter::Sync& completer) {
   fbl::AutoLock lock(&edev0_->ethdev_lock_);
   STATE_CHECK();
-  completer.Reply(edev0_->mac_.SetParam(ETHERNET_SETPARAM_DUMP_REGS, 0, nullptr, 0));
+  completer.Reply(edev0_->SetMacParam(ETHERNET_SETPARAM_DUMP_REGS, 0, nullptr, 0));
 }
 
 #undef STATE_CHECK
@@ -980,6 +976,18 @@ zx_status_t EthDev0::AddDevice() {
   }
 
   return ZX_OK;
+}
+
+zx_status_t EthDev0::SetMacParam(uint32_t param, int32_t value, const uint8_t* data_buffer,
+                                 size_t data_size) {
+  // Release the lock to allow other device operations in callback routine.
+  // Re-acquire lock afterwards.
+  // NB: This is the same as it's done in `Stop`. This is not entirely sound and
+  // hides possible subtle races with instance teardown.
+  ethdev_lock_.Release();
+  zx_status_t status = mac_.SetParam(param, value, data_buffer, data_size);
+  ethdev_lock_.Acquire();
+  return status;
 }
 
 zx_status_t EthDev0::EthBind(void* ctx, zx_device_t* dev) {

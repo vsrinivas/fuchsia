@@ -377,4 +377,22 @@ TEST(EthernetTest, StopTest) {
   ASSERT_OK(result.status());
 }
 
+// Tests that device implementations can call into the interface during a call
+// to SetParam.
+TEST(EthernetTest, ReentrantParamTest) {
+  EthernetDeviceTest test;
+
+  bool set_param_called = false;
+  test.tester.ethmac().SetOnSetParamCallback([&set_param_called, &test]() {
+    set_param_called = true;
+    const uint8_t kData[] = {1, 2, 3};
+    test.edev0->Recv(kData, sizeof(kData), 0);
+  });
+
+  auto result = test.FidlClient()->SetPromiscuousMode(true);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(set_param_called);
+  test.tester.ethmac().SetOnSetParamCallback(nullptr);
+}
+
 }  // namespace ethernet_testing

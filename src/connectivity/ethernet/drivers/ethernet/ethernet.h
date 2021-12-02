@@ -79,6 +79,9 @@ class EthDev0 : public EthDev0Type, public ddk::EmptyProtocol<ZX_PROTOCOL_ETHERN
   void Recv(const void* data, size_t len, uint32_t flags);
   void CompleteTx(ethernet_netbuf_t* netbuf, zx_status_t status);
 
+  zx_status_t SetMacParam(uint32_t param, int32_t value, const uint8_t* data_buffer,
+                          size_t data_size) __TA_REQUIRES(ethdev_lock_);
+
  protected:
   void DestroyAllEthDev();
 

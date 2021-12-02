@@ -57,6 +57,9 @@ class FakeEthernetImplProtocol
     if (param == ETHERNET_SETPARAM_PROMISC) {
       promiscuous_ = value;
     }
+    if (set_param_callback_) {
+      set_param_callback_();
+    }
     return ZX_OK;
   }
 
@@ -97,6 +100,10 @@ class FakeEthernetImplProtocol
     return true;
   }
 
+  void SetOnSetParamCallback(fit::function<void()> callback) {
+    set_param_callback_ = std::move(callback);
+  }
+
  private:
   ethernet_impl_protocol_t proto_;
   const uint8_t mac_[ETH_MAC_SIZE] = {0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
@@ -105,6 +112,7 @@ class FakeEthernetImplProtocol
   bool dump_called_ = false;
   int32_t promiscuous_ = -1;
   bool queue_tx_called_ = false;
+  fit::function<void()> set_param_callback_;
 };
 
 class EthernetTester : public fake_ddk::Bind {
