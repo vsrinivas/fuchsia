@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::AppSet,
+    app_set::{AppSet, AppSetExt as _},
     configuration::Config,
     http_request::HttpRequest,
     installer::Installer,
@@ -19,6 +19,7 @@ use std::rc::Rc;
 
 #[cfg(test)]
 use crate::{
+    app_set::VecAppSet,
     common::App,
     http_request::StubHttpRequest,
     installer::stub::StubInstaller,
@@ -31,7 +32,7 @@ use crate::{
 
 /// Helper type to build/start a [`StateMachine`].
 #[derive(Debug)]
-pub struct StateMachineBuilder<PE, HR, IN, TM, MR, ST>
+pub struct StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
@@ -39,6 +40,7 @@ where
     TM: Timer,
     MR: MetricsReporter,
     ST: Storage,
+    AS: AppSet,
 {
     policy_engine: PE,
     http: HR,
@@ -47,10 +49,10 @@ where
     metrics_reporter: MR,
     storage: Rc<Mutex<ST>>,
     config: Config,
-    app_set: AppSet,
+    app_set: Rc<Mutex<AS>>,
 }
 
-impl<'a, PE, HR, IN, TM, MR, ST> StateMachineBuilder<PE, HR, IN, TM, MR, ST>
+impl<'a, PE, HR, IN, TM, MR, ST, AS> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS>
 where
     PE: 'a + PolicyEngine,
     HR: 'a + HttpRequest,
@@ -58,6 +60,7 @@ where
     TM: 'a + Timer,
     MR: 'a + MetricsReporter,
     ST: 'a + Storage,
+    AS: 'a + AppSet,
 {
     /// Creates a new `StateMachineBuilder` using the given trait implementations.
     #[allow(clippy::too_many_arguments)]
@@ -69,7 +72,7 @@ where
         metrics_reporter: MR,
         storage: Rc<Mutex<ST>>,
         config: Config,
-        app_set: AppSet,
+        app_set: Rc<Mutex<AS>>,
     ) -> Self {
         Self { policy_engine, http, installer, timer, metrics_reporter, storage, config, app_set }
     }
@@ -78,7 +81,7 @@ where
     pub fn policy_engine<PE2: 'a + PolicyEngine>(
         self,
         policy_engine: PE2,
-    ) -> StateMachineBuilder<PE2, HR, IN, TM, MR, ST> {
+    ) -> StateMachineBuilder<PE2, HR, IN, TM, MR, ST, AS> {
         StateMachineBuilder {
             policy_engine,
             http: self.http,
@@ -95,7 +98,7 @@ where
     pub fn http<HR2: 'a + HttpRequest>(
         self,
         http: HR2,
-    ) -> StateMachineBuilder<PE, HR2, IN, TM, MR, ST> {
+    ) -> StateMachineBuilder<PE, HR2, IN, TM, MR, ST, AS> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http,
@@ -112,7 +115,7 @@ where
     pub fn installer<IN2: 'a + Installer>(
         self,
         installer: IN2,
-    ) -> StateMachineBuilder<PE, HR, IN2, TM, MR, ST> {
+    ) -> StateMachineBuilder<PE, HR, IN2, TM, MR, ST, AS> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -129,7 +132,7 @@ where
     pub fn timer<TM2: 'a + Timer>(
         self,
         timer: TM2,
-    ) -> StateMachineBuilder<PE, HR, IN, TM2, MR, ST> {
+    ) -> StateMachineBuilder<PE, HR, IN, TM2, MR, ST, AS> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -146,7 +149,7 @@ where
     pub fn metrics_reporter<MR2: 'a + MetricsReporter>(
         self,
         metrics_reporter: MR2,
-    ) -> StateMachineBuilder<PE, HR, IN, TM, MR2, ST> {
+    ) -> StateMachineBuilder<PE, HR, IN, TM, MR2, ST, AS> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -163,7 +166,7 @@ where
     pub fn storage<ST2: 'a + Storage>(
         self,
         storage: Rc<Mutex<ST2>>,
-    ) -> StateMachineBuilder<PE, HR, IN, TM, MR, ST2> {
+    ) -> StateMachineBuilder<PE, HR, IN, TM, MR, ST2, AS> {
         StateMachineBuilder {
             policy_engine: self.policy_engine,
             http: self.http,
@@ -182,14 +185,25 @@ where
         self
     }
 
-    /// Configures the state machine to use the provided app_set.
-    pub fn app_set(mut self, app_set: AppSet) -> Self {
-        self.app_set = app_set;
-        self
+    /// Configures the state machine to use the provided app_set implementation.
+    pub fn app_set<AS2: 'a + AppSet>(
+        self,
+        app_set: Rc<Mutex<AS2>>,
+    ) -> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS2> {
+        StateMachineBuilder {
+            policy_engine: self.policy_engine,
+            http: self.http,
+            installer: self.installer,
+            timer: self.timer,
+            metrics_reporter: self.metrics_reporter,
+            storage: self.storage,
+            config: self.config,
+            app_set,
+        }
     }
 }
 
-impl<'a, PE, HR, IN, TM, MR, ST, IR> StateMachineBuilder<PE, HR, IN, TM, MR, ST>
+impl<'a, PE, HR, IN, TM, MR, ST, AS, IR> StateMachineBuilder<PE, HR, IN, TM, MR, ST, AS>
 where
     PE: 'a + PolicyEngine<InstallResult = IR>,
     HR: 'a + HttpRequest,
@@ -197,9 +211,10 @@ where
     TM: 'a + Timer,
     MR: 'a + MetricsReporter,
     ST: 'a + Storage,
+    AS: 'a + AppSet,
     IR: 'static + Send,
 {
-    pub async fn build(self) -> StateMachine<PE, HR, IN, TM, MR, ST> {
+    pub async fn build(self) -> StateMachine<PE, HR, IN, TM, MR, ST, AS> {
         let StateMachineBuilder {
             policy_engine,
             http,
@@ -208,11 +223,12 @@ where
             metrics_reporter,
             storage,
             config,
-            mut app_set,
+            app_set,
         } = self;
 
         let ((), context) = {
             let storage = storage.lock().await;
+            let mut app_set = app_set.lock().await;
             futures::join!(app_set.load(&*storage), update_check::Context::load(&*storage))
         };
 
@@ -274,16 +290,19 @@ impl
         StubTimer,
         StubMetricsReporter,
         StubStorage,
+        VecAppSet,
     >
 {
     /// Create a new StateMachine with stub implementations and configuration.
     pub fn new_stub() -> Self {
         let config = crate::configuration::test_support::config_generator();
 
-        let app_set =
-            AppSet::new(vec![App::builder("{00000000-0000-0000-0000-000000000001}", [1, 2, 3, 4])
-                .with_cohort(crate::protocol::Cohort::new("stable-channel"))
-                .build()]);
+        let app_set = VecAppSet::new(vec![App::builder(
+            "{00000000-0000-0000-0000-000000000001}",
+            [1, 2, 3, 4],
+        )
+        .with_cohort(crate::protocol::Cohort::new("stable-channel"))
+        .build()]);
         let mock_time = MockTimeSource::new_from_now();
 
         Self::new(
@@ -294,7 +313,7 @@ impl
             StubMetricsReporter,
             Rc::new(Mutex::new(StubStorage)),
             config,
-            app_set,
+            Rc::new(Mutex::new(app_set)),
         )
     }
 }

@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::app_set::FuchsiaAppSet;
 use fidl_fuchsia_cobalt::{
     SoftwareDistributionInfo, SystemDataUpdaterMarker, SystemDataUpdaterProxy,
 };
 use fuchsia_component::client::connect_to_protocol;
+use futures::lock::Mutex;
 use log::{error, info};
-use omaha_client::common::AppSet;
+use std::rc::Rc;
 
-pub async fn notify_cobalt_current_software_distribution(app_set: AppSet) {
+pub async fn notify_cobalt_current_software_distribution(app_set: Rc<Mutex<FuchsiaAppSet>>) {
     info!("Notifying Cobalt about the current channel and app id.");
     let proxy = match connect_to_protocol::<SystemDataUpdaterMarker>() {
         Ok(proxy) => proxy,
@@ -23,15 +25,18 @@ pub async fn notify_cobalt_current_software_distribution(app_set: AppSet) {
 
 async fn notify_cobalt_current_software_distribution_impl(
     proxy: SystemDataUpdaterProxy,
-    app_set: AppSet,
+    app_set: Rc<Mutex<FuchsiaAppSet>>,
 ) {
-    let channel = app_set.get_current_channel().await;
-    let app_id = app_set.get_current_app_id().await;
+    let distribution_info = {
+        let app_set = app_set.lock().await;
+        let channel = app_set.get_system_current_channel();
+        let app_id = app_set.get_system_app_id();
 
-    let distribution_info = SoftwareDistributionInfo {
-        current_channel: Some(channel),
-        current_realm: Some(app_id),
-        ..SoftwareDistributionInfo::EMPTY
+        SoftwareDistributionInfo {
+            current_channel: Some(channel.into()),
+            current_realm: Some(app_id.into()),
+            ..SoftwareDistributionInfo::EMPTY
+        }
     };
     match proxy.set_software_distribution_info(distribution_info).await {
         Ok(fidl_fuchsia_cobalt::Status::Ok) => {}
@@ -52,9 +57,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_notify_cobalt() {
-        let app_set = AppSet::new(vec![App::builder("id", [1, 2])
-            .with_cohort(Cohort { name: Some("current-channel".to_string()), ..Cohort::default() })
-            .build()]);
+        let app_set = Rc::new(Mutex::new(FuchsiaAppSet::new(
+            App::builder("id", [1, 2])
+                .with_cohort(Cohort {
+                    name: Some("current-channel".to_string()),
+                    ..Cohort::default()
+                })
+                .build(),
+        )));
 
         let (proxy, mut stream) = create_proxy_and_stream::<SystemDataUpdaterMarker>().unwrap();
         let stream_fut = async move {

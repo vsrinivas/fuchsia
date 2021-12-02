@@ -25,7 +25,8 @@ use {
     futures::prelude::*,
     log::error,
     omaha_client::{
-        common::{App, AppSet},
+        app_set::VecAppSet,
+        common::App,
         configuration::{Config, Updater},
         http_request::HttpRequest,
         metrics::StubMetricsReporter,
@@ -76,7 +77,7 @@ pub async fn install_update(
     };
 
     let cohort = Cohort { hint: Some(channel.clone()), name: Some(channel), ..Cohort::default() };
-    let app_set = AppSet::new(vec![App::builder(appid, version).with_cohort(cohort).build()]);
+    let app_set = VecAppSet::new(vec![App::builder(appid, version).with_cohort(cohort).build()]);
 
     let config = get_omaha_config(&current_version, &service_url).await;
     install_update_with_http(
@@ -99,7 +100,7 @@ async fn install_update_with_http<HR>(
     cache: Arc<Cache>,
     resolver: Arc<Resolver>,
     board_name: String,
-    app_set: AppSet,
+    app_set: VecAppSet,
     config: Config,
     updater_url: String,
     http_request: HR,
@@ -117,8 +118,8 @@ where
         FuchsiaTimer,
         StubMetricsReporter,
         storage,
-        config.clone(),
-        app_set.clone(),
+        config,
+        Rc::new(Mutex::new(app_set)),
     );
 
     let stream: Vec<StateMachineEvent> = state_machine.oneshot_check().await.collect().await;
@@ -177,7 +178,7 @@ mod tests {
     ///     makes.
     async fn run_omaha(
         updater: UpdaterForTest,
-        app_set: AppSet,
+        app_set: VecAppSet,
         config: Config,
         mock_responses: Vec<serde_json::Value>,
     ) -> Result<UpdaterResult, Error> {
@@ -227,8 +228,8 @@ mod tests {
         })
     }
 
-    fn get_test_app_set() -> AppSet {
-        AppSet::new(vec![App::builder(TEST_APP_ID.to_owned(), [20200101, 0, 0, 0])
+    fn get_test_app_set() -> VecAppSet {
+        VecAppSet::new(vec![App::builder(TEST_APP_ID.to_owned(), [20200101, 0, 0, 0])
             .with_cohort(Cohort::new(TEST_CHANNEL))
             .build()])
     }

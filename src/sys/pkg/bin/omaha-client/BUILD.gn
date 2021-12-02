@@ -83,6 +83,7 @@ rustc_binary("bin") {
 
   sources = [
     "src/api_metrics.rs",
+    "src/app_set.rs",
     "src/channel.rs",
     "src/cobalt.rs",
     "src/configuration.rs",

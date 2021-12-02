@@ -7,11 +7,14 @@ use fuchsia_component::server::ServiceFs;
 use futures::{lock::Mutex, prelude::*, stream::FuturesUnordered};
 use http_request::FuchsiaHyperHttpRequest;
 use log::info;
-use omaha_client::{state_machine::StateMachineBuilder, time::StandardTimeSource};
+use omaha_client::{
+    app_set::AppSet as _, state_machine::StateMachineBuilder, time::StandardTimeSource,
+};
 use std::cell::RefCell;
 use std::rc::Rc;
 
 mod api_metrics;
+mod app_set;
 mod channel;
 mod cobalt;
 mod configuration;
@@ -52,7 +55,7 @@ async fn main_inner() -> Result<(), Error> {
             .await
             .expect("Unable to read necessary client configuration");
 
-    info!("Omaha app set: {:?}", app_set.to_vec().await);
+    info!("Omaha app set: {:?}", app_set.get_apps());
     info!("Update config: {:?}", platform_config);
 
     let futures = FuturesUnordered::new();
@@ -74,7 +77,7 @@ async fn main_inner() -> Result<(), Error> {
     let configuration_node = inspect::ConfigurationNode::new(root.create_child("configuration"));
     configuration_node.set(&platform_config);
     let apps_node = inspect::AppsNode::new(root.create_child("apps"));
-    apps_node.set(&app_set.to_vec().await);
+    apps_node.set(&app_set.get_apps());
     let state_node = inspect::StateNode::new(root.create_child("state"));
     let schedule_node = inspect::ScheduleNode::new(root.create_child("schedule"));
     let protocol_state_node = inspect::ProtocolStateNode::new(root.create_child("protocol_state"));
@@ -110,6 +113,8 @@ async fn main_inner() -> Result<(), Error> {
     let _policy_config_node =
         inspect::PolicyConfigNode::new(root.create_child("policy_config"), policy_config);
 
+    let app_set = Rc::new(Mutex::new(app_set));
+
     // StateMachine
     let (state_machine_control, state_machine) = StateMachineBuilder::new(
         policy_engine,
@@ -117,9 +122,9 @@ async fn main_inner() -> Result<(), Error> {
         installer,
         timer::FuchsiaTimer,
         metrics_reporter,
-        stash_ref.clone(),
+        Rc::clone(&stash_ref),
         platform_config.clone(),
-        app_set.clone(),
+        Rc::clone(&app_set),
     )
     .start()
     .await;
@@ -128,17 +133,17 @@ async fn main_inner() -> Result<(), Error> {
     let notify_cobalt = channel_data.source == ChannelSource::VbMeta;
     if notify_cobalt {
         futures.push(
-            cobalt::notify_cobalt_current_software_distribution(app_set.clone()).boxed_local(),
+            cobalt::notify_cobalt_current_software_distribution(Rc::clone(&app_set)).boxed_local(),
         );
     }
 
-    futures.push(feedback_annotation::publish_ids_to_feedback(app_set.clone()).boxed_local());
+    futures.push(feedback_annotation::publish_ids_to_feedback(Rc::clone(&app_set)).boxed_local());
 
     // Serve FIDL API
     let fidl = fidl::FidlServer::new(
         state_machine_control,
         stash_ref,
-        app_set.clone(),
+        Rc::clone(&app_set),
         apps_node,
         state_node,
         channel_configs,

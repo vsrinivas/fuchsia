@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::channel::{ChannelConfig, ChannelConfigs};
+use crate::{
+    app_set::FuchsiaAppSet,
+    channel::{ChannelConfig, ChannelConfigs},
+};
 use anyhow::{anyhow, Error};
 use fidl_fuchsia_boot::{ArgumentsMarker, ArgumentsProxy};
 use log::{error, warn};
 use omaha_client::{
-    common::{App, AppSet},
+    common::App,
     configuration::{Config, Updater},
     protocol::{request::OS, Cohort},
 };
@@ -19,7 +22,7 @@ use version::Version;
 /// should probably be included in here as well, eventually.
 pub struct ClientConfiguration {
     pub platform_config: omaha_client::configuration::Config,
-    pub app_set: AppSet,
+    pub app_set: FuchsiaAppSet,
     pub channel_data: ChannelData,
 }
 
@@ -113,7 +116,7 @@ impl ClientConfiguration {
             .with_extra("channel", channel_name.clone().unwrap_or_default())
             .with_extra("product_id", product_id.unwrap_or_default())
             .build();
-        let app_set = AppSet::new(vec![app]);
+        let app_set = FuchsiaAppSet::new(app);
 
         ClientConfiguration {
             platform_config: get_config(&version).await,
@@ -212,6 +215,7 @@ mod tests {
     use fidl_fuchsia_boot::ArgumentsRequest;
     use fuchsia_async as fasync;
     use futures::prelude::*;
+    use omaha_client::app_set::AppSet;
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_config() {
@@ -229,7 +233,7 @@ mod tests {
     async fn test_get_app_set_config_read_init() {
         let config = ClientConfiguration::initialize_from("1.2.3.4", None, None, None).await;
         assert_eq!(config.channel_data.source, ChannelSource::MinFS);
-        let apps = config.app_set.to_vec().await;
+        let apps = config.app_set.get_apps();
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "fuchsia:test-app-id");
         assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));
@@ -251,7 +255,7 @@ mod tests {
         )
         .await;
         assert_eq!(config.channel_data.source, ChannelSource::Default);
-        let apps = config.app_set.to_vec().await;
+        let apps = config.app_set.get_apps();
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "fuchsia:test-app-id");
         assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));
@@ -295,7 +299,7 @@ mod tests {
         )
         .await;
         assert_eq!(config.channel_data.source, ChannelSource::Default);
-        let apps = config.app_set.to_vec().await;
+        let apps = config.app_set.get_apps();
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "some-appid");
         assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));
@@ -307,7 +311,7 @@ mod tests {
     async fn test_get_app_set_invalid_version() {
         let config =
             ClientConfiguration::initialize_from("invalid version", None, None, None).await;
-        let apps = config.app_set.to_vec().await;
+        let apps = config.app_set.get_apps();
         assert_eq!(apps[0].version, Version::from([0]));
     }
 
@@ -388,7 +392,7 @@ mod tests {
         assert_eq!(config.channel_data.name, Some("vbmeta-channel".to_string()));
         assert_eq!(config.channel_data.config, None);
         assert_eq!(config.channel_data.appid, "vbmeta-appid");
-        let apps = config.app_set.to_vec().await;
+        let apps = config.app_set.get_apps();
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "vbmeta-appid");
         assert_eq!(apps[0].version, Version::from([1, 2, 3, 4]));

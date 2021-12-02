@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
+    app_set::FuchsiaAppSet,
     cobalt::notify_cobalt_current_software_distribution,
     fidl::{FidlServer, StateMachineController},
     inspect::{LastResultsNode, ProtocolStateNode, ScheduleNode},
@@ -11,11 +12,11 @@ use crate::{
 use anyhow::anyhow;
 use fidl_fuchsia_feedback::{CrashReporterMarker, CrashReporterProxy};
 use fuchsia_inspect::Node;
-use futures::{future::LocalBoxFuture, prelude::*};
+use futures::{future::LocalBoxFuture, lock::Mutex, prelude::*};
 use log::{error, warn};
 use omaha_client::{
     clock,
-    common::{AppSet, ProtocolState, UpdateCheckSchedule},
+    common::{ProtocolState, UpdateCheckSchedule},
     protocol::response::Response,
     state_machine::{update_check, InstallProgress, State, StateMachineEvent, UpdateCheckError},
     storage::Storage,
@@ -38,7 +39,7 @@ where
     protocol_state_node: ProtocolStateNode,
     last_results_node: LastResultsNode,
     last_update_start_time: SystemTime,
-    app_set: AppSet,
+    app_set: Rc<Mutex<FuchsiaAppSet>>,
     notified_cobalt: bool,
     target_version: Option<String>,
     platform_metrics_emitter: platform::Emitter,
@@ -55,7 +56,7 @@ where
         schedule_node: ScheduleNode,
         protocol_state_node: ProtocolStateNode,
         last_results_node: LastResultsNode,
-        app_set: AppSet,
+        app_set: Rc<Mutex<FuchsiaAppSet>>,
         notified_cobalt: bool,
         platform_metrics_node: Node,
     ) -> Self {
@@ -232,7 +233,7 @@ where
             .unwrap_or(false);
 
         if !self.notified_cobalt && no_update {
-            notify_cobalt_current_software_distribution(self.app_set.clone()).await;
+            notify_cobalt_current_software_distribution(Rc::clone(&self.app_set)).await;
             self.notified_cobalt = true;
         }
     }
@@ -284,7 +285,7 @@ mod tests {
             ProtocolStateNode::new(inspector.root().create_child("protocol_state"));
         let last_results_node = LastResultsNode::new(inspector.root().create_child("last_results"));
         let platform_metrics_node = inspector.root().create_child("platform_metrics");
-        let app_set = AppSet::new(vec![App::builder("id", [1, 2]).build()]);
+        let app_set = Rc::new(Mutex::new(FuchsiaAppSet::new(App::builder("id", [1, 2]).build())));
         FuchsiaObserver::new(
             fidl,
             schedule_node,

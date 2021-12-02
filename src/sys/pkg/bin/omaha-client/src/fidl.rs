@@ -4,6 +4,7 @@
 
 use crate::{
     api_metrics::{ApiEvent, ApiMetricsReporter},
+    app_set::FuchsiaAppSet,
     channel::ChannelConfigs,
     inspect::{AppsNode, StateNode},
 };
@@ -28,7 +29,8 @@ use fuchsia_zircon as zx;
 use futures::{future::BoxFuture, lock::Mutex, prelude::*};
 use log::{error, info, warn};
 use omaha_client::{
-    common::{AppSet, CheckOptions},
+    app_set::{AppSet as _, AppSetExt as _},
+    common::CheckOptions,
     protocol::request::InstallSource,
     state_machine::{self, StartUpdateCheckResponse, StateMachineGone},
     storage::{Storage, StorageExt},
@@ -164,7 +166,7 @@ where
 
     storage_ref: Rc<Mutex<ST>>,
 
-    app_set: AppSet,
+    app_set: Rc<Mutex<FuchsiaAppSet>>,
 
     apps_node: AppsNode,
 
@@ -198,7 +200,7 @@ where
     pub fn new(
         state_machine_control: SM,
         storage_ref: Rc<Mutex<ST>>,
-        app_set: AppSet,
+        app_set: Rc<Mutex<FuchsiaAppSet>>,
         apps_node: AppsNode,
         state_node: StateNode,
         channel_configs: Option<ChannelConfigs>,
@@ -361,20 +363,21 @@ where
                 responder.send().context("error sending SetTarget response from ChannelControl")?;
             }
             ChannelControlRequest::GetTarget { responder } => {
-                let app_set = server.borrow().app_set.clone();
-                let channel = app_set.get_target_channel().await;
+                let app_set = Rc::clone(&server.borrow().app_set);
+                let app_set = app_set.lock().await;
+                let channel = app_set.get_system_target_channel();
                 responder
-                    .send(&channel)
+                    .send(channel)
                     .context("error sending GetTarget response from ChannelControl")?;
             }
             ChannelControlRequest::GetCurrent { responder } => {
                 let (current_channel, app_set) = {
                     let server = server.borrow();
-                    (server.current_channel.clone(), server.app_set.clone()) // server borrow is dropped
+                    (server.current_channel.clone(), Rc::clone(&server.app_set))
                 };
                 let channel = match current_channel {
-                    Some(channel) => channel.to_string(),
-                    None => app_set.get_current_channel().await,
+                    Some(channel) => channel,
+                    None => app_set.lock().await.get_system_current_channel().to_owned(),
                 };
 
                 responder
@@ -390,7 +393,7 @@ where
                     None => Vec::new(),
                 };
                 responder
-                    .send(&mut channel_names.iter().copied())
+                    .send(&mut channel_names.into_iter())
                     .context("error sending channel list response from ChannelControl")?;
             }
         }
@@ -405,11 +408,11 @@ where
             ProviderRequest::GetCurrent { responder } => {
                 let (current_channel, app_set) = {
                     let server = server.borrow();
-                    (server.current_channel.clone(), server.app_set.clone()) // server borrow is dropped
+                    (server.current_channel.clone(), Rc::clone(&server.app_set))
                 };
                 let channel = match current_channel {
-                    Some(channel) => channel.to_string(),
-                    None => app_set.get_current_channel().await,
+                    Some(channel) => channel,
+                    None => app_set.lock().await.get_system_current_channel().to_owned(),
                 };
                 responder
                     .send(&channel)
@@ -473,8 +476,8 @@ where
 
     async fn handle_set_target(server: Rc<RefCell<Self>>, channel: String) {
         // TODO: Verify that channel is valid.
-        let app_set = server.borrow().app_set.clone();
-        let target_channel = app_set.get_target_channel().await;
+        let app_set = Rc::clone(&server.borrow().app_set);
+        let target_channel = app_set.lock().await.get_system_target_channel().to_owned();
         if channel.is_empty() {
             let default_channel_cfg = match &server.borrow().channel_configs {
                 Some(cfgs) => cfgs.get_default_channel(),
@@ -493,7 +496,7 @@ where
             }
             // TODO(fxbug.dev/58887): only OTA that follows can change the current channel.
             // Simplify this logic.
-            app_set.set_target_channel(channel_name, appid).await;
+            app_set.lock().await.set_system_target_channel(channel_name, appid);
         } else {
             // If the new target channel is the same as the existing target channel, then this is
             // a no-op.
@@ -519,18 +522,20 @@ where
             // Don't borrow server across await.
             drop(server);
             let mut storage = storage_ref.lock().await;
-
-            if let Some(id) = &appid {
-                if id != &app_set.get_current_app_id().await {
-                    warn!("Changing app id to: {}", id);
+            {
+                let mut app_set = app_set.lock().await;
+                if let Some(id) = &appid {
+                    if id != &app_set.get_system_app_id() {
+                        warn!("Changing app id to: {}", id);
+                    }
                 }
-            }
 
-            app_set.set_target_channel(Some(channel), appid).await;
-            app_set.persist(&mut *storage).await;
+                app_set.set_system_target_channel(Some(channel), appid);
+                app_set.persist(&mut *storage).await;
+            }
             storage.commit_or_log().await;
         }
-        let app_vec = app_set.to_vec().await;
+        let app_vec = app_set.lock().await.get_apps();
         server.borrow().apps_node.set(&app_vec);
     }
 
@@ -558,7 +563,7 @@ where
         match state {
             state_machine::State::Idle | state_machine::State::WaitingForReboot => {
                 let mut monitor_queue = s.monitor_queue.clone();
-                let app_set = s.app_set.clone();
+                let app_set = Rc::clone(&s.app_set);
                 drop(s);
 
                 // Try to flush the states before starting to reboot.
@@ -581,8 +586,8 @@ where
 
                 // The state machine might make changes to apps only at the end of an update,
                 // update the apps node in inspect.
-                let app_set = app_set.to_vec().await;
-                server.borrow().apps_node.set(&app_set);
+                let apps = app_set.lock().await.get_apps();
+                server.borrow().apps_node.set(&apps);
             }
             _ => {}
         }
@@ -691,7 +696,7 @@ mod stub {
     pub type StubFidlServer = FidlServer<MemStorage, MockOrRealStateMachineController>;
 
     pub struct FidlServerBuilder {
-        apps: Vec<App>,
+        app_set: Option<FuchsiaAppSet>,
         channel_configs: Option<ChannelConfigs>,
         apps_node: Option<AppsNode>,
         state_node: Option<StateNode>,
@@ -703,7 +708,7 @@ mod stub {
     impl FidlServerBuilder {
         pub fn new() -> Self {
             Self {
-                apps: Vec::new(),
+                app_set: None,
                 channel_configs: None,
                 apps_node: None,
                 state_node: None,
@@ -715,8 +720,8 @@ mod stub {
     }
 
     impl FidlServerBuilder {
-        pub fn with_apps(mut self, mut apps: Vec<App>) -> Self {
-            self.apps.append(&mut apps);
+        pub fn with_app_set(mut self, app_set: FuchsiaAppSet) -> Self {
+            self.app_set = Some(app_set);
             self
         }
 
@@ -757,11 +762,10 @@ mod stub {
         pub async fn build(self) -> Rc<RefCell<StubFidlServer>> {
             let config = configuration::get_config("0.1.2").await;
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
-            let app_set = if self.apps.is_empty() {
-                AppSet::new(vec![App::builder("id", [1, 0]).build()])
-            } else {
-                AppSet::new(self.apps)
-            };
+            let app_set = self
+                .app_set
+                .unwrap_or_else(|| FuchsiaAppSet::new(App::builder("id", [1, 0]).build()));
+            let app_set = Rc::new(Mutex::new(app_set));
             let time_source = self.time_source.unwrap_or(MockTimeSource::new_from_now());
             // A state machine with only stub implementations never yields from a poll.
             // Configure the state machine to schedule automatic update checks in the future and
@@ -774,7 +778,7 @@ mod stub {
                 StubMetricsReporter,
                 Rc::clone(&storage_ref),
                 config,
-                app_set.clone(),
+                Rc::clone(&app_set),
             )
             .start()
             .await;
@@ -790,7 +794,7 @@ mod stub {
             let fidl = Rc::new(RefCell::new(FidlServer::new(
                 state_machine_control,
                 storage_ref,
-                app_set.clone(),
+                Rc::clone(&app_set),
                 apps_node,
                 state_node,
                 self.channel_configs,
@@ -1070,10 +1074,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_channel_from_app() {
-        let apps = vec![App::builder("id", [1, 0])
-            .with_cohort(Cohort { name: "current-channel".to_string().into(), ..Cohort::default() })
-            .build()];
-        let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
+        let app_set = FuchsiaAppSet::new(
+            App::builder("id", [1, 0])
+                .with_cohort(Cohort {
+                    name: "current-channel".to_string().into(),
+                    ..Cohort::default()
+                })
+                .build(),
+        );
+        let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
         let proxy =
             spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
@@ -1108,10 +1117,8 @@ mod tests {
         );
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
 
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let fidl = fidl.borrow();
-        fidl.app_set.set_target_channel(None, None).await;
+        let app_set = Rc::clone(&fidl.borrow().app_set);
+        app_set.lock().await.set_system_target_channel(None, None);
 
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
     }
@@ -1130,10 +1137,15 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_provider_get_current_channel_from_app() {
-        let apps = vec![App::builder("id", [1, 0])
-            .with_cohort(Cohort { name: "current-channel".to_string().into(), ..Cohort::default() })
-            .build()];
-        let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
+        let app_set = FuchsiaAppSet::new(
+            App::builder("id", [1, 0])
+                .with_cohort(Cohort {
+                    name: "current-channel".to_string().into(),
+                    ..Cohort::default()
+                })
+                .build(),
+        );
+        let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
         let proxy = spawn_fidl_server::<ProviderMarker>(fidl, IncomingServices::ChannelProvider);
 
@@ -1154,20 +1166,18 @@ mod tests {
 
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
 
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let fidl = fidl.borrow();
-        fidl.app_set.set_target_channel(None, None).await;
+        let app_set = Rc::clone(&fidl.borrow().app_set);
+        app_set.lock().await.set_system_target_channel(None, None);
 
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target() {
-        let apps = vec![App::builder("id", [1, 0])
-            .with_cohort(Cohort::from_hint("target-channel"))
-            .build()];
-        let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
+        let app_set = FuchsiaAppSet::new(
+            App::builder("id", [1, 0]).with_cohort(Cohort::from_hint("target-channel")).build(),
+        );
+        let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
         let proxy =
             spawn_fidl_server::<ChannelControlMarker>(fidl, IncomingServices::ChannelControl);
@@ -1192,13 +1202,13 @@ mod tests {
             IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let fidl = fidl.borrow();
-        let apps = fidl.app_set.to_vec().await;
+
+        let app_set = Rc::clone(&fidl.borrow().app_set);
+        let apps = app_set.lock().await.get_apps();
         assert_eq!("target-channel", apps[0].get_target_channel());
         assert_eq!("target-id", apps[0].id);
-        let storage = fidl.storage_ref.lock().await;
+        let storage = Rc::clone(&fidl.borrow().storage_ref);
+        let storage = storage.lock().await;
         storage.get_string(&apps[0].id).await.unwrap();
         assert!(storage.committed());
     }
@@ -1218,35 +1228,35 @@ mod tests {
             IncomingServices::ChannelControl,
         );
         proxy.set_target("").await.unwrap();
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let fidl = fidl.borrow();
-        let apps = fidl.app_set.to_vec().await;
+
+        let app_set = Rc::clone(&fidl.borrow().app_set);
+        let apps = app_set.lock().await.get_apps();
         assert_eq!("default-channel", apps[0].get_target_channel());
         assert_eq!("default-app", apps[0].id);
-        let storage = fidl.storage_ref.lock().await;
+        let storage = Rc::clone(&fidl.borrow().storage_ref);
+        let storage = storage.lock().await;
         // Default channel should not be persisted to storage.
         assert_eq!(None, storage.get_string(&apps[0].id).await);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_target_no_op() {
-        let apps = vec![App::builder("id", [1, 0])
-            .with_cohort(Cohort::from_hint("target-channel"))
-            .build()];
-        let fidl = FidlServerBuilder::new().with_apps(apps).build().await;
+        let app_set = FuchsiaAppSet::new(
+            App::builder("id", [1, 0]).with_cohort(Cohort::from_hint("target-channel")).build(),
+        );
+        let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
         let proxy = spawn_fidl_server::<ChannelControlMarker>(
             Rc::clone(&fidl),
             IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let fidl = fidl.borrow();
-        let apps = fidl.app_set.to_vec().await;
+
+        let app_set = Rc::clone(&fidl.borrow().app_set);
+        let apps = app_set.lock().await.get_apps();
         assert_eq!("target-channel", apps[0].get_target_channel());
-        let storage = fidl.storage_ref.lock().await;
+        let storage = Rc::clone(&fidl.borrow().storage_ref);
+        let storage = storage.lock().await;
         // Verify that app is not persisted to storage.
         assert_eq!(storage.get_string(&apps[0].id).await, None);
     }
@@ -1293,12 +1303,12 @@ mod tests {
 
             StubFidlServer::on_state_change(Rc::clone(&fidl), state).await;
 
-            let app_set = fidl.borrow().app_set.clone();
+            let app_set = Rc::clone(&fidl.borrow().app_set);
             assert_data_tree!(
                 inspector,
                 root: {
                     apps: {
-                        apps: format!("{:?}", app_set.to_vec().await),
+                        apps: format!("{:?}", app_set.lock().await.get_apps()),
                     }
                 }
             );
@@ -1323,15 +1333,13 @@ mod tests {
             IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let fidl = fidl.borrow();
 
+        let app_set = Rc::clone(&fidl.borrow().app_set);
         assert_data_tree!(
             inspector,
             root: {
                 apps: {
-                    apps: format!("{:?}", fidl.app_set.to_vec().await),
+                    apps: format!("{:?}", app_set.lock().await.get_apps()),
                 }
             }
         );

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    common::{App, AppSet, CheckOptions, CheckTiming},
+    app_set::{AppSet, AppSetExt as _},
+    common::{App, CheckOptions, CheckTiming},
     configuration::Config,
     http_request::{self, HttpRequest},
     installer::{Installer, Plan},
@@ -62,7 +63,7 @@ const MAX_OMAHA_REQUEST_ATTEMPTS: u64 = 3;
 /// This is the core state machine for a client's update check.  It is instantiated and used to
 /// perform update checks over time or to perform a single update check process.
 #[derive(Debug)]
-pub struct StateMachine<PE, HR, IN, TM, MR, ST>
+pub struct StateMachine<PE, HR, IN, TM, MR, ST, AS>
 where
     PE: PolicyEngine,
     HR: HttpRequest,
@@ -70,6 +71,7 @@ where
     TM: Timer,
     MR: MetricsReporter,
     ST: Storage,
+    AS: AppSet,
 {
     /// The immutable configuration of the client itself.
     config: Config,
@@ -95,7 +97,8 @@ where
     state: State,
 
     /// The list of apps used for update check.
-    app_set: AppSet,
+    /// When locking both storage and app_set, make sure to always lock storage first.
+    app_set: Rc<Mutex<AS>>,
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -218,7 +221,7 @@ impl ControlHandle {
     }
 }
 
-impl<PE, HR, IN, TM, MR, ST, IR> StateMachine<PE, HR, IN, TM, MR, ST>
+impl<PE, HR, IN, TM, MR, ST, AS, IR> StateMachine<PE, HR, IN, TM, MR, ST, AS>
 where
     PE: PolicyEngine<InstallResult = IR>,
     HR: HttpRequest,
@@ -226,6 +229,7 @@ where
     TM: Timer,
     MR: MetricsReporter,
     ST: Storage,
+    AS: AppSet,
     IR: 'static + Send,
 {
     /// Ask policy engine for the next update check time and update the context and yield event.
@@ -233,7 +237,7 @@ where
         &mut self,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> CheckTiming {
-        let apps = self.app_set.to_vec().await;
+        let apps = self.app_set.lock().await.get_apps();
         let timing = self
             .policy_engine
             .compute_next_update_time(&apps, &self.context.schedule, &self.context.state)
@@ -273,12 +277,12 @@ where
         mut control: mpsc::Receiver<ControlRequest>,
         mut co: async_generator::Yield<StateMachineEvent>,
     ) {
-        if !self.app_set.valid().await {
-            error!(
-                "App set not valid, not starting state machine: {:#?}",
-                self.app_set.to_vec().await
-            );
-            return;
+        {
+            let app_set = self.app_set.lock().await;
+            if !app_set.all_valid() {
+                error!("App set not valid, not starting state machine: {:#?}", app_set.get_apps());
+                return;
+            }
         }
 
         let state_machine_start_monotonic_time = self.time_source.now_in_monotonic();
@@ -337,7 +341,7 @@ where
             };
 
             let install_result = {
-                let apps = self.app_set.to_vec().await;
+                let apps = self.app_set.lock().await.get_apps();
                 info!("Checking to see if an update check is allowed at this time for {:?}", apps);
                 let decision = self
                     .policy_engine
@@ -575,7 +579,7 @@ where
         request_params: RequestParams,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) -> Option<IN::InstallResult> {
-        let apps = self.app_set.to_vec().await;
+        let apps = self.app_set.lock().await.get_apps();
         let result = self.perform_update_check(request_params, apps, co).await;
 
         let (result, install_result) =
@@ -598,7 +602,7 @@ where
                     // report metrics.
                     self.report_attempts_to_successful_check(true).await;
 
-                    self.app_set.update_from_omaha(&result.app_responses).await;
+                    self.app_set.lock().await.update_from_omaha(&result.app_responses);
 
                     // Only report |attempts_to_successful_install| if we get an error trying to
                     // install, or we succeed to install an update without error.
@@ -680,7 +684,7 @@ where
     async fn persist_data(&self) {
         let mut storage = self.storage_ref.lock().await;
         self.context.persist(&mut *storage).await;
-        self.app_set.persist(&mut *storage).await;
+        self.app_set.lock().await.persist(&mut *storage).await;
 
         storage.commit_or_log().await;
     }
@@ -1069,7 +1073,7 @@ where
 
     /// Sends a ping to Omaha and updates context and app_set.
     async fn ping_omaha(&mut self, co: &mut async_generator::Yield<StateMachineEvent>) {
-        let apps = self.app_set.to_vec().await;
+        let apps = self.app_set.lock().await.get_apps();
         let request_params =
             RequestParams { source: InstallSource::ScheduledTask, use_configured_proxies: true };
         let config = self.config.clone();
@@ -1109,7 +1113,7 @@ where
 
         let result = Self::make_response(response, update_check::Action::NoUpdate);
 
-        self.app_set.update_from_omaha(&result.app_responses).await;
+        self.app_set.lock().await.update_from_omaha(&result.app_responses);
 
         self.persist_data().await;
     }
@@ -1273,7 +1277,7 @@ fn randomize(n: u64, range: u64) -> u64 {
 }
 
 #[cfg(test)]
-impl<PE, HR, IN, TM, MR, ST, IR> StateMachine<PE, HR, IN, TM, MR, ST>
+impl<PE, HR, IN, TM, MR, ST, AS, IR> StateMachine<PE, HR, IN, TM, MR, ST, AS>
 where
     PE: PolicyEngine<InstallResult = IR>,
     HR: HttpRequest,
@@ -1281,6 +1285,7 @@ where
     TM: Timer,
     MR: MetricsReporter,
     ST: Storage,
+    AS: AppSet,
     IR: 'static + Send,
 {
     /// Run perform_update_check once, returning the update check result.
@@ -1289,7 +1294,7 @@ where
     ) -> Result<(update_check::Response, Option<IN::InstallResult>), UpdateCheckError> {
         let request_params = RequestParams::default();
 
-        let apps = self.app_set.to_vec().await;
+        let apps = self.app_set.lock().await.get_apps();
 
         async_generator::generate(move |mut co| async move {
             self.perform_update_check(request_params, apps, &mut co).await
@@ -1318,6 +1323,7 @@ mod tests {
     };
     use super::*;
     use crate::{
+        app_set::VecAppSet,
         common::{
             App, CheckOptions, PersistedApp, ProtocolState, UpdateCheckSchedule, UserCounting,
         },
@@ -1347,10 +1353,13 @@ mod tests {
     use std::time::Duration;
     use version::Version;
 
-    fn make_test_app_set() -> AppSet {
-        AppSet::new(vec![App::builder("{00000000-0000-0000-0000-000000000001}", [1, 2, 3, 4])
-            .with_cohort(Cohort::new("stable-channel"))
-            .build()])
+    fn make_test_app_set() -> Rc<Mutex<VecAppSet>> {
+        Rc::new(Mutex::new(VecAppSet::new(vec![App::builder(
+            "{00000000-0000-0000-0000-000000000001}",
+            [1, 2, 3, 4],
+        )
+        .with_cohort(Cohort::new("stable-channel"))
+        .build()])))
     }
 
     // Assert that the last request made to |http| is equal to the request built by
@@ -1468,7 +1477,7 @@ mod tests {
                 previous_version: Some("1.2.3.4".to_string()),
                 ..Event::error(EventErrorCode::ParseResponse)
             };
-            let apps = state_machine.app_set.to_vec().await;
+            let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
@@ -1505,7 +1514,7 @@ mod tests {
                 previous_version: Some("1.2.3.4".to_string()),
                 ..Event::error(EventErrorCode::ConstructInstallPlan)
             };
-            let apps = state_machine.app_set.to_vec().await;
+            let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
@@ -1558,7 +1567,7 @@ mod tests {
                 download_time_ms: Some(0),
                 ..Event::error(EventErrorCode::Installation)
             };
-            let apps = state_machine.app_set.to_vec().await;
+            let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
@@ -1655,7 +1664,7 @@ mod tests {
                 previous_version: Some("1.2.3.4".to_string()),
                 ..Event::default()
             };
-            let apps = state_machine.app_set.to_vec().await;
+            let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
@@ -1701,7 +1710,7 @@ mod tests {
                 previous_version: Some("1.2.3.4".to_string()),
                 ..Event::error(EventErrorCode::DeniedByPolicy)
             };
-            let apps = state_machine.app_set.to_vec().await;
+            let apps = state_machine.app_set.lock().await.get_apps();
             request_builder = request_builder
                 .add_event(&apps[0], &event)
                 .session_id(GUID::from_u128(0))
@@ -1766,7 +1775,7 @@ mod tests {
             // Run it the first time.
             state_machine.run_once().await;
 
-            let apps = apps.to_vec().await;
+            let apps = apps.lock().await.get_apps();
             assert_eq!(Some("1".to_string()), apps[0].cohort.id);
             assert_eq!(None, apps[0].cohort.hint);
             assert_eq!(Some("stable-channel".to_string()), apps[0].cohort.name);
@@ -2371,7 +2380,7 @@ mod tests {
                 .await;
 
             let storage = storage.lock().await;
-            let apps = app_set.to_vec().await;
+            let apps = app_set.lock().await.get_apps();
             storage.get_string(&apps[0].id).await.unwrap();
             assert!(storage.committed());
         });
@@ -2418,7 +2427,7 @@ mod tests {
     #[test]
     fn test_load_app() {
         block_on(async {
-            let app_set = AppSet::new(vec![App::builder(
+            let app_set = VecAppSet::new(vec![App::builder(
                 "{00000000-0000-0000-0000-000000000001}",
                 [1, 2, 3, 4],
             )
@@ -2433,16 +2442,18 @@ mod tests {
                 user_counting: UserCounting::ClientRegulatedByDate(Some(22222)),
             };
             let json = serde_json::to_string(&persisted_app).unwrap();
-            let apps = app_set.to_vec().await;
+            let apps = app_set.get_apps();
             storage.set_string(&apps[0].id, &json).await.unwrap();
+
+            let app_set = Rc::new(Mutex::new(app_set));
 
             let _state_machine = StateMachineBuilder::new_stub()
                 .storage(Rc::new(Mutex::new(storage)))
-                .app_set(app_set.clone())
+                .app_set(Rc::clone(&app_set))
                 .build()
                 .await;
 
-            let apps = app_set.to_vec().await;
+            let apps = app_set.lock().await.get_apps();
             assert_eq!(persisted_app.cohort, apps[0].cohort);
             assert_eq!(UserCounting::ClientRegulatedByDate(Some(22222)), apps[0].user_counting);
         });
@@ -3369,7 +3380,7 @@ mod tests {
         // Verify that it sends a ping.
         let config = crate::configuration::test_support::config_generator();
         let request_params = RequestParams::default();
-        let apps = pool.run_until(apps.to_vec());
+        let apps = pool.run_until(apps.lock()).get_apps();
         let mut expected_request_builder = RequestBuilder::new(&config, &request_params)
             // 0: session id for update check
             // 1: request id for update check

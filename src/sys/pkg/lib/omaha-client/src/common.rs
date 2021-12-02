@@ -7,16 +7,13 @@
 
 use crate::{
     protocol::{self, request::InstallSource, Cohort},
-    state_machine::update_check::AppResponse,
     storage::Storage,
     time::PartialComplexTime,
 };
-use futures::lock::Mutex;
 use log::error;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
-use std::rc::Rc;
 use std::time::Duration;
 use version::Version;
 
@@ -214,101 +211,6 @@ impl App {
 
     pub fn valid(&self) -> bool {
         !self.id.is_empty() && self.version != Version::from([0])
-    }
-}
-
-/// A set of Apps.
-#[derive(Clone, Debug)]
-pub struct AppSet {
-    apps: Rc<Mutex<Vec<App>>>,
-}
-
-impl AppSet {
-    /// Create a new AppSet with the given `apps`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `apps` is empty.
-    pub fn new(apps: Vec<App>) -> Self {
-        assert!(!apps.is_empty());
-        AppSet { apps: Rc::new(Mutex::new(apps)) }
-    }
-
-    /// Load data from |storage|, only overwrite existing fields if data exists.
-    pub async fn load<'a>(&'a mut self, storage: &'a impl Storage) {
-        let mut apps = self.apps.lock().await;
-        for app in apps.iter_mut() {
-            app.load(storage).await;
-        }
-    }
-
-    /// Persist cohort and user counting to |storage|, will try to set all of them to storage even
-    /// if previous set fails.
-    /// It will NOT call commit() on |storage|, caller is responsible to call commit().
-    pub async fn persist<'a>(&'a self, storage: &'a mut impl Storage) {
-        let apps = self.apps.lock().await;
-        for app in apps.iter() {
-            app.persist(storage).await;
-        }
-    }
-
-    /// Get the current app id.
-    pub async fn get_current_app_id(&self) -> String {
-        let apps = self.apps.lock().await;
-        apps[0].id.clone()
-    }
-
-    /// Get the current product id.
-    /// Returns empty string if product id set for the current app.
-    pub async fn get_current_product_id(&self) -> String {
-        let apps = self.apps.lock().await;
-        apps[0].extra_fields.get("product_id").cloned().unwrap_or_default()
-    }
-
-    /// Get the current channel name from cohort name, returns empty string if no cohort name set
-    /// for the app.
-    pub async fn get_current_channel(&self) -> String {
-        let apps = self.apps.lock().await;
-        apps[0].get_current_channel().to_string()
-    }
-
-    /// Get the target channel name from cohort hint, fallback to current channel if no hint.
-    pub async fn get_target_channel(&self) -> String {
-        let apps = self.apps.lock().await;
-        apps[0].get_target_channel().to_string()
-    }
-
-    /// Set the cohort hint of all apps to |channel| and |id|.
-    pub async fn set_target_channel(&self, channel: Option<String>, id: Option<String>) {
-        let mut apps = self.apps.lock().await;
-        for app in apps.iter_mut() {
-            app.set_target_channel(channel.clone(), id.clone());
-        }
-    }
-
-    /// Update the cohort and user counting for each app from Omaha app response.
-    pub async fn update_from_omaha(&mut self, app_responses: &[AppResponse]) {
-        let mut apps = self.apps.lock().await;
-
-        for app_response in app_responses {
-            for app in apps.iter_mut() {
-                if app.id == app_response.app_id {
-                    app.cohort.update_from_omaha(app_response.cohort.clone());
-                    app.user_counting = app_response.user_counting.clone();
-                    break;
-                }
-            }
-        }
-    }
-
-    /// Clone the apps into a Vec.
-    pub async fn to_vec(&self) -> Vec<App> {
-        self.apps.lock().await.clone()
-    }
-
-    pub async fn valid(&self) -> bool {
-        let apps = self.apps.lock().await;
-        apps.iter().all(|app| app.valid())
     }
 }
 
@@ -518,7 +420,6 @@ pub struct ProtocolState {
 mod tests {
     use super::*;
     use crate::{
-        state_machine::update_check::Action,
         storage::MemStorage,
         time::{MockTimeSource, TimeSource},
     };
@@ -860,75 +761,6 @@ mod tests {
         assert!(!app.valid());
         let app = App::builder("some_id", [0]).build();
         assert!(!app.valid());
-    }
-
-    #[test]
-    #[should_panic]
-    fn test_appset_panics_with_empty_vec() {
-        AppSet::new(vec![]);
-    }
-
-    #[test]
-    fn test_appset_update_from_omaha() {
-        let mut app_set = AppSet::new(vec![App::builder("some_id", [0, 1]).build()]);
-        let cohort = Cohort { name: Some("some-channel".to_string()), ..Cohort::default() };
-        let user_counting = UserCounting::ClientRegulatedByDate(Some(42));
-        let app_responses = vec![AppResponse {
-            app_id: "some_id".to_string(),
-            cohort: cohort.clone(),
-            user_counting: user_counting.clone(),
-            result: Action::Updated,
-        }];
-        block_on(async {
-            app_set.update_from_omaha(&app_responses).await;
-            let apps = app_set.to_vec().await;
-            assert_eq!(cohort, apps[0].cohort);
-            assert_eq!(user_counting, apps[0].user_counting);
-        });
-    }
-
-    #[test]
-    fn test_appset_to_vec() {
-        block_on(async {
-            let app_set = AppSet::new(vec![App::builder("some_id", [0, 1]).build()]);
-            let mut vec = app_set.to_vec().await;
-            vec[0].id = "some_other_id".to_string();
-            assert_eq!("some_id", app_set.to_vec().await[0].id);
-        });
-    }
-
-    #[test]
-    fn test_appset_valid() {
-        block_on(async {
-            let app_set = AppSet::new(vec![App::builder("some_id", [0, 1]).build()]);
-            assert!(app_set.valid().await);
-            let app_set = AppSet::new(vec![
-                App::builder("some_id", [0, 1]).build(),
-                App::builder("some_id_2", [1]).build(),
-            ]);
-            assert!(app_set.valid().await);
-        });
-    }
-
-    #[test]
-    fn test_appset_not_valid() {
-        block_on(async {
-            let app_set = AppSet::new(vec![
-                App::builder("some_id", [0, 1]).build(),
-                App::builder("", [0, 1]).build(),
-            ]);
-            assert!(!app_set.valid().await);
-            let app_set = AppSet::new(vec![
-                App::builder("some_id", [0]).build(),
-                App::builder("some_id_2", [0, 1]).build(),
-            ]);
-            assert!(!app_set.valid().await);
-            let app_set = AppSet::new(vec![
-                App::builder("some_id", [0]).build(),
-                App::builder("", [0, 1]).build(),
-            ]);
-            assert!(!app_set.valid().await);
-        });
     }
 
     #[test]

@@ -31,6 +31,7 @@ rustc_library("omaha-client") {
   test_deps = [ "//third_party/rust_crates:matches" ]
 
   sources = [
+    "src/app_set.rs",
     "src/clock.rs",
     "src/common.rs",
     "src/configuration.rs",

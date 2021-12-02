@@ -3,14 +3,16 @@
 // found in the LICENSE file.
 
 use {
+    crate::app_set::FuchsiaAppSet,
     fidl_fuchsia_feedback::{
         Annotation, ComponentData, ComponentDataRegisterMarker, ComponentDataRegisterProxy,
     },
+    futures::lock::Mutex,
     log::error,
-    omaha_client::common::AppSet,
+    std::rc::Rc,
 };
 
-pub async fn publish_ids_to_feedback(app_set: AppSet) {
+pub async fn publish_ids_to_feedback(app_set: Rc<Mutex<FuchsiaAppSet>>) {
     let proxy =
         match fuchsia_component::client::connect_to_protocol::<ComponentDataRegisterMarker>() {
             Ok(p) => p,
@@ -23,17 +25,23 @@ pub async fn publish_ids_to_feedback(app_set: AppSet) {
     publish_ids_to_feedback_impl(proxy, app_set).await;
 }
 
-async fn publish_ids_to_feedback_impl(proxy: ComponentDataRegisterProxy, app_set: AppSet) {
-    let component_data = ComponentData {
-        namespace: Some("omaha".to_string()),
-        annotations: Some(vec![
-            Annotation { key: "app-id".to_string(), value: app_set.get_current_app_id().await },
-            Annotation {
-                key: "product-id".to_string(),
-                value: app_set.get_current_product_id().await,
-            },
-        ]),
-        ..ComponentData::EMPTY
+async fn publish_ids_to_feedback_impl(
+    proxy: ComponentDataRegisterProxy,
+    app_set: Rc<Mutex<FuchsiaAppSet>>,
+) {
+    let component_data = {
+        let app_set = app_set.lock().await;
+        ComponentData {
+            namespace: Some("omaha".to_string()),
+            annotations: Some(vec![
+                Annotation { key: "app-id".to_string(), value: app_set.get_system_app_id().into() },
+                Annotation {
+                    key: "product-id".to_string(),
+                    value: app_set.get_system_product_id().into(),
+                },
+            ]),
+            ..ComponentData::EMPTY
+        }
     };
 
     match proxy.upsert(component_data).await {
@@ -55,9 +63,9 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_publish_ids_to_feedback() {
-        let app_set = AppSet::new(vec![App::builder("some-app-id", [1, 2])
-            .with_extra("product_id", "some-prod-id")
-            .build()]);
+        let app_set = Rc::new(Mutex::new(FuchsiaAppSet::new(
+            App::builder("some-app-id", [1, 2]).with_extra("product_id", "some-prod-id").build(),
+        )));
 
         let (proxy, mut stream) = create_proxy_and_stream::<ComponentDataRegisterMarker>().unwrap();
         let stream_fut = async move {

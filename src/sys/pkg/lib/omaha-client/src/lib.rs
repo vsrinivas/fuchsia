@@ -7,6 +7,7 @@
 #![recursion_limit = "256"]
 #![warn(clippy::all)]
 
+pub mod app_set;
 pub mod clock;
 pub mod common;
 pub mod configuration;
