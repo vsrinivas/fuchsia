@@ -18,6 +18,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/fuzzer.h",
     "lib/elfldltl/layout.h",
     "lib/elfldltl/machine.h",
+    "lib/elfldltl/memory.h",
     "lib/elfldltl/note.h",
     "lib/elfldltl/relocation.h",
     "lib/elfldltl/self.h",
@@ -48,6 +49,7 @@ source_set("unittests") {
     "diagnostics-tests.cc",
     "field-tests.cc",
     "layout-tests.cc",
+    "memory-tests.cc",
     "note-tests.cc",
     "relocation-tests.cc",
   ]

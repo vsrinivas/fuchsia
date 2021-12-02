@@ -12,6 +12,7 @@
 #include <variant>
 
 #include "layout.h"
+#include "memory.h"
 
 namespace elfldltl {
 
@@ -54,6 +55,18 @@ class SelfBase {
 #endif
     return reinterpret_cast<uintptr_t>(kDynamic) - kGot[0];
   }
+
+  // This returns a memory-access object for referring to the program's own ELF
+  // metadata directly in memory.  See <lib/elfldltl/memory.h> about the API.
+  static DirectMemory Memory(std::byte* start, std::byte* end) {
+    size_t image_size = static_cast<size_t>(end - start);
+    uintptr_t image_vaddr = reinterpret_cast<uintptr_t>(start) - LoadBias();
+    return DirectMemory({start, image_size}, image_vaddr);
+  }
+
+  // This version can be used in normal ELF objects with standard layout.  The
+  // explicit image bounds must be passed for e.g. kernels with special layout.
+  static DirectMemory Memory() { return Memory(kImage, kImageEnd); }
 
  protected:
   // These are defined implicitly by the linker.  _DYNAMIC should be defined in

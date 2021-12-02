@@ -79,4 +79,42 @@ TEST(ElfldltlSelfTests, VisitSelf) {
   EXPECT_TRUE(elfldltl::VisitSelf([](auto&& self) { return self.Valid(); }));
 }
 
+TEST(ElfldltlSelfTests, Memory) {
+  auto memory = Self::Memory();
+  const auto bias = Self::LoadBias();
+
+  static const int something_in_memory = 0x12345678;
+
+  const auto rodata_addr = reinterpret_cast<uintptr_t>(&something_in_memory);
+  auto array = memory.ReadArray<int>(rodata_addr - bias, 1);
+  ASSERT_TRUE(array.has_value());
+  EXPECT_EQ(&something_in_memory, array->data());
+
+  // The stack is not part of the load image, so this should be out of bounds.
+  int something_on_stack = 0xabcdef;
+  const auto stack_addr = reinterpret_cast<uintptr_t>(&something_on_stack);
+  EXPECT_FALSE(memory.ReadArray<int>(stack_addr - bias, 1));
+  EXPECT_FALSE(memory.ReadArray<int>(stack_addr - bias));
+  EXPECT_FALSE(memory.Store<int>(stack_addr - bias, 2));
+  EXPECT_FALSE(memory.StoreAdd<int>(stack_addr - bias, 3));
+  EXPECT_EQ(0xabcdef, something_on_stack);
+
+  // Set an initial value for a data word that will be overwritten by Store.
+  static int mutable_in_memory;
+  mutable_in_memory = 0xbad;
+
+  // This cast to integer for the Memory API makes the compiler lose track of
+  // the pointer identity here so it doesn't see how it's aliasable by the
+  // Memory::Store code when that's fully inlined and so can move the store
+  // later--such that EXPECT_EQ can fail and then print the matching value!
+  // This barrier ensures the store is complete before the pointer is used.
+  const auto mutable_addr = reinterpret_cast<uintptr_t>(&mutable_in_memory);
+  std::atomic_signal_fence(std::memory_order_seq_cst);
+
+  EXPECT_TRUE(memory.Store<int>(mutable_addr - bias, 0x12340000));
+  EXPECT_EQ(0x12340000, mutable_in_memory);
+  EXPECT_TRUE(memory.StoreAdd<int>(mutable_addr - bias, 0x5678));
+  EXPECT_EQ(0x12345678, mutable_in_memory);
+}
+
 }  // namespace
