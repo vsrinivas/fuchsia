@@ -165,6 +165,17 @@ pub struct Resource {
     pub stream: BoxStream<'static, io::Result<Bytes>>,
 }
 
+impl Resource {
+    #[cfg(test)]
+    async fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<(), Error> {
+        buf.reserve(self.len as usize);
+        while let Some(chunk) = self.stream.next().await.transpose()? {
+            buf.extend_from_slice(&chunk);
+        }
+        Ok(())
+    }
+}
+
 impl std::fmt::Debug for Resource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("resource").field("len", &self.len).field("stream", &"..").finish()
@@ -228,7 +239,9 @@ impl Repository {
     /// Create a [Repository] from a [RepositorySpec].
     pub async fn from_repository_spec(name: &str, spec: RepositorySpec) -> Result<Self, Error> {
         let backend: Box<dyn RepositoryBackend + Send + Sync> = match spec {
-            RepositorySpec::FileSystem { path } => Box::new(FileSystemRepository::new(path.into())),
+            RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path } => Box::new(
+                FileSystemRepository::new(metadata_repo_path.into(), blob_repo_path.into()),
+            ),
             RepositorySpec::Pm { path } => Box::new(PmRepository::new(path.into())),
         };
 

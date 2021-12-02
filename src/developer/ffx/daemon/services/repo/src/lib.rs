@@ -1422,7 +1422,7 @@ mod tests {
     async fn add_repo(proxy: &bridge::RepositoryRegistryProxy, repo_name: &str) {
         let path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
 
-        let spec = RepositorySpec::FileSystem { path };
+        let spec = RepositorySpec::Pm { path };
         proxy
             .add_repository(repo_name, &mut spec.into())
             .await
@@ -1534,7 +1534,7 @@ mod tests {
                 serde_json::json!({
                     "repositories": {
                         REPO_NAME: {
-                            "type": "file_system",
+                            "type": "pm",
                             "path": repo_path
                         },
                     },
@@ -1606,9 +1606,9 @@ mod tests {
                 get_repositories(&proxy).await,
                 vec![bridge::RepositoryConfig {
                     name: REPO_NAME.to_string(),
-                    spec: bridge::RepositorySpec::FileSystem(bridge::FileSystemRepositorySpec {
+                    spec: bridge::RepositorySpec::Pm(bridge::PmRepositorySpec {
                         path: Some(repo_path.clone()),
-                        ..bridge::FileSystemRepositorySpec::EMPTY
+                        ..bridge::PmRepositorySpec::EMPTY
                     }),
                 }]
             );
@@ -1640,9 +1640,9 @@ mod tests {
                 .build();
 
             let proxy = daemon.open_proxy::<bridge::RepositoryRegistryMarker>().await;
-            let spec = bridge::RepositorySpec::FileSystem(bridge::FileSystemRepositorySpec {
+            let spec = bridge::RepositorySpec::Pm(bridge::PmRepositorySpec {
                 path: Some(EMPTY_REPO_PATH.to_owned()),
-                ..bridge::FileSystemRepositorySpec::EMPTY
+                ..bridge::PmRepositorySpec::EMPTY
             });
 
             // Initially no server should be running.

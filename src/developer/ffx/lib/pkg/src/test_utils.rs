@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::repository::{FileSystemRepository, Repository, RepositoryKeyConfig},
+    crate::repository::{PmRepository, Repository, RepositoryKeyConfig},
     anyhow::{anyhow, Context, Result},
     std::{
         fs::{copy, create_dir},
@@ -44,13 +44,12 @@ fn copy_dir(from: PathBuf, to: PathBuf) -> Result<()> {
 }
 
 pub async fn make_readonly_empty_repository(name: &str) -> Result<Repository> {
-    let backend = FileSystemRepository::new(PathBuf::from(EMPTY_REPO_PATH));
+    let backend = PmRepository::new(PathBuf::from(EMPTY_REPO_PATH));
     Repository::new(name, Box::new(backend)).await.map_err(|e| anyhow!(e))
 }
 
 pub async fn make_writable_empty_repository(name: &str, root: PathBuf) -> Result<Repository> {
     copy_dir(PathBuf::from(EMPTY_REPO_PATH).canonicalize()?, root.clone())?;
-
-    let backend = FileSystemRepository::new(root);
+    let backend = PmRepository::new(root);
     Ok(Repository::new(name, Box::new(backend)).await?)
 }

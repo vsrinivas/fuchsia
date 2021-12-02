@@ -528,7 +528,7 @@ mod tests {
             let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
 
             for body in &bodies[..] {
-                write_file(&dir.join(body), body.as_bytes());
+                write_file(&dir.join("repository").join(body), body.as_bytes());
             }
 
             manager.add(Arc::new(repo));
@@ -554,7 +554,7 @@ mod tests {
 
         let repo = make_writable_empty_repository("devhost", d.clone()).await.unwrap();
 
-        let timestamp_file = d.join("timestamp.json");
+        let timestamp_file = d.join("repository").join("timestamp.json");
         write_file(
             &timestamp_file,
             serde_json::to_string(&SignedTimestamp { signed: TimestampFile { version: 1 } })

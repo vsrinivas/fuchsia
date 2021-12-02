@@ -330,7 +330,7 @@ mod test {
         let root = tempdir.path().join("artifact_store");
         let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
 
-        let blob_dir = root.join("blobs");
+        let blob_dir = root.join("repository").join("blobs");
         create_dir(&blob_dir).unwrap();
 
         // Put meta.far and blob into blobs directory
@@ -386,7 +386,7 @@ mod test {
         let root = tempdir.path().join("artifact_store");
         let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
 
-        let blob_dir = root.join("blobs");
+        let blob_dir = root.join("repository").join("blobs");
         create_dir(&blob_dir).unwrap();
 
         // Put meta.far and blob into blobs directory
@@ -439,7 +439,7 @@ mod test {
         let root = tempdir.path().join("artifact_store");
         let repo = make_writable_empty_repository("artifact_store", root.clone()).await.unwrap();
 
-        let blob_dir = root.join("blobs");
+        let blob_dir = root.join("repository").join("blobs");
         create_dir(&blob_dir).unwrap();
 
         // Put meta.far and blob into blobs directory

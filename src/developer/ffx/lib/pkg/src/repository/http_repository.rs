@@ -225,10 +225,10 @@ mod test {
 
         // Write targets.json
         let target_json = create_targets_json();
-        let target_json_path = root.join("targets.json");
+        let target_json_path = root.join("repository").join("targets.json");
         write_file(target_json_path.clone(), target_json.as_slice());
 
-        let blob_dir = root.join("blobs");
+        let blob_dir = root.join("repository").join("blobs");
         create_dir(&blob_dir).unwrap();
 
         // Put meta.far and blob into blobs directory

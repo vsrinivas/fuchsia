@@ -22,7 +22,9 @@ pub struct PmRepository {
 impl PmRepository {
     /// Construct a [PmRepository].
     pub fn new(pm_repo_path: PathBuf) -> Self {
-        let repo = FileSystemRepository::new(pm_repo_path.join("repository"));
+        let metadata_repo_path = pm_repo_path.join("repository");
+        let blob_repo_path = metadata_repo_path.join("blobs");
+        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path);
         Self { pm_repo_path, repo }
     }
 }

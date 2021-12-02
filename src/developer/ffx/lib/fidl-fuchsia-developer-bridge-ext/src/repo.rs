@@ -15,7 +15,7 @@ use {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RepositorySpec {
-    FileSystem { path: PathBuf },
+    FileSystem { metadata_repo_path: PathBuf, blob_repo_path: PathBuf },
 
     Pm { path: PathBuf },
 }
@@ -26,9 +26,16 @@ impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
     fn try_from(repo: fidl::RepositorySpec) -> Result<Self, RepositoryError> {
         match repo {
             fidl::RepositorySpec::FileSystem(filesystem_spec) => {
-                let path =
-                    filesystem_spec.path.ok_or(RepositoryError::MissingRepositorySpecField)?;
-                Ok(RepositorySpec::FileSystem { path: path.into() })
+                let metadata_repo_path = filesystem_spec
+                    .metadata_repo_path
+                    .ok_or(RepositoryError::MissingRepositorySpecField)?;
+                let blob_repo_path = filesystem_spec
+                    .blob_repo_path
+                    .ok_or(RepositoryError::MissingRepositorySpecField)?;
+                Ok(RepositorySpec::FileSystem {
+                    metadata_repo_path: metadata_repo_path.into(),
+                    blob_repo_path: blob_repo_path.into(),
+                })
             }
             fidl::RepositorySpec::Pm(pm_spec) => {
                 let path = pm_spec.path.ok_or(RepositoryError::MissingRepositorySpecField)?;
@@ -42,10 +49,13 @@ impl TryFrom<fidl::RepositorySpec> for RepositorySpec {
 impl From<RepositorySpec> for fidl::RepositorySpec {
     fn from(repo: RepositorySpec) -> Self {
         match repo {
-            RepositorySpec::FileSystem { path } => {
-                let path = path.to_str().expect("paths must be UTF-8").clone();
+            RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path } => {
+                let metadata_repo_path =
+                    metadata_repo_path.to_str().expect("paths must be UTF-8").clone();
+                let blob_repo_path = blob_repo_path.to_str().expect("paths must be UTF-8").clone();
                 fidl::RepositorySpec::FileSystem(fidl::FileSystemRepositorySpec {
-                    path: Some(path.into()),
+                    metadata_repo_path: Some(metadata_repo_path.into()),
+                    blob_repo_path: Some(blob_repo_path.into()),
                     ..fidl::FileSystemRepositorySpec::EMPTY
                 })
             }

@@ -16,8 +16,7 @@ host_test_data("empty-repo") {
     "//src/sys/pkg/tests/pkg-resolver/template/repository/targets.json",
     "//src/sys/pkg/tests/pkg-resolver/template/repository/timestamp.json",
   ]
-  outputs =
-      [ "$root_out_dir/test_data/ffx_lib_pkg/empty-repo/{{source_file_part}}" ]
+  outputs = [ "$root_out_dir/test_data/ffx_lib_pkg/empty-repo/repository/{{source_file_part}}" ]
 }
 
 rustc_library("pkg") {

@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_developer_bridge::{
         self as bridge, RepositoryIteratorMarker, RepositoryRegistryProxy,
     },
-    prettytable::{cell, format::TableFormat, row, Row, Table},
+    prettytable::{cell, format::TableFormat, row, table, Row, Table},
     std::io::{stdout, Write},
 };
 
@@ -62,7 +62,13 @@ async fn list_impl<W: Write>(
             match repo.spec {
                 bridge::RepositorySpec::FileSystem(filesystem_spec) => {
                     row.add_cell(cell!("filesystem"));
-                    row.add_cell(cell!(filesystem_spec.path.as_deref().unwrap_or("<unknown>")));
+                    row.add_cell(cell!(table!(
+                        [
+                            "metadata",
+                            filesystem_spec.metadata_repo_path.as_deref().unwrap_or("<unknown>")
+                        ],
+                        ["blobs", filesystem_spec.blob_repo_path.as_deref().unwrap_or("<unknown>")]
+                    )));
                 }
                 bridge::RepositorySpec::Pm(pm_spec) => {
                     row.add_cell(cell!("pm"));
@@ -89,7 +95,6 @@ mod test {
         },
         fuchsia_async as fasync,
         futures::StreamExt,
-        prettytable::format::FormatBuilder,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -112,7 +117,12 @@ mod test {
                                                         name: "Test1".to_owned(),
                                                         spec: RepositorySpec::FileSystem(
                                                             FileSystemRepositorySpec {
-                                                                path: Some("a/b".to_owned()),
+                                                                metadata_repo_path: Some(
+                                                                    "a/b/meta".to_owned(),
+                                                                ),
+                                                                blob_repo_path: Some(
+                                                                    "a/b/blobs".to_owned(),
+                                                                ),
                                                                 ..FileSystemRepositorySpec::EMPTY
                                                             },
                                                         ),
@@ -143,17 +153,22 @@ mod test {
             .detach();
         });
         let mut out = Vec::<u8>::new();
-        list_impl(
-            ListCommand {},
-            repos,
-            Some(FormatBuilder::new().padding(1, 1).build()),
-            &mut out,
-        )
-        .await
-        .unwrap();
+        list_impl(ListCommand {}, repos, None, &mut out).await.unwrap();
+
         assert_eq!(
             &String::from_utf8_lossy(&out),
-            " NAME   TYPE        EXTRA \n Test1  filesystem  a/b \n Test2  pm          c/d \n"
+            "\
+            +-------+------------+--------------------------+\n\
+            | NAME  | TYPE       | EXTRA                    |\n\
+            +=======+============+==========================+\n\
+            | Test1 | filesystem | +----------+-----------+ |\n\
+            |       |            | | metadata | a/b/meta  | |\n\
+            |       |            | +----------+-----------+ |\n\
+            |       |            | | blobs    | a/b/blobs | |\n\
+            |       |            | +----------+-----------+ |\n\
+            +-------+------------+--------------------------+\n\
+            | Test2 | pm         | c/d                      |\n\
+            +-------+------------+--------------------------+\n",
         );
     }
 }

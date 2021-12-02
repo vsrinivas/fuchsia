@@ -18,8 +18,11 @@ type RepositorySpec = flexible union {
 
 /// [FileSystemRepositorySpec] describes a TUF repository found on the local filesystem.
 type FileSystemRepositorySpec = table {
-    /// File system path to the location of the repository.
-    1: path string:MAX_PATH;
+    /// File system path to the location of the metadata repository.
+    1: metadata_repo_path string:MAX_PATH;
+
+    /// File system path to the location of the blob repository.
+    2: blob_repo_path string:MAX_PATH;
 };
 
 /// [PmRepositorySpec] describes a TUF repository created by pm found on the local filesystem.

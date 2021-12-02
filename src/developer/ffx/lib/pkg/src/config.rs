@@ -319,14 +319,14 @@ mod tests {
             assert_eq!(get_default_repository().await.unwrap(), None);
 
             // Add the repository.
-            let repository = RepositorySpec::FileSystem { path: "foo/bar/baz".into() };
+            let repository = RepositorySpec::Pm { path: "foo/bar/baz".into() };
             set_repository("repo", &repository).await.unwrap();
 
             // The single configured repo should be returned as the default
             assert_eq!(get_default_repository().await.unwrap(), Some(String::from("repo")));
 
             // Add a second repository.
-            let repository = RepositorySpec::FileSystem { path: "foo/bar/baz2".into() };
+            let repository = RepositorySpec::Pm { path: "foo/bar/baz2".into() };
             set_repository("repo2", &repository).await.unwrap();
 
             // The single configured repo should be returned as the default
@@ -382,7 +382,7 @@ mod tests {
             assert_eq!(get_repository("repo").await.unwrap(), None);
 
             // Add the repository.
-            let repository = RepositorySpec::FileSystem { path: "foo/bar/baz".into() };
+            let repository = RepositorySpec::Pm { path: "foo/bar/baz".into() };
             set_repository("repo", &repository).await.unwrap();
 
             // Make sure we wrote to the config.
@@ -390,7 +390,7 @@ mod tests {
                 ffx_config::get::<Value, _>(CONFIG_KEY_REPOSITORIES).await.unwrap(),
                 json!({
                     "repo": {
-                        "type": "file_system",
+                        "type": "pm",
                         "path": "foo/bar/baz",
                     }
                 }),
@@ -418,11 +418,11 @@ mod tests {
         run_async_test(async {
             ffx_config::set((CONFIG_KEY_REPOSITORIES, ConfigLevel::User), json!({})).await.unwrap();
 
-            set_repository("repo.name", &RepositorySpec::FileSystem { path: "foo/bar/baz".into() })
+            set_repository("repo.name", &RepositorySpec::Pm { path: "foo/bar/baz".into() })
                 .await
                 .unwrap();
 
-            set_repository("repo%name", &RepositorySpec::FileSystem { path: "foo/bar/baz".into() })
+            set_repository("repo%name", &RepositorySpec::Pm { path: "foo/bar/baz".into() })
                 .await
                 .unwrap();
 
@@ -430,11 +430,11 @@ mod tests {
                 ffx_config::get::<Value, _>(CONFIG_KEY_REPOSITORIES).await.unwrap(),
                 json!({
                     "repo%2Ename": {
-                        "type": "file_system",
+                        "type": "pm",
                         "path": "foo/bar/baz",
                     },
                     "repo%25name": {
-                        "type": "file_system",
+                        "type": "pm",
                         "path": "foo/bar/baz",
                     }
                 }),
@@ -564,19 +564,19 @@ mod tests {
                 json!({
                     // Parse a normal repository.
                     "repo-name": {
-                        "type": "file_system",
+                        "type": "pm",
                         "path": "foo/bar/baz",
                     },
 
                     // Parse encoded `repo.name`.
                     "repo%2Ename": {
-                        "type": "file_system",
+                        "type": "pm",
                         "path": "foo/bar/baz",
                     },
 
                     // Parse encoded `repo%name`.
                     "repo%25name": {
-                        "type": "file_system",
+                        "type": "pm",
                         "path": "foo/bar/baz",
                     },
                 }),
@@ -587,13 +587,13 @@ mod tests {
             assert_eq!(
                 get_repositories().await,
                 hashmap! {
-                    "repo-name".into() => RepositorySpec::FileSystem {
+                    "repo-name".into() => RepositorySpec::Pm {
                         path: "foo/bar/baz".into(),
                     },
-                    "repo.name".into() => RepositorySpec::FileSystem {
+                    "repo.name".into() => RepositorySpec::Pm {
                         path: "foo/bar/baz".into(),
                     },
-                    "repo%name".into() => RepositorySpec::FileSystem {
+                    "repo%name".into() => RepositorySpec::Pm {
                         path: "foo/bar/baz".into(),
                     },
                 }
@@ -613,7 +613,7 @@ mod tests {
 
                     // Ignores invalid encoded repository names.
                     "invalid%aaencoding": {
-                        "type": "file_system",
+                        "type": "pm",
                         "path": "repo/bar/baz",
                     },
                 }),

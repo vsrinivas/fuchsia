@@ -16,7 +16,7 @@ if (is_host) {
       "//src/sys/pkg/tests/pkg-resolver/template/repository/targets.json",
       "//src/sys/pkg/tests/pkg-resolver/template/repository/timestamp.json",
     ]
-    outputs = [ "$root_out_dir/test_data/ffx_daemon_service_repo/empty-repo/{{source_file_part}}" ]
+    outputs = [ "$root_out_dir/test_data/ffx_daemon_service_repo/empty-repo/repository/{{source_file_part}}" ]
   }
 
   rustc_library("ffx_daemon_service_repo") {
