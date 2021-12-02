@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/metadata.h>
@@ -96,6 +97,57 @@ static pbus_dev_t gpio_dev = []() {
   return dev;
 }();
 
+const zx_device_prop_t gpio_expander_props[] = {
+    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
+    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TCA6408A},
+};
+
+constexpr zx_bind_inst_t gpio_expander_i2c_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
+    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x20),
+};
+
+constexpr device_fragment_part_t gpio_expander_i2c_fragment[] = {
+    {countof(gpio_expander_i2c_match), gpio_expander_i2c_match},
+};
+
+constexpr device_fragment_t gpio_expander_fragments[] = {
+    {"i2c", countof(gpio_expander_i2c_fragment), gpio_expander_i2c_fragment},
+};
+
+static const gpio_pin_t gpio_expander_pins[] = {
+    {VIM3_SD_MODE},
+};
+
+static const uint32_t gpio_expander_pin_offset = VIM3_EXPANDER_GPIO_START;
+
+static const device_metadata_t gpio_expander_metadata[] = {
+    {
+        .type = DEVICE_METADATA_GPIO_PINS,
+        .data = &gpio_expander_pins,
+        .length = sizeof(gpio_expander_pins),
+    },
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data = &gpio_expander_pin_offset,
+        .length = sizeof(gpio_expander_pin_offset),
+    },
+};
+
+static composite_device_desc_t gpio_expander_dev = []() {
+  composite_device_desc_t dev = {};
+  dev.props = gpio_expander_props;
+  dev.props_count = countof(gpio_expander_props);
+  dev.fragments = gpio_expander_fragments;
+  dev.fragments_count = countof(gpio_expander_fragments);
+  dev.primary_fragment = gpio_expander_fragments[0].name;
+  dev.spawn_colocated = false;
+  dev.metadata_list = gpio_expander_metadata;
+  dev.metadata_count = countof(gpio_expander_metadata);
+  return dev;
+}();
+
 zx_status_t Vim3::GpioInit() {
   zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
   if (status != ZX_OK) {
@@ -107,6 +159,12 @@ zx_status_t Vim3::GpioInit() {
   if (!gpio_impl_.is_valid()) {
     zxlogf(ERROR, "%s: device_get_protocol failed %d", __func__, status);
     return ZX_ERR_INTERNAL;
+  }
+
+  status = DdkAddComposite("gpio-expander", &gpio_expander_dev);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "DdkAddComposite for gpio-expander failed %d", status);
+    return status;
   }
 
   return ZX_OK;

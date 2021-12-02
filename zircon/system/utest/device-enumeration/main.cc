@@ -188,6 +188,9 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "sys/platform/05:06:28",
       "sys/platform/05:06:a",
       "class/thermal/000",
+
+      // GPIO
+      "gpio-expander/ti-tca6408a/gpio-107",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, std::size(kDevicePaths)));

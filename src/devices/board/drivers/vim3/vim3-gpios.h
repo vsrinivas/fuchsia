@@ -30,4 +30,10 @@
 // USB Power Delivery (Fusb302)
 #define VIM3_FUSB302_INT A311D_GPIOAO(8)
 
+// Make the GPIO expander indices start after the SoC GPIOs to avoid any overlap.
+#define VIM3_EXPANDER_GPIO_START (A311D_GPIOE_START + A311D_GPIOE_COUNT)
+#define VIM3_EXPANDER_GPIO(n) (VIM3_EXPANDER_GPIO_START + (n))
+
+#define VIM3_SD_MODE VIM3_EXPANDER_GPIO(7)
+
 #endif  // SRC_DEVICES_BOARD_DRIVERS_VIM3_VIM3_GPIOS_H_
