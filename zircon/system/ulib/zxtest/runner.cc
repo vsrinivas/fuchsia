@@ -22,7 +22,9 @@ TestDriverImpl::~TestDriverImpl() = default;
 
 void TestDriverImpl::Skip() { status_ = TestStatus::kSkipped; }
 
-bool TestDriverImpl::Continue() const { return !current_test_has_fatal_failures_; }
+bool TestDriverImpl::Continue() const {
+  return !current_test_has_fatal_failures_ && status_ != TestStatus::kSkipped;
+}
 
 void TestDriverImpl::OnTestStart(const TestCase& test_case, const TestInfo& test_info) {
   status_ = TestStatus::kPassed;
