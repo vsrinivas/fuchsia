@@ -787,10 +787,10 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
 zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
   canary_.Assert();
   LTRACEF("offset %#" PRIx64 ", len %#" PRIx64 "\n", offset, len);
-  if (is_contiguous()) {
+  Guard<Mutex> guard{&lock_};
+  if (is_contiguous() && !pmm_physical_page_borrowing_config()->is_loaning_enabled()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  Guard<Mutex> guard{&lock_};
   return DecommitRangeLocked(offset, len);
 }
 

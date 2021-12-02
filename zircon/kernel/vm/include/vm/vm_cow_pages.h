@@ -515,8 +515,9 @@ class VmCowPages final
   }
 
   bool can_decommit_locked() const TA_REQ(lock_) {
-    // For now.
-    return !page_source_;
+    bool result = !page_source_ || !page_source_->properties().is_preserving_page_content;
+    DEBUG_ASSERT(result == !debug_is_user_pager_backed_locked());
+    return result;
   }
 
   // Add a page to the object. This operation unmaps the corresponding

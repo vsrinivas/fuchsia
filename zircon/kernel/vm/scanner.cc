@@ -321,7 +321,7 @@ void scanner_push_disable_count() {
   if (scanner_disable_count == 0) {
     scanner_operation.fetch_or(kScannerOpDisable);
     scanner_request_event.Signal();
-    pmm_physical_page_borrowing_config()->set_enabled(false);
+    pmm_physical_page_borrowing_config()->set_borrowing_enabled(false);
   }
   scanner_disable_count++;
   scanner_disabled_event.Wait(Deadline::infinite());
@@ -335,7 +335,7 @@ void scanner_pop_disable_count() {
     scanner_operation.fetch_or(kScannerOpEnable);
     scanner_request_event.Signal();
     scanner_disabled_event.Unsignal();
-    pmm_physical_page_borrowing_config()->set_enabled(true);
+    pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
   }
 }
 
