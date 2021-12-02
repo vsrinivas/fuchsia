@@ -13,7 +13,8 @@ use {
     async_trait::async_trait,
     clonable_error::ClonableError,
     cm_rust::{FidlIntoNative, ResolverRegistration},
-    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon::Status,
     std::{collections::HashMap, sync::Arc},
     thiserror::Error,
@@ -184,11 +185,22 @@ pub async fn read_and_validate_manifest(
         }
         _ => return Err(ResolverError::RemoteInvalidData),
     };
-    let component_decl: fsys::ComponentDecl = fidl::encoding::decode_persistent(&bytes)
-        .map_err(|err| ResolverError::manifest_invalid(err))?;
-    cm_fidl_validator::fsys::validate(&component_decl)
-        .map_err(|e| ResolverError::manifest_invalid(e))?;
-    Ok(component_decl.fidl_into_native())
+
+    Ok(match fidl::encoding::decode_persistent::<fsys::ComponentDecl>(&bytes) {
+        Ok(component_decl) => {
+            cm_fidl_validator::fsys::validate(&component_decl)
+                .map_err(|e| ResolverError::manifest_invalid(e))?;
+            component_decl.fidl_into_native()
+        }
+        Err(_) => {
+            let component_decl: fdecl::Component =
+                fidl::encoding::decode_persistent::<fdecl::Component>(&bytes)
+                    .map_err(|err| ResolverError::manifest_invalid(err))?;
+            cm_fidl_validator::fdecl::validate(&component_decl)
+                .map_err(|e| ResolverError::manifest_invalid(e))?;
+            component_decl.fidl_into_native()
+        }
+    })
 }
 
 /// Errors produced by `Resolver`.
@@ -281,10 +293,18 @@ struct RemoteError(fsys::ResolverError);
 
 #[cfg(test)]
 mod tests {
-    use crate::model::component::ComponentInstance;
-    use crate::model::environment::Environment;
-    use std::sync::Weak;
-    use {super::*, anyhow::format_err};
+    use {
+        super::*,
+        crate::model::{component::ComponentInstance, environment::Environment},
+        anyhow::format_err,
+        cm_rust::convert as fdecl,
+        cm_rust::NativeIntoFidl,
+        cm_rust_testing::new_decl_from_json,
+        fidl_fuchsia_sys2 as fsys,
+        lazy_static::lazy_static,
+        serde_json::json,
+        std::sync::Weak,
+    };
 
     struct MockOkResolver {
         pub expected_url: String,
@@ -402,4 +422,67 @@ mod tests {
         registry.register("fuchsia-pkg".to_string(), Box::new(resolver_a));
         registry.register("fuchsia-boot".to_string(), Box::new(resolver_b));
     }
+
+    lazy_static! {
+        static ref COMPONENT_DECL: cm_rust::ComponentDecl = new_decl_from_json(json!(
+        {
+            "include": [ "syslog/client.shard.cml" ],
+            "program": {
+                "runner": "elf",
+                "binary": "bin/example",
+            },
+            "children": [
+                {
+                    "name": "logger",
+                    "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    "environment": "#env_one",
+                },
+            ],
+            "collections": [
+                {
+                    "name": "modular",
+                    "durability": "persistent",
+                },
+            ],
+            "capabilities": [
+                {
+                    "protocol": "fuchsia.logger.Log2",
+                    "path": "/svc/fuchsia.logger.Log2",
+                },
+            ],
+            "use": [
+                {
+                    "protocol": "fuchsia.fonts.LegacyProvider",
+                },
+            ],
+            "environments": [
+                {
+                    "name": "env_one",
+                    "extends": "none",
+                    "__stop_timeout_ms": 1337,
+                },
+            ],
+            "facets": {
+                "author": "Fuchsia",
+            }}))
+        .expect("failed to construct manifest");
+    }
+
+    macro_rules! test_read_and_validate_manifest {
+        ($label:ident) => {
+            paste::paste! {
+                #[fuchsia::test]
+                async fn [<test _ read _ and _ validate _ manifest _ $label>]() {
+                    let manifest = fmem::Data::Bytes(
+                        fidl::encoding::encode_persistent::<$label::ComponentDecl>(&mut (COMPONENT_DECL.clone()).native_into_fidl()).expect("failed to encode manifest")
+                    );
+                    let actual = read_and_validate_manifest(manifest).await.expect("failed to decode manifest");
+                    assert_eq!(actual, COMPONENT_DECL.clone());
+                }
+            }
+        };
+    }
+
+    test_read_and_validate_manifest!(fsys);
+    test_read_and_validate_manifest!(fdecl);
 }
