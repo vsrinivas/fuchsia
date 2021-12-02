@@ -141,5 +141,6 @@ group("tests") {
   deps = [
     ":sdmmc-bind_test",
     ":sdmmc-test",
+    "hardware-test",
   ]
 }

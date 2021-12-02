@@ -1,0 +1,38 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("hardware-test-bin") {
+  output_name = "sdmmc_hardware_test"
+  sources = [
+    "hardware-test.cc",
+    "main.cc",
+    "sdmmc-test-device-controller.cc",
+  ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.sdio:fuchsia.hardware.sdio_banjo_cpp",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.gpio:fuchsia.hardware.gpio_llcpp",
+    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
+    "//sdk/fidl/fuchsia.hardware.sdio:fuchsia.hardware.sdio_llcpp",
+    "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zxc",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+# fuchsia_test_component("hardware-test-component") {
+#   component_name = "sdmmc-hardware-test"
+#   manifest = "hardware-test.cml"
+#   deps = [ ":hardware-test-bin" ]
+# }
+
+fuchsia_shell_package("hardware-test") {
+  package_name = "sdmmc-hardware-test"
+  deps = [ ":hardware-test-bin" ]
+}
