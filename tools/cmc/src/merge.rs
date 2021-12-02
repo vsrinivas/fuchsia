@@ -26,8 +26,10 @@ pub fn merge(
     fromfile: Option<PathBuf>,
     depfile: Option<PathBuf>,
 ) -> Result<(), Error> {
-    if let Some(path) = fromfile {
-        let reader = BufReader::new(fs::File::open(path)?);
+    if let Some(path) = &fromfile {
+        let reader = BufReader::new(fs::File::open(path).map_err(|e| {
+            Error::invalid_args(format!("Failed to open --fromfile \"{:?}\": {}", path, e))
+        })?);
         for line in reader.lines() {
             match line {
                 Ok(value) => files.push(PathBuf::from(value)),

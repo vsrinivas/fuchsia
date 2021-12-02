@@ -24,7 +24,11 @@ use {
 /// parser first.
 pub fn json_or_json5_from_file(file: &PathBuf) -> Result<Value, Error> {
     let mut buffer = String::new();
-    fs::File::open(&file)?.read_to_string(&mut buffer)?;
+    fs::File::open(&file)
+        .map_err(|e| {
+            Error::invalid_args(format!("Could not open file at path \"{:?}\": {}", file, e))
+        })?
+        .read_to_string(&mut buffer)?;
 
     serde_json::from_str(&buffer).or_else(|_| {
         // If JSON parsing fails, try JSON5 parsing (which is slower)
