@@ -39,6 +39,7 @@ executable("lz4_encoding_unittest_exe") {
     "//src/developer/forensics/testing:unit_test_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//third_party/re2",
   ]
 }
 

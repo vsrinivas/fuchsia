@@ -9,10 +9,11 @@
 #include <lib/zx/time.h>
 
 #include <cmath>
-#include <regex>
 #include <sstream>
 #include <string>
 #include <vector>
+
+#include <re2/re2.h>
 
 #include "src/developer/forensics/feedback_data/constants.h"
 #include "src/lib/files/directory.h"
@@ -34,8 +35,8 @@ namespace {
 // experienced significant performance issue when this was not done and the log being sorted was
 // large.
 bool MatchesLogMessage(std::string_view line) {
-  std::regex line_start("^\\[\\d{5,9}\\.\\d{3}\\]\\[\\d{5,9}\\]\\[\\d{5,9}\\]");
-  return std::regex_search(line.cbegin(), line.cend(), line_start);
+  re2::RE2 line_start("^\\[\\d{5,9}\\.\\d{3}\\]\\[\\d{5,9}\\]\\[\\d{5,9}\\]");
+  return re2::RE2::PartialMatch(line, line_start);
 }
 
 std::string MakeRepeatedWarning(const size_t repeat_count) {

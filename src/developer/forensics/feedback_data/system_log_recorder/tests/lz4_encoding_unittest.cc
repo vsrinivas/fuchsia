@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <regex>
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <re2/re2.h>
 
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/identity_decoder.h"
 #include "src/developer/forensics/feedback_data/system_log_recorder/encoding/identity_encoder.h"
@@ -21,7 +20,7 @@ namespace system_log_recorder {
 namespace {
 
 const std::string kDecodingErrorStr = "!!! DECODING ERROR !!!\n";
-const std::regex kDecodingSizeError(
+const re2::RE2 kDecodingSizeError(
     "(.*)(!!! CANNOT DECODE)(.*)(THERE ARE ONLY)(.*)(BYTES LEFT !!!\n)");
 
 class Lz4ChunkDecoder : public Lz4Decoder {
@@ -59,7 +58,7 @@ TEST(EncodingTest, TestEncodeDecode_IncompleteData_NoContent) {
   const std::string encoded(encoded_full.begin(), encoded_full.begin() + 2);
   const std::string decoded = decoder.Decode(encoded);
 
-  bool match = std::regex_search(decoded.cbegin(), decoded.cend(), kDecodingSizeError);
+  bool match = re2::RE2::PartialMatch(decoded, kDecodingSizeError);
   EXPECT_TRUE(match);
 }
 
@@ -75,7 +74,7 @@ TEST(EncodingTest, TestEncodeDecode_IncompleteData_MissingData) {
   const std::string encoded(encoded_full.begin(), encoded_full.end() - 1);
   const std::string decoded = decoder.Decode(encoded);
 
-  bool match = std::regex_search(decoded.cbegin(), decoded.cend(), kDecodingSizeError);
+  bool match = re2::RE2::PartialMatch(decoded, kDecodingSizeError);
   EXPECT_TRUE(match);
 }
 

@@ -8,9 +8,10 @@
 
 #include <algorithm>
 #include <cctype>
-#include <regex>
 #include <sstream>
 #include <string_view>
+
+#include <re2/re2.h>
 
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -27,68 +28,53 @@ namespace {
 constexpr std::string_view kDartModulesName = "<_>";
 
 // Unsymbolicated stack traces have 16 groups of "***" on the second line.
-static const std::regex* const kUnsymbolicatedDartStackTraceRegex =
-    new std::regex(R"((?:\*{3}\s{0,1}){16})");
+static const re2::RE2* const kUnsymbolicatedDartStackTraceRegex =
+    new re2::RE2(R"((?:\*{3}\s{0,1}){16})");
 
 bool MatchesUnsymbolicatedDartStackTrace(const std::vector<std::string>& lines) {
-  return lines.size() >= 2 && std::regex_match(lines[1], *kUnsymbolicatedDartStackTraceRegex);
+  return lines.size() >= 2 && re2::RE2::FullMatch(lines[1], *kUnsymbolicatedDartStackTraceRegex);
 }
 
 // Regexes and functions for extracting information from unsymbolicated Dart stack traces.
 //
 // Stack frame.
-static const std::regex* const kStackFrameRegex =
-    new std::regex(R"(\s*#\d{2} abs ([\da-f]+)(?: virt [\da-f]+)? .*$)");
+static const re2::RE2* const kStackFrameRegex =
+    new re2::RE2(R"(\s*#\d{2} abs ([\da-f]+)(?: virt [\da-f]+)? .*$)");
 
 std::optional<uint64_t> TryMatchStackAddress(const std::string& line) {
-  std::smatch stack_frame_match;
-  if (!std::regex_match(line, stack_frame_match, *kStackFrameRegex)) {
-    return std::nullopt;
-  }
-
-  if (stack_frame_match.size() < 2) {
+  std::string address;
+  if (!re2::RE2::FullMatch(line, *kStackFrameRegex, &address)) {
     return std::nullopt;
   }
 
   // The first match is the whole line, the second is the absolute address, and the third is the
   // virtual address.
-  return std::strtoull(stack_frame_match[1].str().c_str(), nullptr, 16);
+  return std::strtoull(address.c_str(), nullptr, 16);
 }
 
 // Build id.
-static const std::regex* const kBuildIdRegex = new std::regex(R"(\s*build_id: '([a-f\d]+)')");
+static const re2::RE2* const kBuildIdRegex = new re2::RE2(R"(\s*build_id: '([a-f\d]+)')");
 
 std::optional<std::string> TryMatchBuildId(const std::string& line) {
-  std::smatch build_id_match;
-  if (!std::regex_match(line, build_id_match, *kBuildIdRegex)) {
+  std::string build_id;
+  if (!re2::RE2::FullMatch(line, *kBuildIdRegex, &build_id)) {
     return std::nullopt;
   }
 
-  if (build_id_match.size() < 2) {
-    return std::nullopt;
-  }
-
-  // The first match is the whole line and the second is the build id
-  return build_id_match[1].str();
+  return build_id;
 }
 
 // Isolate DSO base address.
-static const std::regex* const kIsolateDsoBaseRegex =
-    new std::regex(R"(\s*isolate_dso_base: ([\da-f]+), vm_dso_base: [\da-f]+)");
+static const re2::RE2* const kIsolateDsoBaseRegex =
+    new re2::RE2(R"(\s*isolate_dso_base: ([\da-f]+), vm_dso_base: [\da-f]+)");
 
 std::optional<uint64_t> TryMatchIsolateDsoBase(const std::string& line) {
-  std::smatch isolate_dso_base_match;
-  if (!std::regex_match(line, isolate_dso_base_match, *kIsolateDsoBaseRegex)) {
+  std::string dso_base;
+  if (!re2::RE2::FullMatch(line, *kIsolateDsoBaseRegex, &dso_base)) {
     return std::nullopt;
   }
 
-  if (isolate_dso_base_match.size() < 2) {
-    return std::nullopt;
-  }
-
-  // The first match is the whole line, the second is the isolate base address, and the third is the
-  // vm base address.
-  return std::strtoull(isolate_dso_base_match[1].str().c_str(), nullptr, 16);
+  return std::strtoull(dso_base.c_str(), nullptr, 16);
 }
 
 std::string ToHexString(const uint64_t value) {

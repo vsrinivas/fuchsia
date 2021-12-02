@@ -307,6 +307,7 @@ source_set("report_util") {
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//third_party/re2",
   ]
 }
 
