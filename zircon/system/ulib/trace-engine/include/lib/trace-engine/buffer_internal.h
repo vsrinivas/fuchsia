@@ -15,8 +15,12 @@
 
 #include <lib/trace-engine/context.h>
 
+#ifdef __cplusplus
+
 namespace trace {
 namespace internal {
+
+#endif  // __cplusplus
 
 // This header provides framing information about the buffer, for use in
 // implementing circular buffering and double(streaming) buffering.
@@ -123,6 +127,8 @@ struct trace_buffer_header {
   uint64_t reserved[7];
 };
 
+#ifdef __cplusplus
+
 static_assert(sizeof(trace_buffer_header) == 128, "");
 
 }  // namespace internal
@@ -140,5 +146,7 @@ void trace_context_snapshot_buffer_header_internal(trace_prolonged_context_t* co
                                                    ::trace::internal::trace_buffer_header* header);
 
 __END_CDECLS
+
+#endif  // __cplusplus
 
 #endif  // ZIRCON_SYSTEM_ULIB_LIB_TRACE_ENGINE_BUFFER_INTERNAL_H_
