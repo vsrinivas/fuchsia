@@ -287,7 +287,7 @@ void IntelHDAStream::GetProperties(GetPropertiesRequestView request,
   // We don't know what our FIFO depth is going to be if our format has not been set yet.
   properties.set_fifo_depth(bytes_per_frame_ ? fifo_depth_ : 0);
   // Report this properly based on the codec path delay.
-  properties.set_external_delay(0).set_needs_cache_flush_or_invalidate(true);
+  properties.set_external_delay(allocator, 0).set_needs_cache_flush_or_invalidate(true);
   completer.Reply(std::move(properties));
 }
 
