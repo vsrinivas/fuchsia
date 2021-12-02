@@ -319,9 +319,9 @@ type endpoint struct {
 	ep tcpip.Endpoint
 
 	mu struct {
-		sync.Mutex
+		sync.RWMutex
 		refcount         uint32
-		sockOptTimestamp bool
+		sockOptTimestamp socket.TimestampOption
 	}
 
 	transProto tcpip.TransportProtocolNumber
@@ -495,18 +495,39 @@ func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseNetworkSocketGetPeerNa
 	}), nil
 }
 
+// TODO(https://fxbug.dev/86944): Remove after ABI transition.
 func (ep *endpoint) GetTimestamp(fidl.Context) (socket.BaseSocketGetTimestampResult, error) {
-	ep.mu.Lock()
-	value := ep.mu.sockOptTimestamp
-	ep.mu.Unlock()
+	ep.mu.RLock()
+	value := ep.mu.sockOptTimestamp == socket.TimestampOptionMicrosecond
+	ep.mu.RUnlock()
 	return socket.BaseSocketGetTimestampResultWithResponse(socket.BaseSocketGetTimestampResponse{Value: value}), nil
 }
 
+// TODO(https://fxbug.dev/86944): Remove after ABI transition.
 func (ep *endpoint) SetTimestamp(_ fidl.Context, value bool) (socket.BaseSocketSetTimestampResult, error) {
+	ep.mu.Lock()
+	if value {
+		ep.mu.sockOptTimestamp = socket.TimestampOptionMicrosecond
+	} else {
+		ep.mu.sockOptTimestamp = socket.TimestampOptionDisabled
+	}
+	ep.mu.Unlock()
+	return socket.BaseSocketSetTimestampResultWithResponse(socket.BaseSocketSetTimestampResponse{}), nil
+}
+
+// TODO(https://fxbug.dev/86944): Rename into GetTimestamp after ABI transition.
+func (ep *endpoint) GetTimestamp2(_ fidl.Context) (socket.BaseSocketGetTimestamp2Result, error) {
+	ep.mu.RLock()
+	value := ep.mu.sockOptTimestamp
+	ep.mu.RUnlock()
+	return socket.BaseSocketGetTimestamp2ResultWithResponse(socket.BaseSocketGetTimestamp2Response{Value: value}), nil
+}
+
+func (ep *endpoint) SetTimestamp2(_ fidl.Context, value socket.TimestampOption) (socket.BaseSocketSetTimestamp2Result, error) {
 	ep.mu.Lock()
 	ep.mu.sockOptTimestamp = value
 	ep.mu.Unlock()
-	return socket.BaseSocketSetTimestampResultWithResponse(socket.BaseSocketSetTimestampResponse{}), nil
+	return socket.BaseSocketSetTimestamp2ResultWithResponse(socket.BaseSocketSetTimestamp2Response{}), nil
 }
 
 func (ep *endpoint) domain() (socket.Domain, tcpip.Error) {
@@ -1674,13 +1695,23 @@ func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 }
 
 func (s *datagramSocket) socketControlMessagesToFIDL(cmsg tcpip.ControlMessages) socket.SocketRecvControlData {
-	s.mu.Lock()
-	timestampEnabled := s.endpoint.mu.sockOptTimestamp
-	s.mu.Unlock()
+	s.mu.RLock()
+	sockOptTimestamp := s.endpoint.mu.sockOptTimestamp
+	s.mu.RUnlock()
+
 	var controlData socket.SocketRecvControlData
-	if timestampEnabled {
+	switch sockOptTimestamp {
+	case socket.TimestampOptionDisabled:
+	case socket.TimestampOptionNanosecond:
+		controlData.SetTimestamp(socket.TimestampWithNanoseconds(cmsg.Timestamp.UnixNano()))
+		// TODO(https://fxbug.dev/86944): Remove after ABI transition.
 		controlData.SetTimestampNs(cmsg.Timestamp.UnixNano())
+	case socket.TimestampOptionMicrosecond:
+		controlData.SetTimestamp(socket.TimestampWithMicroseconds(cmsg.Timestamp.UnixMicro()))
+	default:
+		panic(fmt.Sprintf("unknown timestamp option: %d", sockOptTimestamp))
 	}
+
 	return controlData
 }
 

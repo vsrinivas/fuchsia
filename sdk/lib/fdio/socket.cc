@@ -187,16 +187,34 @@ class FidlControlDataProcessor {
  private:
   socklen_t Store(fsocket::wire::SocketRecvControlData const& control_data) {
     socklen_t total = 0;
-    if (control_data.has_timestamp_ns()) {
-      std::chrono::nanoseconds ns(control_data.timestamp_ns());
-      const struct timeval tv = {
-          .tv_sec = std::chrono::duration_cast<std::chrono::seconds>(ns).count(),
-          .tv_usec =
-              std::chrono::duration_cast<std::chrono::microseconds>(ns % std::chrono::seconds(1))
-                  .count(),
-      };
-      total += StoreControlMessage(SOL_SOCKET, SO_TIMESTAMP, &tv, sizeof(tv));
+
+    if (control_data.has_timestamp()) {
+      fsocket::wire::Timestamp timestamp = control_data.timestamp();
+      switch (timestamp.which()) {
+        case fsocket::wire::Timestamp::Tag::kNanoseconds: {
+          std::chrono::duration t = std::chrono::nanoseconds(timestamp.nanoseconds());
+          std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(t);
+          const struct timespec ts = {
+              .tv_sec = sec.count(),
+              .tv_nsec = std::chrono::duration_cast<std::chrono::nanoseconds>(t - sec).count(),
+          };
+          total += StoreControlMessage(SOL_SOCKET, SO_TIMESTAMPNS, &ts, sizeof(ts));
+          break;
+        }
+        case fsocket::wire::Timestamp::Tag::kMicroseconds: {
+          std::chrono::duration t =
+              std::chrono::microseconds(control_data.timestamp().microseconds());
+          std::chrono::seconds sec = std::chrono::duration_cast<std::chrono::seconds>(t);
+          const struct timeval tv = {
+              .tv_sec = sec.count(),
+              .tv_usec = std::chrono::duration_cast<std::chrono::microseconds>(t - sec).count(),
+          };
+          total += StoreControlMessage(SOL_SOCKET, SO_TIMESTAMP, &tv, sizeof(tv));
+          break;
+        }
+      }
     }
+
     return total;
   }
 
@@ -805,8 +823,13 @@ struct BaseSocket {
                               [](const auto& response) { return response.domain; });
         }
       case SO_TIMESTAMP:
-        return proc.Process(client()->GetTimestamp(),
-                            [](const auto& response) { return response.value; });
+        return proc.Process(client()->GetTimestamp2(), [](const auto& response) {
+          return response.value == fsocket::wire::TimestampOption::kMicrosecond;
+        });
+      case SO_TIMESTAMPNS:
+        return proc.Process(client()->GetTimestamp2(), [](const auto& response) {
+          return response.value == fsocket::wire::TimestampOption::kNanosecond;
+        });
       case SO_PROTOCOL:
         if constexpr (std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>) {
           return proc.Process(client()->GetInfo(), [](const auto& response) {
@@ -911,7 +934,17 @@ struct BaseSocket {
     SetSockOptProcessor proc(optval, optlen);
     switch (optname) {
       case SO_TIMESTAMP:
-        return proc.Process<bool>([this](bool value) { return client()->SetTimestamp(value); });
+        return proc.Process<bool>([this](bool value) {
+          using fsocket::wire::TimestampOption;
+          TimestampOption opt = value ? TimestampOption::kMicrosecond : TimestampOption::kDisabled;
+          return client()->SetTimestamp2(opt);
+        });
+      case SO_TIMESTAMPNS:
+        return proc.Process<bool>([this](bool value) {
+          using fsocket::wire::TimestampOption;
+          TimestampOption opt = value ? TimestampOption::kNanosecond : TimestampOption::kDisabled;
+          return client()->SetTimestamp2(opt);
+        });
       case SO_SNDBUF:
         return proc.Process<int32_t>([this](int32_t value) {
           // NB: SNDBUF treated as unsigned, we just cast the value to skip sign check.

@@ -17,6 +17,16 @@ type ShutdownMode = strict bits : uint16 {
     WRITE = 2;
 };
 
+/// Packet timestamp reporting precision options.
+type TimestampOption = strict enum {
+    /// Do not report timestamp.
+    DISABLED = 0;
+    /// Report timestamp with nanosecond precision.
+    NANOSECOND = 1;
+    /// Report timestamp with microsecond precision.
+    MICROSECOND = 2;
+};
+
 /// A socket.
 protocol BaseSocket {
     compose fuchsia.io.Node;
@@ -133,12 +143,30 @@ protocol BaseSocket {
     }) error fuchsia.posix.Errno;
 
     /// Set `SOL_SOCKET` -> `SO_TIMESTAMP`.
+    // TODO(https://fxbug.dev/86944): Remove after ABI transition.
+    @deprecated("Use SetTimestamp2 instead")
     SetTimestamp(struct {
         value bool;
     }) -> (struct {}) error fuchsia.posix.Errno;
     /// Get `SOL_SOCKET` -> `SO_TIMESTAMP`.
+    // TODO(https://fxbug.dev/86944): Remove after ABI transition.
+    @deprecated("Use GetTimestamp2 instead")
     GetTimestamp() -> (struct {
         value bool;
+    }) error fuchsia.posix.Errno;
+
+    /// Set `SOL_SOCKET` -> `SO_TIMESTAMP` or `SO_TIMESTAMPNS`.
+    // These two options are mutually exclusive. Enabling one disables the
+    // other. Disabling either disables both.
+    // https://github.com/torvalds/linux/blob/dcd68326d29/net/core/sock.c#L790-L801
+    // TODO(https://fxbug.dev/86944): Rename into SetTimestamp.
+    SetTimestamp2(struct {
+        value TimestampOption;
+    }) -> (struct {}) error fuchsia.posix.Errno;
+    /// Get `SOL_SOCKET` -> `SO_TIMESTAMP` or `SO_TIMESTAMPNS`.
+    // TODO(https://fxbug.dev/86944): Rename into GetTimestamp.
+    GetTimestamp2() -> (struct {
+        value TimestampOption;
     }) error fuchsia.posix.Errno;
 };
 
@@ -572,13 +600,29 @@ type Empty = struct {};
 
 /// Socket level ancillary data that can be received.
 ///
-/// These match the POSIX `SOL_SOCKET` options.
+/// These match control messages with a `SOL_SOCKET` level.
 type SocketRecvControlData = table {
     /// The time in nanoseconds since epoch (January 1 1970 GMT) at which a
     /// packet was received.
     ///
-    /// Present if the `SOL_SOCKET` -> `SO_TIMESTAMP` option is enabled.
+    /// Present if a timestamp option is enabled. Refer to
+    /// [`fuchsia.posix.socket.BaseSocket/GetTimestamp2`] and
+    /// [`fuchsia.posix.socket.BaseSocket/SetTimestamp2`].
+    // TODO(https://fxbug.dev/86944): After ABI transition, move `timestamp`
+    // field here, or use that unused field for another socket control message.
     1: timestamp_ns int64;
+
+    /// The time at which a packet was received.
+    ///
+    /// Present if a timestamp option is enabled. Refer to
+    /// [`fuchsia.posix.socket.BaseSocket/GetTimestamp2`] and
+    /// [`fuchsia.posix.socket.BaseSocket/SetTimestamp2`].
+    2: timestamp strict union {
+        /// Time in nanoseconds since epoch (January 1 1970 GMT).
+        1: nanoseconds int64;
+        /// Time in microseconds since epoch (January 1 1970 GMT).
+        2: microseconds int64;
+    };
 };
 
 /// Network socket (L3) ancillary data that can be sent.

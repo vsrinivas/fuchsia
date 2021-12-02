@@ -263,6 +263,10 @@ TEST(LocalhostTest, IpAddMembershipAny) {
 struct SockOption {
   int level;
   int option;
+
+  bool operator==(const SockOption& other) const {
+    return level == other.level && option == other.option;
+  }
 };
 
 constexpr int INET_ECN_MASK = 3;
@@ -414,6 +418,13 @@ class SocketOptsTest : public SocketKindTest {
     return {
         .level = SOL_SOCKET,
         .option = SO_TIMESTAMP,
+    };
+  }
+
+  constexpr static SockOption GetTimestampNs() {
+    return {
+        .level = SOL_SOCKET,
+        .option = SO_TIMESTAMPNS,
     };
   }
 };
@@ -1366,20 +1377,135 @@ TEST_P(SocketOptsTest, SetTimestamp) {
   ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
       << strerror(errno);
 
-  int get = -1;
-  socklen_t get_len = sizeof(get);
-  EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
-  EXPECT_EQ(get_len, sizeof(get));
-  EXPECT_EQ(get, kSockOptOn);
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, kSockOptOn);
+  }
 
   ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
       << strerror(errno);
 
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, kSockOptOff);
+  }
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, TimestampNsDefault) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  int get = -1;
+  socklen_t get_len = sizeof(get);
+  SockOption t = GetTimestampNs();
   EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
   EXPECT_EQ(get_len, sizeof(get));
   EXPECT_EQ(get, kSockOptOff);
 
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, SetTimestampNs) {
+  fbl::unique_fd s;
+  ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+  SockOption t = GetTimestampNs();
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOn, sizeof(kSockOptOn)), 0)
+      << strerror(errno);
+
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, kSockOptOn);
+  }
+
+  ASSERT_EQ(setsockopt(s.get(), t.level, t.option, &kSockOptOff, sizeof(kSockOptOff)), 0)
+      << strerror(errno);
+
+  {
+    int get = -1;
+    socklen_t get_len = sizeof(get);
+    EXPECT_EQ(getsockopt(s.get(), t.level, t.option, &get, &get_len), 0) << strerror(errno);
+    EXPECT_EQ(get_len, sizeof(get));
+    EXPECT_EQ(get, kSockOptOff);
+  }
+
+  EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+}
+
+TEST_P(SocketOptsTest, UpdateAnyTimestampDisablesOtherTimestampOptions) {
+  constexpr std::pair<SockOption, const char*> kOpts[] = {
+      std::make_pair(GetTimestamp(), "SO_TIMESTAMP"),
+      std::make_pair(GetTimestampNs(), "SO_TIMESTAMPNS"),
+  };
+  constexpr int optvals[] = {kSockOptOff, kSockOptOn};
+
+  for (const auto& [opt_to_enable, opt_to_enable_name] : kOpts) {
+    SCOPED_TRACE("Enable option " + std::string(opt_to_enable_name));
+    for (const auto& [opt_to_update, opt_to_update_name] : kOpts) {
+      SCOPED_TRACE("Update option " + std::string(opt_to_update_name));
+      if (opt_to_enable == opt_to_update) {
+        continue;
+      }
+      for (const int optval : optvals) {
+        SCOPED_TRACE("Update value " + std::to_string(optval));
+        fbl::unique_fd s;
+        ASSERT_TRUE(s = NewSocket()) << strerror(errno);
+
+        ASSERT_EQ(setsockopt(s.get(), opt_to_enable.level, opt_to_enable.option, &kSockOptOn,
+                             sizeof(kSockOptOn)),
+                  0)
+            << strerror(errno);
+        {
+          int get = -1;
+          socklen_t get_len = sizeof(get);
+          ASSERT_EQ(getsockopt(s.get(), opt_to_enable.level, opt_to_enable.option, &get, &get_len),
+                    0)
+              << strerror(errno);
+          EXPECT_EQ(get_len, sizeof(get));
+          EXPECT_EQ(get, kSockOptOn);
+        }
+
+        ASSERT_EQ(
+            setsockopt(s.get(), opt_to_update.level, opt_to_update.option, &optval, sizeof(optval)),
+            0)
+            << strerror(errno);
+        {
+          int get = -1;
+          socklen_t get_len = sizeof(get);
+          ASSERT_EQ(getsockopt(s.get(), opt_to_update.level, opt_to_update.option, &get, &get_len),
+                    0)
+              << strerror(errno);
+          EXPECT_EQ(get_len, sizeof(get));
+          EXPECT_EQ(get, optval);
+        }
+
+        // The initially enabled option should be disabled after the mutually exclusive option is
+        // updated.
+        {
+          int get = -1;
+          socklen_t get_len = sizeof(get);
+          ASSERT_EQ(getsockopt(s.get(), opt_to_enable.level, opt_to_enable.option, &get, &get_len),
+                    0)
+              << strerror(errno);
+          EXPECT_EQ(get_len, sizeof(get));
+          EXPECT_EQ(get, kSockOptOff);
+        }
+
+        EXPECT_EQ(close(s.release()), 0) << strerror(errno);
+      }
+    }
+  }
 }
 
 INSTANTIATE_TEST_SUITE_P(LocalhostTest, SocketOptsTest,
@@ -5365,6 +5491,8 @@ std::string socketDomainAndOptionToString(
           switch (type) {
             case SO_TIMESTAMP:
               return "SO_TIMESTAMP";
+            case SO_TIMESTAMPNS:
+              return "SO_TIMESTAMPNS";
             default:
               return std::to_string(type);
           }
@@ -5579,11 +5707,17 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessage) {
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvTests, NetDatagramSocketsCmsgRecvTest,
                          testing::Combine(testing::Values(AF_INET, AF_INET6),
-                                          testing::Values(CmsgSocketOption{
-                                              .level = SOL_SOCKET,
-                                              .cmsg_type = SO_TIMESTAMP,
-                                              .optname_to_enable_receive = SO_TIMESTAMP,
-                                          })),
+                                          testing::Values(
+                                              CmsgSocketOption{
+                                                  .level = SOL_SOCKET,
+                                                  .cmsg_type = SO_TIMESTAMP,
+                                                  .optname_to_enable_receive = SO_TIMESTAMP,
+                                              },
+                                              CmsgSocketOption{
+                                                  .level = SOL_SOCKET,
+                                                  .cmsg_type = SO_TIMESTAMPNS,
+                                                  .optname_to_enable_receive = SO_TIMESTAMPNS,
+                                              })),
                          socketDomainAndOptionToString);
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgRecvIPv4Tests, NetDatagramSocketsCmsgRecvTest,
@@ -5611,7 +5745,7 @@ class NetDatagramSocketsCmsgTimestampTest : public NetDatagramSocketsCmsgTestBas
 };
 
 TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsg) {
-  std::chrono::duration before = std::chrono::system_clock::now().time_since_epoch();
+  const std::chrono::duration before = std::chrono::system_clock::now().time_since_epoch();
   char control[CMSG_SPACE(sizeof(timeval)) + 1];
   ASSERT_NO_FATAL_FAILURE(
       SendAndCheckReceivedMessage(control, sizeof(control), [before](msghdr& msghdr) {
@@ -5624,9 +5758,9 @@ TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsg) {
 
         timeval received_tv;
         memcpy(&received_tv, CMSG_DATA(cmsg), sizeof(received_tv));
-        std::chrono::duration received = std::chrono::seconds(received_tv.tv_sec) +
-                                         std::chrono::microseconds(received_tv.tv_usec);
-        std::chrono::duration after = std::chrono::system_clock::now().time_since_epoch();
+        const std::chrono::duration received = std::chrono::seconds(received_tv.tv_sec) +
+                                               std::chrono::microseconds(received_tv.tv_usec);
+        const std::chrono::duration after = std::chrono::system_clock::now().time_since_epoch();
         // It is possible for the clock to 'jump'. To avoid flakiness, do not check the received
         // timestamp if the clock jumped back in time.
         if (before <= after) {
@@ -5639,7 +5773,7 @@ TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsg) {
 }
 
 TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsgUnalignedControlBuffer) {
-  std::chrono::duration before = std::chrono::system_clock::now().time_since_epoch();
+  const std::chrono::duration before = std::chrono::system_clock::now().time_since_epoch();
   char control[CMSG_SPACE(sizeof(timeval)) + 1];
   // Pass an unaligned control buffer.
   ASSERT_NO_FATAL_FAILURE(
@@ -5661,9 +5795,9 @@ TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsgUnalignedControlBuffer) {
 
         timeval received_tv;
         memcpy(&received_tv, CMSG_DATA(cmsg), sizeof(received_tv));
-        std::chrono::duration received = std::chrono::seconds(received_tv.tv_sec) +
-                                         std::chrono::microseconds(received_tv.tv_usec);
-        std::chrono::duration after = std::chrono::system_clock::now().time_since_epoch();
+        const std::chrono::duration received = std::chrono::seconds(received_tv.tv_sec) +
+                                               std::chrono::microseconds(received_tv.tv_usec);
+        const std::chrono::duration after = std::chrono::system_clock::now().time_since_epoch();
         // It is possible for the clock to 'jump'. To avoid flakiness, do not check the received
         // timestamp if the clock jumped back in time.
         if (before <= after) {
@@ -5672,7 +5806,7 @@ TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsgUnalignedControlBuffer) {
         }
 
         // Note: We can't use CMSG_NXTHDR because:
-        // * it *must* to take the unaligned cmsghdr pointer from the control buffer.
+        // * it *must* take the unaligned cmsghdr pointer from the control buffer.
         // * and it may access its members (cmsg_len), which would be an undefined behavior.
         // So we skip the CMSG_NXTHDR assertion that shows that there is no other control message.
       }));
@@ -5680,6 +5814,93 @@ TEST_P(NetDatagramSocketsCmsgTimestampTest, RecvCmsgUnalignedControlBuffer) {
 
 INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgTimestampTests, NetDatagramSocketsCmsgTimestampTest,
                          testing::Values(AF_INET, AF_INET6),
+                         [](const auto info) { return socketDomainToString(info.param); });
+
+class NetDatagramSocketsCmsgTimestampNsTest : public NetDatagramSocketsCmsgTestBase,
+                                              public testing::TestWithParam<sa_family_t> {
+ protected:
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpDatagramSockets(GetParam()));
+
+    // Enable receiving SO_TIMESTAMPNS control message.
+    const int optval = 1;
+    ASSERT_EQ(setsockopt(bound().get(), SOL_SOCKET, SO_TIMESTAMPNS, &optval, sizeof(optval)), 0)
+        << strerror(errno);
+  }
+
+  void TearDown() override { EXPECT_NO_FATAL_FAILURE(TearDownDatagramSockets()); }
+};
+
+TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvMsg) {
+  const std::chrono::duration before = std::chrono::system_clock::now().time_since_epoch();
+  char control[CMSG_SPACE(sizeof(timespec)) + 1];
+  ASSERT_NO_FATAL_FAILURE(
+      SendAndCheckReceivedMessage(control, sizeof(control), [&](msghdr& msghdr) {
+        ASSERT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(timeval)));
+        cmsghdr* cmsg;
+        ASSERT_TRUE(cmsg = CMSG_FIRSTHDR(&msghdr));
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(timespec)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_SOCKET);
+        EXPECT_EQ(cmsg->cmsg_type, SO_TIMESTAMPNS);
+
+        timespec received_ts;
+        memcpy(&received_ts, CMSG_DATA(cmsg), sizeof(received_ts));
+        const std::chrono::duration received = std::chrono::seconds(received_ts.tv_sec) +
+                                               std::chrono::nanoseconds(received_ts.tv_nsec);
+        const std::chrono::duration after = std::chrono::system_clock::now().time_since_epoch();
+        // It is possible for the clock to 'jump'. To avoid flakiness, do not check the received
+        // timestamp if the clock jumped back in time.
+        if (before <= after) {
+          ASSERT_GE(received, before);
+          ASSERT_LE(received, after);
+        }
+
+        EXPECT_FALSE(CMSG_NXTHDR(&msghdr, cmsg));
+      }));
+}
+
+TEST_P(NetDatagramSocketsCmsgTimestampNsTest, RecvCmsgUnalignedControlBuffer) {
+  const std::chrono::duration before = std::chrono::system_clock::now().time_since_epoch();
+  char control[CMSG_SPACE(sizeof(timespec)) + 1];
+  // Pass an unaligned control buffer.
+  ASSERT_NO_FATAL_FAILURE(SendAndCheckReceivedMessage(
+      control + 1, CMSG_LEN(sizeof(timespec)), [before](msghdr& msghdr) {
+        ASSERT_EQ(msghdr.msg_controllen, CMSG_SPACE(sizeof(timespec)));
+        // Fetch back the control buffer and confirm it is unaligned.
+        cmsghdr* unaligned_cmsg;
+        ASSERT_TRUE(unaligned_cmsg = CMSG_FIRSTHDR(&msghdr));
+        ASSERT_TRUE(reinterpret_cast<uintptr_t>(unaligned_cmsg) % alignof(cmsghdr) != 0);
+
+        // Do not access the unaligned control header directly as that would be an undefined
+        // behavior. Copy the content to a properly aligned variable first.
+        char aligned_cmsg[CMSG_SPACE(sizeof(timespec))];
+        memcpy(&aligned_cmsg, unaligned_cmsg, sizeof(aligned_cmsg));
+        cmsghdr* cmsg = reinterpret_cast<cmsghdr*>(aligned_cmsg);
+        EXPECT_EQ(cmsg->cmsg_len, CMSG_LEN(sizeof(timespec)));
+        EXPECT_EQ(cmsg->cmsg_level, SOL_SOCKET);
+        EXPECT_EQ(cmsg->cmsg_type, SO_TIMESTAMPNS);
+
+        timespec received_tv;
+        memcpy(&received_tv, CMSG_DATA(cmsg), sizeof(received_tv));
+        const std::chrono::duration received = std::chrono::seconds(received_tv.tv_sec) +
+                                               std::chrono::nanoseconds(received_tv.tv_nsec);
+        const std::chrono::duration after = std::chrono::system_clock::now().time_since_epoch();
+        // It is possible for the clock to 'jump'. To avoid flakiness, do not check the received
+        // timestamp if the clock jumped back in time.
+        if (before <= after) {
+          ASSERT_GE(received, before);
+          ASSERT_LE(received, after);
+        }
+
+        // Note: We can't use CMSG_NXTHDR because:
+        // * it *must* take the unaligned cmsghdr pointer from the control buffer.
+        // * and it may access its members (cmsg_len), which would be an undefined behavior.
+        // So we skip the CMSG_NXTHDR assertion that shows that there is no other control message.
+      }));
+}
+
+INSTANTIATE_TEST_SUITE_P(NetDatagramSocketsCmsgTimestampNsTests,
+                         NetDatagramSocketsCmsgTimestampNsTest, testing::Values(AF_INET, AF_INET6),
                          [](const auto info) { return socketDomainToString(info.param); });
 
 class NetDatagramSocketsCmsgIpTosTest : public NetDatagramSocketsCmsgTestBase,
