@@ -71,8 +71,8 @@ test("ddk-runcompatibilityhook") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_c",
     "//sdk/lib/fdio",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
@@ -85,6 +85,7 @@ test("ddk-runcompatibilityhook") {
 }
 
 fuchsia_unittest_package("ddk-runcompatibilityhook-test-package") {
+  package_name = "ddk-runcompatibilityhook"
   deps = [
     ":ddk-runcompatibilityhook",
     ":ddk-runcompatibilityhook-test",
