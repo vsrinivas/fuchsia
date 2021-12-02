@@ -232,10 +232,24 @@ static inline void unittest_fails(void) {}
                             "Test registered fatal failures in " #statement ".", ##__VA_ARGS__); \
   } while (0)
 
+#define EXPECT_NO_FATAL_FAILURES(statement, ...)                                                 \
+  do {                                                                                           \
+    statement;                                                                                   \
+    LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, false,                                    \
+                            "Test registered fatal failures in " #statement ".", ##__VA_ARGS__); \
+  } while (0)
+
 #define ASSERT_NO_FAILURES(statement, ...)                                                 \
   do {                                                                                     \
     statement;                                                                             \
     LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_TEST_HAS_ERRORS, true,                              \
+                            "Test registered failures in " #statement ".", ##__VA_ARGS__); \
+  } while (0)
+
+#define EXPECT_NO_FAILURES(statement, ...)                                                 \
+  do {                                                                                     \
+    statement;                                                                             \
+    LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_TEST_HAS_ERRORS, false,                             \
                             "Test registered failures in " #statement ".", ##__VA_ARGS__); \
   } while (0)
 
