@@ -1,0 +1,43 @@
+[
+    {
+        "node": "camera-sensor",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.camerasensor2.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "pdev",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_PID.ARM_ISP",
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_DID.MALI_IV009",
+                    "fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID": "0",
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.arm.platform.BIND_PLATFORM_DEV_VID.ARM"
+                }
+            }
+        ]
+    },
+    {
+        "node": "register-reset",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.registers.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_REGISTER_ID": "fuchsia.amlogic.platform.BIND_REGISTER_ID.ISP_RESET"
+                }
+            }
+        ]
+    }
+]

@@ -1,0 +1,28 @@
+[
+    {
+        "node": "gpio-int",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.t931.GPIOZ_PIN_ID.PIN_1"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-reset",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.t931.GPIOZ_PIN_ID.PIN_9"
+                }
+            }
+        ]
+    }
+]

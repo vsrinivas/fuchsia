@@ -1,0 +1,41 @@
+[
+    {
+        "node": "volume-up",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.t931.GPIOZ_PIN_ID.PIN_4",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "mic-privacy",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.t931.GPIOH_PIN_ID.PIN_3",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "cam-mute",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.t931.GPIOA_PIN_ID.PIN_13",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    }
+]

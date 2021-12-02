@@ -59,6 +59,7 @@ driver_bind_rules("sherlock-buttons-bind") {
   rules = "bind/sherlock-buttons.bind"
   header_output = "sherlock-buttons-bind.h"
   bind_output = "sherlock-buttons-bind.bc"
+  tests = "bind-tests/sherlock-buttons-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
@@ -69,6 +70,7 @@ driver_bind_rules("sherlock-touch-bind") {
   rules = "bind/sherlock-touch.bind"
   header_output = "sherlock-touch-bind.h"
   bind_output = "sherlock-touch-bind.bc"
+  tests = "bind-tests/sherlock-touch-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
@@ -80,6 +82,7 @@ driver_bind_rules("luis-touch-bind") {
   rules = "bind/luis-touch.bind"
   header_output = "luis-touch-bind.h"
   bind_output = "luis-touch-bind.bc"
+  tests = "bind-tests/luis-touch-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
@@ -91,6 +94,7 @@ driver_bind_rules("sherlock-pwm-bind") {
   rules = "bind/sherlock-pwm.bind"
   header_output = "sherlock-pwm-bind.h"
   bind_output = "sherlock-pwm-bind.bc"
+  tests = "bind-tests/sherlock-pwm-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
@@ -102,6 +106,7 @@ driver_bind_rules("sherlock-backlight-bind") {
   rules = "bind/sherlock-backlight.bind"
   header_output = "sherlock-backlight-bind.h"
   bind_output = "sherlock-backlight-bind.bc"
+  tests = "bind-tests/sherlock-backlight-test.json"
   deps = [
     "//src/devices/bind/fuchsia.i2c",
     "//src/devices/bind/fuchsia.platform",
@@ -127,6 +132,7 @@ driver_bind_rules("sherlock-mali-bind") {
   rules = "bind/sherlock-mali.bind"
   header_output = "sherlock-mali-bind.h"
   bind_output = "sherlock-mali-bind.bc"
+  tests = "bind-tests/sherlock-mali-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -138,6 +144,7 @@ driver_bind_rules("sherlock-spi-bind") {
   rules = "bind/sherlock-spi.bind"
   header_output = "sherlock-spi-bind.h"
   bind_output = "sherlock-spi-bind.bc"
+  tests = "bind-tests/sherlock-spi-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
@@ -150,6 +157,7 @@ driver_bind_rules("sherlock-tee-bind") {
   rules = "bind/sherlock-tee.bind"
   header_output = "sherlock-tee-bind.h"
   bind_output = "sherlock-tee-bind.bc"
+  tests = "bind-tests/sherlock-tee-test.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.rpmb",
@@ -161,6 +169,7 @@ driver_bind_rules("sherlock-bluetooth-bind") {
   rules = "bind/sherlock-bluetooth.bind"
   header_output = "sherlock-bluetooth-bind.h"
   bind_output = "sherlock-bluetooth-bind.bc"
+  tests = "bind-tests/sherlock-bluetooth-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -172,6 +181,7 @@ driver_bind_rules("sherlock-video-bind") {
   rules = "bind/sherlock-video.bind"
   header_output = "sherlock-video-bind.h"
   bind_output = "sherlock-video-bind.bc"
+  tests = "bind-tests/sherlock-video-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.meson",
@@ -186,6 +196,7 @@ driver_bind_rules("sherlock-video-enc-bind") {
   rules = "bind/sherlock-video-enc.bind"
   header_output = "sherlock-video-enc-bind.h"
   bind_output = "sherlock-video-enc-bind.bc"
+  tests = "bind-tests/sherlock-video-enc-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.meson",
@@ -199,6 +210,7 @@ driver_bind_rules("sherlock-hevc-enc-bind") {
   rules = "bind/sherlock-hevc-enc.bind"
   header_output = "sherlock-hevc-enc-bind.h"
   bind_output = "sherlock-hevc-enc-bind.bc"
+  tests = "bind-tests/sherlock-hevc-enc-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.meson",
@@ -212,6 +224,7 @@ driver_bind_rules("luis-cpu-bind") {
   rules = "bind/luis-cpu.bind"
   header_output = "luis-cpu-bind.h"
   bind_output = "luis-cpu-bind.bc"
+  tests = "bind-tests/luis-cpu-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.meson",
@@ -228,6 +241,7 @@ driver_bind_rules("sherlock-cpu-bind") {
   rules = "bind/sherlock-cpu.bind"
   header_output = "sherlock-cpu-bind.h"
   bind_output = "sherlock-cpu-bind.bc"
+  tests = "bind-tests/sherlock-cpu-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.google.platform",
@@ -240,6 +254,7 @@ driver_bind_rules("sherlock-emmc-bind") {
   rules = "bind/sherlock-emmc.bind"
   header_output = "sherlock-emmc-bind.h"
   bind_output = "sherlock-emmc-bind.bc"
+  tests = "bind-tests/sherlock-emmc-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
@@ -252,6 +267,7 @@ driver_bind_rules("sherlock-nna-bind") {
   rules = "bind/sherlock-nna.bind"
   header_output = "sherlock-nna-bind.h"
   bind_output = "sherlock-nna-bind.bc"
+  tests = "bind-tests/sherlock-nna-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -263,6 +279,7 @@ driver_bind_rules("sherlock-securemem-bind") {
   rules = "bind/sherlock-securemem.bind"
   header_output = "sherlock-securemem-bind.h"
   bind_output = "sherlock-securemem-bind.bc"
+  tests = "bind-tests/sherlock-securemem-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -271,10 +288,11 @@ driver_bind_rules("sherlock-securemem-bind") {
   ]
 }
 
-driver_bind_rules("aml-usb-phy-v2-bind") {
-  rules = "bind/aml-usb-phy-v2.bind"
-  header_output = "aml-usb-phy-v2-bind.h"
-  bind_output = "aml-usb-phy-v2-bind.bc"
+driver_bind_rules("sherlock-aml-usb-phy-v2-bind") {
+  rules = "bind/sherlock-aml-usb-phy-v2.bind"
+  header_output = "sherlock-aml-usb-phy-v2-bind.h"
+  bind_output = "sherlock-aml-usb-phy-v2-bind.bc"
+  tests = "bind-tests/sherlock-aml-usb-phy-v2-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.platform",
@@ -282,30 +300,33 @@ driver_bind_rules("aml-usb-phy-v2-bind") {
   ]
 }
 
-driver_bind_rules("dwc2-phy-bind") {
-  rules = "bind/dwc2-phy.bind"
-  header_output = "dwc2-phy-bind.h"
-  bind_output = "dwc2-phy-bind.bc"
+driver_bind_rules("sherlock-dwc2-phy-bind") {
+  rules = "bind/sherlock-dwc2-phy.bind"
+  header_output = "sherlock-dwc2-phy-bind.h"
+  bind_output = "sherlock-dwc2-phy-bind.bc"
+  tests = "bind-tests/sherlock-dwc2-phy-test.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.usb.phy",
   ]
 }
 
-driver_bind_rules("xhci-bind") {
-  rules = "bind/xhci.bind"
-  header_output = "xhci-bind.h"
-  bind_output = "xhci-bind.bc"
+driver_bind_rules("sherlock-xhci-bind") {
+  rules = "bind/sherlock-xhci.bind"
+  header_output = "sherlock-xhci-bind.h"
+  bind_output = "sherlock-xhci-bind.bc"
+  tests = "bind-tests/sherlock-xhci-test.json"
   deps = [
     "//src/devices/bind/fuchsia.platform",
     "//src/devices/bind/fuchsia.usb.phy",
   ]
 }
 
-driver_bind_rules("gpio-light-bind") {
-  rules = "bind/gpio-light.bind"
-  header_output = "gpio-light-bind.h"
-  bind_output = "gpio-light-bind.bc"
+driver_bind_rules("sherlock-gpio-light-bind") {
+  rules = "bind/sherlock-gpio-light.bind"
+  header_output = "sherlock-gpio-light-bind.h"
+  bind_output = "sherlock-gpio-light-bind.bc"
+  tests = "bind-tests/sherlock-gpio-light-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
@@ -320,6 +341,7 @@ driver_bind_rules("sherlock-light-sensor-bind") {
   rules = "bind/sherlock-light-sensor.bind"
   header_output = "sherlock-light-sensor-bind.h"
   bind_output = "sherlock-light-sensor-bind.bc"
+  tests = "bind-tests/sherlock-light-sensor-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
@@ -331,6 +353,7 @@ driver_bind_rules("sherlock-ot-radio-bind") {
   rules = "bind/sherlock-ot-radio.bind"
   header_output = "sherlock-ot-radio-bind.h"
   bind_output = "sherlock-ot-radio-bind.bc"
+  tests = "bind-tests/sherlock-ot-radio-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.google.platform",
@@ -344,6 +367,7 @@ driver_bind_rules("sherlock-thermal-bind") {
   rules = "bind/sherlock-thermal.bind"
   header_output = "sherlock-thermal-bind.h"
   bind_output = "sherlock-thermal-bind.bc"
+  tests = "bind-tests/sherlock-thermal-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.meson",
@@ -358,6 +382,7 @@ driver_bind_rules("sherlock-sdio-bind") {
   rules = "bind/sherlock-sdio.bind"
   header_output = "sherlock-sdio-bind.h"
   bind_output = "sherlock-sdio-bind.bc"
+  tests = "bind-tests/sherlock-sdio-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
@@ -371,6 +396,7 @@ driver_bind_rules("sherlock-wifi-bind") {
   rules = "bind/sherlock-wifi.bind"
   header_output = "sherlock-wifi-bind.h"
   bind_output = "sherlock-wifi-bind.bc"
+  tests = "bind-tests/sherlock-wifi-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
     "//src/devices/bind/fuchsia.gpio",
@@ -382,6 +408,7 @@ driver_bind_rules("imx227-sensor-bind") {
   rules = "bind/imx227-sensor.bind"
   header_output = "imx227-sensor-bind.h"
   bind_output = "imx227-sensor-bind.bc"
+  tests = "bind-tests/imx227-sensor-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.meson",
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
@@ -398,6 +425,7 @@ driver_bind_rules("camera-gdc-bind") {
   rules = "bind/camera-gdc.bind"
   header_output = "camera-gdc-bind.h"
   bind_output = "camera-gdc-bind.bc"
+  tests = "bind-tests/camera-gdc-test.json"
   deps = [
     "//src/devices/bind/fuchsia.arm.platform",
     "//src/devices/bind/fuchsia.camerasensor2",
@@ -409,6 +437,7 @@ driver_bind_rules("camera-ge2d-bind") {
   rules = "bind/camera-ge2d.bind"
   header_output = "camera-ge2d-bind.h"
   bind_output = "camera-ge2d-bind.bc"
+  tests = "bind-tests/camera-ge2d-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.camerasensor2",
@@ -420,6 +449,7 @@ driver_bind_rules("camera-isp-bind") {
   rules = "bind/camera-isp.bind"
   header_output = "camera-isp-bind.h"
   bind_output = "camera-isp-bind.bc"
+  tests = "bind-tests/camera-isp-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.arm.platform",
@@ -433,6 +463,7 @@ driver_bind_rules("camera-controller-bind") {
   rules = "bind/camera-controller.bind"
   header_output = "camera-controller-bind.h"
   bind_output = "camera-controller-bind.bc"
+  tests = "bind-tests/camera-controller-test.json"
   deps = [
     "//src/devices/bind/fuchsia.gdc",
     "//src/devices/bind/fuchsia.ge2d",
@@ -445,6 +476,7 @@ driver_bind_rules("luis-codec-bind") {
   rules = "bind/luis-codec.bind"
   header_output = "luis-codec-bind.h"
   bind_output = "luis-codec-bind.bc"
+  tests = "bind-tests/luis-codec-test.json"
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
@@ -452,6 +484,7 @@ driver_bind_rules("sherlock-woofer-bind") {
   rules = "bind/sherlock-woofer.bind"
   header_output = "sherlock-woofer-bind.h"
   bind_output = "sherlock-woofer-bind.bc"
+  tests = "bind-tests/sherlock-woofer-test.json"
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
@@ -459,6 +492,7 @@ driver_bind_rules("sherlock-tweeter-left-bind") {
   rules = "bind/sherlock-tweeter-left.bind"
   header_output = "sherlock-tweeter-left-bind.h"
   bind_output = "sherlock-tweeter-left-bind.bc"
+  tests = "bind-tests/sherlock-tweeter-left-test.json"
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
@@ -466,6 +500,7 @@ driver_bind_rules("sherlock-tweeter-right-bind") {
   rules = "bind/sherlock-tweeter-right.bind"
   header_output = "sherlock-tweeter-right-bind.h"
   bind_output = "sherlock-tweeter-right-bind.bc"
+  tests = "bind-tests/sherlock-tweeter-right-test.json"
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
@@ -473,6 +508,7 @@ driver_bind_rules("ernie-tweeter-bind") {
   rules = "bind/ernie-tweeter.bind"
   header_output = "ernie-tweeter-bind.h"
   bind_output = "ernie-tweeter-bind.bc"
+  tests = "bind-tests/ernie-tweeter-test.json"
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
@@ -480,6 +516,7 @@ driver_bind_rules("ernie-woofer-bind") {
   rules = "bind/ernie-woofer.bind"
   header_output = "ernie-woofer-bind.h"
   bind_output = "ernie-woofer-bind.bc"
+  tests = "bind-tests/ernie-woofer-test.json"
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
@@ -487,6 +524,7 @@ driver_bind_rules("luis-power-domain-bind") {
   rules = "bind/luis-power-domain.bind"
   header_output = "luis-power-domain-bind.h"
   bind_output = "luis-power-domain-bind.bc"
+  tests = "bind-tests/luis-power-domain-test.json"
   deps = [ "//src/devices/bind/fuchsia.power" ]
 }
 
@@ -494,6 +532,7 @@ driver_bind_rules("luis-power-impl-bind") {
   rules = "bind/luis-power-impl.bind"
   header_output = "luis-power-impl-bind.h"
   bind_output = "luis-power-impl-bind.bc"
+  tests = "bind-tests/luis-power-impl-test.json"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.t931",
@@ -508,6 +547,7 @@ driver_bind_rules("luis-0p8-ee-buck-bind") {
   rules = "bind/luis-0p8-ee-buck.bind"
   header_output = "luis-0p8-ee-buck-bind.h"
   bind_output = "luis-0p8-ee-buck-bind.bc"
+  tests = "bind-tests/luis-0p8-ee-buck-test.json"
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
@@ -515,6 +555,7 @@ driver_bind_rules("luis-cpu-a-buck-bind") {
   rules = "bind/luis-cpu-a-buck.bind"
   header_output = "luis-cpu-a-buck-bind.h"
   bind_output = "luis-cpu-a-buck-bind.bc"
+  tests = "bind-tests/luis-cpu-a-buck-test.json"
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
@@ -575,15 +616,12 @@ template("sherlock_driver") {
     ]
 
     deps = [
-      ":aml-usb-phy-v2-bind_header",
       ":camera-controller-bind_header",
       ":camera-gdc-bind_header",
       ":camera-ge2d-bind_header",
       ":camera-isp-bind_header",
-      ":dwc2-phy-bind_header",
       ":ernie-tweeter-bind_header",
       ":ernie-woofer-bind_header",
-      ":gpio-light-bind_header",
       ":imx227-sensor-bind_header",
       ":luis-0p8-ee-buck-bind_header",
       ":luis-codec-bind_header",
@@ -592,6 +630,7 @@ template("sherlock_driver") {
       ":luis-power-domain-bind_header",
       ":luis-power-impl-bind_header",
       ":luis-touch-bind_header",
+      ":sherlock-aml-usb-phy-v2-bind_header",
       ":sherlock-backlight-bind_header",
       ":sherlock-bluetooth-bind_header",
       ":sherlock-buttons-bind_header",
@@ -599,7 +638,9 @@ template("sherlock_driver") {
       ":sherlock-dai-test-in-bind_header",
       ":sherlock-dai-test-out-bind_header",
       ":sherlock-display-bind_header",
+      ":sherlock-dwc2-phy-bind_header",
       ":sherlock-emmc-bind_header",
+      ":sherlock-gpio-light-bind_header",
       ":sherlock-hevc-enc-bind_header",
       ":sherlock-light-sensor-bind_header",
       ":sherlock-mali-bind_header",
@@ -618,7 +659,7 @@ template("sherlock_driver") {
       ":sherlock-video-enc-bind_header",
       ":sherlock-wifi-bind_header",
       ":sherlock-woofer-bind_header",
-      ":xhci-bind_header",
+      ":sherlock-xhci-bind_header",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
@@ -715,7 +756,23 @@ sherlock_driver("luis-factory-rndis") {
 group("tests") {
   testonly = true
   deps = [
+    ":camera-controller-bind_test",
+    ":camera-gdc-bind_test",
+    ":camera-ge2d-bind_test",
+    ":camera-isp-bind_test",
+    ":ernie-tweeter-bind_test",
+    ":ernie-woofer-bind_test",
+    ":imx227-sensor-bind_test",
+    ":luis-0p8-ee-buck-bind_test",
     ":luis-bind_test",
+    ":luis-codec-bind_test",
+    ":luis-cpu-a-buck-bind_test",
+    ":luis-cpu-bind_test",
+    ":luis-power-domain-bind_test",
+    ":luis-power-impl-bind_test",
+    ":luis-touch-bind_test",
+    ":sherlock-aml-usb-phy-v2-bind_test",
     ":sherlock-bind_test",
+    ":sherlock-dwc2-phy-bind_test",
   ]
 }

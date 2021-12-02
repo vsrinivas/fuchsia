@@ -1,0 +1,122 @@
+[
+    {
+        "node": "power-01",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_POWER_DOMAIN": "fuchsia.amlogic.platform.t931.BIND_POWER_DOMAIN.ARM_CORE_BIG",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.power.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "clock-pll-div16-01",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_CLOCK_ID": "fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_PLL_DIV16",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "clock-cpu-div16-01",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_CLOCK_ID": "fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_CPU_CLK_DIV16",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "clock-cpu-scaler-01",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_CLOCK_ID": "fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_CPU_BIG_CLK",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "power-02",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.power.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_POWER_DOMAIN": "fuchsia.amlogic.platform.t931.BIND_POWER_DOMAIN.ARM_CORE_LITTLE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "clock-pll-div16-02",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_CLOCK_ID": "fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_PLLB_DIV16"
+                }
+            }
+        ]
+    },
+    {
+        "node": "clock-cpu-div16-02",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_CLOCK_ID": "fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_CPUB_CLK_DIV16",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "clock-cpu-scaler-02",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_CLOCK_ID": "fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_CPU_LITTLE_CLK",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "pdev",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOOGLE_AMLOGIC_CPU",
+                    "fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID": "0"
+                }
+            }
+        ]
+    }
+]

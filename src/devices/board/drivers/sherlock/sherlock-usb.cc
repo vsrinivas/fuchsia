@@ -20,9 +20,9 @@
 #include <usb/dwc2/metadata.h>
 
 #include "sherlock.h"
-#include "src/devices/board/drivers/sherlock/aml-usb-phy-v2-bind.h"
-#include "src/devices/board/drivers/sherlock/dwc2-phy-bind.h"
-#include "src/devices/board/drivers/sherlock/xhci-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-dwc2-phy-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-aml-usb-phy-v2-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-xhci-bind.h"
 
 namespace sherlock {
 

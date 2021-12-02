@@ -16,7 +16,7 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
-#include "src/devices/board/drivers/sherlock/gpio-light-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-gpio-light-bind.h"
 #include "src/devices/board/drivers/sherlock/sherlock-light-sensor-bind.h"
 
 namespace sherlock {
