@@ -634,6 +634,7 @@ class ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::HandleRightsProtocol;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using NoResponseMethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>;
@@ -2312,6 +2313,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol =
       ::fidl_test_protocols::WithAndWithoutRequestResponse;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using NoRequestNoResponseCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -2904,6 +2906,7 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::Transitional;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using RequestCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::Transitional::Request>;
@@ -3151,6 +3154,7 @@ class ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::MethodWithUnion;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using UnionMethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::MethodWithUnion::UnionMethod>;
@@ -4212,6 +4216,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::WithProtocolEnds;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using ClientEndsCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithProtocolEnds::ClientEnds>;
@@ -4498,6 +4503,7 @@ class ::fidl::WireServer<::fidl_test_protocols::ManyParameters>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::ManyParameters;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FifteenCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::ManyParameters::Fifteen>;
@@ -5812,6 +5818,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::WithErrorSyntax;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using ResponseAsStructCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>;
@@ -6072,6 +6079,7 @@ class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::DiscoverableProtocol;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using MethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::DiscoverableProtocol::Method>;
@@ -7181,6 +7189,7 @@ class ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::ChannelProtocol;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using MethodACompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::ChannelProtocol::MethodA>;
@@ -8288,7 +8297,8 @@ class ::fidl::internal::WireWeakEventSender<
   fidl::Result AnEvent(::fidl::BufferSpan _buffer, ::zx::socket&& h) const;
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::HandleRightsProtocol>;
+  friend ServerBindingRef<::fidl_test_protocols::HandleRightsProtocol,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -8623,7 +8633,8 @@ class ::fidl::internal::WireWeakEventSender<
                               ::fidl::StringView ret) const;
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::WithAndWithoutRequestResponse>;
+  friend ServerBindingRef<::fidl_test_protocols::WithAndWithoutRequestResponse,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -8757,7 +8768,8 @@ class ::fidl::internal::WireWeakEventSender<
   fidl::Result Event(::fidl::BufferSpan _buffer, int64_t x) const;
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::Transitional>;
+  friend ServerBindingRef<::fidl_test_protocols::Transitional,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -8827,7 +8839,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::MethodWithUnion>;
+  friend ServerBindingRef<::fidl_test_protocols::MethodWithUnion,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9072,7 +9085,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::WithProtocolEnds>;
+  friend ServerBindingRef<::fidl_test_protocols::WithProtocolEnds,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9146,7 +9160,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::ManyParameters>;
+  friend ServerBindingRef<::fidl_test_protocols::ManyParameters,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9424,7 +9439,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::WithErrorSyntax>;
+  friend ServerBindingRef<::fidl_test_protocols::WithErrorSyntax,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9491,7 +9507,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::DiscoverableProtocol>;
+  friend ServerBindingRef<::fidl_test_protocols::DiscoverableProtocol,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -9735,7 +9752,8 @@ class ::fidl::internal::WireWeakEventSender<
   fidl::Result EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const;
 
  private:
-  friend ServerBindingRef<::fidl_test_protocols::ChannelProtocol>;
+  friend ServerBindingRef<::fidl_test_protocols::ChannelProtocol,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

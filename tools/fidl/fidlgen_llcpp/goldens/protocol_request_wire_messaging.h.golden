@@ -912,6 +912,7 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Parent>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocolrequest::Parent;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using GetChildCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocolrequest::Parent::GetChild>;
@@ -1068,6 +1069,7 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Child>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocolrequest::Child;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
  private:
   void dispatch_message(
@@ -1382,7 +1384,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocolrequest::Parent>;
+  friend ServerBindingRef<::fidl_test_protocolrequest::Parent,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -1445,7 +1448,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_protocolrequest::Child>;
+  friend ServerBindingRef<::fidl_test_protocolrequest::Child,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

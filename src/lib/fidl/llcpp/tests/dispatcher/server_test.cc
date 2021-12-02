@@ -57,6 +57,7 @@ class ::fidl::WireServer<fidl_test::TestProtocol>
   ~WireServer() override = default;
 
   using _EnclosingProtocol = fidl_test::TestProtocol;
+  using _Transport = fidl::internal::ChannelTransport;
 
  private:
   void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,

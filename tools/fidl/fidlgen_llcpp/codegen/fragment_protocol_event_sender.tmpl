@@ -65,7 +65,7 @@ class {{ .WireWeakEventSender }} {
   {{- end }}
 
  private:
-  friend ServerBindingRef<{{ $ }}>;
+  friend ServerBindingRef<{{ $ }}, ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

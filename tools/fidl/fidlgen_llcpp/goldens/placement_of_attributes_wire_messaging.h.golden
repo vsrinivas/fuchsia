@@ -252,6 +252,7 @@ class ::fidl::WireServer<::fidl_test_placementofattributes::ExampleProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_placementofattributes::ExampleProtocol;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using MethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_placementofattributes::ExampleProtocol::Method>;
@@ -359,7 +360,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_placementofattributes::ExampleProtocol>;
+  friend ServerBindingRef<::fidl_test_placementofattributes::ExampleProtocol,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

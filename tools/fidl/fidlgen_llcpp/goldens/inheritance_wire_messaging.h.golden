@@ -372,6 +372,7 @@ class ::fidl::WireServer<::fidl_test_inheritance::Super>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::Super;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FooCompleter =
       ::fidl::internal::WireCompleter<::fidl_test_inheritance::Super::Foo>;
@@ -733,6 +734,7 @@ class ::fidl::WireServer<::fidl_test_inheritance::Sub>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::Sub;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using FooCompleter =
       ::fidl::internal::WireCompleter<::fidl_test_inheritance::Sub::Foo>;
@@ -903,7 +905,8 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::Super> {
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_inheritance::Super>;
+  friend ServerBindingRef<::fidl_test_inheritance::Super,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
@@ -1012,7 +1015,8 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::Sub> {
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_inheritance::Sub>;
+  friend ServerBindingRef<::fidl_test_inheritance::Sub,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

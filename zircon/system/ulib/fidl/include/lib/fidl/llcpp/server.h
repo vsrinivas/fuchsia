@@ -168,10 +168,11 @@ namespace fidl {
 // TODO(fxbug.dev/66343): Consider using a "DidUnbind" virtual function
 // in the server interface to replace the |on_unbound| handler lambda.
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
-    OnUnbound&& on_unbound = nullptr) {
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>
+BindServer(async_dispatcher_t* dispatcher,
+           fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>
+               server_end,
+           ServerImpl* impl, OnUnbound&& on_unbound = nullptr) {
   return internal::BindServerImpl<ServerImpl>(
       dispatcher, std::move(server_end), impl,
       internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
@@ -181,10 +182,11 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 // The pointer is destroyed on the same thread as the one calling |on_unbound|,
 // and happens right after |on_unbound|. See |BindServer| for details.
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
-    std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>
+BindServer(async_dispatcher_t* dispatcher,
+           fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>
+               server_end,
+           std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
   ServerImpl* impl_raw = impl.get();
   return internal::BindServerImpl<ServerImpl>(
       dispatcher, std::move(server_end), impl_raw,
@@ -195,10 +197,11 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 // The pointer is destroyed on the same thread as the one calling |on_unbound|,
 // and happens right after |on_unbound|. See |BindServer| for details.
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
-    async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
-    std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>
+BindServer(async_dispatcher_t* dispatcher,
+           fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>
+               server_end,
+           std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
   ServerImpl* impl_raw = impl.get();
   return internal::BindServerImpl<ServerImpl>(
       dispatcher, std::move(server_end), impl_raw,
@@ -208,7 +211,7 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 // This class manages a server connection and its binding to an
 // |async_dispatcher_t*|, which may be multi-threaded. See the detailed
 // documentation on the |BindServer| APIs.
-template <typename Protocol>
+template <typename Protocol, typename Transport>
 class ServerBindingRef {
  public:
   ~ServerBindingRef() = default;
@@ -255,8 +258,8 @@ class ServerBindingRef {
  private:
   // This is so that only |BindServerTypeErased| will be able to construct a
   // new instance of |ServerBindingRef|.
-  friend ServerBindingRef<Protocol> internal::BindServerTypeErased<Protocol>(
-      async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol> server_end,
+  friend ServerBindingRef<Protocol, Transport> internal::BindServerTypeErased<Protocol, Transport>(
+      async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol, Transport> server_end,
       internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
 
   explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding> internal_binding)

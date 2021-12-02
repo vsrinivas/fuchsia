@@ -6,6 +6,7 @@
 #define LIB_FIDL_LLCPP_INTERNAL_SERVER_DETAILS_H_
 
 #include <lib/fidl/llcpp/async_binding.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/result.h>
@@ -14,7 +15,7 @@
 namespace fidl {
 
 // Forward declarations.
-template <typename Protocol>
+template <typename Protocol, typename Transport = internal::ChannelTransport>
 class ServerBindingRef;
 
 // |OnUnboundFn| can represent the callback which will be invoked after the
@@ -24,8 +25,9 @@ class ServerBindingRef;
 // It is not required to wrap the callback lambda in this type; |BindServer|
 // accepts a lambda function directly.
 template <typename ServerImpl>
-using OnUnboundFn = fit::callback<void(ServerImpl*, UnbindInfo,
-                                       fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>)>;
+using OnUnboundFn = fit::callback<void(
+    ServerImpl*, UnbindInfo,
+    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>)>;
 
 namespace internal {
 
@@ -119,15 +121,14 @@ class WeakEventSenderInner {
 // The public |fidl::BindServer| functions should translate |interface| back to
 // the user pointer type, possibly at an offset, before invoking the
 // user-provided on-unbound handler.
-template <typename Protocol>
-ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
-                                                fidl::ServerEnd<Protocol> server_end,
-                                                IncomingMessageDispatcher* interface,
-                                                internal::AnyOnUnboundFn on_unbound) {
+template <typename Protocol, typename Transport>
+ServerBindingRef<Protocol, Transport> BindServerTypeErased(
+    async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol, Transport> server_end,
+    IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound) {
   auto internal_binding = internal::AsyncServerBinding::Create(
-      dispatcher, internal::MakeAnyTransport(server_end.TakeChannel()), interface,
+      dispatcher, internal::MakeAnyTransport(server_end.TakeHandle()), interface,
       std::move(on_unbound));
-  auto binding_ref = fidl::ServerBindingRef<Protocol>(internal_binding);
+  auto binding_ref = fidl::ServerBindingRef<Protocol, Transport>(internal_binding);
   auto* binding_ptr = internal_binding.get();
   // The binding object keeps itself alive until unbinding, so dropping the
   // shared pointer here is fine.
@@ -144,12 +145,15 @@ ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
 // Note: if you see a compiler error that ends up in this function, that is
 // probably because you passed in an incompatible |on_unbound| handler.
 template <typename ServerImpl, typename OnUnbound>
-ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
+ServerBindingRef<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>
+BindServerImpl(
     async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
-    OnUnbound&& on_unbound) {
+    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol, typename ServerImpl::_Transport>
+        server_end,
+    ServerImpl* impl, OnUnbound&& on_unbound) {
   using ProtocolType = typename ServerImpl::_EnclosingProtocol;
-  return BindServerTypeErased<ProtocolType>(
+  using Transport = typename ServerImpl::_Transport;
+  return BindServerTypeErased<ProtocolType, Transport>(
       dispatcher, std::move(server_end), impl,
       [on_unbound = std::forward<OnUnbound>(on_unbound)](
           internal::IncomingMessageDispatcher* any_interface, UnbindInfo info,
@@ -157,9 +161,8 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
         // Note: this cast may change the value of the pointer, due to how C++
         // implements classes with virtual tables.
         auto* impl = static_cast<ServerImpl*>(any_interface);
-        std::invoke(
-            on_unbound, impl, info,
-            fidl::ServerEnd<ProtocolType>(channel.release<fidl::internal::ChannelTransport>()));
+        std::invoke(on_unbound, impl, info,
+                    fidl::ServerEnd<ProtocolType, Transport>(channel.release<Transport>()));
       });
 }
 
@@ -176,7 +179,8 @@ struct UnboundThunkCallOperator<Derived, OnUnbound,
                                 std::enable_if_t<!OnUnboundIsNull<OnUnbound>::value>> {
   template <typename ServerImpl>
   void operator()(ServerImpl* impl_ptr, UnbindInfo info,
-                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>&& server_end) {
+                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol,
+                                  typename ServerImpl::_Transport>&& server_end) {
     static_assert(std::is_convertible_v<OnUnbound, OnUnboundFn<ServerImpl>>,
                   "|on_unbound| must have the same signature as fidl::OnUnboundFn<ServerImpl>.");
     auto* self = static_cast<Derived*>(this);
@@ -189,7 +193,8 @@ struct UnboundThunkCallOperator<Derived, OnUnbound,
                                 std::enable_if_t<OnUnboundIsNull<OnUnbound>::value>> {
   template <typename ServerImpl>
   void operator()(ServerImpl* impl_ptr, UnbindInfo info,
-                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>&& server_end) {
+                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol,
+                                  typename ServerImpl::_Transport>&& server_end) {
     // |fn_| is a nullptr, meaning the user did not provide an |on_unbound| callback.
     static_assert(std::is_same_v<OnUnbound, std::nullptr_t>, "|on_unbound| is no-op here");
   }

@@ -422,6 +422,7 @@ class ::fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_transitivedependenciescompose::Top;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using GetFooCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>;
@@ -585,7 +586,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_transitivedependenciescompose::Top>;
+  friend ServerBindingRef<::fidl_test_transitivedependenciescompose::Top,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

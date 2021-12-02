@@ -391,6 +391,7 @@ class ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_nullable::SimpleProtocol;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using AddCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_nullable::SimpleProtocol::Add>;
@@ -552,7 +553,8 @@ class ::fidl::internal::WireWeakEventSender<
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_nullable::SimpleProtocol>;
+  friend ServerBindingRef<::fidl_test_nullable::SimpleProtocol,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

@@ -453,6 +453,7 @@ class ::fidl::WireServer<
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol =
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using GetFooCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
@@ -625,7 +626,8 @@ class ::fidl::internal::WireWeakEventSender<
 
  private:
   friend ServerBindingRef<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top,
+      ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };

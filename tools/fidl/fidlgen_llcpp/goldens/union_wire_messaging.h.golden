@@ -740,6 +740,7 @@ class ::fidl::WireServer<::fidl_test_union::TestProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_union::TestProtocol;
+  using _Transport = ::fidl::internal::ChannelTransport;
 
   using StrictXUnionHenceResponseMayBeStackAllocatedCompleter =
       ::fidl::internal::WireCompleter<
@@ -1043,7 +1044,8 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_union::TestProtocol> {
       : inner_(std::move(binding)) {}
 
  private:
-  friend ServerBindingRef<::fidl_test_union::TestProtocol>;
+  friend ServerBindingRef<::fidl_test_union::TestProtocol,
+                          ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
 };
