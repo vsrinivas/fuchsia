@@ -53,9 +53,7 @@ pub(crate) struct Record {
 #[derive(Clone)]
 pub struct CrashRecords {
     records: Arc<Mutex<Vec<Record>>>,
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    cleanup_task: Arc<fasync::Task<()>>,
+    _cleanup_task: Arc<fasync::Task<()>>,
 }
 
 /// This task will inspect `records`, and sleep until either `records[0].deadline` or for
@@ -91,7 +89,7 @@ impl CrashRecords {
         let records = Arc::new(Mutex::new(vec![]));
         CrashRecords {
             records: records.clone(),
-            cleanup_task: Arc::new(fasync::Task::spawn(record_cleanup_task(records))),
+            _cleanup_task: Arc::new(fasync::Task::spawn(record_cleanup_task(records))),
         }
     }
 
