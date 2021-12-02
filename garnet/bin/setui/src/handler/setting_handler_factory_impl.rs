@@ -60,7 +60,10 @@ impl SettingHandlerFactory for SettingHandlerFactoryImpl {
             self.context_id_counter.fetch_add(1, Ordering::Relaxed),
         ))
         .await
-        .map_err(|_| SettingHandlerFactoryError::HandlerStartupError(setting_type))?;
+        .map_err(|e| {
+            fx_log_err!("Failed to generate setting handler: {:?}", e);
+            SettingHandlerFactoryError::HandlerStartupError(setting_type)
+        })?;
 
         let (controller_messenger, _) = delegate
             .create(MessengerType::Unbound)
