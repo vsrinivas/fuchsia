@@ -173,6 +173,7 @@ test("fvm-integration") {
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/blobfs",
@@ -182,7 +183,6 @@ test("fvm-integration") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/zircon-internal",
@@ -201,8 +201,14 @@ test("fvm-integration") {
   ]
 }
 
-fuchsia_unittest_package("fvm-integration-test") {
+fuchsia_test_component("test-component") {
+  component_name = "fvm-integration-test"
+  manifest = "meta/fvm_integration_test.cml"
   deps = [ ":fvm-integration" ]
+}
+
+fuchsia_test_package("fvm-integration-test") {
+  test_components = [ ":test-component" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

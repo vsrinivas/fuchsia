@@ -5,7 +5,6 @@
 #include <errno.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>

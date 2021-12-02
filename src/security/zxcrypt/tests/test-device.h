@@ -5,7 +5,6 @@
 #ifndef SRC_SECURITY_ZXCRYPT_TESTS_TEST_DEVICE_H_
 #define SRC_SECURITY_ZXCRYPT_TESTS_TEST_DEVICE_H_
 
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/channel.h>

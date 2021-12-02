@@ -15,11 +15,11 @@ test("fvm-driver-integration") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/devices/testing/no_ddk",
     "//src/lib/storage/fs_management",
     "//src/storage/fvm:test_support",
     "//src/storage/fvm/driver:shared",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/zxtest",
   ]

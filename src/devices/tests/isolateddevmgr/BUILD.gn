@@ -44,8 +44,8 @@ test("isolateddevmgr") {
   deps = [
     ":fuchsia.device.manager.test_c",
     "//sdk/lib/fdio",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
