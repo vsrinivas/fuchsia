@@ -1,49 +1,25 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 use anyhow::Error;
-use argh::FromArgs;
-use diagnostics_log_encoding::Value;
+use diagnostics_log_encoding::{Argument, Record, Severity, Value};
 use diagnostics_reader::{ArchiveReader, Logs, SubscriptionResultsStream};
-use fidl_fuchsia_diagnostics::Severity;
-use fidl_fuchsia_diagnostics_stream::{Argument, Record};
-use fidl_fuchsia_validate_logs::{LogSinkPuppetMarker, LogSinkPuppetProxy, PuppetInfo, RecordSpec};
-use fuchsia_async::Task;
-use fuchsia_component::client::{launch, launcher, App};
-use futures::prelude::*;
+use fidl_fuchsia_validate_logs::{LogSinkPuppetProxy, PuppetInfo, RecordSpec};
+use fuchsia_async::{futures::StreamExt, Task};
 use tracing::*;
-
-/// Validate Log VMO formats written by 'puppet' programs controlled by
-/// this Validator program.
-#[derive(Debug, FromArgs)]
-struct Opt {
-    /// required arg: The URL of the puppet
-    #[argh(option, long = "url")]
-    puppet_url: String,
-}
-
-#[fuchsia::component]
-async fn main() -> Result<(), Error> {
-    let Opt { puppet_url } = argh::from_env();
-    Puppet::launch(&puppet_url).await?.test().await
-}
 
 struct Puppet {
     _info: PuppetInfo,
     proxy: LogSinkPuppetProxy,
-    _env: App,
     _reader_errors_task: Task<()>,
     logs: SubscriptionResultsStream<Logs>,
 }
 
 impl Puppet {
-    async fn launch(puppet_url: &str) -> Result<Self, Error> {
-        let local_launcher = launcher()?;
-        let app = launch(&local_launcher, puppet_url.to_string(), None)?;
-        info!("Connecting to puppet and spawning watchdog.");
-        let proxy = app.connect_to_protocol::<LogSinkPuppetMarker>()?;
-
+    // Creates a Puppet instance.
+    // Since this is v2, there is no URL to spawn as we are using RealmBuilder.
+    async fn launch(proxy: fidl_fuchsia_validate_logs::LogSinkPuppetProxy) -> Result<Self, Error> {
         info!("Requesting info from the puppet.");
         let info = proxy.get_info().await?;
         let reader = ArchiveReader::new();
@@ -53,7 +29,7 @@ impl Puppet {
                 panic!("error in subscription: {}", e);
             }
         });
-        Ok(Self { proxy, _info: info, _env: app, _reader_errors_task: task, logs })
+        Ok(Self { proxy, _info: info, _reader_errors_task: task, logs })
     }
 
     async fn test_puppet_started(&mut self) -> Result<(), Error> {
@@ -136,5 +112,36 @@ impl Puppet {
         self.test_basic_log().await?;
         self.test_file_line().await?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use {
+        fidl::endpoints::Proxy,
+        fidl_fuchsia_driver_test as fdt,
+        fuchsia_component_test::RealmBuilder,
+        fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
+    };
+
+    #[fuchsia::test]
+    async fn log_test() {
+        let realm = RealmBuilder::new().await.unwrap();
+        let _ = realm.driver_test_realm_setup().await.unwrap();
+        let realm = realm.build().await.expect("failed to build realm");
+        realm.driver_test_realm_start(fdt::RealmArgs::EMPTY).await.unwrap();
+        let out_dir = realm.driver_test_realm_connect_to_dev().unwrap();
+
+        let driver_service =
+            device_watcher::recursive_wait_and_open_node(&out_dir, "sys/test/virtual-logsink")
+                .await
+                .unwrap();
+        let driver_proxy = fidl_fuchsia_validate_logs::LogSinkPuppetProxy::from_channel(
+            driver_service.into_channel().unwrap(),
+        );
+        let mut puppet = Puppet::launch(driver_proxy).await.unwrap();
+        puppet.test().await.unwrap();
     }
 }

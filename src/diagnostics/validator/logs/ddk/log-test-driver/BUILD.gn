@@ -11,7 +11,10 @@ import("//build/test.gni")
 driver_bind_rules("log-test-driver-bind") {
   rules = "log-test.bind"
   header_output = "log-test-bind.h"
-  deps = [ "//src/devices/bind/fuchsia.test" ]
+  deps = [
+    "//src/devices/bind/fuchsia.test",
+    "//src/devices/bind/fuchsia.test.platform",
+  ]
 }
 
 source_set("common") {
