@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/sdk/sdk_atom.gni")
+import("//build/sdk/sdk_noop_atom.gni")
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
 if (is_host) {
@@ -26,5 +28,59 @@ if (is_host) {
       "shutdown:tests",
       "start:tests",
     ]
+    deps = [ ":aemu_internal" ]
+  }
+
+  # AEMU binaries are only available for x64 currently.
+  if (current_cpu == host_cpu && host_cpu == "x64") {
+    action("create_companion_data") {
+      script = "//src/developer/ffx/plugins/emulator/create_companion_data.py"
+      sources = [
+        "//prebuilt/third_party/android/aemu/release/${host_platform}/emulator",
+      ]
+      outputs = [
+        "$target_gen_dir/${target_name}.txt",
+        "$target_gen_dir/${target_name}_metadata.json",
+      ]
+      args = [
+        "--name",
+        "aemu_internal",
+        "--binary",
+        rebase_path(sources[0], root_build_dir),
+        "--dest_root",
+        "tools/${host_cpu}/aemu_internal",
+        "--output",
+        rebase_path(outputs[0], root_build_dir),
+        "--meta_out",
+        rebase_path(outputs[1], root_build_dir),
+      ]
+    }
+
+    if (host_os == "linux" || host_os == "mac") {
+      file_base = "tools/$current_cpu/aemu_internal"
+    }
+    sdk_atom("aemu_internal") {
+      id = "sdk://tools/$current_cpu/aemu_internal"
+      category = "partner"
+
+      # Declare the support files to add for this host tool.
+      _file_list_array = get_target_outputs(":create_companion_data")
+
+      meta = {
+        dest = "${file_base}-meta.json"
+        schema = "companion_host_tool"
+        source = _file_list_array[1]
+      }
+
+      file_list = _file_list_array[0]
+
+      non_sdk_deps = [ ":create_companion_data" ]
+    }
+    sdk_noop_atom("aemu_internal_legacy") {
+    }
+  } else {
+    # There is no arm64 aemu yet.
+    sdk_noop_atom("aemu_internal") {
+    }
   }
 }

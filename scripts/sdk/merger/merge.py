@@ -124,7 +124,7 @@ def _get_files(element_meta):
         common_files.update(element_meta['sources'])
     elif type == 'fidl_library':
         common_files.update(element_meta['sources'])
-    elif type == 'host_tool':
+    elif type in ['host_tool', 'companion_host_tool']:
         if 'files' in element_meta:
             common_files.update(element_meta['files'])
         if 'target_files' in element_meta:
@@ -223,7 +223,7 @@ def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
     elif type == 'sysroot':
         meta = meta_one
         meta['versions'].update(meta_two['versions'])
-    elif type == 'host_tool':
+    elif type in ['host_tool', 'companion_host_tool']:
         meta = meta_one
         if not 'target_files' in meta:
             meta['target_files'] = {}

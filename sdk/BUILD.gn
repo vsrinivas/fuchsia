@@ -333,6 +333,7 @@ sdk_molecule("host_tools") {
     "//zircon/tools/merkleroot:merkleroot_sdk",
     "//zircon/tools/minfs:minfs_sdk",
     "//zircon/tools/zbi:zbi_sdk",
+    "//src/developer/ffx/plugins/emulator:aemu_internal",
   ]
 
   toolchains = []

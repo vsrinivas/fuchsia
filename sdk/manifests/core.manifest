@@ -215,6 +215,7 @@ sdk://tools/merkleroot
 sdk://tools/minfs
 sdk://tools/pm
 sdk://tools/symbol-index
+sdk://tools/x64/aemu_internal
 sdk://tools/x64/bindc
 sdk://tools/x64/blobfs-compression
 sdk://tools/x64/blobfs_do_not_depend
