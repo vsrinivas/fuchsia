@@ -16,7 +16,7 @@ use {
     ffx_core::ffx_plugin,
     serde_json::Value,
     std::collections::HashMap,
-    std::fs::File,
+    std::fs::{File, OpenOptions},
     std::io::Write,
     std::path::PathBuf,
 };
@@ -107,42 +107,46 @@ fn exec_env_set<W: Write + Sync>(
     mut writer: W,
     env: &mut Environment,
     s: &EnvSetCommand,
-    file: PathBuf,
+    env_file: PathBuf,
 ) -> Result<()> {
-    if !file.exists() {
-        writeln!(writer, "\"{}\" does not exist, creating empty json file", file.display())?;
-        let mut file = File::create(&file).context("opening write buffer")?;
+    if !env_file.exists() {
+        writeln!(writer, "\"{}\" does not exist, creating empty json file", env_file.display())?;
+        let mut file = File::create(&env_file).context("opening write buffer")?;
         file.write_all(b"{}").context("writing configuration file")?;
         file.sync_all().context("syncing configuration file to filesystem")?;
     }
+
+    // Double check read/write permissions and create the file if it doesn't exist.
+    let _ = OpenOptions::new().read(true).write(true).create(true).open(&s.file)?;
+
     match &s.level {
         ConfigLevel::User => match env.user.as_mut() {
-            Some(v) => *v = file.display().to_string(),
-            None => env.user = Some(file.display().to_string()),
+            Some(v) => *v = s.file.to_string(),
+            None => env.user = Some(s.file.to_string()),
         },
         ConfigLevel::Build => match &s.build_dir {
             Some(build_dir) => match env.build.as_mut() {
                 Some(b) => match b.get_mut(&s.file) {
                     Some(e) => *e = build_dir.to_string(),
                     None => {
-                        b.insert(build_dir.to_string(), file.display().to_string());
+                        b.insert(build_dir.to_string(), s.file.to_string());
                     }
                 },
                 None => {
                     let mut build = HashMap::new();
-                    build.insert(build_dir.to_string(), file.display().to_string());
+                    build.insert(build_dir.to_string(), s.file.to_string());
                     env.build = Some(build);
                 }
             },
             None => ffx_bail!("Missing --build-dir flag"),
         },
         ConfigLevel::Global => match env.global.as_mut() {
-            Some(v) => *v = file.display().to_string(),
-            None => env.global = Some(file.display().to_string()),
+            Some(v) => *v = s.file.to_string(),
+            None => env.global = Some(s.file.to_string()),
         },
         _ => ffx_bail!("This configuration is not stored in the enivronment."),
     }
-    env.save(&file)
+    env.save(&env_file)
 }
 
 fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<()> {
@@ -171,4 +175,29 @@ async fn exec_analytics(analytics_cmd: &AnalyticsCommand) -> Result<()> {
         AnalyticsControlCommand::Show(_) => show_metrics_status(writer).await?,
     }
     Ok(())
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// tests
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn test_exec_env_set_set_values() -> Result<()> {
+        let writer = Vec::<u8>::new();
+        let mut env = Environment::default();
+        let cmd = EnvSetCommand {
+            file: "test.json".to_string(),
+            level: ConfigLevel::User,
+            build_dir: None,
+        };
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        exec_env_set(writer, &mut env, &cmd, tmp_file.path().to_path_buf())?;
+        let result = Environment::load(&tmp_file)?;
+        assert_eq!(cmd.file, result.user.unwrap());
+        Ok(())
+    }
 }
