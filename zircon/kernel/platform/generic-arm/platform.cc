@@ -65,6 +65,7 @@
 
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
+#include <lib/zbitl/items/cpu-topology.h>
 #include <lib/zbitl/memory.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
@@ -458,80 +459,29 @@ void ProcessZbiLate() {
 
   ktl::span<const ktl::byte> zbi = ZbiInPhysmap();
   zbitl::View view(zbi);
-  for (auto it = view.begin(); it != view.end(); ++it) {
-    auto [header, payload] = *it;
-    bool is_mexec_data = false;
-    switch (header->type) {
-      case ZBI_TYPE_CPU_CONFIG: {
-        const auto* cpu_config = reinterpret_cast<const zbi_cpu_config_t*>(payload.data());
-
-        // Convert old zbi_cpu_config into zbi_topology structure.
-
-        // Allocate some memory to work in.
-        size_t node_count = 0;
-        for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
-          // Each cluster will get a node.
-          node_count++;
-          node_count += cpu_config->clusters[cluster].cpu_count;
-        }
-
-        fbl::AllocChecker ac;
-        auto flat_topology =
-            ktl::unique_ptr<zbi_topology_node_t[]>{new (&ac) zbi_topology_node_t[node_count]};
-        if (!ac.check()) {
-          panic("out of memory");
-        }
-
-        // Initialize to 0.
-        memset(flat_topology.get(), 0, sizeof(zbi_topology_node_t) * node_count);
-
-        // Create topology structure.
-        size_t flat_index = 0;
-        uint16_t logical_id = 0;
-        for (size_t cluster = 0; cluster < cpu_config->cluster_count; cluster++) {
-          const auto cluster_index = flat_index;
-          zbi_topology_node_t& cluster_node = flat_topology.get()[flat_index++];
-          cluster_node.entity_type = ZBI_TOPOLOGY_ENTITY_CLUSTER;
-          cluster_node.parent_index = ZBI_TOPOLOGY_NO_PARENT;
-
-          // We don't have this data so it is a guess that little cores are
-          // first.
-          cluster_node.entity.cluster.performance_class = static_cast<uint8_t>(cluster);
-
-          for (size_t i = 0; i < cpu_config->clusters[cluster].cpu_count; i++) {
-            zbi_topology_node_t& processor_node = flat_topology.get()[flat_index++];
-            processor_node.entity_type = ZBI_TOPOLOGY_ENTITY_PROCESSOR;
-            processor_node.parent_index = static_cast<uint16_t>(cluster_index);
-            processor_node.entity.processor.logical_id_count = 1;
-            processor_node.entity.processor.logical_ids[0] = logical_id;
-            processor_node.entity.processor.architecture = ZBI_TOPOLOGY_ARCH_ARM;
-            processor_node.entity.processor.architecture_info.arm.cluster_1_id =
-                static_cast<uint8_t>(cluster);
-            processor_node.entity.processor.architecture_info.arm.cpu_id = static_cast<uint8_t>(i);
-            processor_node.entity.processor.architecture_info.arm.gic_id =
-                static_cast<uint8_t>(logical_id++);
-          }
-        }
-        DEBUG_ASSERT(flat_index == node_count);
-
-        // Initialize topology subsystem.
-        init_topology(flat_topology.get(), node_count);
-        is_mexec_data = true;
-        break;
+  for (auto [header, payload] : view) {
+    if (header->type == ZBI_TYPE_CPU_CONFIG || header->type == ZBI_TYPE_CPU_TOPOLOGY) {
+      auto table = zbitl::CpuTopologyTable::FromPayload(header->type, payload);
+      if (table.is_error()) {
+        printf("cannot parse CPU topology from ZBI: %.*s",
+               static_cast<int>(table.error_value().size()), table.error_value().data());
+        continue;
       }
-      case ZBI_TYPE_CPU_TOPOLOGY: {
-        const size_t node_count = payload.size() / static_cast<size_t>(header->extra);
-        const auto* nodes = reinterpret_cast<const zbi_topology_node_t*>(payload.data());
-        init_topology(nodes, node_count);
-        is_mexec_data = true;
-        break;
-      }
-    };
 
-    if (is_mexec_data) {
+      fbl::AllocChecker ac;
+      size_t count = table->size();
+      ktl::unique_ptr<zbi_topology_node_t[]> flat_table(new (&ac) zbi_topology_node_t[count]);
+      if (!ac.check()) {
+        panic("out of memory");
+      }
+
+      ktl::copy(table->begin(), table->end(), flat_table.get());
+
+      init_topology(flat_table.get(), count);
+
       auto result = mexec_data_image.Append(*header, payload);
       if (result.is_error()) {
-        printf("ProcessZbiEarly: failed to append item to mexec data ZBI: ");
+        printf("ProcessZbiEarly: failed to append CPU topology to mexec data ZBI: ");
         zbitl::PrintViewError(result.error_value());
       }
     }
