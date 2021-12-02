@@ -45,10 +45,7 @@ fuchsia_package("network-legacy-deprecated") {
 # TODO(https://fxbug.dev/85742): Remove this target once out-of-tree
 # integration tests inject components from network-legacy-deprecated.
 group("integration-test-deps") {
-  deps = [
-    "dns:dns-resolver",
-    "netstack",
-  ]
+  deps = [ "netstack" ]
 }
 
 group("drivers") {
