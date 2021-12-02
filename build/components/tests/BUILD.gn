@@ -167,7 +167,7 @@ fuchsia_test_component("launcher-test") {
 }
 
 fuchsia_test_package("launcher-integration-test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     ":return-zero-component-named",
     ":return-zero-package-component-named",
     ":return-zero-package-named",

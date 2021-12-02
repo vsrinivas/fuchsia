@@ -28,7 +28,7 @@ test("intl_services_test") {
 }
 
 fuchsia_unittest_package("pkg") {
-  package_deps = [ "//src/intl/intl_services:pkg" ]
+  package_deps_for_infra_only = [ "//src/intl/intl_services:pkg" ]
   package_name = "intl_services_tests"
   component_name = "intl_services_test"
   manifest = "meta/intl_services_test.cmx"

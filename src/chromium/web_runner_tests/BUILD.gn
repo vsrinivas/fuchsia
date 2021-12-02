@@ -134,7 +134,7 @@ resource("resources") {
 }
 
 fuchsia_test_package("web_runner_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/chromium:web_engine",
     "//src/chromium:web_runner",
   ]

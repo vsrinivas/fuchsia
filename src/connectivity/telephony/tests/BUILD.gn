@@ -65,7 +65,7 @@ fuchsia_component("tel-driver-unit-test") {
 }
 
 fuchsia_test_package("telephony-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/telephony/ril-qmi:ril-qmi",
     "//src/connectivity/telephony/telephony-snooper:telephony-snooper",
   ]
@@ -78,7 +78,7 @@ fuchsia_test_package("telephony-tests") {
 }
 
 fuchsia_test_package("telephony-tests-with-error-logs") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/telephony/ril-at:ril-at",
     "//src/connectivity/telephony/tests:telephony-tests",
   ]

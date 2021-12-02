@@ -127,7 +127,7 @@ fuchsia_unittest_package("flatland_unittests") {
 }
 
 fuchsia_unittest_package("flatland_buffers_unittests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//garnet/bin/cpuperf_provider:cpuperf_provider",
     "//garnet/bin/ktrace_provider:ktrace_provider",
   ]
@@ -163,7 +163,7 @@ fuchsia_unittest_package("flatland_display_compositor_pixeltests") {
 
 fuchsia_unittest_package(
     "flatland_display_compositor_pixeltests_with_fake_display") {
-  package_deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
+  package_deps_for_infra_only = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   manifest = "meta/flatland_display_compositor_pixeltests_with_fake_display.cmx"
   deps =
       [ "lib/flatland/engine/tests/pixeltests:pixeltests_with_fake_display" ] +
@@ -176,7 +176,7 @@ fuchsia_unittest_package(
 }
 
 fuchsia_unittest_package("flatland_display_compositor_smoketests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//garnet/bin/trace_manager:trace_manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
   ]
@@ -207,7 +207,7 @@ fuchsia_unittest_package("flatland_engine_unittests") {
 }
 
 fuchsia_unittest_package("flatland_renderer_unittests") {
-  package_deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
+  package_deps_for_infra_only = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   manifest = "meta/flatland_renderer_unittests.cmx"
   deps = [ "lib/flatland/renderer/tests:unittests" ] + scenic_test_deps
   test_specs = {
@@ -229,7 +229,7 @@ fuchsia_unittest_package("gfx_apptests") {
 }
 
 fuchsia_unittest_package("gfx_pixeltests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//garnet/bin/trace_manager:trace_manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
     "//src/ui/bin/root_presenter:root_presenter",
@@ -254,7 +254,7 @@ fuchsia_unittest_package("gfx_swapchain_tests") {
 }
 
 fuchsia_unittest_package("gfx_unittests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//garnet/bin/cpuperf_provider:cpuperf_provider",
     "//garnet/bin/ktrace_provider:ktrace_provider",
   ]
@@ -273,7 +273,7 @@ fuchsia_unittest_package("gfx_util_unittests") {
 }
 
 fuchsia_unittest_package("gfx_viewstate_apptests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//garnet/bin/cpuperf_provider:cpuperf_provider",
     "//garnet/bin/ktrace_provider:ktrace_provider",
     "//src/ui/bin/root_presenter:root_presenter",
@@ -316,7 +316,7 @@ fuchsia_unittest_package("scheduling_unittests") {
 }
 
 fuchsia_unittest_package("screenshot_unittests") {
-  package_deps = [ "//garnet/bin/trace_manager:trace_manager" ]
+  package_deps_for_infra_only = [ "//garnet/bin/trace_manager:trace_manager" ]
   manifest = "meta/screenshot_unittests.cmx"
   deps = [ "lib/screenshot/tests:unittests" ] + scenic_test_deps
 }

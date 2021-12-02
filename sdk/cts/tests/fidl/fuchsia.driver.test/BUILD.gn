@@ -33,5 +33,5 @@ cts_fuchsia_component("component") {
 cts_fuchsia_test_package("driver_test_realm_cts_test") {
   package_name = "driver_test_realm_cts_test"
   test_components = [ ":component" ]
-  package_deps = [ "//sdk/lib/driver_test_realm:package" ]
+  package_deps_for_infra_only = [ "//sdk/lib/driver_test_realm:package" ]
 }

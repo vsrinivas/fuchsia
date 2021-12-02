@@ -273,7 +273,7 @@ fuchsia_component("test_component_using_storage") {
 }
 
 fuchsia_unittest_package("appmgr_unittests") {
-  package_deps = [ "//third_party/sbase:sleep" ]
+  package_deps_for_infra_only = [ "//third_party/sbase:sleep" ]
   deps = [
     ":test_component_using_storage",
     ":unittest_bin",

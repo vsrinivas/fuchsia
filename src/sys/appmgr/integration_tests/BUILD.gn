@@ -201,7 +201,7 @@ fuchsia_component("crashing_component") {
 }
 
 fuchsia_test_package("appmgr_integration_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//garnet/bin/glob:glob",
     "//src/sys/appmgr/integration_tests/mock_runner:appmgr_mock_runner",
     "//src/sys/appmgr/integration_tests/mock_runner:fake_component_for_runner",

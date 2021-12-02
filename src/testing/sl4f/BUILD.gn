@@ -431,7 +431,7 @@ resource("sl4f-server-tests-files") {
 }
 
 fuchsia_unittest_package("sl4f-service-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/factory/fake_factory_store_providers:fake_factory_store_providers",
     "//src/power/battery-manager:battery-manager",
   ]

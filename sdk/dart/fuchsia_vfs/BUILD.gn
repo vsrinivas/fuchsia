@@ -62,7 +62,7 @@ dart_test_component("unittests-component") {
 }
 
 fuchsia_test_package("fuchsia-vfs-unittests") {
-  package_deps = [ dart_default_build_cfg.runner_dep ]
+  package_deps_for_infra_only = [ dart_default_build_cfg.runner_dep ]
   test_components = [ ":unittests-component" ]
 }
 

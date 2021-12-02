@@ -55,7 +55,7 @@ add_to_component_index("component_index") {
 }
 
 fuchsia_unittest_package("locate_integration_test") {
-  package_deps = [ "//src/sys/locate:locate" ]
+  package_deps_for_infra_only = [ "//src/sys/locate:locate" ]
   manifest = "meta/locate_integration_test.cmx"
   deps = [
     ":component_index",

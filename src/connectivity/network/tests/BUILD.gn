@@ -190,7 +190,7 @@ fuchsia_test_component(
 }
 
 fuchsia_test_package("netstack-c-api-tests-inner") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
     "//src/diagnostics/archivist:archivist-for-embedding",
     "//third_party/sbase:cat",

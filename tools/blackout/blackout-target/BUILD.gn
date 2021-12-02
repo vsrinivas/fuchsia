@@ -53,7 +53,7 @@ storage_driver_test_realm_v2_component("blackout-target-test-component") {
 }
 
 fuchsia_test_package("blackout-target-test") {
-  package_deps = [ "//garnet/bin/trace_manager:trace_manager" ]
+  package_deps_for_infra_only = [ "//garnet/bin/trace_manager:trace_manager" ]
   test_components = [ ":blackout-target-test-component" ]
   test_specs = {
     log_settings = {

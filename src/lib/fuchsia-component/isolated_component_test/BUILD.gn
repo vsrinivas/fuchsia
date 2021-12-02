@@ -31,7 +31,7 @@ rustc_binary("fuchsia_component_test_outer_bin") {
 }
 
 fuchsia_unittest_package("fuchsia_component_test_outer") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_inner",
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_middle",
     "//src/lib/fuchsia-component/isolated_component_test:fuchsia_component_test_middle_sibling",

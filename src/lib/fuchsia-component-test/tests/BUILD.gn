@@ -130,7 +130,8 @@ fuchsia_test_component("realm_with_wait_component") {
 }
 
 fuchsia_test_package("fuchsia-component-test-tests") {
-  package_deps = [ "//src/sys/component_manager:component-manager" ]
+  package_deps_for_infra_only =
+      [ "//src/sys/component_manager:component-manager" ]
   deps = [
     ":echo_client_component",
     ":echo_client_empty_component",

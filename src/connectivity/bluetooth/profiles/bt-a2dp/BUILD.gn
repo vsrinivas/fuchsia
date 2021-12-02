@@ -207,7 +207,7 @@ rustc_test("encoding_integration_bin") {
 fuchsia_unittest_package("bt-a2dp-encoding-tests") {
   manifest = "meta/bt-a2dp-encoding-tests.cml"
   deps = [ ":encoding_integration_bin" ]
-  package_deps = [ "//src/media/codec:codec_factory" ]
+  package_deps_for_infra_only = [ "//src/media/codec:codec_factory" ]
 }
 
 group("tests") {

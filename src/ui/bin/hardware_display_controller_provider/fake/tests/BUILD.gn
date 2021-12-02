@@ -31,7 +31,7 @@ executable("unittests") {
 }
 
 fuchsia_unittest_package("fake_hdcp_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//garnet/bin/cpuperf_provider:cpuperf_provider",
     "//garnet/bin/ktrace_provider:ktrace_provider",
   ]

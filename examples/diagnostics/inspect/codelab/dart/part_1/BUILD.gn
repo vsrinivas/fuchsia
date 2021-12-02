@@ -60,7 +60,7 @@ dart_test_component("integration-tests-component") {
 }
 
 fuchsia_test_package("inspect-dart-codelab-part-1-integration-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     ":bin",
     "//examples/diagnostics/inspect/codelab/dart/fizzbuzz:bin",
     dart_default_build_cfg.runner_dep,

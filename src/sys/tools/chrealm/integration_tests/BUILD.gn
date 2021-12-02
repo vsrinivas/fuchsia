@@ -65,7 +65,7 @@ fuchsia_component("chrealm_integrationtests_component") {
 }
 
 fuchsia_test_package("chrealm_integrationtests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/sys/tools/chrealm:chrealm",
     "//src/sys/tools/chrealm/integration_tests:chrealm_test_get_message",
     "//third_party/sbase:ls",

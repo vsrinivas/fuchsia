@@ -438,7 +438,7 @@ fuchsia_package_with_single_component("module_with_fake_runner") {
 }
 
 fuchsia_test_package("modular_integration_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner",
     "//src/diagnostics/archivist:archivist-for-embedding",
     "//src/modular/bin/basemgr:basemgr",

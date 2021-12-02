@@ -13,7 +13,7 @@ dart_test("diagnostics_services_running") {
     "//third_party/dart-pkg/pub/test",
   ]
 
-  package_deps = [ "//src/testing/sl4f($default_toolchain)" ]
+  package_deps_for_infra_only = [ "//src/testing/sl4f($default_toolchain)" ]
 
   environments = [
     {

@@ -23,7 +23,7 @@ group("tests") {
 }
 
 fuchsia_unittest_package("flutter-embedder-test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//examples/intl/manager:intl_property_manager",
     "//garnet/bin/cpuperf_provider:cpuperf_provider",
     "//garnet/bin/ktrace_provider:ktrace_provider",

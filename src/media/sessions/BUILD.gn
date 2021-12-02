@@ -78,7 +78,7 @@ rustc_binary("bin") {
 }
 
 fuchsia_unittest_package("mediasession_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/diagnostics/archivist:archivist-for-embedding",
     "//src/media/sessions:mediasession",
   ]

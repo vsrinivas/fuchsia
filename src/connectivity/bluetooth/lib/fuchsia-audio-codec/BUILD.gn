@@ -61,7 +61,7 @@ fuchsia_test_component("fuchsia-audio-codec-test-component") {
 fuchsia_test_package("fuchsia-audio-codec-tests") {
   test_components = [ ":fuchsia-audio-codec-test-component" ]
   deps = [ ":test-data" ]
-  package_deps = [ "//src/media/codec:codec_factory" ]
+  package_deps_for_infra_only = [ "//src/media/codec:codec_factory" ]
 }
 
 group("tests") {

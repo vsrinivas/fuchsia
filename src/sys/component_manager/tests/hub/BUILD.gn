@@ -80,7 +80,8 @@ fuchsia_component("grandchild") {
 }
 
 fuchsia_unittest_package("hub_integration_test") {
-  package_deps = [ "//src/sys/component_manager:component-manager" ]
+  package_deps_for_infra_only =
+      [ "//src/sys/component_manager:component-manager" ]
   manifest = "meta/hub_integration_test.cmx"
   deps = [
     ":advanced_routing_echo_realm",

@@ -59,10 +59,12 @@ import("fuchsia_test_component_manifest.gni")
 #     Type: string
 #     Default: target_name
 #
-#   package_deps (optional)
+#   package_deps_for_infra_only (optional)
 #     Additional package targets this test package relies on.
 #     Test packages that depend on the contents of other packages are not
-#     hermetic, so populating this parameter is discouraged.
+#     hermetic, so populating this parameter is discouraged. Additionally,
+#     this parameter is only used in infrastructure, and therefore will not
+#     affect fx test invocations.
 #     Type: list(labels)
 #
 #   wrap_cmx_test_with_cml_test (optional)
@@ -160,8 +162,8 @@ template("fuchsia_test_package") {
 
         # Add the package manifest of any package that this test depends on to
         # run.
-        if (defined(invoker.package_deps)) {
-          foreach(dep, invoker.package_deps) {
+        if (defined(invoker.package_deps_for_infra_only)) {
+          foreach(dep, invoker.package_deps_for_infra_only) {
             dep_out_dir = get_label_info(dep, "target_out_dir")
             dep_name = get_label_info(dep, "name")
             package_manifests += [ rebase_path(
@@ -188,8 +190,8 @@ template("fuchsia_test_package") {
       }
       deps += invoker.test_components
       deps += test_deps
-      if (defined(invoker.package_deps)) {
-        deps += invoker.package_deps
+      if (defined(invoker.package_deps_for_infra_only)) {
+        deps += invoker.package_deps_for_infra_only
       }
       testonly = true
     }

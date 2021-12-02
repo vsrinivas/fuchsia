@@ -35,10 +35,12 @@ import("fuchsia_unittest_component.gni")
 #     Type: string
 #     Default: target_name
 #
-#   package_deps (optional)
+#   package_deps_for_infra_only (optional)
 #     Additional package targets this test package relies on.
 #     Test packages that depend on the contents of other packages are not
-#     hermetic, so populating this parameter is discouraged.
+#     hermetic, so populating this parameter is discouraged. Additionally,
+#     this parameter is only used in infrastructure, and therefore will not
+#     affect fx test invocations.
 #     Type: list(labels)
 #
 #   component_name (optional)
@@ -116,7 +118,7 @@ template("fuchsia_unittest_package") {
     fuchsia_test_package(target_name) {
       forward_variables_from(invoker,
                              [
-                               "package_deps",
+                               "package_deps_for_infra_only",
                                "package_name",
                                "test_specs",
                                "visibility",

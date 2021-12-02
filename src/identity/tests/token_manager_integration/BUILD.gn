@@ -34,7 +34,7 @@ executable("bin") {
 }
 
 fuchsia_unittest_package("token_manager_integration_test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/identity/bin/dev_auth_provider:dev_auth_provider",
     "//src/identity/bin/token_manager_factory:token_manager_factory",
   ]

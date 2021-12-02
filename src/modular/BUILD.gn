@@ -41,7 +41,7 @@ group("tests") {
 }
 
 fuchsia_unittest_package("modular_lib_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner",
     "//src/modular/bin/basemgr:basemgr",
     "//src/modular/bin/sessionmgr:sessionmgr",

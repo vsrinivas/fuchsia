@@ -64,7 +64,7 @@ fuchsia_component("gtest_runner_stress_test") {
 }
 
 fuchsia_test_package("gtest-runner-integration-test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/sys/test_runners/gtest/test_data:gtest-runner-example-tests",
     "//src/sys/test_runners/starnix:starnix-test-runner",
   ]

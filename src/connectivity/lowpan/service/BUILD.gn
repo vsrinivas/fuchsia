@@ -54,7 +54,7 @@ group("service") {
 }
 
 fuchsia_unittest_package("lowpanservice-test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:lowpan-dummy-driver",
     "//src/connectivity/lowpan/service:lowpanservice",
   ]

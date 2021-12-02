@@ -56,7 +56,8 @@ config_data("test-config") {
 }
 
 fuchsia_test_package("diagnostics-persistence-integration-tests") {
-  package_deps = [ "//src/diagnostics/archivist:archivist-for-embedding" ]
+  package_deps_for_infra_only =
+      [ "//src/diagnostics/archivist:archivist-for-embedding" ]
   test_components = [ ":canonical-diagnostics-persistence-test" ]
   deps = [ ":test-config" ]
 }

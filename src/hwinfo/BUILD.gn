@@ -127,8 +127,8 @@ template("hwinfo_integration_test") {
       ":${test_name}_misc_cm",
       ":${test_name}_test_driver",
     ]
-    if (defined(invoker.package_deps)) {
-      deps += invoker.package_deps
+    if (defined(invoker.package_deps_for_infra_only)) {
+      deps += invoker.package_deps_for_infra_only
     }
     if (defined(invoker.test_specs)) {
       test_specs = invoker.test_specs
@@ -198,7 +198,7 @@ rustc_test("hwinfo_retail_test") {
 hwinfo_integration_test("hwinfo_positive_tests") {
   manifest = "meta/hwinfo_positive_tests.cml"
   deps = [ ":hwinfo_positive_test" ]
-  package_deps = [
+  package_deps_for_infra_only = [
     ":hwinfo_tests_config",
     ":hwinfo_tests_factory_config",
   ]
@@ -207,7 +207,7 @@ hwinfo_integration_test("hwinfo_positive_tests") {
 hwinfo_integration_test("hwinfo_negative_tests") {
   manifest = "meta/hwinfo_negative_tests.cml"
   deps = [ ":hwinfo_negative_test" ]
-  package_deps = [
+  package_deps_for_infra_only = [
     ":hwinfo_tests_factory_config",
     "//src/factory/fake_factory_store_providers",
   ]
@@ -221,7 +221,7 @@ hwinfo_integration_test("hwinfo_negative_tests") {
 hwinfo_integration_test("hwinfo_retail_tests") {
   manifest = "meta/hwinfo_retail_tests.cml"
   deps = [ ":hwinfo_retail_test" ]
-  package_deps = [
+  package_deps_for_infra_only = [
     ":hwinfo_retail_tests_config",
     ":hwinfo_retail_tests_factory_config",
   ]

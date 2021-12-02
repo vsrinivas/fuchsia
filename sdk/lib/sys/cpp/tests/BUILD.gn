@@ -122,7 +122,7 @@ executable("constructor_helper_proc") {
 }
 
 fuchsia_test_package("sys_cpp_tests") {
-  package_deps = [ "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner" ]
+  package_deps_for_infra_only = [ "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner" ]
   test_components = [
     ":component_cpp_testing_tests",
     ":component_cpp_testing_unittests",

@@ -48,7 +48,8 @@ fuchsia_component("battery_cli_tests") {
 }
 
 fuchsia_test_package("battery-cli-tests") {
-  package_deps = [ "//src/power/battery-manager:battery-manager" ]
+  package_deps_for_infra_only =
+      [ "//src/power/battery-manager:battery-manager" ]
   test_components = [ ":battery_cli_tests" ]
   deps = [ ":battery_cli_test_driver" ]
 }

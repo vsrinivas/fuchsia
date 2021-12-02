@@ -247,7 +247,8 @@ shared_deps = [
 ]
 
 fuchsia_test_package("wlan-hw-sim-test") {
-  package_deps = [ "//src/connectivity/location/emergency:emergency" ]
+  package_deps_for_infra_only =
+      [ "//src/connectivity/location/emergency:emergency" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"

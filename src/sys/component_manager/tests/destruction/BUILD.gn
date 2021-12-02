@@ -105,7 +105,8 @@ fuchsia_component("destroy_and_recreate") {
 }
 
 fuchsia_unittest_package("destruction_integration_test") {
-  package_deps = [ "//src/sys/component_manager:component-manager" ]
+  package_deps_for_infra_only =
+      [ "//src/sys/component_manager:component-manager" ]
   manifest = "meta/destruction_integration_test.cmx"
   deps = [
     ":collection_realm",

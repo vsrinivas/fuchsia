@@ -62,7 +62,7 @@ fuchsia_component("rust_runner_stress_test") {
 }
 
 fuchsia_test_package("rust-runner-integration-test") {
-  package_deps =
+  package_deps_for_infra_only =
       [ "//src/sys/test_runners/rust/test_data:rust-test-runner-example" ]
   test_components = [ ":rust_runner_integration_test" ]
 

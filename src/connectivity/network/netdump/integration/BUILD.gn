@@ -52,7 +52,7 @@ fuchsia_component("netdump_integration_test") {
 }
 
 fuchsia_test_package("netdump-integration-tests") {
-  package_deps =
+  package_deps_for_infra_only =
       [ "//src/connectivity/network/testing/netemul/runner:netemul-sandbox" ]
   test_components = [ ":netdump_integration_test" ]
   deps = [

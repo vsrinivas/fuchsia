@@ -45,7 +45,7 @@ fuchsia_component("ipv6-forward-test") {
 }
 
 fuchsia_test_package("netemul-ip-forward-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
     "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
   ]

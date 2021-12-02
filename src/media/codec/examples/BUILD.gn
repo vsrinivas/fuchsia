@@ -85,7 +85,7 @@ fuchsia_test_component("use_h264_decoder_test_v2") {
 }
 
 fuchsia_test_package("use_h264_decoder_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_ffmpeg",
   ]
@@ -125,7 +125,7 @@ fuchsia_unittest_component("use_h264_decoder_frame_num_gaps_test_v2") {
 }
 
 fuchsia_test_package("use_h264_decoder_frame_num_gaps_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_ffmpeg",
   ]
@@ -171,7 +171,7 @@ fuchsia_test_package("use_h264_sw_decoder_tests") {
   test_specs = {
     environments = [ emu_env ]
   }
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_ffmpeg",
   ]

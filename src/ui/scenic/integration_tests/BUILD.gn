@@ -217,7 +217,7 @@ fuchsia_test_component("screenshot_integration_test") {
 }
 
 fuchsia_test_package("gfx_integration_tests") {
-  package_deps = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
+  package_deps_for_infra_only = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   test_components = [
     ":gfx_focus_integration_test",
     ":gfx_legacy_coordinate_transform_test",

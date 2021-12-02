@@ -48,7 +48,7 @@ executable("basemgr_launcher_test") {
 }
 
 fuchsia_unittest_package("basemgr_launcher_tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/modular/bin/basemgr:basemgr",
     "//src/modular/bin/basemgr_launcher:basemgr_launcher",
     "//src/modular/bin/sessionmgr:dev_session_shell",

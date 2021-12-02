@@ -197,7 +197,7 @@ audio_core_api_test_component("volume-control-test") {
 
 # These tests can run anywhere, including in emulators.
 fuchsia_test_package("audio-core-api-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//garnet/bin/trace_manager:trace_manager",
     "//src/media/audio/audio_core",
     "//src/media/audio/audio_core:audio-core-for-test",

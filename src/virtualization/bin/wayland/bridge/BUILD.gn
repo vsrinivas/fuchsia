@@ -200,7 +200,7 @@ fuchsia_unittest_component("wayland_bridge_unit_tests") {
 }
 
 fuchsia_test_package("wayland_bridge_tests") {
-  package_deps = [ ":bridge" ]
+  package_deps_for_infra_only = [ ":bridge" ]
   test_components = [
     ":wayland_bridge_integration_tests",
     ":wayland_bridge_unit_tests",

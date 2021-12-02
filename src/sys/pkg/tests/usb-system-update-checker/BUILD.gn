@@ -41,7 +41,7 @@ fuchsia_component("usb-system-update-checker-integration-test") {
 }
 
 fuchsia_test_package("usb-system-update-checker-integration-tests") {
-  package_deps =
+  package_deps_for_infra_only =
       [ "//src/lib/storage/ramdevice_client/rust:ramdisk-isolated-devmgr" ]
   test_components = [ ":usb-system-update-checker-integration-test" ]
 

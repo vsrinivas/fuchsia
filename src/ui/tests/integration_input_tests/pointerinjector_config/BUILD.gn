@@ -40,7 +40,7 @@ executable("pointerinjector_config_test") {
 }
 
 fuchsia_unittest_package("pointerinjector-config-test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",
   ]

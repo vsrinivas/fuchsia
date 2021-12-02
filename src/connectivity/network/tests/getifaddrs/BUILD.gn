@@ -28,7 +28,7 @@ fuchsia_component("getifaddrs-netemul-test") {
 }
 
 fuchsia_test_package("getifaddrs-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
     "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
   ]

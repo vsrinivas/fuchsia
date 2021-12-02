@@ -93,7 +93,8 @@ fuchsia_test_component("memory_monitor_inspect_integration_tests_component") {
 }
 
 fuchsia_test_package("memory_monitor_inspect_integration_tests") {
-  package_deps = [ "//src/diagnostics/archivist:archivist-for-embedding" ]
+  package_deps_for_infra_only =
+      [ "//src/diagnostics/archivist:archivist-for-embedding" ]
   test_components = [ ":memory_monitor_inspect_integration_tests_component" ]
   deps = [ ":memory_monitor_test_app_component" ]
 }

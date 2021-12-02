@@ -96,7 +96,7 @@ dart_test_component("dart-archive-reader-test-component") {
 #  fx test dart-archive-reader-test
 
 fuchsia_test_package("dart-archive-reader-test") {
-  package_deps = [ dart_default_build_cfg.runner_dep ]
+  package_deps_for_infra_only = [ dart_default_build_cfg.runner_dep ]
   package_name = "dart-archive-reader-test"
   test_components = [ ":dart-archive-reader-test-component" ]
   deps =

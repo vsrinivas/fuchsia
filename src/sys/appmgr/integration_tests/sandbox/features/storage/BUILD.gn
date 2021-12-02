@@ -65,7 +65,7 @@ executable("isolated_persistent_storage_bin") {
 }
 
 fuchsia_unittest_package("isolated_persistent_storage") {
-  package_deps =
+  package_deps_for_infra_only =
       [ "//src/sys/appmgr/integration_tests/util:persistent_storage_test_util" ]
   manifest = "meta/isolated_persistent_storage.cmx"
   deps = [

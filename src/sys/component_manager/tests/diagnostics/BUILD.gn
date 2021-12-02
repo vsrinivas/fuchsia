@@ -50,7 +50,8 @@ fuchsia_component("component-manager-inspect") {
 }
 
 fuchsia_unittest_package("diagnostics-integration-test") {
-  package_deps = [ "//src/sys/component_manager:component-manager" ]
+  package_deps_for_infra_only =
+      [ "//src/sys/component_manager:component-manager" ]
   manifest = "meta/diagnostics-integration-test.cmx"
   deps = [
     ":bin",

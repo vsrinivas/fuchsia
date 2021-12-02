@@ -36,7 +36,7 @@ fuchsia_test_component("escher_examples_test") {
 }
 
 fuchsia_test_package("escher_tests") {
-  package_deps = [ "//garnet/bin/trace_manager:trace_manager" ]
+  package_deps_for_infra_only = [ "//garnet/bin/trace_manager:trace_manager" ]
   test_components = [
     ":escher_renderer_tests",
     ":escher_examples_test",

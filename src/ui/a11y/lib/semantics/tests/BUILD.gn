@@ -151,7 +151,7 @@ resource("static") {
 }
 
 fuchsia_test_package("semantics-integration-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
     "//src/fonts:pkg",

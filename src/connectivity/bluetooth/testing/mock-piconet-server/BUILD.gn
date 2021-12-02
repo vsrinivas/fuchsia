@@ -118,7 +118,7 @@ fuchsia_package("mock-piconet-server") {
 }
 
 fuchsia_unittest_package("mock-piconet-server-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     ":mock-piconet-server",
     "//src/connectivity/bluetooth/profiles/bt-a2dp:bt-a2dp",
     "//src/media/codec:codec_factory",

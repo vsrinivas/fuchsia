@@ -44,7 +44,8 @@ fuchsia_component("system_controller_consumer") {
 }
 
 fuchsia_unittest_package("shutdown_integration_test") {
-  package_deps = [ "//src/sys/component_manager:component-manager" ]
+  package_deps_for_infra_only =
+      [ "//src/sys/component_manager:component-manager" ]
   manifest = "meta/shutdown_integration_test.cmx"
   deps = [
     ":shutdown_integration_root",

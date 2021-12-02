@@ -50,7 +50,7 @@ dart_test_component("benchmark-component") {
 }
 
 fuchsia_test_package("dart-fidl-benchmarks") {
-  package_deps = [ dart_default_build_cfg.runner_dep ]
+  package_deps_for_infra_only = [ dart_default_build_cfg.runner_dep ]
   test_components = [ ":benchmark-component" ]
 }
 

@@ -25,7 +25,7 @@ fuchsia_test_component("present_view") {
 }
 
 fuchsia_test_package("present_view_tests") {
-  package_deps = [ "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner" ]
+  package_deps_for_infra_only = [ "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner" ]
   test_components = [
     ":present_view_integration_tests",
     ":present_view_unittests",

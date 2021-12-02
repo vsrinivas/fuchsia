@@ -188,7 +188,7 @@ if (is_host) {
   }
 }
 
-group("package_deps") {
+group("package_deps_for_infra_only") {
   testonly = true
   public_deps = [
     "//src/diagnostics:benchmarks",
@@ -227,7 +227,7 @@ group("package_deps") {
 group("test") {
   testonly = true
 
-  deps = [ ":package_deps" ]
+  deps = [ ":package_deps_for_infra_only" ]
 
   foreach(target_name, test_list) {
     deps += [ ":$target_name($host_toolchain)" ]

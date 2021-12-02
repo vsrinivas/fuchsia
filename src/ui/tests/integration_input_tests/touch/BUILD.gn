@@ -79,7 +79,7 @@ fuchsia_component("touch-input-test-component") {
 }
 
 fuchsia_test_package("touch-input-test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt:mock_cobalt",
     "//src/ui/a11y/bin/a11y_manager:a11y-manager",
@@ -163,7 +163,7 @@ fuchsia_test_component("touch-input-test-ip-component") {
 }
 
 fuchsia_test_package("touch-input-test-ip") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/chromium:web_engine",
     "//src/ui/a11y/bin/a11y_manager:a11y-manager",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider",

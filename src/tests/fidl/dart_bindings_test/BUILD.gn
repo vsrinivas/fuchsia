@@ -116,7 +116,7 @@ dart_test_component("bindings-test-component") {
 }
 
 fuchsia_test_package("dart_bindings_test_package") {
-  package_deps = [ dart_default_build_cfg.runner_dep ]
+  package_deps_for_infra_only = [ dart_default_build_cfg.runner_dep ]
   package_name = "dart-bindings-test"
   test_components = [
     ":bindings-test-component",

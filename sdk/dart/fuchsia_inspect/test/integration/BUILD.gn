@@ -50,7 +50,7 @@ dart_app("dart_inspect_vmo_test_writer") {
 }
 
 fuchsia_unittest_package("dart_inspect_vmo_test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//sdk/dart/fuchsia_inspect/test/integration:dart-inspect-vmo-test-writer",
     dart_default_build_cfg.runner_dep,
   ]

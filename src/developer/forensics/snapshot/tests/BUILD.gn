@@ -68,7 +68,7 @@ fuchsia_component("snapshotter_unittest") {
 # PACKAGES
 ###############################################################################
 fuchsia_test_package("snapshot-tests") {
-  package_deps =
+  package_deps_for_infra_only =
       [ "//src/developer/forensics/testing/fakes:fake-data-provider" ]
   test_components = [
     ":snapshotter_integration_test",

@@ -22,7 +22,7 @@ dart_test("fidlcat_test") {
 
   non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/developer/debug/debug_agent($default_toolchain)",
     "//src/testing/fidl/echo_client_placeholder($default_toolchain)",
     "//src/testing/fidl/echo_server_placeholder($default_toolchain)",

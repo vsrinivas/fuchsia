@@ -51,7 +51,7 @@ fuchsia_component("blobfs-lib-test") {
 }
 
 fuchsia_test_package("blobfs-lib-test-package") {
-  package_deps =
+  package_deps_for_infra_only =
       [ "//src/lib/storage/ramdevice_client/rust:ramdisk-isolated-devmgr" ]
   test_components = [ ":blobfs-lib-test" ]
   test_specs = {

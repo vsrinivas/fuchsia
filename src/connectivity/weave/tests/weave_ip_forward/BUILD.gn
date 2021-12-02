@@ -49,7 +49,7 @@ fuchsia_component("weave-ip-fwd-test-wpan-non-subnet-6") {
 }
 
 fuchsia_test_package("weave-ip-fwd-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
     "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
     "//src/diagnostics/archivist:archivist-for-embedding",

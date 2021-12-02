@@ -124,7 +124,7 @@ fuchsia_test_component("model-unittest") {
 }
 
 fuchsia_test_package("netemul-sandbox-test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/network/testing/netemul/runner:netemul-sandbox",
     "//src/connectivity/network/testing/netemul/runner/runner:netemul-runner",
     "//src/connectivity/network/tun/network-tun:network-tun",

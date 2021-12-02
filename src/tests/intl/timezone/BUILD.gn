@@ -82,7 +82,7 @@ rustc_test("timezone_bin_test") {
 }
 
 fuchsia_unittest_package("timezone-test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/tests/intl/timestamp-server-dart:timestamp-server-dart",
     dart_default_build_cfg.runner_dep,
   ]

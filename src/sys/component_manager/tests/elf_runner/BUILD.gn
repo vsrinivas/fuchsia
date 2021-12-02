@@ -56,7 +56,8 @@ fuchsia_component("reporter_args") {
 }
 
 fuchsia_unittest_package("elf-runner-test") {
-  package_deps = [ "//src/sys/component_manager:component-manager" ]
+  package_deps_for_infra_only =
+      [ "//src/sys/component_manager:component-manager" ]
   manifest = "meta/elf-runner-test.cmx"
   deps = [
     ":elf_runner_test_bin",

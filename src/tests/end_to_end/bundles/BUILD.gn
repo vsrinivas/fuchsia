@@ -50,6 +50,6 @@ group("terminal_end_to_end_deps") {
   testonly = true
   public_deps = [
     # Needed for running performance tests.
-    "//src/tests/end_to_end/perf:package_deps",
+    "//src/tests/end_to_end/perf:package_deps_for_infra_only",
   ]
 }

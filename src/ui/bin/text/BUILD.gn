@@ -124,7 +124,7 @@ fuchsia_component("text_manager_bin_test") {
 }
 
 fuchsia_test_package("text_manager_test") {
-  package_deps = [ "//src/ui/testing/text:text_test_suite" ]
+  package_deps_for_infra_only = [ "//src/ui/testing/text:text_test_suite" ]
   test_components = [ ":text_manager_bin_test" ]
 }
 

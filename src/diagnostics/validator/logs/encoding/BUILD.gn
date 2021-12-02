@@ -49,7 +49,7 @@ fuchsia_component("encoding-validator-for-dart") {
 }
 
 fuchsia_test_package("log-encoding-validator-dart") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/diagnostics/validator/logs/encoding/puppet/dart:log-validator-dart-puppet",
     dart_default_build_cfg.runner_dep,
   ]

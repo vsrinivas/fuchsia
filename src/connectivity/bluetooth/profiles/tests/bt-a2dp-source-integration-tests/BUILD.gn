@@ -42,7 +42,7 @@ fuchsia_test_component("bt-a2dp-source-integration-test-component") {
 }
 
 fuchsia_test_package("bt-a2dp-source-integration-tests") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/connectivity/bluetooth/profiles/bt-avrcp-target:bt-avrcp-target",
     "//src/connectivity/bluetooth/testing/mock-piconet-server:mock-piconet-server",
     "//src/media/codec:codec_factory",

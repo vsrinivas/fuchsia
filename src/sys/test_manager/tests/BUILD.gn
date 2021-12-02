@@ -33,7 +33,7 @@ rustc_test("test_manager_test_bin") {
 }
 
 fuchsia_unittest_package("test_manager_test") {
-  package_deps = [
+  package_deps_for_infra_only = [
     "//examples/tests:example-tests",
     "//src/sys/test_manager/cmx_runner/tests:cmx_runner_tests",
     "//src/sys/test_manager/tests/diagnostics_tests:test-manager-diagnostics-tests",

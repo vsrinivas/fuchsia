@@ -12,7 +12,7 @@ dart_test("harvester_test") {
     "//sdk/testing/sl4f/client",
     "//third_party/dart-pkg/pub/test",
   ]
-  package_deps = [
+  package_deps_for_infra_only = [
     "//src/developer/system_monitor/bin/harvester:system_monitor_harvester($default_toolchain)",
     "//src/testing/sl4f($default_toolchain)",
   ]
