@@ -10,7 +10,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/cksum.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
@@ -66,11 +65,8 @@ TEST(SherlockAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  auto svc_root = service::ConnectAt<fuchsia_io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
-  ASSERT_OK(svc_root.status_value());
-
-  ASSERT_NOT_OK(paver::SherlockAbrClientFactory().Create(devmgr.devfs_root().duplicate(), *svc_root,
-                                                         nullptr));
+  ASSERT_NOT_OK(paver::SherlockAbrClientFactory().Create(devmgr.devfs_root().duplicate(),
+                                                         devmgr.fshost_svc_dir(), nullptr));
 }
 
 TEST(LuisAbrTests, CreateFails) {
@@ -83,11 +79,8 @@ TEST(LuisAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  auto svc_root = service::ConnectAt<fuchsia_io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
-  ASSERT_OK(svc_root.status_value());
-
-  ASSERT_NOT_OK(
-      paver::LuisAbrClientFactory().Create(devmgr.devfs_root().duplicate(), *svc_root, nullptr));
+  ASSERT_NOT_OK(paver::LuisAbrClientFactory().Create(devmgr.devfs_root().duplicate(),
+                                                     devmgr.fshost_svc_dir(), nullptr));
 }
 
 TEST(X64AbrTests, CreateFails) {
@@ -100,11 +93,8 @@ TEST(X64AbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  auto svc_root = service::ConnectAt<fuchsia_io::Directory>(devmgr.fshost_outgoing_dir(), "svc");
-  ASSERT_OK(svc_root.status_value());
-
-  ASSERT_NOT_OK(
-      paver::X64AbrClientFactory().Create(devmgr.devfs_root().duplicate(), *svc_root, nullptr));
+  ASSERT_NOT_OK(paver::X64AbrClientFactory().Create(devmgr.devfs_root().duplicate(),
+                                                    devmgr.fshost_svc_dir(), nullptr));
 }
 
 class ChromebookX64AbrTests : public zxtest::Test {
@@ -142,15 +132,7 @@ class ChromebookX64AbrTests : public zxtest::Test {
 
   ~ChromebookX64AbrTests() override { dispatcher_.Shutdown(); }
 
-  fidl::ClientEnd<fuchsia_io::Directory> GetFshostSvcRoot() {
-    auto fshost_root = devmgr_.fshost_outgoing_dir();
-    auto local = service::ConnectAt<fuchsia_io::Directory>(fshost_root, "svc");
-    if (!local.is_ok()) {
-      std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
-      return fidl::ClientEnd<fuchsia_io::Directory>();
-    }
-    return std::move(*local);
-  }
+  fidl::ClientEnd<fuchsia_io::Directory> GetFshostSvcRoot() { return devmgr_.fshost_svc_dir(); }
 
   void SetupPartitions(AbrSlotIndex active_slot) {
     auto pauser = BlockWatcherPauser::Create(GetFshostSvcRoot());
@@ -320,15 +302,7 @@ class CurrentSlotUuidTest : public zxtest::Test {
     ASSERT_FALSE(result->result.is_err());
   }
 
-  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() {
-    auto fshost_root = devmgr_.fshost_outgoing_dir();
-    auto local = service::ConnectAt<fuchsia_io::Directory>(fshost_root, "svc");
-    if (!local.is_ok()) {
-      std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
-      return fidl::ClientEnd<fuchsia_io::Directory>();
-    }
-    return std::move(*local);
-  }
+  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() { return devmgr_.fshost_svc_dir(); }
 
   IsolatedDevmgr devmgr_;
   std::unique_ptr<BlockDevice> disk_;

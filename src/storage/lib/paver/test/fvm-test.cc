@@ -4,7 +4,6 @@
 
 #include "src/storage/lib/paver/fvm.h"
 
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 
 #include <fs-management/fvm.h>

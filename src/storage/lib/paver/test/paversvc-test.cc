@@ -50,8 +50,8 @@ namespace {
 
 namespace partition = fuchsia_hardware_block_partition;
 
-using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
+using driver_integration_test::IsolatedDevmgr;
 
 constexpr std::string_view kFirmwareTypeBootloader("");
 constexpr std::string_view kFirmwareTypeBl2("bl2");
@@ -1835,15 +1835,14 @@ class PaverServiceBlockTest : public PaverServiceTest {
 
  protected:
   void SpawnIsolatedDevmgr() {
-    devmgr_launcher::Args args;
-    args.sys_device_driver = "/boot/driver/platform-bus.so";
+    driver_integration_test::IsolatedDevmgr::Args args;
     args.disable_block_watcher = false;
 
-    ASSERT_OK(IsolatedDevmgr::Create(std::move(args), &devmgr_));
+    ASSERT_OK(IsolatedDevmgr::Create(&args, &devmgr_));
 
     // Forward the block watcher FIDL interface from the devmgr.
     fake_svc_.ForwardServiceTo(fidl::DiscoverableProtocolName<fuchsia_fshost::BlockWatcher>,
-                               devmgr_.fshost_outgoing_dir());
+                               devmgr_.fshost_svc_dir());
 
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));
@@ -1954,7 +1953,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
 
     // Forward the block watcher FIDL interface from the devmgr.
     fake_svc_.ForwardServiceTo(fidl::DiscoverableProtocolName<fuchsia_fshost::BlockWatcher>,
-                               devmgr_.fshost_outgoing_dir());
+                               devmgr_.fshost_svc_dir());
 
     fbl::unique_fd fd;
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform/00:00:2d/ramctl", &fd));

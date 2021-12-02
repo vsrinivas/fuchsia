@@ -42,7 +42,6 @@ zx_library("driver-integration-test") {
     "//src/security/zxcrypt/tests/*",
     "//src/storage/fvm/*",
     "//src/storage/fvm/driver/test/*",
-    "//src/storage/lib/paver/test/*",
     "//zircon/system/ulib/driver-integration-test/test/*",
     "//zircon/system/ulib/usb-virtual-bus-launcher/*",
   ]

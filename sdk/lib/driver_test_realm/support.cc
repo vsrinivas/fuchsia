@@ -89,15 +89,20 @@ const zbi_board_info_t kBoardInfo = []() {
 // updated with the function that deserialized the data. This function
 // is TestBoard::FetchAndDeserialize.
 zx_status_t GetBootItem(const std::vector<board_test::DeviceEntry>& entries, uint32_t type,
-                        uint32_t extra, zx::vmo* out, uint32_t* length) {
+                        std::string_view board_name, uint32_t extra, zx::vmo* out,
+                        uint32_t* length) {
   zx::vmo vmo;
   switch (type) {
     case ZBI_TYPE_PLATFORM_ID: {
+      zbi_platform_id_t platform_id = kPlatformId;
+      if (!board_name.empty()) {
+        strncpy(platform_id.board_name, board_name.data(), ZBI_BOARD_NAME_LEN - 1);
+      }
       zx_status_t status = zx::vmo::create(sizeof(kPlatformId), 0, &vmo);
       if (status != ZX_OK) {
         return status;
       }
-      status = vmo.write(&kPlatformId, 0, sizeof(kPlatformId));
+      status = vmo.write(&platform_id, 0, sizeof(kPlatformId));
       if (status != ZX_OK) {
         return status;
       }
@@ -179,11 +184,13 @@ class FakePowerRegistration
 };
 
 class FakeBootItems final : public fidl::WireServer<fuchsia_boot::Items> {
+ public:
   void Get(GetRequestView request, GetCompleter::Sync& completer) override {
     zx::vmo vmo;
     uint32_t length = 0;
     std::vector<board_test::DeviceEntry> entries = {};
-    zx_status_t status = GetBootItem(entries, request->type, request->extra, &vmo, &length);
+    zx_status_t status =
+        GetBootItem(entries, request->type, board_name_, request->extra, &vmo, &length);
     if (status != ZX_OK) {
       FX_LOGF(ERROR, nullptr, "Failed to get boot items: %d", status);
     }
@@ -194,6 +201,8 @@ class FakeBootItems final : public fidl::WireServer<fuchsia_boot::Items> {
                          GetBootloaderFileCompleter::Sync& completer) override {
     completer.Reply(zx::vmo());
   }
+
+  std::string board_name_;
 };
 
 class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_framework::DriverIndex> {
@@ -296,6 +305,11 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
     if (is_started_) {
       completer.ReplyError(ZX_ERR_ALREADY_EXISTS);
       return;
+    }
+
+    if (request->args.has_board_name()) {
+      boot_items_.board_name_ =
+          std::string(request->args.board_name().data(), request->args.board_name().size());
     }
 
     boot_arguments_ = mock_boot_arguments::Server(CreateBootArgs(request));

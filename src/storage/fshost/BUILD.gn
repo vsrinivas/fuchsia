@@ -421,6 +421,30 @@ fuchsia_component("test-fshost") {
   ]
 }
 
+cmc_merge("test-fshost-no-watcher.cml") {
+  sources = [
+    "meta/base_fshost.cml",
+    "meta/core_fshost.cml",
+    "meta/no_watcher.cml",
+  ]
+  if (unstable_feature_use_fxfs) {
+    sources += [ "meta/fxfs_fshost.cml" ]
+  }
+}
+
+# This is a test version of fshost with no block watcher.
+fuchsia_component("test-fshost-no-watcher") {
+  testonly = true
+
+  manifest_outputs = get_target_outputs(":test-fshost-no-watcher.cml")
+  manifest = manifest_outputs[0]
+  deps = [
+    ":fshost",
+    ":test-fshost-no-watcher.cml",
+    "//src/security/policy/zxcrypt:null",
+  ]
+}
+
 test("copier_test") {
   sources = [
     "copier.cc",

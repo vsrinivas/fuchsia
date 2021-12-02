@@ -28,7 +28,12 @@ source_set("driver-integration-test-shim") {
   testonly = true
 
   sources = [ "fixture.cc" ]
-  public_deps = [ ":driver-integration-test-shim-headers" ]
+  public_deps = [
+    ":driver-integration-test-shim-headers",
+    "//src/devices/board/drivers/integration-test",
+    "//src/storage/fshost:test-fshost",
+    "//src/storage/fshost:test-fshost-no-watcher",
+  ]
   deps = [
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.driver.test",

@@ -40,8 +40,20 @@ shared_library("ramdevice-client") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
-shared_library("ramdevice-client-test") {
+# We need to use this group because the public dependencies of
+# ramdevice-client-test-lib are not propagating correctly.
+group("ramdevice-client-test") {
   testonly = true
+  public_deps = [
+    ":ramdevice-client-test-lib",
+    "//src/devices/testing/driver-integration-test-shim",
+  ]
+}
+
+shared_library("ramdevice-client-test-lib") {
+  testonly = true
+  output_name = "ramdevice-client-test"
+  visibility = [ ":*" ]
   public_configs = [ ":headers_config" ]
   public = [ "include/ramdevice-client-test/ramnandctl.h" ]
   sources = [ "ramnandctl.cc" ]
@@ -51,7 +63,8 @@ shared_library("ramdevice-client-test") {
 
     # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
-    "//zircon/system/ulib/driver-integration-test",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/devices/testing/driver-integration-test-shim",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
@@ -60,8 +73,8 @@ shared_library("ramdevice-client-test") {
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/lib/fdio",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",

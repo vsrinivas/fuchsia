@@ -35,6 +35,12 @@ class IsolatedDevmgr {
     // A list of vid/pid/did triplets to spawn in their own devhosts.
     fbl::Vector<board_test::DeviceEntry> device_list;
     std::vector<fuchsia::driver::test::DriverLog> log_level;
+
+    // If this is true then tell fshost not to create a block watcher.
+    bool disable_block_watcher = true;
+
+    // A board name to appear.
+    fbl::String board_name;
   };
 
   static Args DefaultArgs() { return Args{}; }
@@ -49,6 +55,11 @@ class IsolatedDevmgr {
 
   zx_status_t Connect(const std::string& interface_name, zx::channel channel) {
     return realm_->Connect(interface_name, std::move(channel));
+  }
+
+  fidl::ClientEnd<fuchsia_io::Directory> fshost_svc_dir() const {
+    auto root = realm_->CloneRoot();
+    return fidl::ClientEnd<fuchsia_io::Directory>(root.TakeChannel());
   }
 
  private:

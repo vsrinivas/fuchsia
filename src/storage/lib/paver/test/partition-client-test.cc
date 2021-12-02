@@ -4,7 +4,6 @@
 
 #include "src/storage/lib/paver/partition-client.h"
 
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
@@ -406,15 +405,7 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
         partition_offset, buffer_offset);
   }
 
-  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() {
-    auto fshost_root = devmgr_.fshost_outgoing_dir();
-    auto local = service::ConnectAt<fuchsia_io::Directory>(fshost_root, "svc");
-    if (!local.is_ok()) {
-      std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
-      return fidl::ClientEnd<fuchsia_io::Directory>();
-    }
-    return std::move(*local);
-  }
+  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() { return devmgr_.fshost_svc_dir(); }
 
  private:
   IsolatedDevmgr devmgr_;

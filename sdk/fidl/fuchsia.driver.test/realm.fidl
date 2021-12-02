@@ -62,6 +62,10 @@ type RealmArgs = resource table {
     /// binds as a fallback driver into a driver that will be bound normally.
     /// Default: empty
     9: driver_bind_eager vector<DriverName>:MAX;
+
+    /// Specify the board name that drivers are aware of.
+    /// Default: driver-integration-test
+   10: board_name string:MAX;
 };
 
 /// This protocol is for the DriverTestRealm. It is an integration test

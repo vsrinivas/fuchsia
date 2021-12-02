@@ -3,6 +3,7 @@ struct/member fuchsia.driver.test/DriverLog.name string
 struct fuchsia.driver.test/DriverLog
 protocol/member fuchsia.driver.test/Realm.Start(fuchsia.driver.test/RealmArgs args) -> (fuchsia.driver.test/Realm_Start_Result result)
 protocol fuchsia.driver.test/Realm
+table/member fuchsia.driver.test/RealmArgs.board_name string
 table/member fuchsia.driver.test/RealmArgs.boot fuchsia.io/Directory
 table/member fuchsia.driver.test/RealmArgs.driver_bind_eager vector<string>
 table/member fuchsia.driver.test/RealmArgs.driver_disable vector<string>

@@ -11,7 +11,6 @@
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -366,15 +365,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
   }
 
-  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() {
-    auto fshost_root = devmgr_.fshost_outgoing_dir();
-    auto local = service::ConnectAt<fuchsia_io::Directory>(fshost_root, "svc");
-    if (!local.is_ok()) {
-      std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
-      return fidl::ClientEnd<fuchsia_io::Directory>();
-    }
-    return std::move(*local);
-  }
+  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() { return devmgr_.fshost_svc_dir(); }
 
   // Create a disk with the default size for a BlockDevice.
   void CreateDisk(std::unique_ptr<BlockDevice>* disk) {

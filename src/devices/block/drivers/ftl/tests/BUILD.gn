@@ -117,7 +117,13 @@ fuzzers_package("ftl-fuzzers") {
   cpp_fuzzers = [ ":ftl-read-write-fuzzer" ]
 }
 
-fuchsia_unittest_package("ftl-integration-package") {
+fuchsia_test_component("ftl-integration-test-component") {
+  component_name = "ftl-integration-test"
+  manifest = "meta/ftl-integration-test.cml"
+  deps = [ ":ftl-integration" ]
+}
+
+fuchsia_test_package("ftl-integration-package") {
   package_name = "ftl-integration"
   test_specs = {
     # Raising log severity limit to allow for NDM init errors which are truly
@@ -126,5 +132,5 @@ fuchsia_unittest_package("ftl-integration-package") {
       max_severity = "ERROR"
     }
   }
-  deps = [ ":ftl-integration" ]
+  test_components = [ ":ftl-integration-test-component" ]
 }
