@@ -1,10 +1,14 @@
 //! This module contains `Dependency` and the types/functions it uses for deserialization.
 
-use semver::VersionReq;
-use serde::{Deserialize, Deserializer};
 use std::fmt;
 
-#[derive(PartialEq, Clone, Debug, Copy, Serialize, Deserialize)]
+use camino::Utf8PathBuf;
+#[cfg(feature = "builder")]
+use derive_builder::Builder;
+use semver::VersionReq;
+use serde::{Deserialize, Deserializer, Serialize};
+
+#[derive(Eq, PartialEq, Clone, Debug, Copy, Hash, Serialize, Deserialize)]
 /// Dependencies can come in three kinds
 pub enum DependencyKind {
     #[serde(rename = "normal")]
@@ -27,6 +31,14 @@ impl Default for DependencyKind {
     }
 }
 
+impl fmt::Display for DependencyKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = serde_json::to_string(self).unwrap();
+        // skip opening and closing quotes
+        f.write_str(&s[1..s.len() - 1])
+    }
+}
+
 /// The `kind` can be `null`, which is interpreted as the default - `Normal`.
 pub(super) fn parse_dependency_kind<'de, D>(d: D) -> Result<DependencyKind, D::Error>
 where
@@ -36,6 +48,9 @@ where
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
+#[cfg_attr(feature = "builder", derive(Builder))]
+#[non_exhaustive]
+#[cfg_attr(feature = "builder", builder(pattern = "owned", setter(into)))]
 /// A dependency of the main crate
 pub struct Dependency {
     /// Name as given in the `Cargo.toml`
@@ -57,7 +72,7 @@ pub struct Dependency {
     ///
     /// Use the [`Display`] trait to access the contents.
     ///
-    /// [`Display`]: https://doc.rust-lang.org/std/fmt/trait.Display.html
+    /// [`Display`]: std::fmt::Display
     pub target: Option<Platform>,
     /// If the dependency is renamed, this is the new name for the dependency
     /// as a string.  None if it is not renamed.
@@ -66,18 +81,10 @@ pub struct Dependency {
     ///
     /// If None, the dependency is from crates.io.
     pub registry: Option<String>,
-    #[doc(hidden)]
-    #[serde(skip)]
-    __do_not_match_exhaustively: (),
+    /// The file system path for a local path dependency.
+    ///
+    /// Only produced on cargo 1.51+
+    pub path: Option<Utf8PathBuf>,
 }
 
-/// A target platform.
-#[derive(Clone, Serialize, Deserialize, Debug)]
-#[serde(transparent)]
-pub struct Platform(String);
-
-impl fmt::Display for Platform {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(&self.0)
-    }
-}
+pub use cargo_platform::Platform;

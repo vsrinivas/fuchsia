@@ -11,6 +11,7 @@ if (is_host) {
   crate_deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:rayon",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",

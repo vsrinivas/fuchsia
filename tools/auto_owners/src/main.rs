@@ -4,6 +4,7 @@
 
 use anyhow::bail;
 use argh::FromArgs;
+use camino::{Utf8Path, Utf8PathBuf};
 use gnaw_lib::CrateOutputMetadata;
 use rayon::prelude::*;
 use std::{
@@ -26,7 +27,7 @@ struct Options {
 
     /// path to the ownership overrides config file
     #[argh(option)]
-    overrides: PathBuf,
+    overrides: Utf8PathBuf,
 
     /// path to out/default (or the equivalent for the current build)
     #[argh(option)]
@@ -60,7 +61,7 @@ struct OwnersDb {
     crates_by_top_level_gn_target: BTreeMap<String, CrateOutputMetadata>,
 
     /// explicit lists of OWNERS files to include instead of inferring, indexed by crate name
-    overrides: BTreeMap<String, Vec<PathBuf>>,
+    overrides: BTreeMap<String, Vec<Utf8PathBuf>>,
 
     metadata_path: PathBuf,
     gn_bin: PathBuf,
@@ -69,12 +70,12 @@ struct OwnersDb {
 
 impl OwnersDb {
     fn new(
-        overrides: PathBuf,
+        overrides: Utf8PathBuf,
         metadata_path: PathBuf,
         gn_bin: PathBuf,
         out_dir: PathBuf,
     ) -> anyhow::Result<Self> {
-        let overrides: BTreeMap<String, Vec<PathBuf>> =
+        let overrides: BTreeMap<String, Vec<Utf8PathBuf>> =
             toml::de::from_str(&std::fs::read_to_string(overrides)?)?;
         let external_crates: Vec<CrateOutputMetadata> =
             serde_json::from_reader(File::open(&metadata_path)?)?;
@@ -123,7 +124,7 @@ impl OwnersDb {
         if !file.is_empty() {
             std::fs::write(owners_path, file.to_string().as_bytes())?;
         } else {
-            eprintln!("\n{} would be empty, ensuring deleted", owners_path.display());
+            eprintln!("\n{} would be empty, ensuring deleted", owners_path);
             std::fs::remove_file(owners_path).ok();
         }
         eprint!(".");
@@ -198,7 +199,7 @@ impl OwnersDb {
     }
 
     /// Given a GN target, find the most likely path for its corresponding OWNERS file.
-    fn owners_file_for_gn_target(&self, target: &str) -> anyhow::Result<PathBuf> {
+    fn owners_file_for_gn_target(&self, target: &str) -> anyhow::Result<Utf8PathBuf> {
         // none of the metadata we have emits toolchain suffices, so remove them. the target
         // toolchain is the default toolchain so we don't encounter an targets suffixed that way
         let target = if let Some(idx) = target.find(GN_TOOLCHAIN_SUFFIX_PREFIX) {
@@ -222,7 +223,7 @@ impl OwnersDb {
                 target.strip_prefix("//").expect("GN targets from refs should be absolute");
             // remove the target name after the colon
             let path_portion = no_slashes.rsplitn(2, ":").skip(1).next().unwrap();
-            let mut target = Path::new(path_portion);
+            let mut target = Utf8Path::new(path_portion);
             while !target.join("OWNERS").exists() {
                 target =
                     target.parent().expect("we will always find an OWNERS file in the source tree");
@@ -282,8 +283,8 @@ impl OwnersSource {
 struct OwnersFile {
     // TODO(fxbug.dev/84729)
     #[allow(unused)]
-    path: PathBuf,
-    includes: BTreeSet<PathBuf>,
+    path: Utf8PathBuf,
+    includes: BTreeSet<Utf8PathBuf>,
     source: OwnersSource,
 }
 
@@ -306,7 +307,7 @@ impl std::fmt::Display for OwnersFile {
 
         writeln!(f, "{}", HEADER)?;
         for to_include in &self.includes {
-            write!(f, "include /{}\n", to_include.display())?;
+            write!(f, "include /{}\n", to_include)?;
         }
         Ok(())
     }
@@ -337,7 +338,7 @@ fn gn_reverse_deps(
     Ok(revdeps)
 }
 
-fn should_include(owners_file: &Path) -> bool {
+fn should_include(owners_file: &Utf8Path) -> bool {
     let owners_file = owners_file.as_os_str().to_str().unwrap();
     // many of these repos aren't open
     !owners_file.starts_with("vendor") &&

@@ -5,18 +5,18 @@
 use {
     crate::gn::add_version_suffix,
     crate::types::*,
-    cargo_metadata::{Package, PackageId},
-    semver::Version,
+    camino::{Utf8Path, Utf8PathBuf},
+    cargo_metadata::{Package, PackageId, Version},
     std::borrow::Cow,
     std::cmp::Ordering,
     std::collections::{hash_map::DefaultHasher, HashMap},
     std::hash::{Hash, Hasher},
-    std::path::{Path, PathBuf},
+    std::path::Path,
 };
 
 #[derive(Clone)]
 pub struct CustomBuildTarget<'a> {
-    pub path: PathBuf,
+    pub path: &'a Utf8Path,
     pub dependencies: Vec<&'a Package>,
 }
 
@@ -30,7 +30,7 @@ pub struct GnTarget<'a> {
     /// Name of the package given in Cargo.toml
     pub pkg_name: &'a str,
     /// Path to the root of the crate
-    pub crate_root: &'a Path,
+    pub crate_root: &'a Utf8Path,
     /// Rust Edition of the target
     /// rustc: --edition
     pub edition: &'a str,
@@ -93,7 +93,7 @@ impl<'a> GnTarget<'a> {
         target_name: &'a str,
         pkg_name: &'a str,
         edition: &'a str,
-        crate_root: &'a Path,
+        crate_root: &'a Utf8Path,
         version: &'a Version,
         target_type: GnRustType,
         features: &'a [Feature],
@@ -146,7 +146,7 @@ impl<'a> GnTarget<'a> {
         add_version_suffix(&prefix, &self.version)
     }
 
-    pub fn package_root(&self, project_root: &Path) -> PathBuf {
+    pub fn package_root(&self, project_root: &Path) -> Utf8PathBuf {
         let mut package_root = self.crate_root;
 
         while !package_root.join("Cargo.toml").exists() {

@@ -110,8 +110,16 @@ group("bytes") {
   deps = [ ":bytes-v0_5_4" ]
 }
 
-group("cargo_metadata") {
-  deps = [ ":cargo_metadata-v0_9_1" ]
+if (!(current_os == "fuchsia")) {
+  group("camino") {
+    deps = [ ":camino-v1_0_5" ]
+  }
+}
+
+if (!(current_os == "fuchsia")) {
+  group("cargo_metadata") {
+    deps = [ ":cargo_metadata-v0_14_1" ]
+  }
 }
 
 group("chrono") {
@@ -680,10 +688,6 @@ group("scopeguard") {
 
 group("scrypt") {
   deps = [ ":scrypt-v0_8_0" ]
-}
-
-group("semver") {
-  deps = [ ":semver-v0_9_0" ]
 }
 
 group("serde") {
@@ -2109,28 +2113,76 @@ rust_library("cache-padded-v1_1_1") {
   ]
 }
 
-rust_library("cargo_metadata-v0_9_1") {
-  crate_name = "cargo_metadata"
-  crate_root = "//third_party/rust_crates/vendor/cargo_metadata/src/lib.rs"
-  output_name = "cargo_metadata-cc51a76810d0c63c"
+rust_library("camino-v1_0_5") {
+  crate_name = "camino"
+  crate_root = "//third_party/rust_crates/vendor/camino/src/lib.rs"
+  output_name = "camino-675a72b3a822c4c7"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":semver-v0_9_0" ]
   deps += [ ":serde-v1_0_116" ]
-  deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=675a72b3a822c4c7",
+    "-Cextra-filename=-675a72b3a822c4c7",
+    "--cfg=feature=\"serde\"",
+    "--cfg=feature=\"serde1\"",
+    "--cfg=path_buf_capacity",
+  ]
+}
+
+rust_library("cargo-platform-v0_1_2") {
+  crate_name = "cargo_platform"
+  crate_root = "//third_party/rust_crates/vendor/cargo-platform/src/lib.rs"
+  output_name = "cargo_platform-1a9bc2981dd0c628"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":serde-v1_0_116" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=1a9bc2981dd0c628",
+    "-Cextra-filename=-1a9bc2981dd0c628",
+  ]
+}
+
+rust_library("cargo_metadata-v0_14_1") {
+  crate_name = "cargo_metadata"
+  crate_root = "//third_party/rust_crates/vendor/cargo_metadata/src/lib.rs"
+  output_name = "cargo_metadata-c02c463dd45e6a7c"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":camino-v1_0_5" ]
+  deps += [ ":cargo-platform-v0_1_2" ]
+  deps += [ ":semver-v1_0_4" ]
+  deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_59" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=cc51a76810d0c63c",
-    "-Cextra-filename=-cc51a76810d0c63c",
+    "--edition=2018",
+    "-Cmetadata=c02c463dd45e6a7c",
+    "-Cextra-filename=-c02c463dd45e6a7c",
     "--cfg=feature=\"default\"",
   ]
 }
@@ -9142,49 +9194,28 @@ rust_library("security-framework-sys-v0_4_3") {
   ]
 }
 
-rust_library("semver-v0_9_0") {
+rust_library("semver-v1_0_4") {
   crate_name = "semver"
   crate_root = "//third_party/rust_crates/vendor/semver/src/lib.rs"
-  output_name = "semver-cafeca1c46011ca9"
+  output_name = "semver-952c2f5f714df893"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":semver-parser-v0_7_0" ]
   deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=cafeca1c46011ca9",
-    "-Cextra-filename=-cafeca1c46011ca9",
+    "--edition=2018",
+    "-Cmetadata=952c2f5f714df893",
+    "-Cextra-filename=-952c2f5f714df893",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"serde\"",
-  ]
-}
-
-rust_library("semver-parser-v0_7_0") {
-  crate_name = "semver_parser"
-  crate_root = "//third_party/rust_crates/vendor/semver-parser/src/lib.rs"
-  output_name = "semver_parser-cd0215f2368b3722"
-  configs -= [
-    "//build/config/rust:edition_2018",
-    "//build/config/rust:2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=cd0215f2368b3722",
-    "-Cextra-filename=-cd0215f2368b3722",
+    "--cfg=feature=\"std\"",
   ]
 }
 
@@ -9301,6 +9332,7 @@ rust_library("serde_json-v1_0_59") {
     "-Cextra-filename=-7635f31531fde4db",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+    "--cfg=feature=\"unbounded_depth\"",
     "--cfg=limb_width_64",
   ]
 }

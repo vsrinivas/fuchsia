@@ -3,8 +3,8 @@ extern crate semver;
 #[macro_use]
 extern crate serde_json;
 
-use cargo_metadata::{DependencyKind, Metadata, MetadataCommand};
-use std::path::PathBuf;
+use camino::Utf8PathBuf;
+use cargo_metadata::{CargoOpt, DependencyKind, Metadata, MetadataCommand};
 
 #[test]
 fn old_minimal() {
@@ -73,6 +73,8 @@ fn old_minimal() {
     assert_eq!(pkg.description, None);
     assert_eq!(pkg.license, None);
     assert_eq!(pkg.license_file, None);
+    assert_eq!(pkg.default_run, None);
+    assert_eq!(pkg.rust_version, None);
     assert_eq!(pkg.dependencies.len(), 1);
     let dep = &pkg.dependencies[0];
     assert_eq!(dep.name, "somedep");
@@ -91,15 +93,19 @@ fn old_minimal() {
     assert_eq!(target.kind, vec!["bin"]);
     assert_eq!(target.crate_types, vec!["bin"]);
     assert_eq!(target.required_features.len(), 0);
-    assert_eq!(target.src_path, PathBuf::from("/foo/src/main.rs"));
+    assert_eq!(target.src_path, "/foo/src/main.rs");
     assert_eq!(target.edition, "2015");
     assert_eq!(target.doctest, true);
+    assert_eq!(target.test, true);
+    assert_eq!(target.doc, true);
     assert_eq!(pkg.features.len(), 0);
-    assert_eq!(pkg.manifest_path, PathBuf::from("/foo/Cargo.toml"));
+    assert_eq!(pkg.manifest_path, "/foo/Cargo.toml");
     assert_eq!(pkg.categories.len(), 0);
     assert_eq!(pkg.keywords.len(), 0);
     assert_eq!(pkg.readme, None);
     assert_eq!(pkg.repository, None);
+    assert_eq!(pkg.homepage, None);
+    assert_eq!(pkg.documentation, None);
     assert_eq!(pkg.edition, "2015");
     assert_eq!(pkg.metadata, serde_json::Value::Null);
     assert_eq!(pkg.links, None);
@@ -110,8 +116,9 @@ fn old_minimal() {
         "foo 0.1.0 (path+file:///foo)"
     );
     assert!(meta.resolve.is_none());
-    assert_eq!(meta.workspace_root, PathBuf::from("/foo"));
-    assert_eq!(meta.target_directory, PathBuf::from("/foo/target"));
+    assert_eq!(meta.workspace_root, "/foo");
+    assert_eq!(meta.workspace_metadata, serde_json::Value::Null);
+    assert_eq!(meta.target_directory, "/foo/target");
 }
 
 macro_rules! sorted {
@@ -134,17 +141,27 @@ fn cargo_version() -> semver::Version {
     assert!(split.len() >= 2, "cargo -V output is unexpected: {}", out);
     let mut ver = semver::Version::parse(split[1]).expect("cargo -V semver could not be parsed");
     // Don't care about metadata, it is awkward to compare.
-    ver.pre = Vec::new();
-    ver.build = Vec::new();
+    ver.pre = semver::Prerelease::EMPTY;
+    ver.build = semver::BuildMetadata::EMPTY;
     ver
+}
+
+#[derive(serde::Deserialize, PartialEq, Eq, Debug)]
+struct WorkspaceMetadata {
+    testobject: TestObject,
+}
+
+#[derive(serde::Deserialize, PartialEq, Eq, Debug)]
+struct TestObject {
+    myvalue: String,
 }
 
 #[test]
 fn all_the_fields() {
-    // All the fields currently generated as of 1.41. This tries to exercise as
+    // All the fields currently generated as of 1.58. This tries to exercise as
     // much as possible.
     let ver = cargo_version();
-    let minimum = semver::Version::parse("1.41.0").unwrap();
+    let minimum = semver::Version::parse("1.56.0").unwrap();
     if ver < minimum {
         // edition added in 1.30
         // rename added in 1.31
@@ -152,6 +169,13 @@ fn all_the_fields() {
         // doctest added in 1.37
         // publish added in 1.39
         // dep_kinds added in 1.41
+        // test added in 1.47
+        // homepage added in 1.49
+        // documentation added in 1.49
+        // doc added in 1.50
+        // path added in 1.51
+        // default_run added in 1.55
+        // rust_version added in 1.58
         eprintln!("Skipping all_the_fields test, cargo {} is too old.", ver);
         return;
     }
@@ -159,13 +183,14 @@ fn all_the_fields() {
         .manifest_path("tests/all/Cargo.toml")
         .exec()
         .unwrap();
+    assert_eq!(meta.workspace_root.file_name().unwrap(), "all");
     assert_eq!(
-        meta.workspace_root.file_name().unwrap(),
-        PathBuf::from("all")
-    );
-    assert_eq!(
-        meta.target_directory.file_name().unwrap(),
-        PathBuf::from("target")
+        serde_json::from_value::<WorkspaceMetadata>(meta.workspace_metadata).unwrap(),
+        WorkspaceMetadata {
+            testobject: TestObject {
+                myvalue: "abc".to_string()
+            }
+        }
     );
     assert_eq!(meta.workspace_members.len(), 1);
     assert!(meta.workspace_members[0].to_string().starts_with("all"));
@@ -177,9 +202,17 @@ fn all_the_fields() {
     assert!(all.id.to_string().starts_with("all"));
     assert_eq!(all.description, Some("Package description.".to_string()));
     assert_eq!(all.license, Some("MIT/Apache-2.0".to_string()));
-    assert_eq!(all.license_file, Some(PathBuf::from("LICENSE")));
+    assert_eq!(all.license_file, Some(Utf8PathBuf::from("LICENSE")));
+    assert!(all.license_file().unwrap().ends_with("tests/all/LICENSE"));
     assert_eq!(all.publish, Some(vec![]));
     assert_eq!(all.links, Some("foo".to_string()));
+    assert_eq!(all.default_run, Some("otherbin".to_string()));
+    if ver >= semver::Version::parse("1.58.0").unwrap() {
+        assert_eq!(
+            all.rust_version,
+            Some(semver::VersionReq::parse("1.56").unwrap())
+        );
+    }
 
     assert_eq!(all.dependencies.len(), 8);
     let bitflags = all
@@ -202,6 +235,10 @@ fn all_the_fields() {
     assert_eq!(path_dep.source, None);
     assert_eq!(path_dep.kind, DependencyKind::Normal);
     assert_eq!(path_dep.req, semver::VersionReq::parse("*").unwrap());
+    assert_eq!(
+        path_dep.path.as_ref().map(|p| p.ends_with("path-dep")),
+        Some(true),
+    );
 
     all.dependencies
         .iter()
@@ -265,20 +302,26 @@ fn all_the_fields() {
     assert_eq!(lib.required_features.len(), 0);
     assert_eq!(lib.edition, "2018");
     assert_eq!(lib.doctest, true);
+    assert_eq!(lib.test, true);
+    assert_eq!(lib.doc, true);
 
     let main = get_file_name!("main.rs");
     assert_eq!(main.crate_types, vec!["bin"]);
     assert_eq!(main.kind, vec!["bin"]);
     assert_eq!(main.doctest, false);
+    assert_eq!(main.test, true);
+    assert_eq!(main.doc, true);
 
     let otherbin = get_file_name!("otherbin.rs");
     assert_eq!(otherbin.edition, "2015");
+    assert_eq!(otherbin.doc, false);
 
     let reqfeat = get_file_name!("reqfeat.rs");
     assert_eq!(reqfeat.required_features, vec!["feat2"]);
 
     let ex1 = get_file_name!("ex1.rs");
     assert_eq!(ex1.kind, vec!["example"]);
+    assert_eq!(ex1.test, false);
 
     let t1 = get_file_name!("t1.rs");
     assert_eq!(t1.kind, vec!["test"]);
@@ -297,10 +340,18 @@ fn all_the_fields() {
     assert!(all.manifest_path.ends_with("all/Cargo.toml"));
     assert_eq!(all.categories, vec!["command-line-utilities"]);
     assert_eq!(all.keywords, vec!["cli"]);
-    assert_eq!(all.readme, Some(PathBuf::from("README.md")));
+    assert_eq!(all.readme, Some(Utf8PathBuf::from("README.md")));
     assert_eq!(
         all.repository,
         Some("https://github.com/oli-obk/cargo_metadata/".to_string())
+    );
+    assert_eq!(
+        all.homepage,
+        Some("https://github.com/oli-obk/cargo_metadata/".to_string())
+    );
+    assert_eq!(
+        all.documentation,
+        Some("https://docs.rs/cargo_metadata/".to_string())
     );
     assert_eq!(all.edition, "2018");
     assert_eq!(
@@ -472,4 +523,99 @@ fn current_dir() {
         .unwrap();
     let namedep = meta.packages.iter().find(|p| p.name == "namedep").unwrap();
     assert!(namedep.name.starts_with("namedep"));
+}
+
+#[test]
+fn parse_stream_is_robust() {
+    // Proc macros can print stuff to stdout, which naturally breaks JSON messages.
+    // Let's check that we don't die horribly in this case, and report an error.
+    let json_output = r##"{"reason":"compiler-artifact","package_id":"chatty 0.1.0 (path+file:///chatty-macro/chatty)","target":{"kind":["proc-macro"],"crate_types":["proc-macro"],"name":"chatty","src_path":"/chatty-macro/chatty/src/lib.rs","edition":"2018","doctest":true},"profile":{"opt_level":"0","debuginfo":2,"debug_assertions":true,"overflow_checks":true,"test":false},"features":[],"filenames":["/chatty-macro/target/debug/deps/libchatty-f2adcff24cdf3bb2.so"],"executable":null,"fresh":false}
+Evil proc macro was here!
+{"reason":"compiler-artifact","package_id":"chatty-macro 0.1.0 (path+file:///chatty-macro)","target":{"kind":["lib"],"crate_types":["lib"],"name":"chatty-macro","src_path":"/chatty-macro/src/lib.rs","edition":"2018","doctest":true},"profile":{"opt_level":"0","debuginfo":2,"debug_assertions":true,"overflow_checks":true,"test":false},"features":[],"filenames":["/chatty-macro/target/debug/libchatty_macro.rlib","/chatty-macro/target/debug/deps/libchatty_macro-cb5956ed52a11fb6.rmeta"],"executable":null,"fresh":false}
+"##;
+    let mut n_messages = 0;
+    let mut text = String::new();
+    for message in cargo_metadata::Message::parse_stream(json_output.as_bytes()) {
+        let message = message.unwrap();
+        match message {
+            cargo_metadata::Message::TextLine(line) => text = line,
+            _ => n_messages += 1,
+        }
+    }
+    assert_eq!(n_messages, 2);
+    assert_eq!(text, "Evil proc macro was here!");
+}
+
+#[test]
+fn advanced_feature_configuration() {
+    fn build_features<F: FnOnce(&mut MetadataCommand) -> &mut MetadataCommand>(
+        func: F,
+    ) -> Vec<String> {
+        let mut meta = MetadataCommand::new();
+        let meta = meta.manifest_path("tests/all/Cargo.toml");
+
+        let meta = func(meta);
+        let meta = meta.exec().unwrap();
+
+        let resolve = meta.resolve.as_ref().unwrap();
+
+        let all = resolve
+            .nodes
+            .iter()
+            .find(|n| n.id.to_string().starts_with("all"))
+            .unwrap();
+
+        all.features.clone()
+    }
+
+    // Default behavior; tested above
+    let default_features = build_features(|meta| meta);
+    assert_eq!(
+        sorted!(default_features),
+        vec!["bitflags", "default", "feat1"]
+    );
+
+    // Manually specify the same default features
+    let manual_features = build_features(|meta| {
+        meta.features(CargoOpt::NoDefaultFeatures)
+            .features(CargoOpt::SomeFeatures(vec![
+                "feat1".into(),
+                "bitflags".into(),
+            ]))
+    });
+    assert_eq!(sorted!(manual_features), vec!["bitflags", "feat1"]);
+
+    // Multiple SomeFeatures is same as one longer SomeFeatures
+    let manual_features = build_features(|meta| {
+        meta.features(CargoOpt::NoDefaultFeatures)
+            .features(CargoOpt::SomeFeatures(vec!["feat1".into()]))
+            .features(CargoOpt::SomeFeatures(vec!["feat2".into()]))
+    });
+    assert_eq!(sorted!(manual_features), vec!["feat1", "feat2"]);
+
+    // No features + All features == All features
+    let all_features = build_features(|meta| {
+        meta.features(CargoOpt::AllFeatures)
+            .features(CargoOpt::NoDefaultFeatures)
+    });
+    assert_eq!(
+        sorted!(all_features),
+        vec!["bitflags", "default", "feat1", "feat2"]
+    );
+
+    // The '--all-features' flag supersedes other feature flags
+    let all_flag_variants = build_features(|meta| {
+        meta.features(CargoOpt::SomeFeatures(vec!["feat2".into()]))
+            .features(CargoOpt::NoDefaultFeatures)
+            .features(CargoOpt::AllFeatures)
+    });
+    assert_eq!(sorted!(all_flag_variants), sorted!(all_features));
+}
+
+#[test]
+fn depkind_to_string() {
+    assert_eq!(DependencyKind::Normal.to_string(), "normal");
+    assert_eq!(DependencyKind::Development.to_string(), "dev");
+    assert_eq!(DependencyKind::Build.to_string(), "build");
+    assert_eq!(DependencyKind::Unknown.to_string(), "Unknown");
 }

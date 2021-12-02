@@ -244,8 +244,9 @@ pub fn write_rule<W: io::Write>(
                 }
             }
             Some(platform) => {
-                dependencies
-                    .push_str(format!("if ({}) {{\n", target_to_gn_conditional(platform)?).as_str());
+                dependencies.push_str(
+                    format!("if ({}) {{\n", target_to_gn_conditional(platform)?).as_str(),
+                );
                 for pkg in deps {
                     dependencies.push_str("  deps += [");
                     if pkg.0.is_proc_macro() {
@@ -335,7 +336,7 @@ pub fn write_rule<W: io::Write>(
                 "{} is located outside of the project. Check your vendoring setup",
                 target.name()
             ))?
-            .to_string_lossy()
+            .to_string()
     );
     let output_name = output_name.map_or_else(
         || Cow::Owned(format!("{}-{}", target.name().replace("-", "_"), target.metadata_hash())),
@@ -361,18 +362,20 @@ pub fn write_rule<W: io::Write>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use camino::Utf8Path;
+    use cargo_metadata::Version;
     use std::collections::HashMap;
 
     #[test]
     fn simple_target() {
         let pkg_id = cargo_metadata::PackageId { repr: String::from("42") };
-        let version = semver::Version::new(0, 1, 0);
+        let version = Version::new(0, 1, 0);
         let target = GnTarget::new(
             &pkg_id,
             "test_target",
             "test_package",
             "2018",
-            Path::new("somewhere/over/the/rainbow.rs"),
+            Utf8Path::new("somewhere/over/the/rainbow.rs"),
             &version,
             GnRustType::Library,
             &[],
@@ -405,13 +408,13 @@ mod tests {
     #[test]
     fn binary_target() {
         let pkg_id = cargo_metadata::PackageId { repr: String::from("42") };
-        let version = semver::Version::new(0, 1, 0);
+        let version = Version::new(0, 1, 0);
         let target = GnTarget::new(
             &pkg_id,
             "test_target",
             "test_package",
             "2018",
-            Path::new("somewhere/over/the/rainbow.rs"),
+            Utf8Path::new("somewhere/over/the/rainbow.rs"),
             &version,
             GnRustType::Binary,
             &[],

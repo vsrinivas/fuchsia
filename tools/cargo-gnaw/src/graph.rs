@@ -69,7 +69,7 @@ impl<'a> GnBuildGraph<'a> {
                 if GnRustType::try_from(&target.kind).unwrap() == GnRustType::BuildScript {
                     return Some(CustomBuildTarget {
                         dependencies: vec![],
-                        path: target.src_path.clone(),
+                        path: &target.src_path,
                     });
                 }
                 None

@@ -8,6 +8,7 @@ use {
     crate::{build::BuildScript, graph::GnBuildGraph, target::GnTarget, types::*},
     anyhow::{Context, Error},
     argh::FromArgs,
+    camino::Utf8PathBuf,
     cargo_metadata::DependencyKind,
     serde_derive::{Deserialize, Serialize},
     std::collections::{BTreeMap, HashMap, HashSet},
@@ -161,7 +162,7 @@ pub struct CrateOutputMetadata {
     pub shortcut_target: Option<String>,
 
     /// Filesystem path to the directory containing `Cargo.toml`.
-    pub path: PathBuf,
+    pub path: Utf8PathBuf,
 }
 
 // Use BTreeMap so that iteration over platforms is stable.
