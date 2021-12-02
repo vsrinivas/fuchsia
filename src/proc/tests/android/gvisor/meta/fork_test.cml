@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/fork_test",
-        args: [ "--gunit_filter=ForkTest.*:-*.Alarm" ],
+        args: [ "--gunit_filter=ForkTest.*:-*.Alarm:ForkTest.Multi" ],
     },
 }
