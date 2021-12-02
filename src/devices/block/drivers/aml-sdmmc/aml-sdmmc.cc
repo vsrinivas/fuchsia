@@ -1611,6 +1611,12 @@ zx_status_t AmlSdmmc::Create(void* ctx, zx_device_t* parent) {
     reset_gpio = ddk::GpioProtocolClient(parent, "gpio");
   }
 
+  ddk::GpioProtocolClient sd_mode_gpio(parent, "sd-mode-gpio");
+  if (sd_mode_gpio.is_valid()) {
+    sd_mode_gpio.ConfigOut(1);
+    zxlogf(INFO, "Set SD_MODE high");
+  }
+
   auto dev =
       std::make_unique<AmlSdmmc>(parent, std::move(bti), *std::move(mmio), *std::move(pinned_mmio),
                                  config, std::move(irq), reset_gpio);

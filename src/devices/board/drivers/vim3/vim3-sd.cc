@@ -12,6 +12,7 @@
 #include <soc/aml-a311d/a311d-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>
 
+#include "vim3-gpios.h"
 #include "vim3.h"
 
 namespace vim3 {
@@ -52,6 +53,17 @@ static const pbus_metadata_t sd_metadata[] = {
         .data_buffer = reinterpret_cast<const uint8_t*>(&config),
         .data_size = sizeof(config),
     },
+};
+
+static const zx_bind_inst_t sd_mode_gpio_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
+    BI_MATCH_IF(EQ, BIND_GPIO_PIN, VIM3_SD_MODE),
+};
+static const device_fragment_part_t sd_mode_gpio_fragment[] = {
+    {countof(sd_mode_gpio_match), sd_mode_gpio_match},
+};
+static const device_fragment_t fragments[] = {
+    {"sd-mode-gpio", countof(sd_mode_gpio_fragment), sd_mode_gpio_fragment},
 };
 
 static const zx_bind_inst_t sdio_fn1_match[] = {
@@ -117,7 +129,8 @@ zx_status_t Vim3::SdInit() {
   gpio_impl_.SetDriveStrength(A311D_GPIOC(4), 4000, nullptr);
   gpio_impl_.SetDriveStrength(A311D_GPIOC(5), 4000, nullptr);
 
-  if ((status = pbus_.CompositeDeviceAdd(&sd_dev, /* nullptr */ 0, 0, nullptr)) != ZX_OK) {
+  if ((status = pbus_.CompositeDeviceAdd(&sd_dev, reinterpret_cast<uint64_t>(fragments),
+                                         countof(fragments), nullptr)) != ZX_OK) {
     zxlogf(ERROR, "SdInit could not add sd_dev: %d", status);
     return status;
   }
