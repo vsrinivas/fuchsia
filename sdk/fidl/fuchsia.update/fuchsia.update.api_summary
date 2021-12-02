@@ -1,3 +1,7 @@
+table/member fuchsia.update/AttemptOptions.initiator fuchsia.update/Initiator
+table fuchsia.update/AttemptOptions
+protocol/member fuchsia.update/AttemptsMonitor.OnStart(fuchsia.update/AttemptOptions options,server_end:fuchsia.update/Monitor monitor) -> ()
+protocol fuchsia.update/AttemptsMonitor
 enum/member fuchsia.update/CheckNotStartedReason.ALREADY_IN_PROGRESS 3
 enum/member fuchsia.update/CheckNotStartedReason.INTERNAL 1
 enum/member fuchsia.update/CheckNotStartedReason.INVALID_OPTIONS 2
@@ -28,6 +32,7 @@ table/member fuchsia.update/InstallingData.update fuchsia.update/UpdateInfo
 table fuchsia.update/InstallingData
 const fuchsia.update/MAX_VERSION_STRING_SIZE uint32 128
 protocol/member fuchsia.update/Manager.CheckNow(fuchsia.update/CheckOptions options,client_end:<fuchsia.update/Monitor,optional> monitor) -> (fuchsia.update/Manager_CheckNow_Result result)
+protocol/member fuchsia.update/Manager.MonitorAllUpdateChecks(client_end:fuchsia.update/AttemptsMonitor attempts_monitor)
 protocol/member fuchsia.update/Manager.PerformPendingReboot() -> (bool rebooting)
 protocol fuchsia.update/Manager
 struct fuchsia.update/Manager_CheckNow_Response

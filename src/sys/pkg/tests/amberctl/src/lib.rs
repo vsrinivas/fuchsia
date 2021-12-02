@@ -94,6 +94,13 @@ impl MockUpdateManager {
                 fidl_fuchsia_update::ManagerRequest::PerformPendingReboot { responder: _ } => {
                     panic!("amberctl should never call PerformPendingReboot");
                 }
+
+                fidl_fuchsia_update::ManagerRequest::MonitorAllUpdateChecks {
+                    attempts_monitor: _,
+                    control_handle: _,
+                } => {
+                    panic!("amberctl should never call MonitorAllUpdateChecks");
+                }
             }
         }
 

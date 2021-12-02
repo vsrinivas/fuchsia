@@ -334,6 +334,10 @@ where
                     responder.send(false)?;
                 }
             }
+
+            ManagerRequest::MonitorAllUpdateChecks { attempts_monitor: _, control_handle: _ } => {
+                todo!("implement me!");
+            }
         }
         Ok(())
     }

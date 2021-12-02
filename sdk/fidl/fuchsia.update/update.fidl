@@ -53,6 +53,16 @@ protocol Manager {
     PerformPendingReboot() -> (struct {
         rebooting bool;
     });
+
+    /// Monitor all update attempts as they start, as well as an in-progress attempt, if there is
+    /// one.
+    ///
+    /// Arguments:
+    /// * |attempts_monitor| A protocol on which to receive |Monitor| instances as update attempts
+    /// start.
+    MonitorAllUpdateChecks(resource struct {
+        attempts_monitor client_end:AttemptsMonitor;
+    });
 };
 
 /// Configuration options for an update check.
@@ -82,6 +92,32 @@ type Initiator = strict enum {
     /// The update check was initiated by a service, not a user-facing aspect
     /// of the system.
     SERVICE = 2;
+};
+
+/// Monitors update attempts as they start.
+///
+/// Clients interested in receiving progress information for an update check
+/// should implement this protocol and provide the client end to
+/// [`Manager.MonitorAllUpdateChecks`].
+/// The Manager will close the client end of the AttemptsMonitor if there are
+/// more than 2 outstanding requests.
+protocol AttemptsMonitor {
+    /// Called when a new update attempt has started.
+    ///
+    /// Arguments:
+    /// * |options| Options for how this request should be performed.
+    /// * |monitor| A protocol on which to receive progress updates.
+    OnStart(resource struct {
+        options AttemptOptions;
+        monitor server_end:Monitor;
+    }) -> ();
+};
+
+/// Details for an update attempt monitor.
+type AttemptOptions = table {
+    /// Who or what initiated this update attempt.  This may influence how the
+    /// update check is performed.
+    1: initiator Initiator;
 };
 
 /// Monitors a single update check.

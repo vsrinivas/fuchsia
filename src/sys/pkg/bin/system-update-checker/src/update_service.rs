@@ -72,6 +72,13 @@ impl UpdateService {
                 ManagerRequest::PerformPendingReboot { responder } => {
                     responder.send(false).context("error sending PerformPendingReboot response")?;
                 }
+
+                ManagerRequest::MonitorAllUpdateChecks {
+                    attempts_monitor: _,
+                    control_handle: _,
+                } => {
+                    todo!();
+                }
             }
         }
         Ok(())

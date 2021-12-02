@@ -221,6 +221,13 @@ impl MockUpdateManagerService {
                 fidl_update::ManagerRequest::PerformPendingReboot { responder: _ } => {
                     panic!("update tool should not be calling perform pending reboot!");
                 }
+
+                fidl_update::ManagerRequest::MonitorAllUpdateChecks {
+                    attempts_monitor: _,
+                    control_handle: _,
+                } => {
+                    panic!("MonitorAllUpdateChecks not yet implemented!");
+                }
             }
         }
     }
