@@ -29,7 +29,7 @@ declare_args() {
   experimental_cxx_version = 17
 
   # Controls whether to use the ML inliner in Clang to reduce size.
-  clang_ml_inliner = false
+  clang_ml_inliner = true
 }
 
 # No frame pointers for host compiles.
