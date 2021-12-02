@@ -3197,6 +3197,7 @@ zx_status_t VmCowPages::SupplyPages(uint64_t offset, uint64_t len, VmPageSpliceL
                                     bool new_zeroed_pages) {
   canary_.Assert();
   Guard<Mutex> guard{&lock_};
+  IncrementHierarchyGenerationCountLocked();
   return SupplyPagesLocked(offset, len, pages, new_zeroed_pages);
 }
 

@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/fit/defer.h>
+
 #include "test_helper.h"
 
 namespace vm_unittest {
@@ -143,7 +145,15 @@ static bool pmm_node_loan_borrow_cancel_reclaim_end() {
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   ManagedPmmNode node;
-  node.node().GetPhysicalPageBorrowingConfig()->set_enabled(true);
+
+  bool was_loaning_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
+  bool was_borrowing_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+  pmm_physical_page_borrowing_config()->set_loaning_enabled(true);
+  pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+  auto cleanup = fit::defer([was_loaning_enabled, was_borrowing_enabled] {
+    pmm_physical_page_borrowing_config()->set_loaning_enabled(was_loaning_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_enabled(was_borrowing_enabled);
+  });
 
   list_node list = LIST_INITIAL_VALUE(list);
 
@@ -288,7 +298,15 @@ static bool pmm_node_loan_delete_lender() {
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   ManagedPmmNode node;
-  node.node().GetPhysicalPageBorrowingConfig()->set_enabled(true);
+
+  bool was_loaning_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
+  bool was_borrowing_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+  pmm_physical_page_borrowing_config()->set_loaning_enabled(true);
+  pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+  auto cleanup = fit::defer([was_loaning_enabled, was_borrowing_enabled] {
+    pmm_physical_page_borrowing_config()->set_loaning_enabled(was_loaning_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_enabled(was_borrowing_enabled);
+  });
 
   // Required to stack-own loaned pages.  We don't care about minimizing the duration of this
   list_node list = LIST_INITIAL_VALUE(list);
