@@ -120,7 +120,6 @@ sdk_source_set("cpp_base") {
     "message_builder.cc",
     "message_builder.h",
     "message_part.h",
-    "object_coding.h",
     "string.h",
     "traits.h",
     "types.h",

@@ -42,7 +42,6 @@ cts_source_set("host_test_sources") {
     "defaults_unittest.cc",
     "enum_unittest.cc",
     "fidl_test.cc",
-    "object_coding_unittest.cc",
     "roundtrip_test.cc",
     "string_unittest.cc",
     "table_unittest.cc",
