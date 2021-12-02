@@ -191,7 +191,7 @@ void TestAddParameterizedInstaniations() {
   auto default_name_generator = [](const auto info) -> std::string {
     return std::to_string(info.index);
   };
-  auto provider1 = ::zxtest::testing::Values(1, 2, 3);
+  auto provider1 = ::zxtest::Values(1, 2, 3);
   runner->AddInstantiation<ParameterizedTestSuite1, ParameterizedTestSuite1::ParamType>(
       std::make_unique<zxtest::internal::AddInstantiationDelegateImpl<
           ParameterizedTestSuite1, ParameterizedTestSuite1::ParamType>>(),
@@ -201,7 +201,7 @@ void TestAddParameterizedInstaniations() {
       internal::ParameterizedTestCaseInfoImplTestPeer::GetInstantiationsSize(suite_impl) == 1,
       "There should be one instantiation entry.");
 
-  auto provider2 = ::zxtest::testing::Values(5, 4, 3);
+  auto provider2 = ::zxtest::Values(5, 4, 3);
   runner->AddInstantiation<ParameterizedTestSuite1, ParameterizedTestSuite1::ParamType>(
       std::make_unique<zxtest::internal::AddInstantiationDelegateImpl<
           ParameterizedTestSuite1, ParameterizedTestSuite1::ParamType>>(),
@@ -222,7 +222,7 @@ enum __enum_type {
 void TestInexactTypeMatchup() {
   // The error being tested is at compile-time.
   ::zxtest::internal::ValueProvider<ParameterizedTestSuite1::ParamType> p1(
-      ::zxtest::testing::Values(VALUE_1, VALUE_2));
+      ::zxtest::Values(VALUE_1, VALUE_2));
 }
 }  // namespace test
 }  // namespace zxtest

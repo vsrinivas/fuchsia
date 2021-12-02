@@ -20,7 +20,7 @@ namespace zxtest::test {
 void TestValuesIn() {
   // Test std::vector
   auto c1 = std::vector<int>({0, 1, 2, 3});
-  auto p1 = ::zxtest::testing::ValuesIn(c1);
+  auto p1 = ::zxtest::ValuesIn(c1);
   ZX_ASSERT_MSG(p1.size() == c1.size(), "Resulting provider size does not match input size.");
   size_t i = 0;
   for (auto it = c1.begin(); it != c1.end(); ++it, ++i) {
@@ -29,7 +29,7 @@ void TestValuesIn() {
 
   // Test std::array
   auto c2 = cpp20::to_array<int>({4, 5, 6, 7});
-  auto p2 = ::zxtest::testing::ValuesIn(c2);
+  auto p2 = ::zxtest::ValuesIn(c2);
   ZX_ASSERT_MSG(p2.size() == c2.size(), "Resulting provider size does not match input size.");
   i = 0;
   for (auto it = c2.begin(); it != c2.end(); ++it, ++i) {
@@ -38,7 +38,7 @@ void TestValuesIn() {
 
   // TODO(fxb/82902): This does not work. We still don't support bools in a vector.
   // auto c3 = std::vector<bool>({false, true});
-  // auto p3 = ::zxtest::testing::ValuesIn(c3);
+  // auto p3 = ::zxtest::ValuesIn(c3);
   // ZX_ASSERT_MSG(p3.size() == c3.size(), "Resulting provider size does not match input
   // size."); i = 0; for (auto it = c3.begin(); it != c3.end(); ++it, ++i) {
   //   bool val = *it;
@@ -46,7 +46,7 @@ void TestValuesIn() {
   // }
 
   auto c4 = cpp20::to_array<bool>({false, true});
-  auto p4 = ::zxtest::testing::ValuesIn(c4);
+  auto p4 = ::zxtest::ValuesIn(c4);
   ZX_ASSERT_MSG(p4.size() == c4.size(), "Resulting provider size does not match input size.");
   i = 0;
   for (auto it = c4.begin(); it != c4.end(); ++it, ++i) {
@@ -56,13 +56,13 @@ void TestValuesIn() {
 }
 
 void TestValuesBool() {
-  auto provider = ::zxtest::testing::Bool();
+  auto provider = ::zxtest::Bool();
   ZX_ASSERT_MSG(provider.size() == 2, "Provider size should be 2, got %zu.", provider.size());
   ZX_ASSERT_MSG(provider[0] != provider[1], "Bool values should not equal.");
 }
 
 void TestRange() {
-  auto p1 = ::zxtest::testing::Range(1, 9, 2);
+  auto p1 = ::zxtest::Range(1, 9, 2);
   auto e1 = std::vector<int>({1, 3, 5, 7});
   ZX_ASSERT_MSG(p1.size() == e1.size(), "Resulting provider size: %zu. Expected: %zu", p1.size(),
                 e1.size());
@@ -70,7 +70,7 @@ void TestRange() {
     ZX_ASSERT(p1[i] == e1[i]);
   }
 
-  auto p2 = ::zxtest::testing::Range(1, 2, 2);
+  auto p2 = ::zxtest::Range(1, 2, 2);
   auto e2 = std::vector<int>({1});
   ZX_ASSERT_MSG(p2.size() == e2.size(), "Resulting provider size: %zu. Expected: %zu", p2.size(),
                 e2.size());
@@ -78,7 +78,7 @@ void TestRange() {
     ZX_ASSERT(p2[i] == e2[i]);
   }
 
-  auto p3 = ::zxtest::testing::Range(1, 5);
+  auto p3 = ::zxtest::Range(1, 5);
   auto e3 = std::vector<int>({1, 2, 3, 4});
   ZX_ASSERT_MSG(p3.size() == e3.size(), "Resulting provider size: %zu. Expected: %zu", p3.size(),
                 e3.size());
@@ -86,7 +86,7 @@ void TestRange() {
     ZX_ASSERT(p3[i] == e3[i]);
   }
 
-  auto p4 = ::zxtest::testing::Range(8, 16, 2);
+  auto p4 = ::zxtest::Range(8, 16, 2);
   auto e4 = std::vector<int>({8, 10, 12, 14});
   ZX_ASSERT_MSG(p4.size() == e4.size(), "Resulting provider size: %zu. Expected: %zu", p4.size(),
                 e4.size());
@@ -94,7 +94,7 @@ void TestRange() {
     ZX_ASSERT(p4[i] == e4[i]);
   }
 
-  auto p5 = ::zxtest::testing::Range(8.5, 16.3, 2.5);
+  auto p5 = ::zxtest::Range(8.5, 16.3, 2.5);
   auto e5 = std::vector<double>({8.5, 11, 13.5, 16});
   ZX_ASSERT_MSG(p5.size() == e5.size(), "Resulting provider size: %zu. Expected: %zu", p5.size(),
                 e5.size());
@@ -102,7 +102,7 @@ void TestRange() {
     ZX_ASSERT(p5[i] == e5[i]);
   }
 
-  auto p6 = ::zxtest::testing::Range(7.99, 16.95, 2.98);
+  auto p6 = ::zxtest::Range(7.99, 16.95, 2.98);
   auto e6 = std::vector<double>({7.99, 10.97, 13.95, 16.93});
   ZX_ASSERT_MSG(p6.size() == e6.size(), "Resulting provider size: %zu. Expected: %zu", p6.size(),
                 e6.size());
@@ -110,7 +110,7 @@ void TestRange() {
     ZX_ASSERT(p6[i] == e6[i]);
   }
 
-  auto p7 = ::zxtest::testing::Range(7.99, 9.999);
+  auto p7 = ::zxtest::Range(7.99, 9.999);
   auto e7 = std::vector<double>({7.99, 8.99, 9.99});
   ZX_ASSERT_MSG(p7.size() == e7.size(), "Resulting provider size: %zu. Expected: %zu", p7.size(),
                 e7.size());
@@ -121,15 +121,13 @@ void TestRange() {
 
 void TestValuesSimilarTypes() {
   // Failure would be a compilation error.
-  ::zxtest::internal::ValueProvider<std::string> p1 =
-      ::zxtest::testing::Values("A", std::string("B"));
-  ::zxtest::internal::ValueProvider<long> p2 = ::zxtest::testing::Values(7, 1l, 5);
+  ::zxtest::internal::ValueProvider<std::string> p1 = ::zxtest::Values("A", std::string("B"));
+  ::zxtest::internal::ValueProvider<long> p2 = ::zxtest::Values(7, 1l, 5);
 }
 
 void TestValuesCombine() {
   // Same type
-  auto c1 = ::zxtest::testing::Combine(::zxtest::testing::Values(10, 20, 30),
-                                       ::zxtest::testing::Values(15, 25, 35));
+  auto c1 = ::zxtest::Combine(::zxtest::Values(10, 20, 30), ::zxtest::Values(15, 25, 35));
   std::vector<std::tuple<int, int>> e1 = {
       std::tuple(10, 15), std::tuple(10, 25), std::tuple(10, 35),
       std::tuple(20, 15), std::tuple(20, 25), std::tuple(20, 35),
@@ -144,8 +142,7 @@ void TestValuesCombine() {
   }
 
   // Different types
-  auto c2 = ::zxtest::testing::Combine(::zxtest::testing::Values(1.1, 2.2, 3.3),
-                                       ::zxtest::testing::Values(15, 25, 35));
+  auto c2 = ::zxtest::Combine(::zxtest::Values(1.1, 2.2, 3.3), ::zxtest::Values(15, 25, 35));
   std::vector<std::tuple<double, int>> e2 = {
       std::tuple(1.1, 15), std::tuple(1.1, 25), std::tuple(1.1, 35),
       std::tuple(2.2, 15), std::tuple(2.2, 25), std::tuple(2.2, 35),
@@ -160,9 +157,8 @@ void TestValuesCombine() {
   }
 
   // Combine with 3 parameters
-  auto c3 = ::zxtest::testing::Combine(::zxtest::testing::Values(1.1, 2.2, 3.3),
-                                       ::zxtest::testing::Values(15, 25, 35),
-                                       ::zxtest::testing::Values(150, 250, 350));
+  auto c3 = ::zxtest::Combine(::zxtest::Values(1.1, 2.2, 3.3), ::zxtest::Values(15, 25, 35),
+                              ::zxtest::Values(150, 250, 350));
   std::vector<std::tuple<double, int, int>> e3 = {
       std::tuple(1.1, 15, 150), std::tuple(1.1, 15, 250), std::tuple(1.1, 15, 350),
       std::tuple(1.1, 25, 150), std::tuple(1.1, 25, 250), std::tuple(1.1, 25, 350),
@@ -184,9 +180,8 @@ void TestValuesCombine() {
   }
 
   // Combine with 4 parameters
-  auto c4 = ::zxtest::testing::Combine(
-      ::zxtest::testing::Values(1.1, 2.2), ::zxtest::testing::Values(15, 25),
-      ::zxtest::testing::Values(150, 250), ::zxtest::testing::Values(105, 205));
+  auto c4 = ::zxtest::Combine(::zxtest::Values(1.1, 2.2), ::zxtest::Values(15, 25),
+                              ::zxtest::Values(150, 250), ::zxtest::Values(105, 205));
   std::vector<std::tuple<double, int, int, int>> e4 = {
       std::tuple(1.1, 15, 150, 105), std::tuple(1.1, 15, 150, 205), std::tuple(1.1, 15, 250, 105),
       std::tuple(1.1, 15, 250, 205), std::tuple(1.1, 25, 150, 105), std::tuple(1.1, 25, 150, 205),
@@ -207,9 +202,9 @@ void TestValuesCombine() {
 
 void TestTuplesCombine() {
   // Both tuples
-  auto c1 = ::zxtest::testing::Combine(
-      ::zxtest::testing::Values(std::tuple(10, 11), std::tuple(20, 21), std::tuple(30, 31)),
-      ::zxtest::testing::Values(std::tuple(15, 16), std::tuple(25, 26), std::tuple(35, 36)));
+  auto c1 = ::zxtest::Combine(
+      ::zxtest::Values(std::tuple(10, 11), std::tuple(20, 21), std::tuple(30, 31)),
+      ::zxtest::Values(std::tuple(15, 16), std::tuple(25, 26), std::tuple(35, 36)));
   std::vector<std::tuple<std::tuple<int, int>, std::tuple<int, int>>> e1 = {
       std::tuple(std::tuple(10, 11), std::tuple(15, 16)),
       std::tuple(std::tuple(10, 11), std::tuple(25, 26)),
@@ -234,9 +229,9 @@ void TestTuplesCombine() {
   }
 
   // First tuple only
-  auto c2 = ::zxtest::testing::Combine(
-      ::zxtest::testing::Values(std::tuple(10, 11), std::tuple(20, 21), std::tuple(30, 31)),
-      ::zxtest::testing::Values(15, 25, 35));
+  auto c2 = ::zxtest::Combine(
+      ::zxtest::Values(std::tuple(10, 11), std::tuple(20, 21), std::tuple(30, 31)),
+      ::zxtest::Values(15, 25, 35));
   std::vector<std::tuple<std::tuple<int, int>, int>> e2 = {
       std::tuple(std::tuple(10, 11), 15), std::tuple(std::tuple(10, 11), 25),
       std::tuple(std::tuple(10, 11), 35), std::tuple(std::tuple(20, 21), 15),
@@ -257,9 +252,9 @@ void TestTuplesCombine() {
   }
 
   // Second tuple only
-  auto c3 = ::zxtest::testing::Combine(
-      ::zxtest::testing::Values(10, 20, 30),
-      ::zxtest::testing::Values(std::tuple(15, 16), std::tuple(25, 26), std::tuple(35, 36)));
+  auto c3 = ::zxtest::Combine(
+      ::zxtest::Values(10, 20, 30),
+      ::zxtest::Values(std::tuple(15, 16), std::tuple(25, 26), std::tuple(35, 36)));
   std::vector<std::tuple<int, std::tuple<int, int>>> e3 = {
       std::tuple(10, std::tuple(15, 16)), std::tuple(10, std::tuple(25, 26)),
       std::tuple(10, std::tuple(35, 36)), std::tuple(20, std::tuple(15, 16)),
@@ -280,11 +275,10 @@ void TestTuplesCombine() {
   }
 
   // Quad tuples
-  auto c4 = ::zxtest::testing::Combine(
-      ::zxtest::testing::Values(std::tuple(10, 11), std::tuple(20, 21)),
-      ::zxtest::testing::Values(std::tuple(15, 16), std::tuple(25, 26)),
-      ::zxtest::testing::Values(std::tuple(1.5, 1.6), std::tuple(2.5, 2.6)),
-      ::zxtest::testing::Values(std::tuple("a", "b")));
+  auto c4 = ::zxtest::Combine(::zxtest::Values(std::tuple(10, 11), std::tuple(20, 21)),
+                              ::zxtest::Values(std::tuple(15, 16), std::tuple(25, 26)),
+                              ::zxtest::Values(std::tuple(1.5, 1.6), std::tuple(2.5, 2.6)),
+                              ::zxtest::Values(std::tuple("a", "b")));
   std::vector<std::tuple<std::tuple<int, int>, std::tuple<int, int>, std::tuple<double, double>,
                          std::tuple<const char*, const char*>>>
       e4 = {
@@ -320,10 +314,9 @@ void TestTuplesCombine() {
   }
 
   // Mixed
-  auto c5 = ::zxtest::testing::Combine(
-      ::zxtest::testing::Values(std::tuple(10, 11), std::tuple(20, 21)),
-      ::zxtest::testing::Values(std::tuple(15, 16), std::tuple(25, 26)),
-      ::zxtest::testing::Values(1.5, 2.5), ::zxtest::testing::Values(std::tuple("a", "b")));
+  auto c5 = ::zxtest::Combine(::zxtest::Values(std::tuple(10, 11), std::tuple(20, 21)),
+                              ::zxtest::Values(std::tuple(15, 16), std::tuple(25, 26)),
+                              ::zxtest::Values(1.5, 2.5), ::zxtest::Values(std::tuple("a", "b")));
   std::vector<std::tuple<std::tuple<int, int>, std::tuple<int, int>, double,
                          std::tuple<const char*, const char*>>>
       e5 = {

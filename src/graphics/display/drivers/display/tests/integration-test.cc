@@ -924,6 +924,6 @@ TEST_P(IntegrationTest, EmptyConfigIsNotApplied) {
       zx::sec(1)));
 }
 
-INSTANTIATE_TEST_SUITE_P(UseVsync2, IntegrationTest, zxtest::testing::Bool())
+INSTANTIATE_TEST_SUITE_P(UseVsync2, IntegrationTest, zxtest::Bool())
 
 }  // namespace display

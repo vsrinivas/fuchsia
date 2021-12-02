@@ -68,7 +68,6 @@ class ValueProvider {
 };
 }  // namespace internal
 
-namespace testing {
 namespace internal {
 
 // NOTE about `Combine`:
@@ -150,7 +149,7 @@ auto Combine(::zxtest::internal::ValueProvider<A> a, ::zxtest::internal::ValuePr
 template <typename A, typename B, typename... ProviderType>
 auto Combine(::zxtest::internal::ValueProvider<A> a, ::zxtest::internal::ValueProvider<B> b,
              ProviderType&&... providers) {
-  return internal::Combine(std::move(zxtest::testing::Combine(std::move(a), std::move(b))),
+  return internal::Combine(std::move(zxtest::Combine(std::move(a), std::move(b))),
                            std::forward<ProviderType>(providers)...);
 }
 
@@ -202,7 +201,6 @@ auto Range(A start, B end) {
 
 // Helper function to return a ValueProvider that has both bool values.
 static inline auto Bool() { return Values(false, true); }
-}  // namespace testing
 }  // namespace zxtest
 
 #endif  // ZXTEST_BASE_VALUES_H_
