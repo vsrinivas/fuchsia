@@ -193,7 +193,12 @@ func fuchsiaLogChecks() []FailureModeCheck {
 		// For fxbug.dev/57548.
 		// Hardware watchdog tripped, should not happen.
 		// This string is specified in u-boot.
+		// Astro uses an equal sign, Sherlock uses a colon. Consider allowing
+		// regexes?
+		// It is fine to have the two different checks because bug filing logic
+		// already breaks down by device type.
 		&stringInLogCheck{String: "reboot_mode=watchdog_reboot", Type: serialLogType},
+		&stringInLogCheck{String: "reboot_mode:watchdog_reboot", Type: serialLogType},
 		// For fxbug.dev/55637
 		&stringInLogCheck{String: " in fx_logger::GetSeverity() ", Type: swarmingOutputType},
 		// For fxbug.dev/71784. Do not check for this in swarming output as this does not indicate
