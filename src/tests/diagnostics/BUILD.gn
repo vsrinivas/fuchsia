@@ -33,7 +33,9 @@ group("tests") {
     ":archivist-pipeline-metrics-tests",
     ":archivist-sampler-metrics-tests",
     ":component-manager-cpu-stats-tests",
-    ":component-manager-status-tests",
+
+    # TODO(fxbug.dev/89699): Enable this test.
+    # ":component-manager-status-tests",
     ":diagnostics-kcounter-inspect-tests",
     ":fshost-stats-tests",
     ":legacy-metrics-tests",
