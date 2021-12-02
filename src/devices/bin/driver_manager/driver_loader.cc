@@ -122,8 +122,13 @@ const Driver* DriverLoader::LoadDriverUrl(const std::string& driver_url) {
     LOGF(ERROR, "Error fetching driver: %s: %d", driver_url.data(), fetched_driver.error_value());
     return nullptr;
   }
-  driver_index_drivers_.push_back(std::move(fetched_driver.value()));
+  // It's possible the driver is nullptr if it was disabled.
+  if (!fetched_driver.value()) {
+    return nullptr;
+  }
 
+  // Success. Return driver.
+  driver_index_drivers_.push_back(std::move(fetched_driver.value()));
   return &driver_index_drivers_.back();
 }
 

@@ -35,8 +35,8 @@ zx::status<std::unique_ptr<Driver>> BasePackageResolver::FetchDriver(
     return zx::error(ZX_ERR_INTERNAL);
   }
   if (!driver) {
-    LOGF(ERROR, "Driver not found: %s", package_url.data());
-    return zx::error(ZX_ERR_INTERNAL);
+    LOGF(INFO, "Driver %s not found, probably disabled", package_url.data());
+    return zx::ok(nullptr);
   }
 
   auto base_path_result = GetBasePathFromUrl(package_url);

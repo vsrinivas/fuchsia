@@ -438,7 +438,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
       }
     }
 
-    if (request->args.has_driver_bind_eager()) {
+    if (request->args.has_driver_bind_eager() && request->args.driver_bind_eager().count() > 0) {
       std::string drivers = "";
       for (auto& driver : request->args.driver_bind_eager()) {
         drivers += std::string(driver.data()) + ",";

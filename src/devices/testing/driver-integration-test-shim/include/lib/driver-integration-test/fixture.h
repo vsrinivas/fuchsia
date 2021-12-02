@@ -42,6 +42,8 @@ class IsolatedDevmgr {
 
     // A board name to appear.
     fbl::String board_name;
+    std::vector<std::string> driver_disable;
+    std::vector<std::string> driver_bind_eager;
   };
 
   static Args DefaultArgs() { return Args{}; }
