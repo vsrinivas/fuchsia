@@ -3196,6 +3196,26 @@ A list of binary labels to include in the system_image package.
 
 From //build/product.gni:10
 
+### profile_source_files
+List of GN paths to source files to be instrumented by `profile` variants.
+If [`profile_source_files_list_files`](#profile_source_files_list_files) is
+also set, both lists are used.  Use that option with a file constructed
+separately instead to use more complex selection features such as
+per-function selection, file name patterns, or exclusion.
+
+**Current value (from the default):** `[]`
+
+From //build/config/profile/config.gni:11
+
+### profile_source_files_list_files
+List GN path to files in Clang's `-fprofile-list` format describing files
+and functions to be instrumented by `profile` variants.  Note that if
+[`profile_source_files`](#profile_source_files) is also set, both are used.
+
+**Current value (from the default):** `[]`
+
+From //build/config/profile/config.gni:16
+
 ### rbe_exec_strategy
 One of {local,remote}:
   * remote: Execute action remotely on cache miss.
