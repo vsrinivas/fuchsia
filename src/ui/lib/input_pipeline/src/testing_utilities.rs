@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[cfg(test)]
+#![cfg(test)]
+
 use {
     crate::utils::Position,
     crate::{
@@ -21,7 +22,6 @@ use {
 };
 
 /// Returns the current time as an i64 for InputReports and input_device::EventTime for InputEvents.
-#[cfg(test)]
 pub fn event_times() -> (i64, input_device::EventTime) {
     let event_time = zx::Time::get_monotonic().into_nanos();
     (event_time, event_time as input_device::EventTime)
@@ -32,7 +32,6 @@ pub fn event_times() -> (i64, input_device::EventTime) {
 /// # Parameters
 /// -`pressed_keys`: The input3 keys that will be added to the returned input report.
 /// -`event_time`: The time in nanoseconds when the event was first recorded.
-#[cfg(test)]
 pub fn create_keyboard_input_report(
     pressed_keys: Vec<fidl_fuchsia_input::Key>,
     event_time: i64,
@@ -61,7 +60,6 @@ pub fn create_keyboard_input_report(
 /// - `event_time`: The timestamp in nanoseconds when the event was recorded.
 /// - `device_descriptor`: The device descriptor to add to the event.
 /// - `handled`: Whether the event has been consumed by an upstream handler.
-#[cfg(test)]
 pub fn create_keyboard_event_with_handled(
     key: fidl_fuchsia_input::Key,
     event_type: fidl_fuchsia_ui_input3::KeyEventType,
@@ -94,7 +92,6 @@ pub fn create_keyboard_event_with_handled(
 /// - `event_time`: The timestamp in nanoseconds when the event was recorded.
 /// - `device_descriptor`: The device descriptor to add to the event.
 /// - `repeat_sequence`: The sequence of this key event in the autorepeat process.
-#[cfg(test)]
 pub fn create_keyboard_event_with_key_meaning_and_repeat_sequence(
     key: fidl_fuchsia_input::Key,
     event_type: fidl_fuchsia_ui_input3::KeyEventType,
@@ -126,7 +123,6 @@ pub fn create_keyboard_event_with_key_meaning_and_repeat_sequence(
 /// - `modifiers`: The input3 modifiers that are to be included as pressed.
 /// - `event_time`: The timestamp in nanoseconds when the event was recorded.
 /// - `device_descriptor`: The device descriptor to add to the event.
-#[cfg(test)]
 pub fn create_keyboard_event_with_key_meaning(
     key: fidl_fuchsia_input::Key,
     event_type: fidl_fuchsia_ui_input3::KeyEventType,
@@ -156,7 +152,6 @@ pub fn create_keyboard_event_with_key_meaning(
 /// - `modifiers`: The input3 modifiers that are to be included as pressed.
 /// - `event_time`: The timestamp in nanoseconds when the event was recorded.
 /// - `device_descriptor`: The device descriptor to add to the event.
-#[cfg(test)]
 pub fn create_keyboard_event(
     key: fidl_fuchsia_input::Key,
     event_type: fidl_fuchsia_ui_input3::KeyEventType,
@@ -178,7 +173,6 @@ pub fn create_keyboard_event(
 
 /// Creates a fake input event with the given event time.  Please do not
 /// read into other event fields.
-#[cfg(test)]
 pub fn create_fake_input_event(event_time: input_device::EventTime) -> input_device::InputEvent {
     input_device::InputEvent {
         event_time,
@@ -189,7 +183,6 @@ pub fn create_fake_input_event(event_time: input_device::EventTime) -> input_dev
 }
 
 /// Creates an [`input_device::InputDeviceDescriptor`] for a consumer controls device.
-#[cfg(test)]
 pub fn consumer_controls_device_descriptor() -> input_device::InputDeviceDescriptor {
     input_device::InputDeviceDescriptor::ConsumerControls(
         consumer_controls_binding::ConsumerControlsDeviceDescriptor {
@@ -210,7 +203,6 @@ pub fn consumer_controls_device_descriptor() -> input_device::InputDeviceDescrip
 /// # Parameters
 /// - `buttons`: The buttons in the consumer control report.
 /// - `event_time`: The time of event.
-#[cfg(test)]
 pub fn create_consumer_control_input_report(
     buttons: Vec<fidl_input_report::ConsumerControlButton>,
     event_time: i64,
@@ -237,7 +229,6 @@ pub fn create_consumer_control_input_report(
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
 /// - `handled`: Whether the event has been consumed.
-#[cfg(test)]
 pub fn create_consumer_controls_event_with_handled(
     pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
     event_time: input_device::EventTime,
@@ -260,7 +251,6 @@ pub fn create_consumer_controls_event_with_handled(
 /// - `pressed_buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
-#[cfg(test)]
 pub fn create_consumer_controls_event(
     pressed_buttons: Vec<fidl_input_report::ConsumerControlButton>,
     event_time: input_device::EventTime,
@@ -282,7 +272,6 @@ pub fn create_consumer_controls_event(
 ///     [`MouseLocation::Absolute`] represents position.
 /// - `buttons`: The buttons to report as pressed in the mouse report.
 /// - `event_time`: The time of event.
-#[cfg(test)]
 pub fn create_mouse_input_report(
     location: mouse_binding::MouseLocation,
     buttons: Vec<u8>,
@@ -320,6 +309,7 @@ pub fn create_mouse_input_report(
         ..fidl_input_report::InputReport::EMPTY
     }
 }
+
 /// Creates a [`mouse_binding::MouseEvent`] with the provided parameters.
 ///
 /// # Parameters
@@ -328,7 +318,6 @@ pub fn create_mouse_input_report(
 /// - `buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
-#[cfg(test)]
 pub fn create_mouse_event_with_handled(
     location: mouse_binding::MouseLocation,
     phase: fidl_ui_input::PointerEventPhase,
@@ -355,7 +344,6 @@ pub fn create_mouse_event_with_handled(
 /// - `buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
-#[cfg(test)]
 pub fn create_mouse_event(
     location: mouse_binding::MouseLocation,
     phase: fidl_ui_input::PointerEventPhase,
@@ -378,7 +366,6 @@ pub fn create_mouse_event(
 /// # Parameters
 /// - `contacts`: The contacts in the touch report.
 /// - `event_time`: The time of event.
-#[cfg(test)]
 pub fn create_touch_input_report(
     contacts: Vec<fidl_input_report::ContactInputReport>,
     event_time: i64,
@@ -399,7 +386,6 @@ pub fn create_touch_input_report(
     }
 }
 
-#[cfg(test)]
 pub fn create_touch_contact(id: u32, position: Position) -> touch_binding::TouchContact {
     touch_binding::TouchContact { id, position, pressure: None, contact_size: None }
 }
@@ -411,7 +397,6 @@ pub fn create_touch_contact(id: u32, position: Position) -> touch_binding::Touch
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
 /// - `handled`: Whether the event has been consumed.
-#[cfg(test)]
 pub fn create_touch_event_with_handled(
     mut contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
     event_time: input_device::EventTime,
@@ -449,7 +434,6 @@ pub fn create_touch_event_with_handled(
 /// - `contacts`: The contacts in the touch report.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
-#[cfg(test)]
 pub fn create_touch_event(
     contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
     event_time: input_device::EventTime,
@@ -470,7 +454,6 @@ pub fn create_touch_event(
 /// - `contact`: The touch contact to create the event for.
 /// - `position`: The position of the contact in the viewport space.
 /// - `event_time`: The time in nanoseconds when the event was first recorded.
-#[cfg(test)]
 pub fn create_touch_pointer_sample_event(
     phase: pointerinjector::EventPhase,
     contact: &touch_binding::TouchContact,
@@ -498,7 +481,6 @@ pub fn create_touch_pointer_sample_event(
 
 /// Asserts that the given sequence of input reports generates the provided input events
 /// when the reports are processed by the given device type.
-#[cfg(test)]
 #[macro_export]
 macro_rules! assert_input_report_sequence_generates_events {
     (
@@ -539,7 +521,6 @@ macro_rules! assert_input_report_sequence_generates_events {
 
 /// Asserts that the given sequence of input events generates the provided Scenic commands when the
 /// events are processed by the given input handler.
-#[cfg(test)]
 #[macro_export]
 macro_rules! assert_input_event_sequence_generates_scenic_events {
     (
@@ -587,7 +568,6 @@ macro_rules! assert_input_event_sequence_generates_scenic_events {
 
 /// Asserts that the given sequence of input events generates the provided media buttons events when
 /// the input events are processed by the given input handler.
-#[cfg(test)]
 #[macro_export]
 macro_rules! assert_input_event_sequence_generates_media_buttons_events {
     (
@@ -635,7 +615,6 @@ macro_rules! assert_input_event_sequence_generates_media_buttons_events {
 }
 
 /// Asserts that the given sequence of input events are ignored by the provided handler and request stream.
-#[cfg(test)]
 pub async fn assert_handler_ignores_input_event_sequence(
     // The handler processing events.
     input_handler: std::rc::Rc<dyn input_handler::InputHandler>,
