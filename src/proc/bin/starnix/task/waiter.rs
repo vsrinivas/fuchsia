@@ -309,7 +309,6 @@ impl WaitQueue {
 mod tests {
     use super::*;
     use crate::fs::fuchsia::*;
-    use crate::fs::pipe::new_pipe;
     use crate::fs::FdEvents;
     use crate::types::UserBuffer;
     use fuchsia_async as fasync;
@@ -363,55 +362,6 @@ mod tests {
 
         let read_mem_valid = &read_mem[0..read_size];
         assert_eq!(*&read_mem_valid, test_string.as_bytes());
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_async_wait_fdevent() {
-        static COUNTER: AtomicU64 = AtomicU64::new(INIT_VAL);
-        static WRITE_COUNT: AtomicU64 = AtomicU64::new(0);
-
-        let (kernel, current_task) = create_kernel_and_task();
-        let writer_task = create_task(&kernel, "writer-task");
-        let (pipe_out, pipe_in) = new_pipe(&kernel).unwrap();
-
-        let test_string = "hello startnix".to_string();
-        let test_bytes = test_string.as_bytes();
-        let test_len = test_bytes.len();
-        let read_mem = map_memory(&current_task, UserAddress::default(), test_len as u64);
-        let read_buf = [UserBuffer { address: read_mem, length: test_len }];
-
-        let write_mem = map_memory(&writer_task, UserAddress::default(), test_len as u64);
-        let write_buf = [UserBuffer { address: write_mem, length: test_len }];
-        writer_task.mm.write_memory(write_mem, test_bytes).unwrap();
-
-        let waiter = Waiter::new();
-        let watched_events = FdEvents::POLLIN;
-        let report_packet = move |observed: FdEvents| {
-            assert!(observed & watched_events);
-            COUNTER.store(FINAL_VAL, Ordering::Relaxed);
-        };
-        pipe_out.wait_async(&current_task, &waiter, watched_events, Box::new(report_packet));
-
-        let thread = std::thread::spawn(move || {
-            let no_written = pipe_in.write(&writer_task, &write_buf).unwrap();
-            assert_eq!(no_written, test_len);
-            WRITE_COUNT.fetch_add(no_written as u64, Ordering::Relaxed);
-        });
-
-        // this code would block on failure
-        assert_eq!(INIT_VAL, COUNTER.load(Ordering::Relaxed));
-        waiter.wait(&current_task).unwrap();
-        let _ = thread.join();
-        assert_eq!(FINAL_VAL, COUNTER.load(Ordering::Relaxed));
-
-        let no_read = pipe_out.read(&current_task, &read_buf).unwrap();
-        assert_eq!(no_read as u64, WRITE_COUNT.load(Ordering::Relaxed));
-        assert_eq!(no_read, test_len);
-        let mut read_data = vec![0u8, test_len as u8];
-        current_task.mm.read_memory(read_buf[0].address, &mut read_data).unwrap();
-        for (test_out, test_ref) in read_data.iter().zip(test_bytes) {
-            assert_eq!(*test_out, *test_ref);
-        }
     }
 
     #[test]
