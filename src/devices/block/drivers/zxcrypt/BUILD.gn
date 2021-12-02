@@ -99,13 +99,13 @@ test("device-manager-test-bin") {
     "//sdk/lib/sys/inspect/cpp",
     "//src/devices/block/drivers/ramdisk",
     "//src/devices/block/drivers/zxcrypt",
+    "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/fxl",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/lib/uuid",
     "//src/security/fcrypto",
     "//src/security/zxcrypt:zxcrypt-client",
     "//src/security/zxcrypt:zxcrypt-dev",
-    "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/zxtest",
   ]
 }

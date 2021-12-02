@@ -62,7 +62,6 @@ TEST(ZxcryptInspect, ExportsGuid) {
   // Zxcrypt volume manager requires this.
   driver_integration_test::IsolatedDevmgr devmgr;
   driver_integration_test::IsolatedDevmgr::Args args;
-  args.disable_block_watcher = true;
   ASSERT_EQ(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr), ZX_OK);
   fbl::unique_fd ctl;
   ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(),

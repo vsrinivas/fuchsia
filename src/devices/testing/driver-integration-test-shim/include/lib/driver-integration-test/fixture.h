@@ -25,6 +25,7 @@
 namespace devmgr_integration_test {
 using device_watcher::DirWatcher;
 using device_watcher::RecursiveWaitForFile;
+using device_watcher::RecursiveWaitForFileReadOnly;
 }  // namespace devmgr_integration_test
 
 namespace driver_integration_test {
