@@ -13,6 +13,7 @@ zx_library("zbitl") {
 
   sources = [
     "checking.cc",
+    "cpu-topology.cc",
     "item.cc",
     "mem-config.cc",
   ]

@@ -90,6 +90,7 @@ test("zbitl-unittests") {
   sources = [
     "array-tests.cc",
     "checking-tests.cc",
+    "cpu-topology-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
     "mem-config-test.cc",
