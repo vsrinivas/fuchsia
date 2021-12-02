@@ -9,10 +9,11 @@ use crate::utils::connect_to_driver;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_input::{DeviceMarker as LidMarker, DeviceProxy as LidProxy};
+use fuchsia_async::OnSignals;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_vfs_watcher as vfs;
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use fuchsia_zircon as zx;
 use futures::{
     future::{FutureExt, LocalBoxFuture},
     stream::FuturesUnordered,
@@ -211,7 +212,7 @@ impl LidShutdown {
 
     /// Watches the lid device for reports.
     async fn watch_lid_inner(&self) {
-        match self.report_event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE) {
+        match OnSignals::new(&self.report_event, zx::Signals::USER_0).await {
             Err(e) => error!("Could not wait for lid event: {:?}", e),
             _ => match self.check_report().await {
                 Ok(()) => (),
@@ -301,7 +302,7 @@ mod tests {
     use fidl_fuchsia_hardware_input as finput;
     use fuchsia_async as fasync;
     use fuchsia_inspect::testing::TreeAssertion;
-    use fuchsia_zircon::HandleBased;
+    use fuchsia_zircon::{AsHandleRef, HandleBased};
     use inspect::assert_data_tree;
 
     const LID_OPEN: u8 = 0x1;
@@ -424,6 +425,30 @@ mod tests {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
         }
+    }
+
+    #[test]
+    fn test_loop_is_not_blocked() {
+        let mut executor = fasync::TestExecutor::new().unwrap();
+        let mut mock_maker = MockNodeMaker::new();
+        let shutdown_node = mock_maker.make("Shutdown", vec![]);
+        let node_futures = FuturesUnordered::new();
+        let node = executor
+            .run_singlethreaded(
+                LidShutdownBuilder::new_with_event_and_proxy(
+                    setup_fake_driver(LID_OPEN),
+                    zx::Event::create().unwrap(),
+                    shutdown_node,
+                )
+                .build(&node_futures),
+            )
+            .unwrap();
+
+        let mut future = node.watch_lid();
+        let _ = executor.run_until_stalled(&mut future);
+        // If watch_lid() blocks waiting for the event, it will block forever (because the event
+        // will never come), meaning that this test will time out. Otherwise run_until_stalled()
+        // will return immediately and the test will pass.
     }
 
     /// Tests for the presence and correctness of dynamically-added inspect data
