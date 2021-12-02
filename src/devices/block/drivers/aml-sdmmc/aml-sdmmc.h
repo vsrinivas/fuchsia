@@ -218,6 +218,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   uint64_t consecutive_data_errors_ = 0;
 
   Inspect inspect_;
+  size_t request_count_ = 0;
 };
 
 }  // namespace sdmmc

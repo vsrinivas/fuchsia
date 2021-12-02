@@ -136,19 +136,42 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
   auto on_bus_error =
       fit::defer([&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
+  req->response[0] = AmlSdmmcCmdResp::Get().ReadFrom(&mmio_).reg_value();
+
   if (status_irq.rxd_err()) {
     if (req->suppress_error_messages) {
-      AML_SDMMC_TRACE("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
-                      status_irq.reg_value());
+      AML_SDMMC_TRACE("RX Data CRC Error cmd%d (%zu), arg=0x%08x, status=0x%08x", req->cmd_idx,
+                      request_count_, req->arg, status_irq.reg_value());
     } else {
       AML_SDMMC_ERROR("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
                       req->cmd_idx, req->arg, status_irq.reg_value(), ++consecutive_data_errors_);
+      AML_SDMMC_ERROR("Current: 0x%08x 0x%08x 0x%08x 0x%08x",
+                      AmlSdmmcCurCfg::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcCurArg::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcCurDat::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcCurResp::Get().ReadFrom(&mmio_).reg_value());
+      AML_SDMMC_ERROR("Next: 0x%08x 0x%08x 0x%08x 0x%08x",
+                      AmlSdmmcNextCfg::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcNextArg::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcNextDat::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcNextResp::Get().ReadFrom(&mmio_).reg_value());
     }
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.txd_err()) {
-    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
-                    req->cmd_idx, req->arg, status_irq.reg_value(), ++consecutive_data_errors_);
+    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d (%zu), arg=0x%08x, status=0x%08x, consecutive=%lu",
+                    req->cmd_idx, request_count_, req->arg, status_irq.reg_value(),
+                    ++consecutive_data_errors_);
+    AML_SDMMC_ERROR("Current: 0x%08x 0x%08x 0x%08x 0x%08x",
+                    AmlSdmmcCurCfg::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcCurArg::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcCurDat::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcCurResp::Get().ReadFrom(&mmio_).reg_value());
+    AML_SDMMC_ERROR("Next: 0x%08x 0x%08x 0x%08x 0x%08x",
+                    AmlSdmmcNextCfg::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcNextArg::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcNextDat::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcNextResp::Get().ReadFrom(&mmio_).reg_value());
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.desc_err()) {
@@ -158,7 +181,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
   }
   if (status_irq.resp_err()) {
     if (req->suppress_error_messages) {
-      AML_SDMMC_TRACE("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx,
+      AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx,
                       req->arg, status_irq.reg_value());
     } else {
       AML_SDMMC_ERROR("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
@@ -174,7 +197,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
                   (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
     if (req->suppress_error_messages || is_sd_cmd8) {
-      AML_SDMMC_TRACE("Response timeout, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
+      AML_SDMMC_ERROR("Response timeout, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
                       status_irq.reg_value());
     } else {
       AML_SDMMC_ERROR("Reponse timeout, cmd%d, arg=0x%08x, status=0x%08x, consecutive=%lu",
@@ -412,6 +435,7 @@ void AmlSdmmc::ConfigureDefaultRegs() {
                             .set_resp_timeout(AmlSdmmcCfg::kDefaultRespTimeout)
                             .set_rc_cc(AmlSdmmcCfg::kDefaultRcCc)
                             .set_bus_width(AmlSdmmcCfg::kBusWidth1Bit)
+                            // .set_auto_clk(1)
                             .reg_value();
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_reg_value(config_val).WriteTo(&mmio_);
   AmlSdmmcStatus::Get()
@@ -966,6 +990,9 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
     pending_txn_ = true;
   }
 
+  // Janky way to determine if this is SDIO or eMMC
+  // const bool is_test_sdio = max_freq_ == 50'000'000;
+
   // Wait for the bus to become idle before issuing the next request. This could be necessary if the
   // card is driving CMD low after a voltage switch.
   WaitForBus();
@@ -1013,7 +1040,7 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
   }
 
   ClearStatus();
-
+  request_count_++;
   start_reg.set_desc_busy(1).set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2).WriteTo(&mmio_);
 
   zx_status_t res = WaitForInterrupt(req);
@@ -1023,6 +1050,11 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
   fbl::AutoLock lock(&mtx_);
   pending_txn_ = false;
   txn_finished_.Signal();
+
+  // if (is_test_sdio) {
+  //   zxlogf(INFO, "%s: cmd%d arg 0x%08x resp 0x%08x", __func__, req->cmd_idx, req->arg,
+  //          req->response[0]);
+  // }
 
   return res;
 }
