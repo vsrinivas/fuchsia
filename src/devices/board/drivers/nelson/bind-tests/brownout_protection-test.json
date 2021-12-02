@@ -1,0 +1,42 @@
+[
+    {
+        "node": "codec",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.TAS58xx",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.codec.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI"
+                }
+            }
+        ]
+    },
+    {
+        "node": "power-sensor",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.power.BIND_PROTOCOL.SENSOR",
+                    "fuchsia.BIND_POWER_SENSOR_DOMAIN": "fuchsia.amlogic.platform.s905d3.BIND_POWER_SENSOR_DOMAIN.AUDIO"
+                }
+            }
+        ]
+    },
+    {
+        "node": "alert-gpio",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOZ_PIN_ID.PIN_10"
+                }
+            }
+        ]
+    }
+]

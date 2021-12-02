@@ -1,0 +1,54 @@
+[
+    {
+        "node": "volume-up",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOZ_PIN_ID.PIN_5",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "volume-down",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOZ_PIN_ID.PIN_6"
+                }
+            }
+        ]
+    },
+    {
+        "node": "volume-both",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOAO_PIN_ID.PIN_10",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "mic-privacy",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOZ_PIN_ID.PIN_2"
+                }
+            }
+        ]
+    }
+]

@@ -12,7 +12,7 @@
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/backlight_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_backlight_bind.h"
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556Metadata.h"
 
 namespace nelson {

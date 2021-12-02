@@ -14,7 +14,7 @@
 #include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/mali_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_mali_bind.h"
 
 namespace nelson {
 

@@ -13,7 +13,7 @@
 #include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/aml_video_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_aml_video_bind.h"
 
 namespace nelson {
 

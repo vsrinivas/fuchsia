@@ -17,8 +17,8 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/gpio_light_bind.h"
-#include "src/devices/board/drivers/nelson/tcs3400_light_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_gpio_light_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_tcs3400_light_bind.h"
 
 namespace nelson {
 

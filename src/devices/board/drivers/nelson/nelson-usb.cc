@@ -19,8 +19,8 @@
 #include <usb/dwc2/metadata.h>
 
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/dwc2_bind.h"
-#include "src/devices/board/drivers/nelson/xhci_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_dwc2_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_xhci_bind.h"
 
 namespace nelson {
 

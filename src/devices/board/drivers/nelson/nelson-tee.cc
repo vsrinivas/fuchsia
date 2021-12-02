@@ -13,7 +13,7 @@
 #include <cstdint>
 
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/tee_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_tee_bind.h"
 #include "src/devices/lib/fidl-metadata/tee.h"
 
 namespace nelson {

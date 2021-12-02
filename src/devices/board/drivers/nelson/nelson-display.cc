@@ -16,7 +16,7 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/display_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_display_bind.h"
 
 namespace nelson {
 

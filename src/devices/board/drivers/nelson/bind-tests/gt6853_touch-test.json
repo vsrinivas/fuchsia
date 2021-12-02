@@ -1,0 +1,42 @@
+[
+    {
+        "node": "i2c",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.i2c.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_I2C_BUS_ID": "fuchsia.i2c.BIND_I2C_BUS_ID.NELSON_I2C_2",
+                    "fuchsia.BIND_I2C_ADDRESS": "fuchsia.i2c.BIND_I2C_ADDRESS.GOODIX_TOUCH"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-int",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOZ_PIN_ID.PIN_4",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    },
+    {
+        "node": "gpio-reset",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_GPIO_PIN": "fuchsia.amlogic.platform.s905d3.GPIOZ_PIN_ID.PIN_9",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.gpio.BIND_PROTOCOL.DEVICE"
+                }
+            }
+        ]
+    }
+]

@@ -9,7 +9,7 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/selina_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_selina_bind.h"
 
 namespace nelson {
 

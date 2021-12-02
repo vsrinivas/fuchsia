@@ -20,8 +20,8 @@
 
 #include "nelson-gpios.h"
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/aml_sdio_bind.h"
-#include "src/devices/board/drivers/nelson/wifi_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_aml_sdio_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_wifi_bind.h"
 
 namespace nelson {
 

@@ -1,0 +1,57 @@
+[
+    {
+        "node": "pdev",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_PLL",
+                    "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC",
+                    "fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID": "0",
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.platform.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.S905D3"
+                }
+            }
+        ]
+    },
+    {
+        "node": "pwm-a",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.pwm.BIND_PROTOCOL.PWM",
+                    "fuchsia.BIND_PWM_ID": "fuchsia.amlogic.platform.s905d3.BIND_PWM_ID.PWM_AO_D"
+                }
+            }
+        ]
+    },
+    {
+        "node": "clock-1",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_CLOCK_ID": "fuchsia.amlogic.platform.meson.SM1_CLK_ID.CLK_SYS_PLL_DIV16"
+                }
+            }
+        ]
+    },
+    {
+        "node": "clock-2",
+        "tests": [
+            {
+                "name": "Match",
+                "expected": "match",
+                "device": {
+                    "fuchsia.BIND_PROTOCOL": "fuchsia.clock.BIND_PROTOCOL.DEVICE",
+                    "fuchsia.BIND_CLOCK_ID": "fuchsia.amlogic.platform.meson.SM1_CLK_ID.CLK_SYS_CPU_CLK_DIV16"
+                }
+            }
+        ]
+    }
+]

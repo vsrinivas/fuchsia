@@ -19,7 +19,7 @@
 #include <soc/aml-s905d3/s905d3-hw.h>
 
 #include "nelson.h"
-#include "src/devices/board/drivers/nelson/bt_uart_bind.h"
+#include "src/devices/board/drivers/nelson/nelson_bt_uart_bind.h"
 
 namespace nelson {
 
