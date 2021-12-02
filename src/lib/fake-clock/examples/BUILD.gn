@@ -4,8 +4,5 @@
 
 group("examples") {
   testonly = true
-  deps = [
-    "go:examples",
-    "rust:examples",
-  ]
+  deps = [ "rust:examples" ]
 }
