@@ -84,7 +84,6 @@ class ActiveScanTest : public SimTest {
   // The default active scan request
   const uint8_t default_channels_list_[5] = {1, 2, 3, 4, 5};
   wlanif_scan_req_t default_scan_req_ = {
-      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .channels_list = default_channels_list_,
       .channels_count = 5,
@@ -330,7 +329,6 @@ TEST_F(ActiveScanTest, EmptyChannelList) {
   // Case contains empty channels_list.
   wlanif_scan_req_t req_empty_channels_list = {
       .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .channels_list = nullptr,
       .channels_count = 0,
@@ -376,7 +374,6 @@ TEST_F(ActiveScanTest, SsidTooLong) {
   const cssid_t ssids_list[] = {valid_scan_ssid, invalid_scan_ssid};
   wlanif_scan_req_t req_break_ssids_list = {
       .txn_id = ++client_ifc_.scan_txn_id_,
-      .bss_type_selector = fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY,
       .scan_type = WLAN_SCAN_TYPE_ACTIVE,
       .channels_list = channels_list,
       .channels_count = 5,

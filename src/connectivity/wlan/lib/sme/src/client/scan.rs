@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect::NumericProperty,
-    ieee80211::{Bssid, Ssid, WILDCARD_BSSID},
+    ieee80211::{Bssid, Ssid},
     log::warn,
     std::{
         collections::{hash_map, HashMap, HashSet},
@@ -223,9 +223,6 @@ fn new_scan_request(
 ) -> fidl_mlme::ScanRequest {
     let scan_req = fidl_mlme::ScanRequest {
         txn_id: mlme_txn_id,
-        // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
-        bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
-        bssid: WILDCARD_BSSID.0,
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
         // TODO(fxbug.dev/88658): SME silently ignores unsupported channels
@@ -545,8 +542,6 @@ mod tests {
             .enqueue_scan_to_discover(passive_discovery_scan(10))
             .expect("expected a ScanRequest");
         assert_eq!(req.txn_id, 1);
-        assert_eq!(req.bss_type_selector, fidl_internal::BSS_TYPE_SELECTOR_ANY);
-        assert_eq!(req.bssid, WILDCARD_BSSID.0);
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Passive);
         assert_eq!(req.channel_list, Vec::<u8>::new());
         assert_eq!(req.ssid_list, Vec::<Vec<u8>>::new());
@@ -569,8 +564,6 @@ mod tests {
         let req = sched.enqueue_scan_to_discover(scan_cmd).expect("expected a ScanRequest");
 
         assert_eq!(req.txn_id, 1);
-        assert_eq!(req.bss_type_selector, fidl_internal::BSS_TYPE_SELECTOR_ANY);
-        assert_eq!(req.bssid, WILDCARD_BSSID.0);
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
         assert_eq!(req.channel_list, vec![36, 165, 1]);
         assert_eq!(req.ssid_list, Vec::<Vec<u8>>::new());
@@ -596,8 +589,6 @@ mod tests {
         let req = sched.enqueue_scan_to_discover(scan_cmd).expect("expected a ScanRequest");
 
         assert_eq!(req.txn_id, 1);
-        assert_eq!(req.bss_type_selector, fidl_internal::BSS_TYPE_SELECTOR_ANY);
-        assert_eq!(req.bssid, WILDCARD_BSSID.0);
         assert_eq!(req.scan_type, fidl_mlme::ScanTypes::Active);
         assert_eq!(req.channel_list, vec![1]);
         assert_eq!(req.ssid_list, vec![ssid1, ssid2]);

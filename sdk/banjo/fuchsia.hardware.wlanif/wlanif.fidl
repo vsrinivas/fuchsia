@@ -25,8 +25,6 @@ const WLAN_WMM_PARAM_LEN uint32 = 18;
 
 type WlanifScanReq = struct {
     txn_id uint64;
-    bss_type_selector fuchsia.wlan.internal.BssTypeSelector;
-    bssid ieee80211.MacAddr;
     scan_type WlanScanType;
     /// List of channels to scan on. An empty list of channels will cause a
     /// scan request to immediately return a WlanifScanEnd with code INVALID_ARGS.
@@ -41,7 +39,6 @@ type WlanifScanReq = struct {
     /// SSIDs may result in extended scan times or the error ZX_ERR_INVALID_ARGS to be
     /// returned.
     ssids vector<ieee80211.CSsid>:MAX;
-    probe_delay uint32;
     min_channel_time uint32;
     max_channel_time uint32;
 };

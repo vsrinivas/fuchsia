@@ -50,9 +50,6 @@ pub fn fake_serving_ap_info() -> ServingApInfo {
 pub fn fake_scan_request() -> fidl_mlme::ScanRequest {
     fidl_mlme::ScanRequest {
         txn_id: 1,
-        // All supported MLME drivers only support BSS_TYPE_SELECTOR_ANY
-        bss_type_selector: fidl_internal::BSS_TYPE_SELECTOR_ANY,
-        bssid: [8, 2, 6, 2, 1, 11],
         scan_type: fidl_mlme::ScanTypes::Active,
         channel_list: vec![11],
         ssid_list: vec![],

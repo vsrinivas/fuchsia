@@ -264,15 +264,12 @@ void Device::StartScan(wlan_mlme::ScanRequest req) {
 
   wlanif_scan_req_t impl_req = {
       .txn_id = req.txn_id,
-      .bss_type_selector = req.bss_type_selector,
       .scan_type = ConvertScanType(req.scan_type),
       .channels_count = req.channel_list.size(),
       .ssids_count = req.ssid_list.size(),
-      .probe_delay = req.probe_delay,
       .min_channel_time = req.min_channel_time,
       .max_channel_time = req.max_channel_time,
   };
-  std::memcpy(impl_req.bssid, req.bssid.data(), ETH_ALEN);
 
   if (impl_req.channels_count > 0) {
     // Clone list of channels

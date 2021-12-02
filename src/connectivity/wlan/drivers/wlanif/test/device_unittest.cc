@@ -187,8 +187,6 @@ wlan_mlme::ScanRequest fake_mlme_scan_request(std::vector<uint8_t>&& channel_lis
                                               std::vector<std::vector<uint8_t>>&& ssid_list) {
   return {
       .txn_id = 754,
-      .bss_type_selector = wlan_internal::BSS_TYPE_SELECTOR_ANY,
-      .bssid = {6, 6, 6, 6, 6, 6},
       .scan_type = wlan_mlme::ScanTypes::PASSIVE,
       .channel_list = std::move(channel_list),
       .ssid_list = std::move(ssid_list),
@@ -235,8 +233,6 @@ TEST(SmeChannel, ScanRequest) {
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
   ASSERT_EQ(ctx.scan_req->txn_id, 754u);
-  ASSERT_EQ(ctx.scan_req->bss_type_selector, fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY);
-  ASSERT_THAT(ctx.scan_req->bssid, ElementsAre(6, 6, 6, 6, 6, 6));
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
   ASSERT_EQ(ctx.scan_req->channels_count, 2u);
@@ -252,7 +248,6 @@ TEST(SmeChannel, ScanRequest) {
   ASSERT_THAT(ctx.scan_req->ssids_list[1].data,
               ElementsAre(4, 5, 6, 7, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _,
                           _, _, _, _, _, _, _));
-  ASSERT_EQ(ctx.scan_req->probe_delay, 0u);
   ASSERT_EQ(ctx.scan_req->min_channel_time, 0u);
   ASSERT_EQ(ctx.scan_req->max_channel_time, 100u);
 
@@ -344,15 +339,12 @@ TEST(SmeChannel, ScanRequestEmptySsidList) {
   // Verify scan request.
   ASSERT_TRUE(ctx.scan_req.has_value());
   ASSERT_EQ(ctx.scan_req->txn_id, 754u);
-  ASSERT_EQ(ctx.scan_req->bss_type_selector, fuchsia_wlan_internal_BSS_TYPE_SELECTOR_ANY);
-  ASSERT_THAT(ctx.scan_req->bssid, ElementsAre(6, 6, 6, 6, 6, 6));
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
   ASSERT_EQ(ctx.scan_req->channels_count, 5u);
   uint8_t expected_channels_list[] = {1, 2, 3, 4, 5};
   ASSERT_EQ(0,
             std::memcmp(ctx.scan_req->channels_list, expected_channels_list, 5 * sizeof(uint8_t)));
   ASSERT_EQ(ctx.scan_req->ssids_count, 0u);
-  ASSERT_EQ(ctx.scan_req->probe_delay, 0u);
   ASSERT_EQ(ctx.scan_req->min_channel_time, 0u);
   ASSERT_EQ(ctx.scan_req->max_channel_time, 100u);
 
