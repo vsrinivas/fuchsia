@@ -1,0 +1,5 @@
+{
+    "extraPaths": [
+        "build/python/modules"
+    ]
+}
