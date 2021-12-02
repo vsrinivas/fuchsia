@@ -43,7 +43,8 @@ pub const UNREDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     v6TrailingZeroes: f:e:d:c:abcd:dcba:bcde::, \
     v6LinkLocal: feB2:111:222:333:444:555:666:777, \
     v6LocalMulticast: ff72:111:222:333:444:555:666:777, \
-    v6Multicast: ff77:111:222:333:444:555:666:777";
+    v6Multicast: ff77:111:222:333:444:555:666:777, \
+    obfuscatedGaiaId: 106986199446298680449";
 
 // NOTE: The integers in this string are brittle but deterministic. See the comment in the impl
 // of Redactor for explanation.
@@ -57,7 +58,7 @@ pub const REDACTED_CANARY_MESSAGE: &str = "Log redaction canary: \
     v4Loopback: 127.1.2.3, v4LocalAddr: 169.254.12.34, v4LocalMulti: 224.0.0.123, v4Multi: <REDACTED-IPV4: 4>, \
     broadcast: 255.255.255.255, v6zeroes: :: ::1, v6LeadingZeroes: <REDACTED-IPV6: 9>, v6TrailingZeroes: <REDACTED-IPV6: 10>, \
     v6LinkLocal: feB2:<REDACTED-IPV6-LL: 11>, v6LocalMulticast: ff72:111:222:333:444:555:666:777, \
-    v6Multicast: ff77:<REDACTED-IPV6-MULTI: 12>";
+    v6Multicast: ff77:<REDACTED-IPV6-MULTI: 12>, obfuscatedGaiaId: <REDACTED-OBFUSCATED-GAIA-ID: 16>";
 
 pub fn emit_canary() {
     tracing::info!("{}", UNREDACTED_CANARY_MESSAGE);
@@ -195,6 +196,12 @@ const DEFAULT_REDACTION_PATTERNS: &[RedactionPattern] = &[
     RedactionPattern {
         matcher: r#"\b[0-9a-fA-F]{32}\b"#,
         replacement: "<REDACTED-HEX: {}>",
+        use_map: MapType::ReplaceAll,
+    },
+    // Obfuscated gaia ids
+    RedactionPattern {
+        matcher: r#"\b1[0-9]{20}\b"#,
+        replacement: "<REDACTED-OBFUSCATED-GAIA-ID: {}>",
         use_map: MapType::ReplaceAll,
     },
 ];
@@ -437,6 +444,7 @@ mod test {
         colons_8_fields: "v6_colons_8_fields: ::12:234:35:46:5:6:7:8" => "v6_colons_8_fields: <REDACTED-IPV6: 1>:8",
         v6_8_fields_colons: "v6_8_fields_colons: 12:234:35:46:5:6:7:8::" => "v6_8_fields_colons: <REDACTED-IPV6: 1>::",
         canary: UNREDACTED_CANARY_MESSAGE => REDACTED_CANARY_MESSAGE,
+        obfuscated_gaia_id: "obfuscated_gaia_id: 106986199446298680449" => "obfuscated_gaia_id: <REDACTED-OBFUSCATED-GAIA-ID: 1>",
     }
 
     // A single Redactor is used for every line in the stream, so the numbers grow.
