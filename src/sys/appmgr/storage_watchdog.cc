@@ -14,6 +14,9 @@
 #include <lib/trace/event.h>
 #include <sys/types.h>
 
+#include <regex>
+#include <string>
+
 #include <src/lib/files/directory.h>
 #include <src/lib/files/path.h>
 
@@ -48,6 +51,9 @@ void DeleteDirentInFd(int dir_fd, struct dirent* ent) {
 // PurgeCacheIn will remove elements in cache directories inside dir_fd,
 // recurse on any nested realms in dir_fd, and close dir_fd when its done.
 void PurgeCacheIn(int dir_fd) {
+  static const std::regex* const kV1StorageDirRegex = new std::regex{"[^:#]*:[^:#]*:[^:#]*#[^#]*"};
+  static const std::regex* const kV2StorageDirRegex = new std::regex{"(data)|([0-9a-f]{64})"};
+
   DIR* dir_stream = fdopendir(dir_fd);
   // For all children in the path we're looking at, if it's named "r", then
   // it's a child realm that we should walk into. If it's not, it's a
@@ -56,30 +62,11 @@ void PurgeCacheIn(int dir_fd) {
   // a component to be named "r".
   struct dirent* ent = nullptr;
   while ((ent = readdir(dir_stream))) {
-    if (strncmp(ent->d_name, ".", 2) == 0) {
+    if (std::string(ent->d_name) == ".") {
       // Don't treat `.` as a component directory to be deleted!
       continue;
-    } else if (strncmp(ent->d_name, "r", 2) == 0) {
-      // This is a realm, open and queue up the child realms to be cleaned
-      int r_dir = openat(dir_fd, ent->d_name, O_DIRECTORY);
-      if (r_dir == -1) {
-        // We failed to open the directory. Keep going, as we want to delete as
-        // much as we can!
-        continue;
-      }
-      DIR* r_dir_stream = fdopendir(r_dir);
-      struct dirent* ent = nullptr;
-      while ((ent = readdir(r_dir_stream))) {
-        if (strncmp(ent->d_name, ".", 2) != 0) {
-          int new_dir_fd = openat(r_dir, ent->d_name, O_DIRECTORY);
-          if (new_dir_fd == -1) {
-            continue;
-          }
-          PurgeCacheIn(new_dir_fd);
-        }
-      }
-      closedir(r_dir_stream);
-    } else {
+    } else if (std::regex_match(std::string(ent->d_name), *kV1StorageDirRegex) ||
+               std::regex_match(std::string(ent->d_name), *kV2StorageDirRegex)) {
       int component_dir = openat(dir_fd, ent->d_name, O_DIRECTORY);
       if (component_dir == -1) {
         continue;
@@ -87,11 +74,21 @@ void PurgeCacheIn(int dir_fd) {
       DIR* component_dir_stream = fdopendir(component_dir);
       struct dirent* ent = nullptr;
       while ((ent = readdir(component_dir_stream))) {
-        if (strncmp(ent->d_name, ".", 2) != 0) {
+        if (std::string(ent->d_name) != ".") {
           DeleteDirentInFd(component_dir, ent);
         }
       }
       closedir(component_dir_stream);
+    } else {
+      // This is a container directory such as "r", "children", or <v2_moniker>. Open it and
+      // recurse.
+      int r_dir = openat(dir_fd, ent->d_name, O_DIRECTORY);
+      if (r_dir == -1) {
+        // We failed to open the directory. Keep going, as we want to delete as
+        // much as we can!
+        continue;
+      }
+      PurgeCacheIn(r_dir);
     }
   }
   closedir(dir_stream);

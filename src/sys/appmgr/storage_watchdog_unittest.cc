@@ -10,21 +10,21 @@
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 
+#include <algorithm>
+#include <string>
+#include <vector>
+
 #include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
 
-#define EXAMPLE_PATH "/hippo_storage/cache/r/sys/fuchsia.com:cobalt:0#meta:cobalt.cmx"
-#define EXAMPLE_TEST_PATH              \
-  "/hippo_storage/cache/r/sys/r/test/" \
-  "fuchsia.com:cobalt-unittest:0#meta:cobalt-unittest.cmx"
-
-#define TMPDATA "abcdefghijklmnopqrstuvwxyz1234567890"
-#define TMPDATA_SIZE 36
+#include "gtest/gtest.h"
 
 namespace {
 
 namespace fio = fuchsia_io;
+
+const char* kTmpData = "abcdefghijklmnopqrstuvwxyz1234567890";
 
 class StorageWatchdogTest : public ::testing::Test {
  public:
@@ -74,9 +74,19 @@ class TestStorageWatchdog : public StorageWatchdog {
 };
 
 TEST_F(StorageWatchdogTest, Basic) {
-  // Create directories on memfs
-  files::CreateDirectory(EXAMPLE_PATH);
-  files::CreateDirectory(EXAMPLE_TEST_PATH);
+  const std::string kRootPath = "/hippo_storage/cache";
+  const std::string kRealmPath = files::JoinPath(kRootPath, "r/sys");
+  const std::string kNestedRealmPath = files::JoinPath(kRootPath, "r/sys/r/test");
+  const std::string kV1Path = files::JoinPath(kRealmPath, "fuchsia.com:cobalt:0#meta:cobalt.cmx");
+  const std::string kV1NestedPath =
+      files::JoinPath(kNestedRealmPath, "fuchsia.com:cobalt-unittest:0#meta:cobalt-unittest.cmx");
+  const std::string kV2IdPath = files::JoinPath(
+      kRootPath, "e5ef2bbe9dd2b7cee87beac5e06cece13fe6f9c154b1f00abec155e6c6c9fa62");
+  const std::string kV2MonikerBasePath = files::JoinPath(kRootPath, "network:0");
+  const std::string kV2MonikerPath = files::JoinPath(kV2MonikerBasePath, "data");
+  const std::string kV2NestedMonikerBasePath =
+      files::JoinPath(kRootPath, "network:0/children/netstack:0");
+  const std::string kV2NestedMonikerPath = files::JoinPath(kV2NestedMonikerBasePath, "data");
 
   TestStorageWatchdog watchdog = TestStorageWatchdog("/hippo_storage", "/hippo_storage/cache");
   watchdog.info.used_bytes = 0;
@@ -86,28 +96,108 @@ TEST_F(StorageWatchdogTest, Basic) {
 
   for (size_t i = 0; i < 10; ++i) {
     auto filename = std::to_string(i);
-    ASSERT_TRUE(files::WriteFile(files::JoinPath(EXAMPLE_PATH, filename), TMPDATA, TMPDATA_SIZE));
-    ASSERT_TRUE(
-        files::WriteFile(files::JoinPath(EXAMPLE_TEST_PATH, filename), TMPDATA, TMPDATA_SIZE));
+    for (const std::string& path :
+         {kV1Path, kV1NestedPath, kV2IdPath, kV2MonikerPath, kV2NestedMonikerPath}) {
+      ASSERT_TRUE(files::CreateDirectory(path));
+      ASSERT_TRUE(files::WriteFile(files::JoinPath(path, filename), kTmpData, strlen(kTmpData)));
+    }
   }
 
   watchdog.info.used_bytes = watchdog.info.total_bytes - 128;
 
   // Confirm that storage pressure is high, clear the cache, check that things
-  // were actually deleted
+  // were actually deleted (but the directories themselves were preserved).
   usage = watchdog.GetStorageUsage();
   EXPECT_GT(usage.percent(), StorageWatchdog::kCachePurgeThresholdPct);
   watchdog.PurgeCache();
 
-  std::vector<std::string> example_files = {};
-  EXPECT_TRUE(files::ReadDirContents(EXAMPLE_PATH, &example_files));
-  EXPECT_EQ(1ul, example_files.size());
-  EXPECT_TRUE(example_files.at(0).compare(".") == 0);
+  // For each case, check:
+  // - The contents of the storage dir are cleared.
+  // - The storage dir itself is not deleted.
 
-  std::vector<std::string> example_test_files = {};
-  EXPECT_TRUE(files::ReadDirContents(EXAMPLE_TEST_PATH, &example_test_files));
-  EXPECT_EQ(1ul, example_test_files.size());
-  EXPECT_TRUE(example_test_files.at(0).compare(".") == 0);
+  // V1
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kV1Path, &files));
+    EXPECT_EQ(1ul, files.size());
+    EXPECT_EQ(files[0], ".");
+  }
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kRealmPath, &files));
+    EXPECT_EQ(3ul, files.size());
+    std::sort(files.begin(), files.end());
+    EXPECT_EQ(files[0], ".");
+    EXPECT_EQ(files[1], "fuchsia.com:cobalt:0#meta:cobalt.cmx");
+    EXPECT_EQ(files[2], "r");
+  }
+
+  // V1 nested
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kV1NestedPath, &files));
+    EXPECT_EQ(1ul, files.size());
+    EXPECT_EQ(files[0], ".");
+  }
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kNestedRealmPath, &files));
+    EXPECT_EQ(2ul, files.size());
+    std::sort(files.begin(), files.end());
+    EXPECT_EQ(files[0], ".");
+    EXPECT_EQ(files[1], "fuchsia.com:cobalt-unittest:0#meta:cobalt-unittest.cmx");
+  }
+
+  // V2 instance id
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kV2IdPath, &files));
+    EXPECT_EQ(1ul, files.size());
+    EXPECT_EQ(files[0], ".");
+  }
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kRootPath, &files));
+    EXPECT_EQ(4ul, files.size());
+    std::sort(files.begin(), files.end());
+    EXPECT_EQ(files[0], ".");
+    EXPECT_EQ(files[1], "e5ef2bbe9dd2b7cee87beac5e06cece13fe6f9c154b1f00abec155e6c6c9fa62");
+    EXPECT_EQ(files[2], "network:0");
+    EXPECT_EQ(files[3], "r");
+  }
+
+  // V2 moniker
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kV2MonikerPath, &files));
+    EXPECT_EQ(1ul, files.size());
+    EXPECT_EQ(files[0], ".");
+  }
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kV2MonikerBasePath, &files));
+    EXPECT_EQ(3ul, files.size());
+    std::sort(files.begin(), files.end());
+    EXPECT_EQ(files[0], ".");
+    EXPECT_EQ(files[1], "children");
+    EXPECT_EQ(files[2], "data");
+  }
+
+  // V2 nested moniker
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kV2NestedMonikerPath, &files));
+    EXPECT_EQ(1ul, files.size());
+    EXPECT_EQ(files[0], ".");
+  }
+  {
+    std::vector<std::string> files = {};
+    EXPECT_TRUE(files::ReadDirContents(kV2NestedMonikerBasePath, &files));
+    EXPECT_EQ(2ul, files.size());
+    std::sort(files.begin(), files.end());
+    EXPECT_EQ(files[0], ".");
+    EXPECT_EQ(files[1], "data");
+  }
 }
 
 }  // namespace
