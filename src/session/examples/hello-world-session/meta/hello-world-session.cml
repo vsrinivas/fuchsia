@@ -36,6 +36,13 @@
         // List your component's dependencies here, ex:
         // { protocol: "fuchsia.net.name.Lookup" }
     ],
+    expose: [
+        // session_manager uses this protocol to start the session.
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 
     // [END capabilities_block]
 }

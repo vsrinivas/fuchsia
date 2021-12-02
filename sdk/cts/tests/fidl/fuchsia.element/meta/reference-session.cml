@@ -57,5 +57,9 @@
             protocol: "fuchsia.element.Manager",
             from: "#element_manager",
         },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
     ],
 }

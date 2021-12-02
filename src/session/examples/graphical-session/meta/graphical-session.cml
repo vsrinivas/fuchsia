@@ -7,4 +7,10 @@
     use: [
         { protocol: "fuchsia.ui.scenic.Scenic" },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
 }
