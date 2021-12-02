@@ -146,7 +146,7 @@ func TestSymboltable(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			var s symbolTable
 			// Use these special names to test struct and protocol behaviors.
-			s.addStruct("foo/struct")
+			s.addStruct("foo/struct", &fidlgen.Struct{})
 			s.addProtocol("foo/protocol")
 
 			actual := s.fidlTypeString(test.type_)

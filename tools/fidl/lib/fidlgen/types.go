@@ -853,37 +853,43 @@ type ServiceMember struct {
 // Method represents the declaration of a FIDL method.
 type Method struct {
 	Attributes
-	Ordinal         uint64      `json:"ordinal"`
-	Name            Identifier  `json:"name"`
-	IsComposed      bool        `json:"is_composed"`
-	HasRequest      bool        `json:"has_request"`
-	Request         []Parameter `json:"maybe_request,omitempty"`
-	RequestPayload  *Type       `json:"maybe_request_payload,omitempty"`
-	RequestPadding  bool        `json:"maybe_request_has_padding,omitempty"`
-	RequestFlexible bool        `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
-	HasResponse     bool        `json:"has_response"`
-	Response        []Parameter `json:"maybe_response,omitempty"`
-	ResponsePayload *Type       `json:"maybe_response_payload,omitempty"`
-	HasError        bool        `json:"has_error"`
-	ResultType      *Type       `json:"maybe_response_result_type,omitempty"`
-	ValueType       *Type       `json:"maybe_response_success_type,omitempty"`
-	ValueStruct     *Struct     `json:"maybe_response_success_struct,omitempty"`
-	ErrorType       *Type       `json:"maybe_response_err_type,omitempty"`
+	Ordinal         uint64     `json:"ordinal"`
+	Name            Identifier `json:"name"`
+	IsComposed      bool       `json:"is_composed"`
+	HasRequest      bool       `json:"has_request"`
+	RequestPayload  *Type      `json:"maybe_request_payload,omitempty"`
+	RequestPadding  bool       `json:"maybe_request_has_padding,omitempty"`
+	RequestFlexible bool       `json:"experimental_maybe_request_has_flexible_envelope,omitempty"`
+	HasResponse     bool       `json:"has_response"`
+	ResponsePayload *Type      `json:"maybe_response_payload,omitempty"`
+	HasError        bool       `json:"has_error"`
+	ResultType      *Type      `json:"maybe_response_result_type,omitempty"`
+	ValueType       *Type      `json:"maybe_response_success_type,omitempty"`
+	ValueStruct     *Struct    `json:"maybe_response_success_struct,omitempty"`
+	ErrorType       *Type      `json:"maybe_response_err_type,omitempty"`
+}
+
+// GetRequestPayloadIdentifier retrieves the identifier that points to the
+// declaration of the request payload.
+func (m *Method) GetRequestPayloadIdentifier() (EncodedCompoundIdentifier, bool) {
+	if m.RequestPayload == nil {
+		return "", false
+	}
+	return m.RequestPayload.Identifier, true
+}
+
+// GetResponsePayloadIdentifier retrieves the identifier that points to the
+// declaration of the response payload.
+func (m *Method) GetResponsePayloadIdentifier() (EncodedCompoundIdentifier, bool) {
+	if m.ResponsePayload == nil {
+		return "", false
+	}
+	return m.ResponsePayload.Identifier, true
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.
 func (m *Method) IsTransitional() bool {
 	return m.HasAttribute("transitional")
-}
-
-// Parameter represents a parameter to a FIDL method.
-type Parameter struct {
-	Type         Type       `json:"type"`
-	Name         Identifier `json:"name"`
-	MaxHandles   int        `json:"max_handles"`
-	MaxOutOfLine int        `json:"max_out_of_line"`
-	FieldShapeV1 FieldShape `json:"field_shape_v1"`
-	FieldShapeV2 FieldShape `json:"field_shape_v2"`
 }
 
 // Enum represents a FIDL declaration of an enum.

@@ -280,7 +280,7 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> FidlJsonPackageData {
     let mut package_data = FidlJsonPackageData::new();
     for file in input_files {
         let fidl_file_path = PathBuf::from(&file);
-        let fidl_json = match FidlJson::from_path(&fidl_file_path) {
+        let mut fidl_json = match FidlJson::from_path(&fidl_file_path) {
             Err(why) => {
                 error!("Error parsing {}: {}", file.display(), why);
                 continue;
@@ -288,6 +288,7 @@ fn process_fidl_json_files(input_files: Vec<PathBuf>) -> FidlJsonPackageData {
             Ok(json) => json,
         };
 
+        fidl_json.resolve_method_payloads();
         if should_process_fidl_json(&fidl_json) {
             package_data.insert(fidl_json);
         }

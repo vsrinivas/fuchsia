@@ -141,6 +141,9 @@ type compiler struct {
 
 	// library is the identifier for the current library.
 	library fidlgen.LibraryIdentifier
+
+	// anonymous structs used only as method request/response payloads
+	payloads map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct
 }
 
 var reservedWords = map[string]struct{}{
@@ -560,16 +563,11 @@ func (c *compiler) compileUnion(p fidlgen.Union) ([]StructMember, []StructMember
 	return i, o, h
 }
 
-func (c *compiler) compileParameters(name string, ordinal uint64, params []fidlgen.Parameter) (Struct, Struct) {
-	var args fidlgen.Struct
-	for _, p := range params {
-		args.Members = append(args.Members, fidlgen.StructMember{
-			Type:         p.Type,
-			Name:         p.Name,
-			FieldShapeV1: p.FieldShapeV1,
-		})
+func (c *compiler) compileParameters(name string, ordinal uint64, payload *fidlgen.Struct) (Struct, Struct) {
+	result := c.compileStruct(fidlgen.Struct{})
+	if payload != nil {
+		result = c.compileStruct(*payload)
 	}
-	result := c.compileStruct(args)
 	return Struct{
 			Name:    name,
 			Members: append(append(header(ordinal), result.Inline...), result.OutOfLine...),
@@ -587,18 +585,26 @@ func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier,
 	}
 
 	if val.HasRequest {
-		request, requestHandles := c.compileParameters(r.Name+RequestSuffix, r.Ordinal, val.Request)
+		var payload *fidlgen.Struct
+		if payloadID, ok := val.GetRequestPayloadIdentifier(); ok {
+			payload = c.payloads[payloadID]
+		}
+		request, requestHandles := c.compileParameters(r.Name+RequestSuffix, r.Ordinal, payload)
 		r.Request = &request
 		r.RequestHandles = &requestHandles
 	}
 
 	// For response, we only extract handles for now.
 	if val.HasResponse {
+		var payload *fidlgen.Struct
+		if payloadID, ok := val.GetResponsePayloadIdentifier(); ok {
+			payload = c.payloads[payloadID]
+		}
 		suffix := ResponseSuffix
 		if !val.HasRequest {
 			suffix = EventSuffix
 		}
-		response, responseHandles := c.compileParameters(r.Name+suffix, r.Ordinal, val.Response)
+		response, responseHandles := c.compileParameters(r.Name+suffix, r.Ordinal, payload)
 		r.Response = &response
 		r.ResponseHandles = &responseHandles
 	}
@@ -622,12 +628,13 @@ func compile(fidlData fidlgen.Root) Root {
 	root := Root{}
 	libraryName := fidlgen.ParseLibraryName(fidlData.Name)
 	c := compiler{
-		decls:   fidlData.DeclsWithDependencies(),
-		structs: make(StructMap),
-		unions:  make(UnionMap),
-		enums:   make(EnumMap),
-		bits:    make(BitsMap),
-		library: libraryName,
+		decls:    fidlData.DeclsWithDependencies(),
+		structs:  make(StructMap),
+		unions:   make(UnionMap),
+		enums:    make(EnumMap),
+		bits:     make(BitsMap),
+		library:  libraryName,
+		payloads: make(map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct),
 	}
 
 	root.HeaderPath = fmt.Sprintf("%s/c/fidl.h", formatLibraryPath(libraryName))
@@ -647,6 +654,8 @@ func compile(fidlData fidlgen.Root) Root {
 	for _, v := range fidlData.Structs {
 		// TODO(fxbug.dev/7704) remove once anonymous structs are supported
 		if v.IsRequestOrResponse {
+			v := v
+			c.payloads[v.Name] = &v
 			continue
 		}
 		c.structs[v.Name] = v

@@ -50,16 +50,25 @@ func (p protocol) Serialize() ElementStr {
 
 // method represents an Element for a protocol method.
 type method struct {
-	membership isMember
-	method     fidlgen.Method
+	membership      isMember
+	method          fidlgen.Method
+	requestPayload  *fidlgen.Struct
+	responsePayload *fidlgen.Struct
 }
 
 // newMethod creates a new protocol method element.
 func newMethod(s *symbolTable, parent fidlgen.EncodedCompoundIdentifier, m fidlgen.Method) method {
-	return method{
+	out := method{
 		membership: newIsMember(s, parent, m.Name, fidlgen.ProtocolDeclType /* default value */, nil),
 		method:     m,
 	}
+	if m.RequestPayload != nil {
+		out.requestPayload = s.getStruct(m.RequestPayload.Identifier)
+	}
+	if m.ResponsePayload != nil {
+		out.responsePayload = s.getStruct(m.ResponsePayload.Identifier)
+	}
+	return out
 }
 
 // Name implements Element.
@@ -84,11 +93,11 @@ func (m method) Member() bool {
 // this method.  E.g. "(int32 a) -> (Foo b)"
 func (m method) getTypeSignature() Decl {
 	var parlist []string
-	request := m.getParamList(m.method.HasRequest, m.method.Request)
+	request := m.getParamList(m.method.HasRequest, m.requestPayload)
 	if request != "" {
 		parlist = append(parlist, request)
 	}
-	response := m.getParamList(m.method.HasResponse, m.method.Response)
+	response := m.getParamList(m.method.HasResponse, m.responsePayload)
 	if response != "" {
 		if request == "" {
 			// -> Method(T a)
@@ -107,10 +116,15 @@ func (m method) Serialize() ElementStr {
 }
 
 // getParamList formats a parameter list, as in Foo(ty1 a, ty2b)
-func (m method) getParamList(hasParams bool, params []fidlgen.Parameter) string {
+func (m method) getParamList(hasParams bool, payload *fidlgen.Struct) string {
 	if !hasParams {
 		return ""
 	}
+	if payload == nil {
+		payload = &fidlgen.Struct{}
+	}
+
+	params := payload.Members
 	var ps []string
 	for _, p := range params {
 		ps = append(ps, fmt.Sprintf("%v %v", m.membership.symbolTable.fidlTypeString(p.Type), p.Name))

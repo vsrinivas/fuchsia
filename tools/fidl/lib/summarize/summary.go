@@ -92,7 +92,7 @@ func (s *summarizer) addTables(tables []fidlgen.Table) {
 func (s *summarizer) addStructs(structs []fidlgen.Struct) {
 	for _, st := range structs {
 		if st.IsRequestOrResponse {
-			// Disregard anonymous structs for API summarization.
+			// Disregard anonymous payload structs for API summarization.
 			continue
 		}
 		for _, m := range st.Members {
@@ -103,10 +103,11 @@ func (s *summarizer) addStructs(structs []fidlgen.Struct) {
 	}
 }
 
-// registerStructNames registers names of all the structs in the FIDL IR.
-func (s *summarizer) registerStructNames(structs []fidlgen.Struct) {
+// registerStructs registers names of all the structs in the FIDL IR.
+func (s *summarizer) registerStructs(structs []fidlgen.Struct) {
 	for _, st := range structs {
-		s.symbols.addStruct(st.Name)
+		st := st
+		s.symbols.addStruct(st.Name, &st)
 	}
 }
 
@@ -142,7 +143,7 @@ func serialize(e []Element) []ElementStr {
 func Elements(root fidlgen.Root) []Element {
 	var s summarizer
 
-	s.registerStructNames(root.Structs)
+	s.registerStructs(root.Structs)
 	s.registerProtocolNames(root.Protocols)
 
 	s.addConsts(root.Consts)

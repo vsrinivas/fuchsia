@@ -565,10 +565,12 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		var requestChildren []ScopedLayout
 		var requestTypeShapeV1 fidlgen.TypeShape
 		var requestTypeShapeV2 fidlgen.TypeShape
+		var requestPayloadStruct fidlgen.Struct
 		if v.RequestPayload != nil {
 			requestTypeShapeV1 = v.RequestPayload.TypeShapeV1
 			requestTypeShapeV2 = v.RequestPayload.TypeShapeV2
 			if val, ok := c.requestResponsePayload[v.RequestPayload.Identifier]; ok {
+				requestPayloadStruct = val
 				requestChildren = c.anonymousChildren[toKey(val.NamingContext)]
 			}
 		}
@@ -580,10 +582,12 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		var responseChildren []ScopedLayout
 		var responseTypeShapeV1 fidlgen.TypeShape
 		var responseTypeShapeV2 fidlgen.TypeShape
+		var responsePayloadStruct fidlgen.Struct
 		if v.ResponsePayload != nil {
 			responseTypeShapeV1 = v.ResponsePayload.TypeShapeV1
 			responseTypeShapeV2 = v.ResponsePayload.TypeShapeV2
 			if val, ok := c.requestResponsePayload[v.ResponsePayload.Identifier]; ok {
+				responsePayloadStruct = val
 				responseChildren = c.anonymousChildren[toKey(val.NamingContext)]
 			}
 		}
@@ -609,10 +613,10 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),
 			Ordinal:                   v.Ordinal,
 			HasRequest:                v.HasRequest,
-			RequestArgs:               c.compileParameterArray(v.Request),
+			RequestArgs:               c.compileParameterArray(requestPayloadStruct),
 			RequestAnonymousChildren:  requestChildren,
 			HasResponse:               v.HasResponse,
-			ResponseArgs:              c.compileParameterArray(v.Response),
+			ResponseArgs:              c.compileParameterArray(responsePayloadStruct),
 			ResponseAnonymousChildren: responseChildren,
 			Transitional:              v.IsTransitional(),
 			Result:                    result,
@@ -654,14 +658,14 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 	return &r
 }
 
-func (c *compiler) compileParameterArray(val []fidlgen.Parameter) []Parameter {
+func (c *compiler) compileParameterArray(val fidlgen.Struct) []Parameter {
 	var params []Parameter = []Parameter{}
-	for _, v := range val {
+	for _, v := range val.Members {
 		params = append(params, Parameter{
 			Type:              c.compileType(v.Type),
 			nameVariants:      structMemberContext.transform(v.Name),
-			OffsetV1:          v.FieldShapeV1.Offset,
-			OffsetV2:          v.FieldShapeV2.Offset,
+			OffsetV1:          v.FieldShapeV1.Offset + kMessageHeaderSize,
+			OffsetV2:          v.FieldShapeV2.Offset + kMessageHeaderSize,
 			HandleInformation: c.fieldHandleInformation(&v.Type),
 		})
 	}

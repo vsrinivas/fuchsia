@@ -20,10 +20,10 @@ type symbolTable struct {
 	// for resolving server and client end references.
 	protocolNames map[fidlgen.EncodedCompoundIdentifier]struct{}
 
-	// structNames contain all struct names from the FIDL IR.  Used for
+	// structDecls contain all struct names from the FIDL IR.  Used for
 	// resolving optional structs which have a different syntax
 	// (box<Foo> instead of Foo:optional).
-	structNames map[fidlgen.EncodedCompoundIdentifier]struct{}
+	structDecls map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct
 }
 
 // addProtocol registers that name corresponds to a FIDL protocol.
@@ -41,17 +41,25 @@ func (n *symbolTable) isProtocol(name fidlgen.EncodedCompoundIdentifier) bool {
 }
 
 // addStruct registers that `name` corresponds to a FIDL struct.
-func (n *symbolTable) addStruct(name fidlgen.EncodedCompoundIdentifier) {
-	if n.structNames == nil {
-		n.structNames = make(map[fidlgen.EncodedCompoundIdentifier]struct{})
+func (n *symbolTable) addStruct(name fidlgen.EncodedCompoundIdentifier, def *fidlgen.Struct) {
+	if n.structDecls == nil {
+		n.structDecls = make(map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct)
 	}
-	n.structNames[name] = struct{}{}
+	n.structDecls[name] = def
 }
 
 // isStruct returns true if name is a known struct.
 func (n *symbolTable) isStruct(name fidlgen.EncodedCompoundIdentifier) bool {
-	_, ok := n.structNames[name]
+	_, ok := n.structDecls[name]
 	return ok
+}
+
+// getStruct returns the stored struct definition, if one exists.
+func (n *symbolTable) getStruct(name fidlgen.EncodedCompoundIdentifier) *fidlgen.Struct {
+	if def, ok := n.structDecls[name]; ok {
+		return def
+	}
+	return nil
 }
 
 // fidlTypeString converts the FIDL type declaration into a string per RFC-0050.

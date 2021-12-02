@@ -16,7 +16,7 @@
 {{#if maybe_request ~}}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    {{#each maybe_request ~}}
+    {{#each maybe_request.members ~}}
         <tr>
             <td><code>{{~ name ~}}</code></td>
             <td>
@@ -37,7 +37,7 @@
 {{#if maybe_response ~}}
 <table>
     <tr><th>Name</th><th>Type</th></tr>
-    {{#each maybe_response ~}}
+    {{#each maybe_response.members ~}}
         <tr>
             <td><code>{{~ name ~}}</code></td>
             <td>

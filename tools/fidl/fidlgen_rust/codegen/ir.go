@@ -829,14 +829,9 @@ func (c *compiler) compileHandleMetadataWrapper(val *fidlgen.Type) (string, bool
 	return name, hi.hasHandleMetadata
 }
 
-func (c *compiler) compileParameterArray(payload fidlgen.EncodedCompoundIdentifier) []Parameter {
-	val, ok := c.requestResponsePayload[payload]
-	if !ok {
-		panic(fmt.Sprintf("unknown request/response struct: %v", payload))
-	}
-
+func (c *compiler) compileParameterArray(payload fidlgen.Struct) []Parameter {
 	var parameters []Parameter
-	for _, v := range val.Members {
+	for _, v := range payload.Members {
 		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&v.Type)
 		parameters = append(parameters, Parameter{
 			OGType:            v.Type,
@@ -863,39 +858,51 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	}
 
 	for _, v := range val.Methods {
-		if len(v.Request) > maximumAllowedParameters {
-			panic(fmt.Sprintf(
-				`Method %s.%s has %d parameters, but the FIDL Rust bindings `+
-					`only support up to %d. See https://fxbug.dev/76655 for details.`,
-				val.Name, v.Name, len(v.Request), maximumAllowedParameters))
+		var compiledRequestParameterList []Parameter
+		if v.RequestPayload != nil {
+			if val, ok := c.requestResponsePayload[v.RequestPayload.Identifier]; ok {
+				if len(val.Members) > maximumAllowedParameters {
+					panic(fmt.Sprintf(
+						`Method %s.%s has %d parameters, but the FIDL Rust bindings `+
+							`only support up to %d. See https://fxbug.dev/76655 for details.`,
+						val.Name, v.Name, len(val.Members), maximumAllowedParameters))
+				}
+				compiledRequestParameterList = c.compileParameterArray(val)
+			} else {
+				panic(fmt.Sprintf("unknown request/response struct: %v", v.RequestPayload.Identifier))
+			}
 		}
 
 		name := compileSnakeIdentifier(v.Name)
 		camelName := compileCamelIdentifier(v.Name)
+		var compiledResponseParameterList []Parameter
 		var foundResult *Result
-		if len(v.Response) == 1 && v.Response[0].Type.Kind == fidlgen.IdentifierType {
-			responseType := v.Response[0].Type
-			if result, ok := c.results[responseType.Identifier]; ok {
-				foundResult = &result
+		if v.ResponsePayload != nil {
+			if val, ok := c.requestResponsePayload[v.ResponsePayload.Identifier]; ok {
+				if len(val.Members) == 1 && val.Members[0].Type.Kind == fidlgen.IdentifierType {
+					responseType := val.Members[0].Type
+					if result, ok := c.results[responseType.Identifier]; ok {
+						foundResult = &result
+					}
+				}
+				compiledResponseParameterList = c.compileParameterArray(val)
+			} else {
+				panic(fmt.Sprintf("unknown request/response struct: %v", v.ResponsePayload.Identifier))
 			}
 		}
-		m := Method{
+
+		r.Methods = append(r.Methods, Method{
 			Method:         v,
 			Ordinal:        v.Ordinal,
 			Name:           name,
 			CamelName:      camelName,
 			HasRequest:     v.HasRequest,
+			Request:        compiledRequestParameterList,
 			HasResponse:    v.HasResponse,
+			Response:       compiledResponseParameterList,
 			Result:         foundResult,
 			IsTransitional: v.IsTransitional(),
-		}
-		if v.RequestPayload != nil {
-			m.Request = c.compileParameterArray(v.RequestPayload.Identifier)
-		}
-		if v.ResponsePayload != nil {
-			m.Response = c.compileParameterArray(v.ResponsePayload.Identifier)
-		}
-		r.Methods = append(r.Methods, m)
+		})
 	}
 
 	return r

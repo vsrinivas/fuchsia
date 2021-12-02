@@ -62,8 +62,38 @@ impl FidlJson {
 
         let mut s = String::new();
         fidl_file.read_to_string(&mut s)?;
-
         Ok(serde_json::from_str(&s)?)
+    }
+
+    pub fn resolve_method_payloads(&mut self) {
+        let mut payloads = HashMap::<String, &Value>::new();
+        for strukt in self.struct_declarations.iter() {
+            if strukt["is_request_or_response"].as_bool().unwrap() {
+                payloads.insert(strukt["name"].as_str().unwrap().to_string(), strukt);
+            }
+        }
+        for interface in self.interface_declarations.iter_mut() {
+            let methods = interface["methods"].as_array_mut().unwrap();
+            for method in methods.iter_mut() {
+                let m = method.as_object_mut().unwrap();
+                let req = m.get("maybe_request_payload");
+                if req.is_some() {
+                    let typ = req.unwrap();
+                    let strukt = payloads.get(typ["identifier"].as_str().unwrap()).unwrap();
+                    m.insert("maybe_request".to_string(), strukt.to_owned().clone());
+                }
+
+                let resp = match m.get("maybe_response_payload") {
+                    Some(resp) => Some(resp),
+                    None => m.get("maybe_response_success_type"),
+                };
+                if resp.is_some() {
+                    let typ = resp.unwrap();
+                    let strukt = payloads.get(typ["identifier"].as_str().unwrap()).unwrap();
+                    m.insert("maybe_response".to_string(), strukt.to_owned().clone());
+                }
+            }
+        }
     }
 
     pub fn sort_declarations(&mut self) {
