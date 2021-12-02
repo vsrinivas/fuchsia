@@ -22,7 +22,6 @@
                 "fuchsia.session.Restarter",
                 "fuchsia.sessionmanager.Startup",
                 "fuchsia.ui.accessibility.view.Registry",
-                "fuchsia.ui.lifecycle.LifecycleController",
             ],
         },
     ],
@@ -36,7 +35,6 @@
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "parent",
         },
-        { protocol: "fuchsia.ui.lifecycle.LifecycleController" },
         {
             directory: "config-data",
             from: "parent",
