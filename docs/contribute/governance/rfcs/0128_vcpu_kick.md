@@ -198,7 +198,7 @@ to future use cases that use a similar model to VCPUs.
 ## Prior art and references
 
 A similar operation is present in Apple's Hypervisor Framework:
-https://developer.apple.com/documentation/hypervisor/1441468-hv_vcpu_interrupt
+[https://developer.apple.com/documentation/hypervisor/1441468-hv_vcpu_interrupt](https://developer.apple.com/documentation/hypervisor/1441468-hv_vcpu_interrupt)
 
 As well as in Linux's KVM (Kernel-based Virtual Machine):
-https://www.kernel.org/doc/html/latest/virt/kvm/vcpu-requests.html#vcpu-kicks
+[https://www.kernel.org/doc/html/latest/virt/kvm/vcpu-requests.html#vcpu-kicks](https://www.kernel.org/doc/html/latest/virt/kvm/vcpu-requests.html#vcpu-kicks)
