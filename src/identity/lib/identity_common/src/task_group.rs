@@ -139,6 +139,41 @@ impl TaskGroup {
         .boxed()
     }
 
+    /// Cancel ongoing tasks, but do not wait for their completion. Tasks are allowed to continue
+    /// running to respond to the cancelation request. If more tasks are attempted to
+    /// be spawn during the lifetime of this method, they will be rejected with an AlreadyCancelled
+    /// error.
+    ///
+    /// If this TaskGroup has children, they will be cancelled (concurrently, in no particular
+    /// order) before the tasks of this TaskGroup are cancelled.
+    ///
+    /// If a TaskGroup cancellation is (2) already in progress or (3) completed,
+    /// `Err(TaskGroupError::AlreadyCancelled)` will be returned.
+    pub fn cancel_no_wait<'a>(&'a self) -> BoxFuture<'a, Result<(), TaskGroupError>> {
+        // Since this method is recursive, we cannot use `async fn` directly, hence the BoxFuture.
+        let state = self.state.clone();
+        async move {
+            let state = {
+                let mut state_lock = state.lock().await;
+                std::mem::replace(&mut *state_lock, TaskGroupState::Cancelled)
+            };
+            match state {
+                TaskGroupState::Cancelled => Err(TaskGroupError::AlreadyCancelled),
+                TaskGroupState::Active { cancel_sender, tasks, children } => {
+                    children.iter().for_each(|child| {
+                        let _ = child.cancel_no_wait();
+                    });
+                    let _ = cancel_sender.send(());
+                    // Forget the remote handle, allowing the tasks to continue running after
+                    // `tasks` is dropped.
+                    let () = tasks.into_iter().map(RemoteHandle::forget).collect();
+                    Ok(())
+                }
+            }
+        }
+        .boxed()
+    }
+
     /// Create a child TaskGroup that will be automatically cancelled when the parent is cancelled.
     pub async fn create_child(&self) -> Result<Self, TaskGroupError> {
         let mut state_lock = self.state.lock().await;
@@ -223,6 +258,20 @@ mod test {
         let tg = TaskGroup::new();
         tg.spawn(a_task).await.expect("spawning failed");
         tg.cancel().await.expect("cancelling failed");
+        assert_eq!(receiver.await, Ok(10));
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn cancel_no_wait_test() {
+        // Checks that a task is canceled correctly.
+        let (sender, receiver) = oneshot::channel();
+        let a_task = |cancel: TaskGroupCancel| async {
+            cancel.await.expect("cancel signal not delivered properly");
+            sender.send(10).expect("sending failed");
+        };
+        let tg = TaskGroup::new();
+        tg.spawn(a_task).await.expect("spawning failed");
+        tg.cancel_no_wait().await.expect("cancelling failed");
         assert_eq!(receiver.await, Ok(10));
     }
 

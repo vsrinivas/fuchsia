@@ -411,3 +411,120 @@ async fn deprecated_provision_new_account_formats_directory() {
     let actual_contents = io_util::file::read(&file).await.expect("read file");
     assert_eq!(&actual_contents, expected_content);
 }
+
+#[fuchsia::test]
+async fn locked_account_can_be_unlocked_again() {
+    let env = TestEnv::build().await;
+    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let account_manager = env.account_manager();
+
+    let expected_content = b"some data";
+
+    let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            EMPTY_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+    let root = {
+        let (root, server_end) = fidl::endpoints::create_proxy().unwrap();
+        account_proxy
+            .get_data_directory(server_end)
+            .await
+            .expect("get_data_directory FIDL")
+            .expect("get_data_directory");
+
+        // Write a file to the data directory.
+        let file = io_util::directory::open_file(
+            &root,
+            "test",
+            fio::OPEN_FLAG_CREATE | fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        )
+        .await
+        .expect("create file");
+
+        let (status, bytes_written) = file.write(expected_content).await.expect("file write");
+        Status::ok(status).expect("failed to write content");
+        assert_eq!(bytes_written, expected_content.len() as u64);
+        root
+    };
+
+    // Lock the account.
+    account_proxy.lock().await.expect("lock FIDL").expect("locked");
+
+    // The data directory should be closed.
+    io_util::directory::open_file(&root, "test", fio::OPEN_RIGHT_READABLE)
+        .await
+        .expect_err("failed to open file");
+
+    // The account channel should be closed.
+    let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_proxy.get_data_directory(server_end).await.expect_err("get_data_directory FIDL");
+
+    // Unlock the account again.
+    let (account_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_get_account(GLOBAL_ACCOUNT_ID, EMPTY_PASSWORD, server_end)
+        .await
+        .expect("deprecated_get_account FIDL")
+        .expect("deprecated_get_account");
+
+    // Look for the file written previously.
+    let (root, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_proxy
+        .get_data_directory(server_end)
+        .await
+        .expect("get_data_directory FIDL")
+        .expect("get_data_directory");
+    let file = io_util::directory::open_file(&root, "test", fio::OPEN_RIGHT_READABLE)
+        .await
+        .expect("create file");
+
+    let actual_contents = io_util::file::read(&file).await.expect("read file");
+    assert_eq!(&actual_contents, expected_content);
+}
+
+#[fuchsia::test]
+async fn locking_account_terminates_all_clients() {
+    let env = TestEnv::build().await;
+    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let account_manager = env.account_manager();
+
+    let (account_proxy1, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_provision_new_account(
+            EMPTY_PASSWORD,
+            AccountMetadata { name: Some("test".to_string()), ..AccountMetadata::EMPTY },
+            server_end,
+        )
+        .await
+        .expect("deprecated_new_provision FIDL")
+        .expect("deprecated provision new account");
+
+    let (account_proxy2, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_manager
+        .deprecated_get_account(GLOBAL_ACCOUNT_ID, EMPTY_PASSWORD, server_end)
+        .await
+        .expect("deprecated_get_account FIDL")
+        .expect("deprecated_get_account");
+
+    account_proxy1.lock().await.expect("lock FIDL").expect("lock");
+
+    // Verify that both proxies are disconnected.
+
+    let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_proxy1
+        .get_data_directory(server_end)
+        .await
+        .expect_err("get_data_directory FIDL should fail");
+
+    let (_, server_end) = fidl::endpoints::create_proxy().unwrap();
+    account_proxy2
+        .get_data_directory(server_end)
+        .await
+        .expect_err("get_data_directory FIDL should fail");
+}

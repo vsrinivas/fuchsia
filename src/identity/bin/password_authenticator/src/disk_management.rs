@@ -58,6 +58,8 @@ pub enum DiskError {
     FailedToFormatZxcrypt(#[source] zx::Status),
     #[error("Failed to unseal zxcrypt block device: {0}")]
     FailedToUnsealZxcrypt(#[source] zx::Status),
+    #[error("Failed to seal zxcrypt block device: {0}")]
+    FailedToSealZxcrypt(#[source] zx::Status),
     #[error("Failed to format minfs: {0}")]
     MinfsFormatError(#[from] fs::CommandError),
     #[error("Failed to serve minfs: {0}")]
@@ -222,12 +224,15 @@ pub trait Partition {
 /// The `EncryptedBlockDevice` trait provides a narrow interface for
 /// [`DeviceManager`][fidl_fuchsia_hardware_block_encrypted::DeviceManagerProxy].
 #[async_trait]
-pub trait EncryptedBlockDevice {
+pub trait EncryptedBlockDevice: Send + 'static {
     type BlockDevice;
 
     /// Unseals the block device using the given key. The key must be 256 bits long.
     /// Returns a decrypted block device on success.
     async fn unseal(&self, key: &Key) -> Result<Self::BlockDevice, DiskError>;
+
+    /// Seals the block device.
+    async fn seal(&self) -> Result<(), DiskError>;
 
     /// Re-encrypts the block device using the given key, wiping out any previous zxcrypt volumes.
     /// The key must be 256 bits long.
@@ -419,6 +424,20 @@ impl EncryptedBlockDevice for EncryptedDevBlockDevice {
             MODE_TYPE_SERVICE,
         )?;
         Ok(DevBlockDevice(Node(unsealed_block_node)))
+    }
+
+    async fn seal(&self) -> Result<(), DiskError> {
+        let (device_manager_proxy, server_end) =
+            fidl::endpoints::create_proxy::<DeviceManagerMarker>()?;
+        self.0.open(
+            OPEN_RW,
+            MODE_TYPE_SERVICE,
+            "zxcrypt",
+            ServerEnd::new(server_end.into_channel()),
+        )?;
+        zx::Status::ok(device_manager_proxy.seal().await?)
+            .map_err(DiskError::FailedToSealZxcrypt)?;
+        Ok(())
     }
 
     async fn format(&self, key: &Key) -> Result<(), DiskError> {

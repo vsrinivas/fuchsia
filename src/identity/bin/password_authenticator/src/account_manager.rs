@@ -28,13 +28,13 @@ where
     disk_manager: DM,
     key_derivation: KD,
 
-    accounts: Mutex<HashMap<AccountId, AccountState<DM::Minfs>>>,
+    accounts: Mutex<HashMap<AccountId, AccountState<DM::EncryptedBlockDevice, DM::Minfs>>>,
 }
 
 /// The external state of the account.
-enum AccountState<M> {
+enum AccountState<EB, M> {
     Provisioning(Arc<Mutex<()>>),
-    Provisioned(Arc<Account<M>>),
+    Provisioned(Arc<Account<EB, M>>),
 }
 
 impl<DM, KD> AccountManager<DM, KD>
@@ -204,13 +204,13 @@ where
             Some(AccountState::Provisioned(account)) => {
                 // Attempt to authenticate with the account using the derived key.
                 match account.check_new_client(&key).await {
-                    CheckNewClientResult::Sealed => {
+                    CheckNewClientResult::Locked => {
                         // The account has been sealed. We'll need to unseal the account from disk.
                         let account = self.unseal_account(id, &key).await?;
                         accounts_locked.insert(id, AccountState::Provisioned(account.clone()));
                         account
                     }
-                    CheckNewClientResult::UnsealedSameKey => {
+                    CheckNewClientResult::UnlockedSameKey => {
                         // The account is unsealed and the keys match. We can reuse this `Account`
                         // instance.
                         // It is possible for this Account to be sealed by the time the new client
@@ -218,7 +218,7 @@ where
                         // dropped as soon as it is scheduled to be served.
                         account.clone()
                     }
-                    CheckNewClientResult::UnsealedDifferentKey => {
+                    CheckNewClientResult::UnlockedDifferentKey => {
                         // The account is unsealed but the keys don't match.
                         return Err(faccount::Error::FailedAuthentication);
                     }
@@ -252,7 +252,7 @@ where
         &self,
         id: AccountId,
         key: &Key,
-    ) -> Result<Arc<Account<DM::Minfs>>, faccount::Error> {
+    ) -> Result<Arc<Account<DM::EncryptedBlockDevice, DM::Minfs>>, faccount::Error> {
         let account_ids = self.get_account_ids().await.map_err(|_| faccount::Error::NotFound)?;
         if account_ids.into_iter().find(|i| *i == id).is_none() {
             return Err(faccount::Error::NotFound);
@@ -267,7 +267,7 @@ where
             Err(err) => return Err(err.into()),
         };
         let minfs = self.disk_manager.serve_minfs(block_device).await?;
-        Ok(Arc::new(Account::new(key.clone(), minfs)))
+        Ok(Arc::new(Account::new(key.clone(), encrypted_block, minfs)))
     }
 
     async fn provision_new_account(&self, password: String) -> Result<AccountId, faccount::Error> {
@@ -331,7 +331,7 @@ where
             let mut accounts_locked = self.accounts.lock().await;
             accounts_locked.insert(
                 GLOBAL_ACCOUNT_ID,
-                AccountState::Provisioned(Arc::new(Account::new(key, minfs))),
+                AccountState::Provisioned(Arc::new(Account::new(key, encrypted_block, minfs))),
             );
 
             Ok(GLOBAL_ACCOUNT_ID)
@@ -347,10 +347,10 @@ where
     }
 
     #[cfg(test)]
-    async fn seal_account(&self, id: AccountId) {
+    async fn lock_account(&self, id: AccountId) {
         let mut accounts_locked = self.accounts.lock().await;
         if let Some(AccountState::Provisioned(account)) = accounts_locked.remove(&id) {
-            account.seal().await.expect("seal");
+            account.lock().await.expect("lock");
         }
     }
 }
@@ -379,7 +379,7 @@ mod test {
         // If no partition list is given, partitions() (from the DiskManager trait) will return
         // an error.
         maybe_partitions: Option<Vec<MockPartition>>,
-        format_minfs: Result<(), fn() -> DiskError>,
+        format_minfs_behavior: Result<(), fn() -> DiskError>,
         serve_minfs_fn: Arc<Mutex<dyn FnMut() -> Result<MockMinfs, DiskError> + Send>>,
     }
 
@@ -398,7 +398,7 @@ mod test {
             Self {
                 scope: scope.clone(),
                 maybe_partitions: None,
-                format_minfs: Ok(()),
+                format_minfs_behavior: Ok(()),
                 serve_minfs_fn: Arc::new(Mutex::new(move || Ok(MockMinfs::simple(scope.clone())))),
             }
         }
@@ -424,7 +424,7 @@ mod test {
         }
 
         async fn has_zxcrypt_header(&self, block_dev: &MockBlockDevice) -> Result<bool, DiskError> {
-            match &block_dev.zxcrypt_header {
+            match &block_dev.zxcrypt_header_behavior {
                 Ok(Match::Any) => Ok(true),
                 Ok(Match::None) => Ok(false),
                 Err(err_factory) => Err(err_factory()),
@@ -435,11 +435,11 @@ mod test {
             &self,
             block_dev: MockBlockDevice,
         ) -> Result<MockEncryptedBlockDevice, DiskError> {
-            block_dev.bind.map_err(|err_factory| err_factory())
+            block_dev.bind_behavior.map_err(|err_factory| err_factory())
         }
 
         async fn format_minfs(&self, _block_dev: &MockBlockDevice) -> Result<(), DiskError> {
-            self.format_minfs.clone().map_err(|err_factory| err_factory())
+            self.format_minfs_behavior.clone().map_err(|err_factory| err_factory())
         }
 
         async fn serve_minfs(&self, _block_dev: MockBlockDevice) -> Result<MockMinfs, DiskError> {
@@ -480,10 +480,10 @@ mod test {
     #[derive(Debug, Clone)]
     struct MockPartition {
         // Whether the mock's `has_guid` method will match any given GUID, or produce an error.
-        guid: Result<Match, fn() -> DiskError>,
+        guid_behavior: Result<Match, fn() -> DiskError>,
 
         // Whether the mock's `has_label` method will match any given label, or produce an error.
-        label: Result<Match, fn() -> DiskError>,
+        label_behavior: Result<Match, fn() -> DiskError>,
 
         // BlockDevice representing the partition data.
         block: MockBlockDevice,
@@ -494,7 +494,7 @@ mod test {
         type BlockDevice = MockBlockDevice;
 
         async fn has_guid(&self, _desired_guid: [u8; 16]) -> Result<bool, DiskError> {
-            match &self.guid {
+            match &self.guid_behavior {
                 Ok(Match::Any) => Ok(true),
                 Ok(Match::None) => Ok(false),
                 Err(err_factory) => Err(err_factory()),
@@ -502,7 +502,7 @@ mod test {
         }
 
         async fn has_label(&self, _desired_label: &str) -> Result<bool, DiskError> {
-            match &self.label {
+            match &self.label_behavior {
                 Ok(Match::Any) => Ok(true),
                 Ok(Match::None) => Ok(false),
                 Err(err_factory) => Err(err_factory()),
@@ -517,18 +517,18 @@ mod test {
     #[derive(Debug, Clone)]
     struct MockBlockDevice {
         // Whether or not the block device has a zxcrypt header in the first block.
-        zxcrypt_header: Result<Match, fn() -> DiskError>,
+        zxcrypt_header_behavior: Result<Match, fn() -> DiskError>,
         // Whether or not the block device should succeed in binding zxcrypt
-        bind: Result<MockEncryptedBlockDevice, fn() -> DiskError>,
+        bind_behavior: Result<MockEncryptedBlockDevice, fn() -> DiskError>,
     }
 
     /// A mock implementation of [`EncryptedBlockDevice`].
     #[derive(Debug, Clone)]
     struct MockEncryptedBlockDevice {
         // Whether the block encrypted block device can format successfully.
-        format: Result<(), fn() -> DiskError>,
+        format_behavior: Result<(), fn() -> DiskError>,
         // Whether the block encrypted block device can be unsealed.
-        unseal: Result<Box<MockBlockDevice>, fn() -> DiskError>,
+        unseal_behavior: Result<Box<MockBlockDevice>, fn() -> DiskError>,
     }
 
     #[async_trait]
@@ -536,11 +536,15 @@ mod test {
         type BlockDevice = MockBlockDevice;
 
         async fn format(&self, _key: &Key) -> Result<(), DiskError> {
-            self.format.clone().map_err(|err_factory| err_factory())
+            self.format_behavior.clone().map_err(|err_factory| err_factory())
         }
 
         async fn unseal(&self, _key: &Key) -> Result<MockBlockDevice, DiskError> {
-            self.unseal.clone().map(|b| *b).map_err(|err_factory| err_factory())
+            self.unseal_behavior.clone().map(|b| *b).map_err(|err_factory| err_factory())
+        }
+
+        async fn seal(&self) -> Result<(), DiskError> {
+            Ok(())
         }
     }
 
@@ -548,15 +552,17 @@ mod test {
     // and whose block device has a zxcrypt header.
     fn make_formatted_account_partition() -> MockPartition {
         MockPartition {
-            guid: Ok(Match::Any),
-            label: Ok(Match::Any),
+            guid_behavior: Ok(Match::Any),
+            label_behavior: Ok(Match::Any),
             block: MockBlockDevice {
-                zxcrypt_header: Ok(Match::Any),
-                bind: Ok(MockEncryptedBlockDevice {
-                    format: Ok(()),
-                    unseal: Ok(Box::new(MockBlockDevice {
-                        zxcrypt_header: Ok(Match::None),
-                        bind: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
+                zxcrypt_header_behavior: Ok(Match::Any),
+                bind_behavior: Ok(MockEncryptedBlockDevice {
+                    format_behavior: Ok(()),
+                    unseal_behavior: Ok(Box::new(MockBlockDevice {
+                        zxcrypt_header_behavior: Ok(Match::None),
+                        bind_behavior: Err(|| {
+                            DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
+                        }),
                     })),
                 }),
             },
@@ -567,15 +573,17 @@ mod test {
     // and whose block device does not have a zxcrypt header.
     fn make_unformatted_account_partition() -> MockPartition {
         MockPartition {
-            guid: Ok(Match::Any),
-            label: Ok(Match::Any),
+            guid_behavior: Ok(Match::Any),
+            label_behavior: Ok(Match::Any),
             block: MockBlockDevice {
-                zxcrypt_header: Ok(Match::None),
-                bind: Ok(MockEncryptedBlockDevice {
-                    format: Ok(()),
-                    unseal: Ok(Box::new(MockBlockDevice {
-                        zxcrypt_header: Ok(Match::None),
-                        bind: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
+                zxcrypt_header_behavior: Ok(Match::None),
+                bind_behavior: Ok(MockEncryptedBlockDevice {
+                    format_behavior: Ok(()),
+                    unseal_behavior: Ok(Box::new(MockBlockDevice {
+                        zxcrypt_header_behavior: Ok(Match::None),
+                        bind_behavior: Err(|| {
+                            DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
+                        }),
                     })),
                 }),
             },
@@ -585,11 +593,11 @@ mod test {
     #[fuchsia::test]
     async fn test_get_account_ids_wrong_guid() {
         let disk_manager = MockDiskManager::new().with_partition(MockPartition {
-            guid: Ok(Match::None),
-            label: Ok(Match::Any),
+            guid_behavior: Ok(Match::None),
+            label_behavior: Ok(Match::Any),
             block: MockBlockDevice {
-                zxcrypt_header: Ok(Match::Any),
-                bind: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
+                zxcrypt_header_behavior: Ok(Match::Any),
+                bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
             },
         });
         let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
@@ -600,11 +608,11 @@ mod test {
     #[fuchsia::test]
     async fn test_get_account_ids_wrong_label() {
         let disk_manager = MockDiskManager::new().with_partition(MockPartition {
-            guid: Ok(Match::Any),
-            label: Ok(Match::None),
+            guid_behavior: Ok(Match::Any),
+            label_behavior: Ok(Match::None),
             block: MockBlockDevice {
-                zxcrypt_header: Ok(Match::Any),
-                bind: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
+                zxcrypt_header_behavior: Ok(Match::Any),
+                bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
             },
         });
         let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
@@ -615,11 +623,11 @@ mod test {
     #[fuchsia::test]
     async fn test_get_account_ids_no_zxcrypt_header() {
         let disk_manager = MockDiskManager::new().with_partition(MockPartition {
-            guid: Ok(Match::Any),
-            label: Ok(Match::Any),
+            guid_behavior: Ok(Match::Any),
+            label_behavior: Ok(Match::Any),
             block: MockBlockDevice {
-                zxcrypt_header: Ok(Match::None),
-                bind: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
+                zxcrypt_header_behavior: Ok(Match::None),
+                bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
             },
         });
         let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
@@ -652,11 +660,13 @@ mod test {
         // Expect to ignore the first partition, but notice the second
         let disk_manager = MockDiskManager::new()
             .with_partition(MockPartition {
-                guid: Ok(Match::Any),
-                label: Ok(Match::None),
+                guid_behavior: Ok(Match::Any),
+                label_behavior: Ok(Match::None),
                 block: MockBlockDevice {
-                    zxcrypt_header: Ok(Match::Any),
-                    bind: Err(|| DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)),
+                    zxcrypt_header_behavior: Ok(Match::Any),
+                    bind_behavior: Err(|| {
+                        DiskError::BindZxcryptDriverFailed(Status::NOT_SUPPORTED)
+                    }),
                 },
             })
             .with_partition(make_formatted_account_partition());
@@ -793,7 +803,7 @@ mod test {
             client.get_data_directory(server).await.expect("get_data_directory FIDL"),
             Ok(())
         );
-        account_manager.seal_account(GLOBAL_ACCOUNT_ID).await;
+        account_manager.lock_account(GLOBAL_ACCOUNT_ID).await;
         let (_, server) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
         let err =
             client.get_data_directory(server).await.expect_err("get_data_directory should fail");
@@ -839,11 +849,11 @@ mod test {
     #[fuchsia::test]
     async fn test_deprecated_provision_new_account_zxcrypt_driver_failed() {
         let disk_manager = MockDiskManager::new().with_partition(MockPartition {
-            guid: Ok(Match::Any),
-            label: Ok(Match::Any),
+            guid_behavior: Ok(Match::Any),
+            label_behavior: Ok(Match::Any),
             block: MockBlockDevice {
-                zxcrypt_header: Ok(Match::None),
-                bind: Err(|| DiskError::BindZxcryptDriverFailed(Status::UNAVAILABLE)),
+                zxcrypt_header_behavior: Ok(Match::None),
+                bind_behavior: Err(|| DiskError::BindZxcryptDriverFailed(Status::UNAVAILABLE)),
             },
         });
         let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
@@ -856,13 +866,13 @@ mod test {
     #[fuchsia::test]
     async fn test_deprecated_provision_new_account_format_failed() {
         let disk_manager = MockDiskManager::new().with_partition(MockPartition {
-            guid: Ok(Match::Any),
-            label: Ok(Match::Any),
+            guid_behavior: Ok(Match::Any),
+            label_behavior: Ok(Match::Any),
             block: MockBlockDevice {
-                zxcrypt_header: Ok(Match::None),
-                bind: Ok(MockEncryptedBlockDevice {
-                    format: Err(|| DiskError::FailedToFormatZxcrypt(Status::IO)),
-                    unseal: Err(|| DiskError::FailedToUnsealZxcrypt(Status::IO)),
+                zxcrypt_header_behavior: Ok(Match::None),
+                bind_behavior: Ok(MockEncryptedBlockDevice {
+                    format_behavior: Err(|| DiskError::FailedToFormatZxcrypt(Status::IO)),
+                    unseal_behavior: Err(|| DiskError::FailedToUnsealZxcrypt(Status::IO)),
                 }),
             },
         });
@@ -876,13 +886,13 @@ mod test {
     #[fuchsia::test]
     async fn test_deprecated_provision_new_account_unseal_failed() {
         let disk_manager = MockDiskManager::new().with_partition(MockPartition {
-            guid: Ok(Match::Any),
-            label: Ok(Match::Any),
+            guid_behavior: Ok(Match::Any),
+            label_behavior: Ok(Match::Any),
             block: MockBlockDevice {
-                zxcrypt_header: Ok(Match::None),
-                bind: Ok(MockEncryptedBlockDevice {
-                    format: Ok(()),
-                    unseal: Err(|| DiskError::FailedToUnsealZxcrypt(Status::IO)),
+                zxcrypt_header_behavior: Ok(Match::None),
+                bind_behavior: Ok(MockEncryptedBlockDevice {
+                    format_behavior: Ok(()),
+                    unseal_behavior: Err(|| DiskError::FailedToUnsealZxcrypt(Status::IO)),
                 }),
             },
         });
@@ -1000,7 +1010,7 @@ mod test {
     }
 
     #[fuchsia::test]
-    async fn test_get_unseal_after_account_sealed() {
+    async fn test_unlock_after_account_locked() {
         let disk_manager =
             MockDiskManager::new().with_partition(make_formatted_account_partition());
         let account_manager = AccountManager::new(disk_manager, NullKeyDerivation);
@@ -1018,7 +1028,7 @@ mod test {
             .expect("get_data_directory FIDL")
             .expect("get_data_directory");
 
-        account_manager.seal_account(GLOBAL_ACCOUNT_ID).await;
+        account_manager.lock_account(GLOBAL_ACCOUNT_ID).await;
 
         let (account, server_end) = fidl::endpoints::create_proxy().unwrap();
         account_manager

@@ -50,6 +50,7 @@ rustc_binary("bin") {
     "src/keys.rs",
     "src/main.rs",
     "src/prototype.rs",
+    "src/testing.rs",
   ]
 }
 

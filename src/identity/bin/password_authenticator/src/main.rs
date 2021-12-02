@@ -8,6 +8,8 @@ mod constants;
 mod disk_management;
 mod keys;
 mod prototype;
+#[cfg(test)]
+mod testing;
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_identity_account::AccountManagerRequestStream;
