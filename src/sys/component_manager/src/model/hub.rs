@@ -89,6 +89,7 @@ struct Instance {
     pub has_resolved_directory: bool, // the existence of the resolved directory.
     pub directory: Directory,
     pub children_directory: Directory,
+    pub deleting_directory: Directory,
 }
 
 /// The execution state for a component that has started running.
@@ -154,6 +155,7 @@ impl Hub {
             vec![
                 EventType::CapabilityRouted,
                 EventType::Discovered,
+                EventType::Purged,
                 EventType::Destroyed,
                 EventType::Started,
                 EventType::Resolved,
@@ -228,6 +230,10 @@ impl Hub {
         let children = pfs::simple();
         instance.add_node("children", children.clone(), &abs_moniker)?;
 
+        // Add a deleting directory.
+        let deleting = pfs::simple();
+        instance.add_node("deleting", deleting.clone(), &abs_moniker)?;
+
         Self::add_debug_directory(lifecycle_controller, instance.clone(), abs_moniker)?;
 
         instance_map.insert(
@@ -239,6 +245,7 @@ impl Hub {
                 has_resolved_directory: false,
                 directory: instance.clone(),
                 children_directory: children.clone(),
+                deleting_directory: deleting.clone(),
             },
         );
 
@@ -438,11 +445,9 @@ impl Hub {
     ) -> Result<(), ModelError> {
         let mut instances_map = self.instances.lock().await;
 
-        // TODO(fxbug.dev/89503): This may be an in-flight action completed after the Destroyed event.
-        let instance = match instances_map.get_mut(target_moniker) {
-            Some(i) => i,
-            None => return Ok(()),
-        };
+        let instance = instances_map
+            .get_mut(target_moniker)
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
         // If the resolved directory already exists, report error.
         assert!(!instance.has_resolved_directory);
@@ -488,61 +493,57 @@ impl Hub {
 
         let mut instances_map = self.instances.lock().await;
 
-        // TODO(fxbug.dev/89503): This may be an in-flight action completed after the Destroyed event.
-        let instance = match instances_map.get_mut(target_moniker) {
-            Some(i) => i,
-            None => return Ok(()),
-        };
+        let instance = instances_map
+            .get_mut(target_moniker)
+            .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
-        // Don't create an execution directory if it already exists
-        if instance.execution.is_some() {
-            return Ok(());
+        // If we haven't already created an execution directory, create one now.
+        if instance.execution.is_none() {
+            trace::duration!("component_manager", "hub:create_execution");
+
+            let execution_directory = pfs::simple();
+
+            let exec = Execution {
+                resolved_url: runtime.resolved_url.clone(),
+                directory: execution_directory.clone(),
+            };
+            instance.execution = Some(exec);
+
+            Self::add_resolved_url_file(
+                execution_directory.clone(),
+                runtime.resolved_url.clone(),
+                target_moniker,
+            )?;
+
+            Self::add_in_directory(
+                execution_directory.clone(),
+                component_decl.clone(),
+                Self::clone_dir(runtime.package_dir.as_ref()),
+                target_moniker,
+                target.clone(),
+            )?;
+
+            Self::add_expose_directory(
+                execution_directory.clone(),
+                component_decl.clone(),
+                target_moniker,
+                target.clone(),
+            )?;
+
+            Self::add_out_directory(
+                execution_directory.clone(),
+                Self::clone_dir(runtime.outgoing_dir.as_ref()),
+                target_moniker,
+            )?;
+
+            Self::add_runtime_directory(
+                execution_directory.clone(),
+                Self::clone_dir(runtime.runtime_dir.as_ref()),
+                &target_moniker,
+            )?;
+
+            instance.directory.add_node("exec", execution_directory, &target_moniker)?;
         }
-
-        trace::duration!("component_manager", "hub:create_execution");
-
-        let execution_directory = pfs::simple();
-
-        let exec = Execution {
-            resolved_url: runtime.resolved_url.clone(),
-            directory: execution_directory.clone(),
-        };
-        instance.execution = Some(exec);
-
-        Self::add_resolved_url_file(
-            execution_directory.clone(),
-            runtime.resolved_url.clone(),
-            target_moniker,
-        )?;
-
-        Self::add_in_directory(
-            execution_directory.clone(),
-            component_decl.clone(),
-            Self::clone_dir(runtime.package_dir.as_ref()),
-            target_moniker,
-            target.clone(),
-        )?;
-
-        Self::add_expose_directory(
-            execution_directory.clone(),
-            component_decl.clone(),
-            target_moniker,
-            target.clone(),
-        )?;
-
-        Self::add_out_directory(
-            execution_directory.clone(),
-            Self::clone_dir(runtime.outgoing_dir.as_ref()),
-            target_moniker,
-        )?;
-
-        Self::add_runtime_directory(
-            execution_directory.clone(),
-            Self::clone_dir(runtime.runtime_dir.as_ref()),
-            &target_moniker,
-        )?;
-
-        instance.directory.add_node("exec", execution_directory, &target_moniker)?;
 
         Ok(())
     }
@@ -569,35 +570,57 @@ impl Hub {
         Ok(())
     }
 
+    async fn on_purged_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
+        trace::duration!("component_manager", "hub:on_purged_async");
+        let mut instance_map = self.instances.lock().await;
+
+        // TODO(xbhatnag): Investigate error handling scenarios here.
+        //                 Can these errors arise from faulty components or from
+        //                 a bug in ComponentManager?
+        let parent_moniker = target_moniker.parent().expect("a root component cannot be dynamic");
+        let leaf = target_moniker.leaf().expect("a root component cannot be dynamic");
+
+        instance_map[&parent_moniker].deleting_directory.remove_node(leaf.as_str())?;
+        instance_map
+            .remove(&target_moniker)
+            .expect("the dynamic component must exist in the instance map");
+        Ok(())
+    }
+
     async fn on_stopped_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_stopped_async");
         let mut instance_map = self.instances.lock().await;
-
-        // TODO(fxbug.dev/89503): This may be an in-flight action completed after the Destroyed event.
-        if let Some(instance) = instance_map.get_mut(target_moniker) {
-            instance.directory.remove_node("exec")?;
-            instance.execution = None;
-        }
+        instance_map[target_moniker].directory.remove_node("exec")?;
+        instance_map.get_mut(target_moniker).expect("instance must exist").execution = None;
         Ok(())
     }
 
     async fn on_destroyed_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_destroyed_async");
-        let mut instance_map = self.instances.lock().await;
-
-        let parent_moniker = target_moniker.parent().expect("a root component cannot be dynamic");
-        let leaf = target_moniker.leaf().expect("a root component cannot be dynamic");
-
-        if let Some(parent) = instance_map.get(&parent_moniker) {
-            parent.children_directory.remove_node(leaf.to_partial().as_str()).expect(&format!(
-                "Destroyed: Parent instance must have {} as child.",
-                target_moniker
-            ));
+        let parent_moniker = target_moniker.parent().expect("A root component cannot be destroyed");
+        let instance_map = self.instances.lock().await;
+        if !instance_map.contains_key(&parent_moniker) {
+            // Evidently this a duplicate dispatch of Destroyed.
+            return Ok(());
         }
 
-        instance_map
-            .remove(&target_moniker)
-            .expect(&format!("Destroyed: Unable to find instance {} in map.", target_moniker));
+        let leaf = target_moniker.leaf().expect("A root component cannot be destroyed");
+
+        // In the children directory, the child's instance id is not used
+        // TODO: It's possible for the Destroyed event to be dispatched twice if there
+        // are two concurrent `DestroyChild` operations. In such cases we should probably cause
+        // this update to no-op instead of returning an error.
+        let partial_moniker = leaf.to_partial();
+        let directory = instance_map[&parent_moniker]
+            .children_directory
+            .remove_node(partial_moniker.as_str())
+            .map_err(|_| ModelError::remove_entry_error(leaf.as_str()))?;
+
+        instance_map[&parent_moniker].deleting_directory.add_node(
+            leaf.as_str(),
+            directory,
+            target_moniker,
+        )?;
         Ok(())
     }
 
@@ -654,6 +677,9 @@ impl Hook for Hub {
                     capability_provider.clone(),
                 )
                 .await?;
+            }
+            Ok(EventPayload::Purged) => {
+                self.on_purged_async(target_moniker).await?;
             }
             Ok(EventPayload::Discovered) => {
                 self.on_discovered_async(target_moniker, event.component_url.to_string()).await?;
@@ -1087,7 +1113,16 @@ mod tests {
         .expect("Failed to open directory");
 
         assert_eq!(
-            vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
+            vec![
+                "children",
+                "component_type",
+                "debug",
+                "deleting",
+                "exec",
+                "id",
+                "resolved",
+                "url"
+            ],
             list_directory(&hub_dir).await
         );
     }

@@ -42,7 +42,7 @@ async fn main() {
     expect_dir_listing("/hub/children", vec!["coll:simple_instance"]).await;
     expect_dir_listing(
         "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "debug", "id", "url"],
+        vec!["children", "component_type", "debug", "deleting", "id", "url"],
     )
     .await;
     expect_dir_listing("/hub/children/coll:simple_instance/children", vec![]).await;
@@ -68,7 +68,7 @@ async fn main() {
 
     expect_dir_listing(
         "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "deleting", "exec", "id", "resolved", "url"],
     )
     .await;
     expect_dir_listing("/hub/children/coll:simple_instance/children", vec!["child"]).await;
@@ -90,7 +90,7 @@ async fn main() {
 
     expect_dir_listing(
         "/hub/children/coll:simple_instance",
-        vec!["children", "component_type", "debug", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
     )
     .await;
 
@@ -103,6 +103,12 @@ async fn main() {
         .await;
 
     expect_dir_listing("/hub/children", vec![]).await;
+    expect_dir_listing("/hub/deleting", vec!["coll:simple_instance:1"]).await;
+    expect_dir_listing(
+        "/hub/deleting/coll:simple_instance:1",
+        vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+    )
+    .await;
 
     event.resume().await.unwrap();
 
@@ -111,6 +117,9 @@ async fn main() {
         .moniker_regex("./coll:simple_instance/child")
         .expect_match::<Destroyed>(&mut event_stream)
         .await;
+
+    expect_dir_listing("/hub/deleting/coll:simple_instance:1/children", vec![]).await;
+    expect_dir_listing("/hub/deleting/coll:simple_instance:1/deleting", vec!["child:0"]).await;
 
     event.resume().await.unwrap();
 
@@ -122,6 +131,8 @@ async fn main() {
 
     destroy_task.await.unwrap().unwrap();
 
+    expect_dir_listing("/hub/deleting/coll:simple_instance:1/deleting", vec![]).await;
+
     event.resume().await.unwrap();
 
     // Wait for the dynamic child to be purged
@@ -130,7 +141,7 @@ async fn main() {
         .expect_match::<Purged>(&mut event_stream)
         .await;
 
-    expect_dir_listing("/hub/children", vec![]).await;
+    expect_dir_listing("/hub/deleting", vec![]).await;
 
     event.resume().await.unwrap();
 }
