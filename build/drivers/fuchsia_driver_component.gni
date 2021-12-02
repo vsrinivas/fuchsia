@@ -37,6 +37,9 @@ import("//tools/cmc/build/cmc.gni")
 #     This currently only affects composite drivers.
 #     Type: boolean
 #     Default: false
+#   info (mandatory for //src and //zircon)
+#     Name of the file containing the driver information file.
+#     Type: file
 #   deps
 #   testonly
 #   visibility
@@ -45,10 +48,6 @@ template("fuchsia_driver_component") {
     generate_manifest = true
     if (defined(invoker.manifest)) {
       generate_manifest = false
-    }
-    generate_doc = true
-    if (defined(invoker.info)) {
-      generate_doc = false
     }
     is_v1_driver = true
     if (defined(invoker.is_v1_driver)) {
@@ -107,30 +106,29 @@ template("fuchsia_driver_component") {
 
     driver_path =
         get_path_info(get_path_info(invoker.target_name, "abspath"), "dir")
-    doc_output = "${target_gen_dir}/${target_name}-doc.json"
-    doc_target = "${target_name}-driver-info"
-
-    name = invoker.target_name
-    if (defined(invoker.component_name)) {
-      name = invoker.component_name
-    }
-    if (generate_doc) {
-      action(doc_target) {
-        visibility = [ ":*" ]
-        forward_variables_from(invoker, [ "testonly" ])
-        script = "//build/drivers/create_driver_doc.py"
-        inputs = [ driver_path ]
-        outputs = [ doc_output ]
-        args = [
-          "--name",
-          name,
-          "--driver_path",
-          driver_path,
-          "--doc_output",
-          rebase_path(outputs[0], root_build_dir),
-        ]
-      }
+    splitted_path = string_split(driver_path, "/")
+    base_folder = splitted_path[2]  # after removing "//"
+    create_driver_doc = false
+    if (base_folder == "src" || base_folder == "zircon") {
+      # Public drivers (defined as drivers in //src and //zircon) must provide an 'info' field with
+      # a driver information file.
+      assert(defined(invoker.info), "Must include driver info")
+      create_driver_doc = true
     } else {
+      # Ignore info assignment if present, e.g. from //tools templates.
+      if (defined(invoker.info)) {
+        not_needed(invoker, [ "info" ])
+      }
+    }
+
+    if (create_driver_doc) {
+      doc_output = "${target_gen_dir}/${target_name}-doc.json"
+      doc_target = "${target_name}-driver-info"
+
+      name = invoker.target_name
+      if (defined(invoker.component_name)) {
+        name = invoker.component_name
+      }
       doc_input = invoker.info
       action(doc_target) {
         visibility = [ ":*" ]
@@ -174,8 +172,10 @@ template("fuchsia_driver_component") {
         manifest = get_target_outputs(":${full_manifest_target}")
         manifest = manifest[0]
       }
-      deps += [ ":${doc_target}" ]
-      not_needed(invoker, [ ":${doc_target}" ])
+      if (create_driver_doc) {
+        deps += [ ":${doc_target}" ]
+        not_needed(invoker, [ ":${doc_target}" ])
+      }
       if (is_v1_driver) {
         deps += [ "//src/devices/misc/drivers/compat:driver" ]
       }
@@ -183,8 +183,10 @@ template("fuchsia_driver_component") {
         # Used by the assert_driver_components template.
         driver_component_barrier = []
 
-        # Used by the create_all_drivers_doc template.
-        fuchsia_driver_doc_file = [ doc_output ]
+        if (create_driver_doc) {
+          # Used by the create_all_drivers_doc template.
+          fuchsia_driver_doc_file = [ doc_output ]
+        }
       }
     }
   } else {
