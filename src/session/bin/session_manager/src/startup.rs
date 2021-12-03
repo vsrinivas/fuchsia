@@ -6,13 +6,13 @@ use {
     crate::cobalt,
     argh::FromArgs,
     fidl::endpoints::Proxy,
-    fidl_fuchsia_component as fcomponent, fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_info,
-    fuchsia_zircon as zx, realm_management,
+    fidl_fuchsia_component as fcomponent, fuchsia_async as fasync, fuchsia_zircon as zx,
+    realm_management,
     serde::{Deserialize, Serialize},
     serde_json,
     std::fs,
     thiserror::{self, Error},
+    tracing::info,
 };
 
 #[derive(FromArgs)]
@@ -102,7 +102,7 @@ pub async fn launch_session(
     session_url: &str,
     realm: &fcomponent::RealmProxy,
 ) -> Result<zx::Channel, StartupError> {
-    fx_log_info!("Launching session: {}", session_url);
+    info!(session_url, "Launching session");
 
     let start_time = zx::Time::get_monotonic();
     let exposed_dir = set_session(&session_url, realm).await?;

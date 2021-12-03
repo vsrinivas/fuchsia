@@ -20,10 +20,10 @@ use {
         RegistryMarker, RegistryProxy, RegistryRequest, RegistryRequestStream,
     },
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::macros::fx_log_err,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryFutureExt, TryStreamExt},
     std::sync::Arc,
+    tracing::{error, info},
 };
 
 /// Maximum number of concurrent connections to the protocols served by SessionManager.
@@ -110,7 +110,7 @@ impl SessionManager {
             async move {
                 session_manager
                     .handle_incoming_request(request)
-                    .unwrap_or_else(|e| fx_log_err!("{:?}", e))
+                    .unwrap_or_else(|err| error!(?err))
                     .await
             }
         })
@@ -330,7 +330,7 @@ impl SessionManager {
             match request {
                 _ => {
                     // No-op
-                    fuchsia_syslog::fx_log_info!("Received startup request.");
+                    info!("Received startup request.");
                 }
             };
         }

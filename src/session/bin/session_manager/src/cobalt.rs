@@ -7,8 +7,9 @@ use {
     fidl_fuchsia_cobalt::{LoggerFactoryMarker, LoggerProxy},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     session_framework_metrics_registry::cobalt_registry::{self as metrics},
+    tracing::error,
 };
 
 /// Creates a LoggerProxy connected to Cobalt.
@@ -25,10 +26,10 @@ pub fn get_logger() -> Result<LoggerProxy, Error> {
         .context("Failed to connect to the Cobalt LoggerFactory")?;
 
     fasync::Task::spawn(async move {
-        if let Err(e) =
+        if let Err(err) =
             logger_factory.create_logger_from_project_id(metrics::PROJECT_ID, server_end).await
         {
-            syslog::fx_log_err!("Failed to create Cobalt logger: {}", e);
+            error!(%err, "Failed to create Cobalt logger");
         }
     })
     .detach();
