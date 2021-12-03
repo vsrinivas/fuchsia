@@ -8,11 +8,12 @@
 
 #include <dev/init.h>
 #include <phys/arch/arch-handoff.h>
+#include <platform/pc/debug.h>
 
 void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {}
 
 void ArchDriverHandoffLate(const ArchPhysHandoff& arch_handoff) {}
 
-void ArchUartDriverHandoffEarly(const uart::all::Driver& serial) {}
+void ArchUartDriverHandoffEarly(const uart::all::Driver& serial) { X86UartInitEarly(serial); }
 
-void ArchUartDriverHandoffLate(const uart::all::Driver& serial) {}
+void ArchUartDriverHandoffLate(const uart::all::Driver& serial) { X86UartInitLate(); }

@@ -5,6 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "debug.h"
+
 #include <bits.h>
 #include <lib/arch/intrin.h>
 #include <lib/boot-options/boot-options.h>
@@ -40,7 +42,6 @@
 #include <vm/vm_aspace.h>
 
 #include "memory.h"
-#include "platform_p.h"
 
 // Hardware details of the system's debug port.
 struct DebugPort {
@@ -65,21 +66,6 @@ struct DebugPort {
   vaddr_t mem_addr = 0;
   paddr_t phys_addr = 0;
 };
-
-// Low level debug serial.
-//
-// This code provides basic serial support for a 16550-compatible UART, used
-// for kernel debugging.
-//
-// On system boot, we try each of these sources in decreasing order of priority.
-//
-// The init code is called several times during the boot sequence:
-//
-//   pc_init_debug_early():
-//       Before the MMU is set up.
-//
-//   pc_init_debug():
-//       After virtual memory, kernel, threading and arch-specific code has been enabled.
 
 // Debug port baud rate.
 constexpr int kBaudRate = 115200;
@@ -244,10 +230,10 @@ static void init_uart() {
 
 bool platform_serial_enabled() { return gDebugPort.type != DebugPort::Type::kNull; }
 
-void pc_init_debug_early() {
-  // Updates gDebugPort with the UART metadata encoded in the hand-off, which
-  // is given as variant of libuart driver types, each with methods to indicate
-  // the ZBI item type and payload.
+void X86UartInitEarly(const uart::all::Driver& serial) {
+  // Updates gDebugPort with the provided UART metadata, given by a variant of
+  // libuart driver types, each with methods to indicate the ZBI item type and
+  // payload.
   constexpr auto set_debug_port = [](const auto& uart) {
     const auto config = uart.config();
     using config_type = ktl::decay_t<decltype(config)>;
@@ -274,7 +260,7 @@ void pc_init_debug_early() {
     }
   };
 
-  ktl::visit(set_debug_port, gPhysHandoff->serial);
+  ktl::visit(set_debug_port, serial);
 
   if (!platform_serial_enabled()) {
     dprintf(INFO, "UART: unknown or disabled.\n");
@@ -286,13 +272,11 @@ void pc_init_debug_early() {
   dprintf(INFO, "UART: enabled with FIFO depth %u\n", uart_fifo_depth);
 }
 
-void pc_init_debug() {
+void X86UartInitLate() {
   // At this stage, we have threads, interrupts, the heap, and virtual memory
-  // available to us, which wasn't available at stages.
+  // available to us, which wasn't available at earlier stages.
   //
   // Finish setting up the UART, including:
-  //   - Update the global "bootloader" structure, so that preconfigured serial
-  //     works across mexec().
   //   - Setting up interrupts for TX and RX, or polling timers if we can't
   //     use interrupts;
   //   - RX buffers.

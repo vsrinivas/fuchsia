@@ -239,6 +239,7 @@ source_set("dev-init") {
   sources = [ "dev-init.cc" ]
   deps = [
     "//zircon/kernel/phys:handoff",
+    "//zircon/kernel/platform/pc",
     "//zircon/system/ulib/uart",
   ]
 }

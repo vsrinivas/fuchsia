@@ -404,9 +404,6 @@ void platform_early_init(void) {
   /* is the cmdline option to bypass dlog set ? */
   dlog_bypass_init();
 
-  /* get the debug output working */
-  pc_init_debug_early();
-
 #if WITH_LEGACY_PC_CONSOLE
   /* get the text console working */
   platform_init_console();
@@ -589,8 +586,6 @@ const char* manufacturer = "unknown";
 const char* product = "unknown";
 
 void platform_init(void) {
-  pc_init_debug();
-
   platform_init_crashlog();
 
 #if NO_USER_KEYBOARD
