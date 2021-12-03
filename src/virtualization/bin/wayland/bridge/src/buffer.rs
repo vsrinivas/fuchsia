@@ -105,7 +105,7 @@ impl Image {
                     .expect("fidl error");
                 let content = Content { id: content_id, flatland: flatland.clone() };
 
-                (Rc::new(content), flatland.id(), instance_id)
+                (Rc::new(content), instance_id, flatland.id())
             }
         };
         let result = id.0.clone();
