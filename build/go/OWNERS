@@ -1,5 +1,8 @@
 dhobsd@google.com
 mdempsky@google.com
+maruel@google.com
+olivernewman@google.com
+tamird@google.com
 
 per-file fidl_go.gni = file: /src/fidl/OWNERS
 

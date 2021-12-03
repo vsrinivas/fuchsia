@@ -50,5 +50,12 @@ surajmalhotra@google.com
 thatguy@google.com
 tmandry@google.com
 
-per-file go.mod = maruel@google.com,olivernewman@google.com,tamird@google.com
-per-file go.sum = maruel@google.com,olivernewman@google.com,tamird@google.com
+# Go-language support files
+per-file go.mod = file:/build/go/OWNERS
+per-file go.sum = file:/build/go/OWNERS
+
+# Rust-language support files
+per-file rustfmt.toml = file:/build/rust/OWNERS
+
+# Python-language support files
+per-file pyrightconfig.json = file:/build/python/OWNERS
