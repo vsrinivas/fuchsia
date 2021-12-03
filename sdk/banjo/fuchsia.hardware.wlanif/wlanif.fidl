@@ -28,16 +28,16 @@ type WlanifScanReq = struct {
     scan_type WlanScanType;
     /// List of channels to scan on. An empty list of channels will cause a
     /// scan request to immediately return a WlanifScanEnd with code INVALID_ARGS.
-    ///
-    /// There is no limit on the number of channels specified, but invalid channels
-    /// may be ignored or cause the error ZX_ERR_INVALID_ARGS to be returned.
-    channels vector<uint8>:MAX;
+    /// Invalid channel numbers may also return a WlanifScanEnd with INVALID_ARGS,
+    /// but they may also be silently ignored.
+    channels vector<uint8>:ieee80211.MAX_UNIQUE_CHANNEL_NUMBERS;
     /// List of SSIDs to scan for. An empty list of ssids is the same as specifying
     /// a list containing only the wildcard SSID.
     ///
     /// There is no limit on the number of SSIDs specified, but a large number of
     /// SSIDs may result in extended scan times or the error ZX_ERR_INVALID_ARGS to be
-    /// returned.
+    /// returned. The technical limitation in IEEE 802.11-2016 is that at most
+    /// ieee80211.SSID_LIST_MAX SSIDs can be specified in a single Probe Request frame.
     ssids vector<ieee80211.CSsid>:MAX;
     min_channel_time uint32;
     max_channel_time uint32;
