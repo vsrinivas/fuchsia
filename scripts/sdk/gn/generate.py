@@ -204,10 +204,12 @@ class GNBuilder(Frontend):
         with open(self.dest(metafile), 'r') as input:
             metadata = json.load(input)
 
-            # Documentation, data and host_tool metadata descriptions are named
-            # inconsistently, so read the manifest and copy them explicitly.
+            # Documentation, data and (companion_)host_tool metadata
+            # descriptions are named inconsistently, so read the manifest and
+            # copy them explicitly.
             for atom in metadata['parts']:
-                if atom['type'] in ['data', 'documentation', 'host_tool']:
+                if atom['type'] in ['data', 'companion_host_tool',
+                                    'documentation', 'host_tool']:
                     self.copy_file(atom['meta'])
 
             # There are dart components in the Core SDK which are not part
@@ -356,6 +358,9 @@ class GNBuilder(Frontend):
         self.write_atom_metadata(os.path.join(base, 'meta.json'), atom)
         self.build_files.append(
             os.path.relpath(os.path.join(base, 'BUILD.gn'), self.output))
+
+    def install_companion_host_tool_atom(self, atom):
+        self.install_host_tool_atom(atom)
 
     def install_fidl_library_atom(self, atom):
         name = atom['name']
