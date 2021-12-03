@@ -29,8 +29,6 @@ mod test_utils;
 
 const COBALT_CONNECTOR_BUFFER_SIZE: usize = 1000;
 static DISABLE_RESTRICTIONS_FILE_PATH: &str = "data/pkgfs_disable_executability_restrictions";
-static PKGFS_BOOT_ARG_KEY: &'static str = "zircon.system.pkgfs.cmd";
-static PKGFS_BOOT_ARG_VALUE_PREFIX: &'static str = "bin/pkgsvr+";
 
 #[derive(Debug, PartialEq, Eq)]
 enum ExecutabilityRestrictions {
@@ -88,8 +86,9 @@ async fn main_inner() -> Result<(), Error> {
     } else {
         let boot_args = connect_to_protocol::<fidl_fuchsia_boot::ArgumentsMarker>()
             .context("error connecting to fuchsia.boot/Arguments")?;
-        let system_image =
-            get_system_image_hash(&boot_args).await.context("getting system_image hash")?;
+        let system_image = system_image::get_system_image_hash(&boot_args)
+            .await
+            .context("getting system_image hash")?;
         inspector.root().record_string("system_image", system_image.to_string());
         let system_image = package_directory::RootDir::new(blobfs.clone(), system_image)
             .await
@@ -199,20 +198,6 @@ async fn main_inner() -> Result<(), Error> {
     cobalt_fut.await;
 
     Ok(())
-}
-
-async fn get_system_image_hash(
-    args: &fidl_fuchsia_boot::ArgumentsProxy,
-) -> Result<fuchsia_hash::Hash, Error> {
-    let hash = args
-        .get_string(PKGFS_BOOT_ARG_KEY)
-        .await
-        .context("get pkgfs boot command")?
-        .ok_or_else(|| anyhow!("boot args have no value for key {}", PKGFS_BOOT_ARG_KEY))?;
-    let hash = hash
-        .strip_prefix(PKGFS_BOOT_ARG_VALUE_PREFIX)
-        .ok_or_else(|| anyhow!("malformated pkgfs boot arg {:?}", hash))?;
-    hash.parse().with_context(|| format!("pkgfs boot arg hash invalid {:?}", hash))
 }
 
 fn load_executability_restrictions(
