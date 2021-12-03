@@ -237,7 +237,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                 match action {
                     dhcpv6_core::client::Action::SendMessage(buf) => {
                         let () = match client.socket.send_to(&buf, client.server_addr).await {
-                            Ok(_size) => (),
+                            Ok(size) => assert_eq!(size, buf.len()),
                             Err(e) => {
                                 let () = log::warn!(
                                     "failed to send message to {}: {}; will retransmit later",
@@ -912,7 +912,8 @@ mod tests {
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id, options);
         let mut buf = vec![0u8; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
-        let _: usize = socket.send_to(&buf, to_addr).await?;
+        let size = socket.send_to(&buf, to_addr).await?;
+        assert_eq!(size, buf.len());
         Ok(())
     }
 
@@ -1305,8 +1306,9 @@ mod tests {
         );
 
         // Invalid messages should be discarded. Empty buffer is invalid.
-        let _: usize =
+        let size =
             server_socket.send_to(&[], client_addr).await.expect("failed to send test message");
+        assert_eq!(size, 0);
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),
@@ -1514,8 +1516,8 @@ mod tests {
                     "test recv error",
                 )))
             }
-            fn send_to(&'a self, _buf: &'a [u8], _addr: SocketAddr) -> Self::SendToFut {
-                futures::future::ready(Ok(0))
+            fn send_to(&'a self, buf: &'a [u8], _addr: SocketAddr) -> Self::SendToFut {
+                futures::future::ready(Ok(buf.len()))
             }
         }
 
