@@ -8,7 +8,7 @@ use {
     darling::{ast, FromDeriveInput, FromField, FromVariant},
     proc_macro2::TokenStream,
     quote::quote,
-    std::collections::HashMap,
+    std::collections::HashSet,
     syn::{parse_macro_input, Ident, Type},
 };
 
@@ -40,37 +40,34 @@ fn from_enum_derive_impl(input: syn::DeriveInput) -> TokenStream {
         _ => unreachable!("guaranteed to be an enum"),
     };
     let enum_ident = &opts.ident;
-    let mut impls = HashMap::new();
+    let mut types_seen = HashSet::new();
+    let mut impls = Vec::new();
     for variant in variants {
         let variant_ident = &variant.ident;
         let field = &variant.fields.fields[0];
         let field_ty = &field.ty;
-        let insertion = impls.insert(
-            field_ty.clone(),
-            quote! {
-                impl from_enum::FromEnum < #enum_ident > for #field_ty {
-                    fn from_enum(e: & #enum_ident) -> Option<&Self> {
-                        match e {
-                            #enum_ident :: #variant_ident (inner) => Some(inner),
-                            _ => None,
-                        }
-                    }
-                }
-
-                impl std::convert::From < #field_ty > for #enum_ident {
-                    fn from(f: #field_ty) -> Self {
-                        Self :: #variant_ident (f)
-                    }
-                }
-            },
-        );
-        if insertion.is_some() {
+        if !types_seen.insert(field_ty.clone()) {
             return darling::Error::custom("no two variants can contain the same type")
                 .with_span(&variant_ident)
                 .write_errors();
         }
+        impls.push(quote! {
+            impl from_enum::FromEnum < #enum_ident > for #field_ty {
+                fn from_enum(e: & #enum_ident) -> Option<&Self> {
+                    match e {
+                        #enum_ident :: #variant_ident (inner) => Some(inner),
+                        _ => None,
+                    }
+                }
+            }
+
+            impl std::convert::From < #field_ty > for #enum_ident {
+                fn from(f: #field_ty) -> Self {
+                    Self :: #variant_ident (f)
+                }
+            }
+        });
     }
-    let impls: Vec<&TokenStream> = impls.values().collect();
 
     quote! {
         #(#impls)*
