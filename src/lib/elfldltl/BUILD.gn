@@ -17,6 +17,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/diagnostics.h",
     "lib/elfldltl/field.h",
     "lib/elfldltl/fuzzer.h",
+    "lib/elfldltl/gnu-hash.h",
     "lib/elfldltl/layout.h",
     "lib/elfldltl/machine.h",
     "lib/elfldltl/memory.h",

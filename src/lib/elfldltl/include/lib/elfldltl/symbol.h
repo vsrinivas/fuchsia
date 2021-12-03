@@ -13,6 +13,7 @@
 #include <string_view>
 
 #include "compat-hash.h"
+#include "gnu-hash.h"
 #include "layout.h"
 
 namespace elfldltl {
@@ -42,7 +43,9 @@ class SymbolName : public std::string_view {
   // done entirely in constexpr context.
   template <size_t N>
   constexpr explicit SymbolName(const char (&name)[N])
-      : std::string_view(name), compat_hash_(CompatHashString(*this)) {}
+      : std::string_view(name),
+        compat_hash_(CompatHashString(*this)),
+        gnu_hash_(GnuHashString(*this)) {}
 
   // This will precompute the hashes in constexpr context, see below.
   constexpr explicit SymbolName(std::string_view name) { *this = name; }
@@ -56,8 +59,10 @@ class SymbolName : public std::string_view {
   constexpr SymbolName& operator=(const std::string_view& name) {
     std::string_view::operator=(name);
     compat_hash_ = kCompatNoHash;
+    gnu_hash_ = kGnuNoHash;
     if (cpp20::is_constant_evaluated()) {  // Precompute in constexpr.
       compat_hash();
+      gnu_hash();
     }
     return *this;
   }
@@ -71,8 +76,24 @@ class SymbolName : public std::string_view {
 
   constexpr uint32_t compat_hash() const { return SymbolName(*this).compat_hash(); }
 
+  constexpr uint32_t gnu_hash() {
+    if (gnu_hash_ == kGnuNoHash) {
+      gnu_hash_ = GnuHashString(*this);
+    }
+    return gnu_hash_;
+  }
+
+  constexpr uint32_t gnu_hash() const { return SymbolName(*this).gnu_hash(); }
+
   template <class SymbolInfoType, typename Filter>
   constexpr const typename SymbolInfoType::Sym* Lookup(const SymbolInfoType& si, Filter&& filter) {
+    // DT_GNU_HASH format is superior when available.  Modern systems should
+    // default to --hash-style=gnu or --hash-style=both so it's available.
+    if (auto gnu = si.gnu_hash()) {
+      return si.Lookup(*gnu, *this, gnu_hash(), std::forward<Filter>(filter));
+    }
+
+    // But it's easy enough to support the old format (--hash-style=sysv) too.
     if (auto compat = si.compat_hash()) {
       return si.Lookup(*compat, *this, compat_hash(), std::forward<Filter>(filter));
     }
@@ -101,6 +122,8 @@ class SymbolName : public std::string_view {
  private:
   uint32_t compat_hash_ =  // Precompute in constexpr.
       cpp20::is_constant_evaluated() ? CompatHashString(*this) : kCompatNoHash;
+  uint32_t gnu_hash_ =  // Precompute in constexpr.
+      cpp20::is_constant_evaluated() ? GnuHashString(*this) : kGnuNoHash;
 };
 
 // This represents all the dynamic symbol table information for one ELF file.
@@ -136,6 +159,7 @@ class SymbolInfo {
   //   a nonzero uint32_t symbol table index.
   //
   using CompatHash = ::elfldltl::CompatHash<Word>;  // See compat-hash.h.
+  using GnuHash = ::elfldltl::GnuHash<Word, Addr>;  // See gnu-hash.h.
 
   // This is a forward-iterable container view of a symbol table hash bucket.
   // Each uint32_t element is a symbol table index.
@@ -236,6 +260,13 @@ class SymbolInfo {
     return {};
   }
 
+  constexpr std::optional<GnuHash> gnu_hash() const {
+    if (GnuHash::Valid(gnu_hash_)) {
+      return GnuHash(gnu_hash_);
+    }
+    return {};
+  }
+
   // Install data for the various tables.  These return *this so they can be
   // called in fluent style, e.g. in a constexpr initializer.
 
@@ -258,6 +289,11 @@ class SymbolInfo {
     return *this;
   }
 
+  constexpr SymbolInfo& set_gnu_hash(cpp20::span<const Addr> table) {
+    gnu_hash_ = table;
+    return *this;
+  }
+
  private:
   size_t safe_symtab_size() const {
     if (symtab_.empty()) {
@@ -267,6 +303,12 @@ class SymbolInfo {
     // The old format makes it very cheap to detect, so prefer that.
     if (CompatHash::Valid(compat_hash_)) {
       size_t hash_max = CompatHash(compat_hash_).size();
+      return std::min(symtab_.size(), hash_max);
+    }
+
+    // The DT_GNU_HASH format has to be fully scanned to determine the size.
+    if (GnuHash::Valid(gnu_hash_)) {
+      size_t hash_max = GnuHash(gnu_hash_).size();
       return std::min(symtab_.size(), hash_max);
     }
 
@@ -288,6 +330,7 @@ class SymbolInfo {
   std::string_view strtab_;
   cpp20::span<const Sym> symtab_;
   cpp20::span<const Word> compat_hash_;
+  cpp20::span<const Addr> gnu_hash_;
 };
 
 }  // namespace elfldltl
