@@ -160,6 +160,7 @@ class AppState extends State<App> {
           onPageFinished: (url) async {
             // Injects a sample script that notifies every second through the
             // ExampleHostChannel for the first minute the page is loaded.
+            // ignore: deprecated_member_use
             await _webViewController?.evaluateJavascript(kSampleScript);
           },
           javascriptChannels: {
