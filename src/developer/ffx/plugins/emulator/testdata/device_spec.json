@@ -26,7 +26,7 @@
             }
         },
         "behaviors": {
-            "no_kvm": {
+            "no_accel": {
                 "description": "Acceleration disabled. Works for Femu and Qemu, on MacOS and Linux. Included when --accel=None.",
                 "data": {
                     "femu": {
@@ -39,7 +39,7 @@
                         "options": []
                     }
                 },
-                "handler": "NoKvmQemuBehavior"
+                "handler": "NoAccelerationBehavior"
             },
             "kvm_enabled": {
                 "description": "Kvm-based acceleration enabled. Works for Femu and Qemu on Linux. Included when --accel=auto or --accel=hyper on Linux.",
@@ -57,7 +57,7 @@
                         "options": []
                     }
                 },
-                "handler": "KvmQemuBehavior"
+                "handler": "KvmBehavior"
             },
             "hvf_enabled": {
                 "description": "Hvf-based acceleration enabled. Works for Femu and Qemu on MacOS. Included when --accel=auto or --accel=hyper on MacOS.",
@@ -77,7 +77,7 @@
                         "options": []
                     }
                 },
-                "handler": "HvfQemuBehavior"
+                "handler": "HvfBehavior"
             },
             "four_core_cpu": {
                 "description": "A basic CPU configuration. Works for Femu and Qemu, on Linux and MacOS. Always included.",
@@ -92,7 +92,7 @@
                         ]
                     }
                 },
-                "handler": "SimpleQemuBehavior"
+                "handler": "SimpleBehavior"
             }
         },
         "name": "qemu-x64",

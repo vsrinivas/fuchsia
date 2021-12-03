@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The aemu module encapsulates the interactions with the emulator instance
-//! started via the Android emulator, aemu.
+//! The femu module encapsulates the interactions with the emulator instance
+//! started via the Fuchsia emulator, Femu.
 
 use crate::serialization::SerializingEngine;
 use anyhow::Result;

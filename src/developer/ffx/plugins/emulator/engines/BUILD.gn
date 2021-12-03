@@ -8,6 +8,13 @@ if (is_host) {
     with_unit_tests = true
     edition = "2018"
     sources = [
+      "src/behaviors/femu_behavior.rs",
+      "src/behaviors/handlers/hvf_behavior.rs",
+      "src/behaviors/handlers/kvm_behavior.rs",
+      "src/behaviors/handlers/mod.rs",
+      "src/behaviors/handlers/no_acceleration_behavior.rs",
+      "src/behaviors/handlers/simple_behavior.rs",
+      "src/behaviors/mod.rs",
       "src/femu/mod.rs",
       "src/lib.rs",
       "src/qemu/mod.rs",

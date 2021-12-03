@@ -15,4 +15,4 @@ pub use conversions::*;
 pub use enumerations::*;
 pub use interface_types::*;
 
-pub use sdk_metadata::{AudioDevice, DataAmount, DataUnits};
+pub use sdk_metadata::{AudioDevice, Behavior, BehaviorData, DataAmount, DataUnits, FemuData};
