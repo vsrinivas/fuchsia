@@ -880,6 +880,11 @@ impl<'a> TestInterface<'a> {
         self.id
     }
 
+    /// Returns the endpoint associated with the interface.
+    pub fn endpoint(&self) -> &TestEndpoint<'a> {
+        &self.endpoint
+    }
+
     /// Enable interface.
     ///
     /// Equivalent to `stack.enable_interface(test_interface.id())`.

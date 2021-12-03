@@ -69,6 +69,7 @@ group("tests") {
     "netstack3:tests",
     "testing/netemul:tests",
     "testing/netemul-v2:tests",
+    "testing/network-test-realm:tests",
     "tests",
     "tools:tests",
     "tun:tests",

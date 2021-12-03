@@ -1,0 +1,53 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  deps = [ ":network-test-realm-integration-tests" ]
+  testonly = true
+}
+
+rustc_test("network-test-realm") {
+  output_name = "network_test_realm_integration_test"
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//src/connectivity/lib/net-declare",
+    "//src/connectivity/network/testing/netemul/rust:lib",
+    "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm-rustc",
+    "//src/connectivity/network/testing/network-test-realm/service:network_test_realm_common",
+    "//src/connectivity/network/tests/integration/common:netstack_testing_common",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+    "//third_party/rust_crates:anyhow",
+  ]
+  sources = [ "src/lib.rs" ]
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+fuchsia_test_component("network-test-realm-integration-test") {
+  manifest = "meta/network-test-realm-integration-test.cml"
+  deps = [ ":network-test-realm" ]
+}
+
+fuchsia_test_package("network-test-realm-integration-tests") {
+  test_components = [ ":network-test-realm-integration-test" ]
+
+  deps = [
+    # netemul-sandbox-v2 is used to create hermetic test realms.
+    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
+
+    # controller is used to interact with the Network Test Realm.
+    "//src/connectivity/network/testing/network-test-realm/service:controller",
+
+    # component-debug corresponds to a Netstack2 instance configured by netemul.
+    "//src/connectivity/network/netstack:component-debug",
+  ]
+}

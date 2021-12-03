@@ -39,6 +39,12 @@ fuchsia_component("component-debug-legacy") {
   deps = [ ":bin" ]
 }
 
+fuchsia_component("component-conformance") {
+  component_name = "netstack-conformance"
+  manifest = "meta/netstack_conformance.cml"
+  deps = [ ":bin" ]
+}
+
 # TODO(https://fxbug.dev/84248): rm once no longer used in network:config.
 fuchsia_package("netstack") {
   deps = [ ":component-legacy" ]

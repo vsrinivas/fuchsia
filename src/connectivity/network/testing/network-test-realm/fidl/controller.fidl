@@ -1,0 +1,87 @@
+// Copyright 2021 The Fuchsia Authors.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.net.test.realm;
+
+using fuchsia.net;
+using fuchsia.net.interfaces;
+
+/// Standard error codes for the `Controller` protocol.
+type Error = strict enum {
+    /// The controller encountered an unspecified error while performing the
+    /// desired operation.
+    INTERNAL = 1;
+    /// A hermetic network realm was expected to exist, but no such realm was
+    /// found to be running.
+    HERMETIC_NETWORK_REALM_NOT_RUNNING = 2;
+    /// A network interface was expected to exist, but was not found.
+    INTERFACE_NOT_FOUND = 3;
+};
+
+/// A controller for creating and manipulating the Network Test Realm.
+///
+/// The Network Test Realm corresponds to a hermetic network realm with a
+/// Netstack under test. The `Controller` protocol is responsible for:
+///
+///  * Configuring the Network Test Realm and its child components. This
+///    includes the Netstack under test and the other relevant network
+///    components (e.g. a DHCP server).
+///  * Coordinating interactions with the system's Netstack. This includes
+///    temporarily taking over and mutating system interfaces.
+@discoverable
+protocol Controller {
+    /// Starts a hermetic network realm corresponding to `netstack`.
+    ///
+    /// Any previously running hermetic network realm will be terminated before
+    /// the new realm is started. The configured realm will contain a subset of
+    /// the components in the standard network realm. In particular, it will
+    /// contain:
+    ///
+    ///  * A Netstack instance that corresponds to the provided `netstack`
+    ///  * A DHCP server
+    ///  * A DHCPv6 client
+    ///  * A DNS resolver
+    ///
+    /// + request `netstack` the type of Netstack that will be run.
+    /// * error `INTERNAL` for internal errors, including failure to start the
+    ///     specified `netstack`.
+    StartHermeticNetworkRealm(struct {
+        netstack @generated_name("Netstack") strict enum {
+            /// Netstack2.
+            V2 = 1;
+        };
+    }) -> (struct {}) error Error;
+
+    /// Stops any running hermetic network realm.
+    ///
+    /// All components in the hermetic network realm will be stopped. Similarly,
+    /// any interfaces that were previously disabled on the system's Netstack
+    /// will be re-enabled on a best-effort basis. That is, a failure to
+    /// re-enable an interface will not result in this method returning an
+    /// error.
+    ///
+    /// * error `HERMETIC_NETWORK_REALM_NOT_FOUND` if a hermetic network realm
+    ///     was not running.
+    /// * error `INTERNAL` for internal errors, including failure to destroy the
+    ///     realm.
+    StopHermeticNetworkRealm() -> (struct {}) error Error;
+
+    /// Attaches an interface to the hermetic Netsack.
+    ///
+    /// The interface that corresponds to `mac_address` will disabled on the
+    /// system's Netstack, but enabled on the hermetic Netstack.
+    ///
+    /// + request `mac_address` address of the interface to be added to the
+    ///     hermetic Netstack.
+    /// + request `name` the name to assign to the new interface.
+    /// * error `HERMETIC_NETWORK_REALM_NOT_FOUND` if there is no running
+    ///     hermetic network realm.
+    /// * error `INTERFACE_NOT_FOUND` if an interface with `mac_address` could
+    ///     not be found on the system.
+    /// * error `INTERNAL` for internal errors, including failure to read the
+    ///     system's interfaces or configure an interface.
+    AddInterface(struct {
+        mac_address fuchsia.net.MacAddress;
+        name fuchsia.net.interfaces.name;
+    }) -> (struct {}) error Error;
+};

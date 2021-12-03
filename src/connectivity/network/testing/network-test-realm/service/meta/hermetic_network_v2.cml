@@ -1,0 +1,79 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO(https://fxbug.dev/89642): Shard the network realm manifest instead of
+// duplicating much of it below.
+{
+    include: [ "syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "dhcpd",
+            url: "#meta/dhcpd.cm",
+        },
+        {
+            name: "dhcpv6-client",
+            url: "#meta/dhcpv6-client.cm",
+        },
+        {
+            name: "dns-resolver",
+            url: "#meta/dns_resolver.cm",
+        },
+        {
+            name: "netstack",
+            url: "#meta/netstack-conformance.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.device.NameProvider" ],
+            from: "parent",
+            to: [ "#netstack" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#dhcpd",
+                "#dhcpv6-client",
+                "#dns-resolver",
+                "#netstack",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns-resolver",
+            to: [ "#dhcpd" ],
+        },
+        {
+            protocol: [ "fuchsia.net.neighbor.Controller" ],
+            from: "#netstack",
+            to: [ "#dhcpd" ],
+        },
+        {
+            protocol: [ "fuchsia.net.routes.State" ],
+            from: "#netstack",
+            to: [ "#dns-resolver" ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+            to: [
+                "#dhcpd",
+                "#dhcpv6-client",
+                "#dns-resolver",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.stack.Stack",
+                "fuchsia.netstack.Netstack",
+            ],
+            from: "#netstack",
+        },
+    ],
+}

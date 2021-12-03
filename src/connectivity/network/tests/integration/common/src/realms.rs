@@ -6,6 +6,7 @@
 
 use async_trait::async_trait;
 use fidl::endpoints::DiscoverableProtocolMarker as _;
+use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
@@ -16,6 +17,7 @@ use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_routes as fnet_routes;
 use fidl_fuchsia_net_stack as fnet_stack;
+use fidl_fuchsia_net_test_realm as fntr;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netstack as fnetstack;
 use fidl_fuchsia_posix_socket as fposix_socket;
@@ -108,6 +110,7 @@ pub enum KnownServiceProvider {
     Dhcpv6Client,
     DnsResolver,
     Reachability,
+    NetworkTestRealm,
 }
 
 /// Constant properties of components used in networking integration tests, such
@@ -145,6 +148,11 @@ pub mod constants {
     pub mod reachability {
         pub const COMPONENT_NAME: &str = "reachability";
         pub const COMPONENT_URL: &str = "#meta/reachability.cm";
+    }
+
+    pub mod network_test_realm {
+        pub const COMPONENT_NAME: &str = "controller";
+        pub const COMPONENT_URL: &str = "#meta/controller.cm";
     }
 }
 
@@ -325,6 +333,32 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                     )),
                 ])),
                 eager: Some(true),
+                ..fnetemul::ChildDef::EMPTY
+            },
+            KnownServiceProvider::NetworkTestRealm => fnetemul::ChildDef {
+                name: Some(constants::network_test_realm::COMPONENT_NAME.to_string()),
+                url: Some(constants::network_test_realm::COMPONENT_URL.to_string()),
+                exposes: Some(vec![
+                    fntr::ControllerMarker::PROTOCOL_NAME.to_string(),
+                    fcomponent::RealmMarker::PROTOCOL_NAME.to_string(),
+                ]),
+                uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                    fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_stack::StackMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_debug::InterfacesMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_interfaces::StateMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::NetemulDevfs(fnetemul::DevfsDep {
+                        name: Some(constants::netcfg::DEV_CLASS_ETHERNET.to_string()),
+                        subdir: Some(constants::netcfg::CLASS_ETHERNET_PATH.to_string()),
+                        ..fnetemul::DevfsDep::EMPTY
+                    }),
+                ])),
                 ..fnetemul::ChildDef::EMPTY
             },
         }

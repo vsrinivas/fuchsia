@@ -1,0 +1,61 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/realm_controller_server",
+    },
+    collections: [
+        {
+            name: "enclosed-network",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.net.test.realm.Controller" },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+        {
+            protocol: [
+                "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.stack.Stack",
+            ],
+        },
+        {
+            // TODO(https://fxbug.dev/77059): Only provide READABLE rights.
+            // Currently, reading the interfaces from devfs requires both
+            // READABLE and WRITABE rights.
+            directory: "dev-class-ethernet",
+            rights: [ "rw*" ],
+            path: "/dev/class/ethernet",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#enclosed-network",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.net.test.realm.Controller",
+            from: "self",
+        },
+        {
+            // Needed for the integration tests to be able to inspect the
+            // generated realm.
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+}
