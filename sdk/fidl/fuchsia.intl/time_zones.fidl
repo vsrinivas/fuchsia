@@ -70,6 +70,7 @@ protocol TimeZones {
         /// The time zone in which to calculate a civil date and time.
         time_zone_id TimeZoneId;
         /// The number of nanoseconds since the Unix epoch.
+        /// For example, `at_time == 0` corresponds to 1970-01-01T00:00:00.000000000Z.
         absolute_time zx.time;
     }) -> (struct {
         civil_time CivilTime;
@@ -93,7 +94,8 @@ protocol TimeZones {
     GetTimeZoneInfo(struct {
         /// The time zone ID for which to retrieve information.
         time_zone_id TimeZoneId;
-        /// The date and time at which to calculate values.
+        /// The date and time at which to calculate values, in nanoseconds since the Unix epoch.
+        /// For example, `at_time == 0` corresponds to 1970-01-01T00:00:00.000000000Z.
         at_time zx.time;
     }) -> (struct {
         time_zone_info TimeZoneInfo;
