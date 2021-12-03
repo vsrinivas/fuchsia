@@ -17,12 +17,12 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <dev/uart/motmot/init.h>
 #include <kernel/auto_lock.h>
 #include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <kernel/timer.h>
 #include <ktl/algorithm.h>
-#include <pdev/driver.h>
 #include <pdev/uart.h>
 #include <platform/debug.h>
 
@@ -278,14 +278,13 @@ static const struct pdev_uart_ops uart_ops = {
     .dputs = motmot_uart_dputs,
 };
 
-static void motmot_uart_init_early(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_simple_t));
-  auto driver = static_cast<const dcfg_simple_t*>(driver_data);
-  ASSERT(driver->mmio_phys && driver->irq);
+void MotmotUartInitEarly(const dcfg_simple_t& config) {
+  ASSERT(config.mmio_phys != 0);
+  ASSERT(config.irq != 0);
 
-  uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
-  ASSERT(uart_base);
-  uart_irq = driver->irq;
+  uart_base = periph_paddr_to_vaddr(config.mmio_phys);
+  ASSERT(uart_base != 0);
+  uart_irq = config.irq;
 
   UARTREG(uart_base, UART_ULCON) = (3 << 0);  // no parity, one stop bit, 8 bit
   UARTREG(uart_base, UART_UMCON) = 0;         // no auto flow control
@@ -306,7 +305,7 @@ static void motmot_uart_init_early(const void* driver_data, uint32_t length) {
   pdev_register_uart(&uart_ops);
 }
 
-static void motmot_uart_init(const void* driver_data, uint32_t length) {
+void MotMotUartInitLate() {
   // create circular buffer to hold received data
   uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
@@ -376,7 +375,3 @@ static void motmot_uart_init(const void* driver_data, uint32_t length) {
 
   printf("UART: rx fifo len %u tx fifo len %u\n", uart_rx_fifo_size, uart_tx_fifo_size);
 }
-
-LK_PDEV_INIT(motmot_uart_init_early, KDRV_MOTMOT_UART, motmot_uart_init_early,
-             LK_INIT_LEVEL_PLATFORM_EARLY)
-LK_PDEV_INIT(motmot_uart_init, KDRV_MOTMOT_UART, motmot_uart_init, LK_INIT_LEVEL_PLATFORM)

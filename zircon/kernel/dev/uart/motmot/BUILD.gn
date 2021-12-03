@@ -4,7 +4,12 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+config("includes") {
+  include_dirs = [ "include" ]
+}
+
 source_set("motmot") {
+  public = [ "include/dev/uart/motmot/init.h" ]
   sources = [ "uart.cc" ]
   deps = [
     "//zircon/kernel/dev/pdev",
@@ -13,4 +18,5 @@ source_set("motmot") {
     "//zircon/kernel/lib/cbuf",
     "//zircon/kernel/lib/debuglog",
   ]
+  public_configs = [ ":includes" ]
 }

@@ -14,6 +14,7 @@
 #include <dev/timer/arm_generic.h>
 #include <dev/uart/amlogic_s905/init.h>
 #include <dev/uart/dw8250/init.h>
+#include <dev/uart/motmot/init.h>
 #include <dev/uart/pl011/init.h>
 #include <ktl/type_traits.h>
 #include <ktl/variant.h>
@@ -25,7 +26,6 @@ namespace {
 void UartInitEarly(uint32_t extra, const uart::null::Driver::config_type& config) {}
 
 void UartInitEarly(uint32_t extra, const dcfg_simple_t& config) {
-  // TODO(fxbug.dev/89452): Handle all cases below.
   switch (extra) {
     case KDRV_AMLOGIC_UART:
       AmlogicS905UartInitEarly(config);
@@ -34,6 +34,7 @@ void UartInitEarly(uint32_t extra, const dcfg_simple_t& config) {
       Dw8250UartInitEarly(config);
       break;
     case KDRV_MOTMOT_UART:
+      MotmotUartInitEarly(config);
       break;
     case KDRV_PL011_UART:
       Pl011UartInitEarly(config);
@@ -42,7 +43,6 @@ void UartInitEarly(uint32_t extra, const dcfg_simple_t& config) {
 }
 
 void UartInitLate(uint32_t extra) {
-  // TODO(fxbug.dev/89452): Handle all cases below.
   switch (extra) {
     case KDRV_AMLOGIC_UART:
       AmlogicS905UartInitLate();
@@ -51,6 +51,7 @@ void UartInitLate(uint32_t extra) {
       Dw8250UartInitLate();
       break;
     case KDRV_MOTMOT_UART:
+      MotmotUartInitLate();
       break;
     case KDRV_PL011_UART:
       Pl011UartInitLate();
