@@ -6,8 +6,8 @@ use {
     anyhow::{Context, Error},
     cm_fidl_validator,
     fidl::endpoints::{create_endpoints, ServerEnd},
-    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
+    fidl_fuchsia_component_decl as fcdecl, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::{
         lock::{Mutex, MutexGuard},
         TryStreamExt,
@@ -24,7 +24,7 @@ const RESOLVER_SCHEME: &'static str = "realm-builder";
 
 #[derive(Clone)]
 struct ResolveableComponent {
-    decl: fsys::ComponentDecl,
+    decl: fcdecl::Component,
     package_dir: Option<fio::DirectoryProxy>,
 }
 
@@ -53,11 +53,11 @@ impl Registry {
     // Validates the given decl, and returns a URL at which it can be resolved
     pub async fn validate_and_register(
         self: &Arc<Self>,
-        decl: fsys::ComponentDecl,
+        decl: fcdecl::Component,
         name: String,
         package_dir: Option<fio::DirectoryProxy>,
     ) -> Result<String, cm_fidl_validator::error::ErrorList> {
-        cm_fidl_validator::fsys::validate(&decl)?;
+        cm_fidl_validator::fdecl::validate(&decl)?;
 
         let mut next_unique_component_id_guard = self.next_unique_component_id.lock().await;
         let mut component_decls_guard = self.component_decls.lock().await;
@@ -159,10 +159,10 @@ impl Registry {
         let manifest_file =
             io_util::open_file(&package_dir, Path::new(&fragment), fio::OPEN_RIGHT_READABLE)
                 .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
-        let component_decl: fsys::ComponentDecl = io_util::read_file_fidl(&manifest_file)
+        let component_decl: fcdecl::Component = io_util::read_file_fidl(&manifest_file)
             .await
             .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
-        cm_fidl_validator::fsys::validate(&component_decl)
+        cm_fidl_validator::fdecl::validate(&component_decl)
             .map_err(|_| fsys::ResolverError::ManifestNotFound)?;
         let (client_end, server_end) = create_endpoints::<fio::DirectoryMarker>()
             .map_err(|_| fsys::ResolverError::Internal)?;
@@ -182,7 +182,7 @@ impl Registry {
     }
 }
 
-fn encode(mut component_decl: fsys::ComponentDecl) -> Result<fmem::Data, Error> {
+fn encode(mut component_decl: fcdecl::Component) -> Result<fmem::Data, Error> {
     Ok(fmem::Data::Bytes(
         fidl::encoding::encode_persistent(&mut component_decl)
             .context("failed to encode ComponentDecl")?,

@@ -1588,7 +1588,7 @@ impl RealmNode {
                 io_util::directory::open_file(&test_pkg_dir, &path, io_util::OPEN_RIGHT_READABLE)
                     .await
                     .map_err(Error::PkgDirIoError)?;
-            let fidl_decl = io_util::read_file_fidl::<fsys::ComponentDecl>(&file_proxy)
+            let fidl_decl = io_util::read_file_fidl::<fcdecl::Component>(&file_proxy)
                 .await
                 .map_err(Error::FailedToLoadComponentDecl)?;
             current_node.decl = fidl_decl.fidl_into_native();
