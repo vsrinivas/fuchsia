@@ -4,7 +4,12 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+config("includes") {
+  include_dirs = [ "include" ]
+}
+
 source_set("amlogic_s905") {
+  public = [ "include/dev/uart/amlogic_s905/init.h" ]
   sources = [ "uart.cc" ]
   deps = [
     "//zircon/kernel/dev/pdev",
@@ -14,4 +19,5 @@ source_set("amlogic_s905") {
     "//zircon/kernel/lib/debuglog",
     "//zircon/system/ulib/zxc:zx",
   ]
+  public_configs = [ ":includes" ]
 }

@@ -17,9 +17,9 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <dev/uart/amlogic_s905/init.h>
 #include <kernel/lockdep.h>
 #include <kernel/thread.h>
-#include <pdev/driver.h>
 #include <pdev/uart.h>
 
 // clang-format off
@@ -164,9 +164,9 @@ static interrupt_eoi uart_irq(void* arg) {
   return IRQ_EOI_DEACTIVATE;
 }
 
-static void s905_uart_init(const void* driver_data, uint32_t length) {
-  DEBUG_ASSERT(s905_uart_base);
-  DEBUG_ASSERT(s905_uart_irq);
+void AmlogicS905UartInitLate() {
+  DEBUG_ASSERT(s905_uart_base != 0);
+  DEBUG_ASSERT(s905_uart_irq != 0);
 
   // create circular buffer to hold received data
   uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
@@ -290,18 +290,13 @@ static const struct pdev_uart_ops s905_uart_ops = {
     .dputs = s905_dputs,
 };
 
-static void s905_uart_init_early(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_simple_t));
-  auto driver = static_cast<const dcfg_simple_t*>(driver_data);
-  ASSERT(driver->mmio_phys && driver->irq);
+void AmlogicS905UartInitEarly(const dcfg_simple_t& config) {
+  ASSERT(config.mmio_phys != 0);
+  ASSERT(config.irq != 0);
 
-  s905_uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
-  ASSERT(s905_uart_base);
-  s905_uart_irq = driver->irq;
+  s905_uart_base = periph_paddr_to_vaddr(config.mmio_phys);
+  ASSERT(s905_uart_base != 0);
+  s905_uart_irq = config.irq;
 
   pdev_register_uart(&s905_uart_ops);
 }
-
-LK_PDEV_INIT(s905_uart_init_early, KDRV_AMLOGIC_UART, s905_uart_init_early,
-             LK_INIT_LEVEL_PLATFORM_EARLY)
-LK_PDEV_INIT(s905_uart_init, KDRV_AMLOGIC_UART, s905_uart_init, LK_INIT_LEVEL_PLATFORM)
