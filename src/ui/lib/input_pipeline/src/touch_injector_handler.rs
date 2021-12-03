@@ -61,28 +61,26 @@ struct TouchInjectorHandlerInner {
 impl InputHandler for TouchInjectorHandler {
     async fn handle_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        mut input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match input_event {
-            input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::Touch(touch_event),
-                device_descriptor:
-                    input_device::InputDeviceDescriptor::Touch(touch_device_descriptor),
-                event_time,
-                handled: input_device::Handled::No,
-            } => {
-                // Create a new injector if this is the first time seeing device_id.
-                self.ensure_injector_registered(&touch_device_descriptor).await;
+        if let input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Touch(ref touch_event),
+            device_descriptor:
+                input_device::InputDeviceDescriptor::Touch(ref touch_device_descriptor),
+            event_time,
+            handled: input_device::Handled::No,
+        } = input_event
+        {
+            // Create a new injector if this is the first time seeing device_id.
+            self.ensure_injector_registered(&touch_device_descriptor).await;
 
-                // Handle the event.
-                self.handle_touch_event(&touch_event, &touch_device_descriptor, event_time).await;
+            // Handle the event.
+            self.handle_touch_event(&touch_event, &touch_device_descriptor, event_time).await;
 
-                // Consume the event (i.e., don't forward it to the next handler).
-                vec![]
-            }
-            // Forward event to the next handler.
-            input_event => vec![input_event],
+            // Consume the input event.
+            input_event.handled = input_device::Handled::Yes
         }
+        vec![input_event]
     }
 }
 
@@ -382,6 +380,7 @@ mod tests {
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
         maplit::hashmap,
+        matches::assert_matches,
     };
 
     const TOUCH_ID: u32 = 1;
@@ -650,8 +649,10 @@ mod tests {
         // Await all futures concurrently. If this completes, then the touch event was handled and
         // matches `expected_event`.
         let (handle_result, _, _) = futures::join!(handle_event_fut, registry_fut, device_fut);
-
         // No unhandled events.
-        assert_eq!(handle_result.len(), 0);
+        assert_matches!(
+            handle_result.as_slice(),
+            [input_device::InputEvent { handled: input_device::Handled::Yes, .. }]
+        );
     }
 }

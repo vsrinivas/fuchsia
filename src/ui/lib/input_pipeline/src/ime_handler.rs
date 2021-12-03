@@ -31,31 +31,28 @@ pub struct ImeHandler {
 impl InputHandler for ImeHandler {
     async fn handle_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        mut input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match input_event {
-            input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::Keyboard(keyboard_device_event),
-                device_descriptor:
-                    input_device::InputDeviceDescriptor::Keyboard(_keyboard_device_descriptor),
+        if let input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Keyboard(ref keyboard_device_event),
+            device_descriptor: input_device::InputDeviceDescriptor::Keyboard(_),
+            event_time,
+            handled: input_device::Handled::No,
+        } = input_event
+        {
+            self.modifier_tracker
+                .borrow_mut()
+                .update(keyboard_device_event.get_event_type(), keyboard_device_event.get_key());
+            let key_event = create_key_event(
+                &keyboard_device_event,
                 event_time,
-                handled: input_device::Handled::No,
-            } => {
-                self.modifier_tracker.borrow_mut().update(
-                    keyboard_device_event.get_event_type(),
-                    keyboard_device_event.get_key(),
-                );
-                let key_event = create_key_event(
-                    &keyboard_device_event,
-                    event_time,
-                    &self.modifier_tracker.borrow(),
-                );
-                self.dispatch_key(key_event).await;
-                // Consume the input event.
-                vec![]
-            }
-            no_match => vec![no_match],
+                &self.modifier_tracker.borrow(),
+            );
+            self.dispatch_key(key_event).await;
+            // Consume the input event.
+            input_event.handled = input_device::Handled::Yes
         }
+        vec![input_event]
     }
 }
 
@@ -137,14 +134,16 @@ mod tests {
     use {
         super::*, crate::keyboard_binding, crate::testing_utilities,
         fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
-        fuchsia_async as fasync, futures::StreamExt,
+        fuchsia_async as fasync, futures::StreamExt, matches::assert_matches,
     };
 
-    fn handle_events(ime_handler: Rc<ImeHandler>, events: Vec<input_device::InputEvent>) {
+    fn handle_events(ime_handler: Rc<ImeHandler>, input_events: Vec<input_device::InputEvent>) {
         fasync::Task::local(async move {
-            for event in events {
-                let unhandled_events = ime_handler.clone().handle_input_event(event).await;
-                assert_eq!(unhandled_events.len(), 0);
+            for input_event in input_events {
+                assert_matches!(
+                    ime_handler.clone().handle_input_event(input_event).await.as_slice(),
+                    [input_device::InputEvent { handled: input_device::Handled::Yes, .. }]
+                );
             }
         })
         .detach();

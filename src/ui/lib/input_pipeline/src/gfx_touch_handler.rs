@@ -32,23 +32,21 @@ pub struct GfxTouchHandler {
 impl InputHandler for GfxTouchHandler {
     async fn handle_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        mut input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match input_event {
-            input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::Touch(touch_event),
-                device_descriptor:
-                    input_device::InputDeviceDescriptor::Touch(touch_device_descriptor),
-                event_time,
-                handled: input_device::Handled::No,
-            } => {
-                self.handle_touch_event(touch_event, touch_device_descriptor, event_time);
-                // Consume the event (i.e., don't forward it to the next handler).
-                vec![]
-            }
-            // Don't consume the event (i.e., forward it to the next handler).
-            input_event => vec![input_event],
+        if let input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Touch(ref touch_event),
+            device_descriptor:
+                input_device::InputDeviceDescriptor::Touch(ref touch_device_descriptor),
+            event_time,
+            handled: input_device::Handled::No,
+        } = input_event
+        {
+            self.handle_touch_event(touch_event, touch_device_descriptor, event_time);
+            // Consume the input event.
+            input_event.handled = input_device::Handled::Yes
         }
+        vec![input_event]
     }
 }
 
@@ -83,8 +81,8 @@ impl GfxTouchHandler {
     /// - `event_time`: The time in nanoseconds when the event was first recorded.
     fn handle_touch_event(
         &self,
-        touch_event: touch_binding::TouchEvent,
-        touch_descriptor: touch_binding::TouchDeviceDescriptor,
+        touch_event: &touch_binding::TouchEvent,
+        touch_descriptor: &touch_binding::TouchDeviceDescriptor,
         event_time: input_device::EventTime,
     ) {
         // The order in which events are sent to clients.
@@ -196,6 +194,7 @@ mod tests {
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
         maplit::hashmap,
+        matches::assert_matches,
     };
 
     const SCENIC_COMPOSITOR_ID: u32 = 1;

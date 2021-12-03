@@ -36,28 +36,28 @@ struct MediaButtonsHandlerInner {
 impl InputHandler for MediaButtonsHandler {
     async fn handle_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        mut input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match input_event {
-            input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::ConsumerControls(media_buttons_event),
-                device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
-                event_time: _,
-                handled: input_device::Handled::No,
-            } => {
-                let media_buttons_event = Self::create_media_buttons_event(media_buttons_event);
+        if let input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::ConsumerControls(ref media_buttons_event),
+            device_descriptor: input_device::InputDeviceDescriptor::ConsumerControls(_),
+            event_time: _,
+            handled: input_device::Handled::No,
+        } = input_event
+        {
+            let media_buttons_event = Self::create_media_buttons_event(media_buttons_event);
 
-                // Send the event if the media buttons are supported.
-                self.send_event_to_listeners(&media_buttons_event).await;
+            // Send the event if the media buttons are supported.
+            self.send_event_to_listeners(&media_buttons_event).await;
 
-                // Store the sent event.
-                let mut inner = self.inner.lock().await;
-                inner.last_event = Some(media_buttons_event);
+            // Store the sent event.
+            let mut inner = self.inner.lock().await;
+            inner.last_event = Some(media_buttons_event);
 
-                vec![]
-            }
-            _ => vec![input_event],
+            // Consume the input event.
+            input_event.handled = input_device::Handled::Yes
         }
+        vec![input_event]
     }
 }
 
@@ -119,7 +119,7 @@ impl MediaButtonsHandler {
     /// # Parameters
     /// -  `event`: The MediaButtonEvent to create a MediaButtonsEvent from.
     fn create_media_buttons_event(
-        event: consumer_controls_binding::ConsumerControlsEvent,
+        event: &consumer_controls_binding::ConsumerControlsEvent,
     ) -> fidl_ui_input::MediaButtonsEvent {
         let mut new_event = fidl_ui_input::MediaButtonsEvent {
             volume: Some(0),
@@ -128,7 +128,7 @@ impl MediaButtonsHandler {
             camera_disable: Some(false),
             ..fidl_ui_input::MediaButtonsEvent::EMPTY
         };
-        for button in event.pressed_buttons {
+        for button in &event.pressed_buttons {
             match button {
                 fidl_input_report::ConsumerControlButton::VolumeUp => {
                     new_event.volume = Some(new_event.volume.unwrap().saturating_add(1));
@@ -171,7 +171,7 @@ mod tests {
     use {
         super::*, crate::testing_utilities, fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_input_report as fidl_input_report, fuchsia_async as fasync,
-        fuchsia_zircon as zx, futures::StreamExt,
+        fuchsia_zircon as zx, futures::StreamExt, matches::assert_matches,
     };
 
     fn spawn_device_listener_registry_server(

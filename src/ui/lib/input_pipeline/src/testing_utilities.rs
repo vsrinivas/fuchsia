@@ -16,6 +16,7 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::Future,
     maplit::hashmap,
+    matches::assert_matches,
     std::collections::HashMap,
     std::collections::HashSet,
     std::convert::TryInto,
@@ -536,9 +537,10 @@ macro_rules! assert_input_event_sequence_generates_scenic_events {
         assert_command: $assert_command:expr,
     ) => {
         for input_event in $input_events {
-            let events: Vec<input_device::InputEvent> =
-                $input_handler.clone().handle_input_event(input_event).await;
-            assert_eq!(events.len(), 0);
+            assert_matches!(
+                $input_handler.clone().handle_input_event(input_event).await.as_slice(),
+                [input_device::InputEvent { handled: input_device::Handled::Yes, .. }]
+            );
         }
 
         let mut expected_command_iter = $expected_commands.into_iter().peekable();
@@ -582,9 +584,10 @@ macro_rules! assert_input_event_sequence_generates_media_buttons_events {
     ) => {
         fasync::Task::local(async move {
             for input_event in $input_events {
-                let events: Vec<input_device::InputEvent> =
-                    $input_handler.clone().handle_input_event(input_event).await;
-                assert_eq!(events.len(), 0);
+                assert_matches!(
+                    $input_handler.clone().handle_input_event(input_event).await.as_slice(),
+                    [input_device::InputEvent { handled: input_device::Handled::Yes, .. }]
+                );
             }
         })
         .detach();
@@ -624,7 +627,10 @@ pub async fn assert_handler_ignores_input_event_sequence(
     mut request_stream: impl futures::StreamExt + std::marker::Unpin,
 ) {
     for input_event in input_events {
-        assert_eq!(input_handler.clone().handle_input_event(input_event).await.len(), 1);
+        assert_matches!(
+            input_handler.clone().handle_input_event(input_event).await.as_slice(),
+            [input_device::InputEvent { handled: input_device::Handled::Yes, .. }]
+        );
     }
 
     // The request stream should not receive any events.

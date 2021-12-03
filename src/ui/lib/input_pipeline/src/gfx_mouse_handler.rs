@@ -40,27 +40,28 @@ pub struct GfxMouseHandler {
 impl InputHandler for GfxMouseHandler {
     async fn handle_input_event(
         self: Rc<Self>,
-        input_event: input_device::InputEvent,
+        mut input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        match input_event {
-            input_device::InputEvent {
-                device_event: input_device::InputDeviceEvent::Mouse(mouse_event),
-                device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
+        if let input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Mouse(ref mouse_event),
+            device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
+            event_time,
+            handled: input_device::Handled::No,
+        } = input_event
+        {
+            self.update_cursor_position(&mouse_event, &mouse_descriptor).await;
+            self.send_events_to_scenic(
+                mouse_event.phase,
+                &mouse_event.buttons,
+                &mouse_descriptor,
                 event_time,
-                handled: input_device::Handled::No,
-            } => {
-                self.update_cursor_position(&mouse_event, &mouse_descriptor).await;
-                self.send_events_to_scenic(
-                    mouse_event.phase,
-                    &mouse_event.buttons,
-                    &mouse_descriptor,
-                    event_time,
-                )
-                .await;
-                vec![]
-            }
-            _ => vec![input_event],
+            )
+            .await;
+
+            // Consume the input event.
+            input_event.handled = input_device::Handled::Yes
         }
+        vec![input_event]
     }
 }
 
@@ -207,6 +208,7 @@ mod tests {
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
+        matches::assert_matches,
     };
 
     const SCENIC_COMPOSITOR_ID: u32 = 1;
