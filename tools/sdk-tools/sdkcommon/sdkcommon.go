@@ -17,6 +17,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -34,8 +35,8 @@ var (
 
 // FuchsiaDevice represent a Fuchsia device.
 type FuchsiaDevice struct {
-	// IPv4 or IPv6 of the Fuchsia device.
-	IpAddr string
+	// SSH address of the Fuchsia device.
+	SSHAddr string
 	// Nodename of the Fuchsia device.
 	Name string
 }
@@ -72,11 +73,15 @@ const (
 	defaultDeviceKey       string = "_DEFAULT_DEVICE_"
 
 	FFXIsolatedEnvKey = "FFX_ISOLATED_CONFIG"
+
+	sleepTimeInSeconds = 5
+	unknownTargetName  = "<unknown>"
+	maxRetryCount      = 2
 )
 
 const (
 	defaultBucketName  string = "fuchsia"
-	defaultSSHPort     string = "22"
+	DefaultSSHPort     string = "22"
 	defaultPackagePort string = "8083"
 	helpfulTipMsg      string = `Try running 'ffx target list --format s' and then 'fconfig set-device <device_name> --image <image_name> --default'.`
 )
@@ -123,7 +128,7 @@ func (sdk SDKProperties) setDeviceDefaults(deviceConfig *DeviceConfig) DeviceCon
 	// no reasonable default for image
 	// no reasonable default for device-ip
 	if deviceConfig.SSHPort == "" {
-		deviceConfig.SSHPort = defaultSSHPort
+		deviceConfig.SSHPort = DefaultSSHPort
 	}
 	if deviceConfig.PackageRepo == "" {
 		deviceConfig.PackageRepo = sdk.getDefaultPackageRepoDir(deviceConfig.DeviceName)
@@ -365,46 +370,83 @@ func (sdk SDKProperties) RunFFXDoctor() (string, error) {
 }
 
 func (f *FuchsiaDevice) String() string {
-	return fmt.Sprintf("%s %s", f.IpAddr, f.Name)
+	return fmt.Sprintf("%s %s", f.SSHAddr, f.Name)
 }
 
-// ListDevices returns all available fuchsia devices.
-func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
+func (f *FuchsiaDevice) getIPAddressAndPort() (string, string) {
+	host, port, err := net.SplitHostPort(f.SSHAddr)
+	if err != nil {
+		log.Debugf("Got an error from net.SplitHostPort(%#v): %v", f.SSHAddr, err)
+		return "", ""
+	}
+	return host, port
+}
+
+// isUnknownInListOutput returns true if <unknown> is in the ffx output.
+func (sdk SDKProperties) isUnknownInListOutput(discoveredDevices []*deviceInfo) bool {
+	for _, currentDevice := range discoveredDevices {
+		if unknownTargetName == strings.TrimSpace(currentDevice.Nodename) {
+			return true
+		}
+	}
+	return false
+}
+
+func (sdk SDKProperties) listDevicesWithFFX() ([]*deviceInfo, error) {
 	args := []string{"target", "list", "--format", "json"}
 	output, err := sdk.RunFFX(args, false)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to list devices, please try running 'ffx doctor': %v", err)
 	}
-	var devices []*FuchsiaDevice
-	if len(output) == 0 {
-		return devices, nil
-	}
-
 	var discoveredDevices []*deviceInfo
+	if len(output) == 0 {
+		return discoveredDevices, nil
+	}
 	if err := json.Unmarshal([]byte(output), &discoveredDevices); err != nil {
 		return nil, fmt.Errorf("Unable to unmarshal device info from ffx, please try running 'ffx doctor': %v", err)
 	}
 
+	return discoveredDevices, nil
+}
+
+// listDevices returns all available fuchsia devices.
+func (sdk SDKProperties) listDevices() ([]*FuchsiaDevice, error) {
+	var discoveredDevices []*deviceInfo
+	var err error
+	// List the devices using ffx. If <unknown> is in the output from ffx, we will try
+	// `maxRetryCount` so that the device will show up with the name.
+	// If after the `maxRetryCount` is reached and <unknown> is still in the output, the device
+	// is unreachable.
+	for tries := 0; tries < maxRetryCount; tries++ {
+		discoveredDevices, err = sdk.listDevicesWithFFX()
+		if err != nil {
+			return nil, err
+		}
+		if !sdk.isUnknownInListOutput(discoveredDevices) {
+			break
+		}
+		// This should only occur when the device is in <unknown> state, usually in the first
+		// invocation of any of the f* tools.
+		time.Sleep(sleepTimeInSeconds * time.Second)
+	}
+
+	var devices []*FuchsiaDevice
+
 	for _, currentDevice := range discoveredDevices {
 		if len(currentDevice.Addresses) == 0 {
 			continue
-		} else if len(currentDevice.Addresses) == 1 {
-			devices = append(devices, &FuchsiaDevice{
-				IpAddr: strings.TrimSpace(currentDevice.Addresses[0]),
-				Name:   strings.TrimSpace(currentDevice.Nodename),
-			})
-		} else {
-			ipAddr, err := sdk.getDeviceSSHAddress(currentDevice)
-			// If we are unable to get the device ssh address, skip the device.
-			if err != nil {
-				log.Debugf("Failed to getDeviceSSHAddress for %v: %v", currentDevice.Nodename, err)
-				ipAddr = ""
-			}
-			devices = append(devices, &FuchsiaDevice{
-				IpAddr: strings.TrimSpace(ipAddr),
-				Name:   strings.TrimSpace(currentDevice.Nodename),
-			})
 		}
+		sshAddr, err := sdk.getDeviceSSHAddress(currentDevice)
+		// If we are unable to get the device ssh address, skip the device.
+		if err != nil {
+			log.Debugf("Failed to getDeviceSSHAddress for %s: %v", currentDevice.Nodename, err)
+			sshAddr = ""
+			continue
+		}
+		devices = append(devices, &FuchsiaDevice{
+			SSHAddr: strings.TrimSpace(sshAddr),
+			Name:    strings.TrimSpace(currentDevice.Nodename),
+		})
 	}
 	return devices, nil
 }
@@ -425,15 +467,7 @@ func (sdk SDKProperties) getDeviceSSHAddress(device *deviceInfo) (string, error)
 	if err != nil {
 		return "", fmt.Errorf("Unable to get ssh address: %v", err)
 	}
-	fullAddr := strings.TrimSpace(output)
-	// TODO(fxbug.dev/74863): Migrate f* to use get-ssh-address.
-	// ffx target get-ssh-address returns the full IPv6 address with port.
-	// f* does some manipulation for sshPort, just want the host address.
-	host, _, err := net.SplitHostPort(fullAddr)
-	if err != nil {
-		return "", fmt.Errorf("Unable to find valid IP address, output from ffx target get-ssh-address: %v", fullAddr)
-	}
-	return host, nil
+	return strings.TrimSpace(output), nil
 }
 
 func getCommonSSHArgs(sdk SDKProperties, customSSHConfig string, privateKey string,
@@ -807,14 +841,7 @@ func (sdk SDKProperties) IsValidProperty(property string) bool {
 // If the device name is empty, the default device is used via GetDefaultDevice().
 // It is an error if the property cannot be found.
 func (sdk SDKProperties) GetFuchsiaProperty(device string, property string) (string, error) {
-	var err error
-	var deviceConfig DeviceConfig
-	// If we already know the device name to use, simply use it.
-	if device != "" {
-		deviceConfig, err = sdk.GetDeviceConfiguration(device)
-	} else {
-		deviceConfig, err = sdk.GetDefaultDevice(device)
-	}
+	deviceConfig, err := sdk.GetDefaultDevice(device)
 	if err != nil {
 		return "", fmt.Errorf("Could not read configuration data for %v : %v", device, err)
 	}
@@ -846,7 +873,7 @@ func (sdk SDKProperties) updateConfigIfDeviceIsDiscoverable(deviceConfig *Device
 			deviceConfig.Discoverable = true
 			// If DeviceIP is empty, update it from ffx target list output.
 			if deviceConfig.DeviceIP == "" {
-				deviceConfig.DeviceIP = discoverableDevice.IpAddr
+				deviceConfig.DeviceIP, deviceConfig.SSHPort = discoverableDevice.getIPAddressAndPort()
 			}
 			return *deviceConfig
 		}
@@ -859,8 +886,7 @@ func (sdk SDKProperties) mergeDeviceConfigsWithDiscoverableDevices(configs []Dev
 	visitedDevices := map[string]bool{}
 	var finalConfigs []DeviceConfig
 	// Get the devices that are discoverable.
-	discoverableDevices, err := sdk.ListDevices()
-
+	discoverableDevices, err := sdk.listDevices()
 	if err != nil {
 		log.Debugf("Got an error when listing devices: %v", err)
 		return configs
@@ -883,9 +909,11 @@ func (sdk SDKProperties) mergeDeviceConfigsWithDiscoverableDevices(configs []Dev
 			continue
 		}
 		visitedDevices[discoverableDevice.Name] = true
+		ip, port := discoverableDevice.getIPAddressAndPort()
 		newConfig := DeviceConfig{
 			DeviceName:   discoverableDevice.Name,
-			DeviceIP:     discoverableDevice.IpAddr,
+			DeviceIP:     ip,
+			SSHPort:      port,
 			Discoverable: true,
 		}
 		sdk.setDeviceDefaults(&newConfig)
@@ -972,6 +1000,20 @@ func (sdk SDKProperties) GetDeviceConfiguration(name string) (DeviceConfig, erro
 	return deviceConfig, fmt.Errorf("Cannot parse DeviceData.%v from %v", name, configData)
 }
 
+// SetDeviceIP manually adds a target via `ffx target add`.
+func (sdk SDKProperties) SetDeviceIP(deviceIP, sshPort string) error {
+	if sshPort == "" {
+		sshPort = DefaultSSHPort
+	}
+	fullAddr := net.JoinHostPort(deviceIP, sshPort)
+	ffxTargetAddArgs := []string{"target", "add", fullAddr}
+	log.Debugf("Adding target using ffx %s", ffxTargetAddArgs)
+	if _, err := sdk.RunFFX(ffxTargetAddArgs, false); err != nil {
+		return fmt.Errorf("unable to add target via ffx %s: %w", ffxTargetAddArgs, err)
+	}
+	return nil
+}
+
 // SaveDeviceConfiguration persists the given device configuration properties.
 func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 
@@ -993,11 +1035,6 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 		// if the new value is the default value, then write the empty string.
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, BucketKey})] = ""
 	}
-	if origConfig.DeviceIP != newConfig.DeviceIP {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceIPKey})] = newConfig.DeviceIP
-	} else if defaultConfig.DeviceIP == newConfig.DeviceIP {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, DeviceIPKey})] = ""
-	}
 	if origConfig.Image != newConfig.Image {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, ImageKey})] = newConfig.Image
 	} else if defaultConfig.Image == newConfig.Image {
@@ -1012,11 +1049,6 @@ func (sdk SDKProperties) SaveDeviceConfiguration(newConfig DeviceConfig) error {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = newConfig.PackageRepo
 	} else if defaultConfig.PackageRepo == newConfig.PackageRepo {
 		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, PackageRepoKey})] = defaultConfig.PackageRepo
-	}
-	if origConfig.SSHPort != newConfig.SSHPort {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = newConfig.SSHPort
-	} else if defaultConfig.SSHPort == newConfig.SSHPort {
-		dataMap[getDeviceDataKey([]string{newConfig.DeviceName, SSHPortKey})] = ""
 	}
 	if newConfig.IsDefault {
 		dataMap[getDeviceDataKey([]string{defaultDeviceKey})] = newConfig.DeviceName
@@ -1108,7 +1140,9 @@ func (sdk SDKProperties) GetDefaultDevice(deviceName string) (DeviceConfig, erro
 				return config, nil
 			}
 		}
-		return DeviceConfig{}, nil
+		return sdk.setDeviceDefaults(&DeviceConfig{
+			DeviceName: deviceName,
+		}), nil
 	}
 
 	var discoverableDevicesConfigs []DeviceConfig
@@ -1286,9 +1320,9 @@ func (sdk SDKProperties) mapToDeviceConfig(data interface{}) (DeviceConfig, bool
 
 	if deviceData, ok = data.(map[string]interface{}); ok {
 		for _, key := range validPropertyNames {
-			// the Default flag is stored else where, so don't try to
-			// key it from the map.
-			if key == DefaultKey {
+			// The Default flag, IP address, and SSH port are stored else where, so don't
+			// try to key it from the map.
+			if key == DefaultKey || key == DeviceIPKey || key == SSHPortKey {
 				continue
 			}
 			// Use Sprintf to convert the value into a string.
@@ -1303,8 +1337,6 @@ func (sdk SDKProperties) mapToDeviceConfig(data interface{}) (DeviceConfig, bool
 			switch key {
 			case BucketKey:
 				device.Bucket = value
-			case DeviceIPKey:
-				device.DeviceIP = value
 			case DeviceNameKey:
 				device.DeviceName = value
 			case ImageKey:
@@ -1313,8 +1345,6 @@ func (sdk SDKProperties) mapToDeviceConfig(data interface{}) (DeviceConfig, bool
 				device.PackagePort = value
 			case PackageRepoKey:
 				device.PackageRepo = value
-			case SSHPortKey:
-				device.SSHPort = value
 			}
 		}
 	}

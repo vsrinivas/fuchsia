@@ -34,42 +34,59 @@ func (testSDK testSDKProperties) RunSSHShell(targetAddress string, sshConfig str
 
 const defaultIPAddress = "e80::c00f:f0f0:eeee:cccc"
 
+func clearEnvVars() {
+	os.Unsetenv("_EXPECTED_IPADDR")
+	os.Unsetenv("_EXPECTED_PORT")
+	os.Unsetenv("_EXPECTED_ARGS")
+	os.Unsetenv("_EXPECTED_SSHCONFIG")
+	os.Unsetenv("_EXPECTED_PRIVKEY")
+	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DATA")
+	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE")
+	os.Unsetenv("_FAKE_FFX_TARGET_DEFAULT")
+	os.Unsetenv("_FAKE_FFX_TARGET_LIST")
+	os.Unsetenv("_FAKE_FFX_GET_SSH_ADDRESS")
+}
+
 func TestMain(t *testing.T) {
 	dataDir := t.TempDir()
 	savedArgs := os.Args
 	savedCommandLine := flag.CommandLine
 	sdkcommon.ExecCommand = helperCommandForFSSH
 	defer func() {
+		clearEnvVars()
 		sdkcommon.ExecCommand = exec.Command
 		os.Args = savedArgs
 		flag.CommandLine = savedCommandLine
 	}()
 
 	tests := []struct {
-		args                []string
-		deviceConfiguration string
-		defaultConfigDevice string
-		ffxDefaultDevice    string
-		ffxTargetList       string
-		ffxTargetDefault    string
-		expectedIPAddress   string
-		expectedPort        string
-		expectedSSHConfig   string
-		expectedPrivateKey  string
-		expectedSSHArgs     string
+		name                   string
+		args                   []string
+		deviceConfiguration    string
+		defaultConfigDevice    string
+		ffxDefaultDevice       string
+		ffxTargetList          string
+		ffxTargetDefault       string
+		ffxTargetGetSSHAddress string
+		expectedIPAddress      string
+		expectedPort           string
+		expectedSSHConfig      string
+		expectedPrivateKey     string
+		expectedSSHArgs        string
 	}{
-		// Test case for no configuration, but 1 device discoverable.
 		{
-			args:               []string{os.Args[0], "-data-path", dataDir},
-			expectedIPAddress:  "::1f",
-			expectedPort:       "",
-			expectedSSHArgs:    "",
-			expectedSSHConfig:  filepath.Join(dataDir, "sshconfig"),
-			expectedPrivateKey: "",
-			ffxTargetList:      `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			name:                   "No configured device but 1 device is discoverable",
+			args:                   []string{os.Args[0], "-data-path", dataDir},
+			expectedIPAddress:      "::1f",
+			expectedPort:           "",
+			expectedSSHArgs:        "",
+			expectedSSHConfig:      filepath.Join(dataDir, "sshconfig"),
+			expectedPrivateKey:     "",
+			ffxTargetList:          `[{"nodename":"some-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			ffxTargetGetSSHAddress: `[::1f]:22`,
 		},
-		// Test case for --device-name ,  2 device discoverable.
 		{
+			name:               "Multiple discoverable devices and passing --device-name",
 			args:               []string{os.Args[0], "-data-path", dataDir, "-level", "debug", "--device-name", "test-device"},
 			expectedIPAddress:  "::1f",
 			expectedPort:       "",
@@ -77,22 +94,26 @@ func TestMain(t *testing.T) {
 			expectedSSHConfig:  filepath.Join(dataDir, "sshconfig"),
 			expectedPrivateKey: "",
 			ffxTargetList: `[{"nodename":"test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]},
-			{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::2f"]}]`,
+			{"nodename":"random-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::2f"]}]`,
+			ffxTargetGetSSHAddress: `[::1f]:22`,
 		},
-		// Test case fconfig default device.
 		{
+			name: "fconfig has a default device",
 			args: []string{os.Args[0], "-data-path", dataDir},
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
-		"remote-target-name":{
-			"bucket":"fuchsia-bucket",
-			"device-ip":"::1f",
-			"device-name":"remote-target-name",
-			"image":"release",
-			"package-port":"",
-			"package-repo":"",
-			"ssh-port":"2202",
-			"default": "true"}
-		}`,
+			deviceConfiguration: `{
+			"_DEFAULT_DEVICE_":"remote-target-name",
+			"remote-target-name":{
+				"bucket":"fuchsia-bucket",
+				"device-name":"remote-target-name",
+				"image":"release",
+				"package-port":"",
+				"package-repo":"",
+				"default": "true"
+			}
+			}`,
+			ffxTargetGetSSHAddress: `[::1f]:2202`,
+			ffxTargetList: `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]},
+		{"nodename":"random-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::2f"]}]`,
 			defaultConfigDevice: "\"remote-target-name\"",
 			expectedIPAddress:   "::1f",
 			expectedPort:        "2202",
@@ -100,40 +121,43 @@ func TestMain(t *testing.T) {
 			expectedSSHConfig:   filepath.Join(dataDir, "sshconfig"),
 			expectedPrivateKey:  "",
 		},
-		// Test case fconfig non-default device with --device-name
 		{
-			args: []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-target-name"},
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
-				"remote-target-name":{
-					"bucket":"fuchsia-bucket",
-					"device-ip":"::1f",
-					"device-name":"remote-target-name",
-					"image":"release",
-					"package-port":"",
-					"package-repo":"",
-					"ssh-port":"2202",
-					"default": "true"},
-					"test-target-name":{
-						"bucket":"fuchsia-bucket",
-						"device-ip":"::ff",
-						"device-name":"test-target-name",
-						"image":"release",
-						"package-port":"",
-						"package-repo":"",
-						"ssh-port":"",
-						"default": "true"}
-				}`,
+			name: "fconfig non-default device with --device-name",
+			args: []string{os.Args[0], "-data-path", dataDir, "--device-name", "random-device"},
+			deviceConfiguration: `{
+			"_DEFAULT_DEVICE_":"remote-target-name",
+			"remote-target-name":{
+				"bucket":"fuchsia-bucket",
+				"device-name":"remote-target-name",
+				"image":"release",
+				"package-port":"",
+				"package-repo":"",
+				"default": "true"
+			},
+			"random-device":{
+				"bucket":"fuchsia-bucket",
+				"device-name":"test-target-name",
+				"image":"release",
+				"package-port":"",
+				"package-repo":"",
+				"default": "false"
+			}	
+			}`,
 			defaultConfigDevice: "\"remote-target-name\"",
-			expectedIPAddress:   "::ff",
-			expectedPort:        "",
-			expectedSSHArgs:     "",
-			expectedSSHConfig:   filepath.Join(dataDir, "sshconfig"),
-			expectedPrivateKey:  "",
+			ffxTargetList: `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]},
+			{"nodename":"random-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::2f"]}]`,
+			ffxTargetGetSSHAddress: `[::1f]:2202`,
+			expectedIPAddress:      "::2f",
+			expectedPort:           "8022",
+			expectedSSHArgs:        "",
+			expectedSSHConfig:      filepath.Join(dataDir, "sshconfig"),
+			expectedPrivateKey:     "",
 		},
 	}
 
-	for testcase, test := range tests {
-		t.Run(fmt.Sprintf("testcase_%d", testcase), func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearEnvVars()
 			os.Args = test.args
 			os.Setenv("_EXPECTED_IPADDR", test.expectedIPAddress)
 			os.Setenv("_EXPECTED_PORT", test.expectedPort)
@@ -144,6 +168,7 @@ func TestMain(t *testing.T) {
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
+			os.Setenv("_FAKE_FFX_GET_SSH_ADDRESS", test.ffxTargetGetSSHAddress)
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 			osExit = func(code int) {
 				if code != 0 {
@@ -156,7 +181,6 @@ func TestMain(t *testing.T) {
 }
 
 func TestSSH(t *testing.T) {
-
 	defaultDeviceProperties := make(map[string]string)
 	defaultDeviceProperties[fmt.Sprintf("test-device.%v", sdkcommon.DeviceIPKey)] = defaultIPAddress
 	tests := []struct {
@@ -342,6 +366,13 @@ func TestFakeFFX(t *testing.T) {
 		os.Exit(0)
 	} else if strings.HasSuffix(args[0], "ffx") && args[1] == "target" && args[2] == "list" && args[3] == "--format" && args[4] == "json" {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_LIST"))
+		os.Exit(0)
+	} else if strings.HasSuffix(args[0], "ffx") && args[3] == "target" && args[4] == "get-ssh-address" {
+		if args[2] == "random-device" {
+			fmt.Printf("[::2f]:8022\n")
+			os.Exit(0)
+		}
+		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_GET_SSH_ADDRESS"))
 		os.Exit(0)
 	}
 

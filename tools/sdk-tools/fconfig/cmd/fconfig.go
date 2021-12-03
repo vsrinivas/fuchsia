@@ -25,6 +25,7 @@ type SDKProvider interface {
 	IsValidProperty(property string) bool
 	GetDeviceConfigurations() ([]sdkcommon.DeviceConfig, error)
 	GetDefaultDevice(deviceName string) (sdkcommon.DeviceConfig, error)
+	SetDeviceIP(deviceIP, sshPort string) error
 }
 
 // Allow capturing output in testing.
@@ -193,6 +194,10 @@ func doGet(sdk SDKProvider, property string) (string, error) {
 	}
 }
 
+func isLocalIPAddress(deviceIP string) bool {
+	return deviceIP == "::1" || deviceIP == "127.0.0.1"
+}
+
 func doSetDevice(sdk SDKProvider, deviceName string, propertyMap map[string]string) error {
 	currentConfig, err := sdk.GetDeviceConfiguration(deviceName)
 	if err != nil {
@@ -204,6 +209,7 @@ func doSetDevice(sdk SDKProvider, deviceName string, propertyMap map[string]stri
 	}
 
 	currentConfig.DeviceName = deviceName
+	needToSetDeviceIP := false
 
 	for key, value := range propertyMap {
 		switch key {
@@ -211,6 +217,7 @@ func doSetDevice(sdk SDKProvider, deviceName string, propertyMap map[string]stri
 			currentConfig.Bucket = value
 		case "device-ip":
 			currentConfig.DeviceIP = value
+			needToSetDeviceIP = true
 		case "image":
 			currentConfig.Image = value
 		case "default":
@@ -221,6 +228,18 @@ func doSetDevice(sdk SDKProvider, deviceName string, propertyMap map[string]stri
 			currentConfig.PackageRepo = value
 		case "ssh-port":
 			currentConfig.SSHPort = value
+			needToSetDeviceIP = true
+		}
+	}
+
+	// TODO(fxbug.dev/89209): Remove once customers are migrated.
+	if needToSetDeviceIP {
+		// A remote target forwarded uses port 8022 by default.
+		if (currentConfig.SSHPort == sdkcommon.DefaultSSHPort || currentConfig.SSHPort == "") && isLocalIPAddress(currentConfig.DeviceIP) {
+			currentConfig.SSHPort = "8022"
+		}
+		if err := sdk.SetDeviceIP(currentConfig.DeviceIP, currentConfig.SSHPort); err != nil {
+			return err
 		}
 	}
 	return sdk.SaveDeviceConfiguration(currentConfig)

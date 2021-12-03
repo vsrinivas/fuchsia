@@ -19,9 +19,13 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-const resolvedAddr = "fe80::c0ff:eee:fe00:4444%en0"
+const (
+	resolvedAddr        = "fe80::c0ff:eee:fe00:4444%en0"
+	getSSHAddressOutput = "[fe80::9ded:df4f:5ee8:605f]:8022"
+)
 
-var defaultTargetJSONOutput = fmt.Sprintf(`[{
+var (
+	defaultTargetJSONOutput = fmt.Sprintf(`[{
 	"nodename":"test-device",
 	"rcs_state":"Y",
 	"serial":"<unknown>",
@@ -36,15 +40,21 @@ var defaultTargetJSONOutput = fmt.Sprintf(`[{
 	"target_state":"Product",
 	"addresses":["fe80::9ded:df4f:5ee8:605f", "123-123-123"]
 }]`, resolvedAddr)
+	sshAddresses = map[string]string{
+		"test-device":                "127.0.0.1:22",
+		"another-test-device":        "[fe80::9ded:df4f:5ee8:605f]:8022",
+		"test-device-ipv4":           "127.0.0.1:2022",
+		"another-target-device-name": fmt.Sprintf("[%s]:22", resolvedAddr),
+		"remote-target-name":         "[::1]:22",
+	}
 
-const getSSHAddressOutput = "[fe80::9ded:df4f:5ee8:605f]:8022"
-
-var allSSHOptions = []string{
-	"FSERVE_TEST_USE_CUSTOM_SSH_CONFIG",
-	"FSERVE_TEST_USE_PRIVATE_KEY",
-	"FSERVE_TEST_USE_CUSTOM_SSH_PORT",
-	"SFTP_TO_TARGET",
-}
+	allSSHOptions = []string{
+		"FSERVE_TEST_USE_CUSTOM_SSH_CONFIG",
+		"FSERVE_TEST_USE_PRIVATE_KEY",
+		"FSERVE_TEST_USE_CUSTOM_SSH_PORT",
+		"SFTP_TO_TARGET",
+	}
+)
 
 // See exec_test.go for details, but effectively this runs the function called TestHelperProcess passing
 // the args.
@@ -170,13 +180,13 @@ func TestGetAvailableImages(t *testing.T) {
 }
 
 func compareFuchsiaDevices(f1, f2 *FuchsiaDevice) bool {
-	return cmp.Equal(f1.IpAddr, f2.IpAddr) && cmp.Equal(f1.Name, f2.Name)
+	return cmp.Equal(f1.SSHAddr, f2.SSHAddr) && cmp.Equal(f1.Name, f2.Name)
 }
 
 func TestDeviceString(t *testing.T) {
 	device := &FuchsiaDevice{
-		IpAddr: "123-123-123-123",
-		Name:   "test-device",
+		SSHAddr: "123-123-123-123",
+		Name:    "test-device",
 	}
 	expectedOutput := "123-123-123-123 test-device"
 	actual := device.String()
@@ -189,9 +199,8 @@ func TestListDevicesFfx(t *testing.T) {
 	defer clearTestEnv()
 
 	tests := []struct {
-		ffxTargetListOutput          string
-		ffxTargetGetSSHAddressOutput string
-		expectedFuchsiaDevice        []*FuchsiaDevice
+		ffxTargetListOutput   string
+		expectedFuchsiaDevice []*FuchsiaDevice
 	}{
 		{
 			ffxTargetListOutput: `[{"nodename":"another-test-device",
@@ -200,49 +209,47 @@ func TestListDevicesFfx(t *testing.T) {
 			"target_type":"Unknown",
 			"target_state":"Product",
 			"addresses":["ac80::9ded:df4f:5ee8:605f", "fe80::9ded:df4f:5ee8:605f"]}]`,
-			ffxTargetGetSSHAddressOutput: "[fe80::9ded:df4f:5ee8:605f]:8022",
 			expectedFuchsiaDevice: []*FuchsiaDevice{
 				{
-					IpAddr: "fe80::9ded:df4f:5ee8:605f",
-					Name:   "another-test-device",
+					SSHAddr: "[fe80::9ded:df4f:5ee8:605f]:8022",
+					Name:    "another-test-device",
 				},
 			},
 		},
 		{
-			ffxTargetListOutput: `[{"nodename":"test-device",
+			ffxTargetListOutput: `[{"nodename":"test-device-ipv4",
 			"rcs_state":"N",
 			"serial":"<unknown>",
 			"target_type":"Unknown","target_state":"Product",
 			"addresses":["127.0.0.1"]}]`,
 			expectedFuchsiaDevice: []*FuchsiaDevice{
 				{
-					IpAddr: "127.0.0.1",
-					Name:   "test-device",
+					SSHAddr: "127.0.0.1:2022",
+					Name:    "test-device-ipv4",
 				},
 			},
 		},
 		{
-			ffxTargetListOutput: `[{"nodename":"test-device",
+			ffxTargetListOutput: `[{"nodename":"another-test-device",
 			"rcs_state":"N",
 			"serial":"<unknown>",
 			"target_type":"Unknown",
 			"target_state":"Product",
 			"addresses":["ac80::9ded:df4f:5ee8:605f"]},
-			{"nodename":"another-test-device",
+			{"nodename":"test-device",
 			"rcs_state":"N",
 			"serial":"<unknown>",
 			"target_type":"Unknown",
 			"target_state":"Product",
 			"addresses":["ac80::9ded:df4f:5ee8:605f", "127.0.0.1"]}]`,
-			ffxTargetGetSSHAddressOutput: "127.0.0.1:8022",
 			expectedFuchsiaDevice: []*FuchsiaDevice{
 				{
-					IpAddr: "ac80::9ded:df4f:5ee8:605f",
-					Name:   "test-device",
+					SSHAddr: "[fe80::9ded:df4f:5ee8:605f]:8022",
+					Name:    "another-test-device",
 				},
 				{
-					IpAddr: "127.0.0.1",
-					Name:   "another-test-device",
+					SSHAddr: "127.0.0.1:22",
+					Name:    "test-device",
 				},
 			},
 		},
@@ -254,8 +261,7 @@ func TestListDevicesFfx(t *testing.T) {
 		clearTestEnv()
 		ExecCommand = helperCommandForSDKCommon
 		os.Setenv("TEST_FFX_TARGET_LIST_OUTPUT", test.ffxTargetListOutput)
-		os.Setenv("TEST_GET_SSH_ADDRESS_OUTPUT", test.ffxTargetGetSSHAddressOutput)
-		output, err := testSDK.ListDevices()
+		output, err := testSDK.listDevices()
 		if err != nil {
 			t.Fatalf("Unexpected error: %v", err)
 		}
@@ -459,7 +465,6 @@ func TestCheckSSHConfig(t *testing.T) {
 }
 
 func TestCheckSSHConfigExistingFiles(t *testing.T) {
-
 	tempDir := t.TempDir()
 	homeDir := filepath.Join(tempDir, "_TEMP_HOME")
 	if err := os.MkdirAll(homeDir, 0o700); err != nil {
@@ -520,6 +525,7 @@ func TestCheckSSHConfigExistingFiles(t *testing.T) {
 		t.Fatalf("Expected sshConfig file to contain [%v], but contains [%v]", string(data), string(content))
 	}
 }
+
 func mockedUserProperty(value string) func() (string, error) {
 	return func() (string, error) {
 		return value, nil
@@ -705,12 +711,10 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 		{
 			newDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "new/device/repo",
-				SSHPort:     "22",
 			},
 			expectedValues: map[string]string{
 				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
@@ -718,108 +722,64 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 				"DeviceConfiguration.new-device-name.image":        "image-name",
 				"DeviceConfiguration.new-device-name.bucket":       "buck-name",
 				"DeviceConfiguration.new-device-name.package-repo": "new/device/repo",
-				"DeviceConfiguration.new-device-name.device-ip":    "1.1.1.1",
-				// Since ssh port is the default, it should be cleared.
-				"DeviceConfiguration.new-device-name.ssh-port": "",
 			},
 		},
 		{
 			currentDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "existing/repo",
-				SSHPort:     "22",
 			},
 			newDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "existing/repo",
-				SSHPort:     "22",
 			},
 			expectedValues: map[string]string{
 				// Device name is always written
 				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
-				// Since ssh port is the default, it should be cleared.
-				"DeviceConfiguration.new-device-name.ssh-port": "",
 			},
 		},
 		{
 			currentDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "existing/repo",
-				SSHPort:     "22",
 			},
 			newDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "existing/repo",
-				SSHPort:     "22",
 				IsDefault:   true,
 			},
 			expectedValues: map[string]string{
 				// Device name is always written
 				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
-				// Since ssh port is the default, it should be cleared.
-				"DeviceConfiguration.new-device-name.ssh-port": "",
-				"DeviceConfiguration._DEFAULT_DEVICE_":         "new-device-name",
+				"DeviceConfiguration._DEFAULT_DEVICE_":            "new-device-name",
 			},
 		},
 		{
 			currentDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "existing/repo",
-				SSHPort:     "22",
 			},
 			newDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "existing/repo",
-				SSHPort:     "8022",
-			},
-			expectedValues: map[string]string{
-				// Device name is always written
-				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
-				"DeviceConfiguration.new-device-name.ssh-port":    "8022",
-			},
-		},
-		{
-			currentDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
-				SSHPort:     "8022",
-			},
-			newDevice: DeviceConfig{
-				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
-				Image:       "image-name",
-				Bucket:      "buck-name",
-				PackagePort: "8000",
-				PackageRepo: "existing/repo",
-				SSHPort:     "8022",
 			},
 			expectedValues: map[string]string{
 				// Device name is always written
@@ -829,27 +789,42 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 		{
 			currentDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "existing/repo",
-				SSHPort:     "8022",
 			},
 			newDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+			},
+			expectedValues: map[string]string{
+				// Device name is always written
+				"DeviceConfiguration.new-device-name.device-name": "new-device-name",
+			},
+		},
+		{
+			currentDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
+				Image:       "image-name",
+				Bucket:      "buck-name",
+				PackagePort: "8000",
+				PackageRepo: "existing/repo",
+			},
+			newDevice: DeviceConfig{
+				DeviceName:  "new-device-name",
 				Image:       "custom-image",
 				Bucket:      "",
 				PackagePort: "8000",
 				PackageRepo: "",
-				SSHPort:     "8022",
 			},
 			expectedValues: map[string]string{
 				// Device name is always written
 				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
 				"DeviceConfiguration.new-device-name.bucket":       "",
-				"DeviceConfiguration.new-device-name.device-ip":    "",
 				"DeviceConfiguration.new-device-name.image":        "custom-image",
 				"DeviceConfiguration.new-device-name.package-repo": "",
 			},
@@ -857,26 +832,21 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 		{
 			currentDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "1.1.1.1",
 				Image:       "image-name",
 				Bucket:      "buck-name",
 				PackagePort: "8000",
 				PackageRepo: "/usr/some/new/device",
-				SSHPort:     "8022",
 			},
 			newDevice: DeviceConfig{
 				DeviceName:  "new-device-name",
-				DeviceIP:    "",
 				Image:       "custom-image",
 				Bucket:      "",
 				PackagePort: "8000",
 				PackageRepo: "/usr/some/new/device",
-				SSHPort:     "8022",
 			},
 			expectedValues: map[string]string{
 				"DeviceConfiguration.new-device-name.device-name":  "new-device-name",
 				"DeviceConfiguration.new-device-name.bucket":       "",
-				"DeviceConfiguration.new-device-name.device-ip":    "",
 				"DeviceConfiguration.new-device-name.image":        "custom-image",
 				"DeviceConfiguration.new-device-name.package-repo": "/usr/some/new/device",
 			},
@@ -964,6 +934,7 @@ func TestResolveTargetAddress(t *testing.T) {
 	defer clearTestEnv()
 
 	tests := []struct {
+		name                         string
 		defaultDeviceName            string
 		deviceIP                     string
 		deviceName                   string
@@ -975,7 +946,7 @@ func TestResolveTargetAddress(t *testing.T) {
 		execHelper                   func(command string, s ...string) (cmd *exec.Cmd)
 	}{
 		{
-			// IP address passed in.
+			name:     "IP address passed in",
 			deviceIP: resolvedAddr,
 			expectedConfig: DeviceConfig{
 				Bucket:      "fuchsia",
@@ -987,13 +958,13 @@ func TestResolveTargetAddress(t *testing.T) {
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
-			// Device name passed in.
+			name:              "Device name passed in",
 			defaultDeviceName: "another-test-device",
 			deviceName:        "test-device",
 			expectedConfig: DeviceConfig{
 				DeviceName:   "test-device",
 				Bucket:       "fuchsia",
-				DeviceIP:     resolvedAddr,
+				DeviceIP:     "127.0.0.1",
 				SSHPort:      "22",
 				PackageRepo:  "test-device/packages/amber-files",
 				PackagePort:  "8083",
@@ -1003,14 +974,14 @@ func TestResolveTargetAddress(t *testing.T) {
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
-			// Device name passed in but is not discoverable and is not set in fconfig.
+			name:       "Device name passed in but is not discoverable and is not set in fconfig",
 			deviceName: "some-unknown-device",
 			expectedError: `Cannot get target address for some-unknown-device.
 Try running 'ffx target list --format s' and verify the name matches in 'fconfig get-all'.`,
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
-			// Gets the default device when there are multiple devices in ffx target list.
+			name:              "Gets the default device when there are multiple devices in ffx target list",
 			defaultDeviceName: "another-target-device-name",
 			ffxTargetListOutput: fmt.Sprintf(`[{"nodename":"another-target-device-name",
 			"rcs_state":"Y",
@@ -1039,8 +1010,8 @@ Try running 'ffx target list --format s' and verify the name matches in 'fconfig
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
-			// Returns an error if the default device is set but undiscoverable and doesn't have an
-			// IP in config, even if another device is discoverable.
+			name: "Returns an error if the default device is set but undiscoverable and doesn't have an" +
+				"IP in config, even if another device is discoverable",
 			defaultDeviceName: "fake-target-device-name",
 			ffxTargetListOutput: `[{"nodename":"another-target-device-name",
 			"rcs_state":"N",
@@ -1053,21 +1024,19 @@ Try running 'ffx target list --format s' and verify the name matches in 'fconfig
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 		{
-			// Uses the correct device IP when device has multiple address in ffx target list.
-			ffxTargetListOutput: `[{"nodename":"another-test-device",
+			name: "Uses the correct device IP when device has multiple address in ffx target list",
+			ffxTargetListOutput: `[{"nodename":"test-device-ipv4",
 			"rcs_state":"N",
 			"serial":"<unknown>",
 			"target_type":"Unknown",
 			"target_state":"Product",
 			"addresses":["ac80::9ded:df4f:5ee8:605f", "127.0.0.1"]}]`,
-			ffxTargetGetSSHAddressOutput: "127.0.0.1:123456",
 			expectedConfig: DeviceConfig{
-				DeviceName:   "another-test-device",
-				Bucket:       "fuchsia-bucket",
-				Image:        "release",
+				DeviceName:   "test-device-ipv4",
+				Bucket:       "fuchsia",
 				DeviceIP:     "127.0.0.1",
-				SSHPort:      "123456",
-				PackageRepo:  "another-test-device/packages/amber-files",
+				SSHPort:      "2022",
+				PackageRepo:  "test-device-ipv4/packages/amber-files",
 				PackagePort:  "8083",
 				IsDefault:    false,
 				Discoverable: true,
@@ -1075,28 +1044,7 @@ Try running 'ffx target list --format s' and verify the name matches in 'fconfig
 			execHelper: helperCommandForNoDefaultDevice,
 		},
 		{
-			// Uses the device IP that was set by the user even if ffx outputs something else.
-			ffxTargetListOutput: `[{"nodename":"another-test-device",
-			"rcs_state":"N",
-			"serial":"<unknown>",
-			"target_type":"Unknown",
-			"target_state":"Product",
-			"addresses":["ac80::9ded:df4f:5ee8:605f"]}]`,
-			expectedConfig: DeviceConfig{
-				DeviceName:   "another-test-device",
-				Bucket:       "fuchsia-bucket",
-				Image:        "release",
-				DeviceIP:     "127.0.0.1",
-				SSHPort:      "123456",
-				PackageRepo:  "another-test-device/packages/amber-files",
-				PackagePort:  "8083",
-				IsDefault:    false,
-				Discoverable: true,
-			},
-			execHelper: helperCommandForNoDefaultDevice,
-		},
-		{
-			// Gets the discoverable device if there is only 1, even if fconfig has multiple non-default devices.
+			name: "Gets the discoverable device if there is only 1, even if fconfig has multiple non-default devices",
 			ffxTargetListOutput: `[{"nodename":"some-unknown-device",
 			"rcs_state":"N",
 			"serial":"<unknown>",
@@ -1107,7 +1055,7 @@ Try running 'ffx target list --format s' and verify the name matches in 'fconfig
 				DeviceName:   "some-unknown-device",
 				Bucket:       "fuchsia",
 				DeviceIP:     "fe80::9ded:df4f:5ee8:605f",
-				SSHPort:      "22",
+				SSHPort:      "8022",
 				PackageRepo:  "some-unknown-device/packages/amber-files",
 				PackagePort:  "8083",
 				IsDefault:    false,
@@ -1116,23 +1064,23 @@ Try running 'ffx target list --format s' and verify the name matches in 'fconfig
 			execHelper: helperCommandForNoDefaultDevice,
 		},
 		{
-			// No discoverable device and no default device.
+			name:                "No discoverable device and no default device",
 			ffxTargetListOutput: "[]",
 			expectedError:       fmt.Sprintf("No devices found. %v", helpfulTipMsg),
 			execHelper:          helperCommandForNoDefaultDevice,
 		},
 		{
-			// Multiple discoverable devices found.
+			name:          "Multiple discoverable devices found",
 			expectedError: fmt.Sprintf("Multiple devices found. %v", helpfulTipMsg),
 			execHelper:    helperCommandForNoDefaultDevice,
 		},
 		{
-			// Multiple discoverable devices found but ffx has a default device.
+			name:                      "Multiple discoverable devices found but ffx has a default device",
 			ffxTargetDefaultGetOutput: "test-device",
 			expectedConfig: DeviceConfig{
 				DeviceName:   "test-device",
 				Bucket:       "fuchsia",
-				DeviceIP:     resolvedAddr,
+				DeviceIP:     "127.0.0.1",
 				SSHPort:      "22",
 				PackageRepo:  "test-device/packages/amber-files",
 				PackagePort:  "8083",
@@ -1142,81 +1090,25 @@ Try running 'ffx target list --format s' and verify the name matches in 'fconfig
 			execHelper: helperCommandForNoDefaultDevice,
 		},
 		{
-			// Multiple discoverable devices found, fconfig has a default remote device and ffx has a default device.
-			defaultDeviceName:         "remote-target-name",
-			ffxTargetDefaultGetOutput: "test-device",
-			expectedConfig: DeviceConfig{
-				DeviceName:   "remote-target-name",
-				Bucket:       "fuchsia-bucket",
-				Image:        "release",
-				DeviceIP:     "::1",
-				SSHPort:      "22",
-				PackageRepo:  "remote-target-name/packages/amber-files",
-				PackagePort:  "8083",
-				IsDefault:    true,
-				Discoverable: false,
-			},
-			execHelper: helperCommandForRemoteTarget,
-		},
-		{
-			// Multiple discoverable devices found but ffx has a default device that isn't discoverable.
+			name:                      "Multiple discoverable devices found but ffx has a default device that isn't discoverable",
 			ffxTargetDefaultGetOutput: "some-unknown-default-device",
 			expectedError: `Cannot get target address for some-unknown-default-device.
 Try running 'ffx target list --format s' and verify the name matches in 'fconfig get-all'.`,
 			execHelper: helperCommandForNoDefaultDevice,
 		},
 		{
-			// No discoverable device but fconfig has a remote default target.
-			defaultDeviceName:   "remote-target-name",
-			ffxTargetListOutput: "[]",
-			expectedConfig: DeviceConfig{
-				DeviceName:   "remote-target-name",
-				Bucket:       "fuchsia-bucket",
-				Image:        "release",
-				DeviceIP:     "::1",
-				SSHPort:      "22",
-				PackageRepo:  "remote-target-name/packages/amber-files",
-				PackagePort:  "8083",
-				IsDefault:    true,
-				Discoverable: false,
-			},
-			execHelper: helperCommandForRemoteTarget,
-		},
-		{
-			// One discoverable device and fconfig has a remote default target.
-			defaultDeviceName: "remote-target-name",
+			name: "One discoverable device and no configured device",
 			ffxTargetListOutput: `[{"nodename":"target-device",
 			"rcs_state":"N",
 			"serial":"<unknown>",
 			"target_type":"Unknown",
 			"target_state":"Product",
-			"addresses":["123-123-123"]}]`,
-			expectedConfig: DeviceConfig{
-				DeviceName:   "remote-target-name",
-				Bucket:       "fuchsia-bucket",
-				Image:        "release",
-				DeviceIP:     "::1",
-				SSHPort:      "22",
-				PackageRepo:  "remote-target-name/packages/amber-files",
-				PackagePort:  "8083",
-				IsDefault:    true,
-				Discoverable: false,
-			},
-			execHelper: helperCommandForRemoteTarget,
-		},
-		{
-			// One discoverable device and no configured device.
-			ffxTargetListOutput: `[{"nodename":"target-device",
-			"rcs_state":"N",
-			"serial":"<unknown>",
-			"target_type":"Unknown",
-			"target_state":"Product",
-			"addresses":["123-123-123"]}]`,
+			"addresses":["fe80::9ded:df4f:5ee8:605f"]}]`,
 			expectedConfig: DeviceConfig{
 				DeviceName:   "target-device",
 				Bucket:       "fuchsia",
-				DeviceIP:     "123-123-123",
-				SSHPort:      "22",
+				DeviceIP:     "fe80::9ded:df4f:5ee8:605f",
+				SSHPort:      "8022",
 				PackageRepo:  "target-device/packages/amber-files",
 				PackagePort:  "8083",
 				IsDefault:    false,
@@ -1225,7 +1117,7 @@ Try running 'ffx target list --format s' and verify the name matches in 'fconfig
 			execHelper: helperCommandForNoConfiguredDevices,
 		},
 		{
-			// Multiple discoverable devices and no configured device.
+			name: "Multiple discoverable devices and no configured device",
 			ffxTargetListOutput: `[{"nodename":"another-target-device-name",
 			"rcs_state":"N",
 			"serial":"<unknown>",
@@ -1243,26 +1135,28 @@ Try running 'ffx target list --format s' and verify the name matches in 'fconfig
 			execHelper:    helperCommandForNoConfiguredDevices,
 		},
 	}
-	for i, test := range tests {
-		clearTestEnv()
-		os.Setenv("TEST_DEFAULT_DEVICE_NAME", test.defaultDeviceName)
-		os.Setenv("TEST_FFX_TARGET_LIST_OUTPUT", test.ffxTargetListOutput)
-		os.Setenv("TEST_FFX_TARGET_DEFAULT_GET", test.ffxTargetDefaultGetOutput)
-		os.Setenv("TEST_GET_SSH_ADDRESS_OUTPUT", test.ffxTargetGetSSHAddressOutput)
-		ExecCommand = test.execHelper
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			clearTestEnv()
+			os.Setenv("TEST_DEFAULT_DEVICE_NAME", test.defaultDeviceName)
+			os.Setenv("TEST_FFX_TARGET_LIST_OUTPUT", test.ffxTargetListOutput)
+			os.Setenv("TEST_FFX_TARGET_DEFAULT_GET", test.ffxTargetDefaultGetOutput)
+			os.Setenv("TEST_GET_SSH_ADDRESS_OUTPUT", test.ffxTargetGetSSHAddressOutput)
+			ExecCommand = test.execHelper
 
-		config, err := sdk.ResolveTargetAddress(test.deviceIP, test.deviceName)
-		if err != nil {
-			message := fmt.Sprintf("%v", err)
-			if message != test.expectedError {
-				t.Fatalf("Error '%v' did not match expected error '%v'", message, test.expectedError)
+			config, err := sdk.ResolveTargetAddress(test.deviceIP, test.deviceName)
+			if err != nil {
+				message := fmt.Sprintf("%v", err)
+				if message != test.expectedError {
+					t.Fatalf("Error '%v' did not match expected error '%v'", message, test.expectedError)
+				}
+			} else if test.expectedError != "" {
+				t.Fatalf("Expected error '%v', but got no error", test.expectedError)
 			}
-		} else if test.expectedError != "" {
-			t.Fatalf("Expected error '%v', but got no error", test.expectedError)
-		}
-		if config != test.expectedConfig {
-			t.Fatalf("test case %v: got config: '%v' did not match expected '%v'", i, config, test.expectedConfig)
-		}
+			if config != test.expectedConfig {
+				t.Fatalf("got config: '%v' did not match expected '%v'", config, test.expectedConfig)
+			}
+		})
 	}
 }
 
@@ -1327,8 +1221,6 @@ func TestMapToDeviceConfig(t *testing.T) {
 			deviceName: "test-device1",
 			deviceConfig: DeviceConfig{
 				DeviceName:  "test-device1",
-				DeviceIP:    "localhost",
-				SSHPort:     "1022",
 				PackagePort: "8888",
 			},
 		},
@@ -1350,9 +1242,7 @@ func TestMapToDeviceConfig(t *testing.T) {
 			deviceName: "test-device1",
 			deviceConfig: DeviceConfig{
 				DeviceName:  "test-device1",
-				DeviceIP:    "localhost",
 				PackagePort: "8888",
-				SSHPort:     "1022",
 			},
 		},
 	}
@@ -1373,7 +1263,6 @@ func TestMapToDeviceConfig(t *testing.T) {
 			t.Errorf("Test %v: unexpected deviceConfig: %v. Expected %v", i, actualDevice, expected)
 		}
 	}
-
 }
 
 func helperCommandForInitEnv(command string, s ...string) (cmd *exec.Cmd) {
@@ -1576,7 +1465,7 @@ func fakeGSUtil(args []string) {
 func fakeFfxTarget(args []string) {
 	expected := []string{}
 	expectedListArgs := []string{"target", "list", "--format", "json"}
-	expectedGetSSHAddressArgs := []string{"--target", "another-test-device", "target", "get-ssh-address"}
+	expectedGetSSHAddressArgs := []string{"--target", "*", "target", "get-ssh-address"}
 	expectedGetDefaultTarget := []string{"target", "default", "get"}
 	if args[0] == "target" && args[1] == "list" {
 		expected = expectedListArgs
@@ -1587,8 +1476,8 @@ func fakeFfxTarget(args []string) {
 		}
 	} else if args[0] == "--target" && args[len(args)-1] == "get-ssh-address" {
 		expected = expectedGetSSHAddressArgs
-		if os.Getenv("TEST_GET_SSH_ADDRESS_OUTPUT") != "" {
-			fmt.Println(os.Getenv("TEST_GET_SSH_ADDRESS_OUTPUT"))
+		if val, ok := sshAddresses[args[1]]; ok {
+			fmt.Println(val)
 		} else {
 			fmt.Println(getSSHAddressOutput)
 		}
