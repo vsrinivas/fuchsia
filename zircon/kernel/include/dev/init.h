@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_DEV_INIT_H_
 #define ZIRCON_KERNEL_INCLUDE_DEV_INIT_H_
 
+#include <lib/uart/all.h>
+
 // Forward-declared; fully declared in <phys/handoff.h>
 struct PhysHandoff;
 
@@ -29,5 +31,12 @@ void DriverHandoffLate(const PhysHandoff& handoff);
 // Defined in //zircon/kernel/arch/$cpu/dev-init.cc.
 void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff);
 void ArchDriverHandoffLate(const ArchPhysHandoff& arch_handoff);
+
+// Further arch-specific subroutines for the UART.
+//
+// TODO(fxbug.dev/89182): These will go away when the UART driver can dealt
+// with directly as an arch-agnostic libuart type.
+void ArchUartDriverHandoffEarly(const uart::all::Driver& serial);
+void ArchUartDriverHandoffLate(const uart::all::Driver& serial);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_DEV_INIT_H_

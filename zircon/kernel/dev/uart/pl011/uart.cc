@@ -18,11 +18,11 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <dev/uart/pl011/init.h>
 #include <kernel/auto_lock.h>
 #include <kernel/lockdep.h>
 #include <kernel/thread.h>
 #include <ktl/algorithm.h>
-#include <pdev/driver.h>
 #include <pdev/uart.h>
 #include <platform/debug.h>
 
@@ -158,7 +158,7 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
   return IRQ_EOI_DEACTIVATE;
 }
 
-static void pl011_uart_init(const void* driver_data, uint32_t length) {
+void Pl011UartInitLate() {
   // Initialize circular buffer to hold received data.
   uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
@@ -296,21 +296,16 @@ static const struct pdev_uart_ops uart_ops = {
     .dputs = pl011_dputs,
 };
 
-static void pl011_uart_init_early(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_simple_t));
-  auto driver = static_cast<const dcfg_simple_t*>(driver_data);
-  ASSERT(driver->mmio_phys && driver->irq);
+void Pl011UartInitEarly(const dcfg_simple_t& config) {
+  ASSERT(config.mmio_phys != 0);
+  ASSERT(config.irq != 0);
 
-  uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
-  ASSERT(uart_base);
-  uart_irq = driver->irq;
+  uart_base = periph_paddr_to_vaddr(config.mmio_phys);
+  ASSERT(uart_base != 0);
+  uart_irq = config.irq;
 
   UARTREG(uart_base, UART_LCRH) = (3 << 5) | (1 << 4);  // 8 bit word, enable fifos
   UARTREG(uart_base, UART_CR) = (1 << 8) | (1 << 0);    // tx_enable, uarten
 
   pdev_register_uart(&uart_ops);
 }
-
-LK_PDEV_INIT(pl011_uart_init_early, KDRV_PL011_UART, pl011_uart_init_early,
-             LK_INIT_LEVEL_PLATFORM_EARLY)
-LK_PDEV_INIT(pl011_uart_init, KDRV_PL011_UART, pl011_uart_init, LK_INIT_LEVEL_PLATFORM)

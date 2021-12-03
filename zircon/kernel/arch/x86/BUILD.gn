@@ -237,7 +237,10 @@ source_set("syscall") {
 source_set("dev-init") {
   visibility = [ ":*" ]
   sources = [ "dev-init.cc" ]
-  deps = [ "//zircon/kernel/phys:handoff" ]
+  deps = [
+    "//zircon/kernel/phys:handoff",
+    "//zircon/system/ulib/uart",
+  ]
 }
 
 source_set("tests") {
