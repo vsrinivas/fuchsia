@@ -16,6 +16,7 @@ rustc_binary("virtio_sound_bin") {
 
   sources = [
     "src/main.rs",
+    "src/notification.rs",
     "src/reply.rs",
     "src/sequencer.rs",
     "src/service.rs",
