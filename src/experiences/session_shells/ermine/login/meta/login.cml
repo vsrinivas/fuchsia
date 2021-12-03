@@ -70,6 +70,7 @@
                 "fuchsia.net.interfaces.State",
                 "fuchsia.power.BatteryManager",
                 "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",
 

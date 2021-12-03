@@ -66,6 +66,7 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.power.BatteryManager",
                 "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
                 "fuchsia.ssh.AuthorizedKeys",
 
