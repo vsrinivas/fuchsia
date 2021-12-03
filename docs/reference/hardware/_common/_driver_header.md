@@ -55,8 +55,13 @@ table {
   padding-left: 2px;
 }
 
+.checkbox-div input {
+  margin-right: 1px;
+  margin-left: 5px;
+}
+
 .checkbox-div input+label {
-  font-size: 80%;
+  font-size: 90%;
 }
 
 .form-checkbox button {
