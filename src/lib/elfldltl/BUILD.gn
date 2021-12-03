@@ -83,11 +83,17 @@ cpp_fuzzer("relocation-fuzzer") {
   deps = [ "." ]
 }
 
+cpp_fuzzer("symbol-fuzzer") {
+  sources = [ "symbol-fuzzer.cc" ]
+  deps = [ "." ]
+}
+
 fuzzer_package("elfldltl-fuzzers") {
   fuzz_host = true
   cpp_fuzzers = [
     ":note-fuzzer",
     ":relocation-fuzzer",
+    ":symbol-fuzzer",
   ]
 }
 
