@@ -86,3 +86,10 @@ TLS layout via a template class parameterized by machine.  Each specialization
 provides a consistent API for the constants whose values (and presence) vary by
 machine.  Only the constants related to machines and relocation types supported
 by the toolkit are provided.
+
+## Symbol table
+
+[`<lib/elfldltl/symbol.h>`](include/lib/elfldltl/symbol.h) provides access to
+the dynamic symbol table of an ELF file.  It provides C++ container views for
+the symbol table and the hash tables.  It handles symbol name string hashing
+and hash table lookup.

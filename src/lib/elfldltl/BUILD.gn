@@ -12,6 +12,7 @@ is_elf = current_os != "mac" && current_os != "win"
 zx_library("elfldltl") {
   sdk = "source"
   sdk_headers = [
+    "lib/elfldltl/compat-hash.h",
     "lib/elfldltl/constants.h",
     "lib/elfldltl/diagnostics.h",
     "lib/elfldltl/field.h",
@@ -22,6 +23,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/note.h",
     "lib/elfldltl/relocation.h",
     "lib/elfldltl/self.h",
+    "lib/elfldltl/symbol.h",
   ]
 
   sources = []
@@ -52,6 +54,8 @@ source_set("unittests") {
     "memory-tests.cc",
     "note-tests.cc",
     "relocation-tests.cc",
+    "symbol-tests.cc",
+    "symbol-tests.h",
     "tests.h",
   ]
   deps = [
