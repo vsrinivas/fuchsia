@@ -23,15 +23,6 @@ zx_status_t IoApic::Init() {
   return guest_->CreateMapping(TrapType::MMIO_SYNC, kPhysBase, kMemSize, 0, this);
 }
 
-zx_status_t IoApic::SetRedirect(uint32_t global_irq, RedirectEntry& redirect) {
-  if (global_irq >= kNumRedirects) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-  std::lock_guard<std::mutex> lock(mutex_);
-  redirect_[global_irq] = redirect;
-  return ZX_OK;
-}
-
 zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   if (global_irq >= kNumRedirects) {
     return ZX_ERR_OUT_OF_RANGE;
