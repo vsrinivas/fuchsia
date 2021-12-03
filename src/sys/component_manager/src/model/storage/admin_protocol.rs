@@ -355,9 +355,9 @@ impl StorageAdmin {
             let component_state = match component.lock_resolved_state().await {
                 Ok(state) => state,
                 // A component will not have resolved state if it has already been purged. In this
-                // case, it's storage has also been removed, so we should skip it.
+                // case, its storage has also been removed, so we should skip it.
                 Err(e) => {
-                    warn!(
+                    debug!(
                         "Failed to lock component resolved state, it may already be purged: {:?}",
                         e
                     );
