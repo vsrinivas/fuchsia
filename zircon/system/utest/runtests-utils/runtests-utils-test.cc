@@ -16,11 +16,11 @@
 #include <unistd.h>
 
 #include <memory>
-#include <regex>
 
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
+#include <re2/re2.h>
 #include <runtests-utils/runtests-utils.h>
 #include <zxtest/zxtest.h>
 
@@ -408,7 +408,7 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
       "duration_milliseconds": \d+
     \})",
           succeed_file_name.c_str());
-  std::regex expected_pass_output_regex(expected_pass_output_buf);
+  re2::RE2 expected_pass_output_regex(expected_pass_output_buf);
 
   char expected_fail_output_buf[1024];
   sprintf(expected_fail_output_buf,
@@ -418,7 +418,7 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
       "duration_milliseconds": \d+
     \})",
           fail_file_name.c_str());
-  std::regex expected_fail_output_regex(expected_fail_output_buf);
+  re2::RE2 expected_fail_output_regex(expected_fail_output_buf);
 
   // Extract the actual output.
   const fbl::String output_path = JoinPath(output_dir, "summary.json");
@@ -433,15 +433,14 @@ TEST(DiscoverAndRunTests, DiscoverAndRunTestsWithOutput) {
   // prefix, then be permissive about order of the actual tests.
   EXPECT_EQ(0, strncmp(kExpectedJSONOutputPrefix, buf, kExpectedJSONOutputPrefixSize));
 
-  std::cmatch fail_output_match;
-  std::cmatch pass_output_match;
+  re2::StringPiece buf_for_pass(buf);
+  re2::StringPiece buf_for_fail(buf);
 
-  EXPECT_TRUE(std::regex_search(buf, pass_output_match, expected_pass_output_regex));
-  EXPECT_TRUE(std::regex_search(buf, fail_output_match, expected_fail_output_regex));
+  EXPECT_TRUE(re2::RE2::FindAndConsume(&buf_for_pass, expected_pass_output_regex));
+  EXPECT_TRUE(re2::RE2::FindAndConsume(&buf_for_fail, expected_fail_output_regex));
 
-  auto outputs_end_index = std::max(pass_output_match.position() + pass_output_match.length(),
-                                    fail_output_match.position() + fail_output_match.length());
-  EXPECT_STR_EQ("\n  ]\n}\n", &buf[outputs_end_index]);
+  auto outputs_end = buf_for_pass.length() < buf_for_fail.length() ? buf_for_pass : buf_for_fail;
+  EXPECT_STR_EQ("\n  ]\n}\n", outputs_end.data());
 }
 
 // Passing an --output argument *and* a syslog file name should result in output being

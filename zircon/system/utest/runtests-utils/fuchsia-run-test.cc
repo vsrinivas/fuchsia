@@ -11,11 +11,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <regex>
-
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
+#include <re2/re2.h>
 #include <runtests-utils/fuchsia-run-test.h>
 #include <runtests-utils/runtests-utils.h>
 #include <zxtest/zxtest.h>
@@ -146,7 +145,7 @@ TEST(RunTests, RunAllTestsPublishData) {
       "result": "PASS",
       "duration_milliseconds": \d+)",
       test_name.c_str());
-  std::regex expected_output_regex(expected_output_buf.c_str());
+  re2::RE2 expected_output_regex(expected_output_buf.c_str());
 
   fbl::String test_data_sink_rel_path;
   ASSERT_TRUE(GetOutputFileRelPath(output_dir, "test", &test_data_sink_rel_path));
@@ -170,7 +169,7 @@ TEST(RunTests, RunAllTestsPublishData) {
   EXPECT_LT(0, fread(buf, sizeof(buf[0]), sizeof(buf), output_file));
   fclose(output_file);
 
-  EXPECT_TRUE(std::regex_search(buf, expected_output_regex));
+  EXPECT_TRUE(re2::RE2::PartialMatch(buf, expected_output_regex));
   EXPECT_SUBSTR(buf, expected_data_sink_buf.c_str());
 }
 

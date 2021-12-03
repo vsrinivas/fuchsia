@@ -17,6 +17,7 @@ test("runtests-utils") {
   ]
   deps = [
     "//src/storage/memfs",
+    "//third_party/re2",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
