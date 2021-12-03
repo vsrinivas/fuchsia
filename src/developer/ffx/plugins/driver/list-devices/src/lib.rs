@@ -52,9 +52,13 @@ pub async fn list_devices(
                 println!("{} Properties", count);
                 let mut idx = 0;
                 for prop in property_list.props {
+                    let id_name = bind::compiler::get_deprecated_key_identifiers()
+                        .get(&(prop.id as u32))
+                        .map(std::clone::Clone::clone)
+                        .unwrap_or_else(|| format!("{:#08}", prop.id));
                     println!(
-                        "[{0: >2}/ {1: >2}] : Value {2:#08x} Id {3:#08x}",
-                        idx, count, prop.value, prop.id
+                        "[{0: >2}/ {1: >2}] : Value {2:#08x} Id {3}",
+                        idx, count, prop.value, id_name
                     );
                     idx += 1;
                 }

@@ -13,6 +13,7 @@ ffx_plugin("ffx_driver_list_devices") {
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//src/developer/ffx/plugins/driver/common:ffx_driver",
+    "//src/devices/lib/bind:lib",
   ]
 
   args_sources = [ "src/args.rs" ]
