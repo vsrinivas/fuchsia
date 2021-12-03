@@ -9,8 +9,8 @@ use {
     futures::lock::Mutex,
     futures::{future::BoxFuture, TryStreamExt},
     io_util,
-    log::*,
     std::{collections::HashMap, path::Path, sync::Arc},
+    tracing::*,
 };
 
 pub const MOCK_ID_KEY: &'static str = "local_component_id";

@@ -17,13 +17,13 @@ use {
     fuchsia_component::client as fclient,
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, FutureExt, TryFutureExt},
-    log::*,
     maplit::hashmap,
     rand::Rng,
     std::{
         collections::HashMap,
         fmt::{self, Display},
     },
+    tracing::*,
 };
 
 /// The default name of the child component collection that contains built topologies.
@@ -32,7 +32,10 @@ const REALM_BUILDER_SERVER_CHILD_NAME: &'static str = "realm_builder_server";
 
 pub mod error;
 mod event;
+mod local_component_runner;
 pub mod mock;
+
+pub use local_component_runner::LocalComponentHandles;
 
 /// The path from the root component in a constructed realm to a component. For example, given the
 /// following realm:
