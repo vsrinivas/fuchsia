@@ -148,6 +148,7 @@ impl InputState {
     /// The combination of `device_type` and `device_name`
     /// uniquely identifies the device. Returns None if it fails to find
     /// the corresponding state for the given arguments.
+    #[cfg(test)]
     pub(crate) fn get_state(
         &self,
         device_type: InputDeviceType,
