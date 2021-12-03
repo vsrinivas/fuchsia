@@ -9,14 +9,32 @@ use crate::{
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use valico::json_schema;
+
+pub(crate) const RUN_SCHEMA: &str = include_str!("../schema/run_summary.schema.json");
+pub(crate) const SUITE_SCHEMA: &str = include_str!("../schema/suite_summary.schema.json");
 
 /// Parse the json files in a directory. Returns the parsed test run document and a list of
 /// parsed suite results. This loads all the results in memory at once and shouldn't be used
 /// outside of testing.
 pub fn parse_json_in_output(path: &Path) -> (TestRunResult, Vec<SuiteResult>) {
+    let mut suite_scope = json_schema::Scope::new();
+    let suite_schema_json = serde_json::from_str(SUITE_SCHEMA).expect("parse json schema");
+    let suite_schema =
+        suite_scope.compile_and_return(suite_schema_json, false).expect("compile json schema");
+    let mut run_scope = json_schema::Scope::new();
+    let run_schema_json = serde_json::from_str(RUN_SCHEMA).expect("parse json schema");
+    let run_schema =
+        run_scope.compile_and_return(run_schema_json, false).expect("compile json schema");
+
     let summary_file = File::open(path.join(RUN_SUMMARY_NAME)).expect("open summary file");
+    let run_result_value: serde_json::Value =
+        serde_json::from_reader(summary_file).expect("deserialize run from file");
+    if !run_schema.validate(&run_result_value).is_strictly_valid() {
+        panic!("Run file does not conform with schema");
+    }
     let run_result: TestRunResult =
-        serde_json::from_reader(summary_file).expect("parse summary file");
+        serde_json::from_value(run_result_value).expect("deserialize run from value");
     let suite_entries = match &run_result {
         TestRunResult::V0 { suites, .. } => suites,
     };
@@ -25,8 +43,13 @@ pub fn parse_json_in_output(path: &Path) -> (TestRunResult, Vec<SuiteResult>) {
         .map(|SuiteEntryV0 { summary }| {
             let suite_summary_file =
                 File::open(path.join(summary)).expect("open suite summary file");
-            serde_json::from_reader::<_, SuiteResult>(suite_summary_file)
-                .expect("parse suite summary file")
+            let suite_result_value: serde_json::Value =
+                serde_json::from_reader(suite_summary_file).expect("parse suite summary file");
+            if !suite_schema.validate(&suite_result_value).is_strictly_valid() {
+                panic!("Suite file {} does not conform with schema", summary);
+            }
+            serde_json::from_value::<SuiteResult>(suite_result_value)
+                .expect("deserialize suite from value")
         })
         .collect::<Vec<_>>();
     (run_result, suite_results)

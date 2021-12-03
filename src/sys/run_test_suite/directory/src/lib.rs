@@ -100,7 +100,7 @@ pub struct ArtifactMetadataV0 {
 
 /// Types of artifacts known to the test framework.
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone, Hash)]
-#[serde(rename_all = "UPPERCASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ArtifactType {
     Syslog,
     /// Unexpected high severity logs that caused a test to fail.
@@ -205,8 +205,7 @@ mod test {
 
     #[test]
     fn run_conforms_to_schema() {
-        const RUN_SCHEMA: &str = include_str!("../schema/run_summary.schema.json");
-        let run_schema = serde_json::from_str(RUN_SCHEMA).expect("parse json schema");
+        let run_schema = serde_json::from_str(testing::RUN_SCHEMA).expect("parse json schema");
         let mut scope = json_schema::Scope::new();
         let compiled_schema =
             scope.compile_and_return(run_schema, false).expect("compile json schema");
@@ -260,8 +259,7 @@ mod test {
 
     #[test]
     fn suite_conforms_to_schema() {
-        const SUITE_SCHEMA: &str = include_str!("../schema/suite_summary.schema.json");
-        let suite_schema = serde_json::from_str(SUITE_SCHEMA).expect("parse json schema");
+        let suite_schema = serde_json::from_str(testing::SUITE_SCHEMA).expect("parse json schema");
         let mut scope = json_schema::Scope::new();
         let compiled_schema =
             scope.compile_and_return(suite_schema, false).expect("compile json schema");

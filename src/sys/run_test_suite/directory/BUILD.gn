@@ -23,12 +23,12 @@ rustc_library("directory") {
   deps = [
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:valico",
   ]
 
   test_deps = [
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:valico",
   ]
 }
 
