@@ -4,23 +4,20 @@
 
 //! Core DHCPv6 client state transitions.
 
-use {
-    matches::assert_matches,
-    num::{rational::Ratio, CheckedMul},
-    packet::serialize::InnerPacketBuilder,
-    packet_formats_dhcp::v6,
-    rand::{thread_rng, Rng},
-    std::{
-        cmp::{Eq, Ord, PartialEq, PartialOrd},
-        collections::{hash_map::Entry, BinaryHeap, HashMap, HashSet},
-        convert::TryFrom,
-        default::Default,
-        net::Ipv6Addr,
-        time::Duration,
-        time::Instant,
-    },
-    zerocopy::ByteSlice,
+use matches::assert_matches;
+use num::{rational::Ratio, CheckedMul};
+use packet::serialize::InnerPacketBuilder;
+use packet_formats_dhcp::v6;
+use rand::{thread_rng, Rng};
+use std::{
+    cmp::{Eq, Ord, PartialEq, PartialOrd},
+    collections::{hash_map::Entry, BinaryHeap, HashMap, HashSet},
+    convert::TryFrom,
+    default::Default,
+    net::Ipv6Addr,
+    time::{Duration, Instant},
 };
+use zerocopy::ByteSlice;
 
 /// Initial Information-request timeout `INF_TIMEOUT` from [RFC 8415, Section 7.6].
 ///
@@ -2242,10 +2239,11 @@ impl<R: Rng> ClientStateMachine<R> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, net_declare::std_ip_v6, packet::ParsablePacket, rand::rngs::mock::StepRng,
-        test_case::test_case,
-    };
+    use super::*;
+    use net_declare::std_ip_v6;
+    use packet::ParsablePacket;
+    use rand::rngs::mock::StepRng;
+    use test_case::test_case;
 
     #[test]
     fn test_information_request_and_reply() {
