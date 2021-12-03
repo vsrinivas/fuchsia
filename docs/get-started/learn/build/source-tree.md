@@ -91,7 +91,7 @@ you can expect to find along the way:
   for Fuchsia services.
 * `src`: Source code of Fuchsia, including components, services, and tools
   running on the target device. **This is the stem of the flower**.
-* `tools`: [Fuchsia developer tools](/docs/reference/tools/sdk/README.md)
+* `tools`: [Fuchsia developer tools](https://fuchsia.dev/reference/tools/sdk/README.md)
   running on the host machine.
 * `vendor`: Reserved location for vendor-specific binaries and customizations
   for product builds. The build system supports discovery of configuration

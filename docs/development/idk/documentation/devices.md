@@ -8,7 +8,7 @@ SSH is the protocol for communications over that link, as described in
 
 ### Getting the device address
 
-Getting the Fuchsia device address can be done using [ffx](/docs/reference/tools/sdk/ffx.md).
+Getting the Fuchsia device address can be done using [ffx](https://fuchsia.dev/reference/tools/sdk/ffx.md).
 
 ## Flashing a device
 

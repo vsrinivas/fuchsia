@@ -136,5 +136,5 @@ various programming languages.
 
 <!-- Reference links -->
 
-[ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect
+[ffx-inspect]: https://fuchsia.dev/reference/tools/sdk/ffx.md#inspect
 

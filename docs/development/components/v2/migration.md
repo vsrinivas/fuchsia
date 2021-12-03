@@ -2080,7 +2080,7 @@ described in the [Vulkan documentation][vulkan].
 [system-services]: /docs/concepts/testing/v1_test_component.md#services
 [troubleshooting-components]: /docs/development/components/v2/troubleshooting.md
 [unit-tests-with-generated-manifests]: /docs/development/components/build.md#unit-tests
-[ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect
+[ffx-inspect]: https://fuchsia.dev/reference/tools/sdk/ffx.md#inspect
 [vulkan]: /docs/concepts/graphics/magma/vulkan.md#components_v2
 [realm-builder]:/docs/development/components/v2/realm_builder.md
 [protocol-connector]: /src/lib/fuchsia-component/src/client.rs

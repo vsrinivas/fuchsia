@@ -441,7 +441,7 @@ preprocessor on a given file and prints the postprocessed result. See:
 
 [api-review]: /docs/contribute/governance/api_council.md#api_review
 [clang-i-dir]: https://clang.llvm.org/docs/ClangCommandLineReference.html#cmdoption-clang-i-dir
-[cmc]: /docs/reference/tools/sdk/cmc.md
+[cmc]: https://fuchsia.dev/reference/tools/sdk/cmc.md
 [component-manifests]: /docs/concepts/components/v2/component_manifests.md
 [components-build-includes]: /docs/development/components/build.md#component-manifest-includes
 [cpp-logging]: /docs/development/languages/c-cpp/logging.md

@@ -290,7 +290,7 @@ Binding to component instance...
 [component-url]: /docs/concepts/components/component_urls.md
 [fidl-launcher]: https://fuchsia.dev/reference/fidl/fuchsia.process#Launcher
 [fidl-logger]: https://fuchsia.dev/reference/fidl/fuchsia.logger#LogSink
-[ffx-reference]: /docs/reference/tools/sdk/ffx.md#component
+[ffx-reference]: https://fuchsia.dev/reference/tools/sdk/ffx.md#component
 [glossary.capability]: /docs/glossary/README.md#capability
 [glossary.component-instance]: /docs/glossary/README.md#component-instance
 [glossary.component-instance-tree]: /docs/glossary/README.md#component-instance-tree

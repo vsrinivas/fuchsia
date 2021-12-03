@@ -665,6 +665,6 @@ root:
 
 <!-- Reference links -->
 
-[ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect
+[ffx-inspect]: https://fuchsia.dev/reference/tools/sdk/ffx.md#inspect
 [health-check]: /docs/concepts/diagnostics/inspect/health.md
 [overview]: /docs/development/diagnostics/inspect/README.md

@@ -220,9 +220,9 @@ even if CTS coverage never reaches 100% of the platform surface.
 [decentralized-product-integration]: /docs/contribute/roadmap/2021/decentralized_product_integration.md
 [driver-development]: /docs/development/drivers/developer_guide/driver-development.md
 [ffx]: /docs/development/tools/ffx/overview.md
-[ffx-reference]: /docs/reference/tools/sdk/ffx.md
-[ffx-component]: /docs/reference/tools/sdk/ffx.md#component
-[fssh]: /docs/reference/tools/sdk/fssh.md
+[ffx-reference]: https://fuchsia.dev/reference/tools/sdk/ffx.md
+[ffx-component]: https://fuchsia.dev/reference/tools/sdk/ffx.md#component
+[fssh]: https://fuchsia.dev/reference/tools/sdk/fssh.md
 [fx-mem]: https://fuchsia.dev/reference/tools/fx/cmd/mem
 [fx-snapshot]: https://fuchsia.dev/reference/tools/fx/cmd/snapshot
 [fxb-34556]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=34556
@@ -241,7 +241,7 @@ even if CTS coverage never reaches 100% of the platform surface.
 [package-url]: /docs/concepts/packages/package_url.md
 [procargs]: /docs/concepts/process/program_loading.md#the_processargs_protocol
 [rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
-[sdk-tools]: /docs/reference/tools/sdk/README.md
+[sdk-tools]: https://fuchsia.dev/reference/tools/sdk/README.md
 [selectors]: /docs/reference/diagnostics/selectors.md
 [sl4a]: https://android.googlesource.com/platform/external/sl4a/
 [sl4f]: /docs/concepts/testing/sl4f.md

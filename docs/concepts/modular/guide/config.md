@@ -241,4 +241,4 @@ configuration file.
   - **default**: `false`
 
 [docs-inspect]: /docs/development/diagnostics/inspect/README.md
-[ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect
+[ffx-inspect]: https://fuchsia.dev/reference/tools/sdk/ffx.md#inspect

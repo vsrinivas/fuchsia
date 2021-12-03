@@ -322,10 +322,10 @@ covered in a [separate roadmap document][oot-system-testing].
 [driver-abi-stability]: /docs/contribute/roadmap/2021/stable_driver_runtime.md
 [ffx]: /docs/development/tools/ffx/getting-started.md
 [ffx-plugin]: /docs/development/tools/ffx/development/plugins.md
-[ffx-test]: /docs/reference/tools/sdk/ffx.md#test
+[ffx-test]: https://fuchsia.dev/reference/tools/sdk/ffx.md#test
 [fidl]: /docs//concepts/fidl/overview.md
 [fof-velocity]: /docs/contribute/roadmap/2021/flutter_on_fuchsia_velocity.md
-[fssh]: /docs/reference/tools/sdk/fssh.md
+[fssh]: https://fuchsia.dev/reference/tools/sdk/fssh.md
 [fuchsia-git]: https://fuchsia.googlesource.com/fuchsia
 [fuchsia-hardware]: /docs/concepts/principles/inclusive.md#fuchsia_is_designed_to_support_a_wide_range_of_hardware
 [fx-gce]: https://fuchsia.dev/reference/tools/fx/cmd/gce
@@ -354,7 +354,7 @@ covered in a [separate roadmap document][oot-system-testing].
 [runner-rust]: /docs/concepts/testing/v2/test_runner_framework.md#rust-runner
 [rust]: https://www.rust-lang.org/
 [sanitizers]: /docs/concepts/testing/sanitizers.md
-[sdk-tools]: /docs/reference/tools/sdk/README.md
+[sdk-tools]: https://fuchsia.dev/reference/tools/sdk/README.md
 [sl4f]: /docs/concepts/testing/sl4f.md
 [sl4f-client]: /sdk/testing/sl4f/client/
 [sl4f-guide]: /docs/development/testing/create_a_new_end_to_end_test.md

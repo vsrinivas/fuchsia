@@ -104,7 +104,7 @@ Remote Control Service (RCS) on the Fuchsia Device.]
 
 
 Note: For a complete list of the developer commands supported by `ffx`, see
-the [`ffx` reference](/docs/reference/tools/sdk/ffx.md).
+the [`ffx` reference](https://fuchsia.dev/reference/tools/sdk/ffx.md).
 
 ## What's Next?
 

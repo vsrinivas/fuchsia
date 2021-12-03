@@ -345,5 +345,5 @@ during the GN generation pass.
 [windows-ini]: https://en.wikipedia.org/wiki/INI_file
 [fuchsia-package-archive]: /docs/concepts/packages/package.md#structure-of-a-package
 [glossary.zircon boot image]: /docs//glossary/README.md#zircon-boot-image
-[pm-tool]: /docs/reference/tools/sdk/pm.md
-[zbi-tool]: /docs/reference/tools/sdk/zbi.md
+[pm-tool]: https://fuchsia.dev/reference/tools/sdk/pm.md
+[zbi-tool]: https://fuchsia.dev/reference/tools/sdk/zbi.md
