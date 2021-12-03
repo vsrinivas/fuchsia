@@ -9,8 +9,8 @@ import("//build/rust/rustc_test.gni")
 group("tests") {
   testonly = true
   deps = [
+    ":dynamic_offers_leaf_bind_test",
     ":dynamic_offers_test",
-    ":leaf_bind_test",
   ]
 }
 
@@ -45,7 +45,7 @@ fuchsia_driver_component("root") {
   info = "root-info.json"
 }
 
-driver_bind_rules("leaf_bind") {
+driver_bind_rules("dynamic_offers_leaf_bind") {
   rules = "leaf.bind"
   bind_output = "leaf.bindbc"
   tests = "leaf.bind_tests.json"
@@ -57,8 +57,8 @@ fuchsia_driver("leaf_driver") {
   output_name = "dynamic_offers_leaf"
   sources = [ "leaf_driver.cc" ]
   deps = [
+    ":dynamic_offers_leaf_bind",
     ":fuchsia.offers.test_llcpp",
-    ":leaf_bind",
     "//src/devices/lib/driver2:llcpp",
     "//zircon/system/ulib/async:async-cpp",
   ]
