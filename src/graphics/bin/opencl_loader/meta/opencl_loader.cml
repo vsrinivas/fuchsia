@@ -1,0 +1,71 @@
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/opencl_loader",
+    },
+    collections: [
+        {
+            name: "icd-loaders",
+            environment: "#icd-loader-env",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.opencl.loader.Loader" ],
+        },
+        {
+            runner: "icd_runner",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    use: [
+        {
+            directory: "dev-gpu",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu",
+        },
+        {
+            directory: "dev-gpu-dependency-injection",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu-dependency-injection",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+        {
+            protocol: "fuchsia.memorypressure.Provider",
+            from: "parent",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#icd-loaders" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.opencl.loader.Loader",
+            from: "self",
+        },
+    ],
+    environments: [
+        {
+            name: "icd-loader-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "icd_runner",
+                    from: "self",
+                },
+            ],
+        },
+    ],
+}

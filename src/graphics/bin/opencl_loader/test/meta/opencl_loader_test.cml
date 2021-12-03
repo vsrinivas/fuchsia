@@ -1,0 +1,61 @@
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/opencl_loader_tests#meta/opencl_loader_test_driver.cm",
+        },
+        {
+            name: "opencl_loader",
+            url: "fuchsia-pkg://fuchsia.com/opencl_loader_tests#meta/opencl_loader.cm",
+        },
+        {
+            name: "test_lib_provider",
+            url: "fuchsia-pkg://fuchsia.com/opencl_loader_tests#meta/opencl_loader_test_lib_provider.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [
+                "#opencl_loader",
+                "#test_driver",
+                "#test_lib_provider",
+            ],
+        },
+        {
+            protocol: "fuchsia.opencl.loader.Loader",
+            from: "#opencl_loader",
+            to: [ "#test_driver" ],
+        },
+        {
+            directory: "system-lib",
+            from: "#test_lib_provider",
+            to: [ "#opencl_loader" ],
+        },
+        {
+            directory: "dev-gpu",
+            from: "#test_lib_provider",
+            to: [ "#opencl_loader" ],
+        },
+        {
+            directory: "dev-gpu-dependency-injection",
+            from: "#test_lib_provider",
+            to: [ "#opencl_loader" ],
+        },
+        {
+            directory: "hub",
+            from: "framework",
+            to: "#test_driver",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

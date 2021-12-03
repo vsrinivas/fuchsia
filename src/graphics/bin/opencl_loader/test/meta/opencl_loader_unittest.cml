@@ -1,0 +1,31 @@
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/opencl_loader_tests#meta/opencl_loader_unittest_driver.cm",
+        },
+        {
+            name: "test_lib_provider",
+            url: "fuchsia-pkg://fuchsia.com/opencl_loader_tests#meta/opencl_loader_test_lib_provider.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [
+                "#test_driver",
+                "#test_lib_provider",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

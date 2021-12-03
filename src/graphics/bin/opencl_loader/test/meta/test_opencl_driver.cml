@@ -1,0 +1,27 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "icd_runner",
+    },
+    capabilities: [
+        {
+            directory: "contents",
+            rights: [ "rx*" ],
+            path: "/pkg",
+        },
+    ],
+    expose: [
+        {
+            directory: "contents",
+            from: "self",
+            rights: [ "rx*" ],
+        },
+        {
+            directory: "contents",
+            from: "self",
+            as: "metadata",
+            rights: [ "r*" ],
+            subdir: "data/test_metadata",
+        },
+    ],
+}

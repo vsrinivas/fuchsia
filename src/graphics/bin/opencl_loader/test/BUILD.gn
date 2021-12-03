@@ -1,0 +1,132 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":opencl_loader_tests" ]
+}
+
+executable("test_bin") {
+  testonly = true
+  output_name = "opencl_loader_test"
+  sources = [ "test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.gpu.magma",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.opencl.loader",
+    "//sdk/lib/fdio",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fzl",
+  ]
+}
+
+executable("unittest_bin") {
+  testonly = true
+  output_name = "opencl_loader_unittest"
+  sources = [ "unittest.cc" ]
+  deps = [
+    "..:app",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.opencl.loader",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+executable("opencl-server-bin") {
+  testonly = true
+  output_name = "opencl-server"
+
+  sources = [ "opencl-server-main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.gpu.magma",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("opencl_loader_test_driver") {
+  testonly = true
+  manifest = "meta/opencl_loader_test_driver.cml"
+  deps = [ ":test_bin" ]
+}
+
+fuchsia_component("opencl_loader_test_lib_provider") {
+  testonly = true
+  manifest = "meta/opencl_loader_test_lib_provider.cml"
+  deps = [ ":opencl-server-bin" ]
+}
+
+fuchsia_component("opencl_loader_test") {
+  testonly = true
+  manifest = "meta/opencl_loader_test.cml"
+}
+
+fuchsia_component("opencl_loader_unittest_driver") {
+  testonly = true
+  manifest = "meta/opencl_loader_unittest_driver.cml"
+  deps = [ ":unittest_bin" ]
+}
+
+fuchsia_component("opencl_loader_unittest") {
+  testonly = true
+  manifest = "meta/opencl_loader_unittest.cml"
+}
+
+resource("metadata") {
+  sources = [ "metadata.json" ]
+  outputs = [ "data/test_metadata/metadata.json" ]
+}
+
+resource("manifest-json") {
+  sources = [ "libopencl_fake.json" ]
+  outputs = [ "data/libopencl_fake.json" ]
+}
+
+fuchsia_component("test_opencl_driver") {
+  testonly = true
+  manifest = "meta/test_opencl_driver.cml"
+  deps = [ ":metadata" ]
+}
+
+fuchsia_test_package("opencl_loader_tests") {
+  test_components = [
+    ":opencl_loader_test",
+    ":opencl_loader_unittest",
+  ]
+  deps = [
+    ":manifest-json",
+    ":opencl_loader_test_driver",
+    ":opencl_loader_test_lib_provider",
+    ":opencl_loader_unittest_driver",
+    ":test_opencl_driver",
+    "..:opencl_loader_cmp",
+  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}

@@ -1,0 +1,50 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "opencl_loader",
+            url: "fuchsia-pkg://fuchsia.com/opencl_loader#meta/opencl_loader.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
+    use: [
+        // For appmgr.
+        {
+            protocol: "fuchsia.opencl.loader.Loader",
+            from: "#opencl_loader",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#opencl_loader" ],
+        },
+        {
+            protocol: [ "fuchsia.opencl.loader.Loader" ],
+            from: "#opencl_loader",
+            to: "#session-manager",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu",
+            to: [ "#opencl_loader" ],
+            subdir: "class/gpu",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-gpu-dependency-injection",
+            to: "#opencl_loader",
+            subdir: "class/gpu-dependency-injection",
+        },
+        {
+            protocol: "fuchsia.memorypressure.Provider",
+            from: "#memory_monitor",
+            to: "#opencl_loader",
+        },
+    ],
+}

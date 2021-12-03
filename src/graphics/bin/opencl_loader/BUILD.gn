@@ -1,0 +1,89 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ "test:opencl_loader_tests" ]
+}
+
+source_set("app") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "gpu_device.h",
+    "icd_component.cc",
+    "icd_component.h",
+    "icd_list.cc",
+    "icd_list.h",
+    "icd_runner.cc",
+    "icd_runner.h",
+    "loader.cc",
+    "loader.h",
+    "magma_dependency_injection.cc",
+    "magma_dependency_injection.h",
+    "magma_device.cc",
+    "magma_device.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.component.runner",
+    "//sdk/fidl/fuchsia.gpu.magma",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/json_parser",
+    "//src/lib/storage/vfs/cpp",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.opencl.loader",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+executable("bin") {
+  output_name = "opencl_loader"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":app",
+    "//sdk/fidl/fuchsia.gpu.magma",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.opencl.loader",
+    "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+core_shard("opencl-loader-core-shard") {
+  shard_file = "meta/opencl_loader.core_shard.cml"
+}
+
+fuchsia_component("opencl_loader_cmp") {
+  component_name = "opencl_loader"
+  deps = [ ":bin" ]
+  manifest = "meta/opencl_loader.cml"
+}
+
+fuchsia_package("opencl_loader") {
+  deps = [ ":opencl_loader_cmp" ]
+}

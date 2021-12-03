@@ -1,0 +1,36 @@
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/opencl-server",
+    },
+    capabilities: [
+        {
+            // /dev directory is always empty. It's used for device paths that
+            // aren't required by the icd loader.
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+        {
+            directory: "dev-gpu",
+            rights: [ "rw*" ],
+            path: "/dev-gpu",
+        },
+    ],
+    expose: [
+        {
+            directory: "dev-gpu",
+            from: "self",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev",
+            from: "self",
+            as: "dev-gpu-dependency-injection",
+            rights: [ "rw*" ],
+        },
+    ],
+}

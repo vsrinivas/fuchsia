@@ -10,6 +10,8 @@ type Features = flexible bits {
     GET = 1;
     /// Implements ConnectToDeviceFs().
     CONNECT_TO_DEVICE_FS = 2;
+    /// Implements ConnectToManifestFs().
+    CONNECT_TO_MANIFEST_FS = 4;
 };
 
 type ConnectToManifestOptions = flexible bits {
@@ -28,6 +30,14 @@ protocol Loader {
         name string:64;
     }) -> (resource struct {
         lib zx.handle:<VMO, optional>;
+    });
+
+    /// Connects to a FS serving fuchsia.io containing all OpenCL ICD manifests.
+    /// Manifests will always appear in this directory after the relevant device
+    /// appears in `ConnectToDeviceFs()`.
+    ConnectToManifestFs(resource struct {
+        options ConnectToManifestOptions;
+        channel zx.handle:CHANNEL;
     });
 
     /// Connects to a FS serving fuchsia.io containing all device nodes
