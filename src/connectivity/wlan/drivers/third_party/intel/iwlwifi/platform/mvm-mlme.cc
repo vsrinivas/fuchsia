@@ -296,6 +296,12 @@ void mac_stop(void* ctx) {
 zx_status_t mac_queue_tx(void* ctx, uint32_t options, const wlan_tx_packet_t* tx_packet) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
+  if (tx_packet->mac_frame_size > WLAN_MSDU_MAX_LEN) {
+    IWL_ERR(mvmvif, "Frame size is to large (%lu). expect less than %lu.\n",
+            tx_packet->mac_frame_size, WLAN_MSDU_MAX_LEN);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   ieee80211_mac_packet packet = {};
   packet.common_header =
       reinterpret_cast<const ieee80211_frame_header*>(tx_packet->mac_frame_buffer);
@@ -522,6 +528,12 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
   zx_status_t status = ZX_OK;
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
   iwl_mvm* mvm = mvmvif->mvm;
+
+  if (key_config->key_len > WLAN_MAX_KEY_LEN) {
+    IWL_ERR(mvm, "unreasonable key length: %d bytes. expect smaller than or equal to %lu bytes.\n",
+            key_config->key_len, WLAN_MAX_KEY_LEN);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   if (mvm->trans->cfg->gen2 || iwl_mvm_has_new_tx_api(mvm)) {
     // The new firmwares (for starting with the 22000 series) have different packet generation
@@ -915,6 +927,11 @@ zx_status_t phy_start_iface(void* ctx, zx_device_t* zxdev, uint16_t idx) {
   const auto iwl_trans = reinterpret_cast<struct iwl_trans*>(ctx);
   struct iwl_mvm* mvm = iwl_trans_get_mvm(iwl_trans);
   zx_status_t ret = ZX_OK;
+
+  if (idx >= MAX_NUM_MVMVIF) {
+    IWL_ERR(mvm, "Interface index is too large (%d). expect less than %d\n", idx, MAX_NUM_MVMVIF);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   mtx_lock(&mvm->mutex);
   struct iwl_mvm_vif* mvmvif = mvm->mvmvif[idx];

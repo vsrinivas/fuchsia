@@ -19,6 +19,12 @@
 extern "C" {
 #endif  // defined(__cplusplus)
 
+// IEEE Std 802.11-2016, Table 9-19
+#define WLAN_MSDU_MAX_LEN 2304UL
+
+// A reasonable key length is <= 256 bits.
+#define WLAN_MAX_KEY_LEN ((size_t)(256 / 8))
+
 extern wlanmac_protocol_ops_t wlanmac_ops;
 extern zx_protocol_device_t device_mac_ops;  // for testing only
 

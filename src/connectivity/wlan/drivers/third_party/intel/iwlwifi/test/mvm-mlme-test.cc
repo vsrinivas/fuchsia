@@ -842,6 +842,15 @@ TEST_F(MacInterfaceTest, ClearAssocAfterFailedAssoc) {
   ASSERT_NE(ZX_OK, ClearAssoc());
 }
 
+TEST_F(MacInterfaceTest, InvalidSetKeysTest) {
+  char keybuf[sizeof(wlan_key_config_t) + 16];
+  wlan_key_config_t* key_config = (wlan_key_config_t*)keybuf;
+
+  // key length is too long.
+  key_config->key_len = WLAN_MAX_KEY_LEN + 1;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, SetKey((const wlan_key_config_t*)key_config));
+}
+
 // Check to ensure keys are set during assoc and deleted after disassoc
 // for now use open network
 TEST_F(MacInterfaceTest, SetKeysTest) {
@@ -881,6 +890,19 @@ TEST_F(MacInterfaceTest, SetKeysTest) {
   ASSERT_EQ(list_length(&mvm->time_event_list), 0);
   // Both the keys should have been deleted.
   ASSERT_EQ(*mvm->fw_key_table, 0x0);
+}
+
+TEST_F(MacInterfaceTest, TxPktTooLong) {
+  SetChannel(&kChannel);
+  ConfigureBss(&kBssConfig);
+  BIND_TEST(sim_trans_.iwl_trans());
+
+  bindTx(tx_wrapper);
+  WlanPktBuilder builder;
+  std::shared_ptr<WlanPktBuilder::WlanPkt> wlan_pkt = builder.build();
+  wlan_pkt->wlan_pkt()->mac_frame_size = WLAN_MSDU_MAX_LEN + 1;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, wlanmac_ops.queue_tx(&mvmvif_sta_, 0, wlan_pkt->wlan_pkt()));
+  unbindTx();
 }
 
 TEST_F(MacInterfaceTest, TxPktNotSupportedRole) {
