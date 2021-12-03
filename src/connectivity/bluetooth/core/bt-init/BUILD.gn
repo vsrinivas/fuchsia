@@ -104,14 +104,6 @@ fuchsia_package_with_single_component("bt-init") {
   manifest = "meta/bt-init.cml"
 }
 
-# TODO(fxbug.dev/72960): Now that we use v2-based config, this sysmgr config is empty. Remove once
-# all clients have been migrated away from it.
-config_data("bootstrap_config") {
-  for_pkg = "sysmgr"
-  outputs = [ "bt-init-bootstrap.config" ]
-  sources = [ "bootstrap.config" ]
-}
-
 # The fuchsia.bluetooth.sys.Bootstrap service is not relevant to all configurations, so products
 # that require it should include this shard to expose the protocol to appmgr via bt-init.
 core_shard("bt-bootstrap-core-shard") {

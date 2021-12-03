@@ -24,9 +24,6 @@
         {
             protocol: [
                 "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.gatt.Server",
-                "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.bluetooth.snoop.Snoop",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.deprecatedtimezone.Timezone",
