@@ -756,6 +756,7 @@
                 "fuchsia.sys.Launcher",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",

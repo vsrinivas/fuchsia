@@ -74,6 +74,7 @@
                 "fuchsia.ui.activity.Provider",
                 "fuchsia.ui.activity.Tracker",
                 "fuchsia.ui.brightness.Control",
+                "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
