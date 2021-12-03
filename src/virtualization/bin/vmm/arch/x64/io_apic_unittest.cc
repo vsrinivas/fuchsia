@@ -14,6 +14,24 @@
 
 namespace {
 
+// Read the given indirect register from the IO APIC.
+zx_status_t ReadRegister(IoApic& io_apic, uint8_t reg, IoValue* result) {
+  zx_status_t status = io_apic.Write(kIoApicIoRegSel, IoValue::FromU8(reg));
+  if (status != ZX_OK) {
+    return status;
+  }
+  return io_apic.Read(kIoApicIoWin, result);
+}
+
+// Write the given indirect register from the IO APIC.
+zx_status_t WriteRegister(IoApic& io_apic, uint8_t reg, const IoValue& value) {
+  zx_status_t status = io_apic.Write(kIoApicIoRegSel, IoValue::FromU8(reg));
+  if (status != ZX_OK) {
+    return status;
+  }
+  return io_apic.Write(kIoApicIoWin, value);
+}
+
 TEST(IoApic, IndirectRegisterSelect) {
   Guest guest;
   IoApic io_apic(&guest);
@@ -73,15 +91,15 @@ TEST(IoApic, ApicId) {
 
   // APIC ID should start as 0. (Intel ICH10, Section 13.5.5).
   IoValue value = IoValue::FromU32(0);
-  ASSERT_EQ(io_apic.ReadRegister(kIoApicRegisterId, &value), ZX_OK);
+  ASSERT_EQ(ReadRegister(io_apic, kIoApicRegisterId, &value), ZX_OK);
   EXPECT_EQ(value.u32, 0u);
 
   // Write a value.
-  ASSERT_EQ(io_apic.WriteRegister(kIoApicRegisterId, IoValue::FromU32(0x11223344)), ZX_OK);
+  ASSERT_EQ(WriteRegister(io_apic, kIoApicRegisterId, IoValue::FromU32(0x11223344)), ZX_OK);
 
   // Ensure the value persists.
   value = IoValue::FromU32(0);
-  ASSERT_EQ(io_apic.ReadRegister(kIoApicRegisterId, &value), ZX_OK);
+  ASSERT_EQ(ReadRegister(io_apic, kIoApicRegisterId, &value), ZX_OK);
   EXPECT_EQ(value.u32, 0x11223344u);
 }
 
@@ -91,7 +109,7 @@ TEST(IoApic, Version) {
 
   // Read the version register.
   IoValue value = IoValue::FromU32(0);
-  ASSERT_EQ(io_apic.ReadRegister(kIoApicRegisterVer, &value), ZX_OK);
+  ASSERT_EQ(ReadRegister(io_apic, kIoApicRegisterVer, &value), ZX_OK);
   EXPECT_EQ(value.u32, 0x002f'0020u);  // 0x2f interrupts, APIC version 0x20.
 }
 

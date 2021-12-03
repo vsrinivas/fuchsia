@@ -78,12 +78,8 @@ zx_status_t IoApic::Read(uint64_t addr, IoValue* value) {
       return ZX_OK;
     }
     case kIoApicIoWin: {
-      uint8_t select_register;
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        select_register = select_;
-      }
-      return ReadRegister(select_register, value);
+      std::lock_guard<std::mutex> lock(mutex_);
+      return ReadRegisterLocked(select_, value);
     }
     case kIoApicEOIR: {
       value->u32 = 0;
@@ -103,12 +99,8 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     }
     case kIoApicIoWin: {
-      uint8_t select_register;
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        select_register = select_;
-      }
-      return WriteRegister(select_register, value);
+      std::lock_guard<std::mutex> lock(mutex_);
+      return WriteRegisterLocked(select_, value);
     }
     case kIoApicEOIR: {
       // End of interrupt.
@@ -130,10 +122,9 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t IoApic::ReadRegister(uint8_t select_register, IoValue* value) const {
+zx_status_t IoApic::ReadRegisterLocked(uint8_t select_register, IoValue* value) const {
   switch (select_register) {
     case kIoApicRegisterId: {
-      std::lock_guard<std::mutex> lock(mutex_);
       value->u32 = id_;
       return ZX_OK;
     }
@@ -153,8 +144,7 @@ zx_status_t IoApic::ReadRegister(uint8_t select_register, IoValue* value) const 
       if (value->access_size != 4) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-      std::lock_guard<std::mutex> lock(mutex_);
-      uint32_t redirect_offset = select_ - kFirstRedirectOffset;
+      uint32_t redirect_offset = select_register - kFirstRedirectOffset;
       const RedirectEntry& entry = redirect_[redirect_offset / 2];
       uint32_t redirect_register =
           static_cast<uint32_t>(redirect_offset % 2 == 0 ? entry.lower() : entry.upper());
@@ -167,10 +157,9 @@ zx_status_t IoApic::ReadRegister(uint8_t select_register, IoValue* value) const 
   }
 }
 
-zx_status_t IoApic::WriteRegister(uint8_t select_register, const IoValue& value) {
+zx_status_t IoApic::WriteRegisterLocked(uint8_t select_register, const IoValue& value) {
   switch (select_register) {
     case kIoApicRegisterId: {
-      std::lock_guard<std::mutex> lock(mutex_);
       id_ = value.u32;
       return ZX_OK;
     }
@@ -178,8 +167,7 @@ zx_status_t IoApic::WriteRegister(uint8_t select_register, const IoValue& value)
       if (value.access_size != 4) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-      std::lock_guard<std::mutex> lock(mutex_);
-      uint32_t redirect_offset = select_ - kFirstRedirectOffset;
+      uint32_t redirect_offset = select_register - kFirstRedirectOffset;
       RedirectEntry& entry = redirect_[redirect_offset / 2];
       if (redirect_offset % 2 == 0) {
         entry.set_lower(value.u32);

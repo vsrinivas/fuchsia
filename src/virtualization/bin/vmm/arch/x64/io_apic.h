@@ -60,11 +60,13 @@ class IoApic : public IoHandler, public PlatformDevice {
   // Signals the given global IRQ.
   zx_status_t Interrupt(uint32_t global_irq);
 
-  // Read or write indirect registers directly. Exposed for testing.
-  zx_status_t ReadRegister(uint8_t select_register, IoValue* value) const;
-  zx_status_t WriteRegister(uint8_t select_register, const IoValue& value);
-
  private:
+  // Read or write indirect registers directly.
+  zx_status_t ReadRegisterLocked(uint8_t select_register, IoValue* value) const
+      __TA_REQUIRES(mutex_);
+  zx_status_t WriteRegisterLocked(uint8_t select_register, const IoValue& value)
+      __TA_REQUIRES(mutex_);
+
   Guest* guest_;
 
   mutable std::mutex mutex_;
