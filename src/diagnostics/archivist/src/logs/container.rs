@@ -97,7 +97,7 @@ impl LogsArtifactsContainer {
     /// # Dropped logs
     ///
     /// When messages are evicted from our internal buffers before a client can read them, they
-    /// are surfaced here as an `LazyItem::ItemsDropped` variant. We report these as synthesized
+    /// are surfaced here as an `LazyItem::ItemsRolledOut` variant. We report these as synthesized
     /// messages with the timestamp populated as the most recent timestamp from the stream.
     pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<LogsData>> {
         let identity = self.identity.clone();
@@ -124,7 +124,7 @@ impl LogsArtifactsContainer {
                         }
                     }
                 }
-                LazyItem::ItemsDropped(n) => {
+                LazyItem::ItemsRolledOut(n) => {
                     let message = format!("Rolled {} logs out of buffer", n);
                     let data = LogsDataBuilder::new(BuilderArgs {
                         moniker: identity.to_string(),
@@ -132,7 +132,7 @@ impl LogsArtifactsContainer {
                         component_url: Some(identity.url.clone()),
                         severity: diagnostics_data::Severity::Warn,
                     })
-                    .add_error(diagnostics_data::LogError::DroppedLogs { count: n })
+                    .add_error(diagnostics_data::LogError::RolledOutLogs { count: n })
                     .set_message(message)
                     .build();
                     Arc::new(data)

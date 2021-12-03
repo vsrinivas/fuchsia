@@ -1543,7 +1543,7 @@ mod test {
         }
         assert_eq!(
             String::from_utf8(output).unwrap(),
-            r#"{"data":{"TargetLog":{"data_source":"Logs","metadata":{"component_url":"component_url","timestamp":1615535969000000000,"severity":"WARN","tags":["tag1","tag2"],"pid":1,"tid":2,"dropped":0},"moniker":"some/moniker","payload":{"root":{"message":{"value":"message"}}},"version":1}},"timestamp":0,"version":1}
+            r#"{"data":{"TargetLog":{"data_source":"Logs","metadata":{"component_url":"component_url","timestamp":1615535969000000000,"severity":"WARN","tags":["tag1","tag2"],"pid":1,"tid":2},"moniker":"some/moniker","payload":{"root":{"message":{"value":"message"}}},"version":1}},"timestamp":0,"version":1}
 "#
         );
     }

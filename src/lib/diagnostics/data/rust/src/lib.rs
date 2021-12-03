@@ -201,12 +201,12 @@ impl DiagnosticsData for Logs {
             component_url: metadata.component_url,
             timestamp: metadata.timestamp,
             errors: Some(vec![LogError::Other(Error { message: error })]),
-            dropped: metadata.dropped,
             file: metadata.file,
             line: metadata.line,
             pid: metadata.pid,
             tags: metadata.tags,
             tid: metadata.tid,
+            dropped: None,
             size_bytes: None,
         }
     }
@@ -354,8 +354,10 @@ pub struct LogsMetadata {
     pub line: Option<u64>,
 
     /// Number of dropped messages
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub dropped: Option<u64>,
+    /// DEPRECATED: do not set. Left for backwards compatibility with older serialized metadatas
+    /// that contain this field.
+    #[serde(skip)]
+    dropped: Option<u64>,
 
     /// Size of the original message on the wire, in bytes.
     /// DEPRECATED: do not set. Left for backwards compatibility with older serialized metadatas
@@ -567,8 +569,6 @@ pub struct LogsDataBuilder {
     file: Option<String>,
     /// Line number
     line: Option<u64>,
-    /// Number of dropped messages
-    dropped: Option<u64>,
     /// BuilderArgs that was passed in at construction time
     args: BuilderArgs,
     /// List of KVPs from the user
@@ -597,7 +597,6 @@ impl LogsDataBuilder {
             args,
             errors: vec![],
             msg: None,
-            dropped: Some(0),
             file: None,
             line: None,
             pid: None,
@@ -616,7 +615,6 @@ impl LogsDataBuilder {
 
     #[must_use = "You must call build on your builder to consume its result"]
     pub fn set_dropped(mut self, value: u64) -> Self {
-        self.dropped = Some(value);
         if value <= 0 {
             return self;
         }
@@ -689,7 +687,6 @@ impl LogsDataBuilder {
             self.args.severity,
             self.errors,
         );
-        ret.metadata.dropped = self.dropped;
         ret.metadata.file = self.file;
         ret.metadata.line = self.line;
         ret.metadata.pid = self.pid;
@@ -771,12 +768,12 @@ impl Data<Logs> {
                 component_url: component_url,
                 severity: severity.into(),
                 errors,
-                dropped: None,
                 file: None,
                 line: None,
                 pid: None,
                 tags: None,
                 tid: None,
+                dropped: None,
                 size_bytes: None,
             },
         }
@@ -1134,8 +1131,14 @@ impl FromStr for LogsField {
 /// `DataSource::Logs`.
 #[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize)]
 pub enum LogError {
+    /// Represents the number of logs that were dropped by the component writing the logs due to an
+    /// error writing to the socket before succeeding to write a log.
     #[serde(rename = "dropped_logs")]
     DroppedLogs { count: u64 },
+    /// Represents the number of logs that were dropped for a component by the archivist due to the
+    /// log buffer execeeding its maximum capacity before the current message.
+    #[serde(rename = "rolled_out_logs")]
+    RolledOutLogs { count: u64 },
     #[serde(rename = "parse_record")]
     FailedToParseRecord(String),
     #[serde(rename = "other")]
@@ -1295,7 +1298,6 @@ mod tests {
           },
           "metadata": {
             "component_url": "url",
-              "dropped": 0,
               "severity": "INFO",
               "tags": [],
 
@@ -1343,7 +1345,6 @@ mod tests {
           "metadata": {
             "errors": [],
             "component_url": "url",
-              "dropped": 2,
               "errors": [{"dropped_logs":{"count":2}}],
               "file": "test file.cc",
               "line": 420,
@@ -1398,7 +1399,6 @@ mod tests {
           "metadata": {
             "errors": [],
             "component_url": "url",
-              "dropped": 2,
               "errors": [{"dropped_logs":{"count":2}}],
               "file": "test file.cc",
               "line": 420,
@@ -1527,7 +1527,6 @@ mod tests {
           },
           "metadata": {
             "component_url": "url",
-              "dropped": 0,
               "severity": "INFO",
               "tags": [],
 
@@ -1545,5 +1544,38 @@ mod tests {
         assert_eq!(original_data, expected_data);
         // We skip deserializing the size_bytes
         assert_eq!(original_data.metadata.size_bytes, None);
+    }
+
+    #[fuchsia::test]
+    fn dropped_deserialize_backwards_compatibility() {
+        let original_json = json!({
+          "moniker": "a/b",
+          "version": 1,
+          "data_source": "Logs",
+          "payload": {
+            "root": {
+              "message":{}
+            }
+          },
+          "metadata": {
+            "dropped": 0,
+            "component_url": "url",
+              "severity": "INFO",
+              "tags": [],
+
+            "timestamp": 123,
+          }
+        });
+        let expected_data = LogsDataBuilder::new(BuilderArgs {
+            component_url: Some("url".to_string()),
+            moniker: String::from("a/b"),
+            severity: Severity::Info,
+            timestamp_nanos: 123.into(),
+        })
+        .build();
+        let original_data: LogsData = serde_json::from_value(original_json).unwrap();
+        assert_eq!(original_data, expected_data);
+        // We skip deserializing dropped
+        assert_eq!(original_data.metadata.dropped, None);
     }
 }

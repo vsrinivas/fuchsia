@@ -11,7 +11,7 @@ use fuchsia_inspect_derive::Inspect;
 pub struct LogStreamStats {
     last_timestamp: IntProperty,
     total: LogCounter,
-    dropped: LogCounter,
+    rolled_out: LogCounter,
     fatal: LogCounter,
     error: LogCounter,
     warn: LogCounter,
@@ -23,8 +23,8 @@ pub struct LogStreamStats {
 }
 
 impl LogStreamStats {
-    pub fn increment_dropped(&self, msg: &StoredMessage) {
-        self.dropped.count(msg);
+    pub fn increment_rolled_out(&self, msg: &StoredMessage) {
+        self.rolled_out.count(msg);
     }
 
     pub fn ingest_message(&self, msg: &StoredMessage) {

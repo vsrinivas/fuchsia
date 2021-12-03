@@ -126,7 +126,7 @@ impl StoredMessage {
 impl Drop for StoredMessage {
     fn drop(&mut self) {
         if let Some(stats) = &self.stats {
-            stats.increment_dropped(&*self);
+            stats.increment_rolled_out(&*self);
         }
     }
 }

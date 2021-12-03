@@ -5,8 +5,7 @@
 use crate::error::MessageError;
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_data::{
-    BuilderArgs, LegacySeverity, LogError, LogsData, LogsDataBuilder, LogsField, LogsProperty,
-    Severity,
+    BuilderArgs, LegacySeverity, LogsData, LogsDataBuilder, LogsField, LogsProperty, Severity,
 };
 use diagnostics_log_encoding::{Value, ValueUnknown};
 use fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG;
@@ -65,20 +64,6 @@ pub fn from_logger(source: MonikerWithUrl, msg: LoggerMessage) -> LogsData {
         result.set_legacy_verbosity(verbosity);
     }
     result
-}
-
-/// Returns a new `LogsData` which encodes a count of dropped messages in its metadata.
-pub fn for_dropped(count: u64, source: MonikerWithUrl, timestamp: i64) -> LogsData {
-    let message = format!("Rolled {} logs out of buffer", count);
-    LogsDataBuilder::new(BuilderArgs {
-        timestamp_nanos: timestamp.into(),
-        component_url: Some(source.url.clone()),
-        moniker: source.moniker,
-        severity: Severity::Warn,
-    })
-    .add_error(LogError::DroppedLogs { count })
-    .set_message(message)
-    .build()
 }
 
 /// Constructs a `LogsData` from the provided bytes, assuming the bytes

@@ -211,7 +211,7 @@ impl PuppetEnv {
         // make sure we have an empty entry for each puppet we've launched
         let mut expected_sources = BTreeMap::new();
         for source in &self.launched_monikers {
-            expected_sources.insert(source.clone(), Count { total: 0, dropped: 0 });
+            expected_sources.insert(source.clone(), Count { total: 0, rolled_out: 0 });
         }
 
         // compute the expected drops for each component based on our list of receipts
@@ -219,15 +219,15 @@ impl PuppetEnv {
             let mut puppet_count = expected_sources.get_mut(&receipt.moniker).unwrap();
             puppet_count.total += 1;
             if prior_messages >= self.messages_allowed_in_cache {
-                puppet_count.dropped += 1;
+                puppet_count.rolled_out += 1;
             }
         }
 
-        // archivist should have dropped all containers that have stopped and are empty
+        // archivist should have rolled out all containers that have stopped and are empty
         expected_sources
             .into_iter()
             .filter(|(moniker, count)| {
-                let has_messages = count.total > 0 && count.total != count.dropped;
+                let has_messages = count.total > 0 && count.total != count.rolled_out;
                 let is_running =
                     self.running_puppets.iter().find(|puppet| moniker == &puppet.moniker).is_some();
                 is_running || has_messages
@@ -251,16 +251,16 @@ impl PuppetEnv {
                 let total_bytes = *total.get_property("bytes").unwrap().uint().unwrap() as usize;
                 assert_eq!(total_bytes, total_number * TEST_PACKET_LEN);
 
-                let dropped = logs.get_child("dropped").unwrap();
-                let dropped_number =
-                    *dropped.get_property("number").unwrap().uint().unwrap() as usize;
-                let dropped_bytes =
-                    *dropped.get_property("bytes").unwrap().uint().unwrap() as usize;
-                assert_eq!(dropped_bytes, dropped_number * TEST_PACKET_LEN);
+                let rolled_out = logs.get_child("rolled_out").unwrap();
+                let rolled_out_number =
+                    *rolled_out.get_property("number").unwrap().uint().unwrap() as usize;
+                let rolled_out_bytes =
+                    *rolled_out.get_property("bytes").unwrap().uint().unwrap() as usize;
+                assert_eq!(rolled_out_bytes, rolled_out_number * TEST_PACKET_LEN);
 
                 counts.insert(
                     moniker.clone(),
-                    Count { total: total_number, dropped: dropped_number },
+                    Count { total: total_number, rolled_out: rolled_out_number },
                 );
             }
         }
@@ -273,7 +273,7 @@ impl PuppetEnv {
         let observed_sources = self.current_observed_sources().await;
         assert_eq!(observed_sources, expected_sources);
 
-        let expected_drops = || expected_sources.iter().filter(|(_, c)| c.dropped > 0);
+        let expected_drops = || expected_sources.iter().filter(|(_, c)| c.rolled_out > 0);
         let mut expected_logs = self
             .messages_sent
             .iter()
@@ -283,26 +283,29 @@ impl PuppetEnv {
         trace!("reading log snapshot");
         let observed_logs = self.log_reader.snapshot::<Logs>().await.unwrap().into_iter();
 
-        let mut dropped_message_warnings = BTreeMap::new();
+        let mut rolled_out_message_warnings = BTreeMap::new();
         for observed in observed_logs {
             if observed.metadata.errors.is_some() {
-                dropped_message_warnings.insert(observed.moniker.clone(), observed);
+                rolled_out_message_warnings.insert(observed.moniker.clone(), observed);
             } else {
                 let expected = expected_logs.next().unwrap();
                 assert_eq!(expected, &observed);
             }
         }
 
-        for (moniker, Count { dropped, .. }) in expected_drops() {
-            let dropped_logs_warning = dropped_message_warnings.remove(moniker).unwrap();
+        for (moniker, Count { rolled_out, .. }) in expected_drops() {
+            let rolled_out_logs_warning = rolled_out_message_warnings.remove(moniker).unwrap();
             assert_eq!(
-                dropped_logs_warning.metadata.errors,
-                Some(vec![LogError::DroppedLogs { count: *dropped as u64 }])
+                rolled_out_logs_warning.metadata.errors,
+                Some(vec![LogError::RolledOutLogs { count: *rolled_out as u64 }])
             );
-            assert_eq!(dropped_logs_warning.metadata.severity, Severity::Warn);
+            assert_eq!(rolled_out_logs_warning.metadata.severity, Severity::Warn);
         }
 
-        assert!(dropped_message_warnings.is_empty(), "must have encountered all expected warnings");
+        assert!(
+            rolled_out_message_warnings.is_empty(),
+            "must have encountered all expected warnings"
+        );
     }
 
     async fn validate(mut self) {
@@ -410,7 +413,7 @@ async fn run_mocks(
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Count {
     total: usize,
-    dropped: usize,
+    rolled_out: usize,
 }
 
 /// A value indicating a message was sent by a particular puppet.

@@ -168,7 +168,7 @@ struct CursorId(u64);
 ///
 /// A cursor iterates over nodes in the list, holding the id of the last node seen.
 /// If that id is less than the first id found in the deque, the cursor starts at the beginning of
-/// the list and first returns a count of items dropped.
+/// the list and first returns a count of items rolled out.
 ///
 /// The count is maintained by giving each successive item in a list a monotonically increasing ID
 /// and tracking the "high-water mark" of the largest/last ID seen.
@@ -230,7 +230,7 @@ impl<T> Cursor<T> {
             // were popped.
             let entries_missing = root.entries_popped - self.last_id_seen.unwrap_or(0);
             self.last_id_seen = Some(root.entries_popped);
-            Poll::Ready(Some(LazyItem::ItemsDropped(entries_missing)))
+            Poll::Ready(Some(LazyItem::ItemsRolledOut(entries_missing)))
         } else if cursor_at_end || list_fully_drained {
             trace!("{:?} has reached the end of the terminated stream.", self.id);
             Poll::Ready(None)
@@ -279,10 +279,10 @@ impl<T> Stream for Cursor<T> {
             let num_missed = (to_return.id - 1) - self.last_id_seen.unwrap_or(0);
             let item = if num_missed > 0 {
                 // advance the cursor's high-water mark by the number we missed
-                // so we only report each dropped item once
+                // so we only report each rolled out item once
                 trace!("{:?} reporting {} missed items.", self.id, num_missed);
                 self.last_id_seen = Some(self.last_id_seen.unwrap_or(0) + num_missed);
-                LazyItem::ItemsDropped(num_missed)
+                LazyItem::ItemsRolledOut(num_missed)
             } else {
                 // we haven't missed anything, proceed normally
                 trace!("{:?} yielding item {}.", self.id, to_return.id);
@@ -309,13 +309,13 @@ impl<T> std::fmt::Debug for Cursor<T> {
     }
 }
 
-/// The next element in the stream or a marker of the number of items dropped since last polled.
+/// The next element in the stream or a marker of the number of items rolled out since last polled.
 #[derive(Debug, PartialEq)]
 pub enum LazyItem<T> {
     /// The next item in the stream.
     Next(Arc<T>),
     /// A count of the items dropped between the last call to poll_next and this one.
-    ItemsDropped(u64),
+    ItemsRolledOut(u64),
 }
 
 #[cfg(test)]
@@ -329,18 +329,18 @@ mod tests {
         fn unwrap(self) -> Arc<T> {
             match self {
                 LazyItem::Next(i) => i,
-                LazyItem::ItemsDropped(n) => panic!("{} unexpected dropped items in test", n),
+                LazyItem::ItemsRolledOut(n) => panic!("{} unexpected rolled out items in test", n),
             }
         }
 
         #[track_caller]
-        fn expect_dropped(self, expected: u64) {
+        fn expect_rolled_out(self, expected: u64) {
             match self {
                 LazyItem::Next(i) => {
-                    panic!("expected {} dropped items, found Next({:#?})", expected, i)
+                    panic!("expected {} rolled out items, found Next({:#?})", expected, i)
                 }
-                LazyItem::ItemsDropped(n) => {
-                    assert_eq!(n, expected, "wrong number of dropped items")
+                LazyItem::ItemsRolledOut(n) => {
+                    assert_eq!(n, expected, "wrong number of rolled out items")
                 }
             }
         }
@@ -496,7 +496,7 @@ mod tests {
         list.push_back(3);
         assert_eq!(*list.pop_front().unwrap(), 1);
 
-        early_cursor.next().await.unwrap().expect_dropped(1);
+        early_cursor.next().await.unwrap().expect_rolled_out(1);
         assert_eq!(*early_cursor.next().await.unwrap().unwrap(), 2);
 
         let mut middle_cursor = list.cursor(StreamMode::Subscribe);
@@ -506,12 +506,12 @@ mod tests {
         list.push_back(4);
         list.push_back(5);
 
-        early_cursor.next().await.unwrap().expect_dropped(1);
+        early_cursor.next().await.unwrap().expect_rolled_out(1);
         assert_eq!(*early_cursor.next().await.unwrap().unwrap(), 4);
         assert_eq!(*early_cursor.next().await.unwrap().unwrap(), 5);
 
         assert_eq!(*list.pop_front().unwrap(), 4);
-        middle_cursor.next().await.unwrap().expect_dropped(1);
+        middle_cursor.next().await.unwrap().expect_rolled_out(1);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 5);
 
         list.terminate();
@@ -534,7 +534,7 @@ mod tests {
         list.pop_front();
         list.pop_front();
 
-        middle_cursor.next().await.unwrap().expect_dropped(2);
+        middle_cursor.next().await.unwrap().expect_rolled_out(2);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 3);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 4);
         assert_eq!(*middle_cursor.next().await.unwrap().unwrap(), 5);
@@ -542,7 +542,7 @@ mod tests {
         assert!(middle_cursor.next().await.is_none(), "no items left in list");
 
         let mut full_cursor = list.cursor(StreamMode::Snapshot);
-        full_cursor.next().await.unwrap().expect_dropped(2);
+        full_cursor.next().await.unwrap().expect_rolled_out(2);
         assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 3);
         assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 4);
         assert_eq!(*full_cursor.next().await.unwrap().unwrap(), 5);
@@ -606,12 +606,12 @@ mod tests {
         list.pop_front();
 
         let mut snapshot_cursor = list.cursor(StreamMode::Snapshot);
-        snapshot_cursor.next().await.unwrap().expect_dropped(5);
+        snapshot_cursor.next().await.unwrap().expect_rolled_out(5);
         let snapshot: Vec<_> = snapshot_cursor.map(|i| *i.unwrap()).collect().await;
         let subscribe: Vec<_> =
             list.cursor(StreamMode::Subscribe).map(|i| *i.unwrap()).collect().await;
         let mut both_cursor = list.cursor(StreamMode::Snapshot);
-        both_cursor.next().await.unwrap().expect_dropped(5);
+        both_cursor.next().await.unwrap().expect_rolled_out(5);
         let both: Vec<_> = both_cursor.map(|i| *i.unwrap()).collect().await;
 
         assert!(snapshot.is_empty());
@@ -635,7 +635,7 @@ mod tests {
 
         let mut cursor = list.cursor(StreamMode::Snapshot);
 
-        cursor.next().await.unwrap().expect_dropped(5);
+        cursor.next().await.unwrap().expect_rolled_out(5);
 
         let snapshot: Vec<_> = cursor.map(|i| *i.unwrap()).collect().await;
 
@@ -655,7 +655,7 @@ mod tests {
         list.pop_front();
 
         let mut cursor = list.cursor(StreamMode::Snapshot);
-        cursor.next().await.expect("initial value exists").expect_dropped(3);
+        cursor.next().await.expect("initial value exists").expect_rolled_out(3);
 
         let snapshot: Vec<_> = cursor.map(|i| *i.unwrap()).collect().await;
 
@@ -699,14 +699,14 @@ mod tests {
         list.pop_front();
 
         let mut cursor = list.cursor(StreamMode::SnapshotThenSubscribe);
-        cursor.next().await.unwrap().expect_dropped(3);
+        cursor.next().await.unwrap().expect_rolled_out(3);
         let mut next = cursor.next();
         assert_eq!(poll!(&mut next), Poll::Pending);
 
         list.push_back(4);
         list.pop_front();
 
-        cursor.next().await.unwrap().expect_dropped(1);
+        cursor.next().await.unwrap().expect_rolled_out(1);
         let mut next = cursor.next();
         assert_eq!(poll!(&mut next), Poll::Pending);
 

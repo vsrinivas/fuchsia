@@ -99,7 +99,7 @@ mod tests {
                                 number: 5u64,
                                 bytes: AnyProperty,
                             },
-                            dropped: {
+                            rolled_out: {
                                 number: 0u64,
                                 bytes: 0u64,
                             },
@@ -177,7 +177,7 @@ mod tests {
                                     number: 1u64,
                                     bytes: AnyProperty,
                                 },
-                                dropped: {
+                                rolled_out: {
                                     number: 0u64,
                                     bytes: 0u64,
                                 },
@@ -215,7 +215,7 @@ mod tests {
                                     number: 1u64,
                                     bytes: AnyProperty,
                                 },
-                                dropped: {
+                                rolled_out: {
                                     number: 0u64,
                                     bytes: 0u64,
                                 },
@@ -637,7 +637,7 @@ mod tests {
                                 number: 3u64,
                                 bytes: AnyProperty,
                             },
-                            dropped: {
+                            rolled_out: {
                                 number: 0u64,
                                 bytes: 0u64,
                             },

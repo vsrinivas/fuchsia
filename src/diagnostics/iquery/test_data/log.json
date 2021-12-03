@@ -3,7 +3,6 @@
         "data_source": "Logs",
         "metadata": {
             "component_url": "#meta/realm_builder_server.cm",
-            "dropped": 0,
             "pid": "PID",
             "severity": "INFO",
             "tags": [],
@@ -24,7 +23,6 @@
         "data_source": "Logs",
         "metadata": {
             "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component_with_logs.cm",
-            "dropped": 0,
             "pid": "PID",
             "severity": "INFO",
             "tags": [
