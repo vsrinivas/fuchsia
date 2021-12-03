@@ -558,7 +558,7 @@ impl XdgSurface {
                                     .expect("no future presentation infos");
                                 let info =
                                     infos.iter().next().expect("no future presentation info");
-                                let time_ms =
+                                let time_in_ms =
                                     (info.presentation_time.expect("no presentation time")
                                         / 1_000_000) as u32;
                                 // TODO: Remove this check when OnNextFrameBegin is only sent as a
@@ -567,14 +567,15 @@ impl XdgSurface {
                                     surface_ref.get_mut(client)?.next_callbacks()
                                 {
                                     callbacks.iter().try_for_each(|callback| {
-                                        Callback::done(*callback, client, time_ms)?;
+                                        Callback::done(*callback, client, time_in_ms)?;
                                         client.delete_id(callback.id())
                                     })?;
                                 }
-                                surface_ref.get_mut(client)?.add_present_credits(
+                                Surface::add_present_credits(
+                                    surface_ref,
+                                    client,
                                     values.additional_present_credits.unwrap_or(0),
-                                );
-                                Ok(())
+                                )
                             });
                         }
                         FlatlandEvent::OnFramePresented { frame_presented_info: _ } => {}

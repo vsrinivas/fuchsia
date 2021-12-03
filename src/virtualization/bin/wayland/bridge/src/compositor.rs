@@ -279,6 +279,11 @@ pub struct Surface {
     #[cfg(feature = "flatland")]
     present_credits: u32,
 
+    /// Set after we tried to Present but had no remaining credits. This is used
+    /// to trigger a present as soon as we a credit.
+    #[cfg(feature = "flatland")]
+    present_needed: bool,
+
     /// Global identifier for image instances used by this surface.
     #[cfg(feature = "flatland")]
     image_instance_id: ImageInstanceId,
@@ -396,6 +401,7 @@ impl Surface {
             subsurfaces: vec![(id.into(), None)],
             callbacks: VecDeque::new(),
             present_credits: 1,
+            present_needed: false,
             image_instance_id: NEXT_IMAGE_INSTANCE_ID.fetch_add(1, Ordering::Relaxed),
             content: None,
         }
@@ -599,36 +605,52 @@ impl Surface {
         Ok(())
     }
 
-    pub fn present(
-        this: ObjectRef<Self>,
-        client: &mut Client,
-        mut callbacks: Vec<ObjectRef<Callback>>,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "Surface::present");
-        if this.get(client)?.present_credits == 0 {
-            // Drop frame by adding callbacks to previous frame. There must be at least
-            // one set of pending callbacks when we enter this state.
-            let surface = this.get_mut(client)?;
-            surface.callbacks.back_mut().expect("no pending frame").append(&mut callbacks);
-            println!("dropped frame, no present credits remaining");
-            return Ok(());
-        }
-        let flatland = this
-            .get(client)?
+    fn present_internal(&mut self) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::present_internal");
+        let flatland = self
             .flatland()
             .ok_or(format_err!("Unable to present surface without a flatland instance."))?;
         // Wayland protocol doesn't provide a mechanism to control presentation time
         // so we ask Flatland to present contents immediately by specifying a presentation
         // time of 0.
         flatland.present(0);
-        let surface = this.get_mut(client)?;
-        surface.callbacks.push_back(callbacks);
-        surface.present_credits -= 1;
+        self.present_credits -= 1;
+        self.present_needed = false;
         Ok(())
     }
 
-    pub fn add_present_credits(&mut self, present_credits: u32) {
-        self.present_credits += present_credits;
+    pub fn present(
+        this: ObjectRef<Self>,
+        client: &mut Client,
+        mut callbacks: Vec<ObjectRef<Callback>>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::present");
+        let surface = this.get_mut(client)?;
+        if surface.present_credits == 0 {
+            // Drop frame by adding callbacks to previous frame. There must be at least
+            // one set of pending callbacks when we enter this state.
+            surface.callbacks.back_mut().expect("no pending frame").append(&mut callbacks);
+            surface.present_needed = true;
+        } else {
+            surface.present_internal()?;
+            surface.callbacks.push_back(callbacks);
+        }
+        Ok(())
+    }
+
+    pub fn add_present_credits(
+        this: ObjectRef<Self>,
+        client: &mut Client,
+        present_credits: u32,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "Surface::add_present_credits");
+        let surface = this.get_mut(client)?;
+        surface.present_credits += present_credits;
+        // Present immediately if needed.
+        if surface.present_needed && surface.present_credits > 0 {
+            surface.present_internal()?;
+        }
+        Ok(())
     }
 }
 
