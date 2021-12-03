@@ -50,9 +50,13 @@ class App extends StatelessWidget {
                       background: _kErmineColor100,
                       onBackground: _kErmineColor400,
                       primary: _kErmineColor100,
+                      // TODO: Rename to primaryContainer after roll.
+                      // ignore: deprecated_member_use
                       primaryVariant: _kErmineColor200,
                       onPrimary: _kErmineColor400,
                       secondary: _kErmineColor400,
+                      // TODO: Rename to secondaryContainer after roll.
+                      // ignore: deprecated_member_use
                       secondaryVariant: _kErmineColor300,
                       onSecondary: _kErmineColor100,
                       surface: _kErmineColor100,
