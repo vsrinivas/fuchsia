@@ -10,9 +10,10 @@ use {
         match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey},
     },
     cm_rust::FidlIntoNative,
-    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_driver_development as fdd,
+    fidl_fuchsia_driver_framework as fdf,
     fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream},
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::{zx_status_t, Status},
     futures::prelude::*,
@@ -112,7 +113,7 @@ async fn load_driver(
         ),
         fio::OPEN_RIGHT_READABLE,
     )?;
-    let component: fsys::ComponentDecl = io_util::read_file_fidl(&component)
+    let component: fdecl::Component = io_util::read_file_fidl(&component)
         .await
         .with_context(|| format!("{}: Failed to read component", component_url.as_str()))?;
     let component = component.fidl_into_native();

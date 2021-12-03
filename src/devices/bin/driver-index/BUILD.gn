@@ -37,12 +37,12 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/devices/lib/bind:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
