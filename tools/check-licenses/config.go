@@ -71,7 +71,6 @@ func NewConfigJson(configJson string) (*Config, error) {
 	c := &Config{}
 
 	d := json.NewDecoder(strings.NewReader(configJson))
-	d.DisallowUnknownFields()
 	if err := d.Decode(c); err != nil {
 		return nil, err
 	}
