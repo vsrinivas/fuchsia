@@ -86,6 +86,7 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:rustc-hash",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:smallvec",
+    "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:toml",
     "//third_party/rust_crates:ttf-parser",
     "//third_party/rust_crates:vk-sys",

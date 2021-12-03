@@ -63,12 +63,15 @@ impl Color {
         Ok(u8::from_str_radix(&hash_code[start_index..start_index + 2], 16)?)
     }
 
-    /// Create a color from a six hexadecimal digit string like '#EBD5B3'
+    /// Create a color from a six or height hexadecimal digit string like '#EBD5B3'
     pub fn from_hash_code(hash_code: &str) -> Result<Color, Error> {
         let mut new_color = Color::new();
         new_color.r = Color::extract_hex_slice(&hash_code, 1)?;
         new_color.g = Color::extract_hex_slice(&hash_code, 3)?;
         new_color.b = Color::extract_hex_slice(&hash_code, 5)?;
+        if hash_code.len() > 8 {
+            new_color.a = Color::extract_hex_slice(&hash_code, 7)?;
+        }
         Ok(new_color)
     }
 

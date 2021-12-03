@@ -10,13 +10,14 @@ use carnelian::{
     render::Context as RenderContext,
     scene::{
         facets::{
-            FacetId, SetColorMessage, SetTextMessage, TextFacetOptions, TextHorizontalAlignment,
+            FacetId, SetBackgroundColorMessage, SetColorMessage, SetTextMessage, TextFacetOptions,
             TextVerticalAlignment,
         },
+        layout::{Alignment, StackMemberDataBuilder},
         scene::{Scene, SceneBuilder},
     },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
-    Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::point2;
 use fuchsia_zircon::Event;
@@ -59,7 +60,9 @@ struct FontMetricsViewAssistant {
     label_face: FontFace,
     scene_details: Option<SceneDetails>,
     line_color: Color,
+    text_background_color: Color,
     round_scene_corners: bool,
+    show_text_background_color: bool,
 }
 
 impl FontMetricsViewAssistant {
@@ -81,7 +84,9 @@ impl FontMetricsViewAssistant {
             label_face,
             scene_details: None,
             line_color: Color::new(),
+            text_background_color: Color::from_hash_code("#0000ff60").expect("from_hash_code"),
             round_scene_corners: true,
+            show_text_background_color: false,
         }))
     }
 
@@ -161,6 +166,26 @@ impl FontMetricsViewAssistant {
         }
         self.app_context.request_render(self.view_key);
     }
+
+    fn optional_bg_color(&self) -> Option<Color> {
+        self.show_text_background_color.then(|| self.text_background_color)
+    }
+
+    fn toggle_text_background_color(&mut self) {
+        self.show_text_background_color = !self.show_text_background_color;
+        let optional_bg_color = self.optional_bg_color();
+        if let Some(scene_details) = self.scene_details.as_mut() {
+            scene_details.scene.send_message(
+                &scene_details.sample_title.clone(),
+                Box::new(SetBackgroundColorMessage { color: optional_bg_color }),
+            );
+            scene_details.scene.send_message(
+                &scene_details.sample_paragraph.clone(),
+                Box::new(SetBackgroundColorMessage { color: optional_bg_color }),
+            );
+        }
+        self.app_context.request_render(self.view_key);
+    }
 }
 
 impl ViewAssistant for FontMetricsViewAssistant {
@@ -176,108 +201,151 @@ impl ViewAssistant for FontMetricsViewAssistant {
         context: &ViewAssistantContext,
     ) -> Result<(), Error> {
         let mut scene_details = self.scene_details.take().unwrap_or_else(|| {
-            let mut builder = SceneBuilder::new()
+            let mut sample_title_ref = None;
+            let mut sample_paragraph_ref = None;
+            let mut lines_ref = None;
+            let mut root_builder = SceneBuilder::new()
                 .background_color(Color::white())
                 .round_scene_corners(self.round_scene_corners);
-            let size = context.size;
-            let text_size = size.height.min(size.width) / self.sample_size_divisor;
-            let ascent = self.sample_faces[self.sample_index].ascent(text_size);
-            let descent = self.sample_faces[self.sample_index].descent(text_size);
-            let sample_text_size = text_size / 3.0;
-            let baseline_location = size.height / 3.0;
-            let baseline_left = size.width * BASELINE_INDENT;
-            let baseline_width = size.width * (1.0 - BASELINE_INDENT * 2.0);
-            let baseline_right = baseline_left + baseline_width;
+            root_builder.group().stack().expand().align(Alignment::top_center()).contents(
+                |stack_builder| {
+                    let size = context.size;
+                    let text_size = size.height.min(size.width) / self.sample_size_divisor;
+                    let ascent = self.sample_faces[self.sample_index].ascent(text_size);
+                    let descent = self.sample_faces[self.sample_index].descent(text_size);
+                    let sample_text_size = text_size / 3.0;
+                    let baseline_location = size.height / 3.0;
+                    let baseline_left = size.width * BASELINE_INDENT;
+                    let baseline_width = size.width * (1.0 - BASELINE_INDENT * 2.0);
+                    let padding = PADDING * size.width;
+                    let label_right = size.width - baseline_left + padding;
+                    let optional_bg_color = self.optional_bg_color();
 
-            let sample_title = builder.text(
-                self.sample_faces[self.sample_index].clone(),
-                &self.sample_title,
-                text_size,
-                point2(size.width / 2.0, baseline_location),
-                TextFacetOptions {
-                    horizontal_alignment: TextHorizontalAlignment::Center,
-                    ..TextFacetOptions::default()
+                    let sample_title = stack_builder.text_with_data(
+                        self.sample_faces[self.sample_index].clone(),
+                        &self.sample_title,
+                        text_size,
+                        Point::zero(),
+                        TextFacetOptions {
+                            background_color: optional_bg_color,
+                            ..TextFacetOptions::default()
+                        },
+                        StackMemberDataBuilder::new().top(baseline_location - ascent).build(),
+                    );
+                    sample_title_ref = Some(sample_title);
+
+                    let ascent_x = baseline_left + size.width * BASELINE_INDENT / 5.0;
+                    let paragraph_baseline_location = baseline_location + sample_text_size * 2.0;
+
+                    let sample_paragraph = stack_builder.text_with_data(
+                        self.sample_faces[self.sample_index].clone(),
+                        &self.sample_paragraph,
+                        sample_text_size,
+                        Point::zero(),
+                        TextFacetOptions {
+                            max_width: Some(baseline_width),
+                            background_color: optional_bg_color,
+                            ..TextFacetOptions::default()
+                        },
+                        StackMemberDataBuilder::new().top(paragraph_baseline_location).build(),
+                    );
+                    sample_paragraph_ref = Some(sample_paragraph);
+
+                    let mut lines = Vec::new();
+
+                    lines.push(stack_builder.h_line_with_data(
+                        baseline_width,
+                        LINE_THICKNESS,
+                        self.line_color,
+                        None,
+                        StackMemberDataBuilder::new().top(baseline_location).build(),
+                    ));
+
+                    lines.push(
+                        stack_builder.v_line_with_data(
+                            ascent,
+                            LINE_THICKNESS,
+                            self.line_color,
+                            None,
+                            StackMemberDataBuilder::new()
+                                .top(baseline_location - ascent)
+                                .left(ascent_x)
+                                .build(),
+                        ),
+                    );
+                    lines.push(stack_builder.v_line_with_data(
+                        -descent,
+                        LINE_THICKNESS,
+                        self.line_color,
+                        None,
+                        StackMemberDataBuilder::new().top(baseline_location).left(ascent_x).build(),
+                    ));
+
+                    let label_size = size.height.min(size.width) / 30.0;
+
+                    stack_builder.text_with_data(
+                        self.label_face.clone(),
+                        "baseline",
+                        label_size,
+                        Point::zero(),
+                        TextFacetOptions {
+                            visual: true,
+                            vertical_alignment: TextVerticalAlignment::Center,
+                            ..TextFacetOptions::default()
+                        },
+                        StackMemberDataBuilder::new()
+                            .top(baseline_location - label_size)
+                            .left(baseline_left + baseline_width + padding)
+                            .height(label_size * 2.0)
+                            .build(),
+                    );
+
+                    stack_builder.text_with_data(
+                        self.label_face.clone(),
+                        "ascent",
+                        label_size,
+                        point2(ascent_x - padding, baseline_location - ascent / 2.0),
+                        TextFacetOptions {
+                            visual: true,
+                            vertical_alignment: TextVerticalAlignment::Center,
+                            ..TextFacetOptions::default()
+                        },
+                        StackMemberDataBuilder::new()
+                            .top(baseline_location - ascent)
+                            .height(ascent)
+                            .right(label_right)
+                            .build(),
+                    );
+
+                    stack_builder.text_with_data(
+                        self.label_face.clone(),
+                        "descent",
+                        label_size,
+                        point2(ascent_x - padding, baseline_location - descent / 2.0),
+                        TextFacetOptions {
+                            visual: true,
+                            vertical_alignment: TextVerticalAlignment::Center,
+                            ..TextFacetOptions::default()
+                        },
+                        StackMemberDataBuilder::new()
+                            .top(baseline_location)
+                            .height(-descent)
+                            .right(label_right)
+                            .build(),
+                    );
+                    lines_ref = Some(lines);
                 },
             );
 
-            let paragraph_baseline_location = size.height / 2.0;
-
-            let sample_paragraph = builder.text(
-                self.sample_faces[self.sample_index].clone(),
-                &self.sample_paragraph,
-                sample_text_size,
-                point2(baseline_left, paragraph_baseline_location),
-                TextFacetOptions {
-                    horizontal_alignment: TextHorizontalAlignment::Left,
-                    max_width: Some(baseline_width),
-                    ..TextFacetOptions::default()
-                },
-            );
-
-            let mut lines = Vec::new();
-
-            lines.push(builder.h_line(
-                baseline_width,
-                LINE_THICKNESS,
-                self.line_color,
-                Some(point2(baseline_left, baseline_location)),
-            ));
-
-            let ascent_x = baseline_left + size.width * BASELINE_INDENT / 5.0;
-            lines.push(builder.v_line(
-                ascent,
-                LINE_THICKNESS,
-                self.line_color,
-                Some(point2(ascent_x, baseline_location - ascent)),
-            ));
-            lines.push(builder.v_line(
-                -descent,
-                LINE_THICKNESS,
-                self.line_color,
-                Some(point2(ascent_x, baseline_location)),
-            ));
-
-            let label_size = size.height.min(size.width) / 30.0;
-
-            builder.text(
-                self.label_face.clone(),
-                "baseline",
-                label_size,
-                point2(baseline_right + PADDING * size.width, baseline_location),
-                TextFacetOptions {
-                    vertical_alignment: TextVerticalAlignment::Center,
-                    ..TextFacetOptions::default()
-                },
-            );
-
-            builder.text(
-                self.label_face.clone(),
-                "ascent",
-                label_size,
-                point2(ascent_x - PADDING * size.width, baseline_location - ascent / 2.0),
-                TextFacetOptions {
-                    vertical_alignment: TextVerticalAlignment::Center,
-                    horizontal_alignment: TextHorizontalAlignment::Right,
-                    ..TextFacetOptions::default()
-                },
-            );
-
-            builder.text(
-                self.label_face.clone(),
-                "descent",
-                label_size,
-                point2(ascent_x - PADDING * size.width, baseline_location - descent / 2.0),
-                TextFacetOptions {
-                    vertical_alignment: TextVerticalAlignment::Center,
-                    horizontal_alignment: TextHorizontalAlignment::Right,
-                    ..TextFacetOptions::default()
-                },
-            );
-
-            let scene = builder.build();
-            SceneDetails { scene, sample_paragraph, sample_title, lines }
+            let scene = root_builder.build();
+            SceneDetails {
+                scene,
+                sample_paragraph: sample_paragraph_ref.unwrap(),
+                sample_title: sample_title_ref.unwrap(),
+                lines: lines_ref.unwrap(),
+            }
         });
-
+        scene_details.scene.layout(context.size);
         scene_details.scene.render(render_context, ready_event, context)?;
         self.scene_details = Some(scene_details);
         Ok(())
@@ -294,6 +362,7 @@ impl ViewAssistant for FontMetricsViewAssistant {
         const F: u32 = 'f' as u32;
         const K: u32 = 'k' as u32;
         const T: u32 = 't' as u32;
+        const O: u32 = 'o' as u32;
         const PLUS: u32 = '+' as u32;
         const EQUALS: u32 = '=' as u32;
         const MINUS: u32 = '-' as u32;
@@ -309,6 +378,7 @@ impl ViewAssistant for FontMetricsViewAssistant {
                     MINUS => self.decrease_sample_size(),
                     C => self.toggle_line_color(),
                     K => self.toggle_round_scene_corners(),
+                    O => self.toggle_text_background_color(),
                     _ => println!("code_point = {}", code_point),
                 }
             }

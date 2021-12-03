@@ -11,7 +11,10 @@ use carnelian::{
     input, make_message,
     render::{rive::load_rive, BlendMode, Context as RenderContext, Fill, FillRule, Raster, Style},
     scene::{
-        facets::{RasterFacet, RiveFacet, TextFacetOptions, TextHorizontalAlignment},
+        facets::{
+            RasterFacet, RiveFacet, TextFacetOptions, TextHorizontalAlignment,
+            TextVerticalAlignment,
+        },
         scene::{Scene, SceneBuilder},
     },
     App, AppAssistant, AppAssistantPtr, AppContext, AssistantCreatorFunc, Coord, LocalBoxFuture,
@@ -185,11 +188,8 @@ impl RenderResources {
         };
 
         if is_counting_down {
-            let circle = raster_for_circle(
-                logo_position + vec2(logo_edge / 2.0, logo_edge / 2.0),
-                logo_edge / 2.0,
-                render_context,
-            );
+            let countdown_position = logo_position + vec2(logo_edge / 2.0, logo_edge / 2.0);
+            let circle = raster_for_circle(countdown_position, logo_edge / 2.0, render_context);
             let circle_facet = RasterFacet::new(
                 circle,
                 Style {
@@ -200,20 +200,16 @@ impl RenderResources {
                 logo_size,
             );
 
-            const HORIZONTAL_VISUAL_CENTERING_FACTOR: f32 = 2.2;
-            const VERTICAL_VISUAL_CENTERING_FACTOR: f32 = 1.1;
             builder.text(
                 face.clone(),
-                &format!("{:02}", countdown_ticks),
+                &format!("{}", countdown_ticks),
                 countdown_text_size,
-                logo_position
-                    + vec2(
-                        logo_edge / HORIZONTAL_VISUAL_CENTERING_FACTOR,
-                        countdown_text_size * VERTICAL_VISUAL_CENTERING_FACTOR,
-                    ),
+                countdown_position,
                 TextFacetOptions {
                     color: Color::white(),
                     horizontal_alignment: TextHorizontalAlignment::Center,
+                    vertical_alignment: TextVerticalAlignment::Center,
+                    visual: true,
                     ..TextFacetOptions::default()
                 },
             );
@@ -251,7 +247,7 @@ impl RenderResources {
                 face.clone(),
                 &body,
                 body_text_size,
-                point2(body_x, heading_text_location.y + text_size),
+                point2(body_x, heading_text_location.y + text_size + body_text_size),
                 TextFacetOptions {
                     horizontal_alignment: TextHorizontalAlignment::Left,
                     color: BODY_COLOR,
@@ -593,8 +589,8 @@ impl ViewAssistant for RecoveryViewAssistant {
         event: &input::Event,
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
-        const HID_USAGE_KEY_F11: u32 = 0x44;
-        const HID_USAGE_KEY_F12: u32 = 0x45;
+        const HID_USAGE_KEY_LEFT_BRACKET: u32 = 47;
+        const HID_USAGE_KEY_RIGHT_BRACKET: u32 = 48;
 
         fn keyboard_to_consumer_phase(
             phase: carnelian::input::keyboard::Phase,
@@ -614,11 +610,11 @@ impl ViewAssistant for RecoveryViewAssistant {
 
         let synthetic_event =
             synthetic_phase.and_then(|synthetic_phase| match keyboard_event.hid_usage {
-                HID_USAGE_KEY_F11 => Some(input::consumer_control::Event {
+                HID_USAGE_KEY_LEFT_BRACKET => Some(input::consumer_control::Event {
                     button: ConsumerControlButton::VolumeDown,
                     phase: synthetic_phase,
                 }),
-                HID_USAGE_KEY_F12 => Some(input::consumer_control::Event {
+                HID_USAGE_KEY_RIGHT_BRACKET => Some(input::consumer_control::Event {
                     button: ConsumerControlButton::VolumeUp,
                     phase: synthetic_phase,
                 }),

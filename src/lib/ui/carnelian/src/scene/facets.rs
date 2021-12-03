@@ -5,7 +5,7 @@
 use super::{IdGenerator, LayerGroup};
 use crate::{
     color::Color,
-    drawing::{linebreak_text, measure_text_width, path_for_rectangle, FontFace, GlyphMap, Text},
+    drawing::{linebreak_text, measure_text_size, path_for_rectangle, FontFace, GlyphMap, Text},
     render::{
         rive::{load_rive, RenderCache as RiveRenderCache},
         BlendMode, Context as RenderContext, Fill, FillRule, Layer, Order, Raster, Shed, Style,
@@ -42,6 +42,13 @@ impl FacetId {
 pub struct SetColorMessage {
     /// color value to use.
     pub color: Color,
+}
+
+#[derive(Debug)]
+/// Message used to set the background color on a facet
+pub struct SetBackgroundColorMessage {
+    /// color value to use.
+    pub color: Option<Color>,
 }
 
 /// Message used to set the text on a facet
@@ -149,11 +156,17 @@ impl Facet for RectangleFacet {
     }
 }
 
-/// Possibly obsolete enum for specifying text horizontal alignment.
-#[allow(missing_docs)]
+/// Enum for specifying text horizontal alignment.
+#[derive(Clone, Copy)]
 pub enum TextHorizontalAlignment {
+    /// Align the left edge of the text to the left
+    /// edge of the facet.
     Left,
+    /// Align the right edge of the text to the right
+    /// edge of the facet.
     Right,
+    /// Align the horizontal center of the text to the horizontal
+    /// center of the facet.
     Center,
 }
 
@@ -163,30 +176,39 @@ impl Default for TextHorizontalAlignment {
     }
 }
 
-/// Possibly obsolete enum for specifying text horizontal alignment.
-#[allow(missing_docs)]
+/// Enum for specifying text horizontal alignment.
+#[derive(Clone, Copy)]
 pub enum TextVerticalAlignment {
-    Baseline,
+    /// Align the top edge of the text to the top
+    /// edge of the facet.
     Top,
+    /// Align the bottom edge of the text to the bottom
+    /// edge of the facet.
     Bottom,
+    /// Align the vertical center of the text to the vertical
+    /// center of the facet.
     Center,
 }
 
 impl Default for TextVerticalAlignment {
     fn default() -> Self {
-        Self::Baseline
+        Self::Top
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone, Copy)]
 /// Options for a text facet.
 pub struct TextFacetOptions {
     /// Possibly obsolete horizontal alignment.
     pub horizontal_alignment: TextHorizontalAlignment,
     /// Possibly obsolete vertical alignment.
     pub vertical_alignment: TextVerticalAlignment,
+    /// Use visual alignment, vs purely font metrics
+    pub visual: bool,
     /// Foreground color for the text.
     pub color: Color,
+    /// Background color for the text.
+    pub background_color: Option<Color>,
     /// Optional maximum width. If present, text is word wrapped
     /// to attempt to be no wider than maximum width.
     pub max_width: Option<f32>,
@@ -200,10 +222,28 @@ pub struct TextFacet {
     size: Size,
     options: TextFacetOptions,
     rendered_text: Option<Text>,
+    rendered_background: Option<Raster>,
+    rendered_background_size: Option<Size>,
     glyphs: GlyphMap,
 }
 
 impl TextFacet {
+    fn set_text(&mut self, text: &str) {
+        let lines = Self::wrap_lines(&self.face, self.font_size, text, &self.options.max_width);
+        let size = Self::calculate_size(
+            &self.face,
+            &lines,
+            self.font_size,
+            self.options.max_width.unwrap_or(0.0),
+            self.options.visual,
+        );
+        self.lines = lines;
+        self.size = size;
+        self.rendered_background_size = None;
+        self.rendered_background = None;
+        self.rendered_text = None;
+    }
+
     fn wrap_lines(face: &FontFace, size: f32, text: &str, max_width: &Option<f32>) -> Vec<String> {
         let lines: Vec<String> = text.lines().map(|line| String::from(line)).collect();
         if let Some(max_width) = max_width {
@@ -215,6 +255,32 @@ impl TextFacet {
             wrapped_lines
         } else {
             lines
+        }
+    }
+
+    fn calculate_size(
+        face: &FontFace,
+        lines: &[String],
+        font_size: f32,
+        max_width: f32,
+        visual: bool,
+    ) -> Size {
+        let ascent = face.ascent(font_size);
+        let descent = face.descent(font_size);
+        if lines.len() > 1 {
+            size2(max_width, lines.len() as f32 * (ascent - descent))
+        } else {
+            if lines.len() == 0 {
+                Size::zero()
+            } else {
+                if visual {
+                    measure_text_size(&face, font_size, &lines[0], true)
+                } else {
+                    let measured_size = measure_text_size(&face, font_size, &lines[0], false);
+                    let new_size = size2(measured_size.width, ascent - descent);
+                    new_size
+                }
+            }
         }
     }
 
@@ -231,14 +297,13 @@ impl TextFacet {
         options: TextFacetOptions,
     ) -> FacetPtr {
         let lines = Self::wrap_lines(&face, font_size, text, &options.max_width);
-
-        let size = if lines.len() > 1 {
-            size2(options.max_width.expect("max_width"), lines.len() as f32 * font_size)
-        } else {
-            let ascent = face.ascent(font_size);
-            let descent = face.descent(font_size);
-            size2(measure_text_width(&face, font_size, text), ascent - descent)
-        };
+        let size = Self::calculate_size(
+            &face,
+            &lines,
+            font_size,
+            options.max_width.unwrap_or(0.0),
+            options.visual,
+        );
 
         Box::new(Self {
             face,
@@ -247,6 +312,8 @@ impl TextFacet {
             size,
             options,
             rendered_text: None,
+            rendered_background: None,
+            rendered_background_size: None,
             glyphs: GlyphMap::new(),
         })
     }
@@ -255,11 +322,18 @@ impl TextFacet {
 impl Facet for TextFacet {
     fn update_layers(
         &mut self,
-        _size: Size,
+        size: Size,
         layer_group: &mut dyn LayerGroup,
         render_context: &mut RenderContext,
         _view_context: &ViewAssistantContext,
     ) -> Result<(), Error> {
+        const BACKGROUND_LAYER_ORDER: Order = Order::from_u16(0);
+        const TEXT_LAYER_ORDER: Order = Order::from_u16(1);
+
+        if self.rendered_background_size != Some(size) {
+            self.rendered_background = None;
+        }
+
         let rendered_text = self.rendered_text.take().unwrap_or_else(|| {
             Text::new_with_lines(
                 render_context,
@@ -269,29 +343,28 @@ impl Facet for TextFacet {
                 &mut self.glyphs,
             )
         });
-        let ascent = self.face.ascent(self.font_size);
-        let descent = self.face.descent(self.font_size);
-        let x = match self.options.horizontal_alignment {
+        let mut x = match self.options.horizontal_alignment {
             TextHorizontalAlignment::Left => 0.0,
-            TextHorizontalAlignment::Center => -rendered_text.bounding_box.size.width / 2.0,
-            TextHorizontalAlignment::Right => -rendered_text.bounding_box.size.width,
+            TextHorizontalAlignment::Center => (size.width - self.size.width) / 2.0,
+            TextHorizontalAlignment::Right => size.width - self.size.width,
         };
-        let y = match self.options.vertical_alignment {
-            TextVerticalAlignment::Baseline => 0.0 - ascent,
+        if self.options.visual {
+            x -= rendered_text.bounding_box.origin.x;
+        }
+        let mut y = match self.options.vertical_alignment {
             TextVerticalAlignment::Top => 0.0,
-            TextVerticalAlignment::Bottom => 0.0 - ascent + descent,
-            TextVerticalAlignment::Center => {
-                let capital_height =
-                    self.face.capital_height(self.font_size).unwrap_or(self.font_size);
-                0.0 + capital_height / 2.0 - ascent
-            }
+            TextVerticalAlignment::Bottom => size.height - self.size.height,
+            TextVerticalAlignment::Center => (size.height - self.size.height) / 2.0,
         };
+        if self.options.visual {
+            y -= rendered_text.bounding_box.origin.y;
+        }
         let translation = vec2(x, y);
         let raster = rendered_text.raster.clone().translate(translation.to_i32());
         self.rendered_text = Some(rendered_text);
 
         layer_group.insert(
-            Order::default(),
+            TEXT_LAYER_ORDER,
             Layer {
                 raster,
                 clip: None,
@@ -302,20 +375,44 @@ impl Facet for TextFacet {
                 },
             },
         );
+
+        if let Some(background_color) = self.options.background_color.as_ref() {
+            let rendered_background = self.rendered_background.take().unwrap_or_else(|| {
+                let bg_bounds = Rect::from_size(size);
+                let rect_path = path_for_rectangle(&bg_bounds, render_context);
+                let mut raster_builder = render_context.raster_builder().expect("raster_builder");
+                raster_builder.add(&rect_path, None);
+                raster_builder.build()
+            });
+            let raster = rendered_background.clone();
+            self.rendered_background = Some(rendered_background);
+            self.rendered_background_size = Some(size);
+            layer_group.insert(
+                BACKGROUND_LAYER_ORDER,
+                Layer {
+                    raster,
+                    clip: None,
+                    style: Style {
+                        fill_rule: FillRule::NonZero,
+                        fill: Fill::Solid(*background_color),
+                        blend_mode: BlendMode::Over,
+                    },
+                },
+            );
+        } else {
+            layer_group.remove(BACKGROUND_LAYER_ORDER)
+        }
         Ok(())
     }
 
     fn handle_message(&mut self, msg: Box<dyn Any>) {
         if let Some(set_text) = msg.downcast_ref::<SetTextMessage>() {
-            self.lines = Self::wrap_lines(
-                &self.face,
-                self.font_size,
-                &set_text.text,
-                &self.options.max_width,
-            );
-            self.rendered_text = None;
+            self.set_text(&set_text.text);
         } else if let Some(set_color) = msg.downcast_ref::<SetColorMessage>() {
             self.options.color = set_color.color;
+        } else if let Some(set_background_color) = msg.downcast_ref::<SetBackgroundColorMessage>() {
+            self.options.background_color = set_background_color.color;
+            self.rendered_background = None;
         }
     }
 
@@ -544,5 +641,43 @@ impl Facet for RiveFacet {
         if let Some(set_size) = msg.downcast_ref::<SetSizeMessage>() {
             self.size = set_size.size;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        drawing::FontFace,
+        scene::facets::{TextFacet, TextFacetOptions},
+    };
+    use once_cell::sync::Lazy;
+
+    static FONT_DATA: &'static [u8] = include_bytes!(
+        "../../../../../../prebuilt/third_party/fonts/robotoslab/RobotoSlab-Regular.ttf"
+    );
+    static FONT_FACE: Lazy<FontFace> =
+        Lazy::new(|| FontFace::new(&FONT_DATA).expect("Failed to create font"));
+
+    const SAMPLE_TEXT: &'static str = "Lorem ipsum dolor sit amet, consectetur \
+    adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna \
+    aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris \
+    nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit \
+    in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint \
+    occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim \
+    id est laborum.";
+
+    #[test]
+    fn test_text_facet() {
+        let _ = TextFacet::with_options(FONT_FACE.clone(), "", 32.0, TextFacetOptions::default());
+        let _ = TextFacet::with_options(
+            FONT_FACE.clone(),
+            SAMPLE_TEXT,
+            32.0,
+            TextFacetOptions::default(),
+        );
+        let max_width_options =
+            TextFacetOptions { max_width: Some(200.0), ..TextFacetOptions::default() };
+        let _ = TextFacet::with_options(FONT_FACE.clone(), "", 32.0, max_width_options);
+        let _ = TextFacet::with_options(FONT_FACE.clone(), SAMPLE_TEXT, 32.0, max_width_options);
     }
 }

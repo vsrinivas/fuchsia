@@ -274,6 +274,9 @@ impl fmt::Display for OrderError {
 
 impl error::Error for OrderError {}
 
+type GuaranteedOrderType = u16;
+static_assertions::const_assert!((GuaranteedOrderType::MAX as u32) < (Order::MAX.as_u32()));
+
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Order(u32);
 
@@ -290,6 +293,13 @@ impl Order {
         } else {
             Ok(Self(order))
         }
+    }
+
+    /// Create an order from a sixteen bit value that is guaranteed to
+    /// below the maximum value for an order and thus doesn't need
+    /// to be returned as a result and can be used in constant expressions.
+    pub const fn from_u16(order: GuaranteedOrderType) -> Self {
+        Self(order as u32)
     }
 }
 

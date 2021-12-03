@@ -183,24 +183,40 @@ impl StackMemberData {
         let width = if let Some(width) = self.width() {
             width
         } else {
-            let left = self.left.unwrap_or(0.0);
-            let right =
-                self.right.map(|right| available.width - right).unwrap_or_else(|| calculated.width);
-            right - left
+            let left_right_width = self
+                .left
+                .and_then(|left| self.right.and_then(|right| Some(available.width - right - left)));
+            left_right_width.unwrap_or_else(|| calculated.width)
         };
 
         let height = if let Some(height) = self.height() {
             height
         } else {
-            let top = self.top.unwrap_or(0.0);
-            let bottom = self
-                .bottom
-                .map(|bottom| available.height - bottom)
-                .unwrap_or_else(|| calculated.height);
-            bottom - top
+            let top_bottom_height = self.top.and_then(|top| {
+                self.bottom.and_then(|bottom| Some(available.height - bottom - top))
+            });
+            top_bottom_height.unwrap_or_else(|| calculated.height)
         };
 
         size2(width, height)
+    }
+
+    fn position(&self, calculated_position: Point, size: Size, group_size: Size) -> Point {
+        let x = if let Some(left) = self.left {
+            left
+        } else if let Some(right) = self.right {
+            group_size.width - right - size.width
+        } else {
+            calculated_position.x
+        };
+        let y = if let Some(top) = self.top {
+            top
+        } else if let Some(bottom) = self.bottom {
+            group_size.height - bottom - size.height
+        } else {
+            calculated_position.y
+        };
+        point2(x, y)
     }
 }
 
@@ -448,11 +464,9 @@ impl Arranger for Stack {
             .map(|(facet_size, member_data)| {
                 let stack_member_data = StackMemberData::from(member_data)
                     .unwrap_or_else(|| StackMemberData::default());
+                let default_pos = self.alignment.arrange(facet_size, &group_size);
                 if stack_member_data.is_positioned() {
-                    point2(
-                        stack_member_data.left.unwrap_or(0.0),
-                        stack_member_data.top.unwrap_or(0.0),
-                    )
+                    stack_member_data.position(default_pos, *facet_size, group_size)
                 } else {
                     self.alignment.arrange(facet_size, &group_size)
                 }
@@ -492,12 +506,25 @@ impl<'a> StackBuilder<'a> {
 
     /// Create the stack group, with contents provided by
     /// `f`.
-    pub fn contents<F>(mut self, f: F) -> GroupId
+    pub fn contents<F>(self, f: F) -> GroupId
+    where
+        F: FnMut(&mut SceneBuilder),
+    {
+        self.contents_with_member_data(None, f)
+    }
+
+    /// Create the stack group with member data, with contents provided by
+    /// `f`.
+    pub fn contents_with_member_data<F>(
+        mut self,
+        member_data: Option<GroupMemberData>,
+        f: F,
+    ) -> GroupId
     where
         F: FnMut(&mut SceneBuilder),
     {
         self.builder.arranger = Some(Stack::with_options_ptr(self.stack_options));
-        self.builder.contents(f)
+        self.builder.contents_with_member_data(member_data, f)
     }
 }
 

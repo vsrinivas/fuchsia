@@ -15,7 +15,7 @@ use crate::{
 use anyhow::{anyhow, Context, Error};
 use euclid::{
     default::{Box2D, Size2D, Transform2D, Vector2D},
-    point2, vec2, Angle,
+    point2, size2, vec2, Angle,
 };
 use fuchsia_zircon::{self as zx};
 use serde::{Deserialize, Serialize};
@@ -373,21 +373,49 @@ impl FontFace {
     }
 }
 
-/// Return the size in pixels for the specified text, face and size.
+/// Return the width in pixels for the specified text, face and size.
 pub fn measure_text_width(face: &FontFace, font_size: f32, text: &str) -> f32 {
-    text.chars()
-        .filter_map(|c| {
-            let glyph_index = face.face.glyph_index(c);
-            glyph_index.and_then(|glyph_index| {
-                let hor_advance = face
-                    .face
-                    .glyph_hor_advance(glyph_index)
-                    .and_then(|hor_advance| pixel_size(face, font_size, hor_advance as i16))
-                    .expect("hor_advance");
-                Some(hor_advance)
-            })
-        })
-        .sum()
+    measure_text_size(face, font_size, text, false).width
+}
+
+/// Return the size in pixels for the specified text, face and size.
+pub fn measure_text_size(face: &FontFace, size: f32, text: &str, visual: bool) -> Size {
+    let mut bounding_box = Rect::zero();
+    let ascent = face.ascent(size);
+    let units_per_em = face.face.units_per_em().expect("units_per_em");
+    let scale = size / units_per_em as f32;
+    let y_offset = vec2(0.0, ascent).to_i32();
+    let chars = text.chars();
+    let mut x: f32 = 0.0;
+
+    for c in chars {
+        if let Some(glyph_index) = face.face.glyph_index(c) {
+            let glyph_bounding_box = face
+                .face
+                .glyph_bounding_box(glyph_index)
+                .and_then(|bounding_box| Some(pixel_size_rect(face, size, bounding_box)))
+                .unwrap_or(Rect::zero());
+            let horizontal_advance = face.face.glyph_hor_advance(glyph_index).unwrap_or(0);
+            let w = horizontal_advance as f32 * scale;
+            let position = y_offset + vec2(x, 0.0).to_i32();
+            if !glyph_bounding_box.is_empty() {
+                let glyph_bounding_box = &glyph_bounding_box.translate(position.to_f32());
+
+                if bounding_box.is_empty() {
+                    bounding_box = *glyph_bounding_box;
+                } else {
+                    bounding_box = bounding_box.union(&glyph_bounding_box);
+                }
+            }
+
+            x += w;
+        }
+    }
+    if visual {
+        bounding_box.size
+    } else {
+        size2(x, size)
+    }
 }
 
 /// Break up text into chunks guaranteed to be no wider than max_width when rendered with
@@ -427,10 +455,14 @@ pub fn linebreak_text(face: &FontFace, font_size: f32, text: &str, max_width: f3
     lines
 }
 
-fn pixel_size(face: &FontFace, font_size: f32, value: i16) -> Option<f32> {
-    face.face
-        .units_per_em()
-        .and_then(|units_per_em| Some((value as f32 / units_per_em as f32) * font_size))
+fn pixel_size_rect(face: &FontFace, font_size: f32, value: ttf_parser::Rect) -> Rect {
+    let units_per_em = face.face.units_per_em().expect("units_per_em");
+    let scale = font_size / units_per_em as f32;
+    let min_x = value.x_min as f32 * scale;
+    let max_y = -value.y_min as f32 * scale;
+    let max_x = value.x_max as f32 * scale;
+    let min_y = -value.y_max as f32 * scale;
+    Box2D::new(point2(min_x, min_y), point2(max_x, max_y)).to_rect()
 }
 
 fn scaled_point2(x: f32, y: f32, scale: f32) -> Point {
@@ -569,6 +601,7 @@ impl Text {
             raster_builder.build()
         };
         let ascent = face.ascent(size);
+        let descent = face.descent(size);
         let units_per_em = face.face.units_per_em().expect("units_per_em");
         let scale = size / units_per_em as f32;
         let mut y_offset = vec2(0.0, ascent).to_i32();
@@ -605,7 +638,7 @@ impl Text {
                     x += w;
                 }
             }
-            y_offset += vec2(0, size as i32);
+            y_offset += vec2(0, (ascent - descent) as i32);
         }
 
         Self { raster: raster_union, bounding_box }
@@ -697,7 +730,7 @@ impl TextGridCell {
 mod tests {
     use super::{GlyphMap, Size, Text, TextGrid, TextGridCell};
     use crate::{
-        drawing::{DisplayRotation, FontFace},
+        drawing::{measure_text_size, DisplayRotation, FontFace},
         render::{
             generic::{self, Backend},
             Context as RenderContext, ContextInner,
@@ -795,5 +828,13 @@ mod tests {
         let a_cell =
             TextGridCell::new(&mut render_context, 0, 0, 'a', &grid, &FONT_FACE, &mut glyphs);
         assert!(a_cell.raster.is_some(), "Expected some raster");
+    }
+
+    #[test]
+    fn test_measure_text() {
+        assert_eq!(measure_text_size(&FONT_FACE, 32.0, "", false).width, 0.0);
+        assert_eq!(measure_text_size(&FONT_FACE, 32.0, "", true).width, 0.0);
+        assert!(measure_text_size(&FONT_FACE, 32.0, "ahoy", false).width > 0.0);
+        assert!(measure_text_size(&FONT_FACE, 32.0, "ahoy", true).width > 0.0);
     }
 }

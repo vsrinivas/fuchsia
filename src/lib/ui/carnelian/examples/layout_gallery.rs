@@ -70,6 +70,15 @@ const CROSS_ALIGNS: &[CrossAxisAlignment] =
 
 const MAIN_SIZES: &[MainAxisSize] = &[MainAxisSize::Min, MainAxisSize::Max];
 
+const TEXT_H_ALIGNS: &[TextHorizontalAlignment] = &[
+    TextHorizontalAlignment::Left,
+    TextHorizontalAlignment::Center,
+    TextHorizontalAlignment::Right,
+];
+
+const TEXT_V_ALIGNS: &[TextVerticalAlignment] =
+    &[TextVerticalAlignment::Top, TextVerticalAlignment::Center, TextVerticalAlignment::Bottom];
+
 struct SceneDetails {
     scene: Scene,
 }
@@ -80,6 +89,31 @@ enum Mode {
     Button,
     OneThirdTwoThird,
     OneThirdTwoThirdNoCol,
+    Text(usize, usize, usize),
+}
+
+impl Mode {
+    pub fn next(&self) -> Self {
+        match self {
+            Mode::Stack(..) => Mode::Flex(0, 0, 0),
+            Mode::Flex(..) => Mode::Button,
+            Mode::Button => Mode::OneThirdTwoThird,
+            Mode::OneThirdTwoThird => Mode::OneThirdTwoThirdNoCol,
+            Mode::OneThirdTwoThirdNoCol => Mode::Text(0, 0, 0),
+            Mode::Text(..) => Mode::Stack(0),
+        }
+    }
+
+    pub fn previous(&self) -> Self {
+        match self {
+            Mode::Stack(..) => Mode::Text(0, 0, 0),
+            Mode::Flex(..) => Mode::Stack(0),
+            Mode::Button => Mode::Flex(0, 0, 0),
+            Mode::OneThirdTwoThird => Mode::Button,
+            Mode::OneThirdTwoThirdNoCol => Mode::OneThirdTwoThird,
+            Mode::Text(..) => Mode::OneThirdTwoThird,
+        }
+    }
 }
 
 impl Default for Mode {
@@ -119,6 +153,9 @@ impl LayoutsViewAssistant {
             Mode::Flex(main_size, ..) => {
                 *main_size = (*main_size + 1) % MAIN_SIZES.len();
             }
+            Mode::Text(h, ..) => {
+                *h = (*h + 1) % TEXT_H_ALIGNS.len();
+            }
             _ => (),
         }
         self.refresh();
@@ -128,6 +165,9 @@ impl LayoutsViewAssistant {
         match &mut self.mode {
             Mode::Flex(_, main_align, ..) => {
                 *main_align = (*main_align + 1) % MAIN_ALIGNS.len();
+            }
+            Mode::Text(_, v, ..) => {
+                *v = (*v + 1) % TEXT_V_ALIGNS.len();
             }
             _ => (),
         }
@@ -139,19 +179,16 @@ impl LayoutsViewAssistant {
             Mode::Flex(_, _, cross_align) => {
                 *cross_align = (*cross_align + 1) % CROSS_ALIGNS.len();
             }
+            Mode::Text(_, _, visual) => {
+                *visual = (*visual + 1) % 4;
+            }
             _ => (),
         }
         self.refresh();
     }
 
-    fn cycle_mode(&mut self) {
-        self.mode = match self.mode {
-            Mode::Stack(..) => Mode::Flex(0, 0, 0),
-            Mode::Flex(..) => Mode::Button,
-            Mode::Button => Mode::OneThirdTwoThird,
-            Mode::OneThirdTwoThird => Mode::OneThirdTwoThirdNoCol,
-            Mode::OneThirdTwoThirdNoCol => Mode::Stack(0),
-        };
+    fn cycle_mode(&mut self, go_next: bool) {
+        self.mode = if go_next { self.mode.next() } else { self.mode.previous() };
         self.refresh();
     }
 
@@ -199,6 +236,7 @@ impl ViewAssistant for LayoutsViewAssistant {
                     Mode::Button => String::from("button"),
                     Mode::OneThirdTwoThird => String::from("one_third_two_third"),
                     Mode::OneThirdTwoThirdNoCol => String::from("one_third_two_third_no_col"),
+                    Mode::Text(..) => String::from("text"),
                 }
                 .to_lowercase();
                 builder.text(
@@ -224,6 +262,14 @@ impl ViewAssistant for LayoutsViewAssistant {
                     Mode::Button => make_fake_button(builder),
                     Mode::OneThirdTwoThird => make_one_third_two_third(builder),
                     Mode::OneThirdTwoThirdNoCol => make_one_third_two_third_no_col(builder),
+                    Mode::Text(h, v, visual) => make_text_alignment(
+                        builder,
+                        &self.face,
+                        context.size,
+                        TEXT_H_ALIGNS[h],
+                        TEXT_V_ALIGNS[v],
+                        visual,
+                    ),
                 }
                 if self.background {
                     build_flexible_test_facet(
@@ -258,6 +304,7 @@ impl ViewAssistant for LayoutsViewAssistant {
         keyboard_event: &input::keyboard::Event,
     ) -> Result<(), Error> {
         const M: u32 = 109;
+        const CAPITAL_M: u32 = 77;
         const ONE: u32 = 49;
         const TWO: u32 = 50;
         const THREE: u32 = 51;
@@ -272,7 +319,8 @@ impl ViewAssistant for LayoutsViewAssistant {
                     ONE => self.cycle1(),
                     TWO => self.cycle2(),
                     THREE => self.cycle3(),
-                    M => self.cycle_mode(),
+                    M => self.cycle_mode(true),
+                    CAPITAL_M => self.cycle_mode(false),
                     D => self.dump_bounds(),
                     R => self.refresh(),
                     B => self.toggle_background(),
@@ -486,6 +534,49 @@ fn make_one_third_two_third_no_col(builder: &mut SceneBuilder) {
                 FlexMemberData::new(2),
             );
         });
+    });
+}
+
+fn make_text_alignment(
+    builder: &mut SceneBuilder,
+    font: &FontFace,
+    size: Size,
+    h: TextHorizontalAlignment,
+    v: TextVerticalAlignment,
+    visual_mode: usize,
+) {
+    const INSET: f32 = 50.0;
+    let visual = (visual_mode & 0x1) != 0;
+    let sized = (visual_mode & 0x2) != 0;
+    let font_size = size.width.max(size.height) / 8.0;
+    builder.group().stack().align(Alignment::center()).expand().contents(|builder| {
+        let guide_color = Color::from_hash_code("#81b29a").expect("guide_color");
+        builder.h_line(size.width, 3.0, guide_color, None);
+        builder.v_line(size.height, 3.0, guide_color, None);
+        builder.text_with_data(
+            font.clone(),
+            "Älign Me",
+            font_size,
+            Point::zero(),
+            TextFacetOptions {
+                color: Color::from_hash_code("#3d405b").expect("color"),
+                background_color: Color::from_hash_code("#f2cc8f").ok(),
+                horizontal_alignment: h,
+                vertical_alignment: v,
+                visual,
+                ..TextFacetOptions::default()
+            },
+            if sized {
+                StackMemberDataBuilder::new()
+                    .top(INSET)
+                    .left(INSET)
+                    .bottom(INSET)
+                    .right(INSET)
+                    .build()
+            } else {
+                None
+            },
+        );
     });
 }
 

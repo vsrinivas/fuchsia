@@ -177,6 +177,9 @@ impl Scene {
     /// Set the option to round scene corners.
     pub fn round_scene_corners(&mut self, round_scene_corners: bool) {
         self.options.round_scene_corners = round_scene_corners;
+        if !round_scene_corners {
+            self.corner_knockouts_raster = None;
+        }
     }
 
     /// Add a facet to the scene, returning its ID.
@@ -709,10 +712,22 @@ impl SceneBuilder {
         color: Color,
         location: Option<Point>,
     ) -> FacetId {
+        self.h_line_with_data(width, thickness, color, location, None)
+    }
+
+    /// Add a horizontal line to the scene with member data
+    pub fn h_line_with_data(
+        &mut self,
+        width: Coord,
+        thickness: Coord,
+        color: Color,
+        location: Option<Point>,
+        member_data: Option<GroupMemberData>,
+    ) -> FacetId {
         self.push_facet(
             RectangleFacet::h_line(width, thickness, color),
             location.unwrap_or(Point::zero()),
-            None,
+            member_data,
         )
     }
 
@@ -724,10 +739,22 @@ impl SceneBuilder {
         color: Color,
         location: Option<Point>,
     ) -> FacetId {
+        self.v_line_with_data(height, thickness, color, location, None)
+    }
+
+    /// Add a vertical line to the scene with member data.
+    pub fn v_line_with_data(
+        &mut self,
+        height: Coord,
+        thickness: Coord,
+        color: Color,
+        location: Option<Point>,
+        member_data: Option<GroupMemberData>,
+    ) -> FacetId {
         self.push_facet(
             RectangleFacet::v_line(height, thickness, color),
             location.unwrap_or(Point::zero()),
-            None,
+            member_data,
         )
     }
 
@@ -740,7 +767,21 @@ impl SceneBuilder {
         location: Point,
         options: TextFacetOptions,
     ) -> FacetId {
-        self.push_facet(TextFacet::with_options(face, text, size, options), location, None)
+        self.text_with_data(face, text, size, location, options, None)
+    }
+
+    /// Add a text facet to the scene along with
+    /// some data for the group arranger.
+    pub fn text_with_data(
+        &mut self,
+        face: FontFace,
+        text: &str,
+        size: f32,
+        location: Point,
+        options: TextFacetOptions,
+        member_data: Option<GroupMemberData>,
+    ) -> FacetId {
+        self.push_facet(TextFacet::with_options(face, text, size, options), location, member_data)
     }
 
     /// Add an object that implements the Facet trait to the scene, along with
