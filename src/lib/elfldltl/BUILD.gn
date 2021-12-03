@@ -52,6 +52,7 @@ source_set("unittests") {
     "memory-tests.cc",
     "note-tests.cc",
     "relocation-tests.cc",
+    "tests.h",
   ]
   deps = [
     ".",

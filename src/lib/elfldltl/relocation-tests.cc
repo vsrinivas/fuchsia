@@ -8,22 +8,9 @@
 
 #include <limits>
 
-#include <zxtest/zxtest.h>
+#include "tests.h"
 
 namespace {
-
-template <class... Elf>
-struct TestAllFormats {
-  template <typename Test>
-  void OneTest(Test&& test) const {
-    ASSERT_NO_FATAL_FAILURES((test(Elf{}), ...));
-  }
-
-  template <typename... Test>
-  void operator()(Test&&... tests) const {
-    ASSERT_NO_FATAL_FAILURES((OneTest(tests), ...));
-  }
-};
 
 constexpr auto VisitRelativeEmpty = [](auto elf) {
   using RelocInfo = elfldltl::RelocationInfo<decltype(elf)>;
@@ -36,9 +23,7 @@ constexpr auto VisitRelativeEmpty = [](auto elf) {
   EXPECT_EQ(0, count);
 };
 
-TEST(ElfldltlRelocationTests, VisitRelativeEmpty) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeEmpty);
-}
+TEST(ElfldltlRelocationTests, VisitRelativeEmpty) { TestAllFormats(VisitRelativeEmpty); }
 
 template <class RelocInfo>
 constexpr typename RelocInfo::size_type RelocOffset(const RelocInfo& info,
@@ -111,13 +96,9 @@ constexpr auto VisitRelativeRel = [](auto elf) {
   EXPECT_EQ(2, count);
 };
 
-TEST(ElfldltlRelocationTests, VisitRelativeRel) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRel<>);
-}
+TEST(ElfldltlRelocationTests, VisitRelativeRel) { TestAllFormats(VisitRelativeRel<>); }
 
-TEST(ElfldltlRelocationTests, VisitRelativeBadRelCount) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRel<true>);
-}
+TEST(ElfldltlRelocationTests, VisitRelativeBadRelCount) { TestAllFormats(VisitRelativeRel<true>); }
 
 template <bool BadCount = false>
 constexpr auto VisitRelativeRela = [](auto elf) {
@@ -153,12 +134,10 @@ constexpr auto VisitRelativeRela = [](auto elf) {
   EXPECT_EQ(2, count);
 };
 
-TEST(ElfldltlRelocationTests, VisitRelativeRela) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRela<>);
-}
+TEST(ElfldltlRelocationTests, VisitRelativeRela) { TestAllFormats(VisitRelativeRela<>); }
 
 TEST(ElfldltlRelocationTests, VisitRelativeBadRelaCount) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRela<true>);
+  TestAllFormats(VisitRelativeRela<true>);
 }
 
 constexpr auto VisitRelativeRelrSingle = [](auto elf) {
@@ -187,9 +166,7 @@ constexpr auto VisitRelativeRelrSingle = [](auto elf) {
   EXPECT_EQ(1, count);
 };
 
-TEST(ElfldltlRelocationTests, VisitRelativeRelrSingle) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRelrSingle);
-}
+TEST(ElfldltlRelocationTests, VisitRelativeRelrSingle) { TestAllFormats(VisitRelativeRelrSingle); }
 
 constexpr auto VisitRelativeRelrNoBitmaps = [](auto elf) {
   using RelocInfo = elfldltl::RelocationInfo<decltype(elf)>;
@@ -226,7 +203,7 @@ constexpr auto VisitRelativeRelrNoBitmaps = [](auto elf) {
 };
 
 TEST(ElfldltlRelocationTests, VisitRelativeRelrNoBitmaps) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRelrNoBitmaps);
+  TestAllFormats(VisitRelativeRelrNoBitmaps);
 }
 
 constexpr auto VisitRelativeRelrSingleBitmap = [](auto elf) {
@@ -254,7 +231,7 @@ constexpr auto VisitRelativeRelrSingleBitmap = [](auto elf) {
 };
 
 TEST(ElfldltlRelocationTests, VisitRelativeRelrSingleBitmap) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRelrSingleBitmap);
+  TestAllFormats(VisitRelativeRelrSingleBitmap);
 }
 
 constexpr auto VisitRelativeRelrMultipleBitmaps = [](auto elf) {
@@ -293,7 +270,7 @@ constexpr auto VisitRelativeRelrMultipleBitmaps = [](auto elf) {
 };
 
 TEST(ElfldltlRelocationTests, VisitRelativeRelrMultipleBitmaps) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitRelativeRelrMultipleBitmaps);
+  TestAllFormats(VisitRelativeRelrMultipleBitmaps);
 }
 
 constexpr auto VisitSymbolicEmpty = [](auto elf) {
@@ -307,9 +284,7 @@ constexpr auto VisitSymbolicEmpty = [](auto elf) {
   EXPECT_EQ(0, count);
 };
 
-TEST(ElfldltlRelocationTests, VisitSymbolicEmpty) {
-  elfldltl::AllFormats<TestAllFormats>{}(VisitSymbolicEmpty);
-}
+TEST(ElfldltlRelocationTests, VisitSymbolicEmpty) { TestAllFormats(VisitSymbolicEmpty); }
 
 // TODO(fxbug.dev/72221): real VisitSymbolic tests
 
