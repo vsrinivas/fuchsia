@@ -15,7 +15,9 @@ import subprocess
 import sys
 import tempfile
 
-sys.path += [os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
+sys.path += [
+    os.path.join(paths.FUCHSIA_ROOT, 'third_party', 'pyyaml', 'src', 'lib')
+]
 import yaml
 
 LICENSE_FILES = ['LICENSE', 'LICENSE.txt']
@@ -48,7 +50,7 @@ FORBIDDEN_PACKAGES = ['mojo', 'mojo_services']
 # This is to account for https://github.com/flutter/devtools/issues/1148
 PACKAGES_WITH_NO_LIB = ['devtools']
 
-# A list of pakcage names that have directories that should not be included.
+# A list of package names that have directories that should not be included.
 FORBIDDEN_DIRS = {
     'characters': [
         'third_party/Wikipedia'  # Invalid license
