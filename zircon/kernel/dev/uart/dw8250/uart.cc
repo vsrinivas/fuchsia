@@ -15,9 +15,9 @@
 #include <arch/arm64/periphmap.h>
 #include <dev/interrupt.h>
 #include <dev/uart.h>
+#include <dev/uart/dw8250/init.h>
 #include <kernel/lockdep.h>
 #include <kernel/thread.h>
-#include <pdev/driver.h>
 #include <pdev/uart.h>
 #include <platform/debug.h>
 
@@ -208,7 +208,7 @@ static void dw8250_dputs(const char* str, size_t len, bool block, bool map_NL) {
   }
 }
 
-static void dw8250_uart_init(const void* driver_data, uint32_t length) {
+void Dw8250UartInitLate() {
   // Initialize circular buffer to hold received data.
   uart_rx_buf.Initialize(RXBUF_SIZE, malloc(RXBUF_SIZE));
 
@@ -254,18 +254,14 @@ static const struct pdev_uart_ops uart_ops = {
 };
 
 extern "C" void uart_mark(unsigned char x);
-static void dw8250_uart_init_early(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_simple_t));
-  auto driver = static_cast<const dcfg_simple_t*>(driver_data);
-  ASSERT(driver->mmio_phys && driver->irq);
 
-  uart_base = periph_paddr_to_vaddr(driver->mmio_phys);
-  ASSERT(uart_base);
-  uart_irq = driver->irq;
+void Dw8250UartInitEarly(const dcfg_simple_t& config) {
+  ASSERT(config.mmio_phys != 0);
+  ASSERT(config.irq != 0);
+
+  uart_base = periph_paddr_to_vaddr(config.mmio_phys);
+  ASSERT(uart_base != 0);
+  uart_irq = config.irq;
 
   pdev_register_uart(&uart_ops);
 }
-
-LK_PDEV_INIT(dw8250_uart_init_early, KDRV_DW8250_UART, dw8250_uart_init_early,
-             LK_INIT_LEVEL_PLATFORM_EARLY)
-LK_PDEV_INIT(dw8250_uart_init, KDRV_DW8250_UART, dw8250_uart_init, LK_INIT_LEVEL_PLATFORM)

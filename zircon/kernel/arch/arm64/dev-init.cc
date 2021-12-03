@@ -13,6 +13,7 @@
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
 #include <dev/uart/amlogic_s905/init.h>
+#include <dev/uart/dw8250/init.h>
 #include <dev/uart/pl011/init.h>
 #include <ktl/type_traits.h>
 #include <ktl/variant.h>
@@ -30,6 +31,8 @@ void UartInitEarly(uint32_t extra, const dcfg_simple_t& config) {
       AmlogicS905UartInitEarly(config);
       break;
     case KDRV_DW8250_UART:
+      Dw8250UartInitEarly(config);
+      break;
     case KDRV_MOTMOT_UART:
       break;
     case KDRV_PL011_UART:
@@ -45,6 +48,8 @@ void UartInitLate(uint32_t extra) {
       AmlogicS905UartInitLate();
       break;
     case KDRV_DW8250_UART:
+      Dw8250UartInitLate();
+      break;
     case KDRV_MOTMOT_UART:
       break;
     case KDRV_PL011_UART:
