@@ -660,38 +660,43 @@ fn dispatch_receive_ipv4_packet<B: BufferMut, D: BufferDispatcher<B>>(
 ) {
     increment_counter!(ctx, "dispatch_receive_ipv4_packet");
 
-    macro_rules! mtch {
-        ($($cond:pat => $ty:ident),*) => {
-            match proto {
-                Ipv4Proto::Icmp => <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _>>
-                            ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
-                Ipv4Proto::Igmp => {
-                    IgmpPacketHandler::<(), _, _>::receive_igmp_packet(
-                        ctx,
-                        device.expect("IGMP messages should come from a device"),
-                        src_ip,
-                        dst_ip,
-                        buffer,
-                    );
-                    Ok(())
-                }
-                $($cond => <<Ctx<D> as Ipv4TransportLayerContext>::$ty as BufferIpTransportContext<Ipv4, _, _>>
-                            ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),)*
-                // TODO(joshlf): Once all IP protocol numbers are covered,
-                // remove this default case.
-                _ => Err((
-                    buffer,
-                    TransportReceiveError { inner: TransportReceiveErrorInner::ProtocolUnsupported },
-                )),
-            }
-        };
-    }
-
-    #[rustfmt::skip]
-    let res = mtch!(
-        Ipv4Proto::Proto(IpProto::Tcp) => Proto6,
-        Ipv4Proto::Proto(IpProto::Udp) => Proto17
-    );
+    let res = match proto {
+        Ipv4Proto::Icmp => {
+            <IcmpIpTransportContext as BufferIpTransportContext<Ipv4, _, _>>::receive_ip_packet(
+                ctx, device, src_ip, dst_ip, buffer,
+            )
+        }
+        Ipv4Proto::Igmp => {
+            IgmpPacketHandler::<(), _, _>::receive_igmp_packet(
+                ctx,
+                device.expect("IGMP messages should come from a device"),
+                src_ip,
+                dst_ip,
+                buffer,
+            );
+            Ok(())
+        }
+        Ipv4Proto::Proto(IpProto::Udp) => {
+            <<Ctx<D> as Ipv4TransportLayerContext>::Proto17 as BufferIpTransportContext<
+                Ipv4,
+                _,
+                _,
+            >>::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer)
+        }
+        Ipv4Proto::Proto(IpProto::Tcp) => {
+            <<Ctx<D> as Ipv4TransportLayerContext>::Proto6 as BufferIpTransportContext<
+                Ipv4,
+                _,
+                _,
+            >>::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer)
+        }
+        // TODO(joshlf): Once all IP protocol numbers are covered, remove
+        // this default case.
+        _ => Err((
+            buffer,
+            TransportReceiveError { inner: TransportReceiveErrorInner::ProtocolUnsupported },
+        )),
+    };
 
     if let Err((mut buffer, err)) = res {
         // All branches promise to return the buffer in the same state it was in
@@ -753,32 +758,37 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
 ) {
     increment_counter!(ctx, "dispatch_receive_ipv6_packet");
 
-    macro_rules! mtch {
-        ($($cond:pat => $ty:ident),*) => {
-            match proto {
-                Ipv6Proto::Icmpv6 => <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>
-                            ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),
-                // A value of `Ipv6Proto::NoNextHeader` tells us that there
-                // is no header whatsoever following the last lower-level header
-                // so we stop processing here.
-                Ipv6Proto::NoNextHeader => Ok(()),
-                $($cond => <<Ctx<D> as Ipv6TransportLayerContext>::$ty as BufferIpTransportContext<Ipv6, _, _>>
-                            ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),)*
-                // TODO(joshlf): Once all IP Next Header numbers are covered,
-                // remove this default case.
-                _ => Err((
-                    buffer,
-                    TransportReceiveError { inner: TransportReceiveErrorInner::ProtocolUnsupported },
-                )),
-            }
-        };
-    }
-
-    #[rustfmt::skip]
-    let res = mtch!(
-        Ipv6Proto::Proto(IpProto::Tcp) => Proto6,
-        Ipv6Proto::Proto(IpProto::Udp) => Proto17
-    );
+    let res = match proto {
+        Ipv6Proto::Icmpv6 => {
+            <IcmpIpTransportContext as BufferIpTransportContext<Ipv6, _, _>>::receive_ip_packet(
+                ctx, device, src_ip, dst_ip, buffer,
+            )
+        }
+        // A value of `Ipv6Proto::NoNextHeader` tells us that there is no
+        // header whatsoever following the last lower-level header so we stop
+        // processing here.
+        Ipv6Proto::NoNextHeader => Ok(()),
+        Ipv6Proto::Proto(IpProto::Tcp) => {
+            <<Ctx<D> as Ipv6TransportLayerContext>::Proto6 as BufferIpTransportContext<
+                Ipv6,
+                _,
+                _,
+            >>::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer)
+        }
+        Ipv6Proto::Proto(IpProto::Udp) => {
+            <<Ctx<D> as Ipv6TransportLayerContext>::Proto17 as BufferIpTransportContext<
+                Ipv6,
+                _,
+                _,
+            >>::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer)
+        }
+        // TODO(joshlf): Once all IP Next Header numbers are covered, remove
+        // this default case.
+        _ => Err((
+            buffer,
+            TransportReceiveError { inner: TransportReceiveErrorInner::ProtocolUnsupported },
+        )),
+    };
 
     if let Err((mut buffer, err)) = res {
         // All branches promise to return the buffer in the same state it was in
