@@ -18,7 +18,7 @@ use {
     anyhow::{anyhow, Context, Result},
     cm_fidl_validator,
     fidl::encoding::decode_persistent,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl,
     fuchsia_url::boot_url::BootUrl,
     lazy_static::lazy_static,
     log::{debug, error, info, warn},
@@ -325,14 +325,14 @@ impl PackageDataCollector {
                         let mut cap_uses = Vec::new();
                         let base64_bytes = base64::encode(&decl_bytes);
 
-                        if let Ok(cm_decl) = decode_persistent::<fsys::ComponentDecl>(&decl_bytes) {
-                            if let Err(err) = cm_fidl_validator::fsys::validate(&cm_decl) {
+                        if let Ok(cm_decl) = decode_persistent::<fdecl::Component>(&decl_bytes) {
+                            if let Err(err) = cm_fidl_validator::fdecl::validate(&cm_decl) {
                                 warn!("Invalid cm {} {}", url, err);
                             } else {
                                 if let Some(uses) = cm_decl.uses {
                                     for use_ in uses {
                                         match &use_ {
-                                            fsys::UseDecl::Protocol(protocol) => {
+                                            fdecl::Use::Protocol(protocol) => {
                                                 if let Some(source_name) = &protocol.source_name {
                                                     cap_uses.push(Capability::Protocol(
                                                         ProtocolCapability::new(
@@ -348,9 +348,9 @@ impl PackageDataCollector {
                                 if let Some(exposes) = cm_decl.exposes {
                                     for expose in exposes {
                                         match &expose {
-                                            fsys::ExposeDecl::Protocol(protocol) => {
+                                            fdecl::Expose::Protocol(protocol) => {
                                                 if let Some(source_name) = &protocol.source_name {
-                                                    if let Some(fsys::Ref::Self_(_)) =
+                                                    if let Some(fdecl::Ref::Self_(_)) =
                                                         &protocol.source
                                                     {
                                                         service_map.insert(
@@ -440,15 +440,15 @@ impl PackageDataCollector {
                 info!("Extracting bootfs manifest: {}", file_name);
                 let url = BootUrl::new_resource("/".to_string(), file_name.to_string())?;
                 let base64_bytes = base64::encode(&file_data);
-                if let Ok(cm_decl) = decode_persistent::<fsys::ComponentDecl>(&file_data) {
-                    if let Err(err) = cm_fidl_validator::fsys::validate(&cm_decl) {
+                if let Ok(cm_decl) = decode_persistent::<fdecl::Component>(&file_data) {
+                    if let Err(err) = cm_fidl_validator::fdecl::validate(&cm_decl) {
                         warn!("Invalid cm {} {}", file_name, err);
                     } else {
                         let mut cap_uses = Vec::new();
                         if let Some(uses) = cm_decl.uses {
                             for use_ in uses {
                                 match &use_ {
-                                    fsys::UseDecl::Protocol(protocol) => {
+                                    fdecl::Use::Protocol(protocol) => {
                                         if let Some(source_name) = &protocol.source_name {
                                             cap_uses.push(Capability::Protocol(
                                                 ProtocolCapability::new(source_name.clone()),
@@ -462,9 +462,9 @@ impl PackageDataCollector {
                         if let Some(exposes) = cm_decl.exposes {
                             for expose in exposes {
                                 match &expose {
-                                    fsys::ExposeDecl::Protocol(protocol) => {
+                                    fdecl::Expose::Protocol(protocol) => {
                                         if let Some(source_name) = &protocol.source_name {
-                                            if let Some(fsys::Ref::Self_(_)) = &protocol.source {
+                                            if let Some(fdecl::Ref::Self_(_)) = &protocol.source {
                                                 service_map
                                                     .insert(source_name.clone(), url.to_string());
                                             }
@@ -482,9 +482,10 @@ impl PackageDataCollector {
                             if let Some(offers) = cm_decl.offers {
                                 for offer in offers {
                                     match &offer {
-                                        fsys::OfferDecl::Protocol(protocol) => {
+                                        fdecl::Offer::Protocol(protocol) => {
                                             if let Some(source_name) = &protocol.source_name {
-                                                if let Some(fsys::Ref::Parent(_)) = &protocol.source
+                                                if let Some(fdecl::Ref::Parent(_)) =
+                                                    &protocol.source
                                                 {
                                                     service_map.insert(
                                                         source_name.clone(),

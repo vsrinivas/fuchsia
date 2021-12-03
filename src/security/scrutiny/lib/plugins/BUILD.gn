@@ -12,6 +12,7 @@ if (is_host) {
     edition = "2018"
     visibility = [ "//src/security/scrutiny/*" ]
     deps = [
+      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal-rustc",
       "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
       "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
