@@ -17,11 +17,13 @@
 ## debugging crashes, memory leaks, concurrency bugs, etc.
 ##
 ## This tool extracts and decodes the profiling data for the given component
-## moniker from inspect.json so that it can be used with the pprof tool. The
-## profiling data is extracted into a temporary directory whose path is printed
-## on success.
+## moniker from inspect.json so that it can be used with the pprof tool.
 ##
 ## usage: fx extract-pprof --inspect FILE --component MONIKER
 ##
 ##   --inspect   Path to the inspect.json file
 ##   --component Moniker to extract pprof data for (e.g. core/network/netstack)
+##
+## optional arguments:
+##   --output    Directory to extract pprof data to; If not specified, a temporary
+##               directory will be created

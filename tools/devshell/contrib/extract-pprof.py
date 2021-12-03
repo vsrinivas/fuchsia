@@ -6,6 +6,7 @@ import argparse
 import base64
 import json
 import os
+import pathlib
 import tempfile
 
 
@@ -18,13 +19,22 @@ def main():
         "--component",
         required=True,
         help="Component to extract pprof data for (e.g. core/network/netstack)")
+    parser.add_argument(
+        "--output",
+        type=pathlib.Path,
+        help=
+        "Directory to extract pprof data to; If not specified, a temporary directory will be created"
+    )
     args = parser.parse_args()
 
-    tempdir = tempfile.mkdtemp()
+    if args.output:
+        outdir = args.output
+    else:
+        outdir = tempfile.mkdtemp()
 
     print("inspect.json @ %s" % args.inspect)
     print("component = %s" % args.component)
-    print("output @ %s" % tempdir)
+    print("output @ %s" % outdir)
 
     with open(args.inspect, "r") as f:
         inspect = json.loads(f.read())
@@ -40,7 +50,7 @@ def main():
         if not filepath.startswith("pprof"):
             continue
 
-        filepath = os.path.join(tempdir, filepath)
+        filepath = os.path.join(outdir, filepath)
         os.makedirs(filepath, exist_ok=True)
 
         data = entry["payload"]["root"]["pprof"]
