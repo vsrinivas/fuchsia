@@ -40,8 +40,6 @@ toc:
     path: /reference/tools/sdk/fssh.md
   - title: "fvdl"
     path: /reference/tools/sdk/fvdl.md
-  - title: "fvm"
-    path: /reference/tools/sdk/fvm.md
   - title: "minfs"
     path: /reference/tools/sdk/minfs.md
   - title: "zbi"
