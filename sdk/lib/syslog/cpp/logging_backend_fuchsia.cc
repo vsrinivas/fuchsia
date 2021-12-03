@@ -378,6 +378,7 @@ class LogState {
   async::Loop loop_;
   std::optional<async::Executor> executor_;
   std::atomic<syslog::LogSeverity> min_severity_;
+  const syslog::LogSeverity default_severity_;
   zx_koid_t pid_;
   mutable cpp17::variant<zx::socket, std::ofstream> descriptor_ = zx::socket();
   std::string tags_[kMaxTags];
@@ -429,9 +430,10 @@ void LogState::ConnectAsync() {
   }
   log_sink_.events().OnRegisterInterest = [=](::fuchsia::diagnostics::Interest interest) {
     if (!interest.has_min_severity()) {
-      return;
+      min_severity_ = default_severity_;
+    } else {
+      min_severity_ = IntoLogSeverity(interest.min_severity());
     }
-    min_severity_ = IntoLogSeverity(interest.min_severity());
     handler_(handler_context_, min_severity_);
   };
   log_sink_->ConnectStructured(std::move(remote));
@@ -745,6 +747,7 @@ LogState::LogState(const syslog::LogSettings& in_settings,
     : loop_(&kAsyncLoopConfigNeverAttachToThread),
       executor_(loop_.dispatcher()),
       min_severity_(in_settings.min_log_level),
+      default_severity_(in_settings.min_log_level),
       pid_(pid) {
   syslog::LogSettings settings = in_settings;
   interest_listener_dispatcher_ =

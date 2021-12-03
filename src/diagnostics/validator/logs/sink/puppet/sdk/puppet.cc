@@ -26,9 +26,10 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
     context_->outgoing()->AddPublicService(sink_bindings_.GetHandler(this));
     log_sink_.events().OnRegisterInterest = [=](::fuchsia::diagnostics::Interest interest) {
       if (!interest.has_min_severity()) {
-        return;
+        min_log_level_ = FUCHSIA_LOG_INFO;
+      } else {
+        min_log_level_ = IntoLogSeverity(interest.min_severity());
       }
-      min_log_level_ = IntoLogSeverity(interest.min_severity());
       fuchsia_syslog::LogBuffer buffer;
 
       BeginRecord(&buffer, min_log_level_, __FILE__, __LINE__, "Changed severity",

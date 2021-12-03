@@ -279,6 +279,33 @@ impl Puppet {
     }
 }
 
+fn severity_to_string(severity: Severity) -> String {
+    match severity {
+        Severity::Trace => "Trace".to_string(),
+        Severity::Debug => "Debug".to_string(),
+        Severity::Info => "Info".to_string(),
+        Severity::Warn => "Warn".to_string(),
+        Severity::Error => "Error".to_string(),
+        Severity::Fatal => "Fatal".to_string(),
+    }
+}
+
+async fn assert_logged_severities(
+    puppet: &Puppet,
+    severities: &[Severity],
+    new_file_line_rules: bool,
+) -> Result<(), Error> {
+    for severity in severities {
+        assert_eq!(
+            puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
+            RecordAssertion::new(&puppet.info, *severity, new_file_line_rules)
+                .add_string("message", &severity_to_string(*severity))
+                .build(puppet.start_time..zx::Time::get_monotonic())
+        );
+    }
+    Ok(())
+}
+
 async fn assert_interest_listener(
     puppet: &mut Puppet,
     new_file_line_rules: bool,
@@ -320,19 +347,56 @@ async fn assert_interest_listener(
     send_log_with_severity!(Info);
     send_log_with_severity!(Warn);
     send_log_with_severity!(Error);
-    assert_eq!(
-        puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
-        RecordAssertion::new(&puppet.info, Severity::Warn, new_file_line_rules)
-            .add_string("message", "Warn")
-            .build(puppet.start_time..zx::Time::get_monotonic())
-    );
-    assert_eq!(
-        puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
-        RecordAssertion::new(&puppet.info, Severity::Error, new_file_line_rules)
-            .add_string("message", "Error")
-            .build(puppet.start_time..zx::Time::get_monotonic())
-    );
+    assert_logged_severities(&puppet, &[Severity::Warn, Severity::Error], new_file_line_rules)
+        .await
+        .unwrap();
     info!("Got interest");
+
+    let interest = Interest { min_severity: Some(Severity::Trace), ..Interest::EMPTY };
+    handle.send_on_register_interest(interest)?;
+    assert_eq!(
+        puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
+        RecordAssertion::new(&puppet.info, Severity::Trace, new_file_line_rules)
+            .add_string("message", "Changed severity")
+            .build(puppet.start_time..zx::Time::get_monotonic())
+    );
+    send_log_with_severity!(Trace);
+    send_log_with_severity!(Debug);
+    send_log_with_severity!(Info);
+    send_log_with_severity!(Warn);
+    send_log_with_severity!(Error);
+
+    assert_logged_severities(
+        &puppet,
+        &[Severity::Trace, Severity::Debug, Severity::Info, Severity::Warn, Severity::Error],
+        new_file_line_rules,
+    )
+    .await
+    .unwrap();
+
+    let interest = Interest::EMPTY;
+    handle.send_on_register_interest(interest)?;
+    info!("Waiting for reset interest....");
+    assert_eq!(
+        puppet.read_record_no_tid(puppet.info.tid).await?.unwrap(),
+        RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
+            .add_string("message", "Changed severity")
+            .build(puppet.start_time..zx::Time::get_monotonic())
+    );
+
+    send_log_with_severity!(Debug);
+    send_log_with_severity!(Info);
+    send_log_with_severity!(Warn);
+    send_log_with_severity!(Error);
+
+    assert_logged_severities(
+        &puppet,
+        &[Severity::Info, Severity::Warn, Severity::Error],
+        new_file_line_rules,
+    )
+    .await
+    .unwrap();
+
     if supports_stopping_listener {
         puppet.proxy.stop_interest_listener().await.unwrap();
         // We're restarting the logging system in the child process so we should expect a re-connection.
