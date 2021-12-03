@@ -1,0 +1,48 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/agis_test",
+    },
+    children: [
+        {
+            name: "agis",
+            url: "#meta/agis.cm",
+        },
+        {
+            name: "netstack-debug",
+            url: "#meta/netstack-debug.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.gpu.agis.Session" ],
+            from: "#agis",
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack-debug",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack-debug",
+            to: "#agis",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#agis",
+                "#netstack-debug",
+            ],
+        },
+    ],
+}

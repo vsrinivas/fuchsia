@@ -169,7 +169,12 @@
             name: "hwinfo",
             url: "fuchsia-pkg://fuchsia.com/hwinfo#meta/hwinfo.cm",
         },
-    ],
+        {
+            name: "agis",
+            url: "fuchsia-pkg://fuchsia.com/agis#meta/agis.cm",
+            environment: "#full-resolver-env",
+        },
+    ], // children
     capabilities: [
         // Note: `data`, `cache`, and `temp` storage capabilities are defined in a shard and
         // included as part of the build process. See restricted-storage.core_shard.cml or
@@ -308,7 +313,10 @@
         {
             protocol: [ "fuchsia.posix.socket.Provider" ],
             from: "#network",
-            to: "#session-manager",
+            to: [
+                "#agis",
+                "#session-manager",
+            ],
         },
         {
             protocol: "fuchsia.stash.SecureStore",
@@ -449,6 +457,7 @@
             from: "parent",
             to: [
                 "#activity",
+                "#agis",
                 "#bluetooth-core",
                 "#brightness_manager",
                 "#bt-avrcp",

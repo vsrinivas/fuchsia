@@ -1,0 +1,27 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        binary: "bin/agis",
+    },
+    capabilities: [
+        { protocol: "fuchsia.gpu.agis.Session" },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.gpu.agis.Session",
+            from: "self",
+            to: "parent",
+        },
+    ],
+}

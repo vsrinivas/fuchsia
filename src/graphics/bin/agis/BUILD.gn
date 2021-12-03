@@ -1,0 +1,62 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("test-bin") {
+  testonly = true
+  output_name = "agis_test"
+  sources = [ "test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.gpu.agis",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("test") {
+  testonly = true
+  component_name = "agis-test"
+  manifest = "meta/test.cml"
+  deps = [ ":test-bin" ]
+}
+
+executable("agis-bin") {
+  output_name = "agis"
+  sources = [ "agis.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.gpu.agis",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl:fbl",
+  ]
+}
+
+fuchsia_component("agis-cmp") {
+  component_name = "agis"
+  manifest = "meta/agis.cml"
+  deps = [ ":agis-bin" ]
+}
+
+fuchsia_test_package("agis-test") {
+  test_components = [ ":test" ]
+  deps = [
+    ":agis-cmp",
+    "//build/validate:non_production_tag",
+    "//src/connectivity/network/netstack:component-debug",
+  ]
+}
+
+fuchsia_package("agis") {
+  deps = [
+    ":agis-cmp",
+    "//build/validate:non_production_tag",
+  ]
+}

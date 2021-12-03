@@ -1,0 +1,57 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// AGIS - Android GPU Inspector Service
+library fuchsia.gpu.agis;
+
+using fuchsia.url;
+using zx;
+
+/// AGIS provides FIDL services that facilitate Vulkan command tracing.
+/// It acts as an intermediary between gapii, the Android GPU Inspector
+/// interposing shared library and Vulkan layer, and the host Android GPU
+/// Inspector application. One tracing session is permitted at a time
+/// through this interface.
+///
+/// A Connection is a pairing of a component and its port assignment.
+type Connection = resource struct {
+    component_url fuchsia.url.Url;
+    port uint16;
+};
+
+/// Max component connections that may be registered.
+const MAX_CONNECTIONS uint32 = 128;
+
+type Status = strict enum {
+    OK = 0;
+    NOT_FOUND = 1;
+    ALREADY_REGISTERED = 2;
+    CONNECTIONS_EXCEEDED = 3;
+    INTERNAL_ERROR = 4;
+    UNIMPLEMENTED = 5;
+};
+
+/// The AGIS Session protocol allows traceable components to register their
+/// presence upon launch and to retrieve sockets for communication to
+/// gapis, the host service module of AGI.
+@discoverable
+protocol Session {
+    /// Register a component as traceable and retrieve its bound socket.
+    /// For AGI, gapii will be the only client of this Register interface.
+    Register(struct {
+        component_url fuchsia.url.Url;
+    }) -> (resource struct {
+        gapii_socket zx.handle:optional;
+    }) error Status;
+
+    /// Remove a component from the registry.
+    Unregister(struct {
+        component_url fuchsia.url.Url;
+    }) -> (struct {}) error Status;
+
+    /// Returns a vector of components registered and their port assignments.
+    Connections() -> (resource struct {
+        connections vector<Connection>:MAX_CONNECTIONS;
+    }) error Status;
+};

@@ -12,6 +12,7 @@ group("graphics") {
 group("tests") {
   testonly = true
   deps = [
+    "bin/agis:agis-test",
     "bin/opencl_loader:tests",
     "bin/vulkan_loader:tests",
     "display:tests",
