@@ -24,7 +24,7 @@ enum IoApicRegister : uint8_t {
 // IO APIC configuration constants.
 constexpr uint8_t kIoApicVersion = 0x20;
 constexpr uint8_t kFirstRedirectOffset = 0x10;
-constexpr uint8_t kLastRedirectOffset = kFirstRedirectOffset + IoApic::kNumRedirectOffsets - 1;
+constexpr uint8_t kLastRedirectOffset = kFirstRedirectOffset + IoApic::kNumInterrupts * 2 - 1;
 
 // DESTMOD register.
 constexpr uint8_t kIoApicDestmodPhysical = 0x00;

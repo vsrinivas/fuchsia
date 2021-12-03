@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/io_apic.h"
 
+#include <lib/fit/function.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/hypervisor.h>
 
@@ -30,6 +31,18 @@ zx_status_t WriteRegister(IoApic& io_apic, uint8_t reg, const IoValue& value) {
     return status;
   }
   return io_apic.Write(kIoApicIoWin, value);
+}
+
+// Write the given IoApicRedirectEntry for the given IRQ.
+zx_status_t WriteRedirectEntry(IoApic& io_apic, uint8_t global_irq,
+                               const IoApicRedirectEntry& entry) {
+  zx_status_t status = WriteRegister(io_apic, kFirstRedirectOffset + (global_irq * 2) + 0,
+                                     IoValue::FromU32(static_cast<uint32_t>(entry.lower())));
+  if (status != ZX_OK) {
+    return status;
+  }
+  return WriteRegister(io_apic, kFirstRedirectOffset + (global_irq * 2) + 1,
+                       IoValue::FromU32(static_cast<uint32_t>(entry.upper())));
 }
 
 TEST(IoApic, IndirectRegisterSelect) {
@@ -119,6 +132,77 @@ TEST(IoApic, EndOfInterrupt) {
 
   // Write to the EOI register. We don't expect any effect.
   ASSERT_EQ(io_apic.Write(kIoApicEOIR, IoValue::FromU32(0x01)), ZX_OK);
+}
+
+class InterruptRecorder {
+ public:
+  IoApic::InterruptCallback Callback() {
+    return fit::bind_member(this, &InterruptRecorder::Interrupt);
+  }
+
+  uint64_t count() const { return count_; }
+  uint64_t mask() const { return mask_; }
+  uint32_t vector() const { return vector_; }
+
+ private:
+  zx_status_t Interrupt(uint64_t mask, uint32_t vector) {
+    count_++;
+    mask_ = mask;
+    vector_ = vector;
+    return ZX_OK;
+  }
+
+  uint64_t count_ = 0;
+  uint64_t mask_ = 0;
+  uint32_t vector_ = 0;
+};
+
+TEST(IoApic, SimpleInterrupt) {
+  Guest guest;
+  InterruptRecorder recorder;
+  IoApic io_apic(&guest, recorder.Callback());
+
+  // Set up a redirection from global IRQ 13 to vector 44 on CPU #1.
+  EXPECT_EQ(WriteRedirectEntry(io_apic, /*global_irq=*/13,
+                               IoApicRedirectEntry()
+                                   .set_vector(44)
+                                   .set_destination_mode(kIoApicDestmodPhysical)
+                                   .set_destination(1)),
+            ZX_OK);
+
+  // Trigger an interrupt. We expect it to be sent to vector 44 on CPU #1.
+  EXPECT_EQ(recorder.count(), 0u);
+  io_apic.Interrupt(13);
+  ASSERT_EQ(recorder.count(), 1u);
+  EXPECT_EQ(recorder.mask(), 1u << 1);
+  EXPECT_EQ(recorder.vector(), 44u);
+}
+
+TEST(IoApic, MaskedInterrupt) {
+  Guest guest;
+  InterruptRecorder recorder;
+  IoApic io_apic(&guest, recorder.Callback());
+
+  // Set up a redirection from global IRQ 13 to vector 44 on CPU #1,
+  // but keep it masked.
+  auto entry = IoApicRedirectEntry()
+                   .set_vector(44)
+                   .set_destination_mode(kIoApicDestmodPhysical)
+                   .set_destination(1)
+                   .set_mask(1);
+  EXPECT_EQ(WriteRedirectEntry(io_apic, /*global_irq=*/13, entry), ZX_OK);
+
+  // Trigger an interrupt. Because it is masked, we expect no callback.
+  EXPECT_EQ(recorder.count(), 0u);
+  io_apic.Interrupt(13);
+  EXPECT_EQ(recorder.count(), 0u);
+
+  // Unmask the interrupt. Expect to see the callback.
+  entry.set_mask(0);
+  EXPECT_EQ(WriteRedirectEntry(io_apic, /*global_irq=*/13, entry), ZX_OK);
+  ASSERT_EQ(recorder.count(), 1u);
+  EXPECT_EQ(recorder.mask(), 1u << 1);
+  EXPECT_EQ(recorder.vector(), 44u);
 }
 
 }  // namespace
