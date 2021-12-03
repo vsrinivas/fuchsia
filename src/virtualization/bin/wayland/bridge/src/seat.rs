@@ -222,15 +222,15 @@ impl InputDispatcher {
         ftrace::duration!("wayland", "InputDispatcher::handle_key_event");
         if Some(source) == self.keyboard_focus_source && self.keyboard_focus.is_some() {
             let key = event.key.unwrap();
-            let time = (event.timestamp.unwrap() / 1_000_000) as u32;
+            let time_in_ms = (event.timestamp.unwrap() / 1_000_000) as u32;
             match event.type_.unwrap() {
                 KeyEventType::Pressed => {
                     self.pressed_keys.insert(key);
-                    self.send_key_event(key, time, wl_keyboard::KeyState::Pressed)?;
+                    self.send_key_event(key, time_in_ms, wl_keyboard::KeyState::Pressed)?;
                 }
                 KeyEventType::Released => {
                     self.pressed_keys.remove(&key);
-                    self.send_key_event(key, time, wl_keyboard::KeyState::Released)?;
+                    self.send_key_event(key, time_in_ms, wl_keyboard::KeyState::Released)?;
                 }
                 KeyEventType::Cancel => {
                     self.pressed_keys.remove(&key);

@@ -57,9 +57,13 @@ pub struct Flatland {
 #[cfg(feature = "flatland")]
 impl Flatland {
     pub fn new(flatland: FlatlandProxy) -> Self {
+        let id = NEXT_FLATLAND_INSTANCE_ID.fetch_add(1, Ordering::SeqCst);
+        let debug_name = format!("WaylandBridge:{}", id);
+        flatland.set_debug_name(&debug_name).expect("fidl error");
+
         Flatland {
             flatland,
-            id: NEXT_FLATLAND_INSTANCE_ID.fetch_add(1, Ordering::SeqCst),
+            id,
             release_fences: Rc::new(RefCell::new(vec![])),
             next_transform_id: Cell::new(1),
             next_content_id: Cell::new(1),
