@@ -423,11 +423,17 @@ multiconst!(u64, [
     ZX_CLOCK_OPT_CONTINUOUS = 1 << 1;
     ZX_CLOCK_OPT_AUTO_START = 1 << 2;
 
+    // v1 clock update flags
     ZX_CLOCK_UPDATE_OPTION_VALUE_VALID = 1 << 0;
     ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID = 1 << 1;
     ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID = 1 << 2;
 
+    // Additional v2 clock update flags
+    ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID = 1 << 3;
+    ZX_CLOCK_UPDATE_OPTION_SYNTHETIC_VALUE_VALID = ZX_CLOCK_UPDATE_OPTION_VALUE_VALID;
+
     ZX_CLOCK_ARGS_VERSION_1 = 1 << 58;
+    ZX_CLOCK_ARGS_VERSION_2 = 2 << 58;
 ]);
 
 // from //zircon/system/public/zircon/syscalls/exception.h
@@ -507,6 +513,16 @@ pub struct zx_clock_update_args_v1_t {
     pub rate_adjust: i32,
     pub padding1: [PadByte; 4],
     pub value: i64,
+    pub error_bound: u64,
+}
+
+#[repr(C)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct zx_clock_update_args_v2_t {
+    pub rate_adjust: i32,
+    pub padding1: [PadByte; 4],
+    pub synthetic_value: i64,
+    pub reference_value: i64,
     pub error_bound: u64,
 }
 
