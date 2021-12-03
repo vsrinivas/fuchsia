@@ -713,10 +713,10 @@ impl RealmNode2 {
 
                 if is_parent_ref(&target) {
                     let decl = create_expose_decl(capability.clone(), from.clone())?;
-                    state_guard.decl.exposes.push(decl);
+                    push_if_not_present(&mut state_guard.decl.exposes, decl);
                 } else {
                     let decl = create_offer_decl(capability.clone(), from.clone(), target.clone())?;
-                    state_guard.decl.offers.push(decl);
+                    push_if_not_present(&mut state_guard.decl.offers, decl);
                 }
 
                 let () = add_use_decl_if_needed(
@@ -798,7 +798,7 @@ async fn add_use_decl_if_needed(
     if let fcdecl::Ref::Child(child) = ref_ {
         if let Some(child) = realm.get_updateable_children().get(&child.name) {
             let mut decl = child.get_decl().await;
-            decl.uses.push(create_use_decl(capability)?);
+            push_if_not_present(&mut decl.uses, create_use_decl(capability)?);
             let () = child.replace_decl(decl).await?;
         }
     }
@@ -814,9 +814,14 @@ async fn add_expose_decl_if_needed(
     if let fcdecl::Ref::Child(child) = ref_ {
         if let Some(child) = realm.get_updateable_children().get(&child.name) {
             let mut decl = child.get_decl().await;
-            decl.capabilities.push(create_capability_decl(capability.clone())?);
-            decl.exposes
-                .push(create_expose_decl(capability, fcdecl::Ref::Self_(fcdecl::SelfRef {}))?);
+            push_if_not_present(
+                &mut decl.capabilities,
+                create_capability_decl(capability.clone())?,
+            );
+            push_if_not_present(
+                &mut decl.exposes,
+                create_expose_decl(capability, fcdecl::Ref::Self_(fcdecl::SelfRef {}))?,
+            );
             let () = child.replace_decl(decl).await?;
         }
     }
@@ -1007,6 +1012,12 @@ fn is_parent_ref(ref_: &fcdecl::Ref) -> bool {
     match ref_ {
         fcdecl::Ref::Parent(_) => true,
         _ => false,
+    }
+}
+
+fn push_if_not_present<T: PartialEq>(container: &mut Vec<T>, value: T) {
+    if !container.contains(&value) {
+        container.push(value);
     }
 }
 
@@ -3643,6 +3654,133 @@ mod tests {
                 ..cm_rust::ComponentDecl::default()
             },
             children: vec![],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_route_duplicate_decls() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_child_from_decl("a", fcdecl::Component::EMPTY, ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call AddChildFromDecl")
+            .expect("call failed");
+        realm_and_builder_task
+            .add_child_or_panic("b", "test:///b", ftest::ChildOptions::EMPTY)
+            .await;
+        realm_and_builder_task
+            .add_child_or_panic("c", "test:///c", ftest::ChildOptions::EMPTY)
+            .await;
+
+        // Routing protocol from `a` should yield one and only one ExposeDecl.
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                    name: Some("fuchsia.examples.Hippo".to_owned()),
+                    ..ftest::Protocol::EMPTY
+                })],
+                fcdecl::Ref::Child(fcdecl::ChildRef { name: "a".to_owned(), collection: None }),
+                vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "b".to_owned(),
+                    collection: None,
+                })],
+            )
+            .await;
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![ftest::Capability2::Protocol(ftest::Protocol {
+                    name: Some("fuchsia.examples.Hippo".to_owned()),
+                    ..ftest::Protocol::EMPTY
+                })],
+                fcdecl::Ref::Child(fcdecl::ChildRef { name: "a".to_owned(), collection: None }),
+                vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "c".to_owned(),
+                    collection: None,
+                })],
+            )
+            .await;
+
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                children: vec![
+                    cm_rust::ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                        on_terminate: None,
+                        environment: None,
+                    },
+                    cm_rust::ChildDecl {
+                        name: "c".to_string(),
+                        url: "test:///c".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                        on_terminate: None,
+                        environment: None,
+                    },
+                ],
+                offers: vec![
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
+                            name: "a".to_owned(),
+                            collection: None,
+                        }),
+                        source_name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "b".to_owned(),
+                            collection: None,
+                        }),
+                        target_name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                    }),
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Child(cm_rust::ChildRef {
+                            name: "a".to_owned(),
+                            collection: None,
+                        }),
+                        source_name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
+                        target: cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                            name: "c".to_owned(),
+                            collection: None,
+                        }),
+                        target_name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                    }),
+                ],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![(
+                "a".to_owned(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree {
+                    decl: cm_rust::ComponentDecl {
+                        capabilities: vec![cm_rust::CapabilityDecl::Protocol(
+                            cm_rust::ProtocolDecl {
+                                name: cm_rust::CapabilityName("fuchsia.examples.Hippo".to_owned()),
+                                source_path: Some(cm_rust::CapabilityPath {
+                                    dirname: "/svc".to_owned(),
+                                    basename: "fuchsia.examples.Hippo".to_owned(),
+                                }),
+                            },
+                        )],
+                        exposes: vec![cm_rust::ExposeDecl::Protocol(cm_rust::ExposeProtocolDecl {
+                            source: cm_rust::ExposeSource::Self_,
+                            source_name: cm_rust::CapabilityName(
+                                "fuchsia.examples.Hippo".to_owned(),
+                            ),
+                            target: cm_rust::ExposeTarget::Parent,
+                            target_name: cm_rust::CapabilityName(
+                                "fuchsia.examples.Hippo".to_owned(),
+                            ),
+                        })],
+                        ..cm_rust::ComponentDecl::default()
+                    },
+                    children: vec![],
+                },
+            )],
         };
         expected_tree.add_binder_expose();
         assert_eq!(expected_tree, tree_from_resolver);
