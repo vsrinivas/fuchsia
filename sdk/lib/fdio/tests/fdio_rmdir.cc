@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/fit/defer.h>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -12,13 +13,15 @@
 namespace {
 
 TEST(RmdirTest, Rmdir) {
-  const char* filename = "/tmp/foo";
-  fbl::unique_fd foo_fd(open(filename, O_CREAT | O_RDWR, 0644));
+  char filename[] = "/tmp/fdio-rmdir-file.XXXXXX";
+  ASSERT_TRUE(fbl::unique_fd(mkstemp(filename)), "%s", strerror(errno));
+  auto cleanup =
+      fit::defer([&filename]() { EXPECT_EQ(unlink(filename), 0, "%s", strerror(errno)); });
   EXPECT_EQ(rmdir(filename), -1);
   EXPECT_EQ(errno, ENOTDIR);
 
-  const char* dirname = "/tmp/baz";
-  EXPECT_EQ(mkdir(dirname, 0777), 0);
+  char dirname[] = "/tmp/fdio-rmdir-dir.XXXXXX";
+  ASSERT_NOT_NULL(mkdtemp(dirname), "%s", strerror(errno));
   EXPECT_EQ(rmdir(dirname), 0);
 }
 
