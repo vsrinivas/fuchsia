@@ -4,10 +4,169 @@
 
 #include <fidl/fidl.test.struct/cpp/wire.h>
 #include <fidl/test/struct/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_struct {
-using Simple = ::fidl::test::struct_::Simple;
+class Simple;
 
-using BasicStruct = ::fidl::test::struct_::BasicStruct;
+class BasicStruct;
 
 }  // namespace fidl_test_struct
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_struct::Simple>
+    final {
+ public:
+  uint8_t f1 = {};
+
+  bool f2 = {};
+};
+
+namespace fidl_test_struct {
+class Simple final : public ::fidl::internal::CodableBase<Simple> {
+ private:
+  friend ::fidl::internal::CodableBase<Simple>;
+  Simple(::fidl::Decoder& decoder);
+
+ public:
+  Simple() = default;
+  Simple(uint8_t f1, bool f2) : storage_({f1, f2}) {}
+  Simple(::fidl::internal::DesignatedInitializationProxy<
+         ::fidl_test_struct::Simple>
+             storage)
+      : storage_(std::move(storage)) {}
+  ~Simple() = default;
+  Simple(Simple&&) noexcept = default;
+  Simple& operator=(Simple&&) noexcept = default;
+
+  const uint8_t& f1() const { return storage_.f1; }
+
+  Simple& set_f1(uint8_t _value) {
+    storage_.f1 = std::move(_value);
+    return *this;
+  }
+
+  const bool& f2() const { return storage_.f2; }
+
+  Simple& set_f2(bool _value) {
+    storage_.f2 = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_struct::Simple>;
+
+  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_struct::Simple>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_struct
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_struct::BasicStruct>
+    final {
+ public:
+  uint32_t x = {};
+
+  ::std::string y = {};
+};
+
+namespace fidl_test_struct {
+class BasicStruct final : public ::fidl::internal::CodableBase<BasicStruct> {
+ private:
+  friend ::fidl::internal::CodableBase<BasicStruct>;
+  BasicStruct(::fidl::Decoder& decoder);
+
+ public:
+  BasicStruct() = default;
+  BasicStruct(uint32_t x, ::std::string y) : storage_({x, std::move(y)}) {}
+  BasicStruct(::fidl::internal::DesignatedInitializationProxy<
+              ::fidl_test_struct::BasicStruct>
+                  storage)
+      : storage_(std::move(storage)) {}
+  ~BasicStruct() = default;
+  BasicStruct(BasicStruct&&) noexcept = default;
+  BasicStruct& operator=(BasicStruct&&) noexcept = default;
+
+  const uint32_t& x() const { return storage_.x; }
+
+  BasicStruct& set_x(uint32_t _value) {
+    storage_.x = std::move(_value);
+    return *this;
+  }
+
+  const ::std::string& y() const { return storage_.y; }
+
+  BasicStruct& set_y(::std::string _value) {
+    storage_.y = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_struct::BasicStruct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_struct::BasicStruct>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_struct
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_struct_SimpleTable;
+
+template <>
+struct IsFidlType<::fidl_test_struct::Simple> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_struct::Simple> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_struct_SimpleTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_struct::Simple> {
+  static constexpr size_t inline_size_v1_no_ee = 2;
+  static constexpr size_t inline_size_v2 = 2;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::fidl_test_struct::Simple* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.f1, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.f2, offset + 1);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_struct_BasicStructTable;
+
+template <>
+struct IsFidlType<::fidl_test_struct::BasicStruct> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_struct::BasicStruct> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_struct_BasicStructTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_struct::BasicStruct> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 24;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_struct::BasicStruct* value, size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.y, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

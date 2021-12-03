@@ -5,6 +5,8 @@
 */}}
 
 {{- define "Filename:Header" -}}
+  {{- /* TODO(fxbug.dev/74067): We should follow fxbug.dev/74067 and change
+  the header patterns from "Legacy" to "Unified". */}}
   {{- .LibrarySlashes }}/cpp/fidl_v2.h
 {{- end }}
 
@@ -21,34 +23,49 @@
 #include <{{ . | Filename "Header" }}>
 {{ end -}}
 
-{{- /* Import the natural types from the HLCPP bindings. */}}
-#include <{{ .LegacyIncludeDir }}/natural_types.h>
+{{- /* When the library name only has one component, it is always special.
+Those libraries should not define business logic types or protocols, and we
+do not support them in the bindings. */}}
+{{- if not .SingleComponentLibraryName }}
 
-{{- /* Import the wire types and messaging API from the LLCPP bindings. */}}
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
+
+#include <{{ .LegacyIncludeDir }}/natural_types.h>
 #include <{{ .UnifiedIncludeDir }}/wire.h>
 
 {{ "" }}
 
-{{- /* When the library name only has one component, the natural types are trivially
-       available in our namespace. */}}
-{{- if not .SingleComponentLibraryName }}
+{{- /* Generate our own domain objects. */}}
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Struct }}{{- template "StructForwardDeclaration" . }}{{- end }}
+{{- end }}
 
 {{- /* Bring the natural domain object types into our namespace. */}}
 {{- range .Decls | SkipRequestResponseDecls }}
 {{- if Eq .Kind Kinds.Bits }}{{ template "NaturalTypeAlias" . }}{{- end }}
 {{- if Eq .Kind Kinds.Enum }}{{ template "NaturalTypeAlias" . }}{{- end }}
-{{- if Eq .Kind Kinds.Struct }}{{ template "NaturalTypeAlias" . }}{{- end }}
 {{- if Eq .Kind Kinds.Table }}{{ template "NaturalTypeAlias" . }}{{- end }}
 {{- if Eq .Kind Kinds.Union }}{{ template "NaturalTypeAlias" . }}{{- end }}
+{{ "" }}
 {{- end }}
 
-{{- /* Constants are global variables; declare them instead. */}}
-{{- range .Decls | SkipRequestResponseDecls }}
+{{- /* Generate our own domain objects. */}}
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Struct }}{{ template "StructDeclaration" . }}{{- end }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDeclaration" . }}{{- end }}
+{{ "" }}
 {{- end }}
 
+{{ EnsureNamespace "fidl" }}
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Struct }}{{ template "StructTraits" . }}{{- end }}
 {{- end }}
 {{ "" }}
+
+{{- end }}{{/* if not SingleComponentLibraryName */}}
 
 {{ EndOfFile }}
 {{ end }}

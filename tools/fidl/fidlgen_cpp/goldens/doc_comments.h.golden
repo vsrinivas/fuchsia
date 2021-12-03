@@ -4,17 +4,18 @@
 
 #include <fidl/fidl.test.doccomments/cpp/wire.h>
 #include <fidl/test/doccomments/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_doccomments {
+class Struct;
+
 /// table comment #1
 ///
 /// table comment #3
 using Table = ::fidl::test::doccomments::Table;
-
-/// struct comment #1
-///
-/// struct comment #3
-using Struct = ::fidl::test::doccomments::Struct;
 
 /// strict union comment #1
 ///
@@ -48,9 +49,90 @@ using MyFlexibleBits = ::fidl::test::doccomments::MyFlexibleBits;
 /// flexible union comment #3
 using FlexibleUnion = ::fidl::test::doccomments::FlexibleUnion;
 
+}  // namespace fidl_test_doccomments
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_doccomments::Struct>
+    final {
+ public:
+  /// struct member comment #1
+  ///
+  /// struct member comment #3
+  int32_t Field = {};
+};
+
+namespace fidl_test_doccomments {
+/// struct comment #1
+///
+/// struct comment #3
+class Struct final : public ::fidl::internal::CodableBase<Struct> {
+ private:
+  friend ::fidl::internal::CodableBase<Struct>;
+  Struct(::fidl::Decoder& decoder);
+
+ public:
+  Struct() = default;
+  Struct(int32_t Field) : storage_({Field}) {}
+  Struct(::fidl::internal::DesignatedInitializationProxy<
+         ::fidl_test_doccomments::Struct>
+             storage)
+      : storage_(std::move(storage)) {}
+  ~Struct() = default;
+  Struct(Struct&&) noexcept = default;
+  Struct& operator=(Struct&&) noexcept = default;
+
+  /// struct member comment #1
+  ///
+  /// struct member comment #3
+  const int32_t& Field() const { return storage_.Field; }
+
+  /// struct member comment #1
+  ///
+  /// struct member comment #3
+  Struct& set_Field(int32_t _value) {
+    storage_.Field = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_doccomments::Struct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_doccomments::Struct>
+      storage_ = {};
+};
+
 /// const comment #1
 ///
 /// const comment #3
 constexpr int32_t C = ::fidl::test::doccomments::C;
 
 }  // namespace fidl_test_doccomments
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_doccomments_StructTable;
+
+template <>
+struct IsFidlType<::fidl_test_doccomments::Struct> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_doccomments::Struct> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_doccomments_StructTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_doccomments::Struct> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_doccomments::Struct* value, size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.Field, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

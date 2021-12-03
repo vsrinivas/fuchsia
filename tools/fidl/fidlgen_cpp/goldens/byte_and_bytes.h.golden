@@ -4,8 +4,125 @@
 
 #include <fidl/fidl.test.byteandbytes/cpp/wire.h>
 #include <fidl/test/byteandbytes/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_byteandbytes {
-using ByteAndBytes = ::fidl::test::byteandbytes::ByteAndBytes;
+class ByteAndBytes;
 
 }  // namespace fidl_test_byteandbytes
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_byteandbytes::ByteAndBytes>
+    final {
+ public:
+  uint8_t single_byte = {};
+
+  ::std::vector<uint8_t> many_bytes = {};
+
+  ::std::vector<uint8_t> only_one_k_bytes = {};
+
+  ::fidl::VectorPtr<uint8_t> opt_only_one_k_bytes = {};
+};
+
+namespace fidl_test_byteandbytes {
+class ByteAndBytes final : public ::fidl::internal::CodableBase<ByteAndBytes> {
+ private:
+  friend ::fidl::internal::CodableBase<ByteAndBytes>;
+  ByteAndBytes(::fidl::Decoder& decoder);
+
+ public:
+  ByteAndBytes() = default;
+  ByteAndBytes(uint8_t single_byte, ::std::vector<uint8_t> many_bytes,
+               ::std::vector<uint8_t> only_one_k_bytes,
+               ::fidl::VectorPtr<uint8_t> opt_only_one_k_bytes)
+      : storage_({single_byte, std::move(many_bytes),
+                  std::move(only_one_k_bytes),
+                  std::move(opt_only_one_k_bytes)}) {}
+  ByteAndBytes(::fidl::internal::DesignatedInitializationProxy<
+               ::fidl_test_byteandbytes::ByteAndBytes>
+                   storage)
+      : storage_(std::move(storage)) {}
+  ~ByteAndBytes() = default;
+  ByteAndBytes(ByteAndBytes&&) noexcept = default;
+  ByteAndBytes& operator=(ByteAndBytes&&) noexcept = default;
+
+  const uint8_t& single_byte() const { return storage_.single_byte; }
+
+  ByteAndBytes& set_single_byte(uint8_t _value) {
+    storage_.single_byte = std::move(_value);
+    return *this;
+  }
+
+  const ::std::vector<uint8_t>& many_bytes() const {
+    return storage_.many_bytes;
+  }
+
+  ByteAndBytes& set_many_bytes(::std::vector<uint8_t> _value) {
+    storage_.many_bytes = std::move(_value);
+    return *this;
+  }
+
+  const ::std::vector<uint8_t>& only_one_k_bytes() const {
+    return storage_.only_one_k_bytes;
+  }
+
+  ByteAndBytes& set_only_one_k_bytes(::std::vector<uint8_t> _value) {
+    storage_.only_one_k_bytes = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl::VectorPtr<uint8_t>& opt_only_one_k_bytes() const {
+    return storage_.opt_only_one_k_bytes;
+  }
+
+  ByteAndBytes& set_opt_only_one_k_bytes(::fidl::VectorPtr<uint8_t> _value) {
+    storage_.opt_only_one_k_bytes = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_byteandbytes::ByteAndBytes>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_byteandbytes::ByteAndBytes>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_byteandbytes
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_byteandbytes_ByteAndBytesTable;
+
+template <>
+struct IsFidlType<::fidl_test_byteandbytes::ByteAndBytes>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_byteandbytes::ByteAndBytes>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_byteandbytes_ByteAndBytesTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_byteandbytes::ByteAndBytes> {
+  static constexpr size_t inline_size_v1_no_ee = 56;
+  static constexpr size_t inline_size_v2 = 56;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_byteandbytes::ByteAndBytes* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.single_byte, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.many_bytes, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.only_one_k_bytes, offset + 24);
+    ::fidl::Decode(decoder, &value->storage_.opt_only_one_k_bytes, offset + 40);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

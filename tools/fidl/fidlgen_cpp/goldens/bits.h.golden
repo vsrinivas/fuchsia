@@ -4,6 +4,10 @@
 
 #include <fidl/fidl.test.bits/cpp/wire.h>
 #include <fidl/test/bits/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_bits {
 using StrictBits = ::fidl::test::bits::StrictBits;
@@ -15,3 +19,4 @@ const static MyBits MyBitsMask = ::fidl::test::bits::MyBitsMask;
 using FlexibleBits = ::fidl::test::bits::FlexibleBits;
 
 }  // namespace fidl_test_bits
+namespace fidl {}  // namespace fidl

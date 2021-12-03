@@ -47,15 +47,26 @@ static_assert(std::is_same<fuchsia_examples::LocationType, fuchsia::examples::Lo
 // [START structs]
 TEST(FidlExamples, Structs) {
   fuchsia_examples::Color default_color;
-  ASSERT_EQ(default_color.id, 0u);
-  ASSERT_EQ(default_color.name, "red");
+  ASSERT_EQ(default_color.id(), 0u);
+  ASSERT_EQ(default_color.name(), "red");
 
   fuchsia_examples::Color blue = {1, "blue"};
-  ASSERT_EQ(blue.id, 1u);
+  ASSERT_EQ(blue.id(), 1u);
+
+  // Setters
+  fuchsia_examples::Color color;
+  color.set_id(42).set_name("yellow");
+  ASSERT_EQ(color.id(), 42u);
+  ASSERT_EQ(color.name(), "yellow");
+
+  // Designated initializer support
+  fuchsia_examples::Color designated_1 = {{.id = 1, .name = "designated"}};
+  ASSERT_EQ(designated_1.id(), 1u);
+
+  fuchsia_examples::Color designated_2{{.id = 2, .name = "designated"}};
+  ASSERT_EQ(designated_2.id(), 2u);
 }
 // [END structs]
-static_assert(std::is_same<fuchsia_examples::Color, fuchsia::examples::Color>::value,
-              "Natural types should be equivalent to HLCPP types");
 
 // [START unions]
 TEST(FidlExamples, Unions) {

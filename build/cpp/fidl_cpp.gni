@@ -439,7 +439,7 @@ template("fidl_cpp_family") {
   # Define the unified bindings target.
   # Note that we also check llcpp_public_deps here, because we would not
   # generate the corresponding LLCPP bindings if it was empty.
-  if (llcpp_public_deps != []) {
+  if (llcpp_public_deps != [] && is_fuchsia) {
     cpp_options = {
       bindings_flavor = "cpp"
       generated_headers = [ "$library_name_slashes/cpp/fidl_v2.h" ]
@@ -462,6 +462,7 @@ template("fidl_cpp_family") {
       additional_public_deps = [
         ":${fidl_target_name}_cpp_natural_types",
         ":${fidl_target_name}_llcpp",
+        "//src/lib/fidl/cpp",
       ]
     }
   }

@@ -5,15 +5,21 @@
 #include <exampleusing/cpp/fidl_v2.h>
 #include <fidl/fidl.test.placementofattributes/cpp/wire.h>
 #include <fidl/test/placementofattributes/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_placementofattributes {
+class ExampleStruct;
+
+class ExampleProtocolMethodRequest;
+
 using ExampleXUnion = ::fidl::test::placementofattributes::ExampleXUnion;
 
 using ExampleUnion = ::fidl::test::placementofattributes::ExampleUnion;
 
 using ExampleTable = ::fidl::test::placementofattributes::ExampleTable;
-
-using ExampleStruct = ::fidl::test::placementofattributes::ExampleStruct;
 
 using ExampleEnum = ::fidl::test::placementofattributes::ExampleEnum;
 
@@ -21,7 +27,163 @@ using ExampleBits = ::fidl::test::placementofattributes::ExampleBits;
 const static ExampleBits ExampleBitsMask =
     ::fidl::test::placementofattributes::ExampleBitsMask;
 
+}  // namespace fidl_test_placementofattributes
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_placementofattributes::ExampleStruct>
+    final {
+ public:
+  uint32_t member = {};
+};
+
+namespace fidl_test_placementofattributes {
+class ExampleStruct final
+    : public ::fidl::internal::CodableBase<ExampleStruct> {
+ private:
+  friend ::fidl::internal::CodableBase<ExampleStruct>;
+  ExampleStruct(::fidl::Decoder& decoder);
+
+ public:
+  ExampleStruct() = default;
+  ExampleStruct(uint32_t member) : storage_({member}) {}
+  ExampleStruct(::fidl::internal::DesignatedInitializationProxy<
+                ::fidl_test_placementofattributes::ExampleStruct>
+                    storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleStruct() = default;
+  ExampleStruct(ExampleStruct&&) noexcept = default;
+  ExampleStruct& operator=(ExampleStruct&&) noexcept = default;
+
+  const uint32_t& member() const { return storage_.member; }
+
+  ExampleStruct& set_member(uint32_t _value) {
+    storage_.member = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_placementofattributes::ExampleStruct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_placementofattributes::ExampleStruct>
+      storage_ = {};
+};
+
 constexpr uint32_t EXAMPLE_CONST =
     ::fidl::test::placementofattributes::EXAMPLE_CONST;
 
 }  // namespace fidl_test_placementofattributes
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_placementofattributes::ExampleProtocolMethodRequest>
+    final {
+ public:
+  ::exampleusing::Empty arg = {};
+};
+
+namespace fidl_test_placementofattributes {
+class ExampleProtocolMethodRequest final
+    : public ::fidl::internal::CodableBase<ExampleProtocolMethodRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ExampleProtocolMethodRequest>;
+  ExampleProtocolMethodRequest(::fidl::Decoder& decoder);
+
+ public:
+  ExampleProtocolMethodRequest() = default;
+  ExampleProtocolMethodRequest(::exampleusing::Empty arg)
+      : storage_({std::move(arg)}) {}
+  ExampleProtocolMethodRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_placementofattributes::ExampleProtocolMethodRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleProtocolMethodRequest() = default;
+  ExampleProtocolMethodRequest(ExampleProtocolMethodRequest&&) noexcept =
+      default;
+  ExampleProtocolMethodRequest& operator=(
+      ExampleProtocolMethodRequest&&) noexcept = default;
+
+  const ::exampleusing::Empty& arg() const { return storage_.arg; }
+
+  ExampleProtocolMethodRequest& set_arg(::exampleusing::Empty _value) {
+    storage_.arg = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_placementofattributes::ExampleProtocolMethodRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_placementofattributes::ExampleProtocolMethodRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_placementofattributes
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
+
+template <>
+struct IsFidlType<::fidl_test_placementofattributes::ExampleStruct>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_placementofattributes::ExampleStruct>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_placementofattributes_ExampleStructTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_placementofattributes::ExampleStruct> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_placementofattributes::ExampleStruct* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.member, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_placementofattributes::ExampleProtocolMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_placementofattributes::ExampleProtocolMethodRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_placementofattributes::ExampleProtocolMethodRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_placementofattributes::ExampleProtocolMethodRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.arg, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

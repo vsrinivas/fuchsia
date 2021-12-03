@@ -1,0 +1,125 @@
+{{/*
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+
+
+{{- define "StructForwardDeclaration" }}
+{{ EnsureNamespace . }}
+class {{ .Name }};
+{{- end }}
+
+
+
+{{- define "StructDeclaration" }}
+{{ EnsureNamespace "" }}
+template <>
+struct {{ .DesignatedInitializationProxy }} final {
+ public:
+  {{- range .Members }}
+  {{ .Docs }}
+  {{ .Type }} {{ .Name }} = {{ if .DefaultValue.IsSet }}{{ .DefaultValue }}{{ else }}{}{{ end }};
+  {{- end }}
+};
+
+{{ EnsureNamespace . }}
+{{- .Docs }}
+class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}> {
+ private:
+  friend ::fidl::internal::CodableBase<{{ .Name }}>;
+  {{ .Self }}(::fidl::Decoder& decoder);
+
+ public:
+  {{ .Self }}() = default;
+  {{ .Self }}({{ RenderParams .Members }}) : storage_({ {{ RenderForwardParams .Members }} }) {}
+  {{ .Self }}({{ .DesignatedInitializationProxy }} storage) : storage_(std::move(storage)) {}
+  ~{{ .Self }}() = default;
+  {{ .Self }}({{ .Self }}&&) noexcept = default;
+  {{ .Self }}& operator=({{ .Self }}&&) noexcept = default;
+
+  {{- if .IsResourceType }}
+  {{ .Self }}(const {{ .Self }}&) noexcept = delete;
+  {{ .Self }}& operator=(const {{ .Self }}&) noexcept = delete;
+  {{- else }}
+  {{- /* TODO(fxbug.dev/82189): Generate copy constructors and default move constructors. */}}
+  {{- end }}
+
+  {{- range .Members }}
+  {{ .Docs }}
+  const {{ .Type }}& {{ .Name }}() const {
+    return storage_.{{ .Name }};
+  }
+
+  {{ .Docs }}
+  {{ $.Name }}& set_{{ .Name }}({{ .Type }} _value) {
+    storage_.{{ .Name }} = std::move(_value);
+    return *this;
+  }
+  {{- end }}
+
+ private:
+  friend struct ::fidl::CodingTraits<{{ . }}>;
+
+  {{ .DesignatedInitializationProxy }} storage_ = {};
+};
+{{- end }}
+
+
+
+{{- define "StructDefinition" }}
+{{- IfdefFuchsia -}}
+{{- EnsureNamespace "" }}
+
+{{ . }}::{{ .Self }}(::fidl::Decoder& decoder) : storage_({
+    {{- range $index, $member := .Members -}}
+      {{- if $index }}, {{ end -}}
+      ::fidl::DecodeAs<{{ .Type }}>(&decoder, {{ .OffsetV2 }})
+    {{- end -}}
+}) {}
+
+{{- EndifFuchsia -}}
+{{- end }}
+
+
+
+{{- define "StructTraits" }}
+{{- IfdefFuchsia -}}
+
+extern "C" const fidl_type_t {{ .CodingTableType }};
+
+{{ if .IsResourceType }}
+template <>
+struct IsResource<{{ . }}> : public std::true_type {};
+{{- end }}
+template <>
+struct IsFidlType<{{ . }}> : public std::true_type {};
+
+template <>
+struct {{ .TypeTraits }} final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable = &{{ .CodingTableType }};
+};
+
+{{- /*
+TODO(fxbug.dev/82189): We are reusing the HLCPP coding machinery. For now this
+is the minimal to support encoding/decoding, without any optimizations. This may
+change as we gradually move to a complete natural domain object fork.
+*/}}
+
+template <>
+struct CodingTraits<{{ . }}> {
+  static constexpr size_t inline_size_v1_no_ee = {{ .TypeShapeV1.InlineSize }};
+  static constexpr size_t inline_size_v2 = {{ .TypeShapeV2.InlineSize }};
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, {{ . }}* value, size_t offset) {
+    {{- range .Members }}
+    ::fidl::Decode(decoder, &value->storage_.{{ .Name }}, offset + {{ .OffsetV2 }});
+    {{- end }}
+  }
+};
+
+{{- EndifFuchsia -}}
+{{- end }}

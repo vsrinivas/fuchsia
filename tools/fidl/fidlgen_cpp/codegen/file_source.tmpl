@@ -17,14 +17,18 @@
 #include <{{ .Library | Filename "Header" }}>
 {{ "" }}
 
-{{- /* When the library name only has one component, the natural types are trivially
-       available in our namespace. */}}
+{{- /* When the library name only has one component, it is always special.
+Those libraries should not define business logic types or protocols, and we
+do not support them in the bindings. */}}
 {{- if not .SingleComponentLibraryName }}
-{{- range .Decls | SkipRequestResponseDecls }}
+
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Struct }}{{ template "StructDefinition" . }}{{- end }}
 {{- if Eq .Kind Kinds.Const }}{{ template "ConstDefinition" . }}{{- end }}
 {{- end }}
-{{- end }}
 {{ "" }}
+
+{{- end }}{{/* if not SingleComponentLibraryName */}}
 
 {{ EndOfFile }}
 {{ end }}

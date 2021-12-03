@@ -4,21 +4,572 @@
 
 #include <fidl/fidl.test.encapsulatedstructs/cpp/wire.h>
 #include <fidl/test/encapsulatedstructs/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 #include <zx/cpp/fidl_v2.h>
 
 namespace fidl_test_encapsulatedstructs {
-using NonInlineStructTestStruct =
-    ::fidl::test::encapsulatedstructs::NonInlineStructTestStruct;
+class NonInlineStructTestStruct;
 
-using Int8Int32 = ::fidl::test::encapsulatedstructs::Int8Int32;
+class Int8Int32;
 
-using Int16Int8 = ::fidl::test::encapsulatedstructs::Int16Int8;
+class Int16Int8;
 
-using ArrayInt16Int8 = ::fidl::test::encapsulatedstructs::ArrayInt16Int8;
+class ArrayInt16Int8;
 
-using StructPaddingTestStruct =
-    ::fidl::test::encapsulatedstructs::StructPaddingTestStruct;
+class StructPaddingTestStruct;
 
-using TopLevelStruct = ::fidl::test::encapsulatedstructs::TopLevelStruct;
+class TopLevelStruct;
 
 }  // namespace fidl_test_encapsulatedstructs
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct>
+    final {
+ public:
+  ::std::unique_ptr<::fidl_test_encapsulatedstructs::Int16Int8> element = {};
+
+  ::zx::handle h = {};
+};
+
+namespace fidl_test_encapsulatedstructs {
+class NonInlineStructTestStruct final
+    : public ::fidl::internal::CodableBase<NonInlineStructTestStruct> {
+ private:
+  friend ::fidl::internal::CodableBase<NonInlineStructTestStruct>;
+  NonInlineStructTestStruct(::fidl::Decoder& decoder);
+
+ public:
+  NonInlineStructTestStruct() = default;
+  NonInlineStructTestStruct(
+      ::std::unique_ptr<::fidl_test_encapsulatedstructs::Int16Int8> element,
+      ::zx::handle&& h)
+      : storage_({std::move(element), std::move(h)}) {}
+  NonInlineStructTestStruct(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~NonInlineStructTestStruct() = default;
+  NonInlineStructTestStruct(NonInlineStructTestStruct&&) noexcept = default;
+  NonInlineStructTestStruct& operator=(NonInlineStructTestStruct&&) noexcept =
+      default;
+  NonInlineStructTestStruct(const NonInlineStructTestStruct&) noexcept = delete;
+  NonInlineStructTestStruct& operator=(
+      const NonInlineStructTestStruct&) noexcept = delete;
+
+  const ::std::unique_ptr<::fidl_test_encapsulatedstructs::Int16Int8>& element()
+      const {
+    return storage_.element;
+  }
+
+  NonInlineStructTestStruct& set_element(
+      ::std::unique_ptr<::fidl_test_encapsulatedstructs::Int16Int8> _value) {
+    storage_.element = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::handle& h() const { return storage_.h; }
+
+  NonInlineStructTestStruct& set_h(::zx::handle _value) {
+    storage_.h = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_encapsulatedstructs
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_encapsulatedstructs::Int8Int32>
+    final {
+ public:
+  int8_t a = {};
+
+  int32_t b = {};
+};
+
+namespace fidl_test_encapsulatedstructs {
+class Int8Int32 final : public ::fidl::internal::CodableBase<Int8Int32> {
+ private:
+  friend ::fidl::internal::CodableBase<Int8Int32>;
+  Int8Int32(::fidl::Decoder& decoder);
+
+ public:
+  Int8Int32() = default;
+  Int8Int32(int8_t a, int32_t b) : storage_({a, b}) {}
+  Int8Int32(::fidl::internal::DesignatedInitializationProxy<
+            ::fidl_test_encapsulatedstructs::Int8Int32>
+                storage)
+      : storage_(std::move(storage)) {}
+  ~Int8Int32() = default;
+  Int8Int32(Int8Int32&&) noexcept = default;
+  Int8Int32& operator=(Int8Int32&&) noexcept = default;
+
+  const int8_t& a() const { return storage_.a; }
+
+  Int8Int32& set_a(int8_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const int32_t& b() const { return storage_.b; }
+
+  Int8Int32& set_b(int32_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_encapsulatedstructs::Int8Int32>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_encapsulatedstructs::Int8Int32>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_encapsulatedstructs
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_encapsulatedstructs::Int16Int8>
+    final {
+ public:
+  int16_t a = {};
+
+  int8_t b = {};
+};
+
+namespace fidl_test_encapsulatedstructs {
+class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
+ private:
+  friend ::fidl::internal::CodableBase<Int16Int8>;
+  Int16Int8(::fidl::Decoder& decoder);
+
+ public:
+  Int16Int8() = default;
+  Int16Int8(int16_t a, int8_t b) : storage_({a, b}) {}
+  Int16Int8(::fidl::internal::DesignatedInitializationProxy<
+            ::fidl_test_encapsulatedstructs::Int16Int8>
+                storage)
+      : storage_(std::move(storage)) {}
+  ~Int16Int8() = default;
+  Int16Int8(Int16Int8&&) noexcept = default;
+  Int16Int8& operator=(Int16Int8&&) noexcept = default;
+
+  const int16_t& a() const { return storage_.a; }
+
+  Int16Int8& set_a(int16_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const int8_t& b() const { return storage_.b; }
+
+  Int16Int8& set_b(int8_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_encapsulatedstructs::Int16Int8>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_encapsulatedstructs::Int16Int8>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_encapsulatedstructs
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_encapsulatedstructs::ArrayInt16Int8>
+    final {
+ public:
+  ::std::array<::fidl_test_encapsulatedstructs::Int16Int8, 3> arr = {};
+};
+
+namespace fidl_test_encapsulatedstructs {
+class ArrayInt16Int8 final
+    : public ::fidl::internal::CodableBase<ArrayInt16Int8> {
+ private:
+  friend ::fidl::internal::CodableBase<ArrayInt16Int8>;
+  ArrayInt16Int8(::fidl::Decoder& decoder);
+
+ public:
+  ArrayInt16Int8() = default;
+  ArrayInt16Int8(
+      ::std::array<::fidl_test_encapsulatedstructs::Int16Int8, 3> arr)
+      : storage_({std::move(arr)}) {}
+  ArrayInt16Int8(::fidl::internal::DesignatedInitializationProxy<
+                 ::fidl_test_encapsulatedstructs::ArrayInt16Int8>
+                     storage)
+      : storage_(std::move(storage)) {}
+  ~ArrayInt16Int8() = default;
+  ArrayInt16Int8(ArrayInt16Int8&&) noexcept = default;
+  ArrayInt16Int8& operator=(ArrayInt16Int8&&) noexcept = default;
+
+  const ::std::array<::fidl_test_encapsulatedstructs::Int16Int8, 3>& arr()
+      const {
+    return storage_.arr;
+  }
+
+  ArrayInt16Int8& set_arr(
+      ::std::array<::fidl_test_encapsulatedstructs::Int16Int8, 3> _value) {
+    storage_.arr = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_encapsulatedstructs::ArrayInt16Int8>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_encapsulatedstructs::ArrayInt16Int8>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_encapsulatedstructs
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_encapsulatedstructs::StructPaddingTestStruct>
+    final {
+ public:
+  ::fidl_test_encapsulatedstructs::Int16Int8 trailing = {};
+
+  ::fidl_test_encapsulatedstructs::Int8Int32 inner = {};
+
+  ::fidl_test_encapsulatedstructs::ArrayInt16Int8 array = {};
+};
+
+namespace fidl_test_encapsulatedstructs {
+class StructPaddingTestStruct final
+    : public ::fidl::internal::CodableBase<StructPaddingTestStruct> {
+ private:
+  friend ::fidl::internal::CodableBase<StructPaddingTestStruct>;
+  StructPaddingTestStruct(::fidl::Decoder& decoder);
+
+ public:
+  StructPaddingTestStruct() = default;
+  StructPaddingTestStruct(::fidl_test_encapsulatedstructs::Int16Int8 trailing,
+                          ::fidl_test_encapsulatedstructs::Int8Int32 inner,
+                          ::fidl_test_encapsulatedstructs::ArrayInt16Int8 array)
+      : storage_({std::move(trailing), std::move(inner), std::move(array)}) {}
+  StructPaddingTestStruct(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_encapsulatedstructs::StructPaddingTestStruct>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~StructPaddingTestStruct() = default;
+  StructPaddingTestStruct(StructPaddingTestStruct&&) noexcept = default;
+  StructPaddingTestStruct& operator=(StructPaddingTestStruct&&) noexcept =
+      default;
+
+  const ::fidl_test_encapsulatedstructs::Int16Int8& trailing() const {
+    return storage_.trailing;
+  }
+
+  StructPaddingTestStruct& set_trailing(
+      ::fidl_test_encapsulatedstructs::Int16Int8 _value) {
+    storage_.trailing = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl_test_encapsulatedstructs::Int8Int32& inner() const {
+    return storage_.inner;
+  }
+
+  StructPaddingTestStruct& set_inner(
+      ::fidl_test_encapsulatedstructs::Int8Int32 _value) {
+    storage_.inner = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl_test_encapsulatedstructs::ArrayInt16Int8& array() const {
+    return storage_.array;
+  }
+
+  StructPaddingTestStruct& set_array(
+      ::fidl_test_encapsulatedstructs::ArrayInt16Int8 _value) {
+    storage_.array = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_encapsulatedstructs::StructPaddingTestStruct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_encapsulatedstructs::StructPaddingTestStruct>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_encapsulatedstructs
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_encapsulatedstructs::TopLevelStruct>
+    final {
+ public:
+  ::fidl_test_encapsulatedstructs::StructPaddingTestStruct a = {};
+
+  ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct b = {};
+};
+
+namespace fidl_test_encapsulatedstructs {
+class TopLevelStruct final
+    : public ::fidl::internal::CodableBase<TopLevelStruct> {
+ private:
+  friend ::fidl::internal::CodableBase<TopLevelStruct>;
+  TopLevelStruct(::fidl::Decoder& decoder);
+
+ public:
+  TopLevelStruct() = default;
+  TopLevelStruct(::fidl_test_encapsulatedstructs::StructPaddingTestStruct a,
+                 ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct&& b)
+      : storage_({std::move(a), std::move(b)}) {}
+  TopLevelStruct(::fidl::internal::DesignatedInitializationProxy<
+                 ::fidl_test_encapsulatedstructs::TopLevelStruct>
+                     storage)
+      : storage_(std::move(storage)) {}
+  ~TopLevelStruct() = default;
+  TopLevelStruct(TopLevelStruct&&) noexcept = default;
+  TopLevelStruct& operator=(TopLevelStruct&&) noexcept = default;
+  TopLevelStruct(const TopLevelStruct&) noexcept = delete;
+  TopLevelStruct& operator=(const TopLevelStruct&) noexcept = delete;
+
+  const ::fidl_test_encapsulatedstructs::StructPaddingTestStruct& a() const {
+    return storage_.a;
+  }
+
+  TopLevelStruct& set_a(
+      ::fidl_test_encapsulatedstructs::StructPaddingTestStruct _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct& b() const {
+    return storage_.b;
+  }
+
+  TopLevelStruct& set_b(
+      ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_encapsulatedstructs::TopLevelStruct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_encapsulatedstructs::TopLevelStruct>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_encapsulatedstructs
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
+
+template <>
+struct IsResource<::fidl_test_encapsulatedstructs::NonInlineStructTestStruct>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_encapsulatedstructs::NonInlineStructTestStruct>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_encapsulatedstructs_NonInlineStructTestStructTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.element, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.h, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int8Int32Table;
+
+template <>
+struct IsFidlType<::fidl_test_encapsulatedstructs::Int8Int32>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_encapsulatedstructs::Int8Int32>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_encapsulatedstructs_Int8Int32Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_encapsulatedstructs::Int8Int32> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_encapsulatedstructs::Int8Int32* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_encapsulatedstructs_Int16Int8Table;
+
+template <>
+struct IsFidlType<::fidl_test_encapsulatedstructs::Int16Int8>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_encapsulatedstructs::Int16Int8>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_encapsulatedstructs_Int16Int8Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_encapsulatedstructs::Int16Int8> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_encapsulatedstructs::Int16Int8* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
+
+template <>
+struct IsFidlType<::fidl_test_encapsulatedstructs::ArrayInt16Int8>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_encapsulatedstructs::ArrayInt16Int8>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_encapsulatedstructs_ArrayInt16Int8Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_encapsulatedstructs::ArrayInt16Int8> {
+  static constexpr size_t inline_size_v1_no_ee = 12;
+  static constexpr size_t inline_size_v2 = 12;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_encapsulatedstructs::ArrayInt16Int8* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.arr, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_encapsulatedstructs_StructPaddingTestStructTable;
+
+template <>
+struct IsFidlType<::fidl_test_encapsulatedstructs::StructPaddingTestStruct>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_encapsulatedstructs::StructPaddingTestStruct>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_encapsulatedstructs_StructPaddingTestStructTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_encapsulatedstructs::StructPaddingTestStruct> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 24;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_encapsulatedstructs::StructPaddingTestStruct* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.trailing, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.inner, offset + 4);
+    ::fidl::Decode(decoder, &value->storage_.array, offset + 12);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_encapsulatedstructs_TopLevelStructTable;
+
+template <>
+struct IsResource<::fidl_test_encapsulatedstructs::TopLevelStruct>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_encapsulatedstructs::TopLevelStruct>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_encapsulatedstructs::TopLevelStruct>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_encapsulatedstructs_TopLevelStructTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_encapsulatedstructs::TopLevelStruct> {
+  static constexpr size_t inline_size_v1_no_ee = 40;
+  static constexpr size_t inline_size_v2 = 40;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_encapsulatedstructs::TopLevelStruct* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 24);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

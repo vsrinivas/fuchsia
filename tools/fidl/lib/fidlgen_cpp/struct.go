@@ -11,6 +11,13 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+// These correspond to templated classes forward-declared in
+// //src/lib/fidl/include/lib/fidl/cpp/internal/natural_types.h
+var (
+	DesignatedInitializationProxy = internalNs.member("DesignatedInitializationProxy")
+	TypeTraits                    = internalNs.member("TypeTraits")
+)
+
 type Struct struct {
 	Attributes
 	fidlgen.Resourceness
@@ -29,6 +36,14 @@ type Struct struct {
 
 	TypeShapeV1 TypeShape
 	TypeShapeV2 TypeShape
+
+	// DesignatedInitializationProxy is the name of the internal aggregate
+	// type associated with this struct in natural domain objects,
+	// to support designated initialization.
+	DesignatedInitializationProxy name
+
+	// TypeTraits contains information about a natural domain object.
+	TypeTraits name
 
 	isEmptyStruct       bool
 	isRequestOrResponse bool
@@ -71,6 +86,8 @@ func (sm StructMember) NameAndType() (string, Type) {
 	return sm.Name(), sm.Type
 }
 
+var _ Member = (*StructMember)(nil)
+
 func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	t := c.compileType(val.Type)
 
@@ -91,7 +108,7 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
-	n := c.compileNameVariants(val.Name)
+	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
 		Attributes:        Attributes{val.Attributes},
@@ -99,7 +116,7 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 		TypeShapeV1:       TypeShape{val.TypeShapeV1},
 		TypeShapeV2:       TypeShape{val.TypeShapeV2},
 		Resourceness:      val.Resourceness,
-		nameVariants:      n,
+		nameVariants:      name,
 		CodingTableType:   codingTableType,
 		Members:           []StructMember{},
 		BackingBufferTypeV1: computeAllocation(
@@ -108,7 +125,9 @@ func (c *compiler) compileStruct(val fidlgen.Struct) *Struct {
 		BackingBufferTypeV2: computeAllocation(
 			TypeShape{val.TypeShapeV2}.MaxTotalSize(), boundednessBounded).
 			BackingBufferType(),
-		isRequestOrResponse: val.IsRequestOrResponse,
+		DesignatedInitializationProxy: DesignatedInitializationProxy.template(name.Unified),
+		TypeTraits:                    TypeTraits.template(name.Unified),
+		isRequestOrResponse:           val.IsRequestOrResponse,
 	}
 
 	for _, v := range val.Members {

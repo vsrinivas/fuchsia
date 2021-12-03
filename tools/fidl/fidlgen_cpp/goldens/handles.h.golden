@@ -4,11 +4,501 @@
 
 #include <fidl/fidl.test.handles/cpp/wire.h>
 #include <fidl/test/handles/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 #include <zx/cpp/fidl_v2.h>
 
 namespace fidl_test_handles {
+class Handles;
+
 using obj_type = ::fidl::test::handles::obj_type;
 
-using Handles = ::fidl::test::handles::Handles;
+}  // namespace fidl_test_handles
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_handles::Handles>
+    final {
+ public:
+  ::zx::handle plain_handle = {};
+
+  ::zx::bti bti_handle = {};
+
+  ::zx::channel channel_handle = {};
+
+  ::zx::clock clock_handle = {};
+
+  ::zx::debuglog debuglog_handle = {};
+
+  ::zx::event event_handle = {};
+
+  ::zx::eventpair eventpair_handle = {};
+
+  ::zx::exception exception_handle = {};
+
+  ::zx::fifo fifo_handle = {};
+
+  ::zx::guest guest_handle = {};
+
+  ::zx::interrupt interrupt_handle = {};
+
+  ::zx::iommu iommu_handle = {};
+
+  ::zx::job job_handle = {};
+
+  ::zx::pager pager_handle = {};
+
+  ::zx::pcidevice pcidevice_handle = {};
+
+  ::zx::pmt pmt_handle = {};
+
+  ::zx::port port_handle = {};
+
+  ::zx::process process_handle = {};
+
+  ::zx::profile profile_handle = {};
+
+  ::zx::resource resource_handle = {};
+
+  ::zx::socket socket_handle = {};
+
+  ::zx::suspendtoken suspendtoken_handle = {};
+
+  ::zx::thread thread_handle = {};
+
+  ::zx::timer timer_handle = {};
+
+  ::zx::vcpu vcpu_handle = {};
+
+  ::zx::vmar vmar_handle = {};
+
+  ::zx::vmo vmo_handle = {};
+
+  ::zx::vmo rights_handle = {};
+
+  ::zx::handle aliased_plain_handle_field = {};
+
+  ::zx::vmo aliased_subtype_handle_field = {};
+
+  ::zx::vmo aliased_rights_handle_field = {};
+
+  ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol> some_protocol =
+      {};
+
+  ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>
+      request_some_protocol = {};
+};
+
+namespace fidl_test_handles {
+class Handles final : public ::fidl::internal::CodableBase<Handles> {
+ private:
+  friend ::fidl::internal::CodableBase<Handles>;
+  Handles(::fidl::Decoder& decoder);
+
+ public:
+  Handles() = default;
+  Handles(::zx::handle&& plain_handle, ::zx::bti&& bti_handle,
+          ::zx::channel&& channel_handle, ::zx::clock&& clock_handle,
+          ::zx::debuglog&& debuglog_handle, ::zx::event&& event_handle,
+          ::zx::eventpair&& eventpair_handle,
+          ::zx::exception&& exception_handle, ::zx::fifo&& fifo_handle,
+          ::zx::guest&& guest_handle, ::zx::interrupt&& interrupt_handle,
+          ::zx::iommu&& iommu_handle, ::zx::job&& job_handle,
+          ::zx::pager&& pager_handle, ::zx::pcidevice&& pcidevice_handle,
+          ::zx::pmt&& pmt_handle, ::zx::port&& port_handle,
+          ::zx::process&& process_handle, ::zx::profile&& profile_handle,
+          ::zx::resource&& resource_handle, ::zx::socket&& socket_handle,
+          ::zx::suspendtoken&& suspendtoken_handle,
+          ::zx::thread&& thread_handle, ::zx::timer&& timer_handle,
+          ::zx::vcpu&& vcpu_handle, ::zx::vmar&& vmar_handle,
+          ::zx::vmo&& vmo_handle, ::zx::vmo&& rights_handle,
+          ::zx::handle&& aliased_plain_handle_field,
+          ::zx::vmo&& aliased_subtype_handle_field,
+          ::zx::vmo&& aliased_rights_handle_field,
+          ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol>&&
+              some_protocol,
+          ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>&&
+              request_some_protocol)
+      : storage_({std::move(plain_handle),
+                  std::move(bti_handle),
+                  std::move(channel_handle),
+                  std::move(clock_handle),
+                  std::move(debuglog_handle),
+                  std::move(event_handle),
+                  std::move(eventpair_handle),
+                  std::move(exception_handle),
+                  std::move(fifo_handle),
+                  std::move(guest_handle),
+                  std::move(interrupt_handle),
+                  std::move(iommu_handle),
+                  std::move(job_handle),
+                  std::move(pager_handle),
+                  std::move(pcidevice_handle),
+                  std::move(pmt_handle),
+                  std::move(port_handle),
+                  std::move(process_handle),
+                  std::move(profile_handle),
+                  std::move(resource_handle),
+                  std::move(socket_handle),
+                  std::move(suspendtoken_handle),
+                  std::move(thread_handle),
+                  std::move(timer_handle),
+                  std::move(vcpu_handle),
+                  std::move(vmar_handle),
+                  std::move(vmo_handle),
+                  std::move(rights_handle),
+                  std::move(aliased_plain_handle_field),
+                  std::move(aliased_subtype_handle_field),
+                  std::move(aliased_rights_handle_field),
+                  std::move(some_protocol),
+                  std::move(request_some_protocol)}) {}
+  Handles(::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_handles::Handles>
+              storage)
+      : storage_(std::move(storage)) {}
+  ~Handles() = default;
+  Handles(Handles&&) noexcept = default;
+  Handles& operator=(Handles&&) noexcept = default;
+  Handles(const Handles&) noexcept = delete;
+  Handles& operator=(const Handles&) noexcept = delete;
+
+  const ::zx::handle& plain_handle() const { return storage_.plain_handle; }
+
+  Handles& set_plain_handle(::zx::handle _value) {
+    storage_.plain_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::bti& bti_handle() const { return storage_.bti_handle; }
+
+  Handles& set_bti_handle(::zx::bti _value) {
+    storage_.bti_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::channel& channel_handle() const {
+    return storage_.channel_handle;
+  }
+
+  Handles& set_channel_handle(::zx::channel _value) {
+    storage_.channel_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::clock& clock_handle() const { return storage_.clock_handle; }
+
+  Handles& set_clock_handle(::zx::clock _value) {
+    storage_.clock_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::debuglog& debuglog_handle() const {
+    return storage_.debuglog_handle;
+  }
+
+  Handles& set_debuglog_handle(::zx::debuglog _value) {
+    storage_.debuglog_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::event& event_handle() const { return storage_.event_handle; }
+
+  Handles& set_event_handle(::zx::event _value) {
+    storage_.event_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::eventpair& eventpair_handle() const {
+    return storage_.eventpair_handle;
+  }
+
+  Handles& set_eventpair_handle(::zx::eventpair _value) {
+    storage_.eventpair_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::exception& exception_handle() const {
+    return storage_.exception_handle;
+  }
+
+  Handles& set_exception_handle(::zx::exception _value) {
+    storage_.exception_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::fifo& fifo_handle() const { return storage_.fifo_handle; }
+
+  Handles& set_fifo_handle(::zx::fifo _value) {
+    storage_.fifo_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::guest& guest_handle() const { return storage_.guest_handle; }
+
+  Handles& set_guest_handle(::zx::guest _value) {
+    storage_.guest_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::interrupt& interrupt_handle() const {
+    return storage_.interrupt_handle;
+  }
+
+  Handles& set_interrupt_handle(::zx::interrupt _value) {
+    storage_.interrupt_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::iommu& iommu_handle() const { return storage_.iommu_handle; }
+
+  Handles& set_iommu_handle(::zx::iommu _value) {
+    storage_.iommu_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::job& job_handle() const { return storage_.job_handle; }
+
+  Handles& set_job_handle(::zx::job _value) {
+    storage_.job_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::pager& pager_handle() const { return storage_.pager_handle; }
+
+  Handles& set_pager_handle(::zx::pager _value) {
+    storage_.pager_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::pcidevice& pcidevice_handle() const {
+    return storage_.pcidevice_handle;
+  }
+
+  Handles& set_pcidevice_handle(::zx::pcidevice _value) {
+    storage_.pcidevice_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::pmt& pmt_handle() const { return storage_.pmt_handle; }
+
+  Handles& set_pmt_handle(::zx::pmt _value) {
+    storage_.pmt_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::port& port_handle() const { return storage_.port_handle; }
+
+  Handles& set_port_handle(::zx::port _value) {
+    storage_.port_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::process& process_handle() const {
+    return storage_.process_handle;
+  }
+
+  Handles& set_process_handle(::zx::process _value) {
+    storage_.process_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::profile& profile_handle() const {
+    return storage_.profile_handle;
+  }
+
+  Handles& set_profile_handle(::zx::profile _value) {
+    storage_.profile_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::resource& resource_handle() const {
+    return storage_.resource_handle;
+  }
+
+  Handles& set_resource_handle(::zx::resource _value) {
+    storage_.resource_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::socket& socket_handle() const { return storage_.socket_handle; }
+
+  Handles& set_socket_handle(::zx::socket _value) {
+    storage_.socket_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::suspendtoken& suspendtoken_handle() const {
+    return storage_.suspendtoken_handle;
+  }
+
+  Handles& set_suspendtoken_handle(::zx::suspendtoken _value) {
+    storage_.suspendtoken_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::thread& thread_handle() const { return storage_.thread_handle; }
+
+  Handles& set_thread_handle(::zx::thread _value) {
+    storage_.thread_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::timer& timer_handle() const { return storage_.timer_handle; }
+
+  Handles& set_timer_handle(::zx::timer _value) {
+    storage_.timer_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::vcpu& vcpu_handle() const { return storage_.vcpu_handle; }
+
+  Handles& set_vcpu_handle(::zx::vcpu _value) {
+    storage_.vcpu_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::vmar& vmar_handle() const { return storage_.vmar_handle; }
+
+  Handles& set_vmar_handle(::zx::vmar _value) {
+    storage_.vmar_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::vmo& vmo_handle() const { return storage_.vmo_handle; }
+
+  Handles& set_vmo_handle(::zx::vmo _value) {
+    storage_.vmo_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::vmo& rights_handle() const { return storage_.rights_handle; }
+
+  Handles& set_rights_handle(::zx::vmo _value) {
+    storage_.rights_handle = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::handle& aliased_plain_handle_field() const {
+    return storage_.aliased_plain_handle_field;
+  }
+
+  Handles& set_aliased_plain_handle_field(::zx::handle _value) {
+    storage_.aliased_plain_handle_field = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::vmo& aliased_subtype_handle_field() const {
+    return storage_.aliased_subtype_handle_field;
+  }
+
+  Handles& set_aliased_subtype_handle_field(::zx::vmo _value) {
+    storage_.aliased_subtype_handle_field = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::vmo& aliased_rights_handle_field() const {
+    return storage_.aliased_rights_handle_field;
+  }
+
+  Handles& set_aliased_rights_handle_field(::zx::vmo _value) {
+    storage_.aliased_rights_handle_field = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol>&
+  some_protocol() const {
+    return storage_.some_protocol;
+  }
+
+  Handles& set_some_protocol(
+      ::fidl::InterfaceHandle<::fidl::test::handles::SomeProtocol> _value) {
+    storage_.some_protocol = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>&
+  request_some_protocol() const {
+    return storage_.request_some_protocol;
+  }
+
+  Handles& set_request_some_protocol(
+      ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol> _value) {
+    storage_.request_some_protocol = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_handles::Handles>;
+
+  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_handles::Handles>
+      storage_ = {};
+};
 
 }  // namespace fidl_test_handles
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_handles_HandlesTable;
+
+template <>
+struct IsResource<::fidl_test_handles::Handles> : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_handles::Handles> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_handles::Handles> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_handles_HandlesTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_handles::Handles> {
+  static constexpr size_t inline_size_v1_no_ee = 132;
+  static constexpr size_t inline_size_v2 = 132;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::fidl_test_handles::Handles* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.plain_handle, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.bti_handle, offset + 4);
+    ::fidl::Decode(decoder, &value->storage_.channel_handle, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.clock_handle, offset + 12);
+    ::fidl::Decode(decoder, &value->storage_.debuglog_handle, offset + 16);
+    ::fidl::Decode(decoder, &value->storage_.event_handle, offset + 20);
+    ::fidl::Decode(decoder, &value->storage_.eventpair_handle, offset + 24);
+    ::fidl::Decode(decoder, &value->storage_.exception_handle, offset + 28);
+    ::fidl::Decode(decoder, &value->storage_.fifo_handle, offset + 32);
+    ::fidl::Decode(decoder, &value->storage_.guest_handle, offset + 36);
+    ::fidl::Decode(decoder, &value->storage_.interrupt_handle, offset + 40);
+    ::fidl::Decode(decoder, &value->storage_.iommu_handle, offset + 44);
+    ::fidl::Decode(decoder, &value->storage_.job_handle, offset + 48);
+    ::fidl::Decode(decoder, &value->storage_.pager_handle, offset + 52);
+    ::fidl::Decode(decoder, &value->storage_.pcidevice_handle, offset + 56);
+    ::fidl::Decode(decoder, &value->storage_.pmt_handle, offset + 60);
+    ::fidl::Decode(decoder, &value->storage_.port_handle, offset + 64);
+    ::fidl::Decode(decoder, &value->storage_.process_handle, offset + 68);
+    ::fidl::Decode(decoder, &value->storage_.profile_handle, offset + 72);
+    ::fidl::Decode(decoder, &value->storage_.resource_handle, offset + 76);
+    ::fidl::Decode(decoder, &value->storage_.socket_handle, offset + 80);
+    ::fidl::Decode(decoder, &value->storage_.suspendtoken_handle, offset + 84);
+    ::fidl::Decode(decoder, &value->storage_.thread_handle, offset + 88);
+    ::fidl::Decode(decoder, &value->storage_.timer_handle, offset + 92);
+    ::fidl::Decode(decoder, &value->storage_.vcpu_handle, offset + 96);
+    ::fidl::Decode(decoder, &value->storage_.vmar_handle, offset + 100);
+    ::fidl::Decode(decoder, &value->storage_.vmo_handle, offset + 104);
+    ::fidl::Decode(decoder, &value->storage_.rights_handle, offset + 108);
+    ::fidl::Decode(decoder, &value->storage_.aliased_plain_handle_field,
+                   offset + 112);
+    ::fidl::Decode(decoder, &value->storage_.aliased_subtype_handle_field,
+                   offset + 116);
+    ::fidl::Decode(decoder, &value->storage_.aliased_rights_handle_field,
+                   offset + 120);
+    ::fidl::Decode(decoder, &value->storage_.some_protocol, offset + 124);
+    ::fidl::Decode(decoder, &value->storage_.request_some_protocol,
+                   offset + 128);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

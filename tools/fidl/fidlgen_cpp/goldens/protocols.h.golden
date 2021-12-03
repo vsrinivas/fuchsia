@@ -4,37 +4,105 @@
 
 #include <fidl/fidl.test.protocols/cpp/wire.h>
 #include <fidl/test/protocols/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_protocols {
+class WithErrorSyntax_HandleInResult_Response;
+
+class WithErrorSyntaxHandleInResultTopResponse;
+
+class HandleRightsProtocolResponseMethodTopResponse;
+
+class HandleRightsProtocolResponseMethodRequest;
+
+class HandleRightsProtocolNoResponseMethodRequest;
+
+class HandleRightsProtocolAnEventRequest;
+
+class ChannelProtocolTakeHandleRequest;
+
+class ChannelProtocolMutateSocketTopResponse;
+
+class ChannelProtocolMutateSocketRequest;
+
+class WithProtocolEndsServerEndsTopResponse;
+
+class WithProtocolEndsServerEndsRequest;
+
+class WithProtocolEndsClientEndsTopResponse;
+
+class WithProtocolEndsClientEndsRequest;
+
+class WithErrorSyntax_ResponseAsStruct_Response;
+
+class WithErrorSyntaxResponseAsStructTopResponse;
+
+class WithErrorSyntax_ErrorAsPrimitive_Response;
+
+class WithErrorSyntaxErrorAsPrimitiveTopResponse;
+
+class WithErrorSyntax_ErrorAsEnum_Response;
+
+class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
+
+class WithAndWithoutRequestResponseWithRequestWithResponseRequest;
+
+class WithAndWithoutRequestResponseWithRequestNoResponseRequest;
+
+class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest;
+
+class WithAndWithoutRequestResponseOnWithResponseRequest;
+
+class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
+
+class TransitionalRequestTopResponse;
+
+class TransitionalRequestRequest;
+
+class TransitionalOneWayRequest;
+
+class TransitionalEventRequest;
+
+class MethodWithUnionUnionMethodRequest;
+
+class SyscallProtocolMethodCRequest;
+
+class ProtocolEnds;
+
+class WithProtocolEndsStructContainingEndsTopResponse;
+
+class WithProtocolEndsStructContainingEndsRequest;
+
+class ManyParametersFifteenRequest;
+
+class WithErrorSyntaxErrorAsEnumTopResponse;
+
+class ChannelProtocolMethodBTopResponse;
+
+class ChannelProtocolMethodBRequest;
+
+class ChannelProtocolMethodARequest;
+
+class ChannelProtocolEventARequest;
+
 using rights = ::fidl::test::protocols::rights;
 const static rights rightsMask = ::fidl::test::protocols::rightsMask;
 
 using obj_type = ::fidl::test::protocols::obj_type;
 
-using WithErrorSyntax_HandleInResult_Response =
-    ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Response;
-
 using WithErrorSyntax_HandleInResult_Result =
     ::fidl::test::protocols::WithErrorSyntax_HandleInResult_Result;
-
-using WithErrorSyntax_ResponseAsStruct_Response =
-    ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Response;
 
 using WithErrorSyntax_ResponseAsStruct_Result =
     ::fidl::test::protocols::WithErrorSyntax_ResponseAsStruct_Result;
 
-using WithErrorSyntax_ErrorAsPrimitive_Response =
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Response;
-
 using WithErrorSyntax_ErrorAsPrimitive_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsPrimitive_Result;
 
-using WithErrorSyntax_ErrorAsEnum_Response =
-    ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Response;
-
 using TheUnion = ::fidl::test::protocols::TheUnion;
-
-using ProtocolEnds = ::fidl::test::protocols::ProtocolEnds;
 
 using ErrorEnum = ::fidl::test::protocols::ErrorEnum;
 
@@ -42,3 +110,3644 @@ using WithErrorSyntax_ErrorAsEnum_Result =
     ::fidl::test::protocols::WithErrorSyntax_ErrorAsEnum_Result;
 
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response>
+    final {
+ public:
+  ::zx::handle h = {};
+};
+
+namespace fidl_test_protocols {
+class WithErrorSyntax_HandleInResult_Response final
+    : public ::fidl::internal::CodableBase<
+          WithErrorSyntax_HandleInResult_Response> {
+ private:
+  friend ::fidl::internal::CodableBase<WithErrorSyntax_HandleInResult_Response>;
+  WithErrorSyntax_HandleInResult_Response(::fidl::Decoder& decoder);
+
+ public:
+  WithErrorSyntax_HandleInResult_Response() = default;
+  WithErrorSyntax_HandleInResult_Response(::zx::handle&& h)
+      : storage_({std::move(h)}) {}
+  WithErrorSyntax_HandleInResult_Response(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithErrorSyntax_HandleInResult_Response() = default;
+  WithErrorSyntax_HandleInResult_Response(
+      WithErrorSyntax_HandleInResult_Response&&) noexcept = default;
+  WithErrorSyntax_HandleInResult_Response& operator=(
+      WithErrorSyntax_HandleInResult_Response&&) noexcept = default;
+  WithErrorSyntax_HandleInResult_Response(
+      const WithErrorSyntax_HandleInResult_Response&) noexcept = delete;
+  WithErrorSyntax_HandleInResult_Response& operator=(
+      const WithErrorSyntax_HandleInResult_Response&) noexcept = delete;
+
+  const ::zx::handle& h() const { return storage_.h; }
+
+  WithErrorSyntax_HandleInResult_Response& set_h(::zx::handle _value) {
+    storage_.h = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    final {
+ public:
+  ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Result result = {};
+};
+
+namespace fidl_test_protocols {
+class WithErrorSyntaxHandleInResultTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithErrorSyntaxHandleInResultTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntaxHandleInResultTopResponse>;
+  WithErrorSyntaxHandleInResultTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  WithErrorSyntaxHandleInResultTopResponse() = default;
+  WithErrorSyntaxHandleInResultTopResponse(
+      ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Result&& result)
+      : storage_({std::move(result)}) {}
+  WithErrorSyntaxHandleInResultTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithErrorSyntaxHandleInResultTopResponse() = default;
+  WithErrorSyntaxHandleInResultTopResponse(
+      WithErrorSyntaxHandleInResultTopResponse&&) noexcept = default;
+  WithErrorSyntaxHandleInResultTopResponse& operator=(
+      WithErrorSyntaxHandleInResultTopResponse&&) noexcept = default;
+  WithErrorSyntaxHandleInResultTopResponse(
+      const WithErrorSyntaxHandleInResultTopResponse&) noexcept = delete;
+  WithErrorSyntaxHandleInResultTopResponse& operator=(
+      const WithErrorSyntaxHandleInResultTopResponse&) noexcept = delete;
+
+  const ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  WithErrorSyntaxHandleInResultTopResponse& set_result(
+      ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Result _value) {
+    storage_.result = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    final {
+ public:
+  ::zx::socket h = {};
+};
+
+namespace fidl_test_protocols {
+class HandleRightsProtocolResponseMethodTopResponse final
+    : public ::fidl::internal::CodableBase<
+          HandleRightsProtocolResponseMethodTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      HandleRightsProtocolResponseMethodTopResponse>;
+  HandleRightsProtocolResponseMethodTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  HandleRightsProtocolResponseMethodTopResponse() = default;
+  HandleRightsProtocolResponseMethodTopResponse(::zx::socket&& h)
+      : storage_({std::move(h)}) {}
+  HandleRightsProtocolResponseMethodTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~HandleRightsProtocolResponseMethodTopResponse() = default;
+  HandleRightsProtocolResponseMethodTopResponse(
+      HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
+  HandleRightsProtocolResponseMethodTopResponse& operator=(
+      HandleRightsProtocolResponseMethodTopResponse&&) noexcept = default;
+  HandleRightsProtocolResponseMethodTopResponse(
+      const HandleRightsProtocolResponseMethodTopResponse&) noexcept = delete;
+  HandleRightsProtocolResponseMethodTopResponse& operator=(
+      const HandleRightsProtocolResponseMethodTopResponse&) noexcept = delete;
+
+  const ::zx::socket& h() const { return storage_.h; }
+
+  HandleRightsProtocolResponseMethodTopResponse& set_h(::zx::socket _value) {
+    storage_.h = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest>
+    final {
+ public:
+  ::zx::socket h = {};
+};
+
+namespace fidl_test_protocols {
+class HandleRightsProtocolResponseMethodRequest final
+    : public ::fidl::internal::CodableBase<
+          HandleRightsProtocolResponseMethodRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      HandleRightsProtocolResponseMethodRequest>;
+  HandleRightsProtocolResponseMethodRequest(::fidl::Decoder& decoder);
+
+ public:
+  HandleRightsProtocolResponseMethodRequest() = default;
+  HandleRightsProtocolResponseMethodRequest(::zx::socket&& h)
+      : storage_({std::move(h)}) {}
+  HandleRightsProtocolResponseMethodRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~HandleRightsProtocolResponseMethodRequest() = default;
+  HandleRightsProtocolResponseMethodRequest(
+      HandleRightsProtocolResponseMethodRequest&&) noexcept = default;
+  HandleRightsProtocolResponseMethodRequest& operator=(
+      HandleRightsProtocolResponseMethodRequest&&) noexcept = default;
+  HandleRightsProtocolResponseMethodRequest(
+      const HandleRightsProtocolResponseMethodRequest&) noexcept = delete;
+  HandleRightsProtocolResponseMethodRequest& operator=(
+      const HandleRightsProtocolResponseMethodRequest&) noexcept = delete;
+
+  const ::zx::socket& h() const { return storage_.h; }
+
+  HandleRightsProtocolResponseMethodRequest& set_h(::zx::socket _value) {
+    storage_.h = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    final {
+ public:
+  ::zx::socket h = {};
+};
+
+namespace fidl_test_protocols {
+class HandleRightsProtocolNoResponseMethodRequest final
+    : public ::fidl::internal::CodableBase<
+          HandleRightsProtocolNoResponseMethodRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      HandleRightsProtocolNoResponseMethodRequest>;
+  HandleRightsProtocolNoResponseMethodRequest(::fidl::Decoder& decoder);
+
+ public:
+  HandleRightsProtocolNoResponseMethodRequest() = default;
+  HandleRightsProtocolNoResponseMethodRequest(::zx::socket&& h)
+      : storage_({std::move(h)}) {}
+  HandleRightsProtocolNoResponseMethodRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~HandleRightsProtocolNoResponseMethodRequest() = default;
+  HandleRightsProtocolNoResponseMethodRequest(
+      HandleRightsProtocolNoResponseMethodRequest&&) noexcept = default;
+  HandleRightsProtocolNoResponseMethodRequest& operator=(
+      HandleRightsProtocolNoResponseMethodRequest&&) noexcept = default;
+  HandleRightsProtocolNoResponseMethodRequest(
+      const HandleRightsProtocolNoResponseMethodRequest&) noexcept = delete;
+  HandleRightsProtocolNoResponseMethodRequest& operator=(
+      const HandleRightsProtocolNoResponseMethodRequest&) noexcept = delete;
+
+  const ::zx::socket& h() const { return storage_.h; }
+
+  HandleRightsProtocolNoResponseMethodRequest& set_h(::zx::socket _value) {
+    storage_.h = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::HandleRightsProtocolAnEventRequest>
+    final {
+ public:
+  ::zx::socket h = {};
+};
+
+namespace fidl_test_protocols {
+class HandleRightsProtocolAnEventRequest final
+    : public ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest>;
+  HandleRightsProtocolAnEventRequest(::fidl::Decoder& decoder);
+
+ public:
+  HandleRightsProtocolAnEventRequest() = default;
+  HandleRightsProtocolAnEventRequest(::zx::socket&& h)
+      : storage_({std::move(h)}) {}
+  HandleRightsProtocolAnEventRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::HandleRightsProtocolAnEventRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~HandleRightsProtocolAnEventRequest() = default;
+  HandleRightsProtocolAnEventRequest(
+      HandleRightsProtocolAnEventRequest&&) noexcept = default;
+  HandleRightsProtocolAnEventRequest& operator=(
+      HandleRightsProtocolAnEventRequest&&) noexcept = default;
+  HandleRightsProtocolAnEventRequest(
+      const HandleRightsProtocolAnEventRequest&) noexcept = delete;
+  HandleRightsProtocolAnEventRequest& operator=(
+      const HandleRightsProtocolAnEventRequest&) noexcept = delete;
+
+  const ::zx::socket& h() const { return storage_.h; }
+
+  HandleRightsProtocolAnEventRequest& set_h(::zx::socket _value) {
+    storage_.h = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::HandleRightsProtocolAnEventRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::HandleRightsProtocolAnEventRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ChannelProtocolTakeHandleRequest>
+    final {
+ public:
+  ::zx::handle h = {};
+};
+
+namespace fidl_test_protocols {
+class ChannelProtocolTakeHandleRequest final
+    : public ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest>;
+  ChannelProtocolTakeHandleRequest(::fidl::Decoder& decoder);
+
+ public:
+  ChannelProtocolTakeHandleRequest() = default;
+  ChannelProtocolTakeHandleRequest(::zx::handle&& h)
+      : storage_({std::move(h)}) {}
+  ChannelProtocolTakeHandleRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::ChannelProtocolTakeHandleRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ChannelProtocolTakeHandleRequest() = default;
+  ChannelProtocolTakeHandleRequest(
+      ChannelProtocolTakeHandleRequest&&) noexcept = default;
+  ChannelProtocolTakeHandleRequest& operator=(
+      ChannelProtocolTakeHandleRequest&&) noexcept = default;
+  ChannelProtocolTakeHandleRequest(
+      const ChannelProtocolTakeHandleRequest&) noexcept = delete;
+  ChannelProtocolTakeHandleRequest& operator=(
+      const ChannelProtocolTakeHandleRequest&) noexcept = delete;
+
+  const ::zx::handle& h() const { return storage_.h; }
+
+  ChannelProtocolTakeHandleRequest& set_h(::zx::handle _value) {
+    storage_.h = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolTakeHandleRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ChannelProtocolTakeHandleRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse>
+    final {
+ public:
+  ::zx::socket b = {};
+};
+
+namespace fidl_test_protocols {
+class ChannelProtocolMutateSocketTopResponse final
+    : public ::fidl::internal::CodableBase<
+          ChannelProtocolMutateSocketTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketTopResponse>;
+  ChannelProtocolMutateSocketTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  ChannelProtocolMutateSocketTopResponse() = default;
+  ChannelProtocolMutateSocketTopResponse(::zx::socket&& b)
+      : storage_({std::move(b)}) {}
+  ChannelProtocolMutateSocketTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ChannelProtocolMutateSocketTopResponse() = default;
+  ChannelProtocolMutateSocketTopResponse(
+      ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
+  ChannelProtocolMutateSocketTopResponse& operator=(
+      ChannelProtocolMutateSocketTopResponse&&) noexcept = default;
+  ChannelProtocolMutateSocketTopResponse(
+      const ChannelProtocolMutateSocketTopResponse&) noexcept = delete;
+  ChannelProtocolMutateSocketTopResponse& operator=(
+      const ChannelProtocolMutateSocketTopResponse&) noexcept = delete;
+
+  const ::zx::socket& b() const { return storage_.b; }
+
+  ChannelProtocolMutateSocketTopResponse& set_b(::zx::socket _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ChannelProtocolMutateSocketRequest>
+    final {
+ public:
+  ::zx::socket a = {};
+};
+
+namespace fidl_test_protocols {
+class ChannelProtocolMutateSocketRequest final
+    : public ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest>;
+  ChannelProtocolMutateSocketRequest(::fidl::Decoder& decoder);
+
+ public:
+  ChannelProtocolMutateSocketRequest() = default;
+  ChannelProtocolMutateSocketRequest(::zx::socket&& a)
+      : storage_({std::move(a)}) {}
+  ChannelProtocolMutateSocketRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::ChannelProtocolMutateSocketRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ChannelProtocolMutateSocketRequest() = default;
+  ChannelProtocolMutateSocketRequest(
+      ChannelProtocolMutateSocketRequest&&) noexcept = default;
+  ChannelProtocolMutateSocketRequest& operator=(
+      ChannelProtocolMutateSocketRequest&&) noexcept = default;
+  ChannelProtocolMutateSocketRequest(
+      const ChannelProtocolMutateSocketRequest&) noexcept = delete;
+  ChannelProtocolMutateSocketRequest& operator=(
+      const ChannelProtocolMutateSocketRequest&) noexcept = delete;
+
+  const ::zx::socket& a() const { return storage_.a; }
+
+  ChannelProtocolMutateSocketRequest& set_a(::zx::socket _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolMutateSocketRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ChannelProtocolMutateSocketRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse>
+    final {
+ public:
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol> out =
+      {};
+};
+
+namespace fidl_test_protocols {
+class WithProtocolEndsServerEndsTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithProtocolEndsServerEndsTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsTopResponse>;
+  WithProtocolEndsServerEndsTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  WithProtocolEndsServerEndsTopResponse() = default;
+  WithProtocolEndsServerEndsTopResponse(
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&&
+          out)
+      : storage_({std::move(out)}) {}
+  WithProtocolEndsServerEndsTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithProtocolEndsServerEndsTopResponse() = default;
+  WithProtocolEndsServerEndsTopResponse(
+      WithProtocolEndsServerEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsServerEndsTopResponse& operator=(
+      WithProtocolEndsServerEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsServerEndsTopResponse(
+      const WithProtocolEndsServerEndsTopResponse&) noexcept = delete;
+  WithProtocolEndsServerEndsTopResponse& operator=(
+      const WithProtocolEndsServerEndsTopResponse&) noexcept = delete;
+
+  const ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
+  out() const {
+    return storage_.out;
+  }
+
+  WithProtocolEndsServerEndsTopResponse& set_out(
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+          _value) {
+    storage_.out = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithProtocolEndsServerEndsRequest>
+    final {
+ public:
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol> in =
+      {};
+};
+
+namespace fidl_test_protocols {
+class WithProtocolEndsServerEndsRequest final
+    : public ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest>;
+  WithProtocolEndsServerEndsRequest(::fidl::Decoder& decoder);
+
+ public:
+  WithProtocolEndsServerEndsRequest() = default;
+  WithProtocolEndsServerEndsRequest(
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&&
+          in)
+      : storage_({std::move(in)}) {}
+  WithProtocolEndsServerEndsRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithProtocolEndsServerEndsRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithProtocolEndsServerEndsRequest() = default;
+  WithProtocolEndsServerEndsRequest(
+      WithProtocolEndsServerEndsRequest&&) noexcept = default;
+  WithProtocolEndsServerEndsRequest& operator=(
+      WithProtocolEndsServerEndsRequest&&) noexcept = default;
+  WithProtocolEndsServerEndsRequest(
+      const WithProtocolEndsServerEndsRequest&) noexcept = delete;
+  WithProtocolEndsServerEndsRequest& operator=(
+      const WithProtocolEndsServerEndsRequest&) noexcept = delete;
+
+  const ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
+  in() const {
+    return storage_.in;
+  }
+
+  WithProtocolEndsServerEndsRequest& set_in(
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+          _value) {
+    storage_.in = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsServerEndsRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithProtocolEndsServerEndsRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse>
+    final {
+ public:
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> out =
+      {};
+};
+
+namespace fidl_test_protocols {
+class WithProtocolEndsClientEndsTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithProtocolEndsClientEndsTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsTopResponse>;
+  WithProtocolEndsClientEndsTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  WithProtocolEndsClientEndsTopResponse() = default;
+  WithProtocolEndsClientEndsTopResponse(
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&&
+          out)
+      : storage_({std::move(out)}) {}
+  WithProtocolEndsClientEndsTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithProtocolEndsClientEndsTopResponse() = default;
+  WithProtocolEndsClientEndsTopResponse(
+      WithProtocolEndsClientEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsClientEndsTopResponse& operator=(
+      WithProtocolEndsClientEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsClientEndsTopResponse(
+      const WithProtocolEndsClientEndsTopResponse&) noexcept = delete;
+  WithProtocolEndsClientEndsTopResponse& operator=(
+      const WithProtocolEndsClientEndsTopResponse&) noexcept = delete;
+
+  const ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&
+  out() const {
+    return storage_.out;
+  }
+
+  WithProtocolEndsClientEndsTopResponse& set_out(
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
+          _value) {
+    storage_.out = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithProtocolEndsClientEndsRequest>
+    final {
+ public:
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol> in =
+      {};
+};
+
+namespace fidl_test_protocols {
+class WithProtocolEndsClientEndsRequest final
+    : public ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest>;
+  WithProtocolEndsClientEndsRequest(::fidl::Decoder& decoder);
+
+ public:
+  WithProtocolEndsClientEndsRequest() = default;
+  WithProtocolEndsClientEndsRequest(
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&&
+          in)
+      : storage_({std::move(in)}) {}
+  WithProtocolEndsClientEndsRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithProtocolEndsClientEndsRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithProtocolEndsClientEndsRequest() = default;
+  WithProtocolEndsClientEndsRequest(
+      WithProtocolEndsClientEndsRequest&&) noexcept = default;
+  WithProtocolEndsClientEndsRequest& operator=(
+      WithProtocolEndsClientEndsRequest&&) noexcept = default;
+  WithProtocolEndsClientEndsRequest(
+      const WithProtocolEndsClientEndsRequest&) noexcept = delete;
+  WithProtocolEndsClientEndsRequest& operator=(
+      const WithProtocolEndsClientEndsRequest&) noexcept = delete;
+
+  const ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&
+  in() const {
+    return storage_.in;
+  }
+
+  WithProtocolEndsClientEndsRequest& set_in(
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
+          _value) {
+    storage_.in = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsClientEndsRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithProtocolEndsClientEndsRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
+    final {
+ public:
+  int64_t a = {};
+
+  int64_t b = {};
+
+  int64_t c = {};
+};
+
+namespace fidl_test_protocols {
+class WithErrorSyntax_ResponseAsStruct_Response final
+    : public ::fidl::internal::CodableBase<
+          WithErrorSyntax_ResponseAsStruct_Response> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntax_ResponseAsStruct_Response>;
+  WithErrorSyntax_ResponseAsStruct_Response(::fidl::Decoder& decoder);
+
+ public:
+  WithErrorSyntax_ResponseAsStruct_Response() = default;
+  WithErrorSyntax_ResponseAsStruct_Response(int64_t a, int64_t b, int64_t c)
+      : storage_({a, b, c}) {}
+  WithErrorSyntax_ResponseAsStruct_Response(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithErrorSyntax_ResponseAsStruct_Response() = default;
+  WithErrorSyntax_ResponseAsStruct_Response(
+      WithErrorSyntax_ResponseAsStruct_Response&&) noexcept = default;
+  WithErrorSyntax_ResponseAsStruct_Response& operator=(
+      WithErrorSyntax_ResponseAsStruct_Response&&) noexcept = default;
+
+  const int64_t& a() const { return storage_.a; }
+
+  WithErrorSyntax_ResponseAsStruct_Response& set_a(int64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const int64_t& b() const { return storage_.b; }
+
+  WithErrorSyntax_ResponseAsStruct_Response& set_b(int64_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+  const int64_t& c() const { return storage_.c; }
+
+  WithErrorSyntax_ResponseAsStruct_Response& set_c(int64_t _value) {
+    storage_.c = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
+    final {
+ public:
+  ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Result result = {};
+};
+
+namespace fidl_test_protocols {
+class WithErrorSyntaxResponseAsStructTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithErrorSyntaxResponseAsStructTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntaxResponseAsStructTopResponse>;
+  WithErrorSyntaxResponseAsStructTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  WithErrorSyntaxResponseAsStructTopResponse() = default;
+  WithErrorSyntaxResponseAsStructTopResponse(
+      ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Result result)
+      : storage_({std::move(result)}) {}
+  WithErrorSyntaxResponseAsStructTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithErrorSyntaxResponseAsStructTopResponse() = default;
+  WithErrorSyntaxResponseAsStructTopResponse(
+      WithErrorSyntaxResponseAsStructTopResponse&&) noexcept = default;
+  WithErrorSyntaxResponseAsStructTopResponse& operator=(
+      WithErrorSyntaxResponseAsStructTopResponse&&) noexcept = default;
+
+  const ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  WithErrorSyntaxResponseAsStructTopResponse& set_result(
+      ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Result _value) {
+    storage_.result = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    final {
+ public:
+  uint8_t __reserved = 0u;
+};
+
+namespace fidl_test_protocols {
+class WithErrorSyntax_ErrorAsPrimitive_Response final
+    : public ::fidl::internal::CodableBase<
+          WithErrorSyntax_ErrorAsPrimitive_Response> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntax_ErrorAsPrimitive_Response>;
+  WithErrorSyntax_ErrorAsPrimitive_Response(::fidl::Decoder& decoder);
+
+ public:
+  WithErrorSyntax_ErrorAsPrimitive_Response() = default;
+  WithErrorSyntax_ErrorAsPrimitive_Response(uint8_t __reserved)
+      : storage_({__reserved}) {}
+  WithErrorSyntax_ErrorAsPrimitive_Response(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithErrorSyntax_ErrorAsPrimitive_Response() = default;
+  WithErrorSyntax_ErrorAsPrimitive_Response(
+      WithErrorSyntax_ErrorAsPrimitive_Response&&) noexcept = default;
+  WithErrorSyntax_ErrorAsPrimitive_Response& operator=(
+      WithErrorSyntax_ErrorAsPrimitive_Response&&) noexcept = default;
+
+  const uint8_t& __reserved() const { return storage_.__reserved; }
+
+  WithErrorSyntax_ErrorAsPrimitive_Response& set___reserved(uint8_t _value) {
+    storage_.__reserved = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
+    final {
+ public:
+  ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result = {};
+};
+
+namespace fidl_test_protocols {
+class WithErrorSyntaxErrorAsPrimitiveTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithErrorSyntaxErrorAsPrimitiveTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithErrorSyntaxErrorAsPrimitiveTopResponse>;
+  WithErrorSyntaxErrorAsPrimitiveTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  WithErrorSyntaxErrorAsPrimitiveTopResponse() = default;
+  WithErrorSyntaxErrorAsPrimitiveTopResponse(
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result result)
+      : storage_({std::move(result)}) {}
+  WithErrorSyntaxErrorAsPrimitiveTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithErrorSyntaxErrorAsPrimitiveTopResponse() = default;
+  WithErrorSyntaxErrorAsPrimitiveTopResponse(
+      WithErrorSyntaxErrorAsPrimitiveTopResponse&&) noexcept = default;
+  WithErrorSyntaxErrorAsPrimitiveTopResponse& operator=(
+      WithErrorSyntaxErrorAsPrimitiveTopResponse&&) noexcept = default;
+
+  const ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  WithErrorSyntaxErrorAsPrimitiveTopResponse& set_result(
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Result _value) {
+    storage_.result = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    final {
+ public:
+  uint8_t __reserved = 0u;
+};
+
+namespace fidl_test_protocols {
+class WithErrorSyntax_ErrorAsEnum_Response final
+    : public ::fidl::internal::CodableBase<
+          WithErrorSyntax_ErrorAsEnum_Response> {
+ private:
+  friend ::fidl::internal::CodableBase<WithErrorSyntax_ErrorAsEnum_Response>;
+  WithErrorSyntax_ErrorAsEnum_Response(::fidl::Decoder& decoder);
+
+ public:
+  WithErrorSyntax_ErrorAsEnum_Response() = default;
+  WithErrorSyntax_ErrorAsEnum_Response(uint8_t __reserved)
+      : storage_({__reserved}) {}
+  WithErrorSyntax_ErrorAsEnum_Response(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithErrorSyntax_ErrorAsEnum_Response() = default;
+  WithErrorSyntax_ErrorAsEnum_Response(
+      WithErrorSyntax_ErrorAsEnum_Response&&) noexcept = default;
+  WithErrorSyntax_ErrorAsEnum_Response& operator=(
+      WithErrorSyntax_ErrorAsEnum_Response&&) noexcept = default;
+
+  const uint8_t& __reserved() const { return storage_.__reserved; }
+
+  WithErrorSyntax_ErrorAsEnum_Response& set___reserved(uint8_t _value) {
+    storage_.__reserved = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
+    final {
+ public:
+  ::std::string ret = {};
+};
+
+namespace fidl_test_protocols {
+class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
+      ::fidl::Decoder& decoder);
+
+ public:
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse() = default;
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
+      ::std::string ret)
+      : storage_({std::move(ret)}) {}
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithAndWithoutRequestResponseWithRequestWithResponseTopResponse() = default;
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& operator=(
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&&) noexcept =
+      default;
+
+  const ::std::string& ret() const { return storage_.ret; }
+
+  WithAndWithoutRequestResponseWithRequestWithResponseTopResponse& set_ret(
+      ::std::string _value) {
+    storage_.ret = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestWithResponseRequest>
+    final {
+ public:
+  ::std::string arg = {};
+};
+
+namespace fidl_test_protocols {
+class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
+    : public ::fidl::internal::CodableBase<
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest(
+      ::fidl::Decoder& decoder);
+
+ public:
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest() = default;
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest(::std::string arg)
+      : storage_({std::move(arg)}) {}
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseWithRequestWithResponseRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithAndWithoutRequestResponseWithRequestWithResponseRequest() = default;
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest(
+      WithAndWithoutRequestResponseWithRequestWithResponseRequest&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest& operator=(
+      WithAndWithoutRequestResponseWithRequestWithResponseRequest&&) noexcept =
+      default;
+
+  const ::std::string& arg() const { return storage_.arg; }
+
+  WithAndWithoutRequestResponseWithRequestWithResponseRequest& set_arg(
+      ::std::string _value) {
+    storage_.arg = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestNoResponseRequest>
+    final {
+ public:
+  ::std::string arg = {};
+};
+
+namespace fidl_test_protocols {
+class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
+    : public ::fidl::internal::CodableBase<
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest(
+      ::fidl::Decoder& decoder);
+
+ public:
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest() = default;
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest(::std::string arg)
+      : storage_({std::move(arg)}) {}
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseWithRequestNoResponseRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithAndWithoutRequestResponseWithRequestNoResponseRequest() = default;
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest(
+      WithAndWithoutRequestResponseWithRequestNoResponseRequest&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest& operator=(
+      WithAndWithoutRequestResponseWithRequestNoResponseRequest&&) noexcept =
+      default;
+
+  const ::std::string& arg() const { return storage_.arg; }
+
+  WithAndWithoutRequestResponseWithRequestNoResponseRequest& set_arg(
+      ::std::string _value) {
+    storage_.arg = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
+    final {
+ public:
+  ::std::string arg = {};
+};
+
+namespace fidl_test_protocols {
+class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final
+    : public ::fidl::internal::CodableBase<
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      ::fidl::Decoder& decoder);
+
+ public:
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest() = default;
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      ::std::string arg)
+      : storage_({std::move(arg)}) {}
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithAndWithoutRequestResponseWithRequestEmptyResponseRequest() = default;
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
+      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& operator=(
+      WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&) noexcept =
+      default;
+
+  const ::std::string& arg() const { return storage_.arg; }
+
+  WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& set_arg(
+      ::std::string _value) {
+    storage_.arg = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
+    final {
+ public:
+  ::std::string ret = {};
+};
+
+namespace fidl_test_protocols {
+class WithAndWithoutRequestResponseOnWithResponseRequest final
+    : public ::fidl::internal::CodableBase<
+          WithAndWithoutRequestResponseOnWithResponseRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseOnWithResponseRequest>;
+  WithAndWithoutRequestResponseOnWithResponseRequest(::fidl::Decoder& decoder);
+
+ public:
+  WithAndWithoutRequestResponseOnWithResponseRequest() = default;
+  WithAndWithoutRequestResponseOnWithResponseRequest(::std::string ret)
+      : storage_({std::move(ret)}) {}
+  WithAndWithoutRequestResponseOnWithResponseRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseOnWithResponseRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithAndWithoutRequestResponseOnWithResponseRequest() = default;
+  WithAndWithoutRequestResponseOnWithResponseRequest(
+      WithAndWithoutRequestResponseOnWithResponseRequest&&) noexcept = default;
+  WithAndWithoutRequestResponseOnWithResponseRequest& operator=(
+      WithAndWithoutRequestResponseOnWithResponseRequest&&) noexcept = default;
+
+  const ::std::string& ret() const { return storage_.ret; }
+
+  WithAndWithoutRequestResponseOnWithResponseRequest& set_ret(
+      ::std::string _value) {
+    storage_.ret = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseOnWithResponseRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
+    final {
+ public:
+  ::std::string ret = {};
+};
+
+namespace fidl_test_protocols {
+class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      ::fidl::Decoder& decoder);
+
+ public:
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse() = default;
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      ::std::string ret)
+      : storage_({std::move(ret)}) {}
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithAndWithoutRequestResponseNoRequestWithResponseTopResponse() = default;
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept =
+      default;
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& operator=(
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&&) noexcept =
+      default;
+
+  const ::std::string& ret() const { return storage_.ret; }
+
+  WithAndWithoutRequestResponseNoRequestWithResponseTopResponse& set_ret(
+      ::std::string _value) {
+    storage_.ret = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::TransitionalRequestTopResponse>
+    final {
+ public:
+  int64_t y = {};
+};
+
+namespace fidl_test_protocols {
+class TransitionalRequestTopResponse final
+    : public ::fidl::internal::CodableBase<TransitionalRequestTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<TransitionalRequestTopResponse>;
+  TransitionalRequestTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  TransitionalRequestTopResponse() = default;
+  TransitionalRequestTopResponse(int64_t y) : storage_({y}) {}
+  TransitionalRequestTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::TransitionalRequestTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~TransitionalRequestTopResponse() = default;
+  TransitionalRequestTopResponse(TransitionalRequestTopResponse&&) noexcept =
+      default;
+  TransitionalRequestTopResponse& operator=(
+      TransitionalRequestTopResponse&&) noexcept = default;
+
+  const int64_t& y() const { return storage_.y; }
+
+  TransitionalRequestTopResponse& set_y(int64_t _value) {
+    storage_.y = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::TransitionalRequestTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::TransitionalRequestTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::TransitionalRequestRequest>
+    final {
+ public:
+  int64_t x = {};
+};
+
+namespace fidl_test_protocols {
+class TransitionalRequestRequest final
+    : public ::fidl::internal::CodableBase<TransitionalRequestRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<TransitionalRequestRequest>;
+  TransitionalRequestRequest(::fidl::Decoder& decoder);
+
+ public:
+  TransitionalRequestRequest() = default;
+  TransitionalRequestRequest(int64_t x) : storage_({x}) {}
+  TransitionalRequestRequest(::fidl::internal::DesignatedInitializationProxy<
+                             ::fidl_test_protocols::TransitionalRequestRequest>
+                                 storage)
+      : storage_(std::move(storage)) {}
+  ~TransitionalRequestRequest() = default;
+  TransitionalRequestRequest(TransitionalRequestRequest&&) noexcept = default;
+  TransitionalRequestRequest& operator=(TransitionalRequestRequest&&) noexcept =
+      default;
+
+  const int64_t& x() const { return storage_.x; }
+
+  TransitionalRequestRequest& set_x(int64_t _value) {
+    storage_.x = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::TransitionalRequestRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::TransitionalRequestRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::TransitionalOneWayRequest>
+    final {
+ public:
+  int64_t x = {};
+};
+
+namespace fidl_test_protocols {
+class TransitionalOneWayRequest final
+    : public ::fidl::internal::CodableBase<TransitionalOneWayRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<TransitionalOneWayRequest>;
+  TransitionalOneWayRequest(::fidl::Decoder& decoder);
+
+ public:
+  TransitionalOneWayRequest() = default;
+  TransitionalOneWayRequest(int64_t x) : storage_({x}) {}
+  TransitionalOneWayRequest(::fidl::internal::DesignatedInitializationProxy<
+                            ::fidl_test_protocols::TransitionalOneWayRequest>
+                                storage)
+      : storage_(std::move(storage)) {}
+  ~TransitionalOneWayRequest() = default;
+  TransitionalOneWayRequest(TransitionalOneWayRequest&&) noexcept = default;
+  TransitionalOneWayRequest& operator=(TransitionalOneWayRequest&&) noexcept =
+      default;
+
+  const int64_t& x() const { return storage_.x; }
+
+  TransitionalOneWayRequest& set_x(int64_t _value) {
+    storage_.x = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::TransitionalOneWayRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::TransitionalOneWayRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::TransitionalEventRequest>
+    final {
+ public:
+  int64_t x = {};
+};
+
+namespace fidl_test_protocols {
+class TransitionalEventRequest final
+    : public ::fidl::internal::CodableBase<TransitionalEventRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<TransitionalEventRequest>;
+  TransitionalEventRequest(::fidl::Decoder& decoder);
+
+ public:
+  TransitionalEventRequest() = default;
+  TransitionalEventRequest(int64_t x) : storage_({x}) {}
+  TransitionalEventRequest(::fidl::internal::DesignatedInitializationProxy<
+                           ::fidl_test_protocols::TransitionalEventRequest>
+                               storage)
+      : storage_(std::move(storage)) {}
+  ~TransitionalEventRequest() = default;
+  TransitionalEventRequest(TransitionalEventRequest&&) noexcept = default;
+  TransitionalEventRequest& operator=(TransitionalEventRequest&&) noexcept =
+      default;
+
+  const int64_t& x() const { return storage_.x; }
+
+  TransitionalEventRequest& set_x(int64_t _value) {
+    storage_.x = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::TransitionalEventRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::TransitionalEventRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::MethodWithUnionUnionMethodRequest>
+    final {
+ public:
+  ::fidl_test_protocols::TheUnion u = {};
+};
+
+namespace fidl_test_protocols {
+class MethodWithUnionUnionMethodRequest final
+    : public ::fidl::internal::CodableBase<MethodWithUnionUnionMethodRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<MethodWithUnionUnionMethodRequest>;
+  MethodWithUnionUnionMethodRequest(::fidl::Decoder& decoder);
+
+ public:
+  MethodWithUnionUnionMethodRequest() = default;
+  MethodWithUnionUnionMethodRequest(::fidl_test_protocols::TheUnion u)
+      : storage_({std::move(u)}) {}
+  MethodWithUnionUnionMethodRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::MethodWithUnionUnionMethodRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~MethodWithUnionUnionMethodRequest() = default;
+  MethodWithUnionUnionMethodRequest(
+      MethodWithUnionUnionMethodRequest&&) noexcept = default;
+  MethodWithUnionUnionMethodRequest& operator=(
+      MethodWithUnionUnionMethodRequest&&) noexcept = default;
+
+  const ::fidl_test_protocols::TheUnion& u() const { return storage_.u; }
+
+  MethodWithUnionUnionMethodRequest& set_u(
+      ::fidl_test_protocols::TheUnion _value) {
+    storage_.u = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::MethodWithUnionUnionMethodRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::MethodWithUnionUnionMethodRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::SyscallProtocolMethodCRequest>
+    final {
+ public:
+  int64_t a = {};
+
+  int64_t b = {};
+};
+
+namespace fidl_test_protocols {
+class SyscallProtocolMethodCRequest final
+    : public ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest>;
+  SyscallProtocolMethodCRequest(::fidl::Decoder& decoder);
+
+ public:
+  SyscallProtocolMethodCRequest() = default;
+  SyscallProtocolMethodCRequest(int64_t a, int64_t b) : storage_({a, b}) {}
+  SyscallProtocolMethodCRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::SyscallProtocolMethodCRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~SyscallProtocolMethodCRequest() = default;
+  SyscallProtocolMethodCRequest(SyscallProtocolMethodCRequest&&) noexcept =
+      default;
+  SyscallProtocolMethodCRequest& operator=(
+      SyscallProtocolMethodCRequest&&) noexcept = default;
+
+  const int64_t& a() const { return storage_.a; }
+
+  SyscallProtocolMethodCRequest& set_a(int64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const int64_t& b() const { return storage_.b; }
+
+  SyscallProtocolMethodCRequest& set_b(int64_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::SyscallProtocolMethodCRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::SyscallProtocolMethodCRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ProtocolEnds>
+    final {
+ public:
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
+      client = {};
+
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+      server = {};
+
+  ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
+      client_opt = {};
+
+  ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+      server_opt = {};
+};
+
+namespace fidl_test_protocols {
+class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
+ private:
+  friend ::fidl::internal::CodableBase<ProtocolEnds>;
+  ProtocolEnds(::fidl::Decoder& decoder);
+
+ public:
+  ProtocolEnds() = default;
+  ProtocolEnds(
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&&
+          client,
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&&
+          server,
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&&
+          client_opt,
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&&
+          server_opt)
+      : storage_({std::move(client), std::move(server), std::move(client_opt),
+                  std::move(server_opt)}) {}
+  ProtocolEnds(::fidl::internal::DesignatedInitializationProxy<
+               ::fidl_test_protocols::ProtocolEnds>
+                   storage)
+      : storage_(std::move(storage)) {}
+  ~ProtocolEnds() = default;
+  ProtocolEnds(ProtocolEnds&&) noexcept = default;
+  ProtocolEnds& operator=(ProtocolEnds&&) noexcept = default;
+  ProtocolEnds(const ProtocolEnds&) noexcept = delete;
+  ProtocolEnds& operator=(const ProtocolEnds&) noexcept = delete;
+
+  const ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&
+  client() const {
+    return storage_.client;
+  }
+
+  ProtocolEnds& set_client(
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
+          _value) {
+    storage_.client = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
+  server() const {
+    return storage_.server;
+  }
+
+  ProtocolEnds& set_server(
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+          _value) {
+    storage_.server = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>&
+  client_opt() const {
+    return storage_.client_opt;
+  }
+
+  ProtocolEnds& set_client_opt(
+      ::fidl::InterfaceHandle<::fidl::test::protocols::DiscoverableProtocol>
+          _value) {
+    storage_.client_opt = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>&
+  server_opt() const {
+    return storage_.server_opt;
+  }
+
+  ProtocolEnds& set_server_opt(
+      ::fidl::InterfaceRequest<::fidl::test::protocols::DiscoverableProtocol>
+          _value) {
+    storage_.server_opt = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_protocols::ProtocolEnds>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ProtocolEnds>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
+    final {
+ public:
+  ::fidl_test_protocols::ProtocolEnds out = {};
+};
+
+namespace fidl_test_protocols {
+class WithProtocolEndsStructContainingEndsTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithProtocolEndsStructContainingEndsTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithProtocolEndsStructContainingEndsTopResponse>;
+  WithProtocolEndsStructContainingEndsTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  WithProtocolEndsStructContainingEndsTopResponse() = default;
+  WithProtocolEndsStructContainingEndsTopResponse(
+      ::fidl_test_protocols::ProtocolEnds&& out)
+      : storage_({std::move(out)}) {}
+  WithProtocolEndsStructContainingEndsTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::
+              WithProtocolEndsStructContainingEndsTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithProtocolEndsStructContainingEndsTopResponse() = default;
+  WithProtocolEndsStructContainingEndsTopResponse(
+      WithProtocolEndsStructContainingEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsStructContainingEndsTopResponse& operator=(
+      WithProtocolEndsStructContainingEndsTopResponse&&) noexcept = default;
+  WithProtocolEndsStructContainingEndsTopResponse(
+      const WithProtocolEndsStructContainingEndsTopResponse&) noexcept = delete;
+  WithProtocolEndsStructContainingEndsTopResponse& operator=(
+      const WithProtocolEndsStructContainingEndsTopResponse&) noexcept = delete;
+
+  const ::fidl_test_protocols::ProtocolEnds& out() const {
+    return storage_.out;
+  }
+
+  WithProtocolEndsStructContainingEndsTopResponse& set_out(
+      ::fidl_test_protocols::ProtocolEnds _value) {
+    storage_.out = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest>
+    final {
+ public:
+  ::fidl_test_protocols::ProtocolEnds in = {};
+};
+
+namespace fidl_test_protocols {
+class WithProtocolEndsStructContainingEndsRequest final
+    : public ::fidl::internal::CodableBase<
+          WithProtocolEndsStructContainingEndsRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      WithProtocolEndsStructContainingEndsRequest>;
+  WithProtocolEndsStructContainingEndsRequest(::fidl::Decoder& decoder);
+
+ public:
+  WithProtocolEndsStructContainingEndsRequest() = default;
+  WithProtocolEndsStructContainingEndsRequest(
+      ::fidl_test_protocols::ProtocolEnds&& in)
+      : storage_({std::move(in)}) {}
+  WithProtocolEndsStructContainingEndsRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithProtocolEndsStructContainingEndsRequest() = default;
+  WithProtocolEndsStructContainingEndsRequest(
+      WithProtocolEndsStructContainingEndsRequest&&) noexcept = default;
+  WithProtocolEndsStructContainingEndsRequest& operator=(
+      WithProtocolEndsStructContainingEndsRequest&&) noexcept = default;
+  WithProtocolEndsStructContainingEndsRequest(
+      const WithProtocolEndsStructContainingEndsRequest&) noexcept = delete;
+  WithProtocolEndsStructContainingEndsRequest& operator=(
+      const WithProtocolEndsStructContainingEndsRequest&) noexcept = delete;
+
+  const ::fidl_test_protocols::ProtocolEnds& in() const { return storage_.in; }
+
+  WithProtocolEndsStructContainingEndsRequest& set_in(
+      ::fidl_test_protocols::ProtocolEnds _value) {
+    storage_.in = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ManyParametersFifteenRequest>
+    final {
+ public:
+  bool p1 = {};
+
+  bool p2 = {};
+
+  bool p3 = {};
+
+  bool p4 = {};
+
+  bool p5 = {};
+
+  bool p6 = {};
+
+  bool p7 = {};
+
+  bool p8 = {};
+
+  bool p9 = {};
+
+  bool p10 = {};
+
+  bool p11 = {};
+
+  bool p12 = {};
+
+  bool p13 = {};
+
+  bool p14 = {};
+
+  bool p15 = {};
+};
+
+namespace fidl_test_protocols {
+class ManyParametersFifteenRequest final
+    : public ::fidl::internal::CodableBase<ManyParametersFifteenRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ManyParametersFifteenRequest>;
+  ManyParametersFifteenRequest(::fidl::Decoder& decoder);
+
+ public:
+  ManyParametersFifteenRequest() = default;
+  ManyParametersFifteenRequest(bool p1, bool p2, bool p3, bool p4, bool p5,
+                               bool p6, bool p7, bool p8, bool p9, bool p10,
+                               bool p11, bool p12, bool p13, bool p14, bool p15)
+      : storage_({p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12, p13, p14,
+                  p15}) {}
+  ManyParametersFifteenRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::ManyParametersFifteenRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ManyParametersFifteenRequest() = default;
+  ManyParametersFifteenRequest(ManyParametersFifteenRequest&&) noexcept =
+      default;
+  ManyParametersFifteenRequest& operator=(
+      ManyParametersFifteenRequest&&) noexcept = default;
+
+  const bool& p1() const { return storage_.p1; }
+
+  ManyParametersFifteenRequest& set_p1(bool _value) {
+    storage_.p1 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p2() const { return storage_.p2; }
+
+  ManyParametersFifteenRequest& set_p2(bool _value) {
+    storage_.p2 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p3() const { return storage_.p3; }
+
+  ManyParametersFifteenRequest& set_p3(bool _value) {
+    storage_.p3 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p4() const { return storage_.p4; }
+
+  ManyParametersFifteenRequest& set_p4(bool _value) {
+    storage_.p4 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p5() const { return storage_.p5; }
+
+  ManyParametersFifteenRequest& set_p5(bool _value) {
+    storage_.p5 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p6() const { return storage_.p6; }
+
+  ManyParametersFifteenRequest& set_p6(bool _value) {
+    storage_.p6 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p7() const { return storage_.p7; }
+
+  ManyParametersFifteenRequest& set_p7(bool _value) {
+    storage_.p7 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p8() const { return storage_.p8; }
+
+  ManyParametersFifteenRequest& set_p8(bool _value) {
+    storage_.p8 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p9() const { return storage_.p9; }
+
+  ManyParametersFifteenRequest& set_p9(bool _value) {
+    storage_.p9 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p10() const { return storage_.p10; }
+
+  ManyParametersFifteenRequest& set_p10(bool _value) {
+    storage_.p10 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p11() const { return storage_.p11; }
+
+  ManyParametersFifteenRequest& set_p11(bool _value) {
+    storage_.p11 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p12() const { return storage_.p12; }
+
+  ManyParametersFifteenRequest& set_p12(bool _value) {
+    storage_.p12 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p13() const { return storage_.p13; }
+
+  ManyParametersFifteenRequest& set_p13(bool _value) {
+    storage_.p13 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p14() const { return storage_.p14; }
+
+  ManyParametersFifteenRequest& set_p14(bool _value) {
+    storage_.p14 = std::move(_value);
+    return *this;
+  }
+
+  const bool& p15() const { return storage_.p15; }
+
+  ManyParametersFifteenRequest& set_p15(bool _value) {
+    storage_.p15 = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::ManyParametersFifteenRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ManyParametersFifteenRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
+    final {
+ public:
+  ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Result result = {};
+};
+
+namespace fidl_test_protocols {
+class WithErrorSyntaxErrorAsEnumTopResponse final
+    : public ::fidl::internal::CodableBase<
+          WithErrorSyntaxErrorAsEnumTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<WithErrorSyntaxErrorAsEnumTopResponse>;
+  WithErrorSyntaxErrorAsEnumTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  WithErrorSyntaxErrorAsEnumTopResponse() = default;
+  WithErrorSyntaxErrorAsEnumTopResponse(
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Result result)
+      : storage_({std::move(result)}) {}
+  WithErrorSyntaxErrorAsEnumTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~WithErrorSyntaxErrorAsEnumTopResponse() = default;
+  WithErrorSyntaxErrorAsEnumTopResponse(
+      WithErrorSyntaxErrorAsEnumTopResponse&&) noexcept = default;
+  WithErrorSyntaxErrorAsEnumTopResponse& operator=(
+      WithErrorSyntaxErrorAsEnumTopResponse&&) noexcept = default;
+
+  const ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Result& result()
+      const {
+    return storage_.result;
+  }
+
+  WithErrorSyntaxErrorAsEnumTopResponse& set_result(
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Result _value) {
+    storage_.result = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ChannelProtocolMethodBTopResponse>
+    final {
+ public:
+  int64_t result = {};
+};
+
+namespace fidl_test_protocols {
+class ChannelProtocolMethodBTopResponse final
+    : public ::fidl::internal::CodableBase<ChannelProtocolMethodBTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<ChannelProtocolMethodBTopResponse>;
+  ChannelProtocolMethodBTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  ChannelProtocolMethodBTopResponse() = default;
+  ChannelProtocolMethodBTopResponse(int64_t result) : storage_({result}) {}
+  ChannelProtocolMethodBTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::ChannelProtocolMethodBTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ChannelProtocolMethodBTopResponse() = default;
+  ChannelProtocolMethodBTopResponse(
+      ChannelProtocolMethodBTopResponse&&) noexcept = default;
+  ChannelProtocolMethodBTopResponse& operator=(
+      ChannelProtocolMethodBTopResponse&&) noexcept = default;
+
+  const int64_t& result() const { return storage_.result; }
+
+  ChannelProtocolMethodBTopResponse& set_result(int64_t _value) {
+    storage_.result = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolMethodBTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ChannelProtocolMethodBTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ChannelProtocolMethodBRequest>
+    final {
+ public:
+  int64_t a = {};
+
+  int64_t b = {};
+};
+
+namespace fidl_test_protocols {
+class ChannelProtocolMethodBRequest final
+    : public ::fidl::internal::CodableBase<ChannelProtocolMethodBRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ChannelProtocolMethodBRequest>;
+  ChannelProtocolMethodBRequest(::fidl::Decoder& decoder);
+
+ public:
+  ChannelProtocolMethodBRequest() = default;
+  ChannelProtocolMethodBRequest(int64_t a, int64_t b) : storage_({a, b}) {}
+  ChannelProtocolMethodBRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::ChannelProtocolMethodBRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ChannelProtocolMethodBRequest() = default;
+  ChannelProtocolMethodBRequest(ChannelProtocolMethodBRequest&&) noexcept =
+      default;
+  ChannelProtocolMethodBRequest& operator=(
+      ChannelProtocolMethodBRequest&&) noexcept = default;
+
+  const int64_t& a() const { return storage_.a; }
+
+  ChannelProtocolMethodBRequest& set_a(int64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const int64_t& b() const { return storage_.b; }
+
+  ChannelProtocolMethodBRequest& set_b(int64_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolMethodBRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ChannelProtocolMethodBRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ChannelProtocolMethodARequest>
+    final {
+ public:
+  int64_t a = {};
+
+  int64_t b = {};
+};
+
+namespace fidl_test_protocols {
+class ChannelProtocolMethodARequest final
+    : public ::fidl::internal::CodableBase<ChannelProtocolMethodARequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ChannelProtocolMethodARequest>;
+  ChannelProtocolMethodARequest(::fidl::Decoder& decoder);
+
+ public:
+  ChannelProtocolMethodARequest() = default;
+  ChannelProtocolMethodARequest(int64_t a, int64_t b) : storage_({a, b}) {}
+  ChannelProtocolMethodARequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::ChannelProtocolMethodARequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ChannelProtocolMethodARequest() = default;
+  ChannelProtocolMethodARequest(ChannelProtocolMethodARequest&&) noexcept =
+      default;
+  ChannelProtocolMethodARequest& operator=(
+      ChannelProtocolMethodARequest&&) noexcept = default;
+
+  const int64_t& a() const { return storage_.a; }
+
+  ChannelProtocolMethodARequest& set_a(int64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const int64_t& b() const { return storage_.b; }
+
+  ChannelProtocolMethodARequest& set_b(int64_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolMethodARequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ChannelProtocolMethodARequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocols::ChannelProtocolEventARequest>
+    final {
+ public:
+  int64_t a = {};
+
+  int64_t b = {};
+};
+
+namespace fidl_test_protocols {
+class ChannelProtocolEventARequest final
+    : public ::fidl::internal::CodableBase<ChannelProtocolEventARequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ChannelProtocolEventARequest>;
+  ChannelProtocolEventARequest(::fidl::Decoder& decoder);
+
+ public:
+  ChannelProtocolEventARequest() = default;
+  ChannelProtocolEventARequest(int64_t a, int64_t b) : storage_({a, b}) {}
+  ChannelProtocolEventARequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocols::ChannelProtocolEventARequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ChannelProtocolEventARequest() = default;
+  ChannelProtocolEventARequest(ChannelProtocolEventARequest&&) noexcept =
+      default;
+  ChannelProtocolEventARequest& operator=(
+      ChannelProtocolEventARequest&&) noexcept = default;
+
+  const int64_t& a() const { return storage_.a; }
+
+  ChannelProtocolEventARequest& set_a(int64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const int64_t& b() const { return storage_.b; }
+
+  ChannelProtocolEventARequest& set_b(int64_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolEventARequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocols::ChannelProtocolEventARequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocols
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+
+template <>
+struct IsResource<
+    ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response>
+    : public std::true_type {};
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithErrorSyntax_HandleInResult_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+
+template <>
+struct IsResource<
+    ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+
+template <>
+struct IsResource<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+
+template <>
+struct IsResource<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+
+template <>
+struct IsResource<
+    ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_HandleRightsProtocolAnEventRequestTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::HandleRightsProtocolAnEventRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocols::HandleRightsProtocolAnEventRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::HandleRightsProtocolAnEventRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_HandleRightsProtocolAnEventRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::HandleRightsProtocolAnEventRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::HandleRightsProtocolAnEventRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::ChannelProtocolTakeHandleRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocols::ChannelProtocolTakeHandleRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::ChannelProtocolTakeHandleRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ChannelProtocolTakeHandleRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::ChannelProtocolTakeHandleRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::ChannelProtocolTakeHandleRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.h, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::ChannelProtocolMutateSocketRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocols::ChannelProtocolMutateSocketRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::ChannelProtocolMutateSocketRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ChannelProtocolMutateSocketRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::ChannelProtocolMutateSocketRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::ChannelProtocolMutateSocketRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.out, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsServerEndsRequestTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::WithProtocolEndsServerEndsRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocols::WithProtocolEndsServerEndsRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithProtocolEndsServerEndsRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithProtocolEndsServerEndsRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::WithProtocolEndsServerEndsRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithProtocolEndsServerEndsRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.in, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.out, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsClientEndsRequestTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::WithProtocolEndsClientEndsRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocols::WithProtocolEndsClientEndsRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithProtocolEndsClientEndsRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithProtocolEndsClientEndsRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::WithProtocolEndsClientEndsRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithProtocolEndsClientEndsRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.in, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithErrorSyntax_ResponseAsStruct_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 24;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.c, offset + 16);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsPrimitive_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithErrorSyntax_ErrorAsEnum_ResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse*
+              value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.ret, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestWithResponseRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestWithResponseRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestWithResponseRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.arg, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::
+                      WithAndWithoutRequestResponseWithRequestNoResponseRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestNoResponseRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.arg, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseWithRequestEmptyResponseRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.arg, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.ret, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::
+        WithAndWithoutRequestResponseNoRequestWithResponseTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.ret, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestTopResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::TransitionalRequestTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::TransitionalRequestTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_TransitionalRequestTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::TransitionalRequestTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::TransitionalRequestTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.y, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_TransitionalRequestRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::TransitionalRequestRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::TransitionalRequestRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_TransitionalRequestRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::TransitionalRequestRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_protocols::TransitionalRequestRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::TransitionalOneWayRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::TransitionalOneWayRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_TransitionalOneWayRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::TransitionalOneWayRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_protocols::TransitionalOneWayRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_protocols_TransitionalEventRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::TransitionalEventRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::TransitionalEventRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_TransitionalEventRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::TransitionalEventRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_protocols::TransitionalEventRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::MethodWithUnionUnionMethodRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::MethodWithUnionUnionMethodRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_MethodWithUnionUnionMethodRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::MethodWithUnionUnionMethodRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::MethodWithUnionUnionMethodRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.u, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_SyscallProtocolMethodCRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::SyscallProtocolMethodCRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::SyscallProtocolMethodCRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_SyscallProtocolMethodCRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::SyscallProtocolMethodCRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::SyscallProtocolMethodCRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_protocols_ProtocolEndsTable;
+
+template <>
+struct IsResource<::fidl_test_protocols::ProtocolEnds> : public std::true_type {
+};
+template <>
+struct IsFidlType<::fidl_test_protocols::ProtocolEnds> : public std::true_type {
+};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_protocols::ProtocolEnds> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ProtocolEndsTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::ProtocolEnds> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_protocols::ProtocolEnds* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.client, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.server, offset + 4);
+    ::fidl::Decode(decoder, &value->storage_.client_opt, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.server_opt, offset + 12);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+
+template <>
+struct IsResource<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.out, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+
+template <>
+struct IsResource<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.in, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_ManyParametersFifteenRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::ManyParametersFifteenRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::ManyParametersFifteenRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ManyParametersFifteenRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::ManyParametersFifteenRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_protocols::ManyParametersFifteenRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.p1, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.p2, offset + 1);
+    ::fidl::Decode(decoder, &value->storage_.p3, offset + 2);
+    ::fidl::Decode(decoder, &value->storage_.p4, offset + 3);
+    ::fidl::Decode(decoder, &value->storage_.p5, offset + 4);
+    ::fidl::Decode(decoder, &value->storage_.p6, offset + 5);
+    ::fidl::Decode(decoder, &value->storage_.p7, offset + 6);
+    ::fidl::Decode(decoder, &value->storage_.p8, offset + 7);
+    ::fidl::Decode(decoder, &value->storage_.p9, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.p10, offset + 9);
+    ::fidl::Decode(decoder, &value->storage_.p11, offset + 10);
+    ::fidl::Decode(decoder, &value->storage_.p12, offset + 11);
+    ::fidl::Decode(decoder, &value->storage_.p13, offset + 12);
+    ::fidl::Decode(decoder, &value->storage_.p14, offset + 13);
+    ::fidl::Decode(decoder, &value->storage_.p15, offset + 14);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBTopResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::ChannelProtocolMethodBTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::ChannelProtocolMethodBTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ChannelProtocolMethodBTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::ChannelProtocolMethodBTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::ChannelProtocolMethodBTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::ChannelProtocolMethodBRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::ChannelProtocolMethodBRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ChannelProtocolMethodBRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::ChannelProtocolMethodBRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::ChannelProtocolMethodBRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolMethodARequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::ChannelProtocolMethodARequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::ChannelProtocolMethodARequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ChannelProtocolMethodARequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::ChannelProtocolMethodARequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocols::ChannelProtocolMethodARequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocols_ChannelProtocolEventARequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_protocols::ChannelProtocolEventARequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocols::ChannelProtocolEventARequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocols_ChannelProtocolEventARequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocols::ChannelProtocolEventARequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_protocols::ChannelProtocolEventARequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

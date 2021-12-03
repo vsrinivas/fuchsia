@@ -4,13 +4,31 @@
 
 #include <fidl/fidl.test.union/cpp/wire.h>
 #include <fidl/test/union/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_union {
+class StructWithNullableXUnion;
+
+class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
+
+class Pizza;
+
+class Pasta;
+
+class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
+
+class NullableUnionStruct;
+
+class UnionSandwich;
+
+class Empty;
+
 using UnionWithAttributes = ::fidl::test::union_::UnionWithAttributes;
 
 using Union = ::fidl::test::union_::Union;
-
-using StructWithNullableXUnion = ::fidl::test::union_::StructWithNullableXUnion;
 
 using StrictUnion = ::fidl::test::union_::StrictUnion;
 
@@ -22,10 +40,6 @@ using StrictBoundedXUnion = ::fidl::test::union_::StrictBoundedXUnion;
 
 using ReverseOrdinalUnion = ::fidl::test::union_::ReverseOrdinalUnion;
 
-using Pizza = ::fidl::test::union_::Pizza;
-
-using Pasta = ::fidl::test::union_::Pasta;
-
 using StrictPizzaOrPasta = ::fidl::test::union_::StrictPizzaOrPasta;
 
 using PizzaOrPasta = ::fidl::test::union_::PizzaOrPasta;
@@ -35,8 +49,6 @@ using FlexiblePizzaOrPasta = ::fidl::test::union_::FlexiblePizzaOrPasta;
 using ExplicitPizzaOrPasta = ::fidl::test::union_::ExplicitPizzaOrPasta;
 
 using OlderSimpleUnion = ::fidl::test::union_::OlderSimpleUnion;
-
-using NullableUnionStruct = ::fidl::test::union_::NullableUnionStruct;
 
 using NewerSimpleUnion = ::fidl::test::union_::NewerSimpleUnion;
 
@@ -48,17 +60,658 @@ using FieldCollision = ::fidl::test::union_::FieldCollision;
 
 using ExplicitXUnion = ::fidl::test::union_::ExplicitXUnion;
 
-using UnionSandwich = ::fidl::test::union_::UnionSandwich;
-
 using ExplicitUnion = ::fidl::test::union_::ExplicitUnion;
 
 using ExplicitStrictFoo = ::fidl::test::union_::ExplicitStrictFoo;
 
 using ExplicitFoo = ::fidl::test::union_::ExplicitFoo;
 
-using Empty = ::fidl::test::union_::Empty;
-
 using XUnionContainingEmptyStruct =
     ::fidl::test::union_::XUnionContainingEmptyStruct;
 
 }  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_union::StructWithNullableXUnion>
+    final {
+ public:
+  ::std::unique_ptr<::fidl_test_union::OlderSimpleUnion> x1 = {};
+};
+
+namespace fidl_test_union {
+class StructWithNullableXUnion final
+    : public ::fidl::internal::CodableBase<StructWithNullableXUnion> {
+ private:
+  friend ::fidl::internal::CodableBase<StructWithNullableXUnion>;
+  StructWithNullableXUnion(::fidl::Decoder& decoder);
+
+ public:
+  StructWithNullableXUnion() = default;
+  StructWithNullableXUnion(
+      ::std::unique_ptr<::fidl_test_union::OlderSimpleUnion> x1)
+      : storage_({std::move(x1)}) {}
+  StructWithNullableXUnion(::fidl::internal::DesignatedInitializationProxy<
+                           ::fidl_test_union::StructWithNullableXUnion>
+                               storage)
+      : storage_(std::move(storage)) {}
+  ~StructWithNullableXUnion() = default;
+  StructWithNullableXUnion(StructWithNullableXUnion&&) noexcept = default;
+  StructWithNullableXUnion& operator=(StructWithNullableXUnion&&) noexcept =
+      default;
+
+  const ::std::unique_ptr<::fidl_test_union::OlderSimpleUnion>& x1() const {
+    return storage_.x1;
+  }
+
+  StructWithNullableXUnion& set_x1(
+      ::std::unique_ptr<::fidl_test_union::OlderSimpleUnion> _value) {
+    storage_.x1 = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_union::StructWithNullableXUnion>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_union::StructWithNullableXUnion>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_union::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    final {
+ public:
+  ::fidl_test_union::StrictBoundedXUnion xu = {};
+};
+
+namespace fidl_test_union {
+class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
+    : public ::fidl::internal::CodableBase<
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+      ::fidl::Decoder& decoder);
+
+ public:
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse() =
+      default;
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+      ::fidl_test_union::StrictBoundedXUnion xu)
+      : storage_({std::move(xu)}) {}
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_union::
+              TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse() =
+      default;
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&) noexcept =
+      default;
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+  operator=(
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&&) noexcept =
+      default;
+
+  const ::fidl_test_union::StrictBoundedXUnion& xu() const {
+    return storage_.xu;
+  }
+
+  TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse& set_xu(
+      ::fidl_test_union::StrictBoundedXUnion _value) {
+    storage_.xu = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Pizza>
+    final {
+ public:
+  ::std::vector<::std::string> toppings = {};
+};
+
+namespace fidl_test_union {
+class Pizza final : public ::fidl::internal::CodableBase<Pizza> {
+ private:
+  friend ::fidl::internal::CodableBase<Pizza>;
+  Pizza(::fidl::Decoder& decoder);
+
+ public:
+  Pizza() = default;
+  Pizza(::std::vector<::std::string> toppings)
+      : storage_({std::move(toppings)}) {}
+  Pizza(
+      ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Pizza>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~Pizza() = default;
+  Pizza(Pizza&&) noexcept = default;
+  Pizza& operator=(Pizza&&) noexcept = default;
+
+  const ::std::vector<::std::string>& toppings() const {
+    return storage_.toppings;
+  }
+
+  Pizza& set_toppings(::std::vector<::std::string> _value) {
+    storage_.toppings = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_union::Pizza>;
+
+  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Pizza>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Pasta>
+    final {
+ public:
+  ::std::string sauce = {};
+};
+
+namespace fidl_test_union {
+class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
+ private:
+  friend ::fidl::internal::CodableBase<Pasta>;
+  Pasta(::fidl::Decoder& decoder);
+
+ public:
+  Pasta() = default;
+  Pasta(::std::string sauce) : storage_({std::move(sauce)}) {}
+  Pasta(
+      ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Pasta>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~Pasta() = default;
+  Pasta(Pasta&&) noexcept = default;
+  Pasta& operator=(Pasta&&) noexcept = default;
+
+  const ::std::string& sauce() const { return storage_.sauce; }
+
+  Pasta& set_sauce(::std::string _value) {
+    storage_.sauce = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_union::Pasta>;
+
+  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Pasta>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_union::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    final {
+ public:
+  ::fidl_test_union::OlderSimpleUnion xu = {};
+};
+
+namespace fidl_test_union {
+class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
+    final
+    : public ::fidl::internal::CodableBase<
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+      ::fidl::Decoder& decoder);
+
+ public:
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse() =
+      default;
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+      ::fidl_test_union::OlderSimpleUnion xu)
+      : storage_({std::move(xu)}) {}
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_union::
+              TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse() =
+      default;
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&) noexcept =
+      default;
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+  operator=(
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&&) noexcept =
+      default;
+
+  const ::fidl_test_union::OlderSimpleUnion& xu() const { return storage_.xu; }
+
+  TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse& set_xu(
+      ::fidl_test_union::OlderSimpleUnion _value) {
+    storage_.xu = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_union::NullableUnionStruct>
+    final {
+ public:
+  ::std::unique_ptr<::fidl_test_union::Union> the_union = {};
+};
+
+namespace fidl_test_union {
+class NullableUnionStruct final
+    : public ::fidl::internal::CodableBase<NullableUnionStruct> {
+ private:
+  friend ::fidl::internal::CodableBase<NullableUnionStruct>;
+  NullableUnionStruct(::fidl::Decoder& decoder);
+
+ public:
+  NullableUnionStruct() = default;
+  NullableUnionStruct(::std::unique_ptr<::fidl_test_union::Union> the_union)
+      : storage_({std::move(the_union)}) {}
+  NullableUnionStruct(::fidl::internal::DesignatedInitializationProxy<
+                      ::fidl_test_union::NullableUnionStruct>
+                          storage)
+      : storage_(std::move(storage)) {}
+  ~NullableUnionStruct() = default;
+  NullableUnionStruct(NullableUnionStruct&&) noexcept = default;
+  NullableUnionStruct& operator=(NullableUnionStruct&&) noexcept = default;
+
+  const ::std::unique_ptr<::fidl_test_union::Union>& the_union() const {
+    return storage_.the_union;
+  }
+
+  NullableUnionStruct& set_the_union(
+      ::std::unique_ptr<::fidl_test_union::Union> _value) {
+    storage_.the_union = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_union::NullableUnionStruct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_union::NullableUnionStruct>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_union::UnionSandwich>
+    final {
+ public:
+  uint32_t a = {};
+
+  ::fidl_test_union::ExplicitXUnion u = {};
+
+  uint32_t b = {};
+};
+
+namespace fidl_test_union {
+class UnionSandwich final
+    : public ::fidl::internal::CodableBase<UnionSandwich> {
+ private:
+  friend ::fidl::internal::CodableBase<UnionSandwich>;
+  UnionSandwich(::fidl::Decoder& decoder);
+
+ public:
+  UnionSandwich() = default;
+  UnionSandwich(uint32_t a, ::fidl_test_union::ExplicitXUnion u, uint32_t b)
+      : storage_({a, std::move(u), b}) {}
+  UnionSandwich(::fidl::internal::DesignatedInitializationProxy<
+                ::fidl_test_union::UnionSandwich>
+                    storage)
+      : storage_(std::move(storage)) {}
+  ~UnionSandwich() = default;
+  UnionSandwich(UnionSandwich&&) noexcept = default;
+  UnionSandwich& operator=(UnionSandwich&&) noexcept = default;
+
+  const uint32_t& a() const { return storage_.a; }
+
+  UnionSandwich& set_a(uint32_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl_test_union::ExplicitXUnion& u() const { return storage_.u; }
+
+  UnionSandwich& set_u(::fidl_test_union::ExplicitXUnion _value) {
+    storage_.u = std::move(_value);
+    return *this;
+  }
+
+  const uint32_t& b() const { return storage_.b; }
+
+  UnionSandwich& set_b(uint32_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_union::UnionSandwich>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_union::UnionSandwich>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Empty>
+    final {
+ public:
+  uint8_t __reserved = 0u;
+};
+
+namespace fidl_test_union {
+class Empty final : public ::fidl::internal::CodableBase<Empty> {
+ private:
+  friend ::fidl::internal::CodableBase<Empty>;
+  Empty(::fidl::Decoder& decoder);
+
+ public:
+  Empty() = default;
+  Empty(uint8_t __reserved) : storage_({__reserved}) {}
+  Empty(
+      ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Empty>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~Empty() = default;
+  Empty(Empty&&) noexcept = default;
+  Empty& operator=(Empty&&) noexcept = default;
+
+  const uint8_t& __reserved() const { return storage_.__reserved; }
+
+  Empty& set___reserved(uint8_t _value) {
+    storage_.__reserved = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_union::Empty>;
+
+  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_union::Empty>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_union
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_union_StructWithNullableXUnionTable;
+
+template <>
+struct IsFidlType<::fidl_test_union::StructWithNullableXUnion>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_union::StructWithNullableXUnion>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_union_StructWithNullableXUnionTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_union::StructWithNullableXUnion> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_union::StructWithNullableXUnion* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.x1, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_union::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_union::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_union::
+        TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+              value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.xu, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_union_PizzaTable;
+
+template <>
+struct IsFidlType<::fidl_test_union::Pizza> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_union::Pizza> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_union_PizzaTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_union::Pizza> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::fidl_test_union::Pizza* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.toppings, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_union_PastaTable;
+
+template <>
+struct IsFidlType<::fidl_test_union::Pasta> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_union::Pasta> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_union_PastaTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_union::Pasta> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::fidl_test_union::Pasta* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.sauce, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_union::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_union::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_union::
+        TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+              value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.xu, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_union_NullableUnionStructTable;
+
+template <>
+struct IsFidlType<::fidl_test_union::NullableUnionStruct>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_union::NullableUnionStruct>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_union_NullableUnionStructTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_union::NullableUnionStruct> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_union::NullableUnionStruct* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.the_union, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_union_UnionSandwichTable;
+
+template <>
+struct IsFidlType<::fidl_test_union::UnionSandwich> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_union::UnionSandwich> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_union_UnionSandwichTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_union::UnionSandwich> {
+  static constexpr size_t inline_size_v1_no_ee = 40;
+  static constexpr size_t inline_size_v2 = 32;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_union::UnionSandwich* value, size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.u, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 24);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_union_EmptyTable;
+
+template <>
+struct IsFidlType<::fidl_test_union::Empty> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_union::Empty> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_union_EmptyTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_union::Empty> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::fidl_test_union::Empty* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

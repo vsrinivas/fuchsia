@@ -4,32 +4,534 @@
 
 #include <fidl/fidl.test.unionsandwich/cpp/wire.h>
 #include <fidl/test/unionsandwich/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_unionsandwich {
-using UnionSize8Alignment4 = ::fidl::test::unionsandwich::UnionSize8Alignment4;
+class SandwichUnionSize8Alignment4;
 
-using SandwichUnionSize8Alignment4 =
-    ::fidl::test::unionsandwich::SandwichUnionSize8Alignment4;
+class SandwichUnionSize36Alignment4;
+
+class SandwichUnionSize12Alignment4;
+
+class StructSize16Alignment8;
+
+class SandwichUnionSize24Alignment8;
+
+using UnionSize8Alignment4 = ::fidl::test::unionsandwich::UnionSize8Alignment4;
 
 using UnionSize36Alignment4 =
     ::fidl::test::unionsandwich::UnionSize36Alignment4;
 
-using SandwichUnionSize36Alignment4 =
-    ::fidl::test::unionsandwich::SandwichUnionSize36Alignment4;
-
 using UnionSize12Alignment4 =
     ::fidl::test::unionsandwich::UnionSize12Alignment4;
-
-using SandwichUnionSize12Alignment4 =
-    ::fidl::test::unionsandwich::SandwichUnionSize12Alignment4;
-
-using StructSize16Alignment8 =
-    ::fidl::test::unionsandwich::StructSize16Alignment8;
 
 using UnionSize24Alignment8 =
     ::fidl::test::unionsandwich::UnionSize24Alignment8;
 
-using SandwichUnionSize24Alignment8 =
-    ::fidl::test::unionsandwich::SandwichUnionSize24Alignment8;
+}  // namespace fidl_test_unionsandwich
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4>
+    final {
+ public:
+  uint32_t before = {};
+
+  ::fidl_test_unionsandwich::UnionSize8Alignment4 union_ = {};
+
+  uint32_t after = {};
+};
+
+namespace fidl_test_unionsandwich {
+class SandwichUnionSize8Alignment4 final
+    : public ::fidl::internal::CodableBase<SandwichUnionSize8Alignment4> {
+ private:
+  friend ::fidl::internal::CodableBase<SandwichUnionSize8Alignment4>;
+  SandwichUnionSize8Alignment4(::fidl::Decoder& decoder);
+
+ public:
+  SandwichUnionSize8Alignment4() = default;
+  SandwichUnionSize8Alignment4(
+      uint32_t before, ::fidl_test_unionsandwich::UnionSize8Alignment4 union_,
+      uint32_t after)
+      : storage_({before, std::move(union_), after}) {}
+  SandwichUnionSize8Alignment4(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~SandwichUnionSize8Alignment4() = default;
+  SandwichUnionSize8Alignment4(SandwichUnionSize8Alignment4&&) noexcept =
+      default;
+  SandwichUnionSize8Alignment4& operator=(
+      SandwichUnionSize8Alignment4&&) noexcept = default;
+
+  const uint32_t& before() const { return storage_.before; }
+
+  SandwichUnionSize8Alignment4& set_before(uint32_t _value) {
+    storage_.before = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl_test_unionsandwich::UnionSize8Alignment4& union_() const {
+    return storage_.union_;
+  }
+
+  SandwichUnionSize8Alignment4& set_union_(
+      ::fidl_test_unionsandwich::UnionSize8Alignment4 _value) {
+    storage_.union_ = std::move(_value);
+    return *this;
+  }
+
+  const uint32_t& after() const { return storage_.after; }
+
+  SandwichUnionSize8Alignment4& set_after(uint32_t _value) {
+    storage_.after = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4>
+      storage_ = {};
+};
 
 }  // namespace fidl_test_unionsandwich
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4>
+    final {
+ public:
+  uint32_t before = {};
+
+  ::fidl_test_unionsandwich::UnionSize36Alignment4 union_ = {};
+
+  uint32_t after = {};
+};
+
+namespace fidl_test_unionsandwich {
+class SandwichUnionSize36Alignment4 final
+    : public ::fidl::internal::CodableBase<SandwichUnionSize36Alignment4> {
+ private:
+  friend ::fidl::internal::CodableBase<SandwichUnionSize36Alignment4>;
+  SandwichUnionSize36Alignment4(::fidl::Decoder& decoder);
+
+ public:
+  SandwichUnionSize36Alignment4() = default;
+  SandwichUnionSize36Alignment4(
+      uint32_t before, ::fidl_test_unionsandwich::UnionSize36Alignment4 union_,
+      uint32_t after)
+      : storage_({before, std::move(union_), after}) {}
+  SandwichUnionSize36Alignment4(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~SandwichUnionSize36Alignment4() = default;
+  SandwichUnionSize36Alignment4(SandwichUnionSize36Alignment4&&) noexcept =
+      default;
+  SandwichUnionSize36Alignment4& operator=(
+      SandwichUnionSize36Alignment4&&) noexcept = default;
+
+  const uint32_t& before() const { return storage_.before; }
+
+  SandwichUnionSize36Alignment4& set_before(uint32_t _value) {
+    storage_.before = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl_test_unionsandwich::UnionSize36Alignment4& union_() const {
+    return storage_.union_;
+  }
+
+  SandwichUnionSize36Alignment4& set_union_(
+      ::fidl_test_unionsandwich::UnionSize36Alignment4 _value) {
+    storage_.union_ = std::move(_value);
+    return *this;
+  }
+
+  const uint32_t& after() const { return storage_.after; }
+
+  SandwichUnionSize36Alignment4& set_after(uint32_t _value) {
+    storage_.after = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_unionsandwich
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4>
+    final {
+ public:
+  uint32_t before = {};
+
+  ::fidl_test_unionsandwich::UnionSize12Alignment4 union_ = {};
+
+  int32_t after = {};
+};
+
+namespace fidl_test_unionsandwich {
+class SandwichUnionSize12Alignment4 final
+    : public ::fidl::internal::CodableBase<SandwichUnionSize12Alignment4> {
+ private:
+  friend ::fidl::internal::CodableBase<SandwichUnionSize12Alignment4>;
+  SandwichUnionSize12Alignment4(::fidl::Decoder& decoder);
+
+ public:
+  SandwichUnionSize12Alignment4() = default;
+  SandwichUnionSize12Alignment4(
+      uint32_t before, ::fidl_test_unionsandwich::UnionSize12Alignment4 union_,
+      int32_t after)
+      : storage_({before, std::move(union_), after}) {}
+  SandwichUnionSize12Alignment4(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~SandwichUnionSize12Alignment4() = default;
+  SandwichUnionSize12Alignment4(SandwichUnionSize12Alignment4&&) noexcept =
+      default;
+  SandwichUnionSize12Alignment4& operator=(
+      SandwichUnionSize12Alignment4&&) noexcept = default;
+
+  const uint32_t& before() const { return storage_.before; }
+
+  SandwichUnionSize12Alignment4& set_before(uint32_t _value) {
+    storage_.before = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl_test_unionsandwich::UnionSize12Alignment4& union_() const {
+    return storage_.union_;
+  }
+
+  SandwichUnionSize12Alignment4& set_union_(
+      ::fidl_test_unionsandwich::UnionSize12Alignment4 _value) {
+    storage_.union_ = std::move(_value);
+    return *this;
+  }
+
+  const int32_t& after() const { return storage_.after; }
+
+  SandwichUnionSize12Alignment4& set_after(int32_t _value) {
+    storage_.after = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_unionsandwich
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_unionsandwich::StructSize16Alignment8>
+    final {
+ public:
+  uint64_t f1 = {};
+
+  uint64_t f2 = {};
+};
+
+namespace fidl_test_unionsandwich {
+class StructSize16Alignment8 final
+    : public ::fidl::internal::CodableBase<StructSize16Alignment8> {
+ private:
+  friend ::fidl::internal::CodableBase<StructSize16Alignment8>;
+  StructSize16Alignment8(::fidl::Decoder& decoder);
+
+ public:
+  StructSize16Alignment8() = default;
+  StructSize16Alignment8(uint64_t f1, uint64_t f2) : storage_({f1, f2}) {}
+  StructSize16Alignment8(::fidl::internal::DesignatedInitializationProxy<
+                         ::fidl_test_unionsandwich::StructSize16Alignment8>
+                             storage)
+      : storage_(std::move(storage)) {}
+  ~StructSize16Alignment8() = default;
+  StructSize16Alignment8(StructSize16Alignment8&&) noexcept = default;
+  StructSize16Alignment8& operator=(StructSize16Alignment8&&) noexcept =
+      default;
+
+  const uint64_t& f1() const { return storage_.f1; }
+
+  StructSize16Alignment8& set_f1(uint64_t _value) {
+    storage_.f1 = std::move(_value);
+    return *this;
+  }
+
+  const uint64_t& f2() const { return storage_.f2; }
+
+  StructSize16Alignment8& set_f2(uint64_t _value) {
+    storage_.f2 = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_unionsandwich::StructSize16Alignment8>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_unionsandwich::StructSize16Alignment8>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_unionsandwich
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8>
+    final {
+ public:
+  uint32_t before = {};
+
+  ::fidl_test_unionsandwich::UnionSize24Alignment8 union_ = {};
+
+  uint32_t after = {};
+};
+
+namespace fidl_test_unionsandwich {
+class SandwichUnionSize24Alignment8 final
+    : public ::fidl::internal::CodableBase<SandwichUnionSize24Alignment8> {
+ private:
+  friend ::fidl::internal::CodableBase<SandwichUnionSize24Alignment8>;
+  SandwichUnionSize24Alignment8(::fidl::Decoder& decoder);
+
+ public:
+  SandwichUnionSize24Alignment8() = default;
+  SandwichUnionSize24Alignment8(
+      uint32_t before, ::fidl_test_unionsandwich::UnionSize24Alignment8 union_,
+      uint32_t after)
+      : storage_({before, std::move(union_), after}) {}
+  SandwichUnionSize24Alignment8(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~SandwichUnionSize24Alignment8() = default;
+  SandwichUnionSize24Alignment8(SandwichUnionSize24Alignment8&&) noexcept =
+      default;
+  SandwichUnionSize24Alignment8& operator=(
+      SandwichUnionSize24Alignment8&&) noexcept = default;
+
+  const uint32_t& before() const { return storage_.before; }
+
+  SandwichUnionSize24Alignment8& set_before(uint32_t _value) {
+    storage_.before = std::move(_value);
+    return *this;
+  }
+
+  const ::fidl_test_unionsandwich::UnionSize24Alignment8& union_() const {
+    return storage_.union_;
+  }
+
+  SandwichUnionSize24Alignment8& set_union_(
+      ::fidl_test_unionsandwich::UnionSize24Alignment8 _value) {
+    storage_.union_ = std::move(_value);
+    return *this;
+  }
+
+  const uint32_t& after() const { return storage_.after; }
+
+  SandwichUnionSize24Alignment8& set_after(uint32_t _value) {
+    storage_.after = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_unionsandwich
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_unionsandwich_SandwichUnionSize8Alignment4Table;
+
+template <>
+struct IsFidlType<::fidl_test_unionsandwich::SandwichUnionSize8Alignment4>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_unionsandwich_SandwichUnionSize8Alignment4Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_unionsandwich::SandwichUnionSize8Alignment4> {
+  static constexpr size_t inline_size_v1_no_ee = 40;
+  static constexpr size_t inline_size_v2 = 32;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.before, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.union_, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.after, offset + 24);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_unionsandwich_SandwichUnionSize36Alignment4Table;
+
+template <>
+struct IsFidlType<::fidl_test_unionsandwich::SandwichUnionSize36Alignment4>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_unionsandwich_SandwichUnionSize36Alignment4Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_unionsandwich::SandwichUnionSize36Alignment4> {
+  static constexpr size_t inline_size_v1_no_ee = 40;
+  static constexpr size_t inline_size_v2 = 32;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.before, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.union_, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.after, offset + 24);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_unionsandwich_SandwichUnionSize12Alignment4Table;
+
+template <>
+struct IsFidlType<::fidl_test_unionsandwich::SandwichUnionSize12Alignment4>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_unionsandwich_SandwichUnionSize12Alignment4Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_unionsandwich::SandwichUnionSize12Alignment4> {
+  static constexpr size_t inline_size_v1_no_ee = 40;
+  static constexpr size_t inline_size_v2 = 32;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.before, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.union_, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.after, offset + 24);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_unionsandwich_StructSize16Alignment8Table;
+
+template <>
+struct IsFidlType<::fidl_test_unionsandwich::StructSize16Alignment8>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_unionsandwich::StructSize16Alignment8>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_unionsandwich_StructSize16Alignment8Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_unionsandwich::StructSize16Alignment8> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_unionsandwich::StructSize16Alignment8* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.f1, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.f2, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_unionsandwich_SandwichUnionSize24Alignment8Table;
+
+template <>
+struct IsFidlType<::fidl_test_unionsandwich::SandwichUnionSize24Alignment8>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_unionsandwich_SandwichUnionSize24Alignment8Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_unionsandwich::SandwichUnionSize24Alignment8> {
+  static constexpr size_t inline_size_v1_no_ee = 40;
+  static constexpr size_t inline_size_v2 = 32;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.before, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.union_, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.after, offset + 24);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

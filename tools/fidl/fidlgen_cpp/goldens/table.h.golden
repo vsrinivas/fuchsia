@@ -4,6 +4,10 @@
 
 #include <fidl/fidl.test.table/cpp/wire.h>
 #include <fidl/test/table/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_table {
 using TableWithAttributes = ::fidl::test::table::TableWithAttributes;
@@ -23,3 +27,4 @@ using SixtyFourOrdinalTable = ::fidl::test::table::SixtyFourOrdinalTable;
 using EmptyTable = ::fidl::test::table::EmptyTable;
 
 }  // namespace fidl_test_table
+namespace fidl {}  // namespace fidl

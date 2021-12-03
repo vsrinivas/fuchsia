@@ -7,14 +7,22 @@ assert(is_fuchsia, "Unified C++ bindings only support Fuchsia for now.")
 source_set("cpp") {
   public = [
     "include/lib/fidl/cpp/client.h",
+    "include/lib/fidl/cpp/internal/codable_base.h",
+    "include/lib/fidl/cpp/internal/message_extensions.h",
     "include/lib/fidl/cpp/internal/natural_client_base.h",
     "include/lib/fidl/cpp/internal/natural_client_messenger.h",
+    "include/lib/fidl/cpp/natural_types.h",
     "include/lib/fidl/cpp/unified_messaging.h",
   ]
-  sources = [ "internal/natural_client_messenger.cc" ]
+  sources = [
+    "internal/message_extensions.cc",
+    "internal/natural_client_messenger.cc",
+  ]
   public_deps = [
     "//sdk/lib/fidl/cpp:cpp_base",
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/zxc",
   ]
   public_configs = [ ":cpp.headers" ]
 }

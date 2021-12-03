@@ -4,3 +4,9 @@
 
 #include <fidl/fidl.test.versions/cpp/wire.h>
 #include <fidl/test/versions/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
+
+namespace fidl {}  // namespace fidl

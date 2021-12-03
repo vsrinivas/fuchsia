@@ -4,3 +4,380 @@
 
 #include <fidl/fidl.test.protocolrequest/cpp/wire.h>
 #include <fidl/test/protocolrequest/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
+
+namespace fidl_test_protocolrequest {
+class ParentTakeChildRequestRequest;
+
+class ParentTakeChildRequest;
+
+class ParentGetChildTopResponse;
+
+class ParentGetChildRequestTopResponse;
+
+}  // namespace fidl_test_protocolrequest
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+    final {
+ public:
+  ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r = {};
+};
+
+namespace fidl_test_protocolrequest {
+class ParentTakeChildRequestRequest final
+    : public ::fidl::internal::CodableBase<ParentTakeChildRequestRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ParentTakeChildRequestRequest>;
+  ParentTakeChildRequestRequest(::fidl::Decoder& decoder);
+
+ public:
+  ParentTakeChildRequestRequest() = default;
+  ParentTakeChildRequestRequest(
+      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>&& r)
+      : storage_({std::move(r)}) {}
+  ParentTakeChildRequestRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ParentTakeChildRequestRequest() = default;
+  ParentTakeChildRequestRequest(ParentTakeChildRequestRequest&&) noexcept =
+      default;
+  ParentTakeChildRequestRequest& operator=(
+      ParentTakeChildRequestRequest&&) noexcept = default;
+  ParentTakeChildRequestRequest(const ParentTakeChildRequestRequest&) noexcept =
+      delete;
+  ParentTakeChildRequestRequest& operator=(
+      const ParentTakeChildRequestRequest&) noexcept = delete;
+
+  const ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r()
+      const {
+    return storage_.r;
+  }
+
+  ParentTakeChildRequestRequest& set_r(
+      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> _value) {
+    storage_.r = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocolrequest
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocolrequest::ParentTakeChildRequest>
+    final {
+ public:
+  ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c = {};
+};
+
+namespace fidl_test_protocolrequest {
+class ParentTakeChildRequest final
+    : public ::fidl::internal::CodableBase<ParentTakeChildRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ParentTakeChildRequest>;
+  ParentTakeChildRequest(::fidl::Decoder& decoder);
+
+ public:
+  ParentTakeChildRequest() = default;
+  ParentTakeChildRequest(
+      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>&& c)
+      : storage_({std::move(c)}) {}
+  ParentTakeChildRequest(::fidl::internal::DesignatedInitializationProxy<
+                         ::fidl_test_protocolrequest::ParentTakeChildRequest>
+                             storage)
+      : storage_(std::move(storage)) {}
+  ~ParentTakeChildRequest() = default;
+  ParentTakeChildRequest(ParentTakeChildRequest&&) noexcept = default;
+  ParentTakeChildRequest& operator=(ParentTakeChildRequest&&) noexcept =
+      default;
+  ParentTakeChildRequest(const ParentTakeChildRequest&) noexcept = delete;
+  ParentTakeChildRequest& operator=(const ParentTakeChildRequest&) noexcept =
+      delete;
+
+  const ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c()
+      const {
+    return storage_.c;
+  }
+
+  ParentTakeChildRequest& set_c(
+      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> _value) {
+    storage_.c = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocolrequest::ParentTakeChildRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocolrequest::ParentTakeChildRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocolrequest
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocolrequest::ParentGetChildTopResponse>
+    final {
+ public:
+  ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> c = {};
+};
+
+namespace fidl_test_protocolrequest {
+class ParentGetChildTopResponse final
+    : public ::fidl::internal::CodableBase<ParentGetChildTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<ParentGetChildTopResponse>;
+  ParentGetChildTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  ParentGetChildTopResponse() = default;
+  ParentGetChildTopResponse(
+      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>&& c)
+      : storage_({std::move(c)}) {}
+  ParentGetChildTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocolrequest::ParentGetChildTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ParentGetChildTopResponse() = default;
+  ParentGetChildTopResponse(ParentGetChildTopResponse&&) noexcept = default;
+  ParentGetChildTopResponse& operator=(ParentGetChildTopResponse&&) noexcept =
+      default;
+  ParentGetChildTopResponse(const ParentGetChildTopResponse&) noexcept = delete;
+  ParentGetChildTopResponse& operator=(
+      const ParentGetChildTopResponse&) noexcept = delete;
+
+  const ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child>& c()
+      const {
+    return storage_.c;
+  }
+
+  ParentGetChildTopResponse& set_c(
+      ::fidl::InterfaceHandle<::fidl::test::protocolrequest::Child> _value) {
+    storage_.c = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocolrequest::ParentGetChildTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocolrequest::ParentGetChildTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocolrequest
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+    final {
+ public:
+  ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> r = {};
+};
+
+namespace fidl_test_protocolrequest {
+class ParentGetChildRequestTopResponse final
+    : public ::fidl::internal::CodableBase<ParentGetChildRequestTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<ParentGetChildRequestTopResponse>;
+  ParentGetChildRequestTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  ParentGetChildRequestTopResponse() = default;
+  ParentGetChildRequestTopResponse(
+      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>&& r)
+      : storage_({std::move(r)}) {}
+  ParentGetChildRequestTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ParentGetChildRequestTopResponse() = default;
+  ParentGetChildRequestTopResponse(
+      ParentGetChildRequestTopResponse&&) noexcept = default;
+  ParentGetChildRequestTopResponse& operator=(
+      ParentGetChildRequestTopResponse&&) noexcept = default;
+  ParentGetChildRequestTopResponse(
+      const ParentGetChildRequestTopResponse&) noexcept = delete;
+  ParentGetChildRequestTopResponse& operator=(
+      const ParentGetChildRequestTopResponse&) noexcept = delete;
+
+  const ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>& r()
+      const {
+    return storage_.r;
+  }
+
+  ParentGetChildRequestTopResponse& set_r(
+      ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child> _value) {
+    storage_.r = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_protocolrequest
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+
+template <>
+struct IsResource<::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocolrequest::ParentTakeChildRequestRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocolrequest_ParentTakeChildRequestRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocolrequest::ParentTakeChildRequestRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.r, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentTakeChildRequestTable;
+
+template <>
+struct IsResource<::fidl_test_protocolrequest::ParentTakeChildRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocolrequest::ParentTakeChildRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocolrequest::ParentTakeChildRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocolrequest_ParentTakeChildRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocolrequest::ParentTakeChildRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_protocolrequest::ParentTakeChildRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.c, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildTopResponseTable;
+
+template <>
+struct IsResource<::fidl_test_protocolrequest::ParentGetChildTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocolrequest::ParentGetChildTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocolrequest::ParentGetChildTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocolrequest_ParentGetChildTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_protocolrequest::ParentGetChildTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocolrequest::ParentGetChildTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.c, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_protocolrequest_ParentGetChildRequestTopResponseTable;
+
+template <>
+struct IsResource<::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_protocolrequest_ParentGetChildRequestTopResponseTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.r, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

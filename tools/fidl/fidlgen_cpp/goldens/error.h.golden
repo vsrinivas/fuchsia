@@ -4,10 +4,237 @@
 
 #include <fidl/fidl.test.error/cpp/wire.h>
 #include <fidl/test/error/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_error {
-using Example_foo_Response = ::fidl::test::error::Example_foo_Response;
+class Example_foo_Response;
+
+class ExampleFooTopResponse;
+
+class ExampleFooRequest;
 
 using Example_foo_Result = ::fidl::test::error::Example_foo_Result;
 
 }  // namespace fidl_test_error
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_error::Example_foo_Response>
+    final {
+ public:
+  int64_t y = {};
+};
+
+namespace fidl_test_error {
+class Example_foo_Response final
+    : public ::fidl::internal::CodableBase<Example_foo_Response> {
+ private:
+  friend ::fidl::internal::CodableBase<Example_foo_Response>;
+  Example_foo_Response(::fidl::Decoder& decoder);
+
+ public:
+  Example_foo_Response() = default;
+  Example_foo_Response(int64_t y) : storage_({y}) {}
+  Example_foo_Response(::fidl::internal::DesignatedInitializationProxy<
+                       ::fidl_test_error::Example_foo_Response>
+                           storage)
+      : storage_(std::move(storage)) {}
+  ~Example_foo_Response() = default;
+  Example_foo_Response(Example_foo_Response&&) noexcept = default;
+  Example_foo_Response& operator=(Example_foo_Response&&) noexcept = default;
+
+  const int64_t& y() const { return storage_.y; }
+
+  Example_foo_Response& set_y(int64_t _value) {
+    storage_.y = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_error::Example_foo_Response>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_error::Example_foo_Response>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_error
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_error::ExampleFooTopResponse>
+    final {
+ public:
+  ::fidl_test_error::Example_foo_Result result = {};
+};
+
+namespace fidl_test_error {
+class ExampleFooTopResponse final
+    : public ::fidl::internal::CodableBase<ExampleFooTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<ExampleFooTopResponse>;
+  ExampleFooTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  ExampleFooTopResponse() = default;
+  ExampleFooTopResponse(::fidl_test_error::Example_foo_Result result)
+      : storage_({std::move(result)}) {}
+  ExampleFooTopResponse(::fidl::internal::DesignatedInitializationProxy<
+                        ::fidl_test_error::ExampleFooTopResponse>
+                            storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleFooTopResponse() = default;
+  ExampleFooTopResponse(ExampleFooTopResponse&&) noexcept = default;
+  ExampleFooTopResponse& operator=(ExampleFooTopResponse&&) noexcept = default;
+
+  const ::fidl_test_error::Example_foo_Result& result() const {
+    return storage_.result;
+  }
+
+  ExampleFooTopResponse& set_result(
+      ::fidl_test_error::Example_foo_Result _value) {
+    storage_.result = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_error::ExampleFooTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_error::ExampleFooTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_error
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_error::ExampleFooRequest>
+    final {
+ public:
+  ::std::string s = {};
+};
+
+namespace fidl_test_error {
+class ExampleFooRequest final
+    : public ::fidl::internal::CodableBase<ExampleFooRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<ExampleFooRequest>;
+  ExampleFooRequest(::fidl::Decoder& decoder);
+
+ public:
+  ExampleFooRequest() = default;
+  ExampleFooRequest(::std::string s) : storage_({std::move(s)}) {}
+  ExampleFooRequest(::fidl::internal::DesignatedInitializationProxy<
+                    ::fidl_test_error::ExampleFooRequest>
+                        storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleFooRequest() = default;
+  ExampleFooRequest(ExampleFooRequest&&) noexcept = default;
+  ExampleFooRequest& operator=(ExampleFooRequest&&) noexcept = default;
+
+  const ::std::string& s() const { return storage_.s; }
+
+  ExampleFooRequest& set_s(::std::string _value) {
+    storage_.s = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_error::ExampleFooRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_error::ExampleFooRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_error
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_error_Example_foo_ResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_error::Example_foo_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_error::Example_foo_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_error_Example_foo_ResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_error::Example_foo_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_error::Example_foo_Response* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.y, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_error_ExampleFooTopResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_error::ExampleFooTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_error::ExampleFooTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_error_ExampleFooTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_error::ExampleFooTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_error::ExampleFooTopResponse* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_error_ExampleFooRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_error::ExampleFooRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_error::ExampleFooRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_error_ExampleFooRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_error::ExampleFooRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_error::ExampleFooRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

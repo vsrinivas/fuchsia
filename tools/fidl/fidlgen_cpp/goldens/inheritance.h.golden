@@ -4,3 +4,160 @@
 
 #include <fidl/fidl.test.inheritance/cpp/wire.h>
 #include <fidl/test/inheritance/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
+
+namespace fidl_test_inheritance {
+class SuperFooTopResponse;
+
+class SuperFooRequest;
+
+}  // namespace fidl_test_inheritance
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_inheritance::SuperFooTopResponse>
+    final {
+ public:
+  int64_t y = {};
+};
+
+namespace fidl_test_inheritance {
+class SuperFooTopResponse final
+    : public ::fidl::internal::CodableBase<SuperFooTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<SuperFooTopResponse>;
+  SuperFooTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  SuperFooTopResponse() = default;
+  SuperFooTopResponse(int64_t y) : storage_({y}) {}
+  SuperFooTopResponse(::fidl::internal::DesignatedInitializationProxy<
+                      ::fidl_test_inheritance::SuperFooTopResponse>
+                          storage)
+      : storage_(std::move(storage)) {}
+  ~SuperFooTopResponse() = default;
+  SuperFooTopResponse(SuperFooTopResponse&&) noexcept = default;
+  SuperFooTopResponse& operator=(SuperFooTopResponse&&) noexcept = default;
+
+  const int64_t& y() const { return storage_.y; }
+
+  SuperFooTopResponse& set_y(int64_t _value) {
+    storage_.y = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_inheritance::SuperFooTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_inheritance::SuperFooTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_inheritance
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_inheritance::SuperFooRequest>
+    final {
+ public:
+  ::std::string s = {};
+};
+
+namespace fidl_test_inheritance {
+class SuperFooRequest final
+    : public ::fidl::internal::CodableBase<SuperFooRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<SuperFooRequest>;
+  SuperFooRequest(::fidl::Decoder& decoder);
+
+ public:
+  SuperFooRequest() = default;
+  SuperFooRequest(::std::string s) : storage_({std::move(s)}) {}
+  SuperFooRequest(::fidl::internal::DesignatedInitializationProxy<
+                  ::fidl_test_inheritance::SuperFooRequest>
+                      storage)
+      : storage_(std::move(storage)) {}
+  ~SuperFooRequest() = default;
+  SuperFooRequest(SuperFooRequest&&) noexcept = default;
+  SuperFooRequest& operator=(SuperFooRequest&&) noexcept = default;
+
+  const ::std::string& s() const { return storage_.s; }
+
+  SuperFooRequest& set_s(::std::string _value) {
+    storage_.s = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_inheritance::SuperFooRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_inheritance::SuperFooRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_inheritance
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_inheritance_SuperFooTopResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_inheritance::SuperFooTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_inheritance::SuperFooTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_inheritance_SuperFooTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_inheritance::SuperFooTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_inheritance::SuperFooTopResponse* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.y, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_inheritance_SuperFooRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_inheritance::SuperFooRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_inheritance::SuperFooRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_inheritance_SuperFooRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_inheritance::SuperFooRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_inheritance::SuperFooRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

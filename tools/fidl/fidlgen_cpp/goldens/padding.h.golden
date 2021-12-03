@@ -4,40 +4,1404 @@
 
 #include <fidl/fidl.test.padding/cpp/wire.h>
 #include <fidl/test/padding/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_padding {
-using Padding7ByteMiddle = ::fidl::test::padding::Padding7ByteMiddle;
+class Padding7ByteMiddle;
 
-using Padding7ByteEnd = ::fidl::test::padding::Padding7ByteEnd;
+class Padding7ByteEnd;
 
-using Padding6ByteMiddle = ::fidl::test::padding::Padding6ByteMiddle;
+class Padding6ByteMiddle;
 
-using Padding6ByteEnd = ::fidl::test::padding::Padding6ByteEnd;
+class Padding6ByteEnd;
 
-using Padding5ByteMiddle = ::fidl::test::padding::Padding5ByteMiddle;
+class Padding5ByteMiddle;
 
-using Padding5ByteEnd = ::fidl::test::padding::Padding5ByteEnd;
+class Padding5ByteEnd;
 
-using Padding4ByteMiddle = ::fidl::test::padding::Padding4ByteMiddle;
+class Padding4ByteMiddle;
 
-using Padding4ByteEnd = ::fidl::test::padding::Padding4ByteEnd;
+class Padding4ByteEnd;
 
-using Padding4ByteAlignmentLength12 =
-    ::fidl::test::padding::Padding4ByteAlignmentLength12;
+class Padding4ByteAlignmentLength12;
 
-using Padding3ByteMiddle = ::fidl::test::padding::Padding3ByteMiddle;
+class Padding3ByteMiddle;
 
-using Padding3ByteEnd = ::fidl::test::padding::Padding3ByteEnd;
+class Padding3ByteEnd;
 
-using Padding2ByteMiddle = ::fidl::test::padding::Padding2ByteMiddle;
+class Padding2ByteMiddle;
 
-using Padding2ByteEnd = ::fidl::test::padding::Padding2ByteEnd;
+class Padding2ByteEnd;
 
-using Padding2ByteAlignmentLength6 =
-    ::fidl::test::padding::Padding2ByteAlignmentLength6;
+class Padding2ByteAlignmentLength6;
 
-using Padding1ByteMiddle = ::fidl::test::padding::Padding1ByteMiddle;
+class Padding1ByteMiddle;
 
-using Padding1ByteEnd = ::fidl::test::padding::Padding1ByteEnd;
+class Padding1ByteEnd;
 
 }  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding7ByteMiddle>
+    final {
+ public:
+  uint8_t a = {};
+
+  uint64_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding7ByteMiddle final
+    : public ::fidl::internal::CodableBase<Padding7ByteMiddle> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding7ByteMiddle>;
+  Padding7ByteMiddle(::fidl::Decoder& decoder);
+
+ public:
+  Padding7ByteMiddle() = default;
+  Padding7ByteMiddle(uint8_t a, uint64_t b) : storage_({a, b}) {}
+  Padding7ByteMiddle(::fidl::internal::DesignatedInitializationProxy<
+                     ::fidl_test_padding::Padding7ByteMiddle>
+                         storage)
+      : storage_(std::move(storage)) {}
+  ~Padding7ByteMiddle() = default;
+  Padding7ByteMiddle(Padding7ByteMiddle&&) noexcept = default;
+  Padding7ByteMiddle& operator=(Padding7ByteMiddle&&) noexcept = default;
+
+  const uint8_t& a() const { return storage_.a; }
+
+  Padding7ByteMiddle& set_a(uint8_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint64_t& b() const { return storage_.b; }
+
+  Padding7ByteMiddle& set_b(uint64_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding7ByteMiddle>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding7ByteMiddle>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding7ByteEnd>
+    final {
+ public:
+  uint64_t a = {};
+
+  uint8_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding7ByteEnd final
+    : public ::fidl::internal::CodableBase<Padding7ByteEnd> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding7ByteEnd>;
+  Padding7ByteEnd(::fidl::Decoder& decoder);
+
+ public:
+  Padding7ByteEnd() = default;
+  Padding7ByteEnd(uint64_t a, uint8_t b) : storage_({a, b}) {}
+  Padding7ByteEnd(::fidl::internal::DesignatedInitializationProxy<
+                  ::fidl_test_padding::Padding7ByteEnd>
+                      storage)
+      : storage_(std::move(storage)) {}
+  ~Padding7ByteEnd() = default;
+  Padding7ByteEnd(Padding7ByteEnd&&) noexcept = default;
+  Padding7ByteEnd& operator=(Padding7ByteEnd&&) noexcept = default;
+
+  const uint64_t& a() const { return storage_.a; }
+
+  Padding7ByteEnd& set_a(uint64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint8_t& b() const { return storage_.b; }
+
+  Padding7ByteEnd& set_b(uint8_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding7ByteEnd>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding7ByteEnd>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding6ByteMiddle>
+    final {
+ public:
+  uint16_t a = {};
+
+  uint64_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding6ByteMiddle final
+    : public ::fidl::internal::CodableBase<Padding6ByteMiddle> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding6ByteMiddle>;
+  Padding6ByteMiddle(::fidl::Decoder& decoder);
+
+ public:
+  Padding6ByteMiddle() = default;
+  Padding6ByteMiddle(uint16_t a, uint64_t b) : storage_({a, b}) {}
+  Padding6ByteMiddle(::fidl::internal::DesignatedInitializationProxy<
+                     ::fidl_test_padding::Padding6ByteMiddle>
+                         storage)
+      : storage_(std::move(storage)) {}
+  ~Padding6ByteMiddle() = default;
+  Padding6ByteMiddle(Padding6ByteMiddle&&) noexcept = default;
+  Padding6ByteMiddle& operator=(Padding6ByteMiddle&&) noexcept = default;
+
+  const uint16_t& a() const { return storage_.a; }
+
+  Padding6ByteMiddle& set_a(uint16_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint64_t& b() const { return storage_.b; }
+
+  Padding6ByteMiddle& set_b(uint64_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding6ByteMiddle>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding6ByteMiddle>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding6ByteEnd>
+    final {
+ public:
+  uint64_t a = {};
+
+  uint16_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding6ByteEnd final
+    : public ::fidl::internal::CodableBase<Padding6ByteEnd> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding6ByteEnd>;
+  Padding6ByteEnd(::fidl::Decoder& decoder);
+
+ public:
+  Padding6ByteEnd() = default;
+  Padding6ByteEnd(uint64_t a, uint16_t b) : storage_({a, b}) {}
+  Padding6ByteEnd(::fidl::internal::DesignatedInitializationProxy<
+                  ::fidl_test_padding::Padding6ByteEnd>
+                      storage)
+      : storage_(std::move(storage)) {}
+  ~Padding6ByteEnd() = default;
+  Padding6ByteEnd(Padding6ByteEnd&&) noexcept = default;
+  Padding6ByteEnd& operator=(Padding6ByteEnd&&) noexcept = default;
+
+  const uint64_t& a() const { return storage_.a; }
+
+  Padding6ByteEnd& set_a(uint64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint16_t& b() const { return storage_.b; }
+
+  Padding6ByteEnd& set_b(uint16_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding6ByteEnd>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding6ByteEnd>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding5ByteMiddle>
+    final {
+ public:
+  uint16_t a = {};
+
+  uint8_t b = {};
+
+  uint64_t c = {};
+};
+
+namespace fidl_test_padding {
+class Padding5ByteMiddle final
+    : public ::fidl::internal::CodableBase<Padding5ByteMiddle> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding5ByteMiddle>;
+  Padding5ByteMiddle(::fidl::Decoder& decoder);
+
+ public:
+  Padding5ByteMiddle() = default;
+  Padding5ByteMiddle(uint16_t a, uint8_t b, uint64_t c) : storage_({a, b, c}) {}
+  Padding5ByteMiddle(::fidl::internal::DesignatedInitializationProxy<
+                     ::fidl_test_padding::Padding5ByteMiddle>
+                         storage)
+      : storage_(std::move(storage)) {}
+  ~Padding5ByteMiddle() = default;
+  Padding5ByteMiddle(Padding5ByteMiddle&&) noexcept = default;
+  Padding5ByteMiddle& operator=(Padding5ByteMiddle&&) noexcept = default;
+
+  const uint16_t& a() const { return storage_.a; }
+
+  Padding5ByteMiddle& set_a(uint16_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint8_t& b() const { return storage_.b; }
+
+  Padding5ByteMiddle& set_b(uint8_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+  const uint64_t& c() const { return storage_.c; }
+
+  Padding5ByteMiddle& set_c(uint64_t _value) {
+    storage_.c = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding5ByteMiddle>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding5ByteMiddle>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding5ByteEnd>
+    final {
+ public:
+  uint64_t a = {};
+
+  uint16_t b = {};
+
+  uint8_t c = {};
+};
+
+namespace fidl_test_padding {
+class Padding5ByteEnd final
+    : public ::fidl::internal::CodableBase<Padding5ByteEnd> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding5ByteEnd>;
+  Padding5ByteEnd(::fidl::Decoder& decoder);
+
+ public:
+  Padding5ByteEnd() = default;
+  Padding5ByteEnd(uint64_t a, uint16_t b, uint8_t c) : storage_({a, b, c}) {}
+  Padding5ByteEnd(::fidl::internal::DesignatedInitializationProxy<
+                  ::fidl_test_padding::Padding5ByteEnd>
+                      storage)
+      : storage_(std::move(storage)) {}
+  ~Padding5ByteEnd() = default;
+  Padding5ByteEnd(Padding5ByteEnd&&) noexcept = default;
+  Padding5ByteEnd& operator=(Padding5ByteEnd&&) noexcept = default;
+
+  const uint64_t& a() const { return storage_.a; }
+
+  Padding5ByteEnd& set_a(uint64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint16_t& b() const { return storage_.b; }
+
+  Padding5ByteEnd& set_b(uint16_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+  const uint8_t& c() const { return storage_.c; }
+
+  Padding5ByteEnd& set_c(uint8_t _value) {
+    storage_.c = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding5ByteEnd>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding5ByteEnd>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding4ByteMiddle>
+    final {
+ public:
+  uint32_t a = {};
+
+  uint64_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding4ByteMiddle final
+    : public ::fidl::internal::CodableBase<Padding4ByteMiddle> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding4ByteMiddle>;
+  Padding4ByteMiddle(::fidl::Decoder& decoder);
+
+ public:
+  Padding4ByteMiddle() = default;
+  Padding4ByteMiddle(uint32_t a, uint64_t b) : storage_({a, b}) {}
+  Padding4ByteMiddle(::fidl::internal::DesignatedInitializationProxy<
+                     ::fidl_test_padding::Padding4ByteMiddle>
+                         storage)
+      : storage_(std::move(storage)) {}
+  ~Padding4ByteMiddle() = default;
+  Padding4ByteMiddle(Padding4ByteMiddle&&) noexcept = default;
+  Padding4ByteMiddle& operator=(Padding4ByteMiddle&&) noexcept = default;
+
+  const uint32_t& a() const { return storage_.a; }
+
+  Padding4ByteMiddle& set_a(uint32_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint64_t& b() const { return storage_.b; }
+
+  Padding4ByteMiddle& set_b(uint64_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding4ByteMiddle>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding4ByteMiddle>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding4ByteEnd>
+    final {
+ public:
+  uint64_t a = {};
+
+  uint32_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding4ByteEnd final
+    : public ::fidl::internal::CodableBase<Padding4ByteEnd> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding4ByteEnd>;
+  Padding4ByteEnd(::fidl::Decoder& decoder);
+
+ public:
+  Padding4ByteEnd() = default;
+  Padding4ByteEnd(uint64_t a, uint32_t b) : storage_({a, b}) {}
+  Padding4ByteEnd(::fidl::internal::DesignatedInitializationProxy<
+                  ::fidl_test_padding::Padding4ByteEnd>
+                      storage)
+      : storage_(std::move(storage)) {}
+  ~Padding4ByteEnd() = default;
+  Padding4ByteEnd(Padding4ByteEnd&&) noexcept = default;
+  Padding4ByteEnd& operator=(Padding4ByteEnd&&) noexcept = default;
+
+  const uint64_t& a() const { return storage_.a; }
+
+  Padding4ByteEnd& set_a(uint64_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint32_t& b() const { return storage_.b; }
+
+  Padding4ByteEnd& set_b(uint32_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding4ByteEnd>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding4ByteEnd>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding4ByteAlignmentLength12>
+    final {
+ public:
+  uint32_t a = {};
+
+  uint8_t b = {};
+
+  uint16_t c = {};
+
+  uint16_t d = {};
+};
+
+namespace fidl_test_padding {
+class Padding4ByteAlignmentLength12 final
+    : public ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12>;
+  Padding4ByteAlignmentLength12(::fidl::Decoder& decoder);
+
+ public:
+  Padding4ByteAlignmentLength12() = default;
+  Padding4ByteAlignmentLength12(uint32_t a, uint8_t b, uint16_t c, uint16_t d)
+      : storage_({a, b, c, d}) {}
+  Padding4ByteAlignmentLength12(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_padding::Padding4ByteAlignmentLength12>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~Padding4ByteAlignmentLength12() = default;
+  Padding4ByteAlignmentLength12(Padding4ByteAlignmentLength12&&) noexcept =
+      default;
+  Padding4ByteAlignmentLength12& operator=(
+      Padding4ByteAlignmentLength12&&) noexcept = default;
+
+  const uint32_t& a() const { return storage_.a; }
+
+  Padding4ByteAlignmentLength12& set_a(uint32_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint8_t& b() const { return storage_.b; }
+
+  Padding4ByteAlignmentLength12& set_b(uint8_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+  const uint16_t& c() const { return storage_.c; }
+
+  Padding4ByteAlignmentLength12& set_c(uint16_t _value) {
+    storage_.c = std::move(_value);
+    return *this;
+  }
+
+  const uint16_t& d() const { return storage_.d; }
+
+  Padding4ByteAlignmentLength12& set_d(uint16_t _value) {
+    storage_.d = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_padding::Padding4ByteAlignmentLength12>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding4ByteAlignmentLength12>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding3ByteMiddle>
+    final {
+ public:
+  uint8_t a = {};
+
+  uint32_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding3ByteMiddle final
+    : public ::fidl::internal::CodableBase<Padding3ByteMiddle> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding3ByteMiddle>;
+  Padding3ByteMiddle(::fidl::Decoder& decoder);
+
+ public:
+  Padding3ByteMiddle() = default;
+  Padding3ByteMiddle(uint8_t a, uint32_t b) : storage_({a, b}) {}
+  Padding3ByteMiddle(::fidl::internal::DesignatedInitializationProxy<
+                     ::fidl_test_padding::Padding3ByteMiddle>
+                         storage)
+      : storage_(std::move(storage)) {}
+  ~Padding3ByteMiddle() = default;
+  Padding3ByteMiddle(Padding3ByteMiddle&&) noexcept = default;
+  Padding3ByteMiddle& operator=(Padding3ByteMiddle&&) noexcept = default;
+
+  const uint8_t& a() const { return storage_.a; }
+
+  Padding3ByteMiddle& set_a(uint8_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint32_t& b() const { return storage_.b; }
+
+  Padding3ByteMiddle& set_b(uint32_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding3ByteMiddle>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding3ByteMiddle>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding3ByteEnd>
+    final {
+ public:
+  uint32_t a = {};
+
+  uint8_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding3ByteEnd final
+    : public ::fidl::internal::CodableBase<Padding3ByteEnd> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding3ByteEnd>;
+  Padding3ByteEnd(::fidl::Decoder& decoder);
+
+ public:
+  Padding3ByteEnd() = default;
+  Padding3ByteEnd(uint32_t a, uint8_t b) : storage_({a, b}) {}
+  Padding3ByteEnd(::fidl::internal::DesignatedInitializationProxy<
+                  ::fidl_test_padding::Padding3ByteEnd>
+                      storage)
+      : storage_(std::move(storage)) {}
+  ~Padding3ByteEnd() = default;
+  Padding3ByteEnd(Padding3ByteEnd&&) noexcept = default;
+  Padding3ByteEnd& operator=(Padding3ByteEnd&&) noexcept = default;
+
+  const uint32_t& a() const { return storage_.a; }
+
+  Padding3ByteEnd& set_a(uint32_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint8_t& b() const { return storage_.b; }
+
+  Padding3ByteEnd& set_b(uint8_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding3ByteEnd>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding3ByteEnd>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding2ByteMiddle>
+    final {
+ public:
+  uint16_t a = {};
+
+  uint32_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding2ByteMiddle final
+    : public ::fidl::internal::CodableBase<Padding2ByteMiddle> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding2ByteMiddle>;
+  Padding2ByteMiddle(::fidl::Decoder& decoder);
+
+ public:
+  Padding2ByteMiddle() = default;
+  Padding2ByteMiddle(uint16_t a, uint32_t b) : storage_({a, b}) {}
+  Padding2ByteMiddle(::fidl::internal::DesignatedInitializationProxy<
+                     ::fidl_test_padding::Padding2ByteMiddle>
+                         storage)
+      : storage_(std::move(storage)) {}
+  ~Padding2ByteMiddle() = default;
+  Padding2ByteMiddle(Padding2ByteMiddle&&) noexcept = default;
+  Padding2ByteMiddle& operator=(Padding2ByteMiddle&&) noexcept = default;
+
+  const uint16_t& a() const { return storage_.a; }
+
+  Padding2ByteMiddle& set_a(uint16_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint32_t& b() const { return storage_.b; }
+
+  Padding2ByteMiddle& set_b(uint32_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding2ByteMiddle>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding2ByteMiddle>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding2ByteEnd>
+    final {
+ public:
+  uint32_t a = {};
+
+  uint16_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding2ByteEnd final
+    : public ::fidl::internal::CodableBase<Padding2ByteEnd> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding2ByteEnd>;
+  Padding2ByteEnd(::fidl::Decoder& decoder);
+
+ public:
+  Padding2ByteEnd() = default;
+  Padding2ByteEnd(uint32_t a, uint16_t b) : storage_({a, b}) {}
+  Padding2ByteEnd(::fidl::internal::DesignatedInitializationProxy<
+                  ::fidl_test_padding::Padding2ByteEnd>
+                      storage)
+      : storage_(std::move(storage)) {}
+  ~Padding2ByteEnd() = default;
+  Padding2ByteEnd(Padding2ByteEnd&&) noexcept = default;
+  Padding2ByteEnd& operator=(Padding2ByteEnd&&) noexcept = default;
+
+  const uint32_t& a() const { return storage_.a; }
+
+  Padding2ByteEnd& set_a(uint32_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint16_t& b() const { return storage_.b; }
+
+  Padding2ByteEnd& set_b(uint16_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding2ByteEnd>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding2ByteEnd>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding2ByteAlignmentLength6>
+    final {
+ public:
+  uint8_t a = {};
+
+  uint16_t b = {};
+
+  uint8_t c = {};
+};
+
+namespace fidl_test_padding {
+class Padding2ByteAlignmentLength6 final
+    : public ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6>;
+  Padding2ByteAlignmentLength6(::fidl::Decoder& decoder);
+
+ public:
+  Padding2ByteAlignmentLength6() = default;
+  Padding2ByteAlignmentLength6(uint8_t a, uint16_t b, uint8_t c)
+      : storage_({a, b, c}) {}
+  Padding2ByteAlignmentLength6(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_padding::Padding2ByteAlignmentLength6>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~Padding2ByteAlignmentLength6() = default;
+  Padding2ByteAlignmentLength6(Padding2ByteAlignmentLength6&&) noexcept =
+      default;
+  Padding2ByteAlignmentLength6& operator=(
+      Padding2ByteAlignmentLength6&&) noexcept = default;
+
+  const uint8_t& a() const { return storage_.a; }
+
+  Padding2ByteAlignmentLength6& set_a(uint8_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint16_t& b() const { return storage_.b; }
+
+  Padding2ByteAlignmentLength6& set_b(uint16_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+  const uint8_t& c() const { return storage_.c; }
+
+  Padding2ByteAlignmentLength6& set_c(uint8_t _value) {
+    storage_.c = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_padding::Padding2ByteAlignmentLength6>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding2ByteAlignmentLength6>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding1ByteMiddle>
+    final {
+ public:
+  uint8_t a = {};
+
+  uint16_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding1ByteMiddle final
+    : public ::fidl::internal::CodableBase<Padding1ByteMiddle> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding1ByteMiddle>;
+  Padding1ByteMiddle(::fidl::Decoder& decoder);
+
+ public:
+  Padding1ByteMiddle() = default;
+  Padding1ByteMiddle(uint8_t a, uint16_t b) : storage_({a, b}) {}
+  Padding1ByteMiddle(::fidl::internal::DesignatedInitializationProxy<
+                     ::fidl_test_padding::Padding1ByteMiddle>
+                         storage)
+      : storage_(std::move(storage)) {}
+  ~Padding1ByteMiddle() = default;
+  Padding1ByteMiddle(Padding1ByteMiddle&&) noexcept = default;
+  Padding1ByteMiddle& operator=(Padding1ByteMiddle&&) noexcept = default;
+
+  const uint8_t& a() const { return storage_.a; }
+
+  Padding1ByteMiddle& set_a(uint8_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint16_t& b() const { return storage_.b; }
+
+  Padding1ByteMiddle& set_b(uint16_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding1ByteMiddle>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding1ByteMiddle>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_padding::Padding1ByteEnd>
+    final {
+ public:
+  uint16_t a = {};
+
+  uint8_t b = {};
+};
+
+namespace fidl_test_padding {
+class Padding1ByteEnd final
+    : public ::fidl::internal::CodableBase<Padding1ByteEnd> {
+ private:
+  friend ::fidl::internal::CodableBase<Padding1ByteEnd>;
+  Padding1ByteEnd(::fidl::Decoder& decoder);
+
+ public:
+  Padding1ByteEnd() = default;
+  Padding1ByteEnd(uint16_t a, uint8_t b) : storage_({a, b}) {}
+  Padding1ByteEnd(::fidl::internal::DesignatedInitializationProxy<
+                  ::fidl_test_padding::Padding1ByteEnd>
+                      storage)
+      : storage_(std::move(storage)) {}
+  ~Padding1ByteEnd() = default;
+  Padding1ByteEnd(Padding1ByteEnd&&) noexcept = default;
+  Padding1ByteEnd& operator=(Padding1ByteEnd&&) noexcept = default;
+
+  const uint16_t& a() const { return storage_.a; }
+
+  Padding1ByteEnd& set_a(uint16_t _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+  const uint8_t& b() const { return storage_.b; }
+
+  Padding1ByteEnd& set_b(uint8_t _value) {
+    storage_.b = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_padding::Padding1ByteEnd>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_padding::Padding1ByteEnd>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_padding
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding7ByteMiddleTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding7ByteMiddle>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding7ByteMiddle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding7ByteMiddleTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding7ByteMiddle> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding7ByteMiddle* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding7ByteEndTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding7ByteEnd>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding7ByteEnd>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding7ByteEndTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding7ByteEnd> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding7ByteEnd* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding6ByteMiddleTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding6ByteMiddle>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding6ByteMiddle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding6ByteMiddleTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding6ByteMiddle> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding6ByteMiddle* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding6ByteEndTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding6ByteEnd>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding6ByteEnd>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding6ByteEndTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding6ByteEnd> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding6ByteEnd* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding5ByteMiddleTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding5ByteMiddle>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding5ByteMiddle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding5ByteMiddleTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding5ByteMiddle> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding5ByteMiddle* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
+    ::fidl::Decode(decoder, &value->storage_.c, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding5ByteEndTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding5ByteEnd>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding5ByteEnd>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding5ByteEndTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding5ByteEnd> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding5ByteEnd* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+    ::fidl::Decode(decoder, &value->storage_.c, offset + 10);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding4ByteMiddleTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding4ByteMiddle>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding4ByteMiddle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding4ByteMiddleTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding4ByteMiddle> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding4ByteMiddle* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding4ByteEndTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding4ByteEnd>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding4ByteEnd>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding4ByteEndTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding4ByteEnd> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding4ByteEnd* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_padding_Padding4ByteAlignmentLength12Table;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding4ByteAlignmentLength12>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_padding::Padding4ByteAlignmentLength12>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding4ByteAlignmentLength12Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding4ByteAlignmentLength12> {
+  static constexpr size_t inline_size_v1_no_ee = 12;
+  static constexpr size_t inline_size_v2 = 12;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding4ByteAlignmentLength12* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
+    ::fidl::Decode(decoder, &value->storage_.c, offset + 6);
+    ::fidl::Decode(decoder, &value->storage_.d, offset + 8);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding3ByteMiddleTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding3ByteMiddle>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding3ByteMiddle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding3ByteMiddleTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding3ByteMiddle> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding3ByteMiddle* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding3ByteEndTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding3ByteEnd>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding3ByteEnd>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding3ByteEndTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding3ByteEnd> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding3ByteEnd* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding2ByteMiddleTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding2ByteMiddle>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding2ByteMiddle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding2ByteMiddleTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding2ByteMiddle> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding2ByteMiddle* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding2ByteEndTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding2ByteEnd>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding2ByteEnd>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding2ByteEndTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding2ByteEnd> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding2ByteEnd* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 4);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_padding_Padding2ByteAlignmentLength6Table;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding2ByteAlignmentLength6>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_padding::Padding2ByteAlignmentLength6>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding2ByteAlignmentLength6Table;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding2ByteAlignmentLength6> {
+  static constexpr size_t inline_size_v1_no_ee = 6;
+  static constexpr size_t inline_size_v2 = 6;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding2ByteAlignmentLength6* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
+    ::fidl::Decode(decoder, &value->storage_.c, offset + 4);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding1ByteMiddleTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding1ByteMiddle>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding1ByteMiddle>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding1ByteMiddleTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding1ByteMiddle> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding1ByteMiddle* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_padding_Padding1ByteEndTable;
+
+template <>
+struct IsFidlType<::fidl_test_padding::Padding1ByteEnd>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_padding::Padding1ByteEnd>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_padding_Padding1ByteEndTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_padding::Padding1ByteEnd> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_padding::Padding1ByteEnd* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.b, offset + 2);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

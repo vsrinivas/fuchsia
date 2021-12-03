@@ -4,9 +4,87 @@
 
 #include <fidl/fidl.test.escaping/cpp/wire.h>
 #include <fidl/test/escaping/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
+
+namespace fidl_test_escaping {
+class DocCommentWithQuotes;
+
+}  // namespace fidl_test_escaping
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_escaping::DocCommentWithQuotes>
+    final {
+ public:
+  uint8_t __reserved = 0u;
+};
 
 namespace fidl_test_escaping {
 /// "pleaseescapethisdocommentproperly"
-using DocCommentWithQuotes = ::fidl::test::escaping::DocCommentWithQuotes;
+class DocCommentWithQuotes final
+    : public ::fidl::internal::CodableBase<DocCommentWithQuotes> {
+ private:
+  friend ::fidl::internal::CodableBase<DocCommentWithQuotes>;
+  DocCommentWithQuotes(::fidl::Decoder& decoder);
+
+ public:
+  DocCommentWithQuotes() = default;
+  DocCommentWithQuotes(uint8_t __reserved) : storage_({__reserved}) {}
+  DocCommentWithQuotes(::fidl::internal::DesignatedInitializationProxy<
+                       ::fidl_test_escaping::DocCommentWithQuotes>
+                           storage)
+      : storage_(std::move(storage)) {}
+  ~DocCommentWithQuotes() = default;
+  DocCommentWithQuotes(DocCommentWithQuotes&&) noexcept = default;
+  DocCommentWithQuotes& operator=(DocCommentWithQuotes&&) noexcept = default;
+
+  const uint8_t& __reserved() const { return storage_.__reserved; }
+
+  DocCommentWithQuotes& set___reserved(uint8_t _value) {
+    storage_.__reserved = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_escaping::DocCommentWithQuotes>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_escaping::DocCommentWithQuotes>
+      storage_ = {};
+};
 
 }  // namespace fidl_test_escaping
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_escaping_DocCommentWithQuotesTable;
+
+template <>
+struct IsFidlType<::fidl_test_escaping::DocCommentWithQuotes>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_escaping::DocCommentWithQuotes>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_escaping_DocCommentWithQuotesTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_escaping::DocCommentWithQuotes> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_escaping::DocCommentWithQuotes* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

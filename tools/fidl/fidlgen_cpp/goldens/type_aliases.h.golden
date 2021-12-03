@@ -4,11 +4,209 @@
 
 #include <fidl/fidl.test.typealiases/cpp/wire.h>
 #include <fidl/test/typealiases/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 #include <someotherlibrary/cpp/fidl_v2.h>
 
 namespace fidl_test_typealiases {
+class ExampleOfUseOfAliases;
+
 using obj_type = ::fidl::test::typealiases::obj_type;
 
-using ExampleOfUseOfAliases = ::fidl::test::typealiases::ExampleOfUseOfAliases;
+}  // namespace fidl_test_typealiases
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_typealiases::ExampleOfUseOfAliases>
+    final {
+ public:
+  uint32_t field_of_u32 = {};
+
+  ::std::vector<::std::string> field_of_vec_of_strings = {};
+
+  ::std::vector<::std::string> field_of_vec_of_strings_at_most_nine = {};
+
+  ::std::vector<::std::string> field_of_vec_of_strings_at_most_5 = {};
+
+  ::std::vector<::someotherlibrary::ReferenceMe>
+      field_of_vec_of_ref_me_at_most_5 = {};
+
+  ::zx::channel field_of_channel = {};
+
+  ::zx::channel field_of_client_end = {};
+
+  ::zx::channel field_of_nullable_client_end = {};
+};
+
+namespace fidl_test_typealiases {
+class ExampleOfUseOfAliases final
+    : public ::fidl::internal::CodableBase<ExampleOfUseOfAliases> {
+ private:
+  friend ::fidl::internal::CodableBase<ExampleOfUseOfAliases>;
+  ExampleOfUseOfAliases(::fidl::Decoder& decoder);
+
+ public:
+  ExampleOfUseOfAliases() = default;
+  ExampleOfUseOfAliases(
+      uint32_t field_of_u32,
+      ::std::vector<::std::string> field_of_vec_of_strings,
+      ::std::vector<::std::string> field_of_vec_of_strings_at_most_nine,
+      ::std::vector<::std::string> field_of_vec_of_strings_at_most_5,
+      ::std::vector<::someotherlibrary::ReferenceMe>
+          field_of_vec_of_ref_me_at_most_5,
+      ::zx::channel&& field_of_channel, ::zx::channel&& field_of_client_end,
+      ::zx::channel&& field_of_nullable_client_end)
+      : storage_({field_of_u32, std::move(field_of_vec_of_strings),
+                  std::move(field_of_vec_of_strings_at_most_nine),
+                  std::move(field_of_vec_of_strings_at_most_5),
+                  std::move(field_of_vec_of_ref_me_at_most_5),
+                  std::move(field_of_channel), std::move(field_of_client_end),
+                  std::move(field_of_nullable_client_end)}) {}
+  ExampleOfUseOfAliases(::fidl::internal::DesignatedInitializationProxy<
+                        ::fidl_test_typealiases::ExampleOfUseOfAliases>
+                            storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleOfUseOfAliases() = default;
+  ExampleOfUseOfAliases(ExampleOfUseOfAliases&&) noexcept = default;
+  ExampleOfUseOfAliases& operator=(ExampleOfUseOfAliases&&) noexcept = default;
+  ExampleOfUseOfAliases(const ExampleOfUseOfAliases&) noexcept = delete;
+  ExampleOfUseOfAliases& operator=(const ExampleOfUseOfAliases&) noexcept =
+      delete;
+
+  const uint32_t& field_of_u32() const { return storage_.field_of_u32; }
+
+  ExampleOfUseOfAliases& set_field_of_u32(uint32_t _value) {
+    storage_.field_of_u32 = std::move(_value);
+    return *this;
+  }
+
+  const ::std::vector<::std::string>& field_of_vec_of_strings() const {
+    return storage_.field_of_vec_of_strings;
+  }
+
+  ExampleOfUseOfAliases& set_field_of_vec_of_strings(
+      ::std::vector<::std::string> _value) {
+    storage_.field_of_vec_of_strings = std::move(_value);
+    return *this;
+  }
+
+  const ::std::vector<::std::string>& field_of_vec_of_strings_at_most_nine()
+      const {
+    return storage_.field_of_vec_of_strings_at_most_nine;
+  }
+
+  ExampleOfUseOfAliases& set_field_of_vec_of_strings_at_most_nine(
+      ::std::vector<::std::string> _value) {
+    storage_.field_of_vec_of_strings_at_most_nine = std::move(_value);
+    return *this;
+  }
+
+  const ::std::vector<::std::string>& field_of_vec_of_strings_at_most_5()
+      const {
+    return storage_.field_of_vec_of_strings_at_most_5;
+  }
+
+  ExampleOfUseOfAliases& set_field_of_vec_of_strings_at_most_5(
+      ::std::vector<::std::string> _value) {
+    storage_.field_of_vec_of_strings_at_most_5 = std::move(_value);
+    return *this;
+  }
+
+  const ::std::vector<::someotherlibrary::ReferenceMe>&
+  field_of_vec_of_ref_me_at_most_5() const {
+    return storage_.field_of_vec_of_ref_me_at_most_5;
+  }
+
+  ExampleOfUseOfAliases& set_field_of_vec_of_ref_me_at_most_5(
+      ::std::vector<::someotherlibrary::ReferenceMe> _value) {
+    storage_.field_of_vec_of_ref_me_at_most_5 = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::channel& field_of_channel() const {
+    return storage_.field_of_channel;
+  }
+
+  ExampleOfUseOfAliases& set_field_of_channel(::zx::channel _value) {
+    storage_.field_of_channel = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::channel& field_of_client_end() const {
+    return storage_.field_of_client_end;
+  }
+
+  ExampleOfUseOfAliases& set_field_of_client_end(::zx::channel _value) {
+    storage_.field_of_client_end = std::move(_value);
+    return *this;
+  }
+
+  const ::zx::channel& field_of_nullable_client_end() const {
+    return storage_.field_of_nullable_client_end;
+  }
+
+  ExampleOfUseOfAliases& set_field_of_nullable_client_end(
+      ::zx::channel _value) {
+    storage_.field_of_nullable_client_end = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_typealiases::ExampleOfUseOfAliases>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_typealiases::ExampleOfUseOfAliases>
+      storage_ = {};
+};
 
 }  // namespace fidl_test_typealiases
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_typealiases_ExampleOfUseOfAliasesTable;
+
+template <>
+struct IsResource<::fidl_test_typealiases::ExampleOfUseOfAliases>
+    : public std::true_type {};
+template <>
+struct IsFidlType<::fidl_test_typealiases::ExampleOfUseOfAliases>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_typealiases::ExampleOfUseOfAliases>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_typealiases_ExampleOfUseOfAliasesTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_typealiases::ExampleOfUseOfAliases> {
+  static constexpr size_t inline_size_v1_no_ee = 88;
+  static constexpr size_t inline_size_v2 = 88;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_typealiases::ExampleOfUseOfAliases* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.field_of_u32, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.field_of_vec_of_strings,
+                   offset + 8);
+    ::fidl::Decode(decoder,
+                   &value->storage_.field_of_vec_of_strings_at_most_nine,
+                   offset + 24);
+    ::fidl::Decode(decoder, &value->storage_.field_of_vec_of_strings_at_most_5,
+                   offset + 40);
+    ::fidl::Decode(decoder, &value->storage_.field_of_vec_of_ref_me_at_most_5,
+                   offset + 56);
+    ::fidl::Decode(decoder, &value->storage_.field_of_channel, offset + 72);
+    ::fidl::Decode(decoder, &value->storage_.field_of_client_end, offset + 76);
+    ::fidl::Decode(decoder, &value->storage_.field_of_nullable_client_end,
+                   offset + 80);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

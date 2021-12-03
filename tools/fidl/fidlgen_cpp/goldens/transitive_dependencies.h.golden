@@ -4,9 +4,85 @@
 
 #include <fidl/fidl.test.transitivedependencies/cpp/wire.h>
 #include <fidl/test/transitivedependencies/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 #include <middle/cpp/fidl_v2.h>
 
 namespace fidl_test_transitivedependencies {
-using Baz = ::fidl::test::transitivedependencies::Baz;
+class Baz;
 
 }  // namespace fidl_test_transitivedependencies
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_transitivedependencies::Baz>
+    final {
+ public:
+  ::middle::Bar g = {};
+};
+
+namespace fidl_test_transitivedependencies {
+class Baz final : public ::fidl::internal::CodableBase<Baz> {
+ private:
+  friend ::fidl::internal::CodableBase<Baz>;
+  Baz(::fidl::Decoder& decoder);
+
+ public:
+  Baz() = default;
+  Baz(::middle::Bar g) : storage_({std::move(g)}) {}
+  Baz(::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_transitivedependencies::Baz>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~Baz() = default;
+  Baz(Baz&&) noexcept = default;
+  Baz& operator=(Baz&&) noexcept = default;
+
+  const ::middle::Bar& g() const { return storage_.g; }
+
+  Baz& set_g(::middle::Bar _value) {
+    storage_.g = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_transitivedependencies::Baz>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_transitivedependencies::Baz>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_transitivedependencies
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_transitivedependencies_BazTable;
+
+template <>
+struct IsFidlType<::fidl_test_transitivedependencies::Baz>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_transitivedependencies::Baz>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_transitivedependencies_BazTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_transitivedependencies::Baz> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_transitivedependencies::Baz* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.g, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

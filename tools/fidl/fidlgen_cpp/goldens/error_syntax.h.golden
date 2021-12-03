@@ -5,12 +5,289 @@
 #include <fidl/fidl.test.errorsyntax/cpp/wire.h>
 #include <fidl/test/errorsyntax/cpp/natural_types.h>
 #include <fidl/test/errorsyntax/parent/cpp/fidl_v2.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_errorsyntax {
-using ExampleUseOfErrorSyntax_CallWhichMayFail_Response = ::fidl::test::
-    errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
+class ExampleUseOfErrorSyntax_CallWhichMayFail_Response;
+
+class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+
+class ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
 
 using ExampleUseOfErrorSyntax_CallWhichMayFail_Result =
     ::fidl::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result;
 
 }  // namespace fidl_test_errorsyntax
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+    final {
+ public:
+  int64_t value = {};
+};
+
+namespace fidl_test_errorsyntax {
+class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
+    : public ::fidl::internal::CodableBase<
+          ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(::fidl::Decoder& decoder);
+
+ public:
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response() = default;
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(int64_t value)
+      : storage_({value}) {}
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_errorsyntax::
+              ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleUseOfErrorSyntax_CallWhichMayFail_Response() = default;
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response(
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&) noexcept = default;
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response& operator=(
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Response&&) noexcept = default;
+
+  const int64_t& value() const { return storage_.value; }
+
+  ExampleUseOfErrorSyntax_CallWhichMayFail_Response& set_value(int64_t _value) {
+    storage_.value = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_errorsyntax
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    final {
+ public:
+  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
+      result = {};
+};
+
+namespace fidl_test_errorsyntax {
+class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
+    : public ::fidl::internal::CodableBase<
+          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse() = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
+          result)
+      : storage_({std::move(result)}) {}
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_errorsyntax::
+              ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse() = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(
+      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&) noexcept = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& operator=(
+      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&&) noexcept = default;
+
+  const ::fidl_test_errorsyntax::
+      ExampleUseOfErrorSyntax_CallWhichMayFail_Result&
+      result() const {
+    return storage_.result;
+  }
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& set_result(
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result
+          _value) {
+    storage_.result = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_errorsyntax
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    final {
+ public:
+  ::std::string s = {};
+};
+
+namespace fidl_test_errorsyntax {
+class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
+    : public ::fidl::internal::CodableBase<
+          ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::Decoder& decoder);
+
+ public:
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest() = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::std::string s)
+      : storage_({std::move(s)}) {}
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_errorsyntax::
+              ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleUseOfErrorSyntaxCallWhichMayFailRequest() = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest(
+      ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& operator=(
+      ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&) noexcept = default;
+
+  const ::std::string& s() const { return storage_.s; }
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& set_s(::std::string _value) {
+    storage_.s = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_errorsyntax
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_errorsyntax_ExampleUseOfErrorSyntax_CallWhichMayFail_ResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_errorsyntax::
+                        ExampleUseOfErrorSyntax_CallWhichMayFail_Response> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntax_CallWhichMayFail_Response* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.value, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_errorsyntax::
+                        ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.result, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+
+template <>
+struct IsFidlType<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+};
+
+template <>
+struct CodingTraits<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 16;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
+          value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

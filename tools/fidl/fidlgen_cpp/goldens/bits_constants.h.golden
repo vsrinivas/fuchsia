@@ -4,6 +4,10 @@
 
 #include <fidl/fidl.test.bitsconstants/cpp/wire.h>
 #include <fidl/test/bitsconstants/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_bitsconstants {
 using BitsType = ::fidl::test::bitsconstants::BitsType;
@@ -19,3 +23,4 @@ constexpr ::fidl_test_bitsconstants::BitsType Const1 =
     ::fidl::test::bitsconstants::Const1;
 
 }  // namespace fidl_test_bitsconstants
+namespace fidl {}  // namespace fidl

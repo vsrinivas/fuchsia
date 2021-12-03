@@ -5,9 +5,13 @@
 package fidlgen_cpp
 
 import (
+	"bytes"
 	"fmt"
+	"reflect"
 	"strings"
 	"text/template"
+
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Helper functions used by templates.
@@ -97,6 +101,129 @@ func endOfFile() string {
 	return ensureNamespace("::")
 }
 
+// formatParam funcs are helpers that transform a type and name into a string
+// for rendering in a template.
+type formatParam func(string, Type) string
+
+// visitSliceMembers visits each member of nested slices passed in and calls
+// |fn| on each of them in depth first order.
+func visitSliceMembers(val reflect.Value, fn func(interface{})) {
+	switch val.Type().Kind() {
+	case reflect.Slice:
+		for j := 0; j < val.Len(); j++ {
+			visitSliceMembers(val.Index(j), fn)
+		}
+	case reflect.Interface:
+		visitSliceMembers(val.Elem(), fn)
+	default:
+		fn(val.Interface())
+	}
+}
+
+func wireParam(n string, t Type) string {
+	if t.Kind == TypeKinds.Array || t.Kind == TypeKinds.Struct {
+		if !t.Nullable {
+			if t.IsResource {
+				return fmt.Sprintf("%s&& %s", t.String(), n)
+			}
+			return fmt.Sprintf("const %s& %s", t.String(), n)
+		}
+	}
+	if t.Kind == TypeKinds.Handle || t.Kind == TypeKinds.Request || t.Kind == TypeKinds.Protocol {
+		return fmt.Sprintf("%s&& %s", t.String(), n)
+	}
+	return fmt.Sprintf("%s %s", t.String(), n)
+}
+
+func unifiedParam(n string, t Type) string {
+	if t.IsResource {
+		return fmt.Sprintf("%s&& %s", t.String(), n)
+	}
+	return fmt.Sprintf("%s %s", t.String(), n)
+}
+
+func param(n string, t Type) string {
+	switch currentVariant {
+	case noVariant:
+		fidlgen.TemplateFatalf("called param(%s, %v) when currentVariant isn't set.\n",
+			n, t)
+	case hlcppVariant:
+		fidlgen.TemplateFatalf("HLCPP is not supported")
+	case unifiedVariant:
+		return unifiedParam(n, t)
+	case wireVariant:
+		return wireParam(n, t)
+	}
+	panic("not reached")
+}
+
+func wireForwardParam(n string, t Type) string {
+	if t.Kind == TypeKinds.Union && t.IsResource {
+		return fmt.Sprintf("std::move(%s)", n)
+	} else if t.Kind == TypeKinds.Array || t.Kind == TypeKinds.Struct {
+		if t.IsResource && !t.Nullable {
+			return fmt.Sprintf("std::move(%s)", n)
+		}
+	} else if t.Kind == TypeKinds.Handle || t.Kind == TypeKinds.Request || t.Kind == TypeKinds.Protocol {
+		return fmt.Sprintf("std::move(%s)", n)
+	}
+	return n
+}
+
+func unifiedForwardParam(n string, t Type) string {
+	if t.Kind == TypeKinds.Bits || t.Kind == TypeKinds.Enum || t.Kind == TypeKinds.Primitive {
+		return n
+	}
+	return fmt.Sprintf("std::move(%s)", n)
+}
+
+func forwardParam(n string, t Type) string {
+	switch currentVariant {
+	case noVariant:
+		fidlgen.TemplateFatalf("called forwardParam(%s, %v) when currentVariant isn't set.\n",
+			n, t)
+	case hlcppVariant:
+		fidlgen.TemplateFatalf("HLCPP is not supported")
+	case unifiedVariant:
+		return unifiedForwardParam(n, t)
+	case wireVariant:
+		return wireForwardParam(n, t)
+	}
+	panic("not reached")
+}
+
+// renderParams renders a nested list of parameter definitions.
+// The parameter definitions are either strings or Members.
+// Parameter structs are rendered with the supplied format func.
+// The strings and formatted Parameters are joined with commas and returned.
+func renderParams(format formatParam, list interface{}) string {
+	var (
+		buf   bytes.Buffer
+		first = true
+	)
+	visitSliceMembers(reflect.ValueOf(list), func(val interface{}) {
+		if val == nil {
+			panic(fmt.Sprintf("Unexpected nil in %#v", list))
+		}
+		if first {
+			first = false
+		} else {
+			buf.WriteString(", ")
+		}
+		switch val := val.(type) {
+		case string:
+			buf.WriteString(val)
+		case Member:
+			n, t := val.NameAndType()
+			buf.WriteString(format(n, t))
+		default:
+			panic(fmt.Sprintf("Invalid RenderParams arg %#v", val))
+		}
+	})
+
+	return buf.String()
+}
+
 // CommonTemplateFuncs holds a template.FuncMap containing common funcs.
 var commonTemplateFuncs = template.FuncMap{
 	"Eq":  func(a interface{}, b interface{}) bool { return a == b },
@@ -149,6 +276,29 @@ var commonTemplateFuncs = template.FuncMap{
 			filtered = append(filtered, decl)
 		}
 		return filtered
+	},
+
+	"RenderParams": func(params ...interface{}) string {
+		return renderParams(param, params)
+	},
+
+	"RenderForwardParams": func(params ...interface{}) string {
+		return renderParams(forwardParam, params)
+	},
+
+	"RenderInitMessage": func(params ...interface{}) string {
+		s := renderParams(func(n string, t Type) string {
+			return n + "(" + forwardParam(n, t) + ")"
+		}, params)
+		if len(s) == 0 {
+			return ""
+		}
+		return ": " + s
+	},
+
+	// List is a helper to return a list of its arguments.
+	"List": func(items ...interface{}) []interface{} {
+		return items
 	},
 }
 

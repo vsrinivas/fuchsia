@@ -5,8 +5,84 @@
 #include <dependent/cpp/fidl_v2.h>
 #include <fidl/fidl.test.importedconstvalues/cpp/wire.h>
 #include <fidl/test/importedconstvalues/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_importedconstvalues {
-using MyStruct = ::fidl::test::importedconstvalues::MyStruct;
+class MyStruct;
 
 }  // namespace fidl_test_importedconstvalues
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_importedconstvalues::MyStruct>
+    final {
+ public:
+  uint8_t __reserved = 0u;
+};
+
+namespace fidl_test_importedconstvalues {
+class MyStruct final : public ::fidl::internal::CodableBase<MyStruct> {
+ private:
+  friend ::fidl::internal::CodableBase<MyStruct>;
+  MyStruct(::fidl::Decoder& decoder);
+
+ public:
+  MyStruct() = default;
+  MyStruct(uint8_t __reserved) : storage_({__reserved}) {}
+  MyStruct(::fidl::internal::DesignatedInitializationProxy<
+           ::fidl_test_importedconstvalues::MyStruct>
+               storage)
+      : storage_(std::move(storage)) {}
+  ~MyStruct() = default;
+  MyStruct(MyStruct&&) noexcept = default;
+  MyStruct& operator=(MyStruct&&) noexcept = default;
+
+  const uint8_t& __reserved() const { return storage_.__reserved; }
+
+  MyStruct& set___reserved(uint8_t _value) {
+    storage_.__reserved = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_importedconstvalues::MyStruct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_importedconstvalues::MyStruct>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_importedconstvalues
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_importedconstvalues_MyStructTable;
+
+template <>
+struct IsFidlType<::fidl_test_importedconstvalues::MyStruct>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_importedconstvalues::MyStruct>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_importedconstvalues_MyStructTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_importedconstvalues::MyStruct> {
+  static constexpr size_t inline_size_v1_no_ee = 1;
+  static constexpr size_t inline_size_v2 = 1;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_importedconstvalues::MyStruct* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.__reserved, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

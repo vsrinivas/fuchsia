@@ -4,10 +4,394 @@
 
 #include <fidl/fidl.test.requestflexibleenvelope/cpp/wire.h>
 #include <fidl/test/requestflexibleenvelope/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_requestflexibleenvelope {
+class ProtocolRequestStrictResponseFlexibleRequest;
+
+class ProtocolRequestFlexibleResponseStrictTopResponse;
+
+class ProtocolRequestStrictResponseFlexibleTopResponse;
+
+class ProtocolRequestFlexibleResponseStrictRequest;
+
 using StrictFoo = ::fidl::test::requestflexibleenvelope::StrictFoo;
 
 using FlexibleFoo = ::fidl::test::requestflexibleenvelope::FlexibleFoo;
 
 }  // namespace fidl_test_requestflexibleenvelope
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_requestflexibleenvelope::
+        ProtocolRequestStrictResponseFlexibleRequest>
+    final {
+ public:
+  ::fidl_test_requestflexibleenvelope::StrictFoo s = {};
+};
+
+namespace fidl_test_requestflexibleenvelope {
+class ProtocolRequestStrictResponseFlexibleRequest final
+    : public ::fidl::internal::CodableBase<
+          ProtocolRequestStrictResponseFlexibleRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      ProtocolRequestStrictResponseFlexibleRequest>;
+  ProtocolRequestStrictResponseFlexibleRequest(::fidl::Decoder& decoder);
+
+ public:
+  ProtocolRequestStrictResponseFlexibleRequest() = default;
+  ProtocolRequestStrictResponseFlexibleRequest(
+      ::fidl_test_requestflexibleenvelope::StrictFoo s)
+      : storage_({std::move(s)}) {}
+  ProtocolRequestStrictResponseFlexibleRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_requestflexibleenvelope::
+              ProtocolRequestStrictResponseFlexibleRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ProtocolRequestStrictResponseFlexibleRequest() = default;
+  ProtocolRequestStrictResponseFlexibleRequest(
+      ProtocolRequestStrictResponseFlexibleRequest&&) noexcept = default;
+  ProtocolRequestStrictResponseFlexibleRequest& operator=(
+      ProtocolRequestStrictResponseFlexibleRequest&&) noexcept = default;
+
+  const ::fidl_test_requestflexibleenvelope::StrictFoo& s() const {
+    return storage_.s;
+  }
+
+  ProtocolRequestStrictResponseFlexibleRequest& set_s(
+      ::fidl_test_requestflexibleenvelope::StrictFoo _value) {
+    storage_.s = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_requestflexibleenvelope
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_requestflexibleenvelope::
+        ProtocolRequestFlexibleResponseStrictTopResponse>
+    final {
+ public:
+  ::fidl_test_requestflexibleenvelope::StrictFoo f = {};
+};
+
+namespace fidl_test_requestflexibleenvelope {
+class ProtocolRequestFlexibleResponseStrictTopResponse final
+    : public ::fidl::internal::CodableBase<
+          ProtocolRequestFlexibleResponseStrictTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      ProtocolRequestFlexibleResponseStrictTopResponse>;
+  ProtocolRequestFlexibleResponseStrictTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  ProtocolRequestFlexibleResponseStrictTopResponse() = default;
+  ProtocolRequestFlexibleResponseStrictTopResponse(
+      ::fidl_test_requestflexibleenvelope::StrictFoo f)
+      : storage_({std::move(f)}) {}
+  ProtocolRequestFlexibleResponseStrictTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_requestflexibleenvelope::
+              ProtocolRequestFlexibleResponseStrictTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ProtocolRequestFlexibleResponseStrictTopResponse() = default;
+  ProtocolRequestFlexibleResponseStrictTopResponse(
+      ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictTopResponse& operator=(
+      ProtocolRequestFlexibleResponseStrictTopResponse&&) noexcept = default;
+
+  const ::fidl_test_requestflexibleenvelope::StrictFoo& f() const {
+    return storage_.f;
+  }
+
+  ProtocolRequestFlexibleResponseStrictTopResponse& set_f(
+      ::fidl_test_requestflexibleenvelope::StrictFoo _value) {
+    storage_.f = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_requestflexibleenvelope
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_requestflexibleenvelope::
+        ProtocolRequestStrictResponseFlexibleTopResponse>
+    final {
+ public:
+  ::fidl_test_requestflexibleenvelope::FlexibleFoo f = {};
+};
+
+namespace fidl_test_requestflexibleenvelope {
+class ProtocolRequestStrictResponseFlexibleTopResponse final
+    : public ::fidl::internal::CodableBase<
+          ProtocolRequestStrictResponseFlexibleTopResponse> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      ProtocolRequestStrictResponseFlexibleTopResponse>;
+  ProtocolRequestStrictResponseFlexibleTopResponse(::fidl::Decoder& decoder);
+
+ public:
+  ProtocolRequestStrictResponseFlexibleTopResponse() = default;
+  ProtocolRequestStrictResponseFlexibleTopResponse(
+      ::fidl_test_requestflexibleenvelope::FlexibleFoo f)
+      : storage_({std::move(f)}) {}
+  ProtocolRequestStrictResponseFlexibleTopResponse(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_requestflexibleenvelope::
+              ProtocolRequestStrictResponseFlexibleTopResponse>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ProtocolRequestStrictResponseFlexibleTopResponse() = default;
+  ProtocolRequestStrictResponseFlexibleTopResponse(
+      ProtocolRequestStrictResponseFlexibleTopResponse&&) noexcept = default;
+  ProtocolRequestStrictResponseFlexibleTopResponse& operator=(
+      ProtocolRequestStrictResponseFlexibleTopResponse&&) noexcept = default;
+
+  const ::fidl_test_requestflexibleenvelope::FlexibleFoo& f() const {
+    return storage_.f;
+  }
+
+  ProtocolRequestStrictResponseFlexibleTopResponse& set_f(
+      ::fidl_test_requestflexibleenvelope::FlexibleFoo _value) {
+    storage_.f = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleTopResponse>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleTopResponse>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_requestflexibleenvelope
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_requestflexibleenvelope::
+        ProtocolRequestFlexibleResponseStrictRequest>
+    final {
+ public:
+  ::fidl_test_requestflexibleenvelope::FlexibleFoo s = {};
+};
+
+namespace fidl_test_requestflexibleenvelope {
+class ProtocolRequestFlexibleResponseStrictRequest final
+    : public ::fidl::internal::CodableBase<
+          ProtocolRequestFlexibleResponseStrictRequest> {
+ private:
+  friend ::fidl::internal::CodableBase<
+      ProtocolRequestFlexibleResponseStrictRequest>;
+  ProtocolRequestFlexibleResponseStrictRequest(::fidl::Decoder& decoder);
+
+ public:
+  ProtocolRequestFlexibleResponseStrictRequest() = default;
+  ProtocolRequestFlexibleResponseStrictRequest(
+      ::fidl_test_requestflexibleenvelope::FlexibleFoo s)
+      : storage_({std::move(s)}) {}
+  ProtocolRequestFlexibleResponseStrictRequest(
+      ::fidl::internal::DesignatedInitializationProxy<
+          ::fidl_test_requestflexibleenvelope::
+              ProtocolRequestFlexibleResponseStrictRequest>
+          storage)
+      : storage_(std::move(storage)) {}
+  ~ProtocolRequestFlexibleResponseStrictRequest() = default;
+  ProtocolRequestFlexibleResponseStrictRequest(
+      ProtocolRequestFlexibleResponseStrictRequest&&) noexcept = default;
+  ProtocolRequestFlexibleResponseStrictRequest& operator=(
+      ProtocolRequestFlexibleResponseStrictRequest&&) noexcept = default;
+
+  const ::fidl_test_requestflexibleenvelope::FlexibleFoo& s() const {
+    return storage_.s;
+  }
+
+  ProtocolRequestFlexibleResponseStrictRequest& set_s(
+      ::fidl_test_requestflexibleenvelope::FlexibleFoo _value) {
+    storage_.s = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictRequest>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictRequest>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_requestflexibleenvelope
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_requestflexibleenvelope::
+                      ProtocolRequestStrictResponseFlexibleRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_requestflexibleenvelope::
+        ProtocolRequestStrictResponseFlexibleRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_requestflexibleenvelope::
+                        ProtocolRequestStrictResponseFlexibleRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_requestflexibleenvelope::
+                         ProtocolRequestStrictResponseFlexibleRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_requestflexibleenvelope::
+                      ProtocolRequestFlexibleResponseStrictTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_requestflexibleenvelope::
+        ProtocolRequestFlexibleResponseStrictTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_requestflexibleenvelope::
+                        ProtocolRequestFlexibleResponseStrictTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.f, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+
+template <>
+struct IsFidlType<::fidl_test_requestflexibleenvelope::
+                      ProtocolRequestStrictResponseFlexibleTopResponse>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_requestflexibleenvelope::
+        ProtocolRequestStrictResponseFlexibleTopResponse>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_requestflexibleenvelope::
+                        ProtocolRequestStrictResponseFlexibleTopResponse> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(
+      DecoderImpl* decoder,
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleTopResponse* value,
+      size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.f, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t
+    fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+
+template <>
+struct IsFidlType<::fidl_test_requestflexibleenvelope::
+                      ProtocolRequestFlexibleResponseStrictRequest>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<
+    ::fidl_test_requestflexibleenvelope::
+        ProtocolRequestFlexibleResponseStrictRequest>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_requestflexibleenvelope::
+                        ProtocolRequestFlexibleResponseStrictRequest> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_requestflexibleenvelope::
+                         ProtocolRequestFlexibleResponseStrictRequest* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.s, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

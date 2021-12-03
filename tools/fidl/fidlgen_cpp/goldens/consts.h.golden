@@ -4,6 +4,10 @@
 
 #include <fidl/fidl.test.consts/cpp/wire.h>
 #include <fidl/test/consts/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_consts {
 using EnumType = ::fidl::test::consts::EnumType;
@@ -51,3 +55,4 @@ constexpr uint16_t ANSWER_IN_BINARY = ::fidl::test::consts::ANSWER_IN_BINARY;
 constexpr uint16_t ANSWER = ::fidl::test::consts::ANSWER;
 
 }  // namespace fidl_test_consts
+namespace fidl {}  // namespace fidl

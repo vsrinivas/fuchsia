@@ -4,8 +4,16 @@
 
 #include <fidl/fidl.test.arrays/cpp/wire.h>
 #include <fidl/test/arrays/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_arrays {
+class StructSmallArray;
+
+class StructLargeArray;
+
 using UnionSmallArray = ::fidl::test::arrays::UnionSmallArray;
 
 using UnionLargeArray = ::fidl::test::arrays::UnionLargeArray;
@@ -14,8 +22,148 @@ using TableSmallArray = ::fidl::test::arrays::TableSmallArray;
 
 using TableLargeArray = ::fidl::test::arrays::TableLargeArray;
 
-using StructSmallArray = ::fidl::test::arrays::StructSmallArray;
+}  // namespace fidl_test_arrays
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_arrays::StructSmallArray>
+    final {
+ public:
+  ::std::array<uint32_t, 2> a = {};
+};
 
-using StructLargeArray = ::fidl::test::arrays::StructLargeArray;
+namespace fidl_test_arrays {
+class StructSmallArray final
+    : public ::fidl::internal::CodableBase<StructSmallArray> {
+ private:
+  friend ::fidl::internal::CodableBase<StructSmallArray>;
+  StructSmallArray(::fidl::Decoder& decoder);
+
+ public:
+  StructSmallArray() = default;
+  StructSmallArray(::std::array<uint32_t, 2> a) : storage_({std::move(a)}) {}
+  StructSmallArray(::fidl::internal::DesignatedInitializationProxy<
+                   ::fidl_test_arrays::StructSmallArray>
+                       storage)
+      : storage_(std::move(storage)) {}
+  ~StructSmallArray() = default;
+  StructSmallArray(StructSmallArray&&) noexcept = default;
+  StructSmallArray& operator=(StructSmallArray&&) noexcept = default;
+
+  const ::std::array<uint32_t, 2>& a() const { return storage_.a; }
+
+  StructSmallArray& set_a(::std::array<uint32_t, 2> _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_arrays::StructSmallArray>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_arrays::StructSmallArray>
+      storage_ = {};
+};
 
 }  // namespace fidl_test_arrays
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_arrays::StructLargeArray>
+    final {
+ public:
+  ::std::array<uint32_t, 100> a = {};
+};
+
+namespace fidl_test_arrays {
+class StructLargeArray final
+    : public ::fidl::internal::CodableBase<StructLargeArray> {
+ private:
+  friend ::fidl::internal::CodableBase<StructLargeArray>;
+  StructLargeArray(::fidl::Decoder& decoder);
+
+ public:
+  StructLargeArray() = default;
+  StructLargeArray(::std::array<uint32_t, 100> a) : storage_({std::move(a)}) {}
+  StructLargeArray(::fidl::internal::DesignatedInitializationProxy<
+                   ::fidl_test_arrays::StructLargeArray>
+                       storage)
+      : storage_(std::move(storage)) {}
+  ~StructLargeArray() = default;
+  StructLargeArray(StructLargeArray&&) noexcept = default;
+  StructLargeArray& operator=(StructLargeArray&&) noexcept = default;
+
+  const ::std::array<uint32_t, 100>& a() const { return storage_.a; }
+
+  StructLargeArray& set_a(::std::array<uint32_t, 100> _value) {
+    storage_.a = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_arrays::StructLargeArray>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_arrays::StructLargeArray>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_arrays
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
+
+template <>
+struct IsFidlType<::fidl_test_arrays::StructSmallArray>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_arrays::StructSmallArray>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_arrays_StructSmallArrayTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_arrays::StructSmallArray> {
+  static constexpr size_t inline_size_v1_no_ee = 8;
+  static constexpr size_t inline_size_v2 = 8;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_arrays::StructSmallArray* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_arrays_StructLargeArrayTable;
+
+template <>
+struct IsFidlType<::fidl_test_arrays::StructLargeArray>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_arrays::StructLargeArray>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_arrays_StructLargeArrayTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_arrays::StructLargeArray> {
+  static constexpr size_t inline_size_v1_no_ee = 400;
+  static constexpr size_t inline_size_v2 = 400;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_arrays::StructLargeArray* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.a, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

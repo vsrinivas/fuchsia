@@ -4,8 +4,105 @@
 
 #include <fidl/fidl.test.vectors/cpp/wire.h>
 #include <fidl/test/vectors/cpp/natural_types.h>
+#include <lib/fidl/cpp/internal/codable_base.h>
+#include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/natural_types.h>
+#include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl_test_vectors {
-using ExampleUseOfVectors = ::fidl::test::vectors::ExampleUseOfVectors;
+class ExampleUseOfVectors;
 
 }  // namespace fidl_test_vectors
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_vectors::ExampleUseOfVectors>
+    final {
+ public:
+  ::std::vector<uint8_t> vector_of_uint8 = {};
+
+  ::std::vector<::std::vector<bool>> vector_of_vector_of_bool = {};
+};
+
+namespace fidl_test_vectors {
+class ExampleUseOfVectors final
+    : public ::fidl::internal::CodableBase<ExampleUseOfVectors> {
+ private:
+  friend ::fidl::internal::CodableBase<ExampleUseOfVectors>;
+  ExampleUseOfVectors(::fidl::Decoder& decoder);
+
+ public:
+  ExampleUseOfVectors() = default;
+  ExampleUseOfVectors(
+      ::std::vector<uint8_t> vector_of_uint8,
+      ::std::vector<::std::vector<bool>> vector_of_vector_of_bool)
+      : storage_({std::move(vector_of_uint8),
+                  std::move(vector_of_vector_of_bool)}) {}
+  ExampleUseOfVectors(::fidl::internal::DesignatedInitializationProxy<
+                      ::fidl_test_vectors::ExampleUseOfVectors>
+                          storage)
+      : storage_(std::move(storage)) {}
+  ~ExampleUseOfVectors() = default;
+  ExampleUseOfVectors(ExampleUseOfVectors&&) noexcept = default;
+  ExampleUseOfVectors& operator=(ExampleUseOfVectors&&) noexcept = default;
+
+  const ::std::vector<uint8_t>& vector_of_uint8() const {
+    return storage_.vector_of_uint8;
+  }
+
+  ExampleUseOfVectors& set_vector_of_uint8(::std::vector<uint8_t> _value) {
+    storage_.vector_of_uint8 = std::move(_value);
+    return *this;
+  }
+
+  const ::std::vector<::std::vector<bool>>& vector_of_vector_of_bool() const {
+    return storage_.vector_of_vector_of_bool;
+  }
+
+  ExampleUseOfVectors& set_vector_of_vector_of_bool(
+      ::std::vector<::std::vector<bool>> _value) {
+    storage_.vector_of_vector_of_bool = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_vectors::ExampleUseOfVectors>;
+
+  ::fidl::internal::DesignatedInitializationProxy<
+      ::fidl_test_vectors::ExampleUseOfVectors>
+      storage_ = {};
+};
+
+}  // namespace fidl_test_vectors
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_vectors_ExampleUseOfVectorsTable;
+
+template <>
+struct IsFidlType<::fidl_test_vectors::ExampleUseOfVectors>
+    : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_vectors::ExampleUseOfVectors>
+    final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_vectors_ExampleUseOfVectorsTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_vectors::ExampleUseOfVectors> {
+  static constexpr size_t inline_size_v1_no_ee = 32;
+  static constexpr size_t inline_size_v2 = 32;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder,
+                     ::fidl_test_vectors::ExampleUseOfVectors* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.vector_of_uint8, offset + 0);
+    ::fidl::Decode(decoder, &value->storage_.vector_of_vector_of_bool,
+                   offset + 16);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl
