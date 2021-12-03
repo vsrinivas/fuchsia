@@ -211,7 +211,7 @@ async fn list_device(
                     println!("{:>8}{:<27}{}", "", "bDescriptorType", info.b_descriptor_type);
                     println!("{:>8}{:<27}{:#04X}", "", "bEndpointAddress", info.b_endpoint_address);
                     println!("{:>8}{:<27}{:#04X}", "", "bmAttributes", info.bm_attributes);
-                    println!("{:>8}{:<27}{}", "", "wMaxPacketSize", info.w_max_packet_size);
+                    println!("{:>8}{:<27}{}", "", "wMaxPacketSize", { info.w_max_packet_size });
                     println!("{:>8}{:<27}{}", "", "bInterval", info.b_interval);
                 }
                 Descriptor::Hid(descriptor) => {

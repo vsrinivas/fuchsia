@@ -81,7 +81,7 @@ pub struct EndpointInfoDescriptor {
     pub b_descriptor_type: u8,
     pub b_endpoint_address: u8,
     pub bm_attributes: u8,
-    pub w_max_packet_size: u8,
+    pub w_max_packet_size: u16,
     pub b_interval: u8,
 }
 
