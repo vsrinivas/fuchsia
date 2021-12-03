@@ -1,267 +1,515 @@
 {
     select: {
-        disconnects: [
-            "INSPECT:core/wlanstack:root/client_stats/disconnect/*:@time",
-            "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:@time",
-        ],
-        connected_durations: [
-            "INSPECT:core/wlanstack:root/client_stats/disconnect/*:connected_duration",
-            "INSPECT:wlanstack.cmx:root/client_stats/disconnect/*:connected_duration",
-        ],
-        scan_failures: [
-            "INSPECT:core/wlanstack:root/client_stats/scan_failures/*:@time",
-            "INSPECT:wlanstack.cmx:root/client_stats/scan_failures/*:@time",
-        ],
+        // Counters for up to last 24 hours
+        connect_attempts_count_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:connect_attempts_count",
+        connect_successful_count_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:connect_successful_count",
+        connected_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:connected_duration",
+        disconnect_count_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:disconnect_count",
+        downtime_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:downtime_duration",
+        downtime_no_saved_neighbor_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:downtime_no_saved_neighbor_duration",
+        no_rx_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:no_rx_duration",
+        rx_high_packet_drop_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:rx_high_packet_drop_duration",
+        rx_very_high_packet_drop_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:rx_very_high_packet_drop_duration",
+        total_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:total_duration",
+        tx_high_packet_drop_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:tx_high_packet_drop_duration",
+        tx_very_high_packet_drop_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:tx_very_high_packet_drop_duration",
+
+        // Counters for up to last 7 days
+        connect_attempts_count_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:connect_attempts_count",
+        connect_successful_count_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:connect_successful_count",
+        connected_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:connected_duration",
+        disconnect_count_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:disconnect_count",
+        downtime_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:downtime_duration",
+        downtime_no_saved_neighbor_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:downtime_no_saved_neighbor_duration",
     },
     eval: {
-        last_24_hours: "Fn([time], time > Now() - Hours(24))",
-        n_disconnects_today: "Count(Filter(last_24_hours, disconnects))",
-        n_scan_failures_today: "Count(Filter(last_24_hours, scan_failures))",
+        // Gauges for up to last 24 hours
+        // Don't trigger from last-1d counters unless there has been at least 6 hours worth of data.
+        enough_1d_counters_data: "total_duration_1d > Hours(6)",
+        uptime_denominator_duration_1d: "connected_duration_1d + Max(0, downtime_duration_1d - downtime_no_saved_neighbor_duration_1d)",
+        uptime_ratio_1d: "connected_duration_1d / uptime_denominator_duration_1d",
+        connect_successful_ratio_1d: "connect_successful_count_1d / connect_attempts_count_1d",
+        disconnect_per_day_connected_ratio_1d: "disconnect_count_1d / (connected_duration_1d / Days(1))",
+        rx_high_packet_drop_duration_ratio_1d: "rx_high_packet_drop_duration_1d / connected_duration_1d",
+        rx_very_high_packet_drop_duration_ratio_1d: "rx_very_high_packet_drop_duration_1d / connected_duration_1d",
+        tx_high_packet_drop_duration_ratio_1d: "tx_high_packet_drop_duration_1d / connected_duration_1d",
+        tx_very_high_packet_drop_duration_ratio_1d: "tx_very_high_packet_drop_duration_1d / connected_duration_1d",
+        no_rx_duration_ratio_1d: "no_rx_duration_1d / connected_duration_1d",
 
-        // Preamble of functions to support filtering one list by the contents of another.
-        identity_two: "Fn([a, b], [a, b])",
-        Zip: "Fn([x, y], Map(identity_two, x, y))",
-        first: "Fn([tuple], Apply(Fn([f, s], f), tuple))",
-        second: "Fn([tuple], Apply(Fn([f, s], s), tuple))",
-
-        // Filter connected_durations to only contain connected_durations in the last 24 hours.
-        disconnects_today_indicator: "Map(last_24_hours, disconnects)",
-        connected_durations_today: "Map(second, Filter(first, Apply(Zip, [disconnects_today_indicator, connected_durations])))",
-        avg_connected_duration_today: "Fold(Fn([acc, next], acc + next), connected_durations_today, 0) / n_disconnects_today",
+        // Gauges for up to last 7 days
+        // Don't trigger from last-7d counters unless there has been at least 3 days worth of data.
+        enough_7d_counters_data: "total_duration_7d > Days(3)",
+        uptime_denominator_duration_7d: "connected_duration_7d + Max(0, downtime_duration_7d - downtime_no_saved_neighbor_duration_7d)",
+        uptime_ratio_7d: "connected_duration_7d / uptime_denominator_duration_7d",
+        connect_successful_ratio_7d: "connect_successful_count_7d / connect_attempts_count_7d",
+        disconnect_per_day_connected_ratio_7d: "disconnect_count_7d / (connected_duration_7d / Days(1))",
     },
     act: {
-        too_many_disconnects: {
+        low_uptime_ratio_1d: {
             type: "Snapshot",
-            trigger: "n_disconnects_today >= 5",
+            trigger: "And(uptime_ratio_1d < 0.95, enough_1d_counters_data)",
             repeat: "Hours(24)",
-            signature: "five-disconnects-today",
+            signature: "low-uptime-ratio-1d",
         },
-        too_many_scan_failures: {
+        very_low_uptime_ratio_1d: {
             type: "Snapshot",
-            trigger: "n_scan_failures_today >= 4",
+            trigger: "And(uptime_ratio_1d < 0.75, enough_1d_counters_data)",
             repeat: "Hours(24)",
-            signature: "four-scan-failures-today",
+            signature: "very-low-uptime-ratio-1d",
         },
-        low_connected_duration: {
+        low_connect_successful_ratio_1d: {
             type: "Snapshot",
-            trigger: "And(n_disconnects_today == 1, avg_connected_duration_today <= Hours(3))",
+            trigger: "And(connect_successful_ratio_1d < 0.1, enough_1d_counters_data)",
             repeat: "Hours(24)",
-            signature: "less-than-three-hours-connected-today",
+            signature: "low-connect-successful-ratio-1d",
         },
-        low_avg_connected_duration: {
+        high_disconnect_per_day_connected_ratio_1d: {
             type: "Snapshot",
-            trigger: "And(n_disconnects_today > 1, avg_connected_duration_today <= Hours(3))",
+            trigger: "And(disconnect_per_day_connected_ratio_1d > 12.0, enough_1d_counters_data)",
             repeat: "Hours(24)",
-            signature: "avg-less-than-three-hours-connected-today",
+            signature: "high-disconnect-per-day-connected-ratio-1d",
+        },
+        frequent_rx_high_packet_drop_1d: {
+            type: "Snapshot",
+            trigger: "And(rx_high_packet_drop_duration_ratio_1d > 0.10, enough_1d_counters_data)",
+            repeat: "Hours(24)",
+            signature: "frequent-rx-high-packet-drop-1d",
+        },
+        frequent_rx_very_high_packet_drop_1d: {
+            type: "Snapshot",
+            trigger: "And(rx_very_high_packet_drop_duration_ratio_1d > 0.10, enough_1d_counters_data)",
+            repeat: "Hours(24)",
+            signature: "frequent-rx-very-high-packet-drop-1d",
+        },
+        frequent_tx_high_packet_drop_1d: {
+            type: "Snapshot",
+            trigger: "And(tx_high_packet_drop_duration_ratio_1d > 0.10, enough_1d_counters_data)",
+            repeat: "Hours(24)",
+            signature: "frequent-tx-high-packet-drop-1d",
+        },
+        frequent_tx_very_high_packet_drop_1d: {
+            type: "Snapshot",
+            trigger: "And(tx_very_high_packet_drop_duration_ratio_1d > 0.10, enough_1d_counters_data)",
+            repeat: "Hours(24)",
+            signature: "frequent-tx-very-high-packet-drop-1d",
+        },
+        frequent_no_rx_1d: {
+            type: "Snapshot",
+            trigger: "And(no_rx_duration_ratio_1d > 0.01, enough_1d_counters_data)",
+            repeat: "Hours(24)",
+            signature: "frequent-no-rx-1d",
+        },
+
+        // For 7-day data, we trigger based on sustained performance, hence the threshold is
+        // more stringent. Additionally, the snapshots are potentially more useful due to having
+        // longer period of logs available.
+        low_uptime_ratio_7d: {
+            type: "Snapshot",
+            trigger: "And(uptime_ratio_7d < 0.98, enough_7d_counters_data)",
+            repeat: "Hours(24)",
+            signature: "low-uptime-ratio-7d",
+        },
+        low_connect_successful_ratio_7d: {
+            type: "Snapshot",
+            trigger: "And(connect_successful_ratio_7d < 0.20, enough_7d_counters_data)",
+            repeat: "Hours(24)",
+            signature: "low-connect-successful-ratio-7d",
+        },
+        high_disconnect_per_day_connected_ratio_7d: {
+            type: "Snapshot",
+            trigger: "And(disconnect_per_day_connected_ratio_7d > 3.0, enough_7d_counters_data)",
+            repeat: "Hours(24)",
+            signature: "high-disconnect-per-day-connected-ratio-7d",
         },
     },
     test: {
-        too_many_disconnects: {
+        low_uptime_ratio_1d_triggers: {
             yes: [
-                "too_many_disconnects",
+                "low_uptime_ratio_1d",
             ],
-            no: [],
-            now: "Hours(48)",
-            values: {
-                // A day's worth of nanoseconds is 8.64e13, these numbers are within the last day.
-                disconnects: [
-                    9e13,
-                    10e13,
-                    11e13,
-                    12e13,
-                    13e13,
-                ],
-            },
-        },
-        not_enough_recent_disconnects: {
-            yes: [],
             no: [
-                "too_many_disconnects",
+                "very_low_uptime_ratio_1d",
             ],
-            now: "Hours(48)",
             values: {
-                disconnects: [
-                    8e13,
-                    10e13,
-                    11e13,
-                    12e13,
-                    13e13,
-                ],
+                connected_duration_1d: 45e12,
+                downtime_duration_1d: 5e12,
+                downtime_no_saved_neighbor_duration_1d: 0,
+                total_duration_1d: 8e13,
             },
         },
-        too_many_scan_failures: {
+        low_uptime_ratio_1d_not_triggers_due_to_threshold: {
+            no: [
+                "low_uptime_ratio_1d",
+            ],
+            values: {
+                connected_duration_1d: 49e12,
+                downtime_duration_1d: 1e12,
+                downtime_no_saved_neighbor_duration_1d: 0,
+                total_duration_1d: 8e13,
+            },
+        },
+        low_uptime_ratio_1d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "low_uptime_ratio_1d",
+            ],
+            values: {
+                connected_duration_1d: 2e12,
+                downtime_duration_1d: 9e12,
+                downtime_no_saved_neighbor_duration_1d: 0,
+                total_duration_1d: 1e13,
+            },
+        },
+        very_low_uptime_ratio_1d_triggers: {
             yes: [
-                "too_many_scan_failures",
+                "low_uptime_ratio_1d",
+                "very_low_uptime_ratio_1d",
             ],
-            no: [],
-            now: "Hours(48)",
             values: {
-                scan_failures: [
-                    9e13,
-                    10e13,
-                    11e13,
-                    12e13,
-                ],
+                connected_duration_1d: 35e12,
+                downtime_duration_1d: 15e12,
+                downtime_no_saved_neighbor_duration_1d: 0,
+                total_duration_1d: 8e13,
             },
         },
-        not_enough_recent_scan_failures: {
-            yes: [],
+        very_low_uptime_ratio_1d_not_triggers_due_to_not_enough_data: {
             no: [
-                "too_many_scan_failures",
+                "low_uptime_ratio_1d",
+                "very_low_uptime_ratio_1d",
             ],
-            now: "Hours(48)",
             values: {
-                scan_failures: [
-                    8e13,
-                    10e13,
-                    11e13,
-                    12e13,
-                ],
+                connected_duration_1d: 35e12,
+                downtime_duration_1d: 15e12,
+                downtime_no_saved_neighbor_duration_1d: 0,
+                total_duration_1d: 1e13,
             },
         },
-        one_low_connected_duration: {
+        low_connect_successful_ratio_1d_triggers: {
             yes: [
-                "low_connected_duration",
+                "low_connect_successful_ratio_1d",
             ],
-            no: [
-                "low_avg_connected_duration",
-            ],
-            now: "Hours(48)",
             values: {
-                // A day's worth of nanoseconds is 8.64e13.
-                disconnects: [
-                    9e13,
-                ],
-                connected_durations: [
-                    1e9,
-                ],
+                connect_successful_count_1d: 1,
+                connect_attempts_count_1d: 11,
+                total_duration_1d: 8e13,
             },
         },
-        multiple_low_connected_duration: {
+        low_connect_successful_ratio_1d_not_triggers_due_to_threshold: {
+            no: [
+                "low_connect_successful_ratio_1d",
+            ],
+            values: {
+                connect_successful_count_1d: 2,
+                connect_attempts_count_1d: 11,
+                total_duration_1d: 8e13,
+            },
+        },
+        low_connect_successful_ratio_1d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "low_connect_successful_ratio_1d",
+            ],
+            values: {
+                connect_successful_count_1d: 1,
+                connect_attempts_count_1d: 11,
+                total_duration_1d: 1e13,
+            },
+        },
+        high_disconnect_per_day_connected_ratio_1d_triggers: {
             yes: [
-                "low_avg_connected_duration",
+                "high_disconnect_per_day_connected_ratio_1d",
             ],
-            no: [
-                "low_connected_duration",
-            ],
-            now: "Hours(48)",
             values: {
-                // A day's worth of nanoseconds is 8.64e13.
-                disconnects: [
-                    9e13,
-                    10e13,
-                ],
-                connected_durations: [
-                    3600e9,
-                    12000e9,
-                ],
+                disconnect_count_1d: 2,
+
+                // 3 hours in nanoseconds
+                connected_duration_1d: 108e11,
+                total_duration_1d: 8e13,
             },
         },
-        recent_one_low_connected_duration: {
+        high_disconnect_per_day_connected_ratio_1d_not_triggers_due_to_threshold: {
+            no: [
+                "high_disconnect_per_day_connected_ratio_1d",
+            ],
+            values: {
+                disconnect_count_1d: 1,
+
+                // 8 hours in nanoseconds
+                connected_duration_1d: 288e11,
+                total_duration_1d: 8e13,
+            },
+        },
+        high_disconnect_per_day_connected_ratio_1d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "high_disconnect_per_day_connected_ratio_1d",
+            ],
+            values: {
+                disconnect_count_1d: 1,
+
+                // 3 hours in nanoseconds
+                connected_duration_1d: 108e11,
+                total_duration_1d: 1e13,
+            },
+        },
+        frequent_rx_high_packet_drop_1d_triggers: {
             yes: [
-                "low_connected_duration",
+                "frequent_rx_high_packet_drop_1d",
             ],
-            no: [
-                "low_avg_connected_duration",
-            ],
-            now: "Hours(48)",
             values: {
-                // A day's worth of nanoseconds is 8.64e13.
-                disconnects: [
-                    1e13,
-                    9e13,
-                ],
-                connected_durations: [
-                    1e9,
-                    1e9,
-                ],
+                rx_high_packet_drop_duration_1d: 2e12,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
             },
         },
-        recent_multiple_low_connected_duration: {
+        frequent_rx_high_packet_drop_1d_not_triggers_due_to_threshold: {
+            no: [
+                "frequent_rx_high_packet_drop_1d",
+            ],
+            values: {
+                rx_high_packet_drop_duration_1d: 5e11,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
+            },
+        },
+        frequent_rx_high_packet_drop_1d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "frequent_rx_high_packet_drop_1d",
+            ],
+            values: {
+                rx_high_packet_drop_duration_1d: 2e12,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 1e13,
+            },
+        },
+        frequent_rx_very_high_packet_drop_1d_triggers: {
             yes: [
-                "low_avg_connected_duration",
+                "frequent_rx_very_high_packet_drop_1d",
             ],
-            no: [
-                "low_connected_duration",
-            ],
-            now: "Hours(48)",
             values: {
-                // A day's worth of nanoseconds is 8.64e13.
-                disconnects: [
-                    1e13,
-                    9e13,
-                    10e13,
-                ],
-                connected_durations: [
-                    20000e9,
-                    3600e9,
-                    12000e9,
-                ],
+                rx_very_high_packet_drop_duration_1d: 2e12,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
             },
         },
-        no_connected_duration: {
-            yes: [],
+        frequent_rx_very_high_packet_drop_1d_not_triggers_due_to_threshold: {
             no: [
-                "low_connected_duration",
-                "low_avg_connected_duration",
+                "frequent_rx_very_high_packet_drop_1d",
             ],
-            now: "Hours(48)",
             values: {
-                disconnects: [],
-                connected_durations: [],
+                rx_very_high_packet_drop_duration_1d: 5e11,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
             },
         },
-        no_recent_one_low_connected_duration: {
-            yes: [],
+        frequent_rx_very_high_packet_drop_1d_not_triggers_due_to_not_enough_data: {
             no: [
-                "low_connected_duration",
-                "low_avg_connected_duration",
+                "frequent_rx_very_high_packet_drop_1d",
             ],
-            now: "Hours(48)",
             values: {
-                // A day's worth of nanoseconds is 8.64e13.
-                disconnects: [
-                    1e13,
-                ],
-                connected_durations: [
-                    1e9,
-                ],
+                rx_very_high_packet_drop_duration_1d: 2e12,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 1e13,
             },
         },
-        one_high_connected_duration: {
-            yes: [],
-            no: [
-                "low_connected_duration",
-                "low_avg_connected_duration",
+        frequent_tx_high_packet_drop_1d_triggers: {
+            yes: [
+                "frequent_tx_high_packet_drop_1d",
             ],
-            now: "Hours(48)",
             values: {
-                // A day's worth of nanoseconds is 8.64e13.
-                disconnects: [
-                    9e13,
-                ],
-                connected_durations: [
-                    86400e9,
-                ],
+                tx_high_packet_drop_duration_1d: 2e12,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
             },
         },
-        multiple_high_connected_durations: {
-            yes: [],
+        frequent_tx_high_packet_drop_1d_not_triggers_due_to_threshold: {
             no: [
-                "low_connected_duration",
-                "low_avg_connected_duration",
+                "frequent_tx_high_packet_drop_1d",
             ],
-            now: "Hours(48)",
             values: {
-                // A day's worth of nanoseconds is 8.64e13.
-                disconnects: [
-                    9e13,
-                    10e13,
-                ],
-                connected_durations: [
-                    7200e9,
-                    15000e9,
-                ],
+                tx_high_packet_drop_duration_1d: 5e11,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
+            },
+        },
+        frequent_tx_high_packet_drop_1d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "frequent_tx_high_packet_drop_1d",
+            ],
+            values: {
+                tx_high_packet_drop_duration_1d: 2e12,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 1e13,
+            },
+        },
+        frequent_tx_very_high_packet_drop_1d_triggers: {
+            yes: [
+                "frequent_tx_very_high_packet_drop_1d",
+            ],
+            values: {
+                tx_very_high_packet_drop_duration_1d: 2e12,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
+            },
+        },
+        frequent_tx_very_high_packet_drop_1d_not_triggers_due_to_threshold: {
+            no: [
+                "frequent_tx_very_high_packet_drop_1d",
+            ],
+            values: {
+                tx_very_high_packet_drop_duration_1d: 5e11,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
+            },
+        },
+        frequent_tx_very_high_packet_drop_1d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "frequent_tx_very_high_packet_drop_1d",
+            ],
+            values: {
+                tx_very_high_packet_drop_duration_1d: 2e12,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 1e13,
+            },
+        },
+        frequent_no_rx_1d_triggers: {
+            yes: [
+                "frequent_no_rx_1d",
+            ],
+            values: {
+                no_rx_duration_1d: 2e11,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
+            },
+        },
+        frequent_no_rx_1d_not_triggers_due_to_threshold: {
+            no: [
+                "frequent_no_rx_1d",
+            ],
+            values: {
+                no_rx_duration_1d: 5e10,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 8e13,
+            },
+        },
+        frequent_no_rx_1d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "frequent_no_rx_1d",
+            ],
+            values: {
+                no_rx_duration_1d: 2e11,
+                connected_duration_1d: 1e13,
+                total_duration_1d: 1e13,
+            },
+        },
+        low_uptime_ratio_7d_triggers: {
+            yes: [
+                "low_uptime_ratio_7d",
+            ],
+            values: {
+                connected_duration_7d: 432e12,
+                downtime_duration_7d: 18e12,
+                downtime_no_saved_neighbor_duration_7d: 0,
+
+                // 6 days in nanoseconds
+                total_duration_7d: 5184e11,
+            },
+        },
+        low_uptime_ratio_7d_not_triggers_due_to_threshold: {
+            no: [
+                "low_uptime_ratio_7d",
+            ],
+            values: {
+                connected_duration_7d: 432e12,
+                downtime_duration_7d: 0,
+                downtime_no_saved_neighbor_duration_7d: 0,
+
+                // 6 days in nanoseconds
+                total_duration_7d: 5184e11,
+            },
+        },
+        low_uptime_ratio_7d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "low_uptime_ratio_7d",
+            ],
+            values: {
+                connected_duration_7d: 432e12,
+                downtime_duration_7d: 18e11,
+                downtime_no_saved_neighbor_duration_7d: 0,
+
+                // 2 days in nanoseconds
+                total_duration_7d: 1728e11,
+            },
+        },
+        low_connect_successful_ratio_7d_triggers: {
+            yes: [
+                "low_connect_successful_ratio_7d",
+            ],
+            values: {
+                connect_successful_count_7d: 1,
+                connect_attempts_count_7d: 6,
+
+                // 6 days in nanoseconds
+                total_duration_7d: 5184e11,
+            },
+        },
+        low_connect_successful_ratio_7d_not_triggers_due_to_threshold: {
+            no: [
+                "low_connect_successful_ratio_7d",
+            ],
+            values: {
+                connect_successful_count_7d: 2,
+                connect_attempts_count_7d: 6,
+
+                // 6 days in nanoseconds
+                total_duration_7d: 5184e11,
+            },
+        },
+        low_connect_successful_ratio_7d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "low_connect_successful_ratio_7d",
+            ],
+            values: {
+                connect_successful_count_7d: 1,
+                connect_attempts_count_7d: 6,
+
+                // 2 days in nanoseconds
+                total_duration_7d: 1728e11,
+            },
+        },
+        high_disconnect_per_day_connected_ratio_7d_triggers: {
+            yes: [
+                "high_disconnect_per_day_connected_ratio_7d",
+            ],
+            values: {
+                disconnect_count_7d: 19,
+
+                // 6 days in nanoseconds
+                connected_duration_7d: 5184e11,
+                total_duration_7d: 5184e11,
+            },
+        },
+        high_disconnect_per_day_connected_ratio_7d_not_triggers_due_to_threshold: {
+            no: [
+                "high_disconnect_per_day_connected_ratio_7d",
+            ],
+            values: {
+                disconnect_count_7d: 17,
+
+                // 6 days in nanoseconds
+                connected_duration_7d: 5184e11,
+                total_duration_7d: 5184e11,
+            },
+        },
+        high_disconnect_per_day_connected_ratio_7d_not_triggers_due_to_not_enough_data: {
+            no: [
+                "high_disconnect_per_day_connected_ratio_7d",
+            ],
+            values: {
+                disconnect_count_7d: 19,
+
+                // 2 days in nanoseconds
+                connected_duration_7d: 1728e11,
+
+                // 2 days in nanoseconds
+                total_duration_7d: 1728e11,
             },
         },
     },
