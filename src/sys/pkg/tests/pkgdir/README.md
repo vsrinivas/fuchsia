@@ -147,14 +147,14 @@ Additionally, it will remove segments from paths preceding a ".." segment, so an
 open of "subdir/../foo" will just result in an open of foo. (although note that
 it does not allow one to escape the current directory handle this way)
 
-### content files support `OPEN_FLAG_POSIX`
+### content files support `OPEN_FLAG_POSIX_WRITABLE` and `OPEN_FLAG_POSIX_EXECUTABLE`
 
-package-directory accepts `OPEN_FLAG_POSIX` when opening content files, although
-it is ignored since the `OPEN_FLAG_POSIX*` family of flags only affect the
-behavior of opening directories.
+package-directory accepts the `OPEN_FLAG_POSIX_*` flags when opening content
+files, although they are ignored since the `OPEN_FLAG_POSIX_*` family of flags
+only affect the behavior of opening directories.
 
 TODO(fxbug.dev/85062): figure out and document the situations where pkgfs
-rejects it.
+reject them.
 
 ### meta/ directories and files may not be opened with `OPEN_RIGHT_EXECUTABLE`
 

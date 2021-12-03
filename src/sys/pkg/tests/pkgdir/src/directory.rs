@@ -12,9 +12,9 @@ use {
         CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_BLOCK_DEVICE, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE,
         MODE_TYPE_SERVICE, MODE_TYPE_SOCKET, OPEN_FLAG_APPEND, OPEN_FLAG_CREATE,
         OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NOT_DIRECTORY, OPEN_FLAG_NO_REMOTE,
+        OPEN_FLAG_POSIX_EXECUTABLE, OPEN_FLAG_POSIX_WRITABLE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN,
+        OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_io2::UnlinkOptions,
     files_async::{DirEntry, DirentKind},
@@ -74,7 +74,7 @@ async fn open_per_package_source(source: PackageSource) {
     assert_open_content_file(&source, "dir", "dir/file").await;
 }
 
-const ALL_FLAGS: [u32; 16] = [
+const ALL_FLAGS: [u32; 17] = [
     0,
     OPEN_RIGHT_READABLE,
     OPEN_RIGHT_WRITABLE,
@@ -89,7 +89,8 @@ const ALL_FLAGS: [u32; 16] = [
     OPEN_FLAG_NO_REMOTE,
     OPEN_FLAG_NODE_REFERENCE,
     OPEN_FLAG_DESCRIBE,
-    OPEN_FLAG_POSIX,
+    OPEN_FLAG_POSIX_WRITABLE,
+    OPEN_FLAG_POSIX_EXECUTABLE,
     OPEN_FLAG_NOT_DIRECTORY,
 ];
 
@@ -116,7 +117,8 @@ async fn assert_open_root_directory(
         OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_POSIX,
+        OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_POSIX_EXECUTABLE,
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
@@ -287,7 +289,8 @@ async fn assert_open_content_directory(
         OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_POSIX,
+        OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_POSIX_EXECUTABLE,
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
@@ -390,19 +393,21 @@ async fn assert_open_content_file(
         OPEN_RIGHT_READABLE,
         OPEN_RIGHT_READABLE | OPEN_FLAG_NO_REMOTE,
         OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_POSIX_EXECUTABLE,
         OPEN_RIGHT_READABLE | OPEN_FLAG_NOT_DIRECTORY,
         OPEN_RIGHT_EXECUTABLE,
         OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_NO_REMOTE,
         OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_POSIX,
+        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_POSIX_EXECUTABLE,
         OPEN_RIGHT_EXECUTABLE | OPEN_FLAG_NOT_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE,
     ];
     if source.is_pkgdir() {
-        // "content files support OPEN_FLAG_POSIX"
+        // "content files support OPEN_FLAG_POSIX_EXECUTABLE"
         // TODO(fxbug.dev/85062): figure out why pkgfs rejects this and pkgdir doesn't
-        success_flags.push(OPEN_FLAG_POSIX);
+        success_flags.push(OPEN_FLAG_POSIX_EXECUTABLE);
     }
     if source.is_pkgfs() {
         // "OPEN_FLAG_CREATE_IF_ABSENT without OPEN_FLAG_CREATE"
@@ -469,7 +474,8 @@ async fn assert_open_meta_as_directory_and_file(
         OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_POSIX,
+        OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_POSIX_EXECUTABLE,
     ];
     if source.is_pkgfs() {
         base_directory_success_flags.extend_from_slice(&[
@@ -582,8 +588,14 @@ async fn assert_open_meta_as_directory_and_file(
     //    a. MODE_TYPE_DIRECTORY is set
     //    b. OPEN_FLAG_DIRECTORY is set
     //    c. OPEN_FLAG_NODE_REFERENCE is set
-    let mut base_file_flags =
-        vec![0, OPEN_RIGHT_READABLE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_POSIX, OPEN_FLAG_NOT_DIRECTORY];
+    let mut base_file_flags = vec![
+        0,
+        OPEN_RIGHT_READABLE,
+        OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_POSIX_EXECUTABLE,
+        OPEN_FLAG_NOT_DIRECTORY,
+    ];
     if source.is_pkgfs() {
         base_file_flags.extend_from_slice(&[
             // "OPEN_RIGHT_ADMIN not supported"
@@ -658,7 +670,8 @@ async fn assert_open_meta_subdirectory(
         OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_POSIX,
+        OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_POSIX_EXECUTABLE,
     ];
     if source.is_pkgfs() {
         success_flags.extend_from_slice(&[
@@ -718,7 +731,8 @@ async fn assert_open_meta_file(source: &PackageSource, parent_path: &str, child_
         OPEN_RIGHT_READABLE,
         OPEN_FLAG_NODE_REFERENCE,
         OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_POSIX,
+        OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_POSIX_EXECUTABLE,
         OPEN_FLAG_NOT_DIRECTORY,
     ];
     if source.is_pkgfs() {
@@ -1374,7 +1388,10 @@ async fn assert_node_get_flags_directory_calls(source: &PackageSource, path: &st
     let dir = io_util::directory::open_directory(
         package_root,
         path,
-        OPEN_RIGHT_READABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_POSIX,
+        OPEN_RIGHT_READABLE
+            | OPEN_FLAG_DIRECTORY
+            | OPEN_FLAG_POSIX_WRITABLE
+            | OPEN_FLAG_POSIX_EXECUTABLE,
     )
     .await
     .expect("open directory");
