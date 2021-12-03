@@ -93,3 +93,11 @@ by the toolkit are provided.
 the dynamic symbol table of an ELF file.  It provides C++ container views for
 the symbol table and the hash tables.  It handles symbol name string hashing
 and hash table lookup.
+
+## Dynamic Section
+
+[`<lib/elfldltl/dynamic.h>`](include/lib/elfldltl/dynamic.h) provides a
+framework for examining the `PT_DYNAMIC` metadata in a single pass using a
+mix-and-match variety of observer objects looking for different kinds of
+entries.  The toolkit provides observer object types for some common tasks.
+Custom observer objects can be implemented easily.
