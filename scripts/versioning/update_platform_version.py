@@ -7,29 +7,23 @@ Updates the Fuchsia platform version.
 """
 
 import argparse
+import json
 import os
 import sys
 import json
 import secrets
 
-PLATFORM_VERSION_PATH = "build/config/fuchsia/platform_version.gni"
+PLATFORM_VERSION_PATH = "build/config/fuchsia/platform_version.json"
 VERSION_HISTORY_PATH = "sdk/version_history.json"
 
 
 def update_platform_version(fuchsia_api_level):
-    """Updates platform_version.gni to set the current_fuchsia_api_level to the given
+    """Updates platform_version.json to set the current_fuchsia_api_level to the given
     Fuchsia API level.
     """
     try:
         with open(PLATFORM_VERSION_PATH, "w") as f:
-            f.write(
-                """# Copyright 2021 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
-
-current_fuchsia_api_level = {fuchsia_api_level}
-""".format(fuchsia_api_level=fuchsia_api_level))
-        return True
+            json.dump(fuchsia_api_level, f)
     except FileNotFoundError:
         print(
             """error: Unable to open '{path}'.
