@@ -22,6 +22,7 @@ class YamlChecker {
   Set<String> _mdSet;
   String _rootYaml;
   String _rootDir;
+  String _refDomain;
 
   // List of errors found.
   final List<Error> errors = <Error>[];
@@ -46,10 +47,13 @@ class YamlChecker {
   /// [yamls] is the list of .yaml files to check.
   /// [mdFiles] is the list of .md files to make sure they are
   ///           referenced in the yaml files.
+  /// [refDomain] is the developer site domain where the reference documents
+  ///             are published such as fuchsia.dev.
   YamlChecker(String rootDir, String rootYaml, List<String> yamls,
-      List<String> mdFiles) {
+      List<String> mdFiles, String refDomain) {
     _rootYaml = rootYaml;
     _rootDir = rootDir;
+    _refDomain = refDomain;
 
     if (rootYaml != null && !_isFuchsiaDevYaml(rootYaml)) {
       throw AssertionError(
@@ -207,6 +211,7 @@ class YamlChecker {
             if (validatePath(menuPath, filename)) {
               // If the path is to a file, check that the file exists.
               if (!menuPath.startsWith('https://') &&
+                  !menuPath.startsWith('/reference/') &&
                   !menuPath.startsWith('//')) {
                 checkFileExists(menuPath, filename);
               } else {
@@ -214,6 +219,8 @@ class YamlChecker {
                 try {
                   if (menuPath.startsWith('//')) {
                     uri = Uri.parse('https:$menuPath');
+                  } else if (menuPath.startsWith('/reference')) {
+                    uri = Uri.parse('$_refDomain$menuPath');
                   } else {
                     uri = Uri.parse(menuPath);
                   }
@@ -314,19 +321,20 @@ class YamlChecker {
 
   /// Validates the path is valid for the menu.
   ///
-  /// Valid paths are /docs/* and
+  /// Valid paths are /docs/*, /reference/*, and
   /// http URLs.  Exceptions are made for
   /// CONTRIBUTING.md and CODE_OF_CONDUCT.md which
   /// are in the root of the project.
   bool validatePath(String menuPath, String filename) {
     if (!menuPath.startsWith('/docs') &&
-        menuPath != '/CONTRIBUTING.md' &&
-        menuPath != '/CODE_OF_CONDUCT.md' &&
         !menuPath.startsWith('http://') &&
         !menuPath.startsWith('https://') &&
-        !menuPath.startsWith('//')) {
+        !menuPath.startsWith('/reference') &&
+        !menuPath.startsWith('//') &&
+        menuPath != '/CONTRIBUTING.md' &&
+        menuPath != '/CODE_OF_CONDUCT.md') {
       errors.add(Error(ErrorType.invalidMenu, filename,
-          'Path needs to start with \'/docs\', got $menuPath'));
+          'Path needs to start with \'/docs\' or \'/reference\', got $menuPath'));
       return false;
     }
 

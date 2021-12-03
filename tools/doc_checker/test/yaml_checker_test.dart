@@ -36,13 +36,13 @@ void main() {
   group('doc_checker yaml_checker tests', () {
     test('empty list of toc files', () async {
       YamlChecker checker =
-          YamlChecker(Directory.systemTemp.path, null, [], []);
+          YamlChecker(Directory.systemTemp.path, null, [], [], '');
       bool ret = await checker.check();
       expect(ret, equals(true));
     });
 
     test('filter hidden directory', () {
-      YamlChecker checker = YamlChecker('/usr/docs', null, [], []);
+      YamlChecker checker = YamlChecker('/usr/docs', null, [], [], '');
       final files = [
         '/usr/docs/_hidden/a.md',
         '/usr/docs/_hidden/b.md',
@@ -53,7 +53,7 @@ void main() {
     });
 
     test('filter hidden file', () {
-      YamlChecker checker = YamlChecker('/usr/_foo/docs', null, [], []);
+      YamlChecker checker = YamlChecker('/usr/_foo/docs', null, [], [], '');
       final files = [
         '/usr/_foo/docs/_a.md',
         '/usr/_foo/docs/b.md',
@@ -78,7 +78,7 @@ void main() {
         ..createSync(recursive: true)
         ..writeAsStringSync('world');
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
-          file.absolute.path, [file.absolute.path], []);
+          file.absolute.path, [file.absolute.path], [], '');
       bool ret = await checker.check();
       if (!ret) {
         print('Unexpected errors: ${checker.errors}');
@@ -104,7 +104,7 @@ void main() {
         ..createSync(recursive: true)
         ..writeAsStringSync('world');
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
-          file.absolute.path, [file.absolute.path], []);
+          file.absolute.path, [file.absolute.path], [], '');
       bool ret = await checker.check();
 
       expect(ret, equals(false));
@@ -136,11 +136,13 @@ void main() {
         ..createSync(recursive: true)
         ..writeAsStringSync('good');
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
-          file.absolute.path, [file.absolute.path], []);
+          file.absolute.path, [file.absolute.path], [], '');
       bool ret = await checker.check();
       expect(ret, equals(false));
-      expect(checker.errors[0].content,
-          equals('Path needs to start with \'/docs\', got /src/ref/1.cc'));
+      expect(
+          checker.errors[0].content,
+          equals(
+              'Path needs to start with \'/docs\' or \'/reference\', got /src/ref/1.cc'));
       expect(checker.errors.length, equals(1));
     });
 
@@ -166,7 +168,7 @@ void main() {
         ..createSync(recursive: true)
         ..writeAsStringSync('world');
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
-          file.absolute.path, [file.absolute.path], []);
+          file.absolute.path, [file.absolute.path], [], '');
       bool ret = await checker.check();
       expect(ret, equals(true));
     });
@@ -189,11 +191,13 @@ void main() {
         ..createSync(recursive: true)
         ..writeAsStringSync(includedContent);
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
-          file.absolute.path, [file.absolute.path], []);
+          file.absolute.path, [file.absolute.path], [], '');
       bool ret = await checker.check();
       expect(ret, equals(false));
-      expect(checker.errors[0].content,
-          equals('Path needs to start with \'/docs\', got /src/sample/1.c'));
+      expect(
+          checker.errors[0].content,
+          equals(
+              'Path needs to start with \'/docs\' or \'/reference\', got /src/sample/1.c'));
     });
 
     test('include file not found', () async {
@@ -206,7 +210,7 @@ void main() {
       File file = File('${Directory.systemTemp.path}/_toc.yaml')
         ..writeAsStringSync(content);
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
-          file.absolute.path, [file.absolute.path], []);
+          file.absolute.path, [file.absolute.path], [], '');
       bool ret = await checker.check();
       expect(ret, equals(false));
       expect(checker.errors.length, equals(1));
@@ -243,7 +247,7 @@ void main() {
         ..createSync(recursive: true)
         ..writeAsStringSync('objects');
       YamlChecker checker = YamlChecker(Directory.systemTemp.path,
-          file.absolute.path, [file.absolute.path], []);
+          file.absolute.path, [file.absolute.path], [], '');
       bool ret = await checker.check();
       if (!ret) {
         print('Unexpected failure: ${checker.errors}');
@@ -275,7 +279,29 @@ void main() {
           Directory.systemTemp.path,
           tocFile.absolute.path,
           [tocFile.absolute.path, otherFile.absolute.path],
-          []);
+          [],
+          '');
+      bool ret = await checker.check();
+      if (!ret) {
+        print('Unexpected failure: ${checker.errors}');
+      }
+      expect(ret, equals(true));
+    });
+
+    test('/reference link in yaml', () async {
+      const String tocYaml = '''toc:
+- title: Reference
+  path: /reference/tools/sdk/fidlc.md
+''';
+
+      File tocFile = File('${Directory.systemTemp.path}/_toc.yaml')
+        ..writeAsStringSync(tocYaml);
+      YamlChecker checker = YamlChecker(
+          Directory.systemTemp.path,
+          tocFile.absolute.path,
+          [tocFile.absolute.path],
+          [],
+          'https://fuchsia.dev');
       bool ret = await checker.check();
       if (!ret) {
         print('Unexpected failure: ${checker.errors}');
@@ -294,7 +320,7 @@ X name "RFC-0001"
             ..createSync(recursive: true)
             ..writeAsStringSync(otherYaml);
       YamlChecker checker = YamlChecker(
-          Directory.systemTemp.path, null, [otherFile.absolute.path], []);
+          Directory.systemTemp.path, null, [otherFile.absolute.path], [], '');
       bool ret = await checker.check();
       expect(ret, equals(false));
       expect(checker.errors.length, equals(1));
@@ -309,7 +335,7 @@ X name "RFC-0001"
 
       expect(
           () => YamlChecker(
-              Directory.systemTemp.path, otherFile.absolute.path, [], []),
+              Directory.systemTemp.path, otherFile.absolute.path, [], [], ''),
           throwsA(isA<AssertionError>()));
     });
   }); // group

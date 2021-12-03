@@ -26,6 +26,9 @@ const String _optionLocalLinksOnly = 'local-links-only';
 // Documentation subdirectory to inspect.
 const String _docsDir = 'docs';
 
+// Developer site where reference documentation is published.
+const String refDomain = 'https://fuchsia.dev';
+
 void reportError(Error error) {
   print(error);
 }
@@ -116,7 +119,7 @@ Future<Null> main(List<String> args) async {
   // Start with the /docs/_toc.yaml as the root file.
   final String rootYaml = path.canonicalize(path.join(docsDir, '_toc.yaml'));
 
-  YamlChecker checker = YamlChecker(rootDir, rootYaml, yamls, docs);
+  YamlChecker checker = YamlChecker(rootDir, rootYaml, yamls, docs, refDomain);
   await checker.check();
   List<Error> yamlErrors = checker.errors;
 
