@@ -33,6 +33,7 @@ triage_files = [
   "sysmem.triage",
   "timekeeper.triage",
   "timezone.triage",
+  "wlan.triage",
 ]
 
 detect_unconditional_files = [

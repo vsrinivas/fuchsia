@@ -1,0 +1,142 @@
+{
+    select: {
+        // Counters for up to last 24 hours
+        connect_attempts_count_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:connect_attempts_count",
+        connect_successful_count_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:connect_successful_count",
+        connected_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:connected_duration",
+        disconnect_count_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:disconnect_count",
+        downtime_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:downtime_duration",
+        downtime_no_saved_neighbor_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:downtime_no_saved_neighbor_duration",
+        no_rx_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:no_rx_duration",
+        rx_high_packet_drop_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:rx_high_packet_drop_duration",
+        rx_very_high_packet_drop_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:rx_very_high_packet_drop_duration",
+        total_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:total_duration",
+        tx_high_packet_drop_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:tx_high_packet_drop_duration",
+        tx_very_high_packet_drop_duration_1d: "INSPECT:core/wlancfg:root/client_stats/1d_counters:tx_very_high_packet_drop_duration",
+
+        // Counters for up to last 7 days
+        connect_attempts_count_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:connect_attempts_count",
+        connect_successful_count_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:connect_successful_count",
+        connected_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:connected_duration",
+        disconnect_count_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:disconnect_count",
+        downtime_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:downtime_duration",
+        downtime_no_saved_neighbor_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:downtime_no_saved_neighbor_duration",
+        no_rx_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:no_rx_duration",
+        rx_high_packet_drop_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:rx_high_packet_drop_duration",
+        rx_very_high_packet_drop_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:rx_very_high_packet_drop_duration",
+        total_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:total_duration",
+        tx_high_packet_drop_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:tx_high_packet_drop_duration",
+        tx_very_high_packet_drop_duration_7d: "INSPECT:core/wlancfg:root/client_stats/7d_counters:tx_very_high_packet_drop_duration",
+    },
+    eval: {
+        // Gauges for up to last 24 hours
+        uptime_denominator_duration_1d: "connected_duration_1d + Max(0, downtime_duration_1d - downtime_no_saved_neighbor_duration_1d)",
+        uptime_ratio_1d: "connected_duration_1d / uptime_denominator_duration_1d",
+        connect_successful_ratio_1d: "connect_successful_count_1d / connect_attempts_count_1d",
+        disconnect_per_day_connected_ratio_1d: "disconnect_count_1d / (connected_duration_1d / Days(1))",
+        rx_high_packet_drop_duration_ratio_1d: "rx_high_packet_drop_duration_1d / connected_duration_1d",
+        rx_very_high_packet_drop_duration_ratio_1d: "rx_very_high_packet_drop_duration_1d / connected_duration_1d",
+        tx_high_packet_drop_duration_ratio_1d: "tx_high_packet_drop_duration_1d / connected_duration_1d",
+        tx_very_high_packet_drop_duration_ratio_1d: "tx_very_high_packet_drop_duration_1d / connected_duration_1d",
+        no_rx_duration_ratio_1d: "no_rx_duration_1d / connected_duration_1d",
+
+        // Gauges for up to last 7 days
+        uptime_denominator_duration_7d: "connected_duration_7d + Max(0, downtime_duration_7d - downtime_no_saved_neighbor_duration_7d)",
+        uptime_ratio_7d: "connected_duration_7d / uptime_denominator_duration_7d",
+        connect_successful_ratio_7d: "connect_successful_count_7d / connect_attempts_count_7d",
+        disconnect_per_day_connected_ratio_7d: "disconnect_count_7d / (connected_duration_7d / Days(1))",
+        rx_high_packet_drop_duration_ratio_7d: "rx_high_packet_drop_duration_7d / connected_duration_7d",
+        rx_very_high_packet_drop_duration_ratio_7d: "rx_very_high_packet_drop_duration_7d / connected_duration_7d",
+        tx_high_packet_drop_duration_ratio_7d: "tx_high_packet_drop_duration_7d / connected_duration_7d",
+        tx_very_high_packet_drop_duration_ratio_7d: "tx_very_high_packet_drop_duration_7d / connected_duration_7d",
+        no_rx_duration_ratio_7d: "no_rx_duration_7d / connected_duration_7d",
+    },
+    act: {
+        wlan_uptime_ratio_1d: {
+            type: "Gauge",
+            value: "uptime_ratio_1d",
+            format: "percentage",
+        },
+        wlan_connect_successful_ratio_1d: {
+            type: "Gauge",
+            value: "connect_successful_ratio_1d",
+            format: "percentage",
+        },
+        wlan_disconnect_count_1d: {
+            type: "Gauge",
+            value: "disconnect_count_1d",
+        },
+        wlan_disconnect_per_day_connected_ratio_1d: {
+            type: "Gauge",
+            value: "disconnect_per_day_connected_ratio_1d",
+        },
+        wlan_rx_high_packet_drop_frequency_1d: {
+            type: "Gauge",
+            value: "rx_high_packet_drop_duration_ratio_1d",
+            format: "percentage",
+        },
+        wlan_rx_very_high_packet_drop_frequency_1d: {
+            type: "Gauge",
+            value: "rx_very_high_packet_drop_duration_ratio_1d",
+            format: "percentage",
+        },
+        wlan_tx_high_packet_drop_frequency_1d: {
+            type: "Gauge",
+            value: "tx_high_packet_drop_duration_ratio_1d",
+            format: "percentage",
+        },
+        wlan_tx_very_high_packet_drop_frequency_1d: {
+            type: "Gauge",
+            value: "tx_very_high_packet_drop_duration_ratio_1d",
+            format: "percentage",
+        },
+        wlan_no_rx_frequency_1d: {
+            type: "Gauge",
+            value: "no_rx_duration_ratio_1d",
+            format: "percentage",
+        },
+        wlan_uptime_ratio_7d: {
+            type: "Gauge",
+            value: "uptime_ratio_7d",
+            format: "percentage",
+        },
+        wlan_connect_successful_ratio_7d: {
+            type: "Gauge",
+            value: "connect_successful_ratio_7d",
+            format: "percentage",
+        },
+        wlan_disconnect_count_7d: {
+            type: "Gauge",
+            value: "disconnect_count_7d",
+        },
+        wlan_disconnect_per_day_connected_ratio_7d: {
+            type: "Gauge",
+            value: "disconnect_per_day_connected_ratio_7d",
+        },
+        wlan_rx_high_packet_drop_frequency_7d: {
+            type: "Gauge",
+            value: "rx_high_packet_drop_duration_ratio_7d",
+            format: "percentage",
+        },
+        wlan_rx_very_high_packet_drop_frequency_7d: {
+            type: "Gauge",
+            value: "rx_very_high_packet_drop_duration_ratio_7d",
+            format: "percentage",
+        },
+        wlan_tx_high_packet_drop_frequency_7d: {
+            type: "Gauge",
+            value: "tx_high_packet_drop_duration_ratio_7d",
+            format: "percentage",
+        },
+        wlan_tx_very_high_packet_drop_frequency_7d: {
+            type: "Gauge",
+            value: "tx_very_high_packet_drop_duration_ratio_7d",
+            format: "percentage",
+        },
+        wlan_no_rx_frequency_7d: {
+            type: "Gauge",
+            value: "no_rx_duration_ratio_7d",
+            format: "percentage",
+        },
+    },
+}
