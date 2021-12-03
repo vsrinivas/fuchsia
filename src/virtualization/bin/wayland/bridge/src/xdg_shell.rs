@@ -7,16 +7,18 @@ use {
     crate::compositor::{Surface, SurfaceCommand, SurfaceRole},
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     anyhow::{format_err, Error},
-    fidl::endpoints::create_endpoints,
+    fidl::endpoints::{create_endpoints, create_request_stream},
     fidl::prelude::*,
     fidl_fuchsia_math::{Rect, Size, SizeF},
     fidl_fuchsia_ui_app::{ViewProviderControlHandle, ViewProviderMarker, ViewProviderRequest},
+    fidl_fuchsia_ui_views::ViewRef,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_wayland_core::Enum,
     futures::prelude::*,
     parking_lot::Mutex,
+    std::collections::VecDeque,
     std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -42,8 +44,10 @@ use {
         FlatlandEventStream, FlatlandMarker, ParentViewportWatcherMarker,
         ParentViewportWatcherProxy, TransformId, ViewportProperties,
     },
-    fidl_fuchsia_ui_views::ViewportCreationToken,
-    fuchsia_scenic::flatland::LinkTokenPair,
+    fidl_fuchsia_ui_views::{
+        ViewIdentityOnCreation, ViewRefFocusedMarker, ViewRefFocusedProxy, ViewportCreationToken,
+    },
+    fuchsia_scenic::flatland::{LinkTokenPair, ViewBoundProtocols},
     std::collections::BTreeSet,
 };
 
@@ -51,16 +55,16 @@ use {
 use {
     crate::scenic::ScenicSession,
     crate::seat::InputDispatcher,
-    fidl::endpoints::{create_request_stream, ServerEnd},
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba},
     fidl_fuchsia_ui_scenic::{
         SessionListenerControlHandle, SessionListenerMarker, SessionListenerRequest,
     },
-    fidl_fuchsia_ui_views::{ViewHolderToken, ViewRef, ViewToken},
+    fidl_fuchsia_ui_views::{ViewHolderToken, ViewToken},
     fuchsia_scenic::{
         EntityNode, Material, Rectangle, ShapeNode, View, ViewHolder, ViewRefPair, ViewTokenPair,
     },
-    std::collections::{BTreeMap, VecDeque},
+    std::collections::BTreeMap,
 };
 
 static NEXT_VIEW_ID: AtomicUsize = AtomicUsize::new(1);
@@ -259,6 +263,8 @@ impl RequestReceiver<ZxdgPositionerV6> for XdgPositioner {
     }
 }
 
+const ESCAPE_DELAY_NS: i64 = 1_000_000_000;
+
 /// An `XdgSurface` is the common base to the different surfaces in the
 /// `XdgShell` (ex: `XdgToplevel`, `XdgPopup`).
 pub struct XdgSurface {
@@ -379,6 +385,86 @@ impl XdgSurface {
                 }
             }
             _ => {}
+        }
+    }
+
+    fn spawn_keyboard_listener(
+        surface_ref: ObjectRef<Surface>,
+        mut view_ref: ViewRef,
+        task_queue: TaskQueue,
+    ) -> Result<(), Error> {
+        let keyboard = connect_to_protocol::<fidl_fuchsia_ui_input3::KeyboardMarker>()?;
+        let (listener_client_end, mut listener_stream) =
+            create_request_stream::<fidl_fuchsia_ui_input3::KeyboardListenerMarker>()?;
+
+        fasync::Task::local(async move {
+            keyboard.add_listener(&mut view_ref, listener_client_end).await.unwrap();
+
+            // Track the event time of the last three Escape key presses.
+            let mut escapes: VecDeque<_> = vec![0; 3].into_iter().collect();
+
+            while let Some(event) = listener_stream.try_next().await.unwrap() {
+                match event {
+                    fidl_fuchsia_ui_input3::KeyboardListenerRequest::OnKeyEvent {
+                        event,
+                        responder,
+                        ..
+                    } => {
+                        responder
+                            .send(fidl_fuchsia_ui_input3::KeyEventStatus::Handled)
+                            .expect("send");
+                        // Store the event time of the last three Escape key presses
+                        // and attempt to close `XdgSurface` if the elapsed time
+                        // between the first and the last press is less than
+                        // ESCAPE_DELAY_NS.
+                        let close = if event.type_
+                            == Some(fidl_fuchsia_ui_input3::KeyEventType::Pressed)
+                            && event.key == Some(fidl_fuchsia_input::Key::Escape)
+                        {
+                            let timestamp = event.timestamp.expect("missing timestamp");
+                            escapes.pop_front();
+                            escapes.push_back(timestamp);
+                            // Same to unwrap as there is always three elements.
+                            let elapsed = escapes.back().unwrap() - escapes.front().unwrap();
+                            if elapsed < ESCAPE_DELAY_NS {
+                                escapes = vec![0; 3].into_iter().collect();
+                                true
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        };
+
+                        task_queue.post(move |client| {
+                            if close {
+                                // Close focused XDG surface.
+                                for xdg_surface_ref in &client.xdg_surfaces {
+                                    let xdg_surface = xdg_surface_ref.get(client)?;
+                                    let surface_ref = xdg_surface.surface_ref;
+                                    if client.input_dispatcher.has_focus(surface_ref) {
+                                        XdgSurface::close(*xdg_surface_ref, client)?;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                client.input_dispatcher.handle_key_event(surface_ref, &event)?;
+                            }
+                            Ok(())
+                        });
+                    }
+                }
+            }
+        })
+        .detach();
+        Ok(())
+    }
+
+    fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
+        match this.get(client)?.xdg_role {
+            Some(XdgSurfaceRole::Popup(popup)) => XdgPopup::close(popup, client),
+            Some(XdgSurfaceRole::Toplevel(toplevel)) => XdgToplevel::close(toplevel, client),
+            _ => Ok(()),
         }
     }
 }
@@ -580,6 +666,55 @@ impl XdgSurface {
         })
         .detach();
     }
+
+    fn spawn_view_ref_focused_listener(
+        this: ObjectRef<Self>,
+        source_surface_ref: ObjectRef<Surface>,
+        view_ref_focused: ViewRefFocusedProxy,
+        task_queue: TaskQueue,
+    ) {
+        let mut focus_state_stream =
+            HangingGetStream::new(view_ref_focused, ViewRefFocusedProxy::watch);
+
+        fasync::Task::local(async move {
+            while let Some(result) = focus_state_stream.next().await {
+                match result {
+                    Ok(focus_state) => {
+                        task_queue.post(move |client| {
+                            // Last XDG surface is used as target for focus.
+                            let xdg_surface_ref = *client.xdg_surfaces.last().unwrap_or(&this);
+                            let surface_ref = xdg_surface_ref.get(client)?.surface_ref;
+                            if surface_ref.get(client).is_ok() {
+                                let had_focus = client.input_dispatcher.has_focus(surface_ref);
+                                client.input_dispatcher.handle_keyboard_focus(
+                                    source_surface_ref,
+                                    surface_ref,
+                                    focus_state.focused.unwrap(),
+                                )?;
+                                let has_focus = client.input_dispatcher.has_focus(surface_ref);
+                                if had_focus != has_focus {
+                                    // If our focus has changed we need to reconfigure so that the
+                                    // Activated flag can be set or cleared.
+                                    Self::configure(xdg_surface_ref, client)?;
+                                }
+                            }
+                            Ok(())
+                        });
+                    }
+                    Err(fidl::Error::ClientChannelClosed { .. }) => {
+                        task_queue
+                            .post(|_client| Err(format_err!("ViewRefFocused channel closed")));
+                        return;
+                    }
+                    Err(fidl_error) => {
+                        println!("ViewRefFocused Watch() error: {:?}", fidl_error);
+                        return;
+                    }
+                }
+            }
+        })
+        .detach();
+    }
 }
 
 #[cfg(feature = "flatland")]
@@ -643,9 +778,6 @@ impl RequestReceiver<ZxdgSurfaceV6> for XdgSurface {
         Ok(())
     }
 }
-
-#[cfg(not(feature = "flatland"))]
-const ESCAPE_DELAY_NS: i64 = 1_000_000_000;
 
 #[cfg(not(feature = "flatland"))]
 impl XdgSurface {
@@ -886,86 +1018,6 @@ impl XdgSurface {
         .detach();
         Ok(control_handle)
     }
-
-    fn spawn_keyboard_listener(
-        surface_ref: ObjectRef<Surface>,
-        mut view_ref: ViewRef,
-        task_queue: TaskQueue,
-    ) -> Result<(), Error> {
-        let keyboard = connect_to_protocol::<fidl_fuchsia_ui_input3::KeyboardMarker>()?;
-        let (listener_client_end, mut listener_stream) =
-            create_request_stream::<fidl_fuchsia_ui_input3::KeyboardListenerMarker>()?;
-
-        fasync::Task::local(async move {
-            keyboard.add_listener(&mut view_ref, listener_client_end).await.unwrap();
-
-            // Track the event time of the last three Escape key presses.
-            let mut escapes: VecDeque<_> = vec![0; 3].into_iter().collect();
-
-            while let Some(event) = listener_stream.try_next().await.unwrap() {
-                match event {
-                    fidl_fuchsia_ui_input3::KeyboardListenerRequest::OnKeyEvent {
-                        event,
-                        responder,
-                        ..
-                    } => {
-                        responder
-                            .send(fidl_fuchsia_ui_input3::KeyEventStatus::Handled)
-                            .expect("send");
-                        // Store the event time of the last three Escape key presses
-                        // and attempt to close `XdgSurface` if the elapsed time
-                        // between the first and the last press is less than
-                        // ESCAPE_DELAY_NS.
-                        let close = if event.type_
-                            == Some(fidl_fuchsia_ui_input3::KeyEventType::Pressed)
-                            && event.key == Some(fidl_fuchsia_input::Key::Escape)
-                        {
-                            let timestamp = event.timestamp.expect("missing timestamp");
-                            escapes.pop_front();
-                            escapes.push_back(timestamp);
-                            // Same to unwrap as there is always three elements.
-                            let elapsed = escapes.back().unwrap() - escapes.front().unwrap();
-                            if elapsed < ESCAPE_DELAY_NS {
-                                escapes = vec![0; 3].into_iter().collect();
-                                true
-                            } else {
-                                false
-                            }
-                        } else {
-                            false
-                        };
-
-                        task_queue.post(move |client| {
-                            if close {
-                                // Close focused XDG surface.
-                                for xdg_surface_ref in &client.xdg_surfaces {
-                                    let xdg_surface = xdg_surface_ref.get(client)?;
-                                    let surface_ref = xdg_surface.surface_ref;
-                                    if client.input_dispatcher.has_focus(surface_ref) {
-                                        XdgSurface::close(*xdg_surface_ref, client)?;
-                                        break;
-                                    }
-                                }
-                            } else {
-                                client.input_dispatcher.handle_key_event(surface_ref, &event)?;
-                            }
-                            Ok(())
-                        });
-                    }
-                }
-            }
-        })
-        .detach();
-        Ok(())
-    }
-
-    fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
-        match this.get(client)?.xdg_role {
-            Some(XdgSurfaceRole::Popup(popup)) => XdgPopup::close(popup, client),
-            Some(XdgSurfaceRole::Toplevel(toplevel)) => XdgToplevel::close(toplevel, client),
-            _ => Ok(()),
-        }
-    }
 }
 
 #[cfg(not(feature = "flatland"))]
@@ -1070,6 +1122,11 @@ impl XdgPopup {
     fn geometry(&self) -> Rect {
         self.geometry
     }
+
+    fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
+        ftrace::duration!("wayland", "XdgPopup::close");
+        client.event_queue().post(this.id(), ZxdgPopupV6Event::PopupDone)
+    }
 }
 
 #[cfg(feature = "flatland")]
@@ -1113,11 +1170,6 @@ impl XdgPopup {
 
     pub fn shutdown(&self) {
         self.session_listener_controller.as_ref().map(|h| h.shutdown());
-    }
-
-    fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
-        ftrace::duration!("wayland", "XdgPopup::close");
-        client.event_queue().post(this.id(), ZxdgPopupV6Event::PopupDone)
     }
 }
 
@@ -1237,6 +1289,11 @@ impl XdgToplevel {
     pub fn set_parent(&mut self, parent: Option<ObjectRef<XdgToplevel>>) {
         self.parent_ref = parent;
     }
+
+    fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
+        ftrace::duration!("wayland", "XdgToplevel::close");
+        client.event_queue().post(this.id(), ZxdgToplevelV6Event::Close)
+    }
 }
 
 #[cfg(feature = "flatland")]
@@ -1283,13 +1340,40 @@ impl XdgToplevel {
                     match request {
                         ViewProviderRequest::CreateView2 { args, .. } => {
                             let mut view_creation_token = args.view_creation_token.unwrap();
-                            let (parent_viewport_watcher, server_end) =
+                            let viewref_pair = fuchsia_scenic::ViewRefPair::new()?;
+                            let view_ref =
+                                fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+                            let mut view_identity = ViewIdentityOnCreation::from(viewref_pair);
+                            let (parent_viewport_watcher, parent_viewport_watcher_request) =
                                 create_proxy::<ParentViewportWatcherMarker>()
                                     .expect("failed to create ParentViewportWatcherProxy");
+                            let (view_ref_focused, view_ref_focused_request) =
+                                create_proxy::<ViewRefFocusedMarker>()
+                                    .expect("failed to create ViewRefFocusedProxy");
+                            let view_bound_protocols = ViewBoundProtocols {
+                                view_ref_focused: Some(view_ref_focused_request),
+                                ..ViewBoundProtocols::EMPTY
+                            };
                             flatland
                                 .proxy()
-                                .create_view(&mut view_creation_token, server_end)
+                                .create_view2(
+                                    &mut view_creation_token,
+                                    &mut view_identity,
+                                    view_bound_protocols,
+                                    parent_viewport_watcher_request,
+                                )
                                 .expect("fidl error");
+                            XdgSurface::spawn_keyboard_listener(
+                                surface_ref,
+                                view_ref,
+                                task_queue.clone(),
+                            )?;
+                            XdgSurface::spawn_view_ref_focused_listener(
+                                xdg_surface_ref,
+                                surface_ref,
+                                view_ref_focused,
+                                task_queue.clone(),
+                            );
                             XdgSurface::spawn_parent_viewport_listener(
                                 xdg_surface_ref,
                                 parent_viewport_watcher,
@@ -1576,11 +1660,6 @@ impl XdgToplevel {
         }
         self.session_listener_controller.as_ref().map(|h| h.shutdown());
     }
-
-    fn close(this: ObjectRef<Self>, client: &mut Client) -> Result<(), Error> {
-        ftrace::duration!("wayland", "XdgToplevel::close");
-        client.event_queue().post(this.id(), ZxdgToplevelV6Event::Close)
-    }
 }
 
 impl RequestReceiver<ZxdgToplevelV6> for XdgToplevel {
@@ -1599,7 +1678,6 @@ impl RequestReceiver<ZxdgToplevelV6> for XdgToplevel {
                     (toplevel.surface_ref, toplevel.xdg_surface_ref)
                 };
                 client.xdg_surfaces.retain(|&x| x != xdg_surface_ref);
-                #[cfg(not(feature = "flatland"))]
                 if client.input_dispatcher.has_focus(surface_ref) {
                     // Move keyboard focus to top-most XDG surface.
                     if let Some(target_xdg_surface_ref) = client.xdg_surfaces.last() {

@@ -7,8 +7,10 @@ use {
     crate::compositor::Surface,
     crate::object::{NewObjectExt, ObjectRef, ObjectRefSet, RequestReceiver},
     anyhow::Error,
-    fuchsia_wayland_core as wl,
+    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType},
+    fuchsia_trace as ftrace, fuchsia_wayland_core as wl,
     fuchsia_zircon::{self as zx, HandleBased},
+    std::collections::HashSet,
     wayland::{
         wl_keyboard, wl_seat, WlKeyboard, WlKeyboardEvent, WlKeyboardRequest, WlPointer,
         WlPointerRequest, WlSeat, WlSeatEvent, WlSeatRequest, WlTouch, WlTouchRequest,
@@ -17,12 +19,7 @@ use {
 
 #[cfg(not(feature = "flatland"))]
 use {
-    fidl_fuchsia_ui_input::{
-        FocusEvent, InputEvent, PointerEvent, PointerEventPhase, PointerEventType,
-    },
-    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType},
-    fuchsia_trace as ftrace,
-    std::collections::HashSet,
+    fidl_fuchsia_ui_input::{InputEvent, PointerEvent, PointerEventPhase, PointerEventType},
     wayland::{wl_pointer, wl_touch},
 };
 
@@ -57,13 +54,8 @@ impl Seat {
 }
 
 pub struct InputDispatcher {
-    // TODO(fxb/72068): Enable the 3 fields below for Flatland when we have proper
-    // input support.
-    #[cfg(not(feature = "flatland"))]
     event_queue: EventQueue,
-    #[cfg(not(feature = "flatland"))]
     pressed_keys: HashSet<fidl_fuchsia_input::Key>,
-    #[cfg(not(feature = "flatland"))]
     modifiers: u32,
     /// The set of bound wl_pointer objects for this client.
     ///
@@ -95,7 +87,6 @@ pub struct InputDispatcher {
     pub keyboard_focus_source: Option<ObjectRef<Surface>>,
 }
 
-#[cfg(not(feature = "flatland"))]
 fn modifiers_from_pressed_keys(pressed_keys: &HashSet<fidl_fuchsia_input::Key>) -> u32 {
     // XKB mod masks for the default keymap.
     const SHIFT_MASK: u32 = 1 << 0;
@@ -156,21 +147,6 @@ impl InputDispatcher {
     }
 }
 
-#[cfg(feature = "flatland")]
-impl InputDispatcher {
-    pub fn new(_event_queue: EventQueue) -> Self {
-        Self {
-            pointers: ObjectRefSet::new(),
-            keyboards: ObjectRefSet::new(),
-            touches: ObjectRefSet::new(),
-            pointer_focus: None,
-            keyboard_focus: None,
-            keyboard_focus_source: None,
-        }
-    }
-}
-
-#[cfg(not(feature = "flatland"))]
 impl InputDispatcher {
     pub fn new(event_queue: EventQueue) -> Self {
         Self {
@@ -223,14 +199,83 @@ impl InputDispatcher {
         })
     }
 
-    fn handle_focus_event(
+    fn send_key_event(
+        &self,
+        key: fidl_fuchsia_input::Key,
+        time: u32,
+        state: wl_keyboard::KeyState,
+    ) -> Result<(), Error> {
+        let hid_usage = (key as u32) & 0xffff;
+        ftrace::duration!("wayland", "InputDispatcher::send_key_event", "hid_usage" => hid_usage);
+        let serial = self.event_queue.next_serial();
+        self.keyboards.iter().try_for_each(|k| {
+            self.event_queue
+                .post(k.id(), wl_keyboard::Event::Key { serial, time, key: hid_usage, state })
+        })
+    }
+
+    pub fn handle_key_event(
+        &mut self,
+        source: ObjectRef<Surface>,
+        event: &KeyEvent,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::handle_key_event");
+        if Some(source) == self.keyboard_focus_source && self.keyboard_focus.is_some() {
+            let key = event.key.unwrap();
+            let time = (event.timestamp.unwrap() / 1_000_000) as u32;
+            match event.type_.unwrap() {
+                KeyEventType::Pressed => {
+                    self.pressed_keys.insert(key);
+                    self.send_key_event(key, time, wl_keyboard::KeyState::Pressed)?;
+                }
+                KeyEventType::Released => {
+                    self.pressed_keys.remove(&key);
+                    self.send_key_event(key, time, wl_keyboard::KeyState::Released)?;
+                }
+                KeyEventType::Cancel => {
+                    self.pressed_keys.remove(&key);
+                }
+                _ => (),
+            }
+            let modifiers = modifiers_from_pressed_keys(&self.pressed_keys);
+            if modifiers != self.modifiers {
+                self.send_keyboard_modifiers(modifiers)?;
+                self.modifiers = modifiers;
+            }
+        }
+        Ok(())
+    }
+
+    fn update_keyboard_focus(
+        &mut self,
+        new_focus: Option<ObjectRef<Surface>>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::update_keyboard_focus");
+        if new_focus == self.keyboard_focus {
+            return Ok(());
+        }
+        if let Some(current_focus) = self.keyboard_focus {
+            self.send_keyboard_leave(current_focus)?;
+        }
+        if let Some(focus) = new_focus {
+            self.send_keyboard_enter(focus)?;
+            self.send_keyboard_modifiers(0)?;
+            self.keyboard_focus = Some(focus);
+            self.pressed_keys.clear();
+            self.modifiers = 0;
+        }
+        self.keyboard_focus = new_focus;
+        Ok(())
+    }
+
+    pub fn handle_keyboard_focus(
         &mut self,
         source: ObjectRef<Surface>,
         target: ObjectRef<Surface>,
-        focus: &FocusEvent,
+        focused: bool,
     ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::handle_focus_event");
-        let keyboard_focus = if focus.focused {
+        ftrace::duration!("wayland", "InputDispatcher::handle_keyboard_focus");
+        let keyboard_focus = if focused {
             self.keyboard_focus_source = Some(source);
             Some(target)
         } else {
@@ -240,6 +285,21 @@ impl InputDispatcher {
         self.update_keyboard_focus(keyboard_focus)
     }
 
+    pub fn maybe_update_keyboard_focus(
+        &mut self,
+        source: ObjectRef<Surface>,
+        new_target: ObjectRef<Surface>,
+    ) -> Result<(), Error> {
+        ftrace::duration!("wayland", "InputDispatcher::maybe_update_keyboard_focus");
+        if Some(source) == self.keyboard_focus_source {
+            self.update_keyboard_focus(Some(new_target))?;
+        }
+        Ok(())
+    }
+}
+
+#[cfg(not(feature = "flatland"))]
+impl InputDispatcher {
     fn handle_mouse_event(
         &self,
         pointer: &PointerEvent,
@@ -349,87 +409,6 @@ impl InputDispatcher {
         Ok(())
     }
 
-    fn send_key_event(
-        &self,
-        key: fidl_fuchsia_input::Key,
-        time: u32,
-        state: wl_keyboard::KeyState,
-    ) -> Result<(), Error> {
-        let hid_usage = (key as u32) & 0xffff;
-        ftrace::duration!("wayland", "InputDispatcher::send_key_event", "hid_usage" => hid_usage);
-        let serial = self.event_queue.next_serial();
-        self.keyboards.iter().try_for_each(|k| {
-            self.event_queue
-                .post(k.id(), wl_keyboard::Event::Key { serial, time, key: hid_usage, state })
-        })
-    }
-
-    pub fn handle_key_event(
-        &mut self,
-        source: ObjectRef<Surface>,
-        event: &KeyEvent,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::handle_key_event");
-        if Some(source) == self.keyboard_focus_source && self.keyboard_focus.is_some() {
-            let key = event.key.unwrap();
-            let time = (event.timestamp.unwrap() / 1_000_000) as u32;
-            match event.type_.unwrap() {
-                KeyEventType::Pressed => {
-                    self.pressed_keys.insert(key);
-                    self.send_key_event(key, time, wl_keyboard::KeyState::Pressed)?;
-                }
-                KeyEventType::Released => {
-                    self.pressed_keys.remove(&key);
-                    self.send_key_event(key, time, wl_keyboard::KeyState::Released)?;
-                }
-                KeyEventType::Cancel => {
-                    self.pressed_keys.remove(&key);
-                }
-                _ => (),
-            }
-            let modifiers = modifiers_from_pressed_keys(&self.pressed_keys);
-            if modifiers != self.modifiers {
-                self.send_keyboard_modifiers(modifiers)?;
-                self.modifiers = modifiers;
-            }
-        }
-        Ok(())
-    }
-
-    fn update_keyboard_focus(
-        &mut self,
-        new_focus: Option<ObjectRef<Surface>>,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::update_keyboard_focus");
-        if new_focus == self.keyboard_focus {
-            return Ok(());
-        }
-        if let Some(current_focus) = self.keyboard_focus {
-            self.send_keyboard_leave(current_focus)?;
-        }
-        if let Some(focus) = new_focus {
-            self.send_keyboard_enter(focus)?;
-            self.send_keyboard_modifiers(0)?;
-            self.keyboard_focus = Some(focus);
-            self.pressed_keys.clear();
-            self.modifiers = 0;
-        }
-        self.keyboard_focus = new_focus;
-        Ok(())
-    }
-
-    pub fn maybe_update_keyboard_focus(
-        &mut self,
-        source: ObjectRef<Surface>,
-        new_target: ObjectRef<Surface>,
-    ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::maybe_update_keyboard_focus");
-        if Some(source) == self.keyboard_focus_source {
-            self.update_keyboard_focus(Some(new_target))?;
-        }
-        Ok(())
-    }
-
     fn send_pointer_frame(&self) -> Result<(), Error> {
         ftrace::duration!("wayland", "InputDispatcher::send_pointer_frame");
         self.pointers
@@ -531,7 +510,7 @@ impl InputDispatcher {
         pointer_translation: (f32, f32),
         pixel_scale: (f32, f32),
     ) -> Result<(), Error> {
-        ftrace::duration!("wayland", "InputDispatcher::handle_input_events");
+        ftrace::duration!("wayland", "InputDispatcher::handle_input_event");
         match event {
             InputEvent::Pointer(pointer) if pointer.type_ == PointerEventType::Mouse => {
                 ftrace::flow_end!(
@@ -561,7 +540,7 @@ impl InputDispatcher {
                 self.send_touch_frame()?;
             }
             InputEvent::Focus(focus) => {
-                self.handle_focus_event(source_surface, target_surface, focus)?;
+                self.handle_keyboard_focus(source_surface, target_surface, focus.focused)?;
             }
             // TODO: Implement these.
             InputEvent::Pointer(_pointer) => {}
