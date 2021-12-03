@@ -393,7 +393,7 @@ void PrimaryWrapper::FlowControl(uint64_t new_bytes) {
     // Flow control messages are handled in the PrimaryWrapper::AsyncHandler.
     zx_status_t status = loop_.Run(
         wait ? zx::deadline_after(zx::sec(5)) : zx::deadline_after(zx::duration(0)), true /*once*/);
-    if (status == ZX_ERR_BAD_STATE) {
+    if (status == ZX_ERR_BAD_STATE || status == ZX_ERR_CANCELED) {
       DLOG("Loop was shutdown, client is unbound (channel closed)");
       return;
     }
