@@ -191,7 +191,7 @@ fn sanitize_path(
             components.next();
             true
         }
-        _ => false
+        _ => false,
     };
 
     let mut parts = vec![];
@@ -459,6 +459,29 @@ mod tests {
             assert_matches!(
                 env.read_blob(&path).await,
                 Ok(b) if b == body
+            );
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_fetch_range_chunks() {
+        let env = TestEnv::new();
+
+        let chunks = [1, CHUNK_SIZE - 1, CHUNK_SIZE, CHUNK_SIZE + 1, CHUNK_SIZE * 2 + 1];
+        for size in &chunks {
+            println!("size is: {}", &size);
+            let path = format!("{}", size);
+            let body = vec![0; *size];
+            env.write_metadata(&path, &body);
+            env.write_blob(&path, &body);
+
+            assert_matches!(
+                env.read_metadata_range(&path, ResourceRange::RangeFrom { start: 1 }).await,
+                Ok(b) if b == body[1..]
+            );
+            assert_matches!(
+                env.read_blob_range(&path, ResourceRange::RangeFrom { start: 1 }).await,
+                Ok(b) if b == body[1..]
             );
         }
     }

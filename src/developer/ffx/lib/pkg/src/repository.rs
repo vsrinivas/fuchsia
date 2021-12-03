@@ -140,6 +140,10 @@ pub enum Error {
     #[error(transparent)]
     Meta(#[from] fuchsia_pkg::MetaContentsError),
     #[error(transparent)]
+    ParseInt(#[from] std::num::ParseIntError),
+    #[error(transparent)]
+    ToStr(#[from] hyper::header::ToStrError),
+    #[error(transparent)]
     Other(#[from] anyhow::Error),
     #[error("range not satisfiable")]
     RangeNotSatisfiable,
@@ -282,6 +286,11 @@ impl Repository {
     /// Return a stream of bytes for the resource.
     pub async fn fetch(&self, path: &str) -> Result<Resource, Error> {
         self.backend.fetch(path).await
+    }
+
+    /// Return a stream of bytes for the resource in given range.
+    pub async fn fetch_range(&self, path: &str, range: ResourceRange) -> Result<Resource, Error> {
+        self.backend.fetch_range(path, range).await
     }
 
     /// Return a `Vec<u8>` of the resource.
@@ -595,6 +604,7 @@ impl Drop for Repository {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum ResourceRange {
     Range { start: u64, end: u64 },
     RangeFrom { start: u64 },

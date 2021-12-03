@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{Error, Repository, RepositoryId, RepositoryManager},
+    super::{Error, Repository, RepositoryId, RepositoryManager, Resource, ResourceRange},
     anyhow::Result,
     async_net::{TcpListener, TcpStream},
     chrono::Utc,
@@ -12,9 +12,10 @@ use {
     http_sse::{Event, EventSender, SseResponseCreator},
     hyper::{
         body::Body,
+        header::RANGE,
         server::{accept::from_stream, Server},
         service::{make_service_fn, service_fn},
-        Request, Response, StatusCode,
+        HeaderMap, Request, Response, StatusCode,
     },
     log::{error, info, warn},
     parking_lot::RwLock,
@@ -211,6 +212,13 @@ async fn handle_request(
         warn!("could not find repository {}", repo_name);
         return status_response(StatusCode::NOT_FOUND);
     };
+    let headers = req.headers();
+    let range = extract_range_from_range_header(headers);
+    let range = if let Ok(range) = range {
+        range
+    } else {
+        return status_response(StatusCode::RANGE_NOT_SATISFIABLE);
+    };
 
     let resource = match resource_path {
         "auto" => {
@@ -221,7 +229,13 @@ async fn handle_request(
                 return status_response(StatusCode::NOT_FOUND);
             }
         }
-        _ => match repo.fetch(resource_path).await {
+        _ => match repo
+            .fetch_range(
+                resource_path,
+                range.clone().unwrap_or(ResourceRange::RangeFrom { start: 0 }),
+            )
+            .await
+        {
             Ok(file) => file,
             Err(Error::NotFound) => {
                 warn!("could not find resource: {}", resource_path);
@@ -231,18 +245,76 @@ async fn handle_request(
                 warn!("invalid path: {}", path.display());
                 return status_response(StatusCode::BAD_REQUEST);
             }
+            Err(Error::RangeNotSatisfiable) => {
+                warn!("invalid range: {:?}", range);
+                return status_response(StatusCode::RANGE_NOT_SATISFIABLE);
+            }
             Err(err) => {
                 error!("error fetching file {}: {:?}", resource_path, err);
                 return status_response(StatusCode::INTERNAL_SERVER_ERROR);
             }
         },
     };
+    let total_len = repo.fetch(resource_path).await.unwrap().len;
+    generate_response_from_range(range, resource, total_len)
+}
 
-    Response::builder()
-        .status(200)
-        .header("Content-Length", resource.len)
-        .body(Body::wrap_stream(resource.stream))
-        .unwrap()
+fn generate_response_from_range(
+    range: Option<ResourceRange>,
+    resource: Resource,
+    total_len: u64,
+) -> Response<Body> {
+    if range.is_none() {
+        return Response::builder()
+            .status(200)
+            .header("Content-Length", resource.len)
+            .header("Accept-Ranges", "bytes")
+            .body(Body::wrap_stream(resource.stream))
+            .unwrap();
+    }
+    match range.unwrap() {
+        ResourceRange::RangeFrom { start } => Response::builder()
+            .status(206)
+            .header("Content-Length", resource.len - start)
+            .header("Content-Range", format!("bytes={}-/{}", start, total_len))
+            .body(Body::wrap_stream(resource.stream))
+            .unwrap(),
+        ResourceRange::Range { start, end } => Response::builder()
+            .status(206)
+            .header("Content-Length", end - start)
+            .header("Content-Range", format!("bytes={}-{}/{}", start, end, total_len))
+            .body(Body::wrap_stream(resource.stream))
+            .unwrap(),
+        ResourceRange::RangeTo { end } => Response::builder()
+            .status(206)
+            .header("Content-Length", end)
+            .header("Content-Range", format!("bytes=-{}/{}", end, total_len))
+            .body(Body::wrap_stream(resource.stream))
+            .unwrap(),
+    }
+}
+
+fn extract_range_from_range_header(headers: &HeaderMap) -> Result<Option<ResourceRange>, Error> {
+    if !headers.contains_key(RANGE) {
+        return Ok(None);
+    }
+    let range = headers[RANGE].to_str()?;
+    let mut range_split = range.split("=");
+    if range_split.next() != Some("bytes") {
+        return Err(Error::RangeNotSatisfiable);
+    }
+    let mut vec = range_split.next().ok_or(Error::RangeNotSatisfiable)?.split("-");
+    let start_str = vec.next().ok_or(Error::RangeNotSatisfiable)?;
+    let end_str = vec.next().ok_or(Error::RangeNotSatisfiable)?;
+    match (start_str.is_empty(), end_str.is_empty()) {
+        (true, true) => Ok(Some(ResourceRange::RangeFrom { start: 0 })),
+        (false, false) => Ok(Some(ResourceRange::Range {
+            start: start_str.parse::<u64>()?,
+            end: end_str.parse::<u64>()?,
+        })),
+        (false, true) => Ok(Some(ResourceRange::RangeFrom { start: start_str.parse::<u64>()? })),
+        (true, false) => Ok(Some(ResourceRange::RangeTo { end: end_str.parse::<u64>()? })),
+    }
 }
 
 async fn handle_auto(
@@ -443,6 +515,7 @@ mod tests {
         fuchsia_async as fasync,
         http_sse::Client as SseClient,
         matches::assert_matches,
+        std::convert::TryInto,
         std::{fs::remove_file, io::Write as _, net::Ipv4Addr, path::Path},
         timeout::timeout,
     };
@@ -457,6 +530,48 @@ mod tests {
     async fn get_bytes(url: impl AsRef<str> + std::fmt::Debug) -> Result<Bytes> {
         let response = get(url).await?;
         assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()["Accept-Ranges"], "bytes");
+        Ok(hyper::body::to_bytes(response).await?)
+    }
+
+    async fn get_range(
+        url: impl AsRef<str>,
+        start: Option<u64>,
+        end: Option<u64>,
+    ) -> Result<Response<Body>> {
+        let start_str = match start {
+            Some(start) => start.to_string(),
+            None => "".to_owned(),
+        };
+        let end_str = match end {
+            Some(end) => end.to_string(),
+            None => "".to_owned(),
+        };
+        let req = Request::get(url.as_ref())
+            .header("Range", format!("bytes={}-{}", start_str, end_str))
+            .body(Body::empty())?;
+        let client = fuchsia_hyper::new_client();
+        let response = client.request(req).await?;
+        Ok(response)
+    }
+
+    async fn get_bytes_range(
+        url: impl AsRef<str> + std::fmt::Debug,
+        start: Option<u64>,
+        end: Option<u64>,
+        length: u64,
+    ) -> Result<Bytes> {
+        let response = get_range(url, start, end).await?;
+        assert_eq!(response.status(), StatusCode::PARTIAL_CONTENT);
+        let start_str = start.map(|i| i.to_string()).unwrap_or("".to_owned());
+        let end_str = end.map(|i| i.to_string()).unwrap_or("".to_owned());
+
+        let len = end.unwrap_or(length) - start.unwrap_or(0);
+        assert_eq!(response.headers()["Content-Length"], len.to_string());
+        assert_eq!(
+            response.headers()["Content-Range"],
+            format!("bytes={}-{}/{}", start_str, end_str, length.to_string())
+        );
         Ok(hyper::body::to_bytes(response).await?)
     }
 
@@ -539,6 +654,67 @@ mod tests {
                 for body in &bodies[..] {
                     let url = format!("{}/{}/{}", server_url, devhost, body);
                     assert_matches!(get_bytes(&url).await, Ok(bytes) if bytes == &body[..]);
+                }
+            }
+        })
+        .await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_files_with_close_range_from_repositories() {
+        let manager = RepositoryManager::new();
+
+        let d = tempfile::tempdir().unwrap();
+
+        let test_cases = [("devhost-0", ["0-0", "0-1"]), ("devhost-1", ["1-0", "1-1"])];
+
+        for (devhost, bodies) in &test_cases {
+            let dir = d.path().to_path_buf().join(devhost);
+            let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
+
+            for body in &bodies[..] {
+                write_file(&dir.join("repository").join(body), body.as_bytes());
+            }
+
+            manager.add(Arc::new(repo));
+        }
+
+        run_test(manager, |server_url| async move {
+            for (devhost, bodies) in &test_cases {
+                for body in &bodies[..] {
+                    let url = format!("{}/{}/{}", server_url, devhost, body);
+                    assert_matches!(get_bytes_range(&url, Some(1), Some(2), body.chars().count().try_into().unwrap()).await, Ok(bytes) if bytes == &body[1..2]);
+                }
+            }
+        })
+        .await
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_files_with_get_416_when_range_too_big() {
+        let manager = RepositoryManager::new();
+
+        let d = tempfile::tempdir().unwrap();
+
+        let test_cases = [("devhost-0", ["0-0", "0-1"]), ("devhost-1", ["1-0", "1-1"])];
+
+        for (devhost, bodies) in &test_cases {
+            let dir = d.path().to_path_buf().join(devhost);
+            let repo = make_writable_empty_repository(*devhost, dir.clone()).await.unwrap();
+
+            for body in &bodies[..] {
+                write_file(&dir.join("repository").join(body), body.as_bytes());
+            }
+
+            manager.add(Arc::new(repo));
+        }
+
+        run_test(manager, |server_url| async move {
+            for (devhost, bodies) in &test_cases {
+                for body in &bodies[..] {
+                    let url = format!("{}/{}/{}", server_url, devhost, body);
+                    let response = get_range(&url, Some(1), Some(5)).await.unwrap();
+                    assert_eq!(response.status(), StatusCode::RANGE_NOT_SATISFIABLE);
                 }
             }
         })
