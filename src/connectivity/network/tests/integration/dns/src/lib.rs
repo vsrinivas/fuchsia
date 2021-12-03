@@ -4,9 +4,7 @@
 
 #![cfg(test)]
 
-use std::convert::TryFrom as _;
-use std::num::NonZeroU16;
-use std::str::FromStr as _;
+use std::{convert::TryFrom as _, num::NonZeroU16, str::FromStr as _};
 
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as net_dhcp;
@@ -16,33 +14,35 @@ use fidl_fuchsia_net_name as net_name;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
-use futures::future::{self, FusedFuture, Future, FutureExt as _};
-use futures::stream::{self, StreamExt as _, TryStreamExt as _};
-use futures::{AsyncReadExt as _, AsyncWriteExt as _};
-use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6, std_socket_addr};
-use net_types::ethernet::Mac;
-use net_types::ip as net_types_ip;
-use net_types::Witness;
-use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
-use netstack_testing_common::constants::{eth as eth_consts, ipv6 as ipv6_consts};
-use netstack_testing_common::realms::{
-    constants, KnownServiceProvider, Manager, NetCfg, Netstack2, TestSandboxExt as _,
+use futures::{
+    future::{self, FusedFuture, Future, FutureExt as _},
+    stream::{self, StreamExt as _, TryStreamExt as _},
+    AsyncReadExt as _, AsyncWriteExt as _,
 };
+use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6, std_socket_addr};
+use net_types::{ethernet::Mac, ip as net_types_ip, Witness as _};
+use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
 use netstack_testing_common::{
+    constants::{eth as eth_consts, ipv6 as ipv6_consts},
+    realms::{constants, KnownServiceProvider, Manager, NetCfg, Netstack2, TestSandboxExt as _},
     wait_for_component_stopped, write_ndp_message, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
-use packet::serialize::{InnerPacketBuilder as _, Serializer as _};
-use packet::ParsablePacket as _;
-use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
-use packet_formats::icmp::ndp::{
-    options::{NdpOptionBuilder, RecursiveDnsServer},
-    RouterAdvertisement,
+use packet::{
+    serialize::{InnerPacketBuilder as _, Serializer as _},
+    ParsablePacket as _,
 };
-use packet_formats::ip::IpProto;
-use packet_formats::ipv6::Ipv6PacketBuilder;
-use packet_formats::testutil::parse_ip_packet_in_ethernet_frame;
-use packet_formats::udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs};
+use packet_formats::{
+    ethernet::{EtherType, EthernetFrameBuilder},
+    icmp::ndp::{
+        options::{NdpOptionBuilder, RecursiveDnsServer},
+        RouterAdvertisement,
+    },
+    ip::IpProto,
+    ipv6::Ipv6PacketBuilder,
+    testutil::parse_ip_packet_in_ethernet_frame,
+    udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs},
+};
 use packet_formats_dhcp::v6;
 use test_case::test_case;
 
