@@ -9,7 +9,9 @@ import("//build/testing/host_test_data.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":fstar_integration_test($host_toolchain)" ]
+  # Disabled due to excessive flakes.
+  # TODO(https://fxbug.dev/88194): Reenable
+  # deps = [ ":fstar_integration_test($host_toolchain)" ]
 }
 
 go_library("fstar_integration_lib") {
