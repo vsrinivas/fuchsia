@@ -16,7 +16,7 @@ use fuchsia_zircon as zx;
 
 use futures::{
     future::{self, FusedFuture, Future, FutureExt as _},
-    stream::{self, StreamExt as _, TryStreamExt as _},
+    stream::{self, StreamExt as _},
     AsyncReadExt as _, AsyncWriteExt as _,
 };
 use net_declare::{fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_subnet, std_ip_v6, std_socket_addr};
@@ -33,14 +33,16 @@ use packet::{
     ParsablePacket as _,
 };
 use packet_formats::{
-    ethernet::{EtherType, EthernetFrameBuilder},
+    ethernet::{
+        EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck,
+        EthernetIpExt as _,
+    },
     icmp::ndp::{
         options::{NdpOptionBuilder, RecursiveDnsServer},
         RouterAdvertisement,
     },
-    ip::IpProto,
-    ipv6::Ipv6PacketBuilder,
-    testutil::parse_ip_packet_in_ethernet_frame,
+    ip::{IpPacket as _, IpProto, Ipv6Proto},
+    ipv6::{Ipv6Packet, Ipv6PacketBuilder},
     udp::{UdpPacket, UdpPacketBuilder, UdpParseArgs},
 };
 use packet_formats_dhcp::v6;
@@ -306,56 +308,65 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) {
     let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
     let (src_mac, dst_mac, src_ip, dst_ip, src_port, tx_id) = fake_ep
         .frame_stream()
-        .try_filter_map(|(data, dropped)| {
+        .map(|r| r.expect("error getting OnData event"))
+        .filter_map(|(data, dropped)| {
             assert_eq!(dropped, 0);
-            future::ok(parse_ip_packet_in_ethernet_frame::<net_types_ip::Ipv6>(&data).map_or(
-                None,
-                |(mut body, src_mac, dst_mac, src_ip, dst_ip, _proto, _ttl)| {
-                    // DHCPv6 messages are held in UDP packets.
-                    let udp = match UdpPacket::parse(&mut body, UdpParseArgs::new(src_ip, dst_ip)) {
-                        Ok(o) => o,
-                        Err(_) => return None,
-                    };
 
-                    // We only care about UDP packets directed at a DHCPv6 server.
-                    if udp.dst_port().get() != net_dhcpv6::RELAY_AGENT_AND_SERVER_PORT {
-                        return None;
-                    }
+            let mut data = data.as_slice();
 
-                    // We only care about DHCPv6 messages.
-                    let mut body = udp.body();
-                    let msg = match v6::Message::parse(&mut body, ()) {
-                        Ok(o) => o,
-                        Err(_) => return None,
-                    };
+            future::ready((|| {
+                let ethernet = EthernetFrame::parse(&mut data, EthernetFrameLengthCheck::Check)
+                    .expect("parse ethernet");
 
-                    // We only care about DHCPv6 information requests.
-                    if msg.msg_type() != v6::MessageType::InformationRequest {
-                        return None;
-                    }
+                // DHCPv6 messages are held in IPv6 packets.
+                if ethernet.ethertype() != Some(net_types_ip::Ipv6::ETHER_TYPE) {
+                    return None;
+                }
+                let ipv6 = Ipv6Packet::parse(&mut data, ()).expect("parse ipv6");
 
-                    // We only care about DHCPv6 information requests for DNS servers.
-                    for opt in msg.options() {
-                        if let v6::ParsedDhcpOption::Oro(codes) = opt {
-                            if !codes.contains(&v6::OptionCode::DnsServers) {
-                                return None;
-                            }
+                let src_ip = ipv6.src_ip();
+                let dst_ip = ipv6.dst_ip();
+
+                // DHCPv6 messages are held in UDP packets.
+                if ipv6.proto() != Ipv6Proto::Proto(IpProto::Udp) {
+                    return None;
+                }
+                let udp = UdpPacket::parse(&mut data, UdpParseArgs::new(src_ip, dst_ip))
+                    .expect("parse udp");
+
+                // We only care about UDP packets directed at a DHCPv6 server.
+                if udp.dst_port().get() != net_dhcpv6::RELAY_AGENT_AND_SERVER_PORT {
+                    return None;
+                }
+
+                // We only care about DHCPv6 messages.
+                let msg = v6::Message::parse(&mut data, ()).expect("parse dhcpv6");
+
+                // We only care about DHCPv6 information requests.
+                if msg.msg_type() != v6::MessageType::InformationRequest {
+                    return None;
+                }
+
+                // We only care about DHCPv6 information requests for DNS servers.
+                for opt in msg.options() {
+                    if let v6::ParsedDhcpOption::Oro(codes) = opt {
+                        if !codes.contains(&v6::OptionCode::DnsServers) {
+                            return None;
                         }
                     }
+                }
 
-                    Some((
-                        src_mac,
-                        dst_mac,
-                        src_ip,
-                        dst_ip,
-                        udp.src_port(),
-                        msg.transaction_id().clone(),
-                    ))
-                },
-            ))
+                Some((
+                    ethernet.src_mac(),
+                    ethernet.dst_mac(),
+                    src_ip,
+                    dst_ip,
+                    udp.src_port(),
+                    msg.transaction_id().clone(),
+                ))
+            })())
         })
         .next()
-        .map(|r| r.expect("error getting OnData event"))
         .on_timeout(ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT.after_now(), || {
             panic!("timed out waiting for the DHCPv6 Information request");
         })
