@@ -197,9 +197,7 @@ class _TabsWidgetState extends State<TabsWidget>
         child: Container(
           width: _kTabBarHeight,
           height: _kTabBarHeight,
-          // TODO: Rename to secondaryContainer after roll.
-          // ignore: deprecated_member_use
-          color: _browserTheme.colorScheme.secondaryVariant,
+          color: _browserTheme.colorScheme.secondaryContainer,
           child: Center(
             child: AnimatedBuilder(
               animation: button.isEnabled,
