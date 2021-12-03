@@ -113,7 +113,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/internal/transport_channel.h",
                   ] + llcpp_wavl_tree_headers
 
-    sdk_non_public_headers =
+    sdk_private_headers =
         [
           "include/lib/fidl/llcpp/internal/client_details.h",
           "include/lib/fidl/llcpp/internal/transport_end.h",
@@ -193,7 +193,7 @@ if (is_fuchsia) {
                     "lib/fidl/llcpp/internal/transport_channel.h",
                   ] + llcpp_wavl_tree_headers
 
-    sdk_non_public_headers =
+    sdk_private_headers =
         [
           "include/lib/fidl/llcpp/internal/transport.h",
           "include/lib/fidl/llcpp/internal/transport_channel.h",

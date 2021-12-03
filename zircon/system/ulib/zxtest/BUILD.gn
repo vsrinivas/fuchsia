@@ -36,7 +36,7 @@ zxtest_headers = [
   "include/zxtest/zxtest.h",
 ]
 
-non_public_headers = [
+private_headers = [
   # These headers are not intended to be included directly into user code.
   "include/zxtest/c/zxtest.h",
   "include/zxtest/cpp/assert.h",

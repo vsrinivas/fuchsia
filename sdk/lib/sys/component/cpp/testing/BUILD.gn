@@ -38,7 +38,7 @@ sdk_source_set("cpp_library") {
     "scoped_child.h",
   ]
 
-  non_public_headers = [
+  private_headers = [
     "internal/errors.h",
     "internal/mock_runner.h",
     "internal/realm.h",

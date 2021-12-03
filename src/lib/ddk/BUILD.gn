@@ -40,7 +40,7 @@ sdk_static_library("ddk") {
   ]
 
   # These headers will error out if included directly from user code.
-  non_public_headers = [
+  private_headers = [
     "include/lib/ddk/protodefs.h",
     "include/lib/ddk/fidl-protodefs.h",
   ]

@@ -42,7 +42,7 @@ import("//sdk/cts/plasa/plasa_artifacts.gni")
 #     only needed for runtime dependencies inherited from private dependencies.
 #     Note that these labels should represent SDK targets.
 #
-#   non_public_headers (optional)
+#   private_headers (optional)
 #     List of header files that are not intended for direct inclusion by users.
 #     Used to help generate stub files, which do not know apriori that a header
 #     is not to be used.  Define these in addition to deps (i.e. repeat them
@@ -56,7 +56,7 @@ set_defaults("sdk_static_library") {
 
 template("sdk_static_library") {
   assert(defined(invoker.category), "Must define an SDK category")
-  not_needed(invoker, [ "non_public_headers" ])
+  not_needed(invoker, [ "private_headers" ])
 
   output_name = target_name
   if (defined(invoker.output_name)) {
@@ -235,7 +235,7 @@ template("sdk_static_library") {
                              [
                                "all_deps",
                                "all_headers",
-                               "non_public_headers",
+                               "private_headers",
                                "source_dir",
                                "testonly",
                              ])
