@@ -167,9 +167,8 @@ mod tests {
         cm_rust::FidlIntoNative,
         fidl::encoding::encode_persistent,
         fidl::endpoints::{create_proxy_and_stream, ServerEnd},
-        fidl_fuchsia_data as fdata,
+        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
         fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest, NodeMarker},
-        fidl_fuchsia_sys2::ComponentDecl,
         fuchsia_async as fasync,
         std::path::PathBuf,
         std::sync::Weak,
@@ -240,14 +239,14 @@ mod tests {
                     let out_dir = pseudo_directory! {
                         "meta" => pseudo_directory! {
                             "invalid.cm" => read_only_static(
-                                encode_persistent(&mut fsys::ComponentDecl {
-                                    program: Some(fsys::ProgramDecl {
+                                encode_persistent(&mut fdecl::Component {
+                                    program: Some(fdecl::Program {
                                         runner: None,
                                         info: Some(fdata::Dictionary {
                                             entries: Some(vec![]),
                                             ..fdata::Dictionary::EMPTY
                                         }),
-                                        ..fsys::ProgramDecl::EMPTY
+                                        ..fdecl::Program::EMPTY
                                     }),
                                     uses: None,
                                     exposes: None,
@@ -257,7 +256,7 @@ mod tests {
                                     collections: None,
                                     environments: None,
                                     facets: None,
-                                    ..fsys::ComponentDecl::EMPTY
+                                    ..fdecl::Component::EMPTY
                                 }).unwrap()
                             ),
                         }
@@ -331,8 +330,9 @@ mod tests {
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
 
-        let decl =
-            io_util::read_file_fidl::<ComponentDecl>(&file_proxy).await.expect("could not read cm");
+        let decl = io_util::read_file_fidl::<fdecl::Component>(&file_proxy)
+            .await
+            .expect("could not read cm");
         let decl = decl.fidl_into_native();
 
         assert_eq!(decl.program, expected_program);

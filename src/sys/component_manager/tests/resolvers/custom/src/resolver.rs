@@ -4,7 +4,8 @@
 
 use {
     anyhow::{Context, Error},
-    fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
+    fidl_fuchsia_mem as fmem,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -57,8 +58,8 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
 }
 
 fn build_decl() -> fmem::Data {
-    let mut component_decl = fsys::ComponentDecl::EMPTY;
-    component_decl.program = Some(fsys::ProgramDecl {
+    let mut component_decl = fdecl::Component::EMPTY;
+    component_decl.program = Some(fdecl::Program {
         runner: Some("elf".to_string()),
         info: Some(fdata::Dictionary {
             entries: Some(vec![fdata::DictionaryEntry {
@@ -69,19 +70,19 @@ fn build_decl() -> fmem::Data {
             }]),
             ..fdata::Dictionary::EMPTY
         }),
-        ..fsys::ProgramDecl::EMPTY
+        ..fdecl::Program::EMPTY
     });
-    component_decl.capabilities = Some(vec![fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+    component_decl.capabilities = Some(vec![fdecl::Capability::Protocol(fdecl::Protocol {
         name: Some("fidl.test.components.Trigger".to_string()),
         source_path: Some("/svc/fidl.test.components.Trigger".to_string()),
-        ..fsys::ProtocolDecl::EMPTY
+        ..fdecl::Protocol::EMPTY
     })]);
-    component_decl.exposes = Some(vec![fsys::ExposeDecl::Protocol(fsys::ExposeProtocolDecl {
-        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-        target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+    component_decl.exposes = Some(vec![fdecl::Expose::Protocol(fdecl::ExposeProtocol {
+        source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+        target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
         source_name: Some("fidl.test.components.Trigger".to_string()),
         target_name: Some("fidl.test.components.Trigger".to_string()),
-        ..fsys::ExposeProtocolDecl::EMPTY
+        ..fdecl::ExposeProtocol::EMPTY
     })]);
     fmem::Data::Bytes(fidl::encoding::encode_persistent(&mut component_decl).expect("encoded"))
 }

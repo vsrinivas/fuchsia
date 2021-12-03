@@ -2044,7 +2044,7 @@ async fn use_resolver_from_parent_environment() {
                     .send(&mut Ok(fsys::Component {
                         resolved_url: Some("test://b".into()),
                         decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent::<fsys::ComponentDecl>(
+                            fidl::encoding::encode_persistent::<fdecl::Component>(
                                 &mut default_component_decl().native_into_fidl(),
                             )
                             .unwrap(),
@@ -2129,7 +2129,7 @@ async fn use_resolver_from_grandparent_environment() {
                     .send(&mut Ok(fsys::Component {
                         resolved_url: Some("test://c".into()),
                         decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent::<fsys::ComponentDecl>(
+                            fidl::encoding::encode_persistent::<fdecl::Component>(
                                 &mut default_component_decl().native_into_fidl(),
                             )
                             .unwrap(),
@@ -2214,7 +2214,7 @@ async fn resolver_is_not_available() {
                     .send(&mut Ok(fsys::Component {
                         resolved_url: Some("test://b".into()),
                         decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent::<fsys::ComponentDecl>(
+                            fidl::encoding::encode_persistent::<fdecl::Component>(
                                 &mut default_component_decl().native_into_fidl(),
                             )
                             .unwrap(),
@@ -2296,14 +2296,14 @@ async fn resolver_component_decl_is_validated() {
                     .send(&mut Ok(fsys::Component {
                         resolved_url: Some("test://b".into()),
                         decl: Some(fmem::Data::Bytes({
-                            let mut fidl = fsys::ComponentDecl {
-                                exposes: Some(vec![fsys::ExposeDecl::Protocol(
-                                    fsys::ExposeProtocolDecl {
-                                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                                        ..fsys::ExposeProtocolDecl::EMPTY
+                            let mut fidl = fdecl::Component {
+                                exposes: Some(vec![fdecl::Expose::Protocol(
+                                    fdecl::ExposeProtocol {
+                                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                                        ..fdecl::ExposeProtocol::EMPTY
                                     },
                                 )]),
-                                ..fsys::ComponentDecl::EMPTY
+                                ..fdecl::Component::EMPTY
                             };
                             fidl::encoding::encode_persistent(&mut fidl).unwrap()
                         })),
