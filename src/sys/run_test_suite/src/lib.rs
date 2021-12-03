@@ -818,7 +818,8 @@ pub async fn run_test<'a, Out: Write, F: 'a + Future<Output = ()>>(
     cancel_fut: F,
 ) -> Result<SuiteResults<'a>, RunTestSuiteError> {
     let mut suite_start_futs = vec![];
-    for params in test_params.into_iter() {
+    let mut suite_reporters = HashMap::new();
+    for (suite_id_raw, params) in test_params.into_iter().enumerate() {
         let timeout: Option<i64> = match params.timeout {
             Some(t) => {
                 const NANOS_IN_SEC: u64 = 1_000_000_000;
@@ -838,26 +839,27 @@ pub async fn run_test<'a, Out: Write, F: 'a + Future<Output = ()>>(
             log_iterator: Some(diagnostics::get_type()),
         };
 
+        let suite_id = SuiteId(suite_id_raw as u32);
+        suite_reporters.insert(suite_id, run_reporter.new_suite(&params.test_url, &suite_id)?);
         let (suite_controller, suite_server_end) = fidl::endpoints::create_proxy()?;
-        suite_start_futs.push(
-            RunningSuite::wait_for_start(
-                suite_controller,
-                params.test_url.clone(),
-                params.max_severity_logs,
-            )
-            .boxed(),
-        );
+        let suite_and_id_fut = RunningSuite::wait_for_start(
+            suite_controller,
+            params.test_url.clone(),
+            params.max_severity_logs,
+        )
+        .map(move |running_suite| (running_suite, suite_id))
+        .boxed();
+        suite_start_futs.push(suite_and_id_fut);
         builder_proxy.add_suite(&params.test_url, run_options.into(), suite_server_end)?;
     }
     let (run_controller, run_server_end) = fidl::endpoints::create_proxy()?;
     builder_proxy.build(run_server_end)?;
 
     struct FoldArgs<'a, Out: Write, F: 'a + Future<Output = ()>> {
-        suite_start_futs: Vec<BoxFuture<'a, RunningSuite>>,
+        suite_start_futs: Vec<BoxFuture<'a, (RunningSuite, SuiteId)>>,
         run_controller: ftest_manager::RunControllerProxy,
-        next_suite_id: u32,
+        suite_reporters: HashMap<SuiteId, SuiteReporter<'a>>,
         stdout_writer: &'a mut Out,
-        run_reporter: &'a mut RunReporter,
         min_severity_logs: Option<Severity>,
         run_params: RunParams,
         num_failed: u16,
@@ -867,9 +869,8 @@ pub async fn run_test<'a, Out: Write, F: 'a + Future<Output = ()>>(
     let args = FoldArgs {
         suite_start_futs,
         run_controller,
-        next_suite_id: 0,
+        suite_reporters,
         stdout_writer,
-        run_reporter,
         min_severity_logs,
         run_params,
         num_failed: 0,
@@ -878,22 +879,20 @@ pub async fn run_test<'a, Out: Write, F: 'a + Future<Output = ()>>(
 
     // Handle suite events. Note this assumes that suites are run in serial - it waits to
     // find a suite that is started and drains the events before polling the next one.
-    let stream = futures::stream::try_unfold(args, |args| async move {
+    let stream = futures::stream::try_unfold(args, |mut args| async move {
         match args.suite_start_futs.is_empty() {
             false => {
-                let (started_suite_controller, _idx, mut unstarted_suites) =
+                let ((running_suite, suite_id), _idx, mut unstarted_suites) =
                     futures::future::select_all(args.suite_start_futs).await;
+                let suite_reporter = args.suite_reporters.remove(&suite_id).unwrap();
 
-                let suite_reporter = args
-                    .run_reporter
-                    .new_suite(started_suite_controller.url(), &SuiteId(args.next_suite_id))?;
                 let log_options = diagnostics::LogCollectionOptions {
                     min_severity: args.min_severity_logs,
-                    max_severity: started_suite_controller.max_severity_logs(),
+                    max_severity: running_suite.max_severity_logs(),
                 };
 
                 let result = run_suite_and_collect_logs(
-                    started_suite_controller,
+                    running_suite,
                     &suite_reporter,
                     &log_options,
                     args.stdout_writer,
@@ -923,10 +922,12 @@ pub async fn run_test<'a, Out: Write, F: 'a + Future<Output = ()>>(
                     // Drop remaining controllers, which is the same as calling kill on
                     // each controller.
                     unstarted_suites = vec![];
+                    args.suite_reporters
+                        .drain()
+                        .try_for_each(|(_id, reporter)| reporter.finished())?;
                 }
                 let next_args = FoldArgs {
                     suite_start_futs: unstarted_suites,
-                    next_suite_id: args.next_suite_id + 1,
                     num_failed: accumulated_failures,
                     ..args
                 };

@@ -1420,3 +1420,61 @@ async fn test_terminate_signal() {
     // to make more sophisticated tests. Since we need to make assertions on the directory reporter
     // simultaneously, we'll need to support writing to multiple reporters at once as well.
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_terminate_signal_multiple_suites() {
+    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
+    );
+
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        vec![test_params; 10],
+        new_run_params(),
+        None,
+        false,
+        Some(output_dir.path().to_path_buf()),
+        futures::future::ready(()),
+    )
+    .await;
+
+    assert_eq!(outcome, Outcome::Inconclusive);
+
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Inconclusive);
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+
+    // There should be exactly one test that started and is inconclusive. Remaining tests should
+    // be NOT_STARTED. Note this assumes that test manager is running tests sequentially, this test
+    // could start flaking when this changes.
+    let (inconclusive_suite_results, other_suite_results): (Vec<_>, Vec<_>) = suite_results
+        .into_iter()
+        .partition(|&directory::SuiteResult::V0 { ref outcome, .. }| {
+            *outcome == directory::Outcome::Inconclusive
+        });
+    assert_eq!(inconclusive_suite_results.len(), 1);
+    assert_eq!(other_suite_results.len(), 9);
+
+    let directory::SuiteResult::V0 { outcome: suite_outcome, name: suite_name, .. } =
+        inconclusive_suite_results.into_iter().next().unwrap();
+    assert_eq!(suite_outcome, directory::Outcome::Inconclusive);
+    assert_eq!(
+        suite_name,
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm"
+    );
+
+    other_suite_results.into_iter().for_each(|suite_result| {
+        directory::testing::assert_suite_result(
+            output_dir.path(),
+            &suite_result,
+            &ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
+                directory::Outcome::NotStarted,
+            ),
+        );
+    });
+}

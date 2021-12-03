@@ -58,6 +58,7 @@
         "outcome": {
             "description": "The outcome of the test",
             "enum": [
+                "NOT_STARTED",
                 "PASSED",
                 "FAILED",
                 "INCONCLUSIVE",

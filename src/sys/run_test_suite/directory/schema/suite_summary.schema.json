@@ -60,6 +60,7 @@
         "outcome": {
             "description": "The outcome scoped to a suite run or test case",
             "enum": [
+                "NOT_STARTED",
                 "PASSED",
                 "FAILED",
                 "INCONCLUSIVE",

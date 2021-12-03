@@ -101,7 +101,7 @@ impl DirectoryReporter {
                 artifact_dir,
                 artifacts: vec![],
                 children: vec![],
-                outcome: directory::Outcome::Inconclusive,
+                outcome: directory::Outcome::NotStarted,
                 timer: MonotonicTimer::Unknown,
                 approximate_host_start_time: None,
             },
@@ -156,7 +156,7 @@ impl Reporter for DirectoryReporter {
                 artifact_dir,
                 artifacts: vec![],
                 children: vec![],
-                outcome: directory::Outcome::Inconclusive,
+                outcome: directory::Outcome::NotStarted,
                 timer: MonotonicTimer::Unknown,
                 approximate_host_start_time: None,
             },
@@ -170,6 +170,7 @@ impl Reporter for DirectoryReporter {
         let entry =
             entries.get_mut(entity).expect("Outcome reported for an entity that does not exist");
         entry.approximate_host_start_time = Some(std::time::SystemTime::now());
+        entry.outcome = directory::Outcome::Inconclusive;
         match (&entry.timer, timestamp) {
             (MonotonicTimer::Unknown, Timestamp::Given(mono_start_time)) => {
                 entry.timer = MonotonicTimer::Started { mono_start_time };
@@ -791,7 +792,7 @@ mod test {
         assert_run_result(
             dir.path(),
             &initial_run_result,
-            &ExpectedTestRun::new(directory::Outcome::Inconclusive),
+            &ExpectedTestRun::new(directory::Outcome::NotStarted),
         );
         assert!(initial_suite_results.is_empty());
 
@@ -841,15 +842,21 @@ mod test {
 
         run_reporter.started(Timestamp::Unknown).expect("start test run");
 
+        // Add a suite and case that start, but don't stop.
         let suite_reporter =
             run_reporter.new_suite("suite", &SuiteId(0)).expect("create new suite");
         suite_reporter.started(Timestamp::Unknown).expect("start suite");
-
         let case_reporter = suite_reporter.new_case("case", &CaseId(0)).expect("create case");
         case_reporter.started(Timestamp::Unknown).expect("start case");
         // finish run without reporting result
         case_reporter.finished().expect("finish case");
         suite_reporter.finished().expect("finish suite");
+
+        // Add a suite that doesn't start.
+        let no_start_suite_reporter =
+            run_reporter.new_suite("no-start-suite", &SuiteId(1)).expect("create new suite");
+        no_start_suite_reporter.finished().expect("finish suite");
+
         run_reporter.finished().expect("finish test run");
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
@@ -861,8 +868,11 @@ mod test {
         assert_suite_results(
             dir.path(),
             &suite_results,
-            &vec![ExpectedSuite::new("suite", directory::Outcome::Inconclusive)
-                .with_case(ExpectedTestCase::new("case", directory::Outcome::Inconclusive))],
+            &vec![
+                ExpectedSuite::new("suite", directory::Outcome::Inconclusive)
+                    .with_case(ExpectedTestCase::new("case", directory::Outcome::Inconclusive)),
+                ExpectedSuite::new("no-start-suite", directory::Outcome::NotStarted),
+            ],
         );
     }
 }

@@ -12,8 +12,9 @@ pub const RUN_SUMMARY_NAME: &str = "run_summary.json";
 
 /// A serializable version of a test outcome.
 #[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone, Copy)]
-#[serde(rename_all = "UPPERCASE")]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Outcome {
+    NotStarted,
     Passed,
     Failed,
     Inconclusive,

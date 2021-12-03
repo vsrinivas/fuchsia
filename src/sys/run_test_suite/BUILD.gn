@@ -49,6 +49,7 @@ rustc_library("lib") {
 
   test_deps = [
     "//third_party/rust_crates:ansi_term",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
   ]
