@@ -150,6 +150,9 @@ zx_status_t IoApic::ReadRegister(uint8_t select_register, IoValue* value) const 
       value->u32 = 0;
       return ZX_OK;
     case kFirstRedirectOffset ... kLastRedirectOffset: {
+      if (value->access_size != 4) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
       std::lock_guard<std::mutex> lock(mutex_);
       uint32_t redirect_offset = select_ - kFirstRedirectOffset;
       const RedirectEntry& entry = redirect_[redirect_offset / 2];
@@ -172,6 +175,9 @@ zx_status_t IoApic::WriteRegister(uint8_t select_register, const IoValue& value)
       return ZX_OK;
     }
     case kFirstRedirectOffset ... kLastRedirectOffset: {
+      if (value.access_size != 4) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
       std::lock_guard<std::mutex> lock(mutex_);
       uint32_t redirect_offset = select_ - kFirstRedirectOffset;
       RedirectEntry& entry = redirect_[redirect_offset / 2];

@@ -49,6 +49,24 @@ TEST(IoApic, IndirectRegisterSelect) {
   }
 }
 
+TEST(IoApic, InvalidReadWriteSize) {
+  Guest guest;
+  IoApic io_apic(&guest);
+
+  // Select a redirect entry.
+  ASSERT_EQ(io_apic.Write(kIoApicIoRegSel, IoValue::FromU8(kFirstRedirectOffset)), ZX_OK);
+
+  // Attempt to read 8/16 bit values. We expect an error.
+  IoValue result8 = IoValue::FromU8(0);
+  EXPECT_EQ(io_apic.Read(kIoApicIoWin, &result8), ZX_ERR_NOT_SUPPORTED);
+  IoValue result16 = IoValue::FromU16(0);
+  EXPECT_EQ(io_apic.Read(kIoApicIoWin, &result16), ZX_ERR_NOT_SUPPORTED);
+
+  // Attempt to write 8/16 bit values. We expect an error.
+  EXPECT_EQ(io_apic.Write(kIoApicIoWin, IoValue::FromU8(0xff)), ZX_ERR_NOT_SUPPORTED);
+  EXPECT_EQ(io_apic.Write(kIoApicIoWin, IoValue::FromU16(0xffff)), ZX_ERR_NOT_SUPPORTED);
+}
+
 TEST(IoApic, ApicId) {
   Guest guest;
   IoApic io_apic(&guest);
