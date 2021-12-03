@@ -783,7 +783,7 @@ From //build/config/clang/clang.gni:17
 ### clang_ml_inliner
 Controls whether to use the ML inliner in Clang to reduce size.
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //build/config/BUILD.gn:32
 
@@ -3411,7 +3411,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"dW9HJuha3Dgyfo40ERT1x_6S4MNtd5FkJ6-MoF5RJ4IC"`
+**Current value (from the default):** `"1HGj7gKkdUdRQihGgmc58I7aXniKMxxrjQEynT3KABMC"`
 
 From //build/rust/config.gni:30
 
