@@ -7,6 +7,8 @@
 
 #include <mutex>
 
+#include <hwreg/bitfields.h>
+
 #include "src/virtualization/bin/vmm/io.h"
 #include "src/virtualization/bin/vmm/platform_device.h"
 
@@ -25,8 +27,25 @@ class IoApic : public IoHandler, public PlatformDevice {
 
   // An entry in the redirect table.
   struct RedirectEntry {
-    uint32_t upper;
-    uint32_t lower;
+    uint64_t raw;
+
+    // Bit definitions for the redirect entry. See _Intel I/O Controller Hub
+    // 10 (ICH10) Family Datasheet (October 2008), Section 13.5_.
+    DEF_SUBFIELD(raw, 63, 56, destination);
+    DEF_SUBFIELD(raw, 55, 48, edid);  // Extended Destination ID
+    // Bits 47:17 reserved.
+    DEF_SUBBIT(raw, 16, mask);
+    DEF_SUBBIT(raw, 15, trigger_mode);
+    DEF_SUBBIT(raw, 14, remote_irr);
+    DEF_SUBBIT(raw, 13, interrupt_input_pin_polarity);
+    DEF_SUBBIT(raw, 12, delivery_status);
+    DEF_SUBBIT(raw, 11, destination_mode);
+    DEF_SUBFIELD(raw, 10, 8, delivery_mode);
+    DEF_SUBFIELD(raw, 7, 0, vector);
+
+    // Allow easy reading/writing to the upper/lower 32-bits of the word.
+    DEF_SUBFIELD(raw, 63, 32, upper);
+    DEF_SUBFIELD(raw, 31, 0, lower);
   };
 
   IoApic(Guest* guest);

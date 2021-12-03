@@ -43,7 +43,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
     entry = redirect_[global_irq];
   }
 
-  uint32_t vector = bits_shift(entry.lower, 7, 0);
+  uint32_t vector = static_cast<uint32_t>(entry.vector());
 
   // The "destination mode" (DESTMOD) determines how the dest field in the
   // redirection entry should be interpreted.
@@ -57,9 +57,17 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   //
   // See Intel ICH10 Section 13.5.7.
   // See Intel Volume 3, Section 10.12.10
-  uint32_t destmod = bit_shift(entry.lower, 11);
-  if (destmod == kIoApicDestmodPhysical) {
-    uint32_t dest = bits_shift(entry.upper, 27, 24);
+  if (entry.destination_mode() == kIoApicDestmodPhysical) {
+    uint64_t dest = entry.destination();
+
+    // Ensure that the top bits of dest are zero. From ICH10 Section 13.5.7:
+    // "If bit 11 of this entry is 0 (Physical), then bits 59:56 specifies an
+    // APIC ID. In this case, bits 63:59 should be programmed by software to
+    // 0."
+    if (dest >= kIoApicNumPhysicalDestinations) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     return guest_->Interrupt(1ul << dest, vector);
   }
 
@@ -68,8 +76,7 @@ zx_status_t IoApic::Interrupt(uint32_t global_irq) {
   //
   // Note we're not currently respecting the DELMODE field and instead are only
   // delivering to the fist local APIC that is targeted.
-  uint32_t dest = bits_shift(entry.upper, 31, 24);
-  return guest_->Interrupt(dest, vector);
+  return guest_->Interrupt(entry.destination(), vector);
 }
 
 zx_status_t IoApic::Read(uint64_t addr, IoValue* value) {
@@ -155,7 +162,8 @@ zx_status_t IoApic::ReadRegister(uint8_t select_register, IoValue* value) const 
       std::lock_guard<std::mutex> lock(mutex_);
       uint32_t redirect_offset = select_ - kFirstRedirectOffset;
       const RedirectEntry& entry = redirect_[redirect_offset / 2];
-      uint32_t redirect_register = redirect_offset % 2 == 0 ? entry.lower : entry.upper;
+      uint32_t redirect_register =
+          static_cast<uint32_t>(redirect_offset % 2 == 0 ? entry.lower() : entry.upper());
       value->u32 = redirect_register;
       return ZX_OK;
     }
@@ -176,8 +184,11 @@ zx_status_t IoApic::WriteRegister(uint8_t select_register, const IoValue& value)
       std::lock_guard<std::mutex> lock(mutex_);
       uint32_t redirect_offset = select_ - kFirstRedirectOffset;
       RedirectEntry& entry = redirect_[redirect_offset / 2];
-      uint32_t* redirect_register = redirect_offset % 2 == 0 ? &entry.lower : &entry.upper;
-      *redirect_register = value.u32;
+      if (redirect_offset % 2 == 0) {
+        entry.set_lower(value.u32);
+      } else {
+        entry.set_upper(value.u32);
+      }
       return ZX_OK;
     }
     case kIoApicRegisterVer:

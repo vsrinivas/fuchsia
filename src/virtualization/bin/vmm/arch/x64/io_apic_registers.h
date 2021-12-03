@@ -29,5 +29,6 @@ constexpr uint8_t kLastRedirectOffset = kFirstRedirectOffset + IoApic::kNumRedir
 // DESTMOD register.
 constexpr uint8_t kIoApicDestmodPhysical = 0x00;
 constexpr uint8_t kIoApicDestmodLogical = 0x01;
+constexpr uint8_t kIoApicNumPhysicalDestinations = 16;
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_IO_APIC_REGISTERS_H_
