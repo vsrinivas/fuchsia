@@ -5,8 +5,8 @@ use {
     anyhow::{format_err, Error, Result},
     core::convert::TryFrom,
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input as ui_input,
-    fidl_fuchsia_ui_input3 as ui_input3,
-    keymaps::{self, usages::input3_key_to_hid_usage},
+    fidl_fuchsia_ui_input3::{self as ui_input3, LockState, Modifiers},
+    keymaps::{self, usages::input3_key_to_hid_usage, LockStateKeys, ModifierState},
     std::collections::HashSet,
 };
 
@@ -180,11 +180,11 @@ impl TryFrom<KeyEvent> for ui_input::KeyboardEvent {
             Some(code_point) => code_point,
             None => keymaps::US_QWERTY.hid_usage_to_code_point(
                 hid_usage,
-                &keymaps::ModifierState {
-                    caps_lock: caps_lock == ui_input::MODIFIER_CAPS_LOCK,
-                    left_shift: left_shift == ui_input::MODIFIER_LEFT_SHIFT,
-                    right_shift: right_shift == ui_input::MODIFIER_RIGHT_SHIFT,
-                },
+                &ModifierState::new()
+                    .with_if(Modifiers::LeftShift, left_shift == ui_input::MODIFIER_LEFT_SHIFT)
+                    .with_if(Modifiers::RightShift, right_shift == ui_input::MODIFIER_RIGHT_SHIFT),
+                &LockStateKeys::new()
+                    .with_if(LockState::CapsLock, caps_lock == ui_input::MODIFIER_CAPS_LOCK),
             )?,
         };
         Ok(ui_input::KeyboardEvent {

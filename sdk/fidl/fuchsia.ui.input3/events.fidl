@@ -105,4 +105,14 @@ type KeyEvent = table {
     /// through the autorepeat mechanism, this property is set and is
     /// incremented by one for each successive generated key event.
     6: repeat_sequence uint32;
+
+    /// The lock state in effect at the time of the event.
+    ///
+    /// For example, if CapsLock effect is turned on (pressing 'a' results in
+    /// the effect 'A'), the corresponding bit in the lock state is set.
+    ///
+    /// NOTE: `LockState` is different from whether the CapsLock modifier key
+    /// is actuated or not. `LockState.CAPS_LOCK` can be active even if the
+    /// Caps Lock key is not currently actuated.
+    7: lock_state LockState;
 };

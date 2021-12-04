@@ -3,26 +3,70 @@
 // found in the LICENSE file.
 library fuchsia.ui.input3;
 
+/// Declares all the modifiers supported by Fuchsia's input subsystem.
+///
 /// Modifiers are special keys that modify the purpose or the function
 /// of other keys when used in combination with them.  In the Modifiers type,
 /// a bit is set if the specific modifier key is actuated (held down),
-/// irrespective of whether the modifier is has an associated lock state or not.
+/// irrespective of whether the modifier has an associated lock state or not.
+///
+/// Somewhat specially, and as a convenience for the users, the modifiers that
+/// have "left" and "right" flavors have special bit values which can be used
+/// if the distinction between sides does not matter.
 type Modifiers = flexible bits : uint64 {
     /// Applies when the `CAPS_LOCK` modifier is actuated.
-    CAPS_LOCK = 0x00000001;
+    CAPS_LOCK = 0x1;
     /// Applies when the `NUM_LOCK` modifier is actuated.
-    NUM_LOCK = 0x00000002;
+    NUM_LOCK = 0x2;
     /// Applies when the `SCROLL_LOCK` modifier is actuated.
-    SCROLL_LOCK = 0x00000004;
-
-    // TODO: Define additional modifiers as needed.
-    // SHIFT, CONTROL, ALT, META
-    // ALT_GRAPH, FUNCTION, FUNCTION_LOCK, SYMBOL, SYMBOL_LOCK
+    SCROLL_LOCK = 0x4;
+    /// Applies when the `FUNCTION` modifier is actuated.
+    FUNCTION = 0x8;
+    /// Applies when the `SYMBOL` modifier is actuated.
+    SYMBOL = 0x10;
+    /// Applies when the left SHIFT modifier is actuated.
+    LEFT_SHIFT = 0x20;
+    /// Applies when the right SHIFT modifier is actuated.
+    RIGHT_SHIFT = 0x40;
+    /// Applies when either `LEFT_SHIFT` or `RIGHT_SHIFT` modifier is actuated.
+    ///
+    /// This bit mask a convenience to test for either `LEFT_SHIFT`
+    /// or `RIGHT_SHIFT`.
+    SHIFT = 0x80;
+    /// Applies when the left `ALT` modifier is actuated.
+    LEFT_ALT = 0x100;
+    /// Applies when the right `ALT` modifier is actuated.
+    RIGHT_ALT = 0x200;
+    /// Applies when either the left `ALT` or the right `ALT` modifier
+    /// is actuated.
+    ALT = 0x400;
+    /// Applies when the `ALT_GRAPH` modifier is actuated.
+    ALT_GRAPH = 0x800;
+    /// Applies when the `LEFT_META` modifier is actuated.
+    LEFT_META = 0x1000;
+    /// Applies when the `RIGHT_META` modifier is actuated.
+    RIGHT_META = 0x2000;
+    /// Applies when either `LEFT_META` or `RIGHT_META` modifier is actuated.
+    META = 0x4000;
+    /// Applies when the `LEFT_CTRL` modifier is actuated.
+    LEFT_CTRL = 0x8000;
+    /// Applies when the `RIGHT_CTRL` modifier is actuated.
+    RIGHT_CTRL = 0x10000;
+    /// Applies when either `LEFT_CTRL` or `RIGHT_CTRL` modifier is actuated.
+    CTRL = 0x20000;
 };
 
+/// A bit field of lock states which are currently active.
+///
 /// Lock state reports whether the lock is active for the keys which have a lock
 /// state (need to be pressed once to activate, and one more time to deactivate).
 /// A set bit denotes active lock state.
+///
+/// For example, when Caps Lock is active, i.e. pressing 'a' produces the effect
+/// of 'A' appearing on the screen, the `CAPS_LOCK` bit will be active.
+///
+/// The bit values in `LockState` are chosen to correspond to the values in
+/// `Modifiers`, to the extent that this is doable in the long run.
 type LockState = flexible bits : uint64 {
     /// Applies when the `CAPS_LOCK` modifier is locked.
     ///
@@ -36,9 +80,13 @@ type LockState = flexible bits : uint64 {
     ///
     /// The position of alphabetic keys may vary depending on the keymap in
     /// current use too.
-    CAPS_LOCK = 0x00000001;
+    CAPS_LOCK = 0x1;
     /// Applies when the `NUM_LOCK` modifier is locked.
-    NUM_LOCK = 0x00000002;
+    NUM_LOCK = 0x2;
     /// Applies when the `SCROLL_LOCK` modifier is locked.
-    SCROLL_LOCK = 0x00000004;
+    SCROLL_LOCK = 0x4;
+    /// Applies when the `FUNCTION` modifier is locked.
+    FUNCTION_LOCK = 0x8;
+    /// Applies when the `SYMBOL` modifier is locked.
+    SYMBOL_LOCK = 0x10;
 };

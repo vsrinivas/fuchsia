@@ -25,6 +25,9 @@ pub struct ImeHandler {
 
     /// Tracks the state of shift keys, for keymapping purposes.
     modifier_tracker: RefCell<keymaps::ModifierState>,
+
+    /// Tracks the lock state (CapsLock, NumLock etc) for keymapping purposes.
+    lock_state_tracker: RefCell<keymaps::LockStateKeys>,
 }
 
 #[async_trait(?Send)]
@@ -40,13 +43,19 @@ impl InputHandler for ImeHandler {
             handled: input_device::Handled::No,
         } = input_event
         {
-            self.modifier_tracker
-                .borrow_mut()
-                .update(keyboard_device_event.get_event_type(), keyboard_device_event.get_key());
+            self.modifier_tracker.borrow_mut().update(
+                keyboard_device_event.get_event_type(),
+                keyboard_device_event.get_key(),
+            );
+            self.lock_state_tracker.borrow_mut().update(
+                keyboard_device_event.get_event_type(),
+                keyboard_device_event.get_key(),
+            );
             let key_event = create_key_event(
                 &keyboard_device_event,
                 event_time,
                 &self.modifier_tracker.borrow(),
+                &self.lock_state_tracker.borrow(),
             );
             self.dispatch_key(key_event).await;
             // Consume the input event.
@@ -73,7 +82,11 @@ impl ImeHandler {
     async fn new_handler(
         key_event_injector: fidl_ui_input3::KeyEventInjectorProxy,
     ) -> Result<Rc<Self>, Error> {
-        let handler = ImeHandler { key_event_injector, modifier_tracker: Default::default() };
+        let handler = ImeHandler {
+            key_event_injector,
+            modifier_tracker: Default::default(),
+            lock_state_tracker: Default::default(),
+        };
 
         Ok(Rc::new(handler))
     }
@@ -107,6 +120,7 @@ fn create_key_event(
     event: &keyboard_binding::KeyboardEvent,
     event_time: input_device::EventTime,
     modifier_state: &keymaps::ModifierState,
+    lock_state: &keymaps::LockStateKeys,
 ) -> fidl_ui_input3::KeyEvent {
     let (key, event_type, modifiers) =
         (event.get_key(), event.get_event_type(), event.get_modifiers());
@@ -117,7 +131,8 @@ fn create_key_event(
         event_type
     );
     // Don't override the key meaning if already set, e.g. by prior stage.
-    let key_meaning = event.get_key_meaning().or(keymaps::US_QWERTY.apply(key, modifier_state));
+    let key_meaning =
+        event.get_key_meaning().or(keymaps::US_QWERTY.apply(key, modifier_state, &lock_state));
 
     fidl_ui_input3::KeyEvent {
         timestamp: Some(event_time.try_into().unwrap_or_default()),

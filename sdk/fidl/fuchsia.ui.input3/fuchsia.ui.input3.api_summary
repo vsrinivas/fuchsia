@@ -1,5 +1,6 @@
 table/member fuchsia.ui.input3/KeyEvent.key fuchsia.input/Key
 table/member fuchsia.ui.input3/KeyEvent.key_meaning fuchsia.ui.input3/KeyMeaning
+table/member fuchsia.ui.input3/KeyEvent.lock_state fuchsia.ui.input3/LockState
 table/member fuchsia.ui.input3/KeyEvent.modifiers fuchsia.ui.input3/Modifiers
 table/member fuchsia.ui.input3/KeyEvent.repeat_sequence uint32
 table/member fuchsia.ui.input3/KeyEvent.timestamp int64
@@ -23,12 +24,29 @@ protocol fuchsia.ui.input3/Keyboard
 protocol/member fuchsia.ui.input3/KeyboardListener.OnKeyEvent(fuchsia.ui.input3/KeyEvent event) -> (fuchsia.ui.input3/KeyEventStatus status)
 protocol fuchsia.ui.input3/KeyboardListener
 bits/member fuchsia.ui.input3/LockState.CAPS_LOCK 1
+bits/member fuchsia.ui.input3/LockState.FUNCTION_LOCK 8
 bits/member fuchsia.ui.input3/LockState.NUM_LOCK 2
 bits/member fuchsia.ui.input3/LockState.SCROLL_LOCK 4
+bits/member fuchsia.ui.input3/LockState.SYMBOL_LOCK 16
 flexible bits fuchsia.ui.input3/LockState uint64
+bits/member fuchsia.ui.input3/Modifiers.ALT 1024
+bits/member fuchsia.ui.input3/Modifiers.ALT_GRAPH 2048
 bits/member fuchsia.ui.input3/Modifiers.CAPS_LOCK 1
+bits/member fuchsia.ui.input3/Modifiers.CTRL 131072
+bits/member fuchsia.ui.input3/Modifiers.FUNCTION 8
+bits/member fuchsia.ui.input3/Modifiers.LEFT_ALT 256
+bits/member fuchsia.ui.input3/Modifiers.LEFT_CTRL 32768
+bits/member fuchsia.ui.input3/Modifiers.LEFT_META 4096
+bits/member fuchsia.ui.input3/Modifiers.LEFT_SHIFT 32
+bits/member fuchsia.ui.input3/Modifiers.META 16384
 bits/member fuchsia.ui.input3/Modifiers.NUM_LOCK 2
+bits/member fuchsia.ui.input3/Modifiers.RIGHT_ALT 512
+bits/member fuchsia.ui.input3/Modifiers.RIGHT_CTRL 65536
+bits/member fuchsia.ui.input3/Modifiers.RIGHT_META 8192
+bits/member fuchsia.ui.input3/Modifiers.RIGHT_SHIFT 64
 bits/member fuchsia.ui.input3/Modifiers.SCROLL_LOCK 4
+bits/member fuchsia.ui.input3/Modifiers.SHIFT 128
+bits/member fuchsia.ui.input3/Modifiers.SYMBOL 16
 flexible bits fuchsia.ui.input3/Modifiers uint64
 enum/member fuchsia.ui.input3/NonPrintableKey.BACKSPACE 65
 enum/member fuchsia.ui.input3/NonPrintableKey.ENTER 49

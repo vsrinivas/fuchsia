@@ -8,7 +8,8 @@
 //! This is useful during the transition towards a more configurable keymap
 //! support.
 
-use crate::ModifierState;
+use crate::{LockStateKeys, ModifierState};
+use fidl_fuchsia_ui_input3::{LockState, Modifiers};
 use lazy_static::lazy_static;
 use std::convert::Into;
 
@@ -437,8 +438,8 @@ impl From<(char, Option<char>, bool)> for KeyLevels {
 }
 
 impl KeyLevels {
-    pub fn get_key(&self, m: &ModifierState) -> Option<char> {
-        if m.is_caps_lock_active() && self.is_letter || m.is_shift_active() {
+    pub fn get_key(&self, m: &ModifierState, l: &LockStateKeys) -> Option<char> {
+        if l.test(LockState::CapsLock) && self.is_letter || m.test(Modifiers::Shift) {
             return self.shift_ch;
         }
         Some(self.ch)

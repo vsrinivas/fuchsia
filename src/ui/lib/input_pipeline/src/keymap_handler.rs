@@ -24,6 +24,9 @@ use std::rc::Rc;
 pub struct KeymapHandler {
     /// Tracks the state of the modifier keys.
     modifier_state: RefCell<keymaps::ModifierState>,
+
+    /// Tracks the lock state (NumLock, CapsLock).
+    lock_state: RefCell<keymaps::LockStateKeys>,
 }
 
 /// This trait implementation allows the [KeymapHandler] to be hooked up into the input
@@ -68,16 +71,21 @@ impl KeymapHandler {
         fx_log_debug!(
             concat!(
                 "Keymap::process_keyboard_event: key:{:?}, ",
-                "modifier_state:{:?}, event_type: {:?}"
+                "modifier_state:{:?}, lock_state: {:?}, event_type: {:?}"
             ),
             key,
             self.modifier_state.borrow(),
+            self.lock_state.borrow(),
             event_type
         );
 
         self.modifier_state.borrow_mut().update(event_type, key);
-        let key_meaning =
-            keymaps::select_keymap(&event.get_keymap()).apply(key, &*self.modifier_state.borrow());
+        self.lock_state.borrow_mut().update(event_type, key);
+        let key_meaning = keymaps::select_keymap(&event.get_keymap()).apply(
+            key,
+            &*self.modifier_state.borrow(),
+            &*self.lock_state.borrow(),
+        );
         vec![input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Keyboard(
                 event.clone().into_with_key_meaning(key_meaning),
