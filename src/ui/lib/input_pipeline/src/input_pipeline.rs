@@ -395,7 +395,9 @@ impl InputPipeline {
     fn catch_unhandled(mut receiver: UnboundedReceiver<input_device::InputEvent>) {
         fasync::Task::local(async move {
             while let Some(event) = receiver.next().await {
-                fx_log_warn!("unhandled input event: {:?}", &event);
+                if event.handled == input_device::Handled::No {
+                    fx_log_warn!("unhandled input event: {:?}", &event);
+                }
             }
             panic!("unhandled event catcher is not supposed to terminate.");
         })
