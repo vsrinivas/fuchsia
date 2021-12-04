@@ -37,28 +37,58 @@ fn create_netstack_realm<'a>(
     )
 }
 
-/// Returns the online status of the interface with `expected_name`.
+/// Verifies that an interface with `interface_name` exists and has the provided
+/// `expected_online_status`.
 ///
-/// If the interface is not found, then `None` is returned
-async fn get_interface_online_status<'a>(
+/// Note that this function will not return until the `expected_online_status`
+/// is observed.
+async fn wait_interface_online_status<'a>(
+    interface_name: &'a str,
+    expected_online_status: bool,
+    state_proxy: &'a fnet_interfaces::StateProxy,
+) {
+    let id = get_interface_id(interface_name, state_proxy).await.unwrap_or_else(|| {
+        panic!("failed to find interface with name {}", interface_name);
+    });
+    let () = fnet_interfaces_ext::wait_interface_with_id(
+        fnet_interfaces_ext::event_stream_from_state(state_proxy).expect("watcher creation failed"),
+        &mut fnet_interfaces_ext::InterfaceState::Unknown(id),
+        |&fnet_interfaces_ext::Properties { online, .. }| {
+            (expected_online_status == online).then(|| ())
+        },
+    )
+    .await
+    .expect("wait for interface failed");
+}
+
+/// Verifies that an interface with `interface_name` does not exist.
+async fn verify_interface_not_exist<'a>(
     interface_name: &'a str,
     state_proxy: &'a fnet_interfaces::StateProxy,
-) -> Option<bool> {
+) {
+    assert_eq!(get_interface_id(interface_name, state_proxy).await, None);
+}
+
+/// Returns the id for the interface with `interface_name`.
+///
+/// If the interface is not found then, None is returned.
+async fn get_interface_id<'a>(
+    interface_name: &'a str,
+    state_proxy: &'a fnet_interfaces::StateProxy,
+) -> Option<u64> {
     let stream = fnet_interfaces_ext::event_stream_from_state(&state_proxy)
         .expect("failed to get interface stream");
     let interfaces = fnet_interfaces_ext::existing(stream, HashMap::new())
         .await
         .expect("failed to get existing interfaces");
     interfaces.values().find_map(
-        |fidl_fuchsia_net_interfaces_ext::Properties {
-             name,
-             online,
-             id: _,
-             device_class: _,
-             addresses: _,
-             has_default_ipv4_route: _,
-             has_default_ipv6_route: _,
-         }| if interface_name == name { Some(*online) } else { None },
+        |fidl_fuchsia_net_interfaces_ext::Properties { id, name, .. }| {
+            if name == interface_name {
+                Some(*id)
+            } else {
+                None
+            }
+        },
     )
 }
 
@@ -107,24 +137,6 @@ async fn has_hermetic_network_realm(realm: &netemul::TestRealm<'_>) -> bool {
     network_test_realm_common::has_hermetic_network_realm(&realm_proxy)
         .await
         .expect("failed to check for hermetic network realm")
-}
-
-/// Verifies that the system interface with `name` has the provided
-/// `expected_online_status`.
-async fn verify_system_interface_online_status(
-    name: &str,
-    realm: &netemul::TestRealm<'_>,
-    expected_online_status: bool,
-) {
-    let system_stack_proxy = realm
-        .connect_to_protocol::<fnet_interfaces::StateMarker>()
-        .expect("failed to connect to state");
-    let online_status =
-        get_interface_online_status(name, &system_stack_proxy).await.unwrap_or_else(|| {
-            panic!("failed to find system interface with name {}", name);
-        });
-
-    assert_eq!(expected_online_status, online_status);
 }
 
 async fn add_interface_to_system_netstack<'a>(
@@ -225,23 +237,25 @@ async fn start_hermetic_network_realm_replaces_existing_realm() {
         .expect("start_hermetic_network_realm failed")
         .expect("start_hermetic_network_realm error");
 
+    let system_state_proxy = realm
+        .connect_to_protocol::<fnet_interfaces::StateMarker>()
+        .expect("failed to connect to state");
+
     // The interface on the system's Netstack should be re-enabled (it was
     // disabled when an interface was added above).
-    verify_system_interface_online_status(
+    wait_interface_online_status(
         ETH1_INTERFACE_NAME,
-        &realm,
         true, /* expected_online_status */
+        &system_state_proxy,
     )
     .await;
 
     let hermetic_network_state_proxy =
         connect_to_hermetic_network_realm_protocol::<fnet_interfaces::StateMarker>(&realm).await;
+
     // The Netstack in the replaced hermetic network realm should not have the
     // previously attached interface.
-    assert_eq!(
-        get_interface_online_status(EXPECTED_INTERFACE_NAME, &hermetic_network_state_proxy).await,
-        None
-    );
+    verify_interface_not_exist(EXPECTED_INTERFACE_NAME, &hermetic_network_state_proxy).await;
 
     assert!(has_hermetic_network_realm(&realm).await);
 }
@@ -276,31 +290,30 @@ async fn add_interface() {
         .expect("add_interface failed")
         .expect("add_interface error");
 
+    let system_state_proxy = realm
+        .connect_to_protocol::<fnet_interfaces::StateMarker>()
+        .expect("failed to connect to state");
+
     // The corresponding interface on the system's Netstack should be disabled
     // when an interface is added to the hermetic Netstack.
-    verify_system_interface_online_status(
+    wait_interface_online_status(
         ETH1_INTERFACE_NAME,
-        &realm,
         false, /* expected_online_status */
+        &system_state_proxy,
     )
     .await;
 
     let hermetic_network_state_proxy =
         connect_to_hermetic_network_realm_protocol::<fnet_interfaces::StateMarker>(&realm).await;
 
-    let online_status =
-        get_interface_online_status(EXPECTED_INTERFACE_NAME, &hermetic_network_state_proxy)
-            .await
-            .unwrap_or_else(|| {
-                panic!(
-                    "failed to find hermetic network interface with: name {}",
-                    EXPECTED_INTERFACE_NAME
-                );
-            });
-
     // An interface with a name of `EXPECTED_INTERFACE_NAME` should be enabled and
     // present in the hermetic Netstack.
-    assert!(online_status);
+    wait_interface_online_status(
+        EXPECTED_INTERFACE_NAME,
+        true, /* expected_online_status */
+        &hermetic_network_state_proxy,
+    )
+    .await;
 }
 
 // Tests the case where the MAC address provided to `Controller.AddInterface`
@@ -444,10 +457,14 @@ async fn stop_hermetic_network_realm() {
         .expect("stop_hermetic_network_realm failed")
         .expect("stop_hermetic_network_realm error");
 
-    verify_system_interface_online_status(
+    let system_state_proxy = realm
+        .connect_to_protocol::<fnet_interfaces::StateMarker>()
+        .expect("failed to connect to state");
+
+    wait_interface_online_status(
         ETH1_INTERFACE_NAME,
-        &realm,
         true, /* expected_online_status */
+        &system_state_proxy,
     )
     .await;
     assert!(!has_hermetic_network_realm(&realm).await);
