@@ -5,14 +5,16 @@
 mod femu_behavior;
 mod handlers;
 
+use anyhow::{anyhow, Result};
+use ffx_emulator_config::{Behavior, BehaviorTrait};
+use handlers::{
+    hvf_behavior::HvfBehavior, kvm_behavior::KvmBehavior,
+    no_acceleration_behavior::NoAccelerationBehavior, simple_behavior::SimpleBehavior,
+};
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 
 pub use femu_behavior::FemuBehavior;
-pub use handlers::hvf_behavior::HvfBehavior;
-pub use handlers::kvm_behavior::KvmBehavior;
-pub use handlers::no_acceleration_behavior::NoAccelerationBehavior;
-pub use handlers::simple_behavior::SimpleBehavior;
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub(crate) enum BehaviorHandler {
@@ -37,4 +39,30 @@ impl FromStr for BehaviorHandler {
             Ok(v) => Ok(v),
         };
     }
+}
+
+pub fn get_handler_for_behavior(behavior: &Behavior) -> Result<Box<dyn BehaviorTrait + '_>> {
+    let result = BehaviorHandler::from_str(&behavior.handler);
+    let behavior_handler;
+    match result {
+        Ok(handler) => {
+            behavior_handler = handler;
+        }
+        Err(error) => return Err(anyhow!(error)),
+    }
+    let b = match behavior_handler {
+        BehaviorHandler::HvfBehavior => {
+            Box::new(HvfBehavior { behavior: &behavior }) as Box<dyn BehaviorTrait>
+        }
+        BehaviorHandler::KvmBehavior => {
+            Box::new(KvmBehavior { behavior: &behavior }) as Box<dyn BehaviorTrait>
+        }
+        BehaviorHandler::NoAccelerationBehavior => {
+            Box::new(NoAccelerationBehavior { behavior: &behavior }) as Box<dyn BehaviorTrait>
+        }
+        BehaviorHandler::SimpleBehavior => {
+            Box::new(SimpleBehavior { behavior: &behavior }) as Box<dyn BehaviorTrait>
+        }
+    };
+    return Ok(b);
 }

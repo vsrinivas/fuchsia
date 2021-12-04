@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 /// A Behavior for setting up the MacOS Hypervisor Framework (HFV) feature. Femu on MacOS can't use
-/// KVM for acceleration, so HVF is the MacOS alternative. 
-
+/// KVM for acceleration, so HVF is the MacOS alternative.
 use crate::behaviors::FemuBehavior;
 use anyhow::Result;
 use ffx_emulator_config::{
@@ -27,7 +26,9 @@ impl BehaviorTrait for HvfBehavior<'_> {
             // For now it accepts for Auto.
         }
         if std::env::consts::OS != "macos" {
-            return Ok(FilterResult::Reject("HvfBehavior rejected since OS is not MacOS.".to_string()));
+            return Ok(FilterResult::Reject(
+                "HvfBehavior rejected since OS is not MacOS.".to_string(),
+            ));
         }
         Ok(FilterResult::Accept)
     }

@@ -4,7 +4,6 @@
 
 /// A Behavior for setting up Kernel-based Virtualization (KVM) acceleration. KVM for Femu is only
 /// supported for Linux hosts.
-
 use crate::behaviors::FemuBehavior;
 use anyhow::Result;
 use ffx_emulator_config::{
@@ -27,7 +26,9 @@ impl BehaviorTrait for KvmBehavior<'_> {
             // For now it accepts for Auto.
         }
         if std::env::consts::OS != "linux" {
-            return Ok(FilterResult::Reject("KvmBehavior rejected since OS is not Linux.".to_string()));
+            return Ok(FilterResult::Reject(
+                "KvmBehavior rejected since OS is not Linux.".to_string(),
+            ));
         }
         Ok(FilterResult::Accept)
     }

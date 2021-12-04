@@ -6,7 +6,6 @@
 /// runs prohibitively slow without acceleration, but necessary for hosts that don't have KVM/HVF
 /// available. Enabled by setting `--accel none` on the command line, or `--accel auto` on hosts
 /// where acceleration software is not installed (see TODO comment below).
-
 use crate::behaviors::FemuBehavior;
 use anyhow::Result;
 use ffx_emulator_config::{

@@ -5,10 +5,14 @@
 //! The qemu_base module encapsulates traits and functions specific
 //! for engines using QEMU as the emulator platform.
 
-use anyhow::{anyhow, bail, Result};
+use crate::behaviors::get_handler_for_behavior;
+use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 use ffx_emulator_common::{config, config::FfxConfigWrapper};
-use ffx_emulator_config::{DataUnits, DeviceConfig, GuestConfig};
+use ffx_emulator_config::{
+    Behavior, DataUnits, DeviceConfig, EmulatorConfiguration, FilterResult, GuestConfig,
+};
+use std::collections::HashMap;
 use std::{fs, path::PathBuf, process::Command, str};
 
 /// QemuBasedEngine collects the interface for
@@ -141,11 +145,73 @@ pub(crate) trait QemuBasedEngine {
         }
         Ok(())
     }
+
+    fn set_up_behaviors(config: &EmulatorConfiguration) -> Result<HashMap<String, Behavior>> {
+        let mut implemented_behaviors = HashMap::new();
+        for key in config.behaviors.keys() {
+            let behavior = config.behaviors.get(key).unwrap();
+            let b = get_handler_for_behavior(&behavior)?;
+
+            let result = b
+                .filter(config)
+                .with_context(|| format!("Failure when checking the filter for {}", key));
+            match result {
+                Ok(filter_result) => match filter_result {
+                    FilterResult::Reject(message) => {
+                        log::debug!("Filtering out the {} behavior: {:?}", key, message);
+                        continue;
+                    }
+                    FilterResult::Accept => {
+                        log::debug!("Adding behavior {} for implementation.", key);
+                        implemented_behaviors.insert(key.clone(), behavior.clone());
+                    }
+                },
+                Err(e) => return Err(e),
+            }
+
+            let setup_result = b.setup();
+            if let Err(error) = setup_result {
+                log::debug!("The {} behavior failed during setup.", key);
+                if let Err(e) = Self::clean_up_behaviors(&implemented_behaviors) {
+                    log::debug!(
+                        "The cleanup also failed after failed setup routine for behavior {}: {:?}",
+                        key,
+                        e
+                    );
+                }
+                return Err(error);
+            }
+        }
+        Ok(implemented_behaviors)
+    }
+
+    fn clean_up_behaviors(behaviors: &HashMap<String, Behavior>) -> Result<()> {
+        let mut errors: Vec<anyhow::Error> = Vec::new();
+        for key in behaviors.keys() {
+            let behavior = behaviors.get(key).unwrap();
+            let b = get_handler_for_behavior(behavior)?;
+            if let Err(error) = b.cleanup() {
+                log::error!("Failed to clean up {}: {:?}", behavior.handler, error);
+                errors.push(error);
+            }
+        }
+        if errors.len() > 0 {
+            let first = errors.get(0).unwrap();
+            return Err(anyhow!(
+                "Encountered {} failures during cleanup, starting with: {:?}",
+                errors.len(),
+                first
+            ));
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ffx_emulator_config::{AccelerationMode, Behavior, BehaviorData};
+    use std::collections::HashMap;
     use tempfile::tempdir;
 
     struct TestEngine {}
@@ -194,5 +260,53 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(actual, expected);
+    }
+
+    fn new_behavior(handler: String) -> Behavior {
+        Behavior {
+            description: "Description".to_string(),
+            handler,
+            data: BehaviorData { femu: None },
+        }
+    }
+
+    #[test]
+    fn test_filter_reject() -> Result<()> {
+        // The KvmBehavior is rejected when AccelerationMode is None.
+        let bad_filter = Behavior {
+            description: "Description".to_string(),
+            handler: "KvmBehavior".to_string(),
+            data: BehaviorData { femu: None },
+        };
+
+        let mut behaviors = HashMap::new();
+        behaviors.insert("test_filter_reject".to_string(), bad_filter);
+
+        let mut config = EmulatorConfiguration::default();
+        config.behaviors = behaviors;
+        config.host.acceleration = AccelerationMode::None;
+
+        let implemented_behaviors = TestEngine::set_up_behaviors(&config)?;
+        assert_eq!(implemented_behaviors.len(), 0);
+        assert!(TestEngine::clean_up_behaviors(&implemented_behaviors).is_ok());
+        Ok(())
+    }
+
+    #[test]
+    fn test_filter_accept() -> Result<()> {
+        // The SimpleBehavior is always accepted.
+        let good_filter = new_behavior("SimpleBehavior".to_string());
+
+        let mut behaviors = HashMap::new();
+        behaviors.insert("test_filter_accept".to_string(), good_filter);
+
+        let mut config = EmulatorConfiguration::default();
+        config.behaviors = behaviors;
+
+        let implemented_behaviors = TestEngine::set_up_behaviors(&config)?;
+        assert_eq!(implemented_behaviors.len(), 1);
+        assert!(implemented_behaviors.keys().any(|k| k == "test_filter_accept"));
+        assert!(TestEngine::clean_up_behaviors(&implemented_behaviors).is_ok());
+        Ok(())
     }
 }

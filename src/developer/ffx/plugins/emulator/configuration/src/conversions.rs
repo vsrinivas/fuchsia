@@ -30,7 +30,7 @@ pub fn convert_bundle_to_configs(
         screen: virtual_device.hardware.window_size.clone(),
         storage: virtual_device.hardware.storage.clone(),
     };
-    emulator_configuration.behavior = virtual_device.behaviors.clone();
+    emulator_configuration.behaviors = virtual_device.behaviors.clone();
     if let Some(manifests) = &product_bundle.manifests {
         if let Some(emu) = &manifests.emu {
             emulator_configuration.guest = GuestConfig {
@@ -132,7 +132,7 @@ mod tests {
         assert_eq!(config.guest.kernel_image.to_string_lossy(), emu.kernel);
         assert_eq!(config.guest.zbi_image.to_string_lossy(), emu.initial_ramdisk);
 
-        assert!(config.behavior.contains_key("four_core_cpu"));
+        assert!(config.behaviors.contains_key("four_core_cpu"));
 
         // Adjust all of the values that affect the config, then run it again.
         pb.manifests = Some(Manifests {

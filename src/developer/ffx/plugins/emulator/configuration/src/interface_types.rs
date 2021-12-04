@@ -55,7 +55,7 @@ pub trait EmulatorEngine {
 /// Collects the specific configurations into a single struct for ease of passing around.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct EmulatorConfiguration {
-    pub behavior: HashMap<String, Behavior>,
+    pub behaviors: HashMap<String, Behavior>,
     pub device: DeviceConfig,
     pub guest: GuestConfig,
     pub host: HostConfig,
