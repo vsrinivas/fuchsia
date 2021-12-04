@@ -96,8 +96,7 @@ static bool vmo_pin_test() {
 
     fbl::RefPtr<VmObjectPaged> vmo;
     zx_status_t status;
-    status =
-        VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, alloc_size, &vmo);
+    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, alloc_size, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
@@ -156,7 +155,7 @@ static bool vmo_pin_contiguous_test() {
     fbl::RefPtr<VmObjectPaged> vmo;
     zx_status_t status;
     status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, alloc_size,
-                                              /*alignment_log2=*/0, &vmo);
+                                             /*alignment_log2=*/0, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
@@ -291,7 +290,7 @@ static bool vmo_multiple_pin_contiguous_test() {
     fbl::RefPtr<VmObjectPaged> vmo;
     zx_status_t status;
     status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, alloc_size,
-                                              /*alignment_log2=*/0, &vmo);
+                                             /*alignment_log2=*/0, &vmo);
     ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
     ASSERT_TRUE(vmo, "vmobject creation\n");
 
@@ -1390,6 +1389,9 @@ static bool vmo_eviction_hints_test() {
   // Hint that the page is always needed.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
 
+  // If the page was loaned, it will be replaced with a non-loaned page now.
+  page = vmo->DebugGetPage(0);
+
   // The page should now have moved to the first LRU queue.
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
@@ -1401,6 +1403,9 @@ static bool vmo_eviction_hints_test() {
 
   // Hint that the page is not needed again.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
+
+  // HintRange() is allowed to replace the page.
+  page = vmo->DebugGetPage(0);
 
   // The page should now have moved to the DontNeed queue.
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBacked(page));
@@ -1439,6 +1444,68 @@ static bool vmo_eviction_hints_test() {
   END_TEST;
 }
 
+static bool vmo_always_need_evicts_loaned_test() {
+  BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
+  // Depending on which loaned page we get, it may not still be loaned at the time HintRange() is
+  // called, so try a few times and make sure we see non-loaned after HintRange() for all the tries.
+  const uint32_t kTryCount = 30;
+  for (uint32_t try_ordinal = 0; try_ordinal < kTryCount; ++try_ordinal) {
+    bool loaning_was_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
+    bool borrowing_was_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+    pmm_physical_page_borrowing_config()->set_loaning_enabled(true);
+    pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+    auto cleanup = fit::defer([loaning_was_enabled, borrowing_was_enabled] {
+      pmm_physical_page_borrowing_config()->set_loaning_enabled(loaning_was_enabled);
+      pmm_physical_page_borrowing_config()->set_borrowing_enabled(borrowing_was_enabled);
+    });
+
+    zx_status_t status;
+    fbl::RefPtr<VmObjectPaged> vmo;
+    vm_page_t* page;
+    const uint32_t kPagesToLoan = 10;
+    fbl::RefPtr<VmObjectPaged> contiguous_vmos[kPagesToLoan];
+    uint32_t iteration_count = 0;
+    const uint32_t kMaxIterations = 2000;
+    do {
+      // Before we call make_committed_pager_vmo(), we create a few 1-page contiguous VMOs and
+      // decommit them, to increase the chance that make_committed_pager_vmo() picks up a loaned
+      // page, so we'll get to replace that page during HintRange() below.  The decommit (loaning)
+      // is best effort in case loaning is disabled.
+      for (uint32_t i = 0; i < kPagesToLoan; ++i) {
+        status = VmObjectPaged::CreateContiguous(PMM_ALLOC_FLAG_ANY, PAGE_SIZE,
+                                                 /*alignment_log2=*/0, &contiguous_vmos[i]);
+        ASSERT_EQ(ZX_OK, status);
+        status = contiguous_vmos[i]->DecommitRange(0, PAGE_SIZE);
+        ASSERT_TRUE(status == ZX_OK || status == ZX_ERR_NOT_SUPPORTED);
+      }
+
+      // Create a pager-backed VMO with a single page.
+      status = make_committed_pager_vmo(1, &page, &vmo);
+      ASSERT_EQ(ZX_OK, status);
+      ++iteration_count;
+    } while (!pmm_is_loaned(page) && iteration_count < kMaxIterations);
+
+    // If we hit this iteration count, something almost certainly went wrong...
+    ASSERT_TRUE(iteration_count < kMaxIterations);
+
+    // At this point we can't be absolutely certain that the page will stay loaned depending on
+    // which loaned page we got, so we run this in an outer loop that tries this a few times.
+
+    // Hint that the page is always needed.
+    ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+
+    // If the page was still loaned, it will be replaced with a non-loaned page now.
+    page = vmo->DebugGetPage(0);
+
+    ASSERT_FALSE(pmm_is_loaned(page));
+  }
+
+  END_TEST;
+}
+
 static bool vmo_eviction_hints_clone_test() {
   BEGIN_TEST;
   AutoVmScannerDisable scanner_disable;
@@ -1473,6 +1540,9 @@ static bool vmo_eviction_hints_clone_test() {
   // Hint that the page is always needed.
   ASSERT_OK(clone->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
 
+  // If the page was loaned, it will be replaced with a non-loaned page now.
+  pages[0] = vmo->DebugGetPage(0);
+
   // The page should now have moved to the first LRU queue.
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(pages[0], &queue));
@@ -1497,6 +1567,9 @@ static bool vmo_eviction_hints_clone_test() {
 
   // Hint that the page is always needed.
   ASSERT_OK(clone2->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
+
+  // If the page was loaned, it will be replaced with a non-loaned page now.
+  pages[0] = vmo->DebugGetPage(0);
 
   // The page should now have moved to the first LRU queue.
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(pages[0]));
@@ -1759,8 +1832,8 @@ static bool vmo_attribution_ops_test() {
 
     fbl::RefPtr<VmObjectPaged> vmo;
     zx_status_t status;
-    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 4 * PAGE_SIZE,
-                                    &vmo);
+    status =
+        VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kResizable, 4 * PAGE_SIZE, &vmo);
     ASSERT_EQ(ZX_OK, status);
 
     uint64_t expected_gen_count = 1;
@@ -1849,8 +1922,8 @@ static bool vmo_attribution_ops_test() {
     ASSERT_EQ(ZX_OK, status);
     ++expected_gen_count;
     expected_page_count -= 2;
-    EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count,
-                                                    expected_page_count));
+    EXPECT_EQ(true,
+              verify_object_page_attribution(vmo.get(), expected_gen_count, expected_page_count));
 
     // Zero'ing the range will decommit pages, and should increment the generation count.  In the
     // case of contiguous VMOs, we don't decommit pages (so far), but we do bump the generation
@@ -2944,6 +3017,7 @@ VM_UNITTEST(vmo_clone_removes_write_test)
 VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
 VM_UNITTEST(vmo_eviction_hints_test)
+VM_UNITTEST(vmo_always_need_evicts_loaned_test)
 VM_UNITTEST(vmo_eviction_hints_clone_test)
 VM_UNITTEST(vmo_eviction_test)
 VM_UNITTEST(vmo_validate_page_splits_test)

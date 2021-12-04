@@ -232,6 +232,11 @@ class VmObjectPaged final : public VmObject {
     return cow_pages_;
   }
 
+  vm_page_t* DebugGetPage(uint64_t offset) const {
+    Guard<Mutex> guard{&lock_};
+    return cow_pages_locked()->DebugGetPageLocked(offset);
+  }
+
   using RangeChangeOp = VmCowPages::RangeChangeOp;
   // Apply the specified operation to all mappings in the given range.
   void RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeChangeOp op) TA_REQ(lock_);
@@ -255,6 +260,10 @@ class VmObjectPaged final : public VmObject {
   void MarkAsLatencySensitive() override {
     Guard<Mutex> guard{&lock_};
     cow_pages_locked()->MarkAsLatencySensitiveLocked();
+  }
+
+  zx_status_t ReplacePageLocked(vm_page_t* page, uint64_t offset, bool with_loaned) TA_REQ(lock_) {
+    return cow_pages_locked()->ReplacePageLocked(page, offset, with_loaned, nullptr);
   }
 
   // Sets the always_need hint on |page| if it belongs to the root VMO in this hierarchy, and is
