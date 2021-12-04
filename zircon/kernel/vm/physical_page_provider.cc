@@ -233,11 +233,6 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
 
           // We specify EvictionHintAction::Follow, but a page will never be both borrowed and
           // ALWAYS_NEED, so Follow doesn't actually matter here.
-          //
-          // TODO(dustingreen): Currently the only thing ensuring that a page is not borrowed +
-          // ALWAYS_NEED is the fact that we don't borrow yet.  Add code to avoid borrowing +
-          // ALWAYS_NEED.  Swap out loaned page on ALWAYS_NEED getting set (for "stage 1"), and
-          // avoid active "sweeping" of an always_need page (for "stage 2").
           DEBUG_ASSERT(!page->object.always_need);
           bool evict_result = cow_container->RemovePageForEviction(
               page, vmo_backlink.offset, VmCowPages::EvictionHintAction::Follow);

@@ -353,7 +353,9 @@ class VmCowPages final
 
   // If page is still at offset, replace it with a different page.  If with_loaned is true, replace
   // with a loaned page.  If with_loaned is false, replace with a non-loaned page.
-  zx_status_t ReplacePage(vm_page_t* page, uint64_t offset, bool with_loaned) TA_EXCL(lock_);
+  zx_status_t ReplacePage(vm_page_t* before_page, uint64_t offset, bool with_loaned) TA_EXCL(lock_);
+  zx_status_t ReplacePageLocked(vm_page_t* before_page, uint64_t offset, bool with_loaned,
+                                vm_page_t** after_page) TA_REQ(lock_);
 
   // Attempts to dedup the given page at the specified offset with the zero page. The only
   // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that
@@ -404,7 +406,7 @@ class VmCowPages final
   void MarkAsLatencySensitiveLocked() TA_REQ(lock_);
 
   // Helper function to hint always_need on a |page| (if applicable).
-  void HintAlwaysNeedLocked(vm_page_t* page) const TA_REQ(lock_);
+  void HintAlwaysNeedLocked(vm_page_t* page) TA_REQ(lock_);
 
   zx_status_t LockRangeLocked(uint64_t offset, uint64_t len, zx_vmo_lock_state_t* lock_state_out);
   zx_status_t TryLockRangeLocked(uint64_t offset, uint64_t len);
@@ -422,7 +424,8 @@ class VmCowPages final
   bool DebugIsPage(uint64_t offset) const;
   bool DebugIsMarker(uint64_t offset) const;
   bool DebugIsEmpty(uint64_t offset) const;
-  vm_page_t* DebugGetPage(uint64_t offset) const;
+  vm_page_t* DebugGetPage(uint64_t offset) const TA_EXCL(lock_);
+  vm_page_t* DebugGetPageLocked(uint64_t offset) const TA_REQ(lock_);
 
   // Discard all the pages from a discardable vmo in the |kReclaimable| state. For this call to
   // succeed, the vmo should have been in the reclaimable state for at least
@@ -508,10 +511,8 @@ class VmCowPages final
     // Exclude ShouldTrapDirtyTransitions() for now to prevent write-back and borrowing from
     // interesecting until we get a chance to fix that up.
     bool result = page_source_ && page_source_->properties().is_preserving_page_content &&
-                  !is_latency_sensitive_ &&
-                  !page_source_->ShouldTrapDirtyTransitions();
-    DEBUG_ASSERT(result == (debug_is_user_pager_backed_locked() &&
-                            !is_latency_sensitive_ &&
+                  !is_latency_sensitive_ && !page_source_->ShouldTrapDirtyTransitions();
+    DEBUG_ASSERT(result == (debug_is_user_pager_backed_locked() && !is_latency_sensitive_ &&
                             !page_source_->ShouldTrapDirtyTransitions()));
     return result;
   }

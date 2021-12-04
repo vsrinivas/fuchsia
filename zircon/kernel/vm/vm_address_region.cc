@@ -812,6 +812,7 @@ zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_
                     }
                     auto vmop = static_cast<VmObjectPaged*>(vmo_locked);
                     AssertHeld(vmop->lock_ref());
+
                     vmop->HintAlwaysNeedLocked(page);
                   });
 

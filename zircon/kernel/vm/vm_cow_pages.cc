@@ -2710,14 +2710,27 @@ void VmCowPages::ProtectRangeFromReclamationLocked(uint64_t offset, uint64_t len
   }
 }
 
-void VmCowPages::HintAlwaysNeedLocked(vm_page_t* page) const {
+void VmCowPages::HintAlwaysNeedLocked(vm_page_t* page) {
   if (!can_root_source_evict_locked()) {
     return;
   }
   // Check to see if the page is owned by the root VMO. Hints only apply to the root.
-  if (page->object.get_object() == GetRootLocked()) {
-    page->object.always_need = 1;
+  VmCowPages* owner = reinterpret_cast<VmCowPages*>(page->object.get_object());
+  if (owner != GetRootLocked()) {
+    return;
   }
+  vm_page_t* cur_page = page;
+  if (pmm_is_loaned(cur_page)) {
+    AssertHeld(owner->lock_);
+    zx_status_t status = owner->ReplacePageLocked(cur_page, cur_page->object.get_page_offset(),
+                                                  /*with_loaned=*/false, &cur_page);
+    if (status != ZX_OK) {
+      // Ignore the failure.  Hints are best effort.  We can't mark a loaned page always_need true.
+      return;
+    }
+  }
+  DEBUG_ASSERT(!pmm_is_loaned(cur_page));
+  cur_page->object.always_need = 1;
 }
 
 void VmCowPages::MarkAsLatencySensitiveLocked() {
@@ -3552,6 +3565,7 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
 
   // Do not evict if the |always_need| hint is set, unless we are told to ignore the eviction hint.
   if (page->object.always_need == 1 && hint_action == EvictionHintAction::Follow) {
+    DEBUG_ASSERT(!pmm_is_loaned(page));
     // We still need to move the page from the tail of the LRU page queue(s) so that the eviction
     // loop can make progress. Since this page is always needed, move it out of the way and into the
     // MRU queue. Do this here while we hold the lock, instead of at the callsite.
@@ -3618,8 +3632,13 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   DEBUG_ASSERT(status == ZX_OK);
 }
 
-zx_status_t VmCowPages::ReplacePage(vm_page_t* page, uint64_t offset, bool with_loaned) {
+zx_status_t VmCowPages::ReplacePage(vm_page_t* before_page, uint64_t offset, bool with_loaned) {
   Guard<Mutex> guard{&lock_};
+  return ReplacePageLocked(before_page, offset, with_loaned, nullptr);
+}
+
+zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offset, bool with_loaned,
+                                          vm_page_t** after_page) {
   VmPageOrMarker* p = page_list_.Lookup(offset);
   if (!p) {
     return ZX_ERR_NOT_FOUND;
@@ -3628,12 +3647,16 @@ zx_status_t VmCowPages::ReplacePage(vm_page_t* page, uint64_t offset, bool with_
     return ZX_ERR_NOT_FOUND;
   }
   vm_page_t* old_page = p->Page();
-  if (old_page != page) {
+  if (old_page != before_page) {
     return ZX_ERR_NOT_FOUND;
   }
-  DEBUG_ASSERT(page != vm_get_zero_page());
-  if (page->object.pin_count != 0) {
-    DEBUG_ASSERT(!pmm_is_loaned(page));
+  DEBUG_ASSERT(old_page != vm_get_zero_page());
+  if (old_page->object.pin_count != 0) {
+    DEBUG_ASSERT(!pmm_is_loaned(old_page));
+    return ZX_ERR_BAD_STATE;
+  }
+  if (old_page->object.always_need) {
+    DEBUG_ASSERT(!old_page->is_loaned());
     return ZX_ERR_BAD_STATE;
   }
   uint32_t pmm_alloc_flags = pmm_alloc_flags_;
@@ -3658,6 +3681,9 @@ zx_status_t VmCowPages::ReplacePage(vm_page_t* page, uint64_t offset, bool with_
   SwapPageLocked(offset, old_page, new_page);
   pmm_page_queues()->Remove(old_page);
   pmm_free_page(old_page);
+  if (after_page) {
+    *after_page = new_page;
+  }
   return ZX_OK;
 }
 
@@ -3974,6 +4000,11 @@ bool VmCowPages::DebugValidateVmoPageBorrowingLocked() const {
         result = false;
         return ZX_ERR_STOP;
       }
+      if (page->object.always_need) {
+        dprintf(INFO, "always_need page is loaned?? - offset: 0x%" PRIx64 "\n", offset);
+        result = false;
+        return ZX_ERR_STOP;
+      }
     }
     return ZX_ERR_NEXT;
   });
@@ -4253,8 +4284,12 @@ bool VmCowPages::DebugIsEmpty(uint64_t offset) const {
 }
 
 vm_page_t* VmCowPages::DebugGetPage(uint64_t offset) const {
-  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   Guard<Mutex> guard{&lock_};
+  return DebugGetPageLocked(offset);
+}
+
+vm_page_t* VmCowPages::DebugGetPageLocked(uint64_t offset) const {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   const VmPageOrMarker* p = page_list_.Lookup(offset);
   if (p && p->IsPage()) {
     return p->Page();
@@ -4433,6 +4468,8 @@ void VmCowPages::CopyPageForReplacementLocked(vm_page_t* dst_page, vm_page_t* sr
   dst_page->object.cow_left_split = src_page->object.cow_left_split;
   dst_page->object.cow_right_split = src_page->object.cow_right_split;
   dst_page->object.always_need = src_page->object.always_need;
+  DEBUG_ASSERT(!dst_page->object.always_need ||
+               (!pmm_is_loaned(dst_page) && !pmm_is_loaned(src_page)));
   dst_page->object.dirty = src_page->object.dirty;
 }
 
