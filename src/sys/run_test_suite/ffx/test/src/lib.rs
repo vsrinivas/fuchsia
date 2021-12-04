@@ -181,10 +181,10 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
         }
         run_test_suite_lib::Outcome::Failed => ffx_bail!("Tests failed."),
         run_test_suite_lib::Outcome::Inconclusive => ffx_bail!("Inconclusive test result."),
-        run_test_suite_lib::Outcome::Error { internal } => match internal {
+        run_test_suite_lib::Outcome::Error { origin } => match origin.is_internal_error() {
             // Using anyhow instead of ffx_bail here prints a message to file a bug.
-            true => Err(anyhow!("There was an internal error running tests.")),
-            false => ffx_bail!("There was an error running tests."),
+            true => Err(anyhow!("There was an internal error running tests: {:?}", origin)),
+            false => ffx_bail!("There was an error running tests: {:?}", origin),
         },
     }
 }

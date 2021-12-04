@@ -23,6 +23,7 @@ use {
     std::fmt,
     std::io::{self, ErrorKind, Write},
     std::path::PathBuf,
+    std::sync::Arc,
     std::time::Duration,
 };
 
@@ -45,18 +46,33 @@ use {
 /// Duration after which to emit an excessive duration log.
 const EXCESSIVE_DURATION: Duration = Duration::from_secs(60);
 
-#[derive(PartialEq, Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum Outcome {
     Passed,
     Failed,
     Inconclusive,
     Timedout,
-    Error { internal: bool },
+    Error { origin: Arc<RunTestSuiteError> },
 }
 
 impl Outcome {
     fn error<E: Into<RunTestSuiteError>>(e: E) -> Self {
-        Self::Error { internal: e.into().is_internal_error() }
+        Self::Error { origin: Arc::new(e.into()) }
+    }
+}
+
+impl PartialEq for Outcome {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Passed, Self::Passed)
+            | (Self::Failed, Self::Failed)
+            | (Self::Inconclusive, Self::Inconclusive)
+            | (Self::Timedout, Self::Timedout) => true,
+            (Self::Error { origin }, Self::Error { origin: other_origin }) => {
+                format!("{}", origin.as_ref()) == format!("{}", other_origin.as_ref())
+            }
+            (_, _) => false,
+        }
     }
 }
 
@@ -569,7 +585,7 @@ async fn collect_results_for_suite<F: Future<Output = ()>>(
                             ftest_manager::SuiteStatus::TimedOut => Outcome::Timedout,
                             ftest_manager::SuiteStatus::Stopped => Outcome::Failed,
                             ftest_manager::SuiteStatus::InternalError => {
-                                Outcome::Error { internal: true }
+                                Outcome::error(UnexpectedEventError::InternalErrorSuiteStatus)
                             }
                             s => {
                                 return Err(UnexpectedEventError::UnrecognizedSuiteStatus {
@@ -663,7 +679,7 @@ async fn collect_results_for_suite<F: Future<Output = ()>>(
     test_cases_passed.sort();
     test_cases_failed.sort();
 
-    suite_reporter.stopped(&outcome.into(), suite_finish_timestamp)?;
+    suite_reporter.stopped(&outcome.clone().into(), suite_finish_timestamp)?;
 
     Ok(SuiteRunResult {
         url: running_suite.url().to_string(),
@@ -1068,7 +1084,7 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
         println!("One or more test runs failed.");
     }
 
-    let report_result = match reporter.stopped(&test_outcome.into(), Timestamp::Unknown) {
+    let report_result = match reporter.stopped(&test_outcome.clone().into(), Timestamp::Unknown) {
         Ok(()) => reporter.finished(),
         Err(e) => Err(e),
     };
