@@ -16,6 +16,7 @@ zx_library("vm") {
     "page_queues.cc",
     "page_source.cc",
     "page_state.cc",
+    "physical_page_borrowing_config.cc",
     "physical_page_provider.cc",
     "physmap.cc",
     "pinned_vm_object.cc",
