@@ -6,7 +6,7 @@ use anyhow::{Context as _, Error};
 use argh::FromArgs;
 use cm_rust::FidlIntoNative;
 use fidl::encoding::{decode_persistent, encode_persistent};
-use fidl_fuchsia_sys2 as fsys;
+use fidl_fuchsia_component_decl as fdecl;
 use std::{collections::BTreeMap, fs, io::Write, path::PathBuf};
 
 /// compile a configuration value file
@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
 
     // load & parse the manifest
     let cm_raw = fs::read(cm).context("reading component manifest")?;
-    let component: fsys::ComponentDecl =
+    let component: fdecl::Component =
         decode_persistent(&cm_raw).context("decoding component manifest")?;
     let component = component.fidl_into_native();
     let config_decl = component
