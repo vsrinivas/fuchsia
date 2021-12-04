@@ -102,6 +102,11 @@ template("cm") {
              rebase_path(depfile, root_build_dir),
            ] + include_paths
 
+    # Experimentally, try out `fuchsia.component.decl` as output
+    # decl type.
+    # TODO(fxbug.dev/86993): Remove this flag and set SDK type as default.
+    args += [ "--experimental-sdk-output" ]
+
     # Opt-in to the requested restricted_features.
     if (defined(invoker.restricted_features) &&
         invoker.restricted_features != []) {
