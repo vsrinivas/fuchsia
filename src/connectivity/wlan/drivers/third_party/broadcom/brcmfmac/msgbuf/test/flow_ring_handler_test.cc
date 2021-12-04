@@ -22,7 +22,7 @@ namespace brcmfmac {
 namespace {
 
 // Time out value for test waits.
-static constexpr zx::duration kTestTimeout = zx::msec(100);
+constexpr zx::duration kTestTimeout = zx::sec(30);
 
 // Struct for holding on to all objects necessary to support a FlowRingHandler instance for test.
 struct FlowRingHandlerAndDependencies {
@@ -105,7 +105,7 @@ TEST(FlowRingHandlerTest, CreateDestroyFlowRings) {
         });
     EXPECT_EQ(ZX_OK, handler->GetOrAddFlowRing(kInterfaceIndex, source_addr, dest_addr, kPriority,
                                                &multicast_ring_index));
-    sync_completion_wait(&create_completed, kTestTimeout.get());
+    ASSERT_EQ(ZX_OK, sync_completion_wait(&create_completed, kTestTimeout.get()));
     EXPECT_EQ(ZX_OK, handler->NotifyFlowRingCreated(multicast_ring_id, 0));
 
     // Expect that a second flow ring to the same destination returns the same ring.
@@ -132,10 +132,11 @@ TEST(FlowRingHandlerTest, CreateDestroyFlowRings) {
           EXPECT_EQ(0, std::memcmp(request->da, dest_addr.byte, sizeof(request->da)));
           EXPECT_EQ(0, std::memcmp(request->sa, source_addr.byte, sizeof(request->sa)));
           unicast_ring_id = request->flow_ring_id;
+          sync_completion_signal(&create_completed);
         });
     EXPECT_EQ(ZX_OK, handler->GetOrAddFlowRing(kInterfaceIndex, source_addr, dest_addr, kPriority,
                                                &unicast_ring_index));
-    sync_completion_wait(&create_completed, kTestTimeout.get());
+    ASSERT_EQ(ZX_OK, sync_completion_wait(&create_completed, kTestTimeout.get()));
     EXPECT_EQ(ZX_OK, handler->NotifyFlowRingCreated(unicast_ring_id, 0));
 
     // Expect that a second flow ring to the same destination returns the same ring.
@@ -172,7 +173,7 @@ TEST(FlowRingHandlerTest, CreateDestroyFlowRings) {
     handler_and_deps.fake_interfaces->AddControlSubmitRingCallback(flow_ring_delete_callback);
     EXPECT_EQ(ZX_OK, handler->RemoveInterface(kInterfaceIndex));
 
-    sync_completion_wait(&delete_completion, kTestTimeout.get());
+    ASSERT_EQ(ZX_OK, sync_completion_wait(&delete_completion, kTestTimeout.get()));
     EXPECT_TRUE(multicast_ring_deleted);
     EXPECT_TRUE(unicast_ring_deleted);
     EXPECT_EQ(ZX_OK, handler->NotifyFlowRingDestroyed(multicast_ring_id, 0));
@@ -227,7 +228,7 @@ TEST(FlowRingHandlerTest, BufferQueueSubmit) {
       });
   EXPECT_EQ(ZX_OK, handler->GetOrAddFlowRing(kInterfaceIndex, source_addr, dest_addr, kPriority,
                                              &ring_index));
-  sync_completion_wait(&create_completed, kTestTimeout.get());
+  ASSERT_EQ(ZX_OK, sync_completion_wait(&create_completed, kTestTimeout.get()));
 
   // Submitting a Netbuf right after adding a flow ring has no effect yet.
   constexpr char kBeforeCreatedData[] = "This packet is before NotifyFlowRingCreated() was called.";
@@ -242,7 +243,7 @@ TEST(FlowRingHandlerTest, BufferQueueSubmit) {
                          &before_created_data_complete);
   handler->NotifyFlowRingCreated(flow_ring_id, 0);
   handler->SubmitToFlowRings();
-  sync_completion_wait(&before_created_data_complete, kTestTimeout.get());
+  ASSERT_EQ(ZX_OK, sync_completion_wait(&before_created_data_complete, kTestTimeout.get()));
 
   // Submitting another Netbuf now happens immediately.
   constexpr char kAfterCreatedData[] = "This packet is after NotifyFlowRingCreated() was called.";
@@ -253,7 +254,7 @@ TEST(FlowRingHandlerTest, BufferQueueSubmit) {
   add_flow_ring_callback(kAfterCreatedData, sizeof(kAfterCreatedData),
                          &after_created_data_complete);
   handler->SubmitToFlowRings();
-  sync_completion_wait(&after_created_data_complete, kTestTimeout.get());
+  ASSERT_EQ(ZX_OK, sync_completion_wait(&after_created_data_complete, kTestTimeout.get()));
 
   // Queue another Netbuf, but remove the interface before submitting it; it should be returned with
   // ZX_ERR_CONNECTION_ABORTED.
