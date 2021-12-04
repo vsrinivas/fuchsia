@@ -79,10 +79,10 @@ async fn main_inner() -> Result<(), Error> {
 
     let mut package_index = PackageIndex::new(index_node);
 
-    let (executability_restrictions, base_packages) = if ignore_system_image {
+    let (executability_restrictions, base_packages, cache_packages) = if ignore_system_image {
         fx_log_info!("not loading system_image due to process arguments");
         inspector.root().record_string("system_image", "ignored");
-        (ExecutabilityRestrictions::Enforce, None)
+        (ExecutabilityRestrictions::Enforce, None, None)
     } else {
         let boot_args = connect_to_protocol::<fidl_fuchsia_boot::ArgumentsMarker>()
             .context("error connecting to fuchsia.boot/Arguments")?;
@@ -104,7 +104,8 @@ async fn main_inner() -> Result<(), Error> {
             )
             .context("deserialize data/cache_packages")?;
 
-            Ok(index::load_cache_packages(&mut package_index, cache_packages, &blobfs).await)
+            let () = index::load_cache_packages(&mut package_index, &cache_packages, &blobfs).await;
+            Ok(Some(cache_packages))
         };
 
         let base_packages_fut = BasePackages::new(
@@ -115,13 +116,15 @@ async fn main_inner() -> Result<(), Error> {
 
         let (cache_packages_res, base_packages_res) =
             join!(load_cache_packages_fut, base_packages_fut);
-        let () = cache_packages_res.unwrap_or_else(|e: anyhow::Error| {
-            fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e))
+        let cache_packages = cache_packages_res.unwrap_or_else(|e: anyhow::Error| {
+            fx_log_err!("Failed to load cache packages: {:#}", anyhow!(e));
+            None
         });
 
         (
             load_executability_restrictions(&system_image),
             Some(base_packages_res.context("loading base packages")?),
+            cache_packages,
         )
     };
 
@@ -152,6 +155,7 @@ async fn main_inner() -> Result<(), Error> {
     let cache_inspect_node = inspector.root().create_child("fuchsia.pkg.PackageCache");
     let cache_get_node = Arc::new(cache_inspect_node.create_child("get"));
     let base_packages = Arc::new(base_packages);
+    let cache_packages = Arc::new(cache_packages);
 
     let () = fs
         .for_each_concurrent(None, move |svc| {
@@ -164,6 +168,7 @@ async fn main_inner() -> Result<(), Error> {
                         Arc::clone(&package_index),
                         blobfs.clone(),
                         Arc::clone(&base_packages),
+                        Arc::clone(&cache_packages),
                         stream,
                         cobalt_sender.clone(),
                         Arc::clone(&cache_inspect_id),

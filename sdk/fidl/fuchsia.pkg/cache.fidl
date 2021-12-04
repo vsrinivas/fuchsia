@@ -60,6 +60,14 @@ protocol PackageCache {
         iterator server_end:PackageIndexIterator;
     });
 
+    /// Retrieves a chunk iterator to the cache package index.
+    ///
+    /// + request `iterator` a request for the `PackageIndexIterator` that will return sets of
+    ///   `PackageIndexEntry` objects until all packages in the cache index have been iterated.
+    CachePackageIndex(resource struct {
+        iterator server_end:PackageIndexIterator;
+    });
+
     /// Synchronizes updates to the cached packages to the underlying persistent storage.
     ///
     /// * error a zx_status value indicating failure. One of the following:

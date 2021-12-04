@@ -549,12 +549,6 @@ where
                 .targets(vec![ RouteEndpoint::component("local_mirror") ])
             ).await.unwrap()
 
-            .add_route(RouteBuilder::directory("pkgfs-system", "/pkgfs/system", fidl_fuchsia_io2::R_STAR_DIR)
-                .source(RouteEndpoint::component("service_reflector"))
-                .targets(vec![
-                    RouteEndpoint::component("pkg_resolver_wrapper"),
-                ])
-            ).await.unwrap()
             .add_route(RouteBuilder::directory("config-data", "/config/data", fidl_fuchsia_io2::R_STAR_DIR)
                 .source(RouteEndpoint::component("service_reflector"))
                 .targets(vec![

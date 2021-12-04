@@ -50,6 +50,7 @@ use {
 };
 
 mod base_pkg_index;
+mod cache_pkg_index;
 mod cobalt;
 mod get;
 mod inspect;

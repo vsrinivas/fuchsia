@@ -358,6 +358,10 @@ impl MockPackageCacheService {
                     )
                     .detach()
                 }
+                PackageCacheRequest::CachePackageIndex { .. } => {
+                    // dropping the iterator will cause pkg-resolver to get a fidl error,
+                    // and pkg-resolver will then assume there are no cache packages
+                }
             }
         }
         Ok(())

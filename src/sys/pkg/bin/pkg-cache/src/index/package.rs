@@ -142,7 +142,7 @@ impl PackageIndex {
 /// Load present cache packages into the dynamic index.
 pub async fn load_cache_packages(
     index: &mut PackageIndex,
-    cache_packages: system_image::CachePackages,
+    cache_packages: &system_image::CachePackages,
     blobfs: &blobfs::Client,
 ) {
     crate::index::dynamic::load_cache_packages(&mut index.dynamic, cache_packages, blobfs).await

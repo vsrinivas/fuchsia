@@ -79,6 +79,7 @@ rustc_library("lib") {
     "src/cache/inspect.rs",
     "src/cache/resume.rs",
     "src/cache/retry.rs",
+    "src/cache_package_index.rs",
     "src/clock.rs",
     "src/config.rs",
     "src/error.rs",

@@ -231,7 +231,7 @@ impl DynamicIndex {
 /// blobfs, imports those packages into the provided dynamic index.
 pub async fn load_cache_packages(
     index: &mut DynamicIndex,
-    cache_packages: CachePackages,
+    cache_packages: &CachePackages,
     blobfs: &blobfs::Client,
 ) {
     // This function is called before anything writes to or deletes from blobfs, so if it needs
@@ -243,10 +243,10 @@ pub async fn load_cache_packages(
     // with *only* blobs that are readable, i.e. blobs for which the `USER_0` signal is set (which
     // is currently checked per-package per-blob by `blobfs.filter_to_missing_blobs()`). Would need
     // to confirm with the storage team that blobfs meets this requirement.
-    for (path, hash) in cache_packages.into_contents() {
+    for (path, hash) in cache_packages.contents() {
         let required_blobs = match super::enumerate_package_blobs(blobfs, &hash).await {
             Ok(Some((path_from_far, required_blobs))) => {
-                if path_from_far != path {
+                if path_from_far != *path {
                     fx_log_err!(
                         "load_cache_packages: path mismatch for {} from manifest {} from far {}",
                         hash,
@@ -271,23 +271,23 @@ pub async fn load_cache_packages(
         if !blobfs.filter_to_missing_blobs(&required_blobs).await.is_empty() {
             continue;
         }
-        let () = index.start_install(hash);
-        if let Err(e) = index.fulfill_meta_far(hash, path, required_blobs) {
+        let () = index.start_install(*hash);
+        if let Err(e) = index.fulfill_meta_far(*hash, path.clone(), required_blobs) {
             fx_log_err!(
                 "load_cache_packages: fulfill_meta_far of {} failed: {:#}",
                 hash,
                 anyhow!(e)
             );
-            let () = index.cancel_install(&hash);
+            let () = index.cancel_install(hash);
             continue;
         }
-        if let Err(e) = index.complete_install(hash) {
+        if let Err(e) = index.complete_install(*hash) {
             fx_log_err!(
                 "load_cache_packages: complete_install of {} failed: {:#}",
                 hash,
                 anyhow!(e)
             );
-            let () = index.cancel_install(&hash);
+            let () = index.cancel_install(hash);
             continue;
         }
     }
@@ -700,7 +700,7 @@ mod tests {
         let mut dynamic_index =
             DynamicIndex::new(finspect::Inspector::new().root().create_child("index"));
 
-        let () = load_cache_packages(&mut dynamic_index, cache_packages, &blobfs.client()).await;
+        let () = load_cache_packages(&mut dynamic_index, &cache_packages, &blobfs.client()).await;
 
         let present0 = Package::Active {
             path: "present0/0".parse().unwrap(),

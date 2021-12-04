@@ -419,9 +419,14 @@ impl MockPackageCacheService {
                         .send(&mut self.open_response.lock().unwrap().map_err(|s| s.into_raw()))
                         .expect("send ok");
                 }
-                PackageCacheRequest::Get { .. } => panic!("should only support Open requests"),
+                PackageCacheRequest::Get { .. } => {
+                    panic!("should only support Open requests, received Get")
+                }
                 PackageCacheRequest::BasePackageIndex { .. } => {
-                    panic!("should only support Open requests")
+                    panic!("should only support Open requests, received BasePackageIndex")
+                }
+                PackageCacheRequest::CachePackageIndex { .. } => {
+                    panic!("should only support Open requests, received CachePackageIndex")
                 }
                 PackageCacheRequest::Sync { .. } => panic!("should only support Open requests"),
             }

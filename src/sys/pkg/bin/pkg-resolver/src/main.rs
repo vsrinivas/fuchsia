@@ -23,11 +23,11 @@ use {
         sync::Arc,
         time::{Duration, Instant},
     },
-    system_image::CachePackages,
 };
 
 mod args;
 mod cache;
+mod cache_package_index;
 mod clock;
 mod config;
 mod error;
@@ -143,7 +143,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     );
 
     // The list of cache packages from the system image, not to be confused with the PackageCache.
-    let system_cache_list = Arc::new(load_system_cache_list().await);
+    let system_cache_list = Arc::new(cache_package_index::from_proxy(pkg_cache.proxy()).await);
 
     let inspector = fuchsia_inspect::Inspector::new();
     let channel_inspect_state =
@@ -507,36 +507,4 @@ fn load_font_package_manager(mut cobalt_sender: CobaltSender) -> FontPackageMana
         }
     }
     .build()
-}
-
-// Read in the list of cache_packages from /system/data/cache_packages.
-// If we can't load it for some reason, return an empty cache.
-async fn load_system_cache_list() -> system_image::CachePackages {
-    let system_image = pkgfs::system::Client::open_from_namespace();
-    // Default to empty cache.
-    let empty = CachePackages::from_entries(vec![]);
-    let system_image = match system_image {
-        Ok(s) => s,
-        Err(e) => {
-            fx_log_err!("failed to open system image: {:#}", anyhow!(e));
-            return empty;
-        }
-    };
-    let cache_file = system_image.open_file("data/cache_packages").await;
-    let cache_file = match cache_file {
-        Ok(f) => f,
-        Err(e) => {
-            fx_log_err!("failed to open data/cache_packages: {:#}", anyhow!(e));
-            return empty;
-        }
-    };
-
-    let cache_list = CachePackages::deserialize(cache_file);
-    match cache_list {
-        Ok(cl) => cl,
-        Err(e) => {
-            fx_log_err!("error opening package cache: {:#}", anyhow!(e));
-            empty
-        }
-    }
 }
