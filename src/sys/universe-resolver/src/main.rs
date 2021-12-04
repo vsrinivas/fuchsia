@@ -207,7 +207,7 @@ mod tests {
         super::*,
         anyhow::Error,
         fidl::{encoding::encode_persistent, endpoints::ServerEnd},
-        fidl_fuchsia_mem,
+        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_mem,
         fidl_fuchsia_pkg::PackageResolverRequest,
         fidl_fuchsia_sys2::{self as fsys, ComponentResolverMarker},
         fuchsia_async as fasync,
@@ -523,7 +523,7 @@ mod tests {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let server = async move {
-            let cm_bytes = encode_persistent(&mut fsys::ComponentDecl::EMPTY.clone())
+            let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
                 .expect("failed to encode ComponentDecl FIDL");
             let fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
@@ -571,7 +571,7 @@ mod tests {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         let server = async move {
-            let cm_bytes = encode_persistent(&mut fsys::ComponentDecl::EMPTY.clone())
+            let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
                 .expect("failed to encode ComponentDecl FIDL");
             let fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
@@ -613,7 +613,7 @@ mod tests {
             let fs = pseudo_directory! {
                 "meta" => pseudo_directory!{
                     "test.cm" => vfs::file::vmo::read_only(|| async move {
-                        let cm_bytes = encode_persistent(&mut fsys::ComponentDecl::EMPTY.clone())
+                        let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
                             .expect("failed to encode ComponentDecl FIDL");
                         let capacity = cm_bytes.len() as u64;
                         let vmo = Vmo::create(capacity)?;
