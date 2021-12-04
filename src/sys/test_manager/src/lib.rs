@@ -10,9 +10,10 @@ use {
     fdiagnostics::ArchiveAccessorProxy,
     fidl::endpoints::{create_proxy, ClientEnd},
     fidl::prelude::*,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_debugdata as fdebugdata,
-    fidl_fuchsia_diagnostics as fdiagnostics, fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
+    fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys as fv1sys,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test as ftest,
     fidl_fuchsia_test_internal as ftest_internal, fidl_fuchsia_test_manager as ftest_manager,
     fsys::ComponentResolverProxy,
     ftest::Invocation,
@@ -1035,7 +1036,7 @@ impl Drop for ScopedTestMapEntry {
     }
 }
 
-fn get_test_realm(decl: &fsys::ComponentDecl) -> Result<&'static str, FacetError> {
+fn get_test_realm(decl: &fdecl::Component) -> Result<&'static str, FacetError> {
     if let Some(obj) = &decl.facets {
         let entries = match &obj.entries {
             Some(e) => e,
@@ -1107,7 +1108,7 @@ impl RunningSuite {
             }
             _ => return Err(LaunchTestError::InvalidResolverData),
         };
-        let component_decl: fsys::ComponentDecl = fidl::encoding::decode_persistent(&bytes)
+        let component_decl: fdecl::Component = fidl::encoding::decode_persistent(&bytes)
             .map_err(|e| LaunchTestError::InvalidManifest(e.into()))?;
 
         let test_collection = get_test_realm(&component_decl)?;
@@ -1591,7 +1592,7 @@ impl AboveRootCapabilitiesForTest {
     pub async fn new(manifest_name: &str) -> Result<Self, Error> {
         let path = format!("/pkg/meta/{}", manifest_name);
         let file_proxy = io_util::open_file_in_namespace(&path, io_util::OPEN_RIGHT_READABLE)?;
-        let component_decl = io_util::read_file_fidl::<fsys::ComponentDecl>(&file_proxy).await?;
+        let component_decl = io_util::read_file_fidl::<fdecl::Component>(&file_proxy).await?;
         let capabilities = Self::load(component_decl);
         Ok(Self { capabilities })
     }
@@ -1616,13 +1617,13 @@ impl AboveRootCapabilitiesForTest {
         Ok(())
     }
 
-    fn load(decl: fsys::ComponentDecl) -> HashMap<&'static str, Vec<RouteBuilder>> {
+    fn load(decl: fdecl::Component) -> HashMap<&'static str, Vec<RouteBuilder>> {
         let mut capabilities: HashMap<_, _> =
             TEST_TYPE_REALM_MAP.values().map(|v| (*v, vec![])).collect();
         for offer_decl in decl.offers.unwrap_or(vec![]) {
             match offer_decl {
-                fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
-                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                    target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
                     target_name: Some(target_name),
                     ..
                 }) if capabilities.contains_key(name.as_str())
@@ -1633,8 +1634,8 @@ impl AboveRootCapabilitiesForTest {
                         .unwrap()
                         .push(RouteBuilder::protocol(target_name));
                 }
-                fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
-                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                fdecl::Offer::Directory(fdecl::OfferDirectory {
+                    target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
                     rights,
                     target_name: Some(target_name),
                     ..
@@ -1645,8 +1646,8 @@ impl AboveRootCapabilitiesForTest {
                         rights.unwrap_or(*READ_RIGHTS),
                     ));
                 }
-                fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
-                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                fdecl::Offer::Storage(fdecl::OfferStorage {
+                    target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
                     target_name: Some(target_name),
                     ..
                 }) if capabilities.contains_key(name.as_str()) => {
@@ -1656,24 +1657,24 @@ impl AboveRootCapabilitiesForTest {
                         .unwrap()
                         .push(RouteBuilder::storage(target_name, use_path));
                 }
-                fsys::OfferDecl::Service(fsys::OfferServiceDecl {
-                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                fdecl::Offer::Service(fdecl::OfferService {
+                    target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
                     ..
                 })
-                | fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
-                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                | fdecl::Offer::Runner(fdecl::OfferRunner {
+                    target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
                     ..
                 })
-                | fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
-                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                | fdecl::Offer::Resolver(fdecl::OfferResolver {
+                    target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
                     ..
                 }) if capabilities.contains_key(name.as_str()) => {
                     unimplemented!(
                         "Services, runners and resolvers are not supported by realm builder"
                     );
                 }
-                fsys::OfferDecl::Event(fsys::OfferEventDecl {
-                    target: Some(fsys::Ref::Collection(fsys::CollectionRef { name })),
+                fdecl::Offer::Event(fdecl::OfferEvent {
+                    target: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name })),
                     ..
                 }) if capabilities.contains_key(name.as_str()) => {
                     unreachable!("No events should be routed from above root to a test.");
@@ -2272,7 +2273,7 @@ mod tests {
         const TEST_FACET: &str = "fuchsia.test";
 
         // test that default hermetic value is true
-        let mut decl = fsys::ComponentDecl::EMPTY;
+        let mut decl = fdecl::Component::EMPTY;
         assert_eq!(get_test_realm(&decl).unwrap(), HERMETIC_TESTS_COLLECTION);
 
         // empty facet
