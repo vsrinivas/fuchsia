@@ -124,6 +124,7 @@ async fn build_input_pipeline_assembly(
         // keymap settings in the remainder of the pipeline.
         assembly = add_text_settings_handler(text_settings_handler, assembly);
         assembly = add_keymap_handler(assembly);
+        assembly = assembly.add_autorepeater();
         assembly = add_dead_keys_handler(assembly, icu_data_loader);
         // Shortcut needs to go before IME.
         assembly = add_shortcut_handler(assembly).await;

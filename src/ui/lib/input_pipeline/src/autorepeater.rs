@@ -7,8 +7,16 @@
 
 //! Implements hardware key autorepeat.
 //!
-//! This handler does not implement [input_pipeline::InputHandler], as it requires a different
-//! approach to event processing.
+//! The [Autorepeater] is a bit of an exception among the stages of the input pipeline.  This
+//! handler does not implement [input_pipeline::InputHandler], as it requires a different approach
+//! to event processing.
+//!
+//! Specifically, it requires the ability to interleave the events it generates into the
+//! flow of "regular" events through the input pipeline.  While the [input_pipeline::InputHandler]
+//! trait could in principle be modified to admit this sort of approach to event processing, in
+//! practice the [Autorepeater] is for now the only stage that requires this approach, so it is
+//! not cost effective to retrofit all other handlers just for the sake of this one.  We may
+//! revisit this decision if we grow more stages that need autorepeat.
 
 use crate::input_device::{
     self, EventTime, Handled, InputDeviceDescriptor, InputDeviceEvent, InputEvent,
@@ -17,7 +25,7 @@ use crate::keyboard_binding::KeyboardEvent;
 use anyhow::{anyhow, Context, Result};
 use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
 use fuchsia_async::{Task, Time, Timer};
-use fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_warn};
+use fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_zircon::Duration;
 use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures::StreamExt;
@@ -59,6 +67,9 @@ enum Repeatability {
 // nonprintable are empirically repeatable.  Keys that are not repeatable have a zero as the
 // codepoint - this is not an API requirement, but stems from the way we currently use it, so we
 // may as well make it official.  The decisions may become obsolete as KeyMeaning evolves.
+//
+// TODO(fxbug.dev/89736): Sort out whether Left, Right, Up, Down etc should be nonprintable keys
+// or keys with codepoint zero.
 fn repeatability(key_meaning: Option<KeyMeaning>) -> Repeatability {
     match key_meaning {
         Some(KeyMeaning::Codepoint(0)) => Repeatability::No, // e.g. Shift
@@ -147,6 +158,10 @@ fn new_autorepeat_timer(sink: UnboundedSender<AnyEvent>, delay: Duration) -> Rc<
     Rc::new(task)
 }
 
+/// Maintains the internal autorepeat state.
+///
+/// The autorepeat tracks key presses and generates autorepeat key events for
+/// the keys that are eligible for autorepeat.
 pub struct Autorepeater {
     // Internal events are multiplexed into this sender.  We may make multiple
     // clones to serialize async events.
@@ -219,6 +234,7 @@ impl Autorepeater {
     /// Run this function in an executor to start processing events. The
     /// transformed event stream is available in `output`.
     pub async fn run(self: &Rc<Self>, output: UnboundedSender<InputEvent>) -> Result<()> {
+        fx_log_info!("key autorepeater installed");
         let src = &mut *(self.event_source.borrow_mut());
         while let Some(event) = src.next().await {
             match event {

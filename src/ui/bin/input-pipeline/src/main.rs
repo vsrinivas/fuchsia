@@ -63,7 +63,8 @@ async fn main() -> Result<(), Error> {
         input_pipeline_lib::input_pipeline::InputPipeline::new(
             device_types.clone(),
             input_pipeline_lib::input_pipeline::InputPipelineAssembly::new()
-                .add_all_handlers(input_handlers),
+                .add_all_handlers(input_handlers)
+                .add_autorepeater(),
         )
         .expect("Failed to create input pipeline")
     };
