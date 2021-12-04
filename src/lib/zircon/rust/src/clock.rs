@@ -5,7 +5,7 @@
 //! Type-safe bindings for Zircon clock objects.
 
 use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Time};
+use crate::{AsHandleRef, ClockUpdate, Handle, HandleBased, HandleRef, Time};
 use bitflags::bitflags;
 use fuchsia_zircon_status::Status;
 use fuchsia_zircon_sys as sys;
@@ -178,72 +178,13 @@ impl Clock {
     ///
     /// [zx_clock_update]: https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_update
     pub fn update(&self, update: ClockUpdate) -> Result<(), Status> {
-        let opts = sys::ZX_CLOCK_ARGS_VERSION_1 | update.raw_opts();
+        let options = update.options();
         let args = sys::zx_clock_update_args_v1_t::from(update);
         let status = unsafe {
-            sys::zx_clock_update(self.raw_handle(), opts, &args as *const _ as *const u8)
+            sys::zx_clock_update(self.raw_handle(), options, &args as *const _ as *const u8)
         };
         ok(status)?;
         Ok(())
-    }
-}
-
-/// Specifies which properties of a clock to update. See [`Clock::update`]
-#[derive(Debug, Eq, PartialEq)]
-pub struct ClockUpdate {
-    value: Option<Time>,
-    rate_adjust: Option<i32>,
-    error_bounds: Option<u64>,
-}
-
-impl ClockUpdate {
-    /// Create a new ClockUpdate.
-    pub fn new() -> Self {
-        ClockUpdate { value: None, rate_adjust: None, error_bounds: None }
-    }
-
-    /// Update a clock's absolute value.
-    pub fn value(mut self, value: Time) -> Self {
-        self.value = Some(value);
-        self
-    }
-
-    /// Update a clock's rate adjustment, specified in PPM deviation from nominal.
-    pub fn rate_adjust(mut self, rate_adjust: i32) -> Self {
-        self.rate_adjust = Some(rate_adjust);
-        self
-    }
-
-    /// Update a clock's estimated error bounds, specified in nanoseconds.
-    pub fn error_bounds(mut self, error_bounds: u64) -> Self {
-        self.error_bounds = Some(error_bounds);
-        self
-    }
-
-    /// Returns a bitmask of options for use with [`sys::zx_clock_update`].
-    fn raw_opts(&self) -> u64 {
-        let mut opts = 0;
-        if self.rate_adjust.is_some() {
-            opts |= sys::ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID;
-        }
-        if self.value.is_some() {
-            opts |= sys::ZX_CLOCK_UPDATE_OPTION_VALUE_VALID;
-        }
-        if self.error_bounds.is_some() {
-            opts |= sys::ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID;
-        }
-        opts
-    }
-}
-
-impl From<ClockUpdate> for sys::zx_clock_update_args_v1_t {
-    fn from(cu: ClockUpdate) -> Self {
-        sys::zx_clock_update_args_v1_t {
-            rate_adjust: cu.rate_adjust.unwrap_or(0),
-            padding1: Default::default(),
-            value: cu.value.map(Time::into_nanos).unwrap_or(0),
-            error_bound: cu.error_bounds.unwrap_or(0),
-        }
     }
 }
 
@@ -302,7 +243,7 @@ mod tests {
         assert_eq!(before_details.last_rate_adjust_update_ticks, 0);
         assert_eq!(before_details.last_error_bounds_update_ticks, 0);
 
-        // Update all values.
+        // Update all properties.
         clock
             .update(ClockUpdate::new().value(Time::from_nanos(42)).rate_adjust(52).error_bounds(52))
             .expect("failed to update clock");
@@ -323,7 +264,7 @@ mod tests {
 
         let before_details = after_details;
 
-        // Update only one value.
+        // Update only one property.
         clock.update(ClockUpdate::new().error_bounds(100)).expect("failed to update clock");
         let after_details = clock.get_details().expect("failed to get details");
         assert!(before_details.generation_counter < after_details.generation_counter);
