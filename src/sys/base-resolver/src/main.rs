@@ -167,6 +167,7 @@ mod tests {
         fidl::encoding::encode_persistent,
         fidl::endpoints::{create_proxy, ServerEnd},
         fidl::prelude::*,
+        fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_io::{DirectoryMarker, DirectoryObject, NodeInfo, NodeMarker},
         matches::assert_matches,
         std::sync::Arc,
@@ -316,7 +317,7 @@ mod tests {
     }
 
     fn build_fake_pkgfs() -> Arc<MockDir> {
-        let cm_bytes = encode_persistent(&mut fsys::ComponentDecl::EMPTY.clone())
+        let cm_bytes = encode_persistent(&mut fdecl::Component::EMPTY.clone())
             .expect("failed to encode ComponentDecl FIDL");
         Arc::new(
             MockDir::new().add_entry(
