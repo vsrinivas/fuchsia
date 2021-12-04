@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_CMX_CMX_H_
 #define SRC_LIB_CMX_CMX_H_
 
-#include <regex>
 #include <string>
 
 #include <rapidjson/document.h>
@@ -39,7 +38,6 @@ class CmxMetadata {
   const ProgramMetadata& program_meta() { return program_meta_; }
 
  private:
-  static std::string GetCmxPathFromPath(const std::regex& regex, const std::string& path);
   void ParseSandboxMetadata(const rapidjson::Document& document, json::JSONParser* json_parser);
   void ParseProgramMetadata(const rapidjson::Document& document, json::JSONParser* json_parser);
 

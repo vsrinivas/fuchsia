@@ -5,7 +5,6 @@
 #ifndef SRC_LIB_CMX_FACET_PARSER_CMX_FACET_PARSER_H_
 #define SRC_LIB_CMX_FACET_PARSER_CMX_FACET_PARSER_H_
 
-#include <regex>
 #include <string>
 #include <unordered_map>
 

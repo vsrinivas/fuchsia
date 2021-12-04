@@ -90,6 +90,7 @@ source_set("lib") {
     "//src/lib/storage/vfs/cpp",
     "//third_party/googletest:gtest_prod",
     "//third_party/rapidjson",
+    "//third_party/re2",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",

@@ -28,6 +28,8 @@
 #include <memory>
 #include <utility>
 
+#include <re2/re2.h>
+
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/cmx/program.h"
 #include "src/lib/cmx/runtime.h"
@@ -193,7 +195,7 @@ zx::process CreateProcess(const zx::job& job, zx::vmo executable, const std::str
 }
 
 bool IsValidEnvironmentLabel(const std::string& label) {
-  static const std::regex* const kEnvironmentLabelRegex = new std::regex{"[0-9a-zA-Z\\.\\-_:#]+"};
+  static const re2::RE2* const kEnvironmentLabelRegex = new re2::RE2{"[0-9a-zA-Z\\.\\-_:#]+"};
 
   // The regex technically covers the empty check, but checking separately
   // allows us to print a more useful error message.
@@ -201,7 +203,7 @@ bool IsValidEnvironmentLabel(const std::string& label) {
     FX_LOGS(ERROR) << "Environment label cannot be empty";
     return false;
   }
-  if (!std::regex_match(label, *kEnvironmentLabelRegex)) {
+  if (!re2::RE2::FullMatch(label, *kEnvironmentLabelRegex)) {
     FX_LOGS(ERROR) << "Environment label '" << label << "' contains invalid characters";
     return false;
   }

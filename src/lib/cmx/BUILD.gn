@@ -34,6 +34,7 @@ source_set("cmx") {
     "//src/lib/json_parser",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
+    "//third_party/re2",
     "//zircon/system/ulib/trace",
   ]
 }

@@ -7,7 +7,6 @@
 #include <lib/trace/event.h>
 
 #include <algorithm>
-#include <regex>
 #include <sstream>
 #include <string>
 
