@@ -300,6 +300,22 @@ memory that will be dumped; the actual amount dumped depends on stack depth.
 Each 16 bytes of stack is printed on one line using up to 75 characters.
 )""")
 
+DEFINE_OPTION("kernel.ppb.borrow-in-supplypages", bool, ppb_borrow_in_supplypages, {false}, R"""(
+This controls whether zx_pager_supply_pages can borrow loaned pages.  If true,
+zx_pager_supply_pages will copy supplied page contents into borrowed pages, if
+any loaned pages are available and the supplied pages aren't already loaned,
+else zx_pager_supply_pages will install the supplied pages into the VMO.  If
+false, zx_pager_supply_pages will install the supplied pages into the VMO
+(regardless of whether they are already loaned or not).
+)""")
+
+DEFINE_OPTION("kernel.ppb.loan", bool, ppb_loan, {false}, R"""(
+This controls whether ZX_VMO_OP_DECOMMIT is enabled on a contiguous VMO.  If
+true, decommit on a contiguous VMO can work and return ZX_OK.  The pages are
+loaned to the rest of the system for potential borrowing.  If false, decommit
+will return ZX_ERR_NOT_SUPPORTED.
+)""")
+
 DEFINE_OPTION("kernel.render-dlog-to-crashlog", bool, render_dlog_to_crashlog, {false}, R"""(
 When set to true, as much of the recent kernel debuglog as will fit will be
 appended to the generated crashlog during a kernel panic to assist in debugging.

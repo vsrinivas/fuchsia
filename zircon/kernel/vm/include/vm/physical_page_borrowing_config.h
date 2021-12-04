@@ -9,17 +9,15 @@
 
 #include <kernel/spinlock.h>
 
+enum class PhysicalPageBorrowingSite : uint32_t {
+  kSupplyPages,
+};
+
 // The PmmNode has an instance of this class, which will allow the ppb kernel command to dynamically
 // control whether physical page borrowing is enabled or disabled (for pager-backed VMOs only for
 // now).
 //
 // TODO(dustingreen):
-//  * Wire up to command line flags.
-//  * Add the remaining code to make is_borrowing_enabled() true really do any borrowing (we're
-//    adding the config mechanism first so the other code can depend on the config mechanism from
-//    the start).
-//  * Add a kernel command (k ppb) to control + a kernel-command-only sweeper that makes the current
-//    situation consistent with the setting.
 //  * Change the default from false to true.
 class PhysicalPageBorrowingConfig {
  public:
