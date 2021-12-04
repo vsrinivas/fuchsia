@@ -105,8 +105,7 @@ impl FemuEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ffx_emulator_config::{AccelerationMode, Behavior, BehaviorData, FemuData};
-    use std::collections::HashMap;
+    use ffx_emulator_config::{AccelerationMode, BehaviorData, FemuData};
 
     fn new_behavior(data: BehaviorData) -> Behavior {
         Behavior {

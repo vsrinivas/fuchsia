@@ -210,7 +210,7 @@ pub(crate) trait QemuBasedEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ffx_emulator_config::{AccelerationMode, Behavior, BehaviorData};
+    use ffx_emulator_config::{AccelerationMode, BehaviorData};
     use std::collections::HashMap;
     use tempfile::tempdir;
 
