@@ -6,8 +6,10 @@
 
 #include "zbi.h"
 
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/view.h>
 #include <lib/zbitl/vmo.h>
+#include <stdarg.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
@@ -15,8 +17,32 @@
 
 namespace {
 
+using ZbiView = zbitl::View<zbitl::MapUnownedVmo>;
+using ZbiError = ZbiView::Error;
+using ZbiCopyError = ZbiView::CopyError<zbitl::MapOwnedVmo>;
+
 constexpr const char kBootfsVmoName[] = "uncompressed-bootfs";
 constexpr const char kScratchVmoName[] = "bootfs-decompression-scratch";
+
+[[noreturn]] void FailFromZbiError(const ZbiError& error, const zx::debuglog& log) {
+  zbitl::PrintViewError(error, [&](const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    printl(log, fmt, args);
+    va_end(args);
+  });
+  zx_process_exit(-1);
+}
+
+[[noreturn]] void FailFromZbiCopyError(const ZbiCopyError& error, const zx::debuglog& log) {
+  zbitl::PrintViewCopyError(error, [&](const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    printl(log, fmt, args);
+    va_end(args);
+  });
+  zx_process_exit(-1);
+}
 
 // This is used as the zbitl::View::CopyStorageItem callback to allocate
 // scratch memory used by decompression.
@@ -100,28 +126,15 @@ class ScratchAllocator {
 
 zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
                          const zx::vmo& zbi_vmo) {
-  zbitl::View<zbitl::MapUnownedVmo> zbi(zbitl::MapUnownedVmo{
-      zx::unowned_vmo{zbi_vmo}, /*writable=*/true, zx::unowned_vmar{vmar_self}});
+  ZbiView zbi(zbitl::MapUnownedVmo{zx::unowned_vmo{zbi_vmo}, /*writable=*/true,
+                                   zx::unowned_vmar{vmar_self}});
 
   for (auto it = zbi.begin(); it != zbi.end(); ++it) {
-    if ((*it).header->type == ZBI_TYPE_STORAGE_BOOTFS) {
+    if (it->header->type == ZBI_TYPE_STORAGE_BOOTFS) {
       auto result = zbi.CopyStorageItem(it, ScratchAllocator{vmar_self, log});
       if (result.is_error()) {
-        if (result.error_value().read_error) {
-          fail(log, "cannot extract BOOTFS from ZBI: %.*s: read error: %s\n",
-               static_cast<int>(result.error_value().zbi_error.size()),
-               result.error_value().zbi_error.data(),
-               zx_status_get_string(*result.error_value().read_error));
-        } else if (result.error_value().write_error) {
-          fail(log, "cannot extract BOOTFS from ZBI: %.*s: write error: %s\n",
-               static_cast<int>(result.error_value().zbi_error.size()),
-               result.error_value().zbi_error.data(),
-               zx_status_get_string(*result.error_value().write_error));
-        } else {
-          fail(log, "cannot extract BOOTFS from ZBI: %.*s\n",
-               static_cast<int>(result.error_value().zbi_error.size()),
-               result.error_value().zbi_error.data());
-        }
+        printl(log, "cannot extract BOOTFS from ZBI: ");
+        FailFromZbiCopyError(result.error_value(), log);
       }
 
       zx::vmo bootfs_vmo = std::move(result).value().release();
@@ -144,15 +157,10 @@ zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
   }
 
   if (auto check = zbi.take_error(); check.is_error()) {
-    auto error = check.error_value();
-    if (error.storage_error) {
-      fail(log, "invalid ZBI: %.*s at offset %#x\n", static_cast<int>(error.zbi_error.size()),
-           error.zbi_error.data(), error.item_offset);
-    } else {
-      fail(log, "invalid ZBI: %.*s at offset %#x: %s\n", static_cast<int>(error.zbi_error.size()),
-           error.zbi_error.data(), error.item_offset, zx_status_get_string(*error.storage_error));
-    }
-  } else {
-    fail(log, "no '/boot' bootfs in bootstrap message\n");
+    printl(log, "invalid ZBI: ");
+    FailFromZbiError(check.error_value(), log);
   }
+
+  fail(log, "no '/boot' bootfs in bootstrap message\n");
+  __UNREACHABLE;
 }

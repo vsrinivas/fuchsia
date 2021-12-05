@@ -16,35 +16,57 @@
 
 namespace zbitl {
 
-// Prints an error message from a View `Error` value.
-template <typename ViewError>
-inline void PrintViewError(const ViewError& error, FILE* f = stdout) {
-  fprintf(f, "%.*s at offset %" PRIu32, static_cast<int>(error.zbi_error.size()),
+// Prints an error message from a View `Error` value, where Printer is a
+// callable type with a printf-like signature.
+template <typename ViewError, typename Printer>
+inline void PrintViewError(const ViewError& error, Printer&& printer) {
+  printer("%.*s at offset %" PRIu32, static_cast<int>(error.zbi_error.size()),
           error.zbi_error.data(), error.item_offset);
   if (error.storage_error) {
     auto storage_error = ViewError::storage_error_string(error.storage_error.value());
     std::string_view storage_error_sv = storage_error;
-    fprintf(f, ": %.*s", static_cast<int>(storage_error_sv.size()), storage_error_sv.data());
+    printer(": %.*s", static_cast<int>(storage_error_sv.size()), storage_error_sv.data());
   }
-  fprintf(f, "\n");  // To flush the buffer.
+  printer("\n");  // To flush the buffer.
 }
 
-// Prints an error message from a View `CopyError` value.
-template <typename ViewCopyError>
-inline void PrintViewCopyError(const ViewCopyError& error, FILE* f = stdout) {
-  fprintf(f, "%.*s", static_cast<int>(error.zbi_error.size()), error.zbi_error.data());
+template <typename ViewError>
+inline void PrintViewError(const ViewError& error, FILE* f = stdout) {
+  PrintViewError(error, [f](const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(f, fmt, args);
+    va_end(args);
+  });
+}
+
+// Prints an error message from a View `CopyError` value, where Printer is a
+// callable type with a printf-like signature.
+template <typename ViewCopyError, typename Printer>
+inline void PrintViewCopyError(const ViewCopyError& error, Printer&& printer) {
+  printer("%.*s", static_cast<int>(error.zbi_error.size()), error.zbi_error.data());
   if (error.read_error) {
     auto read_error = ViewCopyError::read_error_string(error.read_error.value());
     std::string_view read_error_sv = read_error;
-    fprintf(f, ": read error at source offset %" PRIu32 ": %.*s", error.read_offset,
+    printer(": read error at source offset %" PRIu32 ": %.*s", error.read_offset,
             static_cast<int>(read_error_sv.size()), read_error_sv.data());
   } else if (error.write_error) {
     auto write_error = ViewCopyError::write_error_string(error.write_error.value());
     std::string_view write_error_sv = write_error;
-    fprintf(f, ": write error at destination offset %" PRIu32 ": %.*s", error.write_offset,
+    printer(": write error at destination offset %" PRIu32 ": %.*s", error.write_offset,
             static_cast<int>(write_error_sv.size()), write_error_sv.data());
   }
-  fprintf(f, "\n");  // To flush the buffer.
+  printer("\n");  // To flush the buffer.
+}
+
+template <typename ViewCopyError>
+inline void PrintViewCopyError(const ViewCopyError& error, FILE* f = stdout) {
+  PrintViewCopyError(error, [f](const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    vfprintf(f, fmt, args);
+    va_end(args);
+  });
 }
 
 // Prints an error message from a BootfsView `Error` value, where Printer is a
