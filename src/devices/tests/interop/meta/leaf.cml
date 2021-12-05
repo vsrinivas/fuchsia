@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        binary: "driver/interop_leaf.so",
+        bind: "meta/bind/leaf.bindbc",
+    },
+    use: [
+        { protocol: "fuchsia.interop.test.Waiter" },
+    ],
+}

@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework interop integration test v1 driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

@@ -283,7 +283,10 @@ Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driv
   }
 }
 
-Node::~Node() { UnbindAndReset(controller_ref_); }
+Node::~Node() {
+  UnbindAndReset(controller_ref_);
+  UnbindAndReset(node_ref_);
+}
 
 const std::string& Node::name() const { return name_; }
 

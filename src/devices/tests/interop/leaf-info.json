@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework interop integration test leaf driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

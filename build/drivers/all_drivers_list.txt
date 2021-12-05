@@ -210,6 +210,9 @@
 //src/devices/tests/dynamic_offers:root_driver
 //src/devices/tests/fidl-protocol:child-driver
 //src/devices/tests/fidl-protocol:parent-driver
+//src/devices/tests/interop:leaf_driver
+//src/devices/tests/interop:root_driver
+//src/devices/tests/interop:v1_driver
 //src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver-driver
 //src/devices/tests/mock-device:mock-device-driver
 //src/devices/tests/string-bind-test:child-driver-driver
