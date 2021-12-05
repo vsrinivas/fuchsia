@@ -123,7 +123,7 @@ which it uses to decompress the item into a fresh VMO.
 
 Next, `userboot` examines the environment strings it received from the
 kernel, which represent the kernel command line.  If there is a string
-`userboot=`*file* then *file* will be loaded as the first real user
+`userboot.next=`*file* then *file* will be loaded as the first real user
 process.  If no such option is present, the default *file* is `bin/bootsvc`.
 The files are found in the BOOTFS image.
 
@@ -172,7 +172,7 @@ If [the `userboot.shutdown` option was given on the kernel command line](/docs/r
 then `userboot` waits for the process it started to exit, and then shuts
 down the system (as if by the `dm shutdown` command).  This can be useful
 to run a single test program and then shut down the machine (or emulator).
-For example, the command line `userboot=bin/core-tests userboot.shutdown`
+For example, the command line `userboot.next=bin/core-tests userboot.shutdown`
 runs the Zircon core tests and then shuts down.
 
 Otherwise, `userboot` does not wait for the process to exit.  `userboot`

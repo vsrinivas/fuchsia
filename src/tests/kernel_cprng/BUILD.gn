@@ -27,7 +27,7 @@ executable("cprng-draw") {
 
 zbi_test("cprng-draw-zbi") {
   assert(current_cpu != "")
-  args = [ "userboot=bin/cprng-draw" ]
+  args = [ "userboot.next=bin/cprng-draw" ]
   deps = [
     ":cprng-draw",
     "//zircon/kernel",

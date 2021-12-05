@@ -15,7 +15,7 @@ enum option {
 #define OPTION_ROOT_STRING "userboot.root"
 #define OPTION_ROOT_DEFAULT ""
   OPTION_FILENAME,
-#define OPTION_FILENAME_STRING "userboot"
+#define OPTION_FILENAME_STRING "userboot.next"
 #define OPTION_FILENAME_DEFAULT "bin/bootsvc"
   OPTION_SHUTDOWN,
 #define OPTION_SHUTDOWN_STRING "userboot.shutdown"

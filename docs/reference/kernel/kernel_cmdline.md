@@ -453,7 +453,7 @@ ethernet ports, which may be enumerated in a non-deterministic order.
 This option makes `netsvc` work normally and support all features. By default,
 `netsvc` starts in a minimal mode where only device discovery is supported.
 
-## userboot=\<path>
+## userboot.next=\<path>
 
 This option instructs the userboot process (the first userspace process) to
 execute the specified binary within the bootfs, instead of following the normal
@@ -473,14 +473,14 @@ to resolve the `PT_INTERP` (dynamic linker) name and any shared library names it
 may request. That service simply looks in the `lib/` directory (under
 `userboot.root`) in the BOOTFS.
 
-Example: `userboot=bin/core-tests`
+Example: `userboot.next=bin/core-tests`
 
 ## userboot.root=\<path>
 
-This sets a "root" path prefix within the BOOTFS where the `userboot` path and
-the `lib/` directory for the loader service will be found. By default, there is
-no prefix so paths are treated as exact relative paths from the root of the
-BOOTFS. e.g. with `userboot.root=pkg/foo` and `userboot=bin/app`, the names
+This sets a "root" path prefix within the BOOTFS where the `userboot.next` path 
+and the `lib/` directory for the loader service will be found. By default, there
+is no prefix so paths are treated as exact relative paths from the root of the
+BOOTFS. e.g. with `userboot.root=pkg/foo` and `userboot.next=bin/app`, the names
 found in the BOOTFS will be `pkg/foo/bin/app`, `pkg/foo/lib/ld.so.1`, etc.
 
 ## userboot.reboot

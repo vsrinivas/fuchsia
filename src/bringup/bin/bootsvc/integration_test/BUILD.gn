@@ -188,7 +188,7 @@ zbi_test("bootsvc-integration-tests") {
   assert(current_cpu != "")
 
   args = [
-    "userboot=bin/bootsvc",
+    "userboot.next=bin/bootsvc",
     "bootsvc.next=bin/bootsvc-integration-test,testargument",
     "kernel.root-job.behavior=shutdown",
 
@@ -219,7 +219,7 @@ zbi_test("bootsvc-integration-tests") {
 
 zbi_test("bootsvc-root-job-test") {
   args = [
-    "userboot=bin/bootsvc",
+    "userboot.next=bin/bootsvc",
     "bootsvc.next=test/core/zbi-child-test",
     "kernel.root-job.behavior=shutdown",
     "kernel.root-job.notice=$zbi_test_success_string",
