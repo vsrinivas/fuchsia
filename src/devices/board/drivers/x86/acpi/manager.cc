@@ -148,7 +148,7 @@ acpi::status<bool> Manager::DiscoverDevice(ACPI_HANDLE handle) {
   // TODO(fxbug.dev/80491): newer versions of ACPICA return this from GetObjectInfo().
   auto state_result = acpi_->EvaluateObject(handle, "_STA", std::nullopt);
   bool examine_children;
-  uint32_t state;
+  uint64_t state;
   if (state_result.zx_status_value() == ZX_ERR_NOT_FOUND) {
     // No state means all bits are set.
     state = ~0;

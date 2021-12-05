@@ -93,7 +93,8 @@ acpi::status<acpi::UniquePtr<ACPI_DEVICE_INFO>> MockAcpi::GetObjectInfo(ACPI_HAN
   if (d->hid().has_value()) {
     valid |= ACPI_VALID_HID;
     const std::string& value = d->hid().value();
-    info->HardwareId.Length = value.size();
+    ZX_ASSERT(value.size() < std::numeric_limits<uint32_t>::max());
+    info->HardwareId.Length = static_cast<uint32_t>(value.size());
     info->HardwareId.String = const_cast<char*>(value.data());
     if (value == kPciPnpID || value == kPciePnpID) {
       info->Flags |= ACPI_PCI_ROOT_BRIDGE;
@@ -102,11 +103,14 @@ acpi::status<acpi::UniquePtr<ACPI_DEVICE_INFO>> MockAcpi::GetObjectInfo(ACPI_HAN
 
   if (!d->cids().empty()) {
     valid |= ACPI_VALID_CID;
-    info->CompatibleIdList.ListSize = d->cids().size() * sizeof(ACPI_PNP_DEVICE_ID);
-    info->CompatibleIdList.Count = d->cids().size();
+    ZX_ASSERT(d->cids().size() * sizeof(ACPI_PNP_DEVICE_ID) < std::numeric_limits<uint32_t>::max());
+    info->CompatibleIdList.ListSize =
+        static_cast<uint32_t>(d->cids().size() * sizeof(ACPI_PNP_DEVICE_ID));
+    info->CompatibleIdList.Count = static_cast<uint32_t>(d->cids().size());
     for (size_t i = 0; i < d->cids().size(); i++) {
       const std::string& cid = d->cids()[i];
-      info->CompatibleIdList.Ids[i].Length = cid.size();
+      ZX_ASSERT(cid.size() < std::numeric_limits<uint32_t>::max());
+      info->CompatibleIdList.Ids[i].Length = static_cast<uint32_t>(cid.size());
       info->CompatibleIdList.Ids[i].String = const_cast<char*>(cid.data());
       if (cid == kPciPnpID || cid == kPciePnpID) {
         info->Flags |= ACPI_PCI_ROOT_BRIDGE;

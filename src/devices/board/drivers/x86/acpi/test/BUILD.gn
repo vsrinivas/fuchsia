@@ -23,7 +23,4 @@ source_set("mock-acpi") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zxc",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }

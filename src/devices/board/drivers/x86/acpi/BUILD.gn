@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 import("//build/components.gni")
 import("//build/test.gni")
-
 group("tests") {
   testonly = true
   deps = []
@@ -48,9 +47,6 @@ source_set("acpi") {
   ]
   public_deps = shared_public_deps
   deps = shared_deps + [ "//src/lib/ddk" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("acpi-test") {
@@ -76,9 +72,6 @@ test("acpi-test") {
          ]
 
   defines = [ "IS_TEST" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("x86-acpi-tests") {

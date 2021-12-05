@@ -39,7 +39,11 @@ acpi::status<> AcpiImpl::WalkResources(ACPI_HANDLE object, const char* resource_
 acpi::status<acpi::UniquePtr<ACPI_RESOURCE>> AcpiImpl::BufferToResource(
     cpp20::span<uint8_t> buffer) {
   ACPI_RESOURCE* res;
-  ACPI_STATUS status = AcpiBufferToResource(buffer.data(), buffer.size(), &res);
+  if (buffer.size() > std::numeric_limits<uint16_t>::max()) {
+    return acpi::error(AE_BAD_VALUE);
+  }
+  ACPI_STATUS status =
+      AcpiBufferToResource(buffer.data(), static_cast<uint16_t>(buffer.size()), &res);
   if (status != AE_OK) {
     return acpi::error(status);
   }

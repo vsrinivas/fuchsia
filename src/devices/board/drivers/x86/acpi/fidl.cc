@@ -383,17 +383,23 @@ acpi::status<> EvaluateObjectFidlHelper::DecodeObject(
       break;
     }
     case Tag::kStringVal: {
+      if (obj.string_val().size() > std::numeric_limits<uint32_t>::max()) {
+        return acpi::error(AE_BAD_VALUE);
+      }
       // ACPI strings need to be null terminated. FIDL strings aren't, so we have to make copies
       // of them.
       allocated_strings_.emplace_front(
           std::string(obj.string_val().data(), obj.string_val().size()));
       out->String.Type = ACPI_TYPE_STRING;
-      out->String.Length = obj.string_val().size();
+      out->String.Length = static_cast<uint32_t>(obj.string_val().size());
       out->String.Pointer = allocated_strings_.front().data();
       break;
     }
     case Tag::kPackageVal: {
       auto& list = obj.package_val().value;
+      if (list.count() > std::numeric_limits<uint32_t>::max()) {
+        return acpi::error(AE_BAD_VALUE);
+      }
       std::vector<ACPI_OBJECT> package(list.count());
       for (size_t i = 0; i < list.count(); i++) {
         auto status = DecodeObject(list[i], &package[i]);
@@ -403,14 +409,17 @@ acpi::status<> EvaluateObjectFidlHelper::DecodeObject(
       }
       allocated_packages_.emplace_front(std::move(package));
       out->Package.Type = ACPI_TYPE_PACKAGE;
-      out->Package.Count = list.count();
+      out->Package.Count = static_cast<uint32_t>(list.count());
       out->Package.Elements = allocated_packages_.front().data();
       break;
     }
     case Tag::kBufferVal: {
       auto& buffer = obj.buffer_val();
+      if (buffer.count() > std::numeric_limits<uint32_t>::max()) {
+        return acpi::error(AE_BAD_VALUE);
+      }
       out->Buffer.Type = ACPI_TYPE_BUFFER;
-      out->Buffer.Length = buffer.count();
+      out->Buffer.Length = static_cast<uint32_t>(buffer.count());
       out->Buffer.Pointer = buffer.mutable_data();
       break;
     }
