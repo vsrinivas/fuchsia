@@ -416,15 +416,6 @@ void ProcessZbiEarly() {
 
         ParseBootOptions(
             ktl::string_view{reinterpret_cast<const char*>(payload.data()), payload.size()});
-
-        // The CMDLINE might include entropy for the zircon cprng.
-        // We don't want that information to be accesible after it has
-        // been added to the kernel cmdline.
-        // Editing the header of a ktl::span will not result in an error.
-        static_cast<void>(view.EditHeader(it, zbi_header_t{
-                                                  .type = ZBI_TYPE_DISCARD,
-                                              }));
-        mandatory_memset(payload.data(), 0, payload.size());
         break;
       }
       case ZBI_TYPE_MEM_CONFIG: {

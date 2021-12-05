@@ -229,9 +229,6 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
     }
     off = next_off;
     len = safemath::CheckSub(len, item_len).ValueOrDie();
-
-    // Kernel cmdline cannot be present in the zbi vmo.
-    ZX_DEBUG_ASSERT(header.type != ZBI_TYPE_CMDLINE);
   }
 
   if (discard_end > discard_begin) {
