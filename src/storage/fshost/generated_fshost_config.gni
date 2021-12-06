@@ -39,9 +39,6 @@ declare_args() {
 
   # Make fshost watch for NAND devices.
   fshost_watch_for_nand = false
-
-  # List of files and directories that don't need to be preserved when resizing minfs.
-  minfs_resize_excluded_paths = []
 }
 
 # Generates an fshost config file that will appear in config/fshost. If no configuration file is
@@ -165,10 +162,6 @@ template("generated_fshost_config") {
     }
     if (fshost_watch_for_nand) {
       contents += [ "nand" ]
-    }
-    if (minfs_resize_excluded_paths != []) {
-      contents += [ "minfs-resize-excluded-paths=" +
-                    string_join(",", minfs_resize_excluded_paths) ]
     }
 
     output_conversion = "list lines"

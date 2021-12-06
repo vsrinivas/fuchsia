@@ -62,8 +62,7 @@ class BlockDevice : public BlockDeviceInterface {
   zx_status_t FormatCustomFilesystem(const std::string& binary_path) const;
 
  private:
-  zx_status_t MountData(MountOptions* options);
-  zx::channel CloneDeviceChannel() const;
+  zx_status_t MountData(MountOptions* options, zx::channel block_device);
 
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;

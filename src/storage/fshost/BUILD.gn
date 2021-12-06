@@ -132,7 +132,6 @@ source_set("block-watcher") {
     "encrypted-volume.cc",
     "filesystem-mounter.cc",
     "fshost-fs-provider.cc",
-    "minfs-manipulator.cc",
     "nand-device.cc",
     "pkgfs-launcher.cc",
     "pkgfs-loader-service.cc",
@@ -361,7 +360,6 @@ test("fshost_integration_test") {
     "fshost-exposed-dir-test.cc",
     "fshost_integration_test.cc",
     "fshost_integration_test.h",
-    "minfs-manipulator-test.cc",
     "mock-block-device.h",
     "recovery-test.cc",
   ]
@@ -374,7 +372,6 @@ test("fshost_integration_test") {
     "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
-    "//sdk/lib/inspect/testing/cpp",
     "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing_llcpp",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",

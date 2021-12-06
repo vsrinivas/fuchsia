@@ -32,11 +32,6 @@ zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::str
   return ZX_OK;
 }
 
-InspectManager::InspectManager() {
-  minfs_upgrade_progress_ = inspector_.GetRoot().CreateChild("minfs_upgrade");
-}
-InspectManager::~InspectManager() = default;
-
 fbl::RefPtr<fs::PseudoDir> InspectManager::Initialize(async_dispatcher* dispatcher) {
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
   diagnostics_dir->AddEntry(
@@ -67,27 +62,6 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
         return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
       },
       &inspector_);
-}
-
-const char* InspectManager::MinfsUpgradeStateString(MinfsUpgradeState state) {
-  switch (state) {
-    case InspectManager::MinfsUpgradeState::kUnknown:
-      return "unknown";
-    case InspectManager::MinfsUpgradeState::kSkipped:
-      return "skipped";
-    case InspectManager::MinfsUpgradeState::kDetectedFailedUpgrade:
-      return "detected_failed_upgrade";
-    case InspectManager::MinfsUpgradeState::kReadOldPartition:
-      return "1_read_old";
-    case InspectManager::MinfsUpgradeState::kWriteNewPartition:
-      return "2_write_new";
-    case InspectManager::MinfsUpgradeState::kFinished:
-      return "3_finished";
-  }
-}
-
-void InspectManager::LogMinfsUpgradeProgress(MinfsUpgradeState state) {
-  minfs_upgrade_progress_.CreateUint(MinfsUpgradeStateString(state), 1u, &inspector_);
 }
 
 void InspectManager::FillStats(fidl::UnownedClientEnd<fio::Directory> dir_chan,
