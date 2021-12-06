@@ -217,6 +217,10 @@
             protocol: "fuchsia.component.Binder",
             from: "framework",
         },
+        {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "#workstation_session",
+        },
     ],
     environments: [
         {

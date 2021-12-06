@@ -21,8 +21,7 @@ typedef ViewPresentedCallback = bool Function(ViewState viewState);
 typedef ViewDismissedCallback = void Function(ViewState viewState);
 typedef ErrorCallback = void Function(String url, String error);
 
-/// Defines a [GraphicalPresenter] to present and dismiss application views.
-class PresenterService extends GraphicalPresenter {
+class PresenterService {
   late ViewPresentedCallback onViewPresented;
   late ViewDismissedCallback onViewDismissed;
   late VoidCallback onPresenterDisposed;
@@ -30,9 +29,37 @@ class PresenterService extends GraphicalPresenter {
 
   PresenterService();
 
+  final _bindings = <_GraphicalPresenterImpl>{};
+
   void advertise(Outgoing outgoing) {
     outgoing.addPublicService(bind, GraphicalPresenter.$serviceName);
   }
+
+  void bind(InterfaceRequest<GraphicalPresenter> request) {
+    final graphicalPresenter = _GraphicalPresenterImpl()
+      ..onPresenterDisposed = onPresenterDisposed
+      ..onViewPresented = onViewPresented
+      ..onViewDismissed = onViewDismissed
+      ..onError = onError
+      ..bind(request);
+    _bindings.add(graphicalPresenter);
+  }
+
+  void dispose() {
+    for (var binding in _bindings) {
+      binding.dispose();
+    }
+  }
+}
+
+/// Defines a [GraphicalPresenter] to present and dismiss application views.
+class _GraphicalPresenterImpl extends GraphicalPresenter {
+  late ViewPresentedCallback onViewPresented;
+  late ViewDismissedCallback onViewDismissed;
+  late VoidCallback onPresenterDisposed;
+  late ErrorCallback onError;
+
+  _GraphicalPresenterImpl();
 
   @override
   Future<void> presentView(
