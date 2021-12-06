@@ -319,6 +319,7 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   ri->i_current_depth = CpuToLe(static_cast<uint32_t>(GetCurDirDepth()));
   ri->i_xattr_nid = CpuToLe(GetXattrNid());
   ri->i_flags = CpuToLe(GetInodeFlags());
+  ri->i_pino = CpuToLe(GetParentNid());
   ri->i_generation = CpuToLe(GetGeneration());
   ri->i_dir_level = GetDirLevel();
 

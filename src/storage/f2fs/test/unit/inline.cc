@@ -285,5 +285,90 @@ TEST(InlineDirTest, NestedInlineDirectories) {
   EXPECT_EQ(Fsck(std::move(bc)), ZX_OK);
 }
 
+TEST(InlineDirTest, InlineDirPino) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+
+  // Enable inline dir option
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 1), ZX_OK);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  // Inline dir creation
+  fbl::RefPtr<fs::Vnode> vnode;
+  ASSERT_EQ(root_dir->Create("a", S_IFDIR, &vnode), ZX_OK);
+  fbl::RefPtr<Dir> a_dir = fbl::RefPtr<Dir>::Downcast(std::move(vnode));
+  ASSERT_EQ(a_dir->GetParentNid(), root_dir->Ino());
+
+  ASSERT_EQ(root_dir->Create("b", S_IFDIR, &vnode), ZX_OK);
+  fbl::RefPtr<Dir> b_dir = fbl::RefPtr<Dir>::Downcast(std::move(vnode));
+  ASSERT_EQ(b_dir->GetParentNid(), root_dir->Ino());
+
+  ASSERT_EQ(a_dir->Create("c", S_IFDIR, &vnode), ZX_OK);
+  fbl::RefPtr<Dir> c_dir = fbl::RefPtr<Dir>::Downcast(std::move(vnode));
+  ASSERT_EQ(c_dir->GetParentNid(), a_dir->Ino());
+
+  ASSERT_EQ(a_dir->Create("d", S_IFREG, &vnode), ZX_OK);
+  fbl::RefPtr<File> d1_file = fbl::RefPtr<File>::Downcast(std::move(vnode));
+  ASSERT_EQ(d1_file->GetParentNid(), a_dir->Ino());
+
+  ASSERT_EQ(b_dir->Create("d", S_IFREG, &vnode), ZX_OK);
+  fbl::RefPtr<File> d2_file = fbl::RefPtr<File>::Downcast(std::move(vnode));
+  ASSERT_EQ(d2_file->GetParentNid(), b_dir->Ino());
+
+  // rename "/a/c" to "/b/c" and "/a/d" to "/b/d"
+  ASSERT_EQ(a_dir->Rename(b_dir, "c", "c", true, true), ZX_OK);
+  ASSERT_EQ(a_dir->Rename(b_dir, "d", "d", false, false), ZX_OK);
+
+  // Check i_pino of renamed directory
+  ASSERT_EQ(c_dir->GetParentNid(), b_dir->Ino());
+  ASSERT_EQ(d1_file->GetParentNid(), b_dir->Ino());
+
+  ASSERT_EQ(d1_file->Close(), ZX_OK);
+  ASSERT_EQ(d2_file->Close(), ZX_OK);
+  ASSERT_EQ(c_dir->Close(), ZX_OK);
+  ASSERT_EQ(b_dir->Close(), ZX_OK);
+  ASSERT_EQ(a_dir->Close(), ZX_OK);
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = a_dir = b_dir = c_dir = nullptr;
+  d1_file = d2_file = nullptr;
+
+  // Remount
+  FileTester::Unmount(std::move(fs), &bc);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  FileTester::CreateRoot(fs.get(), &root);
+  root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  FileTester::Lookup(root_dir.get(), "b", &vnode);
+  b_dir = fbl::RefPtr<Dir>::Downcast(std::move(vnode));
+  FileTester::Lookup(b_dir.get(), "c", &vnode);
+  c_dir = fbl::RefPtr<Dir>::Downcast(std::move(vnode));
+  FileTester::Lookup(b_dir.get(), "d", &vnode);
+  d1_file = fbl::RefPtr<File>::Downcast(std::move(vnode));
+
+  // Check i_pino of renamed directory
+  ASSERT_EQ(c_dir->GetParentNid(), b_dir->Ino());
+  ASSERT_EQ(d1_file->GetParentNid(), b_dir->Ino());
+
+  ASSERT_EQ(d1_file->Close(), ZX_OK);
+  ASSERT_EQ(c_dir->Close(), ZX_OK);
+  ASSERT_EQ(b_dir->Close(), ZX_OK);
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = b_dir = c_dir = nullptr;
+  d1_file = nullptr;
+
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc), &bc), ZX_OK);
+}
+
 }  // namespace
 }  // namespace f2fs

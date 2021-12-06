@@ -328,7 +328,6 @@ void Dir::InitDentInode(VnodeF2fs *vnode, Page *ipage) {
 
   /* copy dentry info. to this inode page */
   rn = static_cast<Node *>(PageAddress(ipage));
-  rn->i.i_pino = CpuToLe(Ino());
   rn->i.i_namelen = CpuToLe(vnode->GetNameLen());
   memcpy(rn->i.i_name, vnode->GetName(), vnode->GetNameLen());
 #if 0  // porting needed

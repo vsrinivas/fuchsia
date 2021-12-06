@@ -539,6 +539,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       }
     }
 
+    old_vnode->SetParentNid(new_dir->Ino());
     old_vnode->SetCTime(cur_time);
     old_vnode->SetFlag(InodeInfoFlag::kNeedCp);
     old_vnode->MarkInodeDirty();
