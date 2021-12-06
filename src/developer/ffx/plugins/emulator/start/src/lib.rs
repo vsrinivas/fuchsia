@@ -5,6 +5,7 @@
 use crate::pbm::make_configs;
 use anyhow::{Context, Result};
 use ffx_core::ffx_plugin;
+use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_engines::EngineBuilder;
 use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_bridge as bridge;
@@ -13,8 +14,9 @@ mod pbm;
 
 #[ffx_plugin("emu.experimental")]
 pub async fn start(cmd: StartCommand, _daemon_proxy: bridge::DaemonProxy) -> Result<()> {
+    let config = FfxConfigWrapper::new();
     let emulator_configuration =
-        make_configs(&cmd).await.context("making configuration from metadata")?;
+        make_configs(&cmd, &config).await.context("making configuration from metadata")?;
 
     // Initialize an engine of the requested type with the configuration defined in the manifest.
     let result =

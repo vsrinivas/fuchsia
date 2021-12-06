@@ -5,6 +5,7 @@
 //! Utilities for Product Bundle Metadata (PBM).
 
 use anyhow::{anyhow, Result};
+use ffx_emulator_common::{config, config::FfxConfigWrapper};
 use ffx_emulator_config::{
     convert_bundle_to_configs, ConsoleType, EmulatorConfiguration, LogLevel, NetworkingMode,
 };
@@ -13,7 +14,10 @@ use fms;
 use std::path::PathBuf;
 
 /// Create a RuntimeConfiguration based on the command line args.
-pub(crate) async fn make_configs(cmd: &StartCommand) -> Result<EmulatorConfiguration> {
+pub(crate) async fn make_configs(
+    cmd: &StartCommand,
+    config: &FfxConfigWrapper,
+) -> Result<EmulatorConfiguration> {
     let fms_entries = fms::Entries::from_config().await?;
     let product_bundle = fms::find_product_bundle(&fms_entries, &cmd.product_bundle)?;
     let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)?;
@@ -24,8 +28,10 @@ pub(crate) async fn make_configs(cmd: &StartCommand) -> Result<EmulatorConfigura
         );
     }
 
+    let sdk_root = config.file(config::SDK_ROOT).await?;
+
     // Apply the values from the manifest to an emulation configuration.
-    let config = convert_bundle_to_configs(product_bundle, virtual_device)?;
+    let config = convert_bundle_to_configs(product_bundle, virtual_device, &sdk_root)?;
 
     // Integrate the values from command line flags into the emulation configuration, and
     // return the result to the caller.

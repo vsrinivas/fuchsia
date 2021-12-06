@@ -14,6 +14,7 @@ use std::path::PathBuf;
 pub fn convert_bundle_to_configs(
     product_bundle: &ProductBundleV1,
     virtual_device: &VirtualDeviceV1,
+    sdk_root: &PathBuf,
 ) -> Result<EmulatorConfiguration> {
     let mut emulator_configuration: EmulatorConfiguration = EmulatorConfiguration::default();
 
@@ -35,10 +36,10 @@ pub fn convert_bundle_to_configs(
         if let Some(emu) = &manifests.emu {
             emulator_configuration.guest = GuestConfig {
                 // TODO(fxbug.dev/88908): Eventually we'll need to support multiple disk_images.
-                fvm_image: Some(PathBuf::from(&emu.disk_images[0])),
-                kernel_image: PathBuf::from(&emu.kernel),
+                fvm_image: Some(sdk_root.join(&emu.disk_images[0])),
+                kernel_image: sdk_root.join(&emu.kernel),
                 kernel_args: Vec::new(),
-                zbi_image: PathBuf::from(&emu.initial_ramdisk),
+                zbi_image: sdk_root.join(&emu.initial_ramdisk),
             };
         } else {
             return Err(anyhow!(
@@ -117,8 +118,9 @@ mod tests {
             behaviors,
         };
 
+        let sdk_root = PathBuf::from("/some/sdk-root");
         // Run the conversion, then assert everything in the config matches the manifest data.
-        let config = convert_bundle_to_configs(&pb, &device)?;
+        let config = convert_bundle_to_configs(&pb, &device, &sdk_root)?;
         assert_eq!(config.device.audio, device.hardware.audio);
         assert_eq!(config.device.cpu.architecture, device.hardware.cpu.arch);
         assert_eq!(config.device.memory, device.hardware.memory);
@@ -128,9 +130,14 @@ mod tests {
 
         assert!(config.guest.fvm_image.is_some());
         let emu = pb.manifests.unwrap().emu.unwrap();
-        assert_eq!(config.guest.fvm_image.unwrap().to_string_lossy(), emu.disk_images[0]);
-        assert_eq!(config.guest.kernel_image.to_string_lossy(), emu.kernel);
-        assert_eq!(config.guest.zbi_image.to_string_lossy(), emu.initial_ramdisk);
+
+        let expected_kernel = sdk_root.join(emu.kernel);
+        let expected_fvm = sdk_root.join(&emu.disk_images[0]);
+        let expected_zbi = sdk_root.join(emu.initial_ramdisk);
+
+        assert_eq!(config.guest.fvm_image.unwrap(), expected_fvm);
+        assert_eq!(config.guest.kernel_image, expected_kernel);
+        assert_eq!(config.guest.zbi_image, expected_zbi);
 
         assert!(config.behaviors.contains_key("four_core_cpu"));
 
@@ -151,7 +158,7 @@ mod tests {
             memory: DataAmount { quantity: 2048, units: DataUnits::Megabytes },
             window_size: Screen { height: 1024, width: 1280, units: ScreenUnits::Pixels },
         };
-        let config = convert_bundle_to_configs(&pb, &device)?;
+        let config = convert_bundle_to_configs(&pb, &device, &sdk_root)?;
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);
@@ -163,9 +170,13 @@ mod tests {
 
         assert!(config.guest.fvm_image.is_some());
         let emu = pb.manifests.unwrap().emu.unwrap();
-        assert_eq!(config.guest.fvm_image.unwrap().to_string_lossy(), emu.disk_images[0]);
-        assert_eq!(config.guest.kernel_image.to_string_lossy(), emu.kernel);
-        assert_eq!(config.guest.zbi_image.to_string_lossy(), emu.initial_ramdisk);
+        let expected_kernel = sdk_root.join(emu.kernel);
+        let expected_fvm = sdk_root.join(&emu.disk_images[0]);
+        let expected_zbi = sdk_root.join(emu.initial_ramdisk);
+
+        assert_eq!(config.guest.fvm_image.unwrap(), expected_fvm);
+        assert_eq!(config.guest.kernel_image, expected_kernel);
+        assert_eq!(config.guest.zbi_image, expected_zbi);
         Ok(())
     }
 }
