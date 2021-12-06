@@ -61,6 +61,13 @@ impl WakeupTime for std::time::Duration {
     }
 }
 
+#[cfg(target_os = "fuchsia")]
+impl WakeupTime for Duration {
+    fn into_time(self) -> Time {
+        Time::after(self)
+    }
+}
+
 impl DurationExt for std::time::Duration {
     fn after_now(self) -> Time {
         self.into_time()
@@ -298,6 +305,17 @@ mod timer_tests {
             Either::Left((_, _)) => {}
             Either::Right((_, _)) => panic!("wrong timer fired"),
         }
+    }
+
+    #[cfg(target = "fuchsia")]
+    #[test]
+    fn can_use_zx_duration() {
+        let mut exec = LocalExecutor::new().unwrap();
+        let start = Instant::now();
+        let timer = Timer::new(Duration::from_millis(100));
+        exec.run_singlethreaded(timer);
+        let end = Instant::now();
+        assert!(end - start > std::time::Duration::from_millis(100));
     }
 
     #[test]
