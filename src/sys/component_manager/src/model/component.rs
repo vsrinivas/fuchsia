@@ -1817,7 +1817,7 @@ pub mod tests {
             actions::ShutdownAction,
             binding::Binder,
             events::{registry::EventSubscription, stream::EventStream},
-            hooks::{EventError, EventErrorPayload, EventType},
+            hooks::EventType,
             testing::{
                 mocks::{ControlMessage, ControllerActionResponse, MockController},
                 routing_test_helpers::{RoutingTest, RoutingTestBuilder},
@@ -2281,58 +2281,6 @@ pub mod tests {
             })),
             exec.run_until_stalled(&mut stop_fut)
         );
-    }
-
-    #[fuchsia::test]
-    async fn notify_directory_ready() {
-        let test = RoutingTest::new(
-            "root",
-            vec![(
-                "root",
-                ComponentDeclBuilder::new()
-                    .directory(cm_rust::DirectoryDecl {
-                        name: "diagnostics".into(),
-                        source_path: Some("/diagnostics".try_into().unwrap()),
-                        rights: *::routing::rights::READ_RIGHTS,
-                    })
-                    .expose(cm_rust::ExposeDecl::Directory(cm_rust::ExposeDirectoryDecl {
-                        source: cm_rust::ExposeSource::Self_,
-                        source_name: "diagnostics".try_into().expect("bad cap path"),
-                        target: cm_rust::ExposeTarget::Framework,
-                        target_name: "diagnostics".try_into().expect("bad cap path"),
-                        rights: None,
-                        subdir: None,
-                    }))
-                    .build(),
-            )],
-        )
-        .await;
-
-        let mut event_source = test
-            .builtin_environment
-            .event_source_factory
-            .create_for_debug()
-            .await
-            .expect("create event source");
-        let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(
-                EventType::DirectoryReady.into(),
-                EventMode::Async,
-            )])
-            .await
-            .expect("subscribe to event stream");
-        event_source.start_component_tree().await;
-
-        let _component =
-            test.model.bind(&vec![].into(), &BindReason::Root).await.expect("failed to bind");
-        let event =
-            event_stream.wait_until(EventType::DirectoryReady, vec![].into()).await.unwrap().event;
-
-        assert_eq!(event.target_moniker, AbsoluteMoniker::root().into());
-        assert_matches!(event.result,
-                        Err(EventError {
-                            event_error_payload:
-                                EventErrorPayload::DirectoryReady { name, .. }, .. }) if name == "diagnostics");
     }
 
     #[fuchsia::test]

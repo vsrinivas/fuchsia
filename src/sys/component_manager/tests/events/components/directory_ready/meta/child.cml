@@ -27,13 +27,6 @@
             rights: [ "x*" ],
             path: "/insufficient_rights",
         },
-
-        // Never published
-        {
-            directory: "not_published",
-            rights: [ "r*" ],
-            path: "/not_published",
-        },
     ],
     expose: [
         {
@@ -54,11 +47,6 @@
         },
         {
             directory: "insufficient_rights",
-            from: "self",
-            to: "framework",
-        },
-        {
-            directory: "not_published",
             from: "self",
             to: "framework",
         },

@@ -10,7 +10,7 @@ use {
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ServerEnd},
     fidl_fidl_test_components as ftest,
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
-    files_async, fuchsia_async as fasync,
+    files_async,
     futures::StreamExt,
     io_util,
     maplit::hashmap,
@@ -44,7 +44,7 @@ async fn call_trigger(directory: &DirectoryProxy, paths: &Vec<String>) {
 /// Those directories contain a `Trigger` service that should be accessible when opening the
 /// directory.
 /// It sends "Saw: /path/to/dir on /some_moniker" for each successful read.
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
     let event_source = EventSource::new().unwrap();
     let mut event_stream =
@@ -56,9 +56,9 @@ async fn main() {
         "nested".to_string() => vec![format!("inner/{}", ftest::TriggerMarker::PROTOCOL_NAME).to_string()],
     };
 
-    let mut err_event_names = vec!["insufficient_rights", "not_published"];
+    let mut err_event_names = vec!["insufficient_rights"];
 
-    for _ in 0..4 {
+    for _ in 0..3 {
         let event = EventMatcher::default().expect_match::<DirectoryReady>(&mut event_stream).await;
 
         assert_eq!(

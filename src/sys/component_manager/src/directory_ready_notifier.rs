@@ -25,8 +25,20 @@ use {
     io_util,
     log::*,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
-    std::sync::{Arc, Mutex, Weak},
+    std::{
+        sync::{Arc, Mutex, Weak},
+        time::Duration,
+    },
 };
+
+// TODO(fxbug.dev/49198): The out/diagnostics directory propagation for runners includes a retry.
+// The reason of this is that flutter fills the out/ directory *after*
+// serving it. Therefore we need to watch that directory to notify.
+// Sadly the PseudoDir exposed in the SDK (and used by flutter) returns ZX_ERR_NOT_SUPPORTED on
+// Watch.
+const OPEN_OUT_SUBDIR_RETRY_INITIAL_DELAY_MS: u64 = 500;
+const OPEN_OUT_SUBDIR_RETRY_MAX_DELAY_MS: u64 = 15000;
+const OPEN_OUT_SUBDIR_MAX_RETRIES: usize = 30;
 
 /// Awaits for `Started` events and for each capability exposed to framework, dispatches a
 /// `DirectoryReady` event.
@@ -200,27 +212,40 @@ impl DirectoryReadyNotifier {
         let node_result = async move {
             // DirProxy.open fails on absolute paths.
             let source_path = source_path.to_string();
-            let canonicalized_path = io_util::canonicalize_path(&source_path);
+
             let outgoing_dir = outgoing_dir_result.map_err(|e| e.clone())?;
 
-            let (node, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
-
-            outgoing_dir
-                .open(
-                    rights.into_legacy() | fio::OPEN_FLAG_DESCRIBE,
-                    fio::MODE_TYPE_DIRECTORY,
-                    &canonicalized_path,
-                    ServerEnd::new(server_end.into_channel()),
-                )
-                .map_err(|_| {
-                    ModelError::open_directory_error(
-                        target.abs_moniker.to_partial(),
-                        source_path.clone(),
-                    )
-                })?;
-            self.wait_for_on_open(&node, &target.abs_moniker, canonicalized_path.to_string())
-                .await?;
-            Ok(node)
+            let mut current_delay = 0;
+            let mut retries = 0;
+            loop {
+                match self.try_opening(&outgoing_dir, &source_path, &rights).await {
+                    Ok(node) => return Ok(node),
+                    Err(TryOpenError::Fidl(_)) => {
+                        break Err(ModelError::open_directory_error(
+                            target.abs_moniker.to_partial(),
+                            source_path.clone(),
+                        ));
+                    }
+                    Err(TryOpenError::Status(status)) => {
+                        // If the directory doesn't exist, retry.
+                        if status == zx::Status::NOT_FOUND {
+                            if retries < OPEN_OUT_SUBDIR_MAX_RETRIES {
+                                retries += 1;
+                                current_delay = std::cmp::min(
+                                    OPEN_OUT_SUBDIR_RETRY_MAX_DELAY_MS,
+                                    current_delay + OPEN_OUT_SUBDIR_RETRY_INITIAL_DELAY_MS,
+                                );
+                                fasync::Timer::new(Duration::from_millis(current_delay)).await;
+                                continue;
+                            }
+                        }
+                        break Err(ModelError::open_directory_error(
+                            target.abs_moniker.to_partial(),
+                            source_path.clone(),
+                        ));
+                    }
+                }
+            }
         }
         .await;
 
@@ -233,6 +258,38 @@ impl DirectoryReadyNotifier {
                 Err(EventError::new(&e, EventErrorPayload::DirectoryReady { name: target_name })),
             ),
         }
+    }
+
+    async fn try_opening(
+        &self,
+        outgoing_dir: &DirectoryProxy,
+        source_path: &str,
+        rights: &Rights,
+    ) -> Result<NodeProxy, TryOpenError> {
+        let canonicalized_path = io_util::canonicalize_path(&source_path);
+        let (node, server_end) = fidl::endpoints::create_proxy::<NodeMarker>().unwrap();
+        outgoing_dir
+            .open(
+                rights.into_legacy() | fio::OPEN_FLAG_DESCRIBE,
+                fio::MODE_TYPE_DIRECTORY,
+                &canonicalized_path,
+                ServerEnd::new(server_end.into_channel()),
+            )
+            .map_err(TryOpenError::Fidl)?;
+        let mut events = node.take_event_stream();
+        match events.next().await {
+            Some(Ok(fio::NodeEvent::OnOpen_ { s: status, .. })) => {
+                let zx_status = zx::Status::from_raw(status);
+                if zx_status != zx::Status::OK {
+                    return Err(TryOpenError::Status(zx_status));
+                }
+            }
+            Some(Ok(fio::NodeEvent::OnConnectionInfo { .. })) => {}
+            _ => {
+                return Err(TryOpenError::Status(zx::Status::PEER_CLOSED));
+            }
+        }
+        Ok(node)
     }
 
     async fn provide_builtin(&self, filter: &EventFilter) -> Vec<Event> {
@@ -363,6 +420,11 @@ impl EventSynthesisProvider for DirectoryReadyNotifier {
     }
 }
 
+enum TryOpenError {
+    Fidl(fidl::Error),
+    Status(zx::Status),
+}
+
 #[async_trait]
 impl Hook for DirectoryReadyNotifier {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
@@ -389,5 +451,86 @@ impl Hook for DirectoryReadyNotifier {
             _ => {}
         }
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::{
+        environment::Environment,
+        testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
+    };
+    use cm_rust_testing::ComponentDeclBuilder;
+    use std::convert::TryFrom;
+
+    #[fuchsia::test]
+    async fn verify_get_event_retry() {
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
+        let _task = fasync::Task::spawn(async move {
+            serve_fake_dir(stream).await;
+        });
+
+        let components = vec![("root", ComponentDeclBuilder::new().build())];
+        let TestModelResult { model, .. } =
+            TestEnvironmentBuilder::new().set_components(components).build().await;
+
+        let component = Arc::new(ComponentInstance::new_root(
+            Environment::empty(),
+            Weak::new(),
+            Weak::new(),
+            "test:///root".to_string(),
+        ));
+        let notifier = DirectoryReadyNotifier::new(Arc::downgrade(&model));
+        let event = notifier
+            .create_event(
+                &component,
+                Ok(&proxy),
+                Rights::from(*routing::rights::READ_RIGHTS),
+                &CapabilityPath::try_from("/foo").unwrap(),
+                &CapabilityName::from("foo"),
+            )
+            .await;
+        assert_eq!(event.target_moniker, AbsoluteMoniker::root().into());
+        assert_eq!(event.component_url, "test:///root");
+        let payload = event.result.expect("got ok result");
+
+        match payload {
+            EventPayload::DirectoryReady { name, .. } => {
+                assert_eq!(name, "foo");
+            }
+            other => {
+                panic!("Unexpected payload: {:?}", other);
+            }
+        }
+    }
+
+    /// Serves a fake directory that returns NOT_FOUND for the given path until the third request.
+    async fn serve_fake_dir(mut request_stream: fio::DirectoryRequestStream) {
+        let mut requests = 0;
+        while let Some(req) = request_stream.next().await {
+            match req {
+                Ok(fio::DirectoryRequest::Open { path, object, .. }) => {
+                    assert_eq!("foo", path);
+                    let (_stream, control_handle) =
+                        object.into_stream_and_control_handle().unwrap();
+                    if requests >= 3 {
+                        control_handle
+                            .send_on_open_(
+                                zx::Status::OK.into_raw(),
+                                Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject {})),
+                            )
+                            .unwrap();
+                    } else {
+                        control_handle
+                            .send_on_open_(zx::Status::NOT_FOUND.into_raw(), None)
+                            .unwrap();
+                    }
+                    requests += 1;
+                }
+                _ => {}
+            }
+        }
     }
 }

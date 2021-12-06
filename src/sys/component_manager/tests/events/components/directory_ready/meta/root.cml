@@ -25,7 +25,6 @@
                     "insufficient_rights",
                     "nested",
                     "normal",
-                    "not_published",
                 ],
             },
             modes: [ "async" ],
