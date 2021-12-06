@@ -43,12 +43,13 @@ impl std::str::FromStr for TimeFormat {
     subcommand,
     name = "log",
     description = "Display logs from a target device",
-    note = "`ffx` logs are proactively pulled off of target devices and cached on the host.
+    note = "Logs are proactively retrieved from target devices and cached on the host.
 
-Symbolization is performed in the background using the symbolizer host tool. You can pass additional
-arguments to the symbolizer tool (for example, to add a remote symbol server) by running:
+Symbolization is performed in the background using the symbolizer host tool. You can pass
+additional arguments to the symbolizer tool (for example, to add a remote symbol server) using:
+  $ ffx config set proactive_log.symbolize.extra_args \"--symbol-server gs://some-url/path --symbol-server gs://some-other-url/path ...\"
 
-`ffx config set proactive_log.symbolize.extra_args \"--symbol-server gs://some-url/path --symbol-server gs://some-other-url/path ...\"`",
+To learn more about configuring the log viewer, visit https://fuchsia.dev/fuchsia-src/development/tools/ffx/commands/log",
     example = "\
 Dump the most recent logs and stream new ones as they happen:
   $ ffx log
@@ -63,11 +64,15 @@ Stream ERROR logs with source moniker, component url or message containing eithe
 \"netstack\" or \"remote-control.cm\", but not containing \"sys\":
   $ ffx log --severity error --filter netstack --filter remote-control.cm --exclude sys
 
-Dump all available logs where the source moniker, component url, or message contains \"remote-control\"
+Dump all available logs where the source moniker, component url, or message contains
+\"remote-control\":
   $ ffx log --filter remote-control dump
 
 Dump all logs from the last 30 minutes logged before 5 minutes ago:
-  $ ffx log --since \"30m ago\" --until \"5m ago\" dump"
+  $ ffx log --since \"30m ago\" --until \"5m ago\" dump
+
+Enable DEBUG logs from the \"core/audio\" component while logs are streaming:
+  $ ffx log --select core/audio#DEBUG"
 )]
 pub struct LogCommand {
     #[argh(subcommand)]
@@ -141,21 +146,12 @@ pub struct LogCommand {
     #[argh(switch)]
     pub no_symbols: bool,
 
-    /// specify the runtime log level for components as 'component interest'
-    /// using the form <component>#<interest> where component is the
-    /// component selector (a component moniker that may include wildcards or a recursive
-    /// glob in its last segment) and interest is the specified selection criteria,
-    /// e.g. 'log-level' as one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE.
-    ///
-    /// Example: --select core/audio#DEBUG --select core/session-*/my_component#WARN
-    /// Note 1: This flag changes the settings with which logs are emitted
-    /// on the component/producer side.
-    ///
-    /// Note 2: In the event that multiple log listeners provide selector
-    /// arguments via --select, the minimum severity provided across all active clients
-    /// will be used. When a client disconnects, the new minimum severity across the remaining
-    /// clients will be used. See https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#LogSettings
-    /// for a full explanation of the semantics.
+    /// configure the log settings on the target device for components matching
+    /// the given selector. This modifies the minimum log severity level emitted
+    /// by components during the logging session.
+    /// Specify using the format <component-selector>#<log-level>, with level
+    /// as one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE.
+    /// May be repeated.
     #[argh(option, from_str_fn(parse_log_interest_selector))]
     pub select: Vec<LogInterestSelector>,
 }

@@ -27,12 +27,13 @@ usually invoke it with [`ffx log`](https://fuchsia.dev/reference/tools/sdk/ffx.m
    <td><code>--select &lt;comma-separated-component-interests></code>
    </td>
    <td>
-       Specify the runtime log level for components as 'component interest' using the form
-       <code>&lt;component>#&lt;interest></code> where component is a component selector
-       (a component moniker that might include wildcards or a recursive glob in the last segment)
-       and interest is the specified selection criteria, one of FATAL|ERROR|WARN|INFO|DEBUG|TRACE
-       giving the desired 'log-level'. Multiple component interest selections are delimited by
-       commas.
+      Configure the minimum severity level for logs emitted by components on the target device
+      matching the selector.
+
+      Specify using the format <code>&lt;component-selector&gt;#&lt;log-level&gt;</code>, where
+      <code>log-level</code> must be one of <code>FATAL|ERROR|WARN|INFO|DEBUG|TRACE</code>.
+      <p>
+      Multiple component selections are delimited by commas.
    </td>
   </tr>
   <tr>

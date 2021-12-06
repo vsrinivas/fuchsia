@@ -1,24 +1,25 @@
 # Command log
 
-`ffx log` is a log-viewing utility built into `ffx`. It has similar functionality to `fx log`, but
-is built around proactively caching logs from target devices on the host machine. This feature along
-with configuration options and possible side-effects are described on this page.
+`ffx log` is a log-viewing utility built into `ffx`. This guide describes how to
+configure and use `ffx log` to view logs on your Fuchsia device.
 
-## Streaming logs
-
-The basic usage for the `ffx` log viewer is:
+To start the log viewer, run the following command:
 
 ```posix-terminal
 ffx log
 ```
 
-This command prints some earlier logs from your device for context, and then stream subsequent logs
-as they are logged.
+This command prints the current log contents and leaves the connection open to
+stream new log entries. To print the current contents of the log and exit, use `dump`:
 
-## Proactive logging overview
+```posix-terminal
+ffx log dump
+```
+
+## Proactive logging
 
 The `ffx` daemon persists in the background after an `ffx` command is run. The daemon proactively
-discovers Fuchsia devices and connects to them as they become reachable .
+discovers Fuchsia devices and connects to them as they become reachable.
 
 With proactive logging, the `ffx` daemon begins reading logs from a target device in the background
 as soon as it's connected. The logs are cached on the host machine, up to a configured space limit.
@@ -47,7 +48,7 @@ ffx --target <NODENAME> log dump ~1
 the currently active session for that target device (whether or not a currently active session exists). You
 can view earlier boots by using `~2`, `~3`, and so on.
 
-### Proactive log configuration
+### Configuration
 
 There are 3 configuration settings relevant to the proactive log cache:
 
@@ -83,3 +84,44 @@ There are two configuration parameters relevant to symbolization:
 - `proactive_log.symbolize.extra_args`: A raw string of additional parameters passed directly to the
   `symbolizer` host tool. This can be used to, for example, configure remote symbol servers. Default
   is `""`.
+
+## Filtering logs
+
+The `ffx log` command provides additional options to filter the logs captured from the target
+device. You can apply filters to the log based on timestamps, component, tags, or log level.
+
+```posix-terminal
+ffx log --filter hello-world --severity error
+```
+
+For a complete list of filtering options, see the [reference documentation][ffx-reference].
+
+## Log settings
+
+Log filters modify how the captured logs are displayed by `ffx log`, but they do not affect the
+log entries emitted by components on the target device. Use the `--select` option to send a
+request to configure the [log settings][fidl-logsettings] of specific components during the
+logging session. This adjusts the log level applied to any component matching the provided
+[component selector][component-select] for recording logs.
+
+```posix-terminal
+ffx log --select {{ '<var>' }}component-selector{{ '</var>' }}#{{ '<var>' }}log-level{{ '</var>' }}
+```
+
+You can use this to temporarily enable logs that are below the minimum severity configure by your
+component, such as `DEBUG` or `TRACE` logs, or to suppress noisy logs from a component to improve
+performance.
+
+The following example enables debug logs for the `core/audio` component, and suppresses all log
+messages except errors from networking components:
+
+```none {:.devsite-disable-click-to-copy}
+$ ffx log --select core/audio#DEBUG --select core/network/**#ERROR
+```
+
+Note: Unlike the `--severity` option, which filters the view after logs are captured from the
+target device, this configures whether the target components emit logs of the given severity.
+
+[component-select]: /docs/development/tools/ffx/commands/component-select.md
+[ffx-reference]: https://fuchsia.dev/reference/tools/sdk/ffx
+[fidl-logsettings]: https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#LogSettings
