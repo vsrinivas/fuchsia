@@ -578,8 +578,8 @@ depfile_inputs+=( "${depfile_shlibs[@]}" )
 extra_outputs+=( "${extra_linker_outputs[@]}" )
 
 test "$llvm_ir_output" = "no" || {
-  # Expect a llvm-ir .ll file.
-  extra_outputs+="$(dirname "$output")/$(basename "$output" .rlib)$extra_filename".ll
+  # Expect a llvm-ir .ll file when building a .rlib crate or executable.
+  extra_outputs+=( "$(dirname "$output")/$(basename "$output" .rlib)$extra_filename".ll )
 }
 
 test "$save_analysis" = 0 || {
