@@ -11,6 +11,15 @@ use url::Url;
 use valico::common::error::ValicoError;
 use valico::json_schema;
 
+pub mod schema {
+    pub const COMMON: &str = include_str!("../common.json");
+    pub const EMU_MANIFEST: &str = include_str!("../emu_manifest.json");
+    pub const FLASH_MANIFEST_V1: &str = include_str!("../flash_manifest-835e8f26.json");
+    pub const HARDWARE_V1: &str = include_str!("../hardware-f6f47515.json");
+    pub const PRODUCT_BUNDLE_COMMON_V1: &str =
+        include_str!("../product_bundle_common-ab8943fd.json");
+}
+
 /// The various types of errors raised by this module.
 #[derive(Debug, Error)]
 enum Error {
@@ -66,6 +75,11 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
     /// Returns the schema matching the object type.
     fn get_schema() -> &'static str;
 
+    /// Returns a list of schemas referenced by this schema.
+    fn get_referenced_schemata() -> &'static [&'static str] {
+        &[schema::COMMON]
+    }
+
     // Returns schema ID.
     fn get_schema_id() -> Result<String> {
         let schema = from_str(Self::get_schema())?;
@@ -80,30 +94,11 @@ pub trait JsonObject: for<'a> Deserialize<'a> + Serialize + Sized {
         let mut scope = json_schema::Scope::new();
 
         // Add the schema including all the common definitions.
-        scope
-            .compile(from_str(include_str!("../common.json"))?, /*ban_unknown=*/ true)
-            .map_err(Error::SchemaInvalid)?;
-        scope
-            .compile(from_str(include_str!("../emu_manifest.json"))?, /*ban_unknown=*/ true)
-            .map_err(Error::SchemaInvalid)?;
-        scope
-            .compile(
-                from_str(include_str!("../flash_manifest-835e8f26.json"))?,
-                /*ban_unknown=*/ true,
-            )
-            .map_err(Error::SchemaInvalid)?;
-        scope
-            .compile(
-                from_str(include_str!("../hardware-f6f47515.json"))?,
-                /*ban_unknown=*/ true,
-            )
-            .map_err(Error::SchemaInvalid)?;
-        scope
-            .compile(
-                from_str(include_str!("../product_bundle_common-ab8943fd.json"))?,
-                /*ban_unknown=*/ true,
-            )
-            .map_err(Error::SchemaInvalid)?;
+        for schema in Self::get_referenced_schemata() {
+            scope
+                .compile(from_str(schema)?, /*ban_unknown=*/ true)
+                .map_err(Error::SchemaInvalid)?;
+        }
 
         let validator = scope
             .compile_and_return(schema, /*ban_unknown=*/ true)

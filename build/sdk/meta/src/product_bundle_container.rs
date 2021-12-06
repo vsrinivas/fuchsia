@@ -8,7 +8,7 @@
 use {
     crate::{
         common::{ElementType, Envelope},
-        json::JsonObject,
+        json::{schema, JsonObject},
         ProductBundleV1,
     },
     serde::{Deserialize, Serialize},
@@ -50,6 +50,16 @@ pub struct ProductBundleContainerV1 {
 impl JsonObject for Envelope<ProductBundleContainerV1> {
     fn get_schema() -> &'static str {
         include_str!("../product_bundle_container-76a5c104.json")
+    }
+
+    fn get_referenced_schemata() -> &'static [&'static str] {
+        &[
+            schema::COMMON,
+            schema::HARDWARE_V1,
+            schema::EMU_MANIFEST,
+            schema::FLASH_MANIFEST_V1,
+            schema::PRODUCT_BUNDLE_COMMON_V1,
+        ]
     }
 }
 

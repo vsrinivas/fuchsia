@@ -5,7 +5,7 @@
 //! Representation of the physical_device metadata.
 
 use crate::common::{ElementType, Envelope, TargetArchitecture};
-use crate::json::JsonObject;
+use crate::json::{schema, JsonObject};
 use serde::{Deserialize, Serialize};
 
 /// Specifics for a CPU.
@@ -50,6 +50,10 @@ pub struct PhysicalDeviceV1 {
 impl JsonObject for Envelope<PhysicalDeviceV1> {
     fn get_schema() -> &'static str {
         include_str!("../physical_device-0bd5d21f.json")
+    }
+
+    fn get_referenced_schemata() -> &'static [&'static str] {
+        &[schema::COMMON, schema::HARDWARE_V1]
     }
 }
 

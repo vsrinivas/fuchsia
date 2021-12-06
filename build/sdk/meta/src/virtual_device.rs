@@ -7,7 +7,7 @@
 use crate::common::{
     AudioModel, DataUnits, ElementType, Envelope, PointingDevice, ScreenUnits, TargetArchitecture,
 };
-use crate::json::JsonObject;
+use crate::json::{schema, JsonObject};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -176,6 +176,10 @@ pub struct VirtualDeviceV1 {
 impl JsonObject for Envelope<VirtualDeviceV1> {
     fn get_schema() -> &'static str {
         include_str!("../virtual_device-93A41932.json")
+    }
+
+    fn get_referenced_schemata() -> &'static [&'static str] {
+        &[schema::COMMON, schema::HARDWARE_V1]
     }
 }
 
