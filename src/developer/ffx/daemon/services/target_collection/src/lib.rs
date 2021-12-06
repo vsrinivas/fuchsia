@@ -27,7 +27,7 @@ use {
 mod reboot;
 mod target_handle;
 
-#[ffx_service]
+#[ffx_service(bridge::MdnsMarker, bridge::FastbootTargetStreamMarker)]
 pub struct TargetCollectionService {
     tasks: TaskManager,
 
@@ -201,8 +201,8 @@ impl FidlService for TargetCollectionService {
     async fn start(&mut self, cx: &Context) -> Result<()> {
         let target_collection = cx.get_target_collection().await?;
         self.load_manual_targets(&target_collection).await;
-        let mdns = cx.open_service_proxy::<bridge::MdnsMarker>().await?;
-        let fastboot = cx.open_service_proxy::<bridge::FastbootTargetStreamMarker>().await?;
+        let mdns = self.open_mdns_proxy(cx).await?;
+        let fastboot = self.open_fastboot_target_stream_proxy(cx).await?;
         let tc = cx.get_target_collection().await?;
         let tc_clone = tc.clone();
         self.tasks.spawn(async move {

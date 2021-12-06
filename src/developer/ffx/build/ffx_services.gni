@@ -47,6 +47,7 @@ template("ffx_services") {
              "//third_party/rust_crates:quote",
              "//third_party/rust_crates:syn",
              "//src/developer/ffx/lib/services:lib",
+             "//src/developer/ffx/lib/services/dependencies:lib",
              "//src/lib/fidl/rust/fidl",
            ]
   }

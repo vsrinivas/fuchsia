@@ -13,6 +13,7 @@ if (is_host) {
     deps = [
       "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
       "//src/developer/ffx/lib/services:lib",
+      "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",

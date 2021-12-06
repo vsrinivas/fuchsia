@@ -51,5 +51,8 @@ group("services") {
 
 group("tests") {
   testonly = true
-  deps = [ ":lib_test($host_toolchain)" ]
+  deps = [
+    ":lib_test($host_toolchain)",
+    "dependencies:tests($host_toolchain)",
+  ]
 }

@@ -123,6 +123,34 @@ impl Context {
         self.inner.open_remote_control(target_identifier).await
     }
 
+    /// Opens a service proxy on the daemon using the ConnectToService function.
+    ///
+    /// This is not intended to be directly called by the user at risk of
+    /// causing circular dependencies, so behavior when calling this directly
+    /// is undefined.
+    ///
+    /// If you need to open another service from within your own service,
+    /// first declare a dependency to the service endpoint in the `ffx_service`
+    /// macro, which will generate the appropriate build-time dependency checks,
+    /// and access functions.
+    ///
+    /// Example:
+    /// ```rust
+    /// use fidl_library_of_some_kind::DependentServiceMarker;
+    ///
+    /// #[ffx_service(DependentServiceMarker)]
+    /// pub struct FooService {}
+    ///
+    /// impl FooService {
+    ///
+    ///   async fn example_func(&self, cx: &Context) -> Result<()> {
+    ///     let proxy = self.open_dependent_service_proxy(cx).await?;
+    ///     proxy.do_some_things().await?;
+    ///     Ok(())
+    ///   }
+    /// }
+    ///
+    /// ```
     pub async fn open_service_proxy<S>(&self) -> Result<S::Proxy>
     where
         S: fidl::endpoints::DiscoverableProtocolMarker,
