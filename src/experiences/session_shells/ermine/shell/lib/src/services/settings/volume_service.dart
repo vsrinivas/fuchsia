@@ -55,6 +55,11 @@ class VolumeService implements TaskService {
     volume = (volume - 0.1).clamp(0, 1);
   }
 
+  // Toggles mute for volume on/off.
+  void toggleMute() {
+    muted = !muted;
+  }
+
   IconData get icon => _muted ? Icons.volume_off : Icons.volume_up;
 
   bool get muted => _muted;

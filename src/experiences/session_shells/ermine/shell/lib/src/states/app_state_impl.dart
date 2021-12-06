@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// ignore_for_file: unnecessary_lambdas
 import 'dart:convert';
 
 import 'package:ermine/src/services/focus_service.dart';
@@ -408,10 +409,11 @@ class AppStateImpl with Disposable implements AppState {
             settingsState.showAllSettings();
           }
         },
-        // ignore: unnecessary_lambdas
         'increaseBrightness': () => settingsState.increaseBrightness(),
-        // ignore: unnecessary_lambdas
         'decreaseBrightness': () => settingsState.decreaseBrightness(),
+        'increaseVolume': () => settingsState.increaseVolume(),
+        'decreaseVolume': () => settingsState.decreaseVolume(),
+        'muteVolume': () => settingsState.toggleMute(),
       };
 
   final _focusedView = Observable<ViewHandle?>(null);
