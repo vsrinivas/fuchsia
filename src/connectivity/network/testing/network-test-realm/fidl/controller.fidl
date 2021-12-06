@@ -46,7 +46,7 @@ protocol Controller {
     /// * error `INTERNAL` for internal errors, including failure to start the
     ///     specified `netstack`.
     StartHermeticNetworkRealm(struct {
-        netstack @generated_name("Netstack") strict enum {
+        netstack strict enum {
             /// Netstack2.
             V2 = 1;
         };
@@ -60,7 +60,7 @@ protocol Controller {
     /// re-enable an interface will not result in this method returning an
     /// error.
     ///
-    /// * error `HERMETIC_NETWORK_REALM_NOT_FOUND` if a hermetic network realm
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if a hermetic network realm
     ///     was not running.
     /// * error `INTERNAL` for internal errors, including failure to destroy the
     ///     realm.
@@ -74,7 +74,7 @@ protocol Controller {
     /// + request `mac_address` address of the interface to be added to the
     ///     hermetic Netstack.
     /// + request `name` the name to assign to the new interface.
-    /// * error `HERMETIC_NETWORK_REALM_NOT_FOUND` if there is no running
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
     ///     hermetic network realm.
     /// * error `INTERFACE_NOT_FOUND` if an interface with `mac_address` could
     ///     not be found on the system.
