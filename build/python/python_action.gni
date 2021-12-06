@@ -36,11 +36,9 @@ template("python_action") {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "args",
                              "deps",
                              "binary_label",
                              "script",
-                             "args",
                            ])
 
     script = binary_tool_output_name
