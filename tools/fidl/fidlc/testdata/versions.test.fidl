@@ -1,3 +1,60 @@
 // TODO(fxbug.dev/67858): Change strings to integers and add more declarations to this file.
-@available(added="1", deprecated="2", removed="3")
+@available(added = "1", deprecated = "2", removed = "3")
 library fidl.test.versions;
+
+@available(added = "1", deprecated = "2", removed = "3")
+alias Alias = string;
+
+@available(added = "1", deprecated = "2", removed = "3")
+const Const uint32 = 0;
+
+@available(added = "1", deprecated = "2", removed = "3")
+type Bits = bits {
+    @available(added = "1", deprecated = "2", removed = "3")
+    A = 1;
+};
+
+@available(added = "1", deprecated = "2", removed = "3")
+type Enum = enum {
+    @available(added = "1", deprecated = "2", removed = "3")
+    A = 1;
+};
+
+@available(added = "1", deprecated = "2", removed = "3")
+type Struct = struct {
+    @available(added = "1", deprecated = "2", removed = "3")
+    x uint32;
+};
+
+@available(added = "1", deprecated = "2", removed = "3")
+type Table = table {
+    @available(added = "1", deprecated = "2", removed = "3")
+    1: x uint32;
+    @available(added = "1", deprecated = "2", removed = "3")
+    2: reserved;
+};
+
+@available(added = "1", deprecated = "2", removed = "3")
+type Union = union {
+    @available(added = "1", deprecated = "2", removed = "3")
+    1: x uint32;
+    @available(added = "1", deprecated = "2", removed = "3")
+    2: reserved;
+};
+
+protocol OtherProtocol {};
+
+@available(added = "1", deprecated = "2", removed = "3")
+protocol Protocol {
+    @available(added = "1", deprecated = "2", removed = "3")
+    compose OtherProtocol;
+
+    @available(added = "1", deprecated = "2", removed = "3")
+    Foo();
+};
+
+@available(added = "1", deprecated = "2", removed = "3")
+service Service {
+    @available(added = "1", deprecated = "2", removed = "3")
+    p client_end:Protocol;
+};

@@ -22,7 +22,7 @@
             "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
             "line": 2,
             "column": 12,
-            "length": 9
+            "length": 11
           }
         },
         {
@@ -41,8 +41,8 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
             "line": 2,
-            "column": 23,
-            "length": 14
+            "column": 25,
+            "length": 16
           }
         },
         {
@@ -61,8 +61,8 @@
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
             "line": 2,
-            "column": 39,
-            "length": 11
+            "column": 43,
+            "length": 13
           }
         }
       ],
@@ -70,21 +70,1923 @@
         "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
         "line": 2,
         "column": 1,
-        "length": 50
+        "length": 56
       }
     }
   ],
   "library_dependencies": [],
-  "bits_declarations": [],
-  "const_declarations": [],
-  "enum_declarations": [],
+  "bits_declarations": [
+    {
+      "name": "fidl.test.versions/Bits",
+      "naming_context": [
+        "Bits"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 12,
+        "column": 6,
+        "length": 4
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 11,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 11,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 11,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 11,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "mask": "1",
+      "members": [
+        {
+          "name": "A",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 14,
+            "column": 5,
+            "length": 1
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 13,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 13,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 13,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 13,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ]
+        }
+      ],
+      "strict": false
+    }
+  ],
+  "const_declarations": [
+    {
+      "name": "fidl.test.versions/Const",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 9,
+        "column": 7,
+        "length": 5
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 8,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 8,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 8,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 8,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "uint32",
+        "type_shape_v1": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 4,
+          "alignment": 4,
+          "depth": 0,
+          "max_handles": 0,
+          "max_out_of_line": 0,
+          "has_padding": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "0",
+        "expression": "0",
+        "literal": {
+          "kind": "numeric",
+          "value": "0",
+          "expression": "0"
+        }
+      }
+    }
+  ],
+  "enum_declarations": [
+    {
+      "name": "fidl.test.versions/Enum",
+      "naming_context": [
+        "Enum"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 18,
+        "column": 6,
+        "length": 4
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 17,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 17,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 17,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 17,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "type": "uint32",
+      "members": [
+        {
+          "name": "A",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 20,
+            "column": 5,
+            "length": 1
+          },
+          "value": {
+            "kind": "literal",
+            "value": "1",
+            "expression": "1",
+            "literal": {
+              "kind": "numeric",
+              "value": "1",
+              "expression": "1"
+            }
+          },
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 19,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 19,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 19,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 19,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ]
+        }
+      ],
+      "strict": false,
+      "maybe_unknown_value": 4294967295
+    }
+  ],
   "experimental_resource_declarations": [],
-  "interface_declarations": [],
-  "service_declarations": [],
-  "struct_declarations": [],
-  "table_declarations": [],
-  "union_declarations": [],
-  "type_alias_declarations": [],
-  "declaration_order": [],
-  "declarations": {}
+  "interface_declarations": [
+    {
+      "name": "fidl.test.versions/OtherProtocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 45,
+        "column": 10,
+        "length": 13
+      },
+      "composed_protocols": [],
+      "methods": []
+    },
+    {
+      "name": "fidl.test.versions/Protocol",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 48,
+        "column": 10,
+        "length": 8
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 47,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 47,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 47,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 47,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "composed_protocols": [
+        {
+          "name": "fidl.test.versions/OtherProtocol",
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 49,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 49,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 49,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 49,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 50,
+            "column": 13,
+            "length": 13
+          }
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 7892886356712658659,
+          "name": "Foo",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 53,
+            "column": 5,
+            "length": 3
+          },
+          "has_request": true,
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 52,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 52,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 52,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 52,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ],
+          "maybe_request": [],
+          "maybe_request_type_shape_v1": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "maybe_request_type_shape_v2": {
+            "inline_size": 16,
+            "alignment": 8,
+            "depth": 0,
+            "max_handles": 0,
+            "max_out_of_line": 0,
+            "has_padding": false,
+            "has_flexible_envelope": false
+          },
+          "has_response": false,
+          "is_composed": false,
+          "has_error": false
+        }
+      ]
+    }
+  ],
+  "service_declarations": [
+    {
+      "name": "fidl.test.versions/Service",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 57,
+        "column": 9,
+        "length": 7
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 56,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 56,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 56,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 56,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "identifier",
+            "identifier": "fidl.test.versions/Protocol",
+            "nullable": false,
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 1,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "p",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 59,
+            "column": 5,
+            "length": 1
+          },
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 58,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 58,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 58,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 58,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [
+    {
+      "name": "fidl.test.versions/Struct",
+      "naming_context": [
+        "Struct"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 24,
+        "column": 6,
+        "length": 6
+      },
+      "is_request_or_response": false,
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 23,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 23,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 23,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 23,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "x",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 26,
+            "column": 5,
+            "length": 1
+          },
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 25,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 25,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 25,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 25,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ],
+          "field_shape_v1": {
+            "offset": 0,
+            "padding": 0
+          },
+          "field_shape_v2": {
+            "offset": 0,
+            "padding": 0
+          }
+        }
+      ],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 4,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    }
+  ],
+  "table_declarations": [
+    {
+      "name": "fidl.test.versions/Table",
+      "naming_context": [
+        "Table"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 30,
+        "column": 6,
+        "length": 5
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 29,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 29,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 29,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 29,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "name": "x",
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 32,
+            "column": 8,
+            "length": 1
+          },
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 31,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 31,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 31,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 31,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 33,
+            "column": 5,
+            "length": 72
+          },
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 33,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 33,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 33,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 33,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ]
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 24,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 2,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    }
+  ],
+  "union_declarations": [
+    {
+      "name": "fidl.test.versions/Union",
+      "naming_context": [
+        "Union"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 38,
+        "column": 6,
+        "length": 5
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 37,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 37,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 37,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 37,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "name": "x",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32",
+            "type_shape_v1": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            },
+            "type_shape_v2": {
+              "inline_size": 4,
+              "alignment": 4,
+              "depth": 0,
+              "max_handles": 0,
+              "max_out_of_line": 0,
+              "has_padding": false,
+              "has_flexible_envelope": false
+            }
+          },
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 40,
+            "column": 8,
+            "length": 1
+          },
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 39,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 39,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 39,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 39,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ]
+        },
+        {
+          "ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 41,
+            "column": 5,
+            "length": 72
+          },
+          "maybe_attributes": [
+            {
+              "name": "available",
+              "arguments": [
+                {
+                  "name": "added",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "1",
+                    "expression": "\"1\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "1",
+                      "expression": "\"1\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 41,
+                    "column": 16,
+                    "length": 11
+                  }
+                },
+                {
+                  "name": "deprecated",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "2",
+                    "expression": "\"2\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "2",
+                      "expression": "\"2\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 41,
+                    "column": 29,
+                    "length": 16
+                  }
+                },
+                {
+                  "name": "removed",
+                  "type": "string",
+                  "value": {
+                    "kind": "literal",
+                    "value": "3",
+                    "expression": "\"3\"",
+                    "literal": {
+                      "kind": "string",
+                      "value": "3",
+                      "expression": "\"3\""
+                    }
+                  },
+                  "location": {
+                    "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                    "line": 41,
+                    "column": 47,
+                    "length": 13
+                  }
+                }
+              ],
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 41,
+                "column": 5,
+                "length": 56
+              }
+            }
+          ]
+        }
+      ],
+      "strict": false,
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      },
+      "type_shape_v2": {
+        "inline_size": 16,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": true,
+        "has_flexible_envelope": true
+      }
+    }
+  ],
+  "type_alias_declarations": [
+    {
+      "name": "fidl.test.versions/Alias",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "line": 6,
+        "column": 7,
+        "length": 5
+      },
+      "maybe_attributes": [
+        {
+          "name": "available",
+          "arguments": [
+            {
+              "name": "added",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "1",
+                "expression": "\"1\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "1",
+                  "expression": "\"1\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 5,
+                "column": 12,
+                "length": 11
+              }
+            },
+            {
+              "name": "deprecated",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "2",
+                "expression": "\"2\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "2",
+                  "expression": "\"2\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 5,
+                "column": 25,
+                "length": 16
+              }
+            },
+            {
+              "name": "removed",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "3",
+                "expression": "\"3\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "3",
+                  "expression": "\"3\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+                "line": 5,
+                "column": 43,
+                "length": 13
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "line": 5,
+            "column": 1,
+            "length": 56
+          }
+        }
+      ],
+      "partial_type_ctor": {
+        "name": "string",
+        "args": [],
+        "nullable": false
+      }
+    }
+  ],
+  "declaration_order": [
+    "fidl.test.versions/Union",
+    "fidl.test.versions/Table",
+    "fidl.test.versions/Struct",
+    "fidl.test.versions/Service",
+    "fidl.test.versions/OtherProtocol",
+    "fidl.test.versions/Protocol",
+    "fidl.test.versions/Enum",
+    "fidl.test.versions/Const",
+    "fidl.test.versions/Bits",
+    "fidl.test.versions/Alias"
+  ],
+  "declarations": {
+    "fidl.test.versions/Bits": "bits",
+    "fidl.test.versions/Const": "const",
+    "fidl.test.versions/Enum": "enum",
+    "fidl.test.versions/OtherProtocol": "interface",
+    "fidl.test.versions/Protocol": "interface",
+    "fidl.test.versions/Service": "service",
+    "fidl.test.versions/Struct": "struct",
+    "fidl.test.versions/Table": "table",
+    "fidl.test.versions/Union": "union",
+    "fidl.test.versions/Alias": "type_alias"
+  }
 }

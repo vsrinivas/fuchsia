@@ -3,3 +3,23 @@
 #pragma once
 
 #include <fidl/test/versions/cpp/fidl.h>
+namespace fidl {
+namespace test {
+namespace versions {
+namespace testing {
+class OtherProtocol_TestBase : public ::fidl::test::versions::OtherProtocol {
+ public:
+  virtual ~OtherProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+};
+
+class Protocol_TestBase : public ::fidl::test::versions::Protocol {
+ public:
+  virtual ~Protocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void Foo() override { NotImplemented_("Foo"); }
+};
+}  // namespace testing
+}  // namespace versions
+}  // namespace test
+}  // namespace fidl

@@ -7,7 +7,668 @@
 //
 // Domain objects definitions (i.e. "natural types" in unified bindings)
 //
+namespace fidl {
+namespace test {
+namespace versions {
+extern "C" const fidl_type_t fidl_test_versions_UnionTable;
+const fidl_type_t* Union::FidlType = &fidl_test_versions_UnionTable;
+
+Union::Union() {}
+
+Union::~Union() { Destroy(); }
+
+Union::Union(Union&& other) : tag_(other.tag_) {
+  switch (tag_) {
+    case ::fidl::test::versions::Union::Tag::kX:
+      x_ = std::move(other.x_);
+      break;
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::versions::Union::Tag::Invalid):
+      break;
+    default:
+      new (&unknown_data_) decltype(unknown_data_);
+      unknown_data_ = std::move(other.unknown_data_);
+      break;
+  }
+}
+
+Union& Union::operator=(Union&& other) {
+  if (this != &other) {
+    Destroy();
+    tag_ = other.tag_;
+    switch (tag_) {
+      case ::fidl::test::versions::Union::Tag::kX:
+        x_ = std::move(other.x_);
+        break;
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::versions::Union::Tag::Invalid):
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        unknown_data_ = std::move(other.unknown_data_);
+        break;
+    }
+  }
+  return *this;
+}
+
+Union Union::WithX(uint32_t&& val) {
+  Union result;
+  result.set_x(std::move(val));
+  return result;
+}
+
+void Union::Encode(
+    ::fidl::Encoder* encoder, size_t offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  const size_t length_before = encoder->CurrentLength();
+  const size_t handles_before = encoder->CurrentHandleCount();
+
+  switch (Which()) {
+    case ::fidl::test::versions::Union::Tag::kX: {
+      switch (encoder->wire_format()) {
+        case ::fidl::internal::WireFormatVersion::kV1: {
+          ::fidl::Encode(
+              encoder, &x_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_t* xunion = encoder->GetPtr<fidl_xunion_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint32_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+          break;
+        }
+        case ::fidl::internal::WireFormatVersion::kV2: {
+          if (::fidl::EncodingInlineSize<uint32_t>(encoder) <=
+              FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+            ::fidl::Encode(encoder, &x_,
+                           offset + offsetof(fidl_xunion_v2_t, envelope));
+
+            fidl_xunion_v2_t* xunion =
+                encoder->GetPtr<fidl_xunion_v2_t>(offset);
+            xunion->tag = tag_;
+            xunion->envelope.num_handles = static_cast<uint16_t>(
+                encoder->CurrentHandleCount() - handles_before);
+            xunion->envelope.flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+            break;
+          }
+
+          ::fidl::Encode(
+              encoder, &x_,
+              encoder->Alloc(
+                  ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                      encoder)));
+
+          fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
+          xunion->tag = tag_;
+          xunion->envelope.num_bytes =
+              static_cast<uint32_t>(encoder->CurrentLength() - length_before);
+          xunion->envelope.num_handles = static_cast<uint16_t>(
+              encoder->CurrentHandleCount() - handles_before);
+          xunion->envelope.flags = 0;
+          break;
+        }
+      }
+      break;
+    }
+    case ::fidl::test::versions::Union::Tag::kUnknown: {
+      ::fidl::EncodeUnknownBytes(encoder, &unknown_data_,
+                                 offset + offsetof(fidl_xunion_t, envelope));
+      *encoder->GetPtr<uint64_t>(offset) = tag_;
+      break;
+    }
+    default:
+      break;
+  }
+}
+
+void Union::Decode(::fidl::Decoder* _decoder, Union* value, size_t offset) {
+  fidl_xunion_v2_t* xunion = _decoder->GetPtr<fidl_xunion_v2_t>(offset);
+
+  if (xunion->envelope.num_bytes == 0 && xunion->envelope.num_handles == 0 &&
+      xunion->envelope.flags == 0) {
+    value->EnsureStorageInitialized(static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::versions::Union::Tag::Invalid));
+    return;
+  }
+
+  value->EnsureStorageInitialized(xunion->tag);
+
+  size_t value_offset = _decoder->EnvelopeValueOffset(&xunion->envelope);
+
+  switch (value->tag_) {
+    case ::fidl::test::versions::Union::Tag::kX: {
+      ::fidl::Decode(_decoder, &value->x_, value_offset);
+      break;
+    }
+    default: {
+      auto unknown_info = _decoder->EnvelopeUnknownDataInfo(&xunion->envelope);
+      value->unknown_data_.resize(unknown_info.num_bytes);
+      ::fidl::DecodeUnknownBytesContents(_decoder, &value->unknown_data_,
+                                         unknown_info.value_offset);
+      break;
+    }
+  }
+}
+
+zx_status_t Union::Clone(Union* result) const {
+  result->Destroy();
+  result->tag_ = tag_;
+  switch (tag_) {
+    case ::fidl::test::versions::Union::Tag::Invalid:
+      return ZX_OK;
+    case ::fidl::test::versions::Union::Tag::kX:
+      return ::fidl::Clone(x_, &result->x_);
+    default:
+      new (&result->unknown_data_) decltype(unknown_data_);
+      return ::fidl::Clone(unknown_data_, &result->unknown_data_);
+      return ZX_OK;
+  }
+}
+
+Union& Union::set_x(uint32_t value) {
+  EnsureStorageInitialized(::fidl::test::versions::Union::Tag::kX);
+  x_ = std::move(value);
+  return *this;
+}
+Union& Union::SetUnknownData(fidl_xunion_tag_t ordinal,
+                             std::vector<uint8_t> bytes) {
+  EnsureStorageInitialized(ordinal);
+  unknown_data_ = std::move(bytes);
+  return *this;
+}
+
+void Union::Destroy() {
+  switch (tag_) {
+    case ::fidl::test::versions::Union::Tag::kX:
+      break;
+
+    case static_cast<fidl_xunion_tag_t>(
+        ::fidl::test::versions::Union::Tag::Invalid):
+      break;
+    default:
+      unknown_data_.~decltype(unknown_data_)();
+      break;
+  }
+  tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::versions::Union::Tag::Invalid);
+}
+
+void Union::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
+  if (tag_ != tag) {
+    Destroy();
+    tag_ = tag;
+    switch (tag_) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::versions::Union::Tag::Invalid):
+        break;
+      case ::fidl::test::versions::Union::Tag::kX:
+        new (&x_) uint32_t();
+        break;
+      default:
+        new (&unknown_data_) decltype(unknown_data_);
+        break;
+    }
+  }
+}
+
+extern "C" const fidl_type_t fidl_test_versions_TableTable;
+const fidl_type_t* Table::FidlType = &fidl_test_versions_TableTable;
+
+Table::Table() {}
+
+Table::Table(Table&& other) {
+  field_presence_ = other.field_presence_;
+  if (field_presence_.IsSet<0>()) {
+    Construct(&x_value_.value, std::move(other.x_value_.value));
+  }
+  _unknown_data = std::move(other._unknown_data);
+}
+
+Table::~Table() {
+  if (field_presence_.IsSet<0>()) {
+    Destruct(&x_value_.value);
+  }
+}
+
+Table& Table::operator=(Table&& other) {
+  if (other.field_presence_.IsSet<0>()) {
+    if (field_presence_.IsSet<0>()) {
+      x_value_.value = std::move(other.x_value_.value);
+    } else {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value, std::move(other.x_value_.value));
+    }
+  } else if (field_presence_.IsSet<0>()) {
+    field_presence_.Clear<0>();
+    Destruct(&x_value_.value);
+  }
+  _unknown_data = std::move(other._unknown_data);
+  return *this;
+}
+
+bool Table::IsEmpty() const {
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+}
+
+void Table::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  size_t envelope_size =
+      (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
+          ? sizeof(fidl_envelope_t)
+          : sizeof(fidl_envelope_v2_t);
+  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
+  auto next_unknown = _unknown_data.begin();
+  if (field_presence_.IsSet<0>()) {
+    // Encode unknown fields that have an ordinal that should appear before this
+    // field.
+    while (next_unknown != _unknown_data.end() && next_unknown->first < 1) {
+      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
+      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
+                                 envelope_base);
+      std::advance(next_unknown, 1);
+    }
+
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
+
+    size_t envelope_base = base + (1 - 1) * envelope_size;
+    switch (_encoder->wire_format()) {
+      case ::fidl::internal::WireFormatVersion::kV1: {
+        ::fidl::Encode(
+            _encoder, &x_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                    _encoder)));
+
+        fidl_envelope_t* envelope =
+            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint32_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->presence = FIDL_ALLOC_PRESENT;
+        break;
+      }
+      case ::fidl::internal::WireFormatVersion::kV2: {
+        if (::fidl::EncodingInlineSize<uint32_t>(_encoder) <=
+            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+          ::fidl::Encode(_encoder, &x_value_.value, envelope_base);
+
+          fidl_envelope_v2_t* envelope =
+              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+          envelope->num_handles = static_cast<uint16_t>(
+              _encoder->CurrentHandleCount() - handles_before);
+          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
+          break;
+        }
+
+        ::fidl::Encode(
+            _encoder, &x_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(
+                    _encoder)));
+
+        fidl_envelope_v2_t* envelope =
+            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+        envelope->num_bytes =
+            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
+        envelope->num_handles = static_cast<uint16_t>(
+            _encoder->CurrentHandleCount() - handles_before);
+        envelope->flags = 0;
+        break;
+      }
+    }
+  }
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * envelope_size;
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
+  }
+}
+
+void Table::Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  size_t base;
+  size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+  if (count >= 1) {
+    size_t envelope_base = base + (1 - 1) * sizeof(fidl_envelope_v2_t);
+    fidl_envelope_v2_t* envelope =
+        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+      ::fidl::Decode(_decoder, _value->mutable_x(),
+                     _decoder->EnvelopeValueOffset(envelope));
+    } else {
+      _value->clear_x();
+    }
+  } else {
+    goto done_1;
+  }
+
+  if (count > 1) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
+        auto result = _value->_unknown_data.emplace(
+            std::piecewise_construct, std::forward_as_tuple(ordinal),
+            std::forward_as_tuple());
+        auto iter = result.first;
+        iter->second.resize(unknown_info.num_bytes);
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           unknown_info.value_offset);
+      }
+    }
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+done_1:
+  _value->clear_x();
+  return;
+}
+
+zx_status_t Table::Clone(Table* result) const {
+  if (field_presence_.IsSet<0>()) {
+    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
+    if (_status != ZX_OK) return _status;
+  } else {
+    result->clear_x();
+  }
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+}
+
+extern "C" const fidl_type_t fidl_test_versions_StructTable;
+const fidl_type_t* Struct::FidlType = &fidl_test_versions_StructTable;
+
+void Struct::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  if (::fidl::IsMemcpyCompatible<Struct>::value) {
+    memcpy(_encoder->template GetPtr<Struct>(_offset), this, sizeof(Struct));
+  } else {
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+      ::fidl::Encode(_encoder, &x, _offset + 0);
+
+    } else {
+      ::fidl::Encode(_encoder, &x, _offset + 0);
+    }
+  }
+}
+
+void Struct::Decode(::fidl::Decoder* _decoder, Struct* _value, size_t _offset) {
+  if (::fidl::IsMemcpyCompatible<Struct>::value) {
+    memcpy(_value, _decoder->template GetPtr<Struct>(_offset), sizeof(Struct));
+  } else {
+    ::fidl::Decode(_decoder, &_value->x, _offset + 0);
+  }
+}
+
+zx_status_t Struct::Clone(Struct* _result) const {
+  zx_status_t _status = ::fidl::Clone(x, &_result->x);
+  if (_status != ZX_OK) return _status;
+  return ZX_OK;
+}
+
+#if (__cplusplus < 201703)
+constexpr const ::fidl::test::versions::Enum Enum::A =
+    ::fidl::test::versions::Enum(1u);
+#endif  // (__cplusplus < 201703)
+
+#if (__cplusplus < 201703)
+constexpr const ::fidl::test::versions::Bits Bits::A =
+    ::fidl::test::versions::Bits(1u);
+constexpr const ::fidl::test::versions::Bits Bits::kMask =
+    ::fidl::test::versions::Bits(1u);
+
+#endif  // (__cplusplus < 201703)
 
 //
 // Proxies and stubs definitions
 //
+#ifdef __Fuchsia__
+
+OtherProtocol::~OtherProtocol() = default;
+
+const fidl_type_t* ::fidl::test::versions::OtherProtocol_RequestDecoder::
+    GetType(uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* OtherProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    default:
+      return nullptr;
+  }
+}
+
+OtherProtocol_EventSender::~OtherProtocol_EventSender() = default;
+
+OtherProtocol_Sync::~OtherProtocol_Sync() = default;
+
+OtherProtocol_Proxy::OtherProtocol_Proxy(
+    ::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+OtherProtocol_Proxy::~OtherProtocol_Proxy() = default;
+
+zx_status_t OtherProtocol_Proxy::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+OtherProtocol_Stub::OtherProtocol_Stub(
+    ::fidl::test::versions::OtherProtocol_Stub::OtherProtocol_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+OtherProtocol_Stub::~OtherProtocol_Stub() = default;
+
+namespace {}  // namespace
+
+zx_status_t OtherProtocol_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::fidl::test::versions::OtherProtocol_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+OtherProtocol_SyncProxy::OtherProtocol_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+OtherProtocol_SyncProxy::~OtherProtocol_SyncProxy() = default;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_versions_ProtocolFooRequestMessageTable;
+
+}  // namespace _internal
+Protocol::~Protocol() = default;
+
+const fidl_type_t* ::fidl::test::versions::Protocol_RequestDecoder::GetType(
+    uint64_t ordinal, bool* out_needs_response) {
+  switch (ordinal) {
+    case ::fidl::test::versions::internal::kProtocol_Foo_Ordinal:
+      *out_needs_response = false;
+      return &::fidl::test::versions::_internal::
+          fidl_test_versions_ProtocolFooRequestMessageTable;
+    default:
+      *out_needs_response = false;
+      return nullptr;
+  }
+}
+
+const fidl_type_t* Protocol_ResponseDecoder::GetType(uint64_t ordinal) {
+  switch (ordinal) {
+    default:
+      return nullptr;
+  }
+}
+
+Protocol_EventSender::~Protocol_EventSender() = default;
+
+Protocol_Sync::~Protocol_Sync() = default;
+
+Protocol_Proxy::Protocol_Proxy(::fidl::internal::ProxyController* controller)
+    : controller_(controller) {
+  (void)controller_;
+}
+
+Protocol_Proxy::~Protocol_Proxy() = default;
+
+zx_status_t Protocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
+  zx_status_t status = ZX_OK;
+  switch (message.ordinal()) {
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+void Protocol_Proxy::Foo() {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::versions::internal::kProtocol_Foo_Ordinal);
+  controller_->Send(
+      &::fidl::test::versions::_internal::
+          fidl_test_versions_ProtocolFooRequestMessageTable,
+      ::fidl::test::versions::Protocol_RequestEncoder::Foo(&_encoder), nullptr);
+}
+
+Protocol_Stub::Protocol_Stub(
+    ::fidl::test::versions::Protocol_Stub::Protocol_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
+
+Protocol_Stub::~Protocol_Stub() = default;
+
+namespace {}  // namespace
+
+zx_status_t Protocol_Stub::Dispatch_(
+    ::fidl::HLCPPIncomingMessage message,
+    ::fidl::internal::PendingResponse response) {
+  bool needs_response;
+  const fidl_type_t* request_type =
+      ::fidl::test::versions::Protocol_RequestDecoder::GetType(
+          message.ordinal(), &needs_response);
+  if (request_type == nullptr) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (response.needs_response() != needs_response) {
+    if (needs_response) {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message needing a response with no txid");
+    } else {
+      FIDL_REPORT_DECODING_ERROR(message, request_type,
+                                 "Message not needing a response with a txid");
+    }
+    return ZX_ERR_INVALID_ARGS;
+  }
+  const char* error_msg = nullptr;
+  zx_status_t status = message.Decode(request_type, &error_msg);
+  if (status != ZX_OK) {
+    FIDL_REPORT_DECODING_ERROR(message, request_type, error_msg);
+    return status;
+  }
+  uint64_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case ::fidl::test::versions::internal::kProtocol_Foo_Ordinal: {
+      impl_->Foo();
+      break;
+    }
+    default: {
+      status = ZX_ERR_NOT_SUPPORTED;
+      break;
+    }
+  }
+  return status;
+}
+
+Protocol_SyncProxy::Protocol_SyncProxy(::zx::channel channel)
+    : proxy_(::std::move(channel)) {}
+
+Protocol_SyncProxy::~Protocol_SyncProxy() = default;
+
+zx_status_t Protocol_SyncProxy::Foo() {
+  ::fidl::Encoder _encoder(
+      ::fidl::test::versions::internal::kProtocol_Foo_Ordinal);
+  return proxy_.Send(
+      &::fidl::test::versions::_internal::
+          fidl_test_versions_ProtocolFooRequestMessageTable,
+      ::fidl::test::versions::Protocol_RequestEncoder::Foo(&_encoder));
+}
+#endif  // __Fuchsia__
+
+}  // namespace versions
+}  // namespace test
+}  // namespace fidl

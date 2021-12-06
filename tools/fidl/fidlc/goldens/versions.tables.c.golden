@@ -3,6 +3,36 @@
 #include <lib/fidl/internal.h>
 
 
+__LOCAL extern const struct FidlCodedXUnion fidl_test_versions_UnionTable;
+__LOCAL extern const struct FidlCodedXUnion fidl_test_versions_UnionNullableRefTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_versions_TableTable;
+__LOCAL extern const struct FidlCodedStruct fidl_test_versions_StructTable;
+__LOCAL extern const struct FidlCodedEnum fidl_test_versions_EnumTable;
+__LOCAL extern const struct FidlCodedBits fidl_test_versions_BitsTable;
 
 
+__LOCAL extern const struct FidlCodedStruct fidl_test_versions_ProtocolFooRequestMessageTable;
+const struct FidlCodedStruct fidl_test_versions_ProtocolFooRequestMessageTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .elements=NULL, .element_count=0u, .size_v1=16u, .size_v2=16u, .name="fidl.test.versions/ProtocolFooRequestMessage"};
+
+
+static const struct FidlXUnionField Fields24fidl_test_versions_Union[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)},
+    /*FidlXUnionField*/{.type=NULL}
+};
+const struct FidlCodedXUnion fidl_test_versions_UnionTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields24fidl_test_versions_Union, .nullable=kFidlNullability_Nonnullable, .name="fidl.test.versions/Union", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlXUnionField Fields35fidl_test_versions_UnionNullableRef[] = {
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table)},
+    /*FidlXUnionField*/{.type=NULL}
+};
+const struct FidlCodedXUnion fidl_test_versions_UnionNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=2u, .fields=Fields35fidl_test_versions_UnionNullableRef, .nullable=kFidlNullability_Nullable, .name="fidl.test.versions/Union", .strictness=kFidlStrictness_Flexible, .is_resource=kFidlIsResource_NotResource};
+static const struct FidlTableField Fields24fidl_test_versions_Table[] = {
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kUint32Table), .ordinal=1u}
+};
+const struct FidlCodedTable fidl_test_versions_TableTable = {.tag=kFidlTypeTable, .fields=Fields24fidl_test_versions_Table, .field_count=1u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.versions/Table"};
+
+const struct FidlCodedStruct fidl_test_versions_StructTable = {.tag=kFidlTypeStruct, .contains_envelope=kFidlContainsEnvelope_DoesNotContainEnvelope, .is_empty=kFidlEmpty_IsNotEmpty, .elements=NULL, .element_count=0u, .size_v1=4u, .size_v2=4u, .name="fidl.test.versions/Struct"};
+
+const struct FidlCodedEnum fidl_test_versions_EnumTable = {.tag=kFidlTypeEnum, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .validate=NULL, .name="fidl.test.versions/Enum"};
+
+const struct FidlCodedBits fidl_test_versions_BitsTable = {.tag=kFidlTypeBits, .underlying_type=kFidlCodedPrimitiveSubtype_Uint32, .strictness=kFidlStrictness_Flexible, .mask=1ul, .name="fidl.test.versions/Bits"};
 

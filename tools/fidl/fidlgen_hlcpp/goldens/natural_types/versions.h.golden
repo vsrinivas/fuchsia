@@ -7,5 +7,622 @@
 //
 // Domain objects declarations (i.e. "natural types" in unified bindings).
 //
+namespace fidl {
+namespace test {
+namespace versions {
+class Union;
 
-namespace fidl {}  // namespace fidl
+class Table;
+
+class Struct;
+
+#ifdef __Fuchsia__
+class Service;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class OtherProtocol;
+using OtherProtocolHandle = ::fidl::InterfaceHandle<OtherProtocol>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+class Protocol;
+using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
+#endif  // __Fuchsia__
+
+class Enum final {
+ public:
+  constexpr Enum() : value_(0) {}
+  constexpr explicit Enum(uint32_t value) : value_(value) {}
+  constexpr operator uint32_t() const { return value_; }
+
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
+
+        return false;
+    }
+    return true;
+  }
+
+  constexpr static Enum Unknown() { return Enum(0xffffffff); }
+
+  static const Enum A;
+
+ private:
+  uint32_t value_;
+};
+
+#if !(__cplusplus < 201703)
+constexpr const ::fidl::test::versions::Enum Enum::A =
+    ::fidl::test::versions::Enum(1u);
+#endif  // !(__cplusplus < 201703)
+
+inline zx_status_t Clone(::fidl::test::versions::Enum value,
+                         ::fidl::test::versions::Enum* result) {
+  *result = value;
+  return ZX_OK;
+}
+
+// |Bits| is flexible, hence may contain unknown members not
+// defined in the FIDL schema.
+class Bits final {
+ public:
+  constexpr Bits() = default;
+
+  // Constructs an instance of |Bits| from an underlying primitive value
+  // if the primitive does not contain any unknown members not defined in the
+  // FIDL schema. Otherwise, returns |cpp17::nullopt|.
+  constexpr inline static cpp17::optional<Bits> TryFrom(uint32_t value) {
+    if (value & ~kMask.value_) {
+      return cpp17::nullopt;
+    }
+    return Bits(value & Bits::kMask.value_);
+  }
+
+  // Constructs an instance of |Bits| from an underlying primitive value,
+  // clearing any bit member not defined in the FIDL schema.
+  constexpr inline static Bits TruncatingUnknown(uint32_t value) {
+    return Bits(value & Bits::kMask.value_);
+  }
+
+  // Constructs an instance of |Bits| from an underlying primitive value,
+  // preserving any bit member not defined in the FIDL schema.
+  constexpr explicit Bits(uint32_t value) : value_(value) {}
+  const static Bits A;
+  const static Bits kMask;
+
+  explicit constexpr inline operator uint32_t() const { return value_; }
+  explicit constexpr inline operator bool() const {
+    return static_cast<bool>(value_);
+  }
+  constexpr inline bool operator==(const Bits& other) const {
+    return value_ == other.value_;
+  }
+  constexpr inline bool operator!=(const Bits& other) const {
+    return value_ != other.value_;
+  }
+  constexpr inline Bits operator~() const;
+  constexpr inline Bits operator|(const Bits& other) const;
+  constexpr inline Bits operator&(const Bits& other) const;
+  constexpr inline Bits operator^(const Bits& other) const;
+  constexpr inline void operator|=(const Bits& other);
+  constexpr inline void operator&=(const Bits& other);
+  constexpr inline void operator^=(const Bits& other);
+  constexpr inline Bits unknown_bits() const {
+    return *this & Bits(~kMask.value_);
+  }
+  constexpr inline bool has_unknown_bits() const {
+    return static_cast<bool>(unknown_bits());
+  }
+
+ private:
+  uint32_t value_ = 0;
+};
+
+#if !(__cplusplus < 201703)
+constexpr const ::fidl::test::versions::Bits Bits::A =
+    ::fidl::test::versions::Bits(1u);
+constexpr const ::fidl::test::versions::Bits Bits::kMask =
+    ::fidl::test::versions::Bits(1u);
+
+#endif  // !(__cplusplus < 201703)
+
+constexpr inline ::fidl::test::versions::Bits Bits::operator~() const {
+  return ::fidl::test::versions::Bits(
+      static_cast<uint32_t>(~this->value_ & kMask.value_));
+}
+
+constexpr inline ::fidl::test::versions::Bits Bits::operator|(
+    const ::fidl::test::versions::Bits& other) const {
+  return ::fidl::test::versions::Bits(
+      static_cast<uint32_t>(this->value_ | other.value_));
+}
+
+constexpr inline ::fidl::test::versions::Bits Bits::operator&(
+    const ::fidl::test::versions::Bits& other) const {
+  return ::fidl::test::versions::Bits(
+      static_cast<uint32_t>(this->value_ & other.value_));
+}
+
+constexpr inline ::fidl::test::versions::Bits Bits::operator^(
+    const ::fidl::test::versions::Bits& other) const {
+  return ::fidl::test::versions::Bits(
+      static_cast<uint32_t>(this->value_ ^ other.value_));
+}
+
+constexpr inline void Bits::operator|=(
+    const ::fidl::test::versions::Bits& other) {
+  this->value_ |= other.value_;
+}
+
+constexpr inline void Bits::operator&=(
+    const ::fidl::test::versions::Bits& other) {
+  this->value_ &= other.value_;
+}
+
+constexpr inline void Bits::operator^=(
+    const ::fidl::test::versions::Bits& other) {
+  this->value_ ^= other.value_;
+}
+
+inline zx_status_t Clone(::fidl::test::versions::Bits value,
+                         ::fidl::test::versions::Bits* result) {
+  *result = value;
+  return ZX_OK;
+}
+
+class Union final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  Union();
+  ~Union();
+
+  Union(Union&&);
+  Union& operator=(Union&&);
+
+  static Union WithX(uint32_t&&);
+
+  enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
+    kUnknown = 0,
+
+    kX = 1,  // 0x1
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  static inline ::std::unique_ptr<Union> New() {
+    return ::std::make_unique<Union>();
+  }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Union* value, size_t offset);
+  zx_status_t Clone(Union* result) const;
+
+  bool has_invalid_tag() const { return tag_ == Invalid; }
+
+  bool is_x() const { return tag_ == ::fidl::test::versions::Union::Tag::kX; }
+
+  uint32_t& x() {
+    EnsureStorageInitialized(::fidl::test::versions::Union::Tag::kX);
+    return x_;
+  }
+
+  const uint32_t& x() const {
+    ZX_ASSERT(is_x());
+    return x_;
+  }
+  Union& set_x(uint32_t value);
+  Union& SetUnknownData(fidl_xunion_tag_t ordinal, std::vector<uint8_t> bytes);
+
+  ::fidl::test::versions::Union::Tag Which() const {
+    switch (tag_) {
+      case ::fidl::test::versions::Union::Tag::Invalid:
+      case ::fidl::test::versions::Union::Tag::kX:
+        return ::fidl::test::versions::Union::Tag(tag_);
+      default:
+        return ::fidl::test::versions::Union::Tag::kUnknown;
+    }
+  }
+
+  // You probably want to use Which() method instead of Ordinal(). Use Ordinal()
+  // only when you need access to the raw integral ordinal value.
+  fidl_xunion_tag_t Ordinal() const { return tag_; }
+  const std::vector<uint8_t>* UnknownBytes() const {
+    if (Which() != ::fidl::test::versions::Union::Tag::kUnknown) {
+      return nullptr;
+    }
+    return &unknown_data_;
+  }
+
+  friend ::fidl::Equality<::fidl::test::versions::Union>;
+
+ private:
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(
+      ::fidl::test::versions::Union::Tag::Invalid);
+  union {
+    uint32_t x_;
+    std::vector<uint8_t> unknown_data_;
+  };
+};
+
+inline zx_status_t Clone(const ::fidl::test::versions::Union& value,
+                         ::fidl::test::versions::Union* result) {
+  return value.Clone(result);
+}
+
+using UnionPtr = ::std::unique_ptr<Union>;
+
+class Table final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const uint32_t& x() const {
+    ZX_ASSERT(field_presence_.IsSet<0>());
+    return x_value_.value;
+  }
+  bool has_x() const { return field_presence_.IsSet<0>(); }
+
+  uint32_t* mutable_x() {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value);
+    }
+    return &x_value_.value;
+  }
+  Table& set_x(uint32_t _value) {
+    if (!field_presence_.IsSet<0>()) {
+      field_presence_.Set<0>();
+      Construct(&x_value_.value, std::move(_value));
+    } else {
+      x_value_.value = std::move(_value);
+    }
+    return *this;
+  }
+  void clear_x() {
+    if (!field_presence_.IsSet<0>()) {
+      return;
+    }
+    field_presence_.Clear<0>();
+    Destruct(&x_value_.value);
+  }
+
+  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
+  Table();
+  Table(Table&& other);
+  ~Table();
+  Table& operator=(Table&& other);
+
+  static inline ::std::unique_ptr<Table> New() {
+    return ::std::make_unique<Table>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset);
+  zx_status_t Clone(Table* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    size_t max_ordinal =
+        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      case 1:
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<1> field_presence_;
+  union ValueUnion_x {
+    ValueUnion_x() {}
+    ~ValueUnion_x() {}
+
+    uint32_t value;
+  };
+  ValueUnion_x x_value_;
+  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
+};
+
+using TablePtr = ::std::unique_ptr<Table>;
+
+class Struct final {
+ public:
+  static const fidl_type_t* FidlType;
+
+  uint32_t x{};
+
+  static inline ::std::unique_ptr<Struct> New() {
+    return ::std::make_unique<Struct>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
+  zx_status_t Clone(Struct* result) const;
+};
+
+inline zx_status_t Clone(const ::fidl::test::versions::Struct& _value,
+                         ::fidl::test::versions::Struct* _result) {
+  return _value.Clone(_result);
+}
+
+using StructPtr = ::std::unique_ptr<Struct>;
+
+#ifdef __Fuchsia__
+
+class OtherProtocol_RequestEncoder {
+ public:
+};
+
+class OtherProtocol_ResponseEncoder {
+ public:
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+namespace _internal {
+__LOCAL extern "C" const fidl_type_t
+    fidl_test_versions_ProtocolFooRequestMessageTable;
+
+}  // namespace _internal
+class Protocol_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage Foo(::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    switch (_encoder->wire_format()) {
+      case ::fidl::internal::WireFormatVersion::kV1:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+      case ::fidl::internal::WireFormatVersion::kV2:
+        _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+        break;
+    }
+
+    if (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1) {
+    } else {
+    }
+
+    fidl_trace(DidHLCPPEncode,
+               &::fidl::test::versions::_internal::
+                   fidl_test_versions_ProtocolFooRequestMessageTable,
+               _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+               _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+
+class Protocol_ResponseEncoder {
+ public:
+};
+#endif  // __Fuchsia__
+
+constexpr uint32_t Const = 0u;
+
+}  // namespace versions
+}  // namespace test
+template <>
+struct IsFidlXUnion<::fidl::test::versions::Union> : public std::true_type {};
+
+template <>
+struct CodingTraits<::fidl::test::versions::Union>
+    : public EncodableCodingTraits<::fidl::test::versions::Union, 24, 16> {};
+
+template <>
+struct CodingTraits<std::unique_ptr<::fidl::test::versions::Union>> {
+  static constexpr size_t inline_size_v1_no_ee = 24;
+  static constexpr size_t inline_size_v2 = 16;
+
+  static void Encode(
+      Encoder* encoder, std::unique_ptr<::fidl::test::versions::Union>* value,
+      size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    auto&& p_xunion = *value;
+    if (p_xunion) {
+      p_xunion->Encode(encoder, offset);
+    }
+  }
+
+  static void Decode(Decoder* _decoder,
+                     std::unique_ptr<::fidl::test::versions::Union>* value,
+                     size_t offset) {
+    fidl_xunion_t* encoded = _decoder->GetPtr<fidl_xunion_t>(offset);
+    if (encoded->tag == 0) {
+      value->reset(nullptr);
+      return;
+    }
+
+    value->reset(new ::fidl::test::versions::Union);
+
+    ::fidl::test::versions::Union::Decode(_decoder, value->get(), offset);
+  }
+};
+
+inline zx_status_t Clone(const ::fidl::test::versions::Union& value,
+                         ::fidl::test::versions::Union* result) {
+  return ::fidl::test::versions::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::versions::Union> {
+  bool operator()(const ::fidl::test::versions::Union& _lhs,
+                  const ::fidl::test::versions::Union& _rhs) const {
+    if (_lhs.Ordinal() != _rhs.Ordinal()) {
+      return false;
+    }
+
+    switch (_lhs.Ordinal()) {
+      case static_cast<fidl_xunion_tag_t>(
+          ::fidl::test::versions::Union::Tag::Invalid):
+        return true;
+      case ::fidl::test::versions::Union::Tag::kX:
+        return ::fidl::Equals(_lhs.x_, _rhs.x_);
+      default:
+        return ::fidl::Equals(_lhs.unknown_data_, _rhs.unknown_data_);
+    }
+  }
+};
+template <>
+struct CodingTraits<::fidl::test::versions::Table>
+    : public EncodableCodingTraits<::fidl::test::versions::Table, 16, 16> {};
+
+inline zx_status_t Clone(const ::fidl::test::versions::Table& _value,
+                         ::fidl::test::versions::Table* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::fidl::test::versions::Table> {
+  bool operator()(const ::fidl::test::versions::Table& _lhs,
+                  const ::fidl::test::versions::Table& _rhs) const {
+    if (_lhs.has_x()) {
+      if (!_rhs.has_x()) {
+        return false;
+      }
+      if (!::fidl::Equals(_lhs.x(), _rhs.x())) {
+        return false;
+      }
+    } else if (_rhs.has_x()) {
+      return false;
+    }
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+  }
+};
+template <>
+struct CodingTraits<::fidl::test::versions::Struct>
+    : public EncodableCodingTraits<::fidl::test::versions::Struct, 4, 4> {};
+
+template <>
+struct IsMemcpyCompatible<::fidl::test::versions::Struct>
+    : public internal::BoolConstant<
+          !HasPadding<::fidl::test::versions::Struct>::value &&
+          IsMemcpyCompatible<uint32_t>::value> {};
+
+inline zx_status_t Clone(const ::fidl::test::versions::Struct& value,
+                         ::fidl::test::versions::Struct* result) {
+  return ::fidl::test::versions::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::versions::Struct> {
+  bool operator()(const ::fidl::test::versions::Struct& _lhs,
+                  const ::fidl::test::versions::Struct& _rhs) const {
+    if (!::fidl::Equals(_lhs.x, _rhs.x)) {
+      return false;
+    }
+    return true;
+  }
+};
+template <>
+struct CodingTraits<::fidl::test::versions::Enum> {
+  static constexpr size_t inline_size_old =
+      sizeof(::fidl::test::versions::Enum);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::versions::Enum);
+  static constexpr size_t inline_size_v2 = sizeof(::fidl::test::versions::Enum);
+  static void Encode(
+      Encoder* encoder, ::fidl::test::versions::Enum* value, size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::fidl::test::versions::Enum* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::fidl::test::versions::Enum>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::fidl::test::versions::Enum value,
+                         ::fidl::test::versions::Enum* result) {
+  return ::fidl::test::versions::Clone(value, result);
+}
+template <>
+struct Equality<::fidl::test::versions::Enum> {
+  bool operator()(const ::fidl::test::versions::Enum& _lhs,
+                  const ::fidl::test::versions::Enum& _rhs) const {
+    return _lhs == _rhs;
+  }
+};
+
+template <>
+struct CodingTraits<::fidl::test::versions::Bits> {
+  static constexpr size_t inline_size_old =
+      sizeof(::fidl::test::versions::Bits);
+  static constexpr size_t inline_size_v1_no_ee =
+      sizeof(::fidl::test::versions::Bits);
+  static constexpr size_t inline_size_v2 = sizeof(::fidl::test::versions::Bits);
+  static void Encode(
+      Encoder* encoder, ::fidl::test::versions::Bits* value, size_t offset,
+      cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+    ZX_DEBUG_ASSERT(!maybe_handle_info);
+    uint32_t underlying = static_cast<uint32_t>(*value);
+    ::fidl::Encode(encoder, &underlying, offset);
+  }
+  static void Decode(Decoder* decoder, ::fidl::test::versions::Bits* value,
+                     size_t offset) {
+    uint32_t underlying = {};
+    ::fidl::Decode(decoder, &underlying, offset);
+    *value = static_cast<::fidl::test::versions::Bits>(underlying);
+  }
+};
+
+inline zx_status_t Clone(::fidl::test::versions::Bits value,
+                         ::fidl::test::versions::Bits* result) {
+  return ::fidl::test::versions::Clone(value, result);
+}
+
+template <>
+struct Equality<::fidl::test::versions::Bits> {
+  bool operator()(const ::fidl::test::versions::Bits& _lhs,
+                  const ::fidl::test::versions::Bits& _rhs) const {
+    uint32_t _lhs_underlying = static_cast<uint32_t>(_lhs);
+    uint32_t _rhs_underlying = static_cast<uint32_t>(_rhs);
+    return ::fidl::Equals(_lhs_underlying, _rhs_underlying);
+  }
+};
+
+}  // namespace fidl

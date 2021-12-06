@@ -523,6 +523,13 @@ fidl_testdata_info = [
       # TODO(fxbug.dev/65465): Make fidlgen_libfuzzer work without protocols.
       "fidlgen_libfuzzer",
     ]
+    host_build_denylist = [
+      # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
+      "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode Unified CPP dependency on HLCPP and LLCPP.
+      "fidlgen_cpp",
+    ]
   },
 ]
 

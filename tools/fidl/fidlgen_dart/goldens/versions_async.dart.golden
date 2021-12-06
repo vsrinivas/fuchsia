@@ -38,3 +38,485 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: comment_references
 // ignore_for_file: avoid_unused_constructor_parameters
 // ignore_for_file: prefer_interpolation_to_compose_strings
+
+const int const$ = 0x0;
+
+class Enum extends $fidl.Enum {
+  static final Map<int, Enum> _internedValues = {
+    0x1: a,
+  };
+  factory Enum(int _v) {
+    if (!_internedValues.containsKey(_v)) {
+      _internedValues[_v] = Enum._(_v, true);
+    }
+    return _internedValues[_v]!;
+  }
+  static const Enum a = Enum._(0x1, false);
+
+  /// Default unknown placeholder.
+  static const Enum $unknown = Enum._(0xffffffff, true);
+
+  const Enum._(this.$value, this._isUnknown);
+
+  @override
+  final int $value;
+
+  final bool _isUnknown;
+
+  static const Map<String, Enum> $valuesMap = {
+    r'a': a,
+  };
+
+  static const List<Enum> $values = [
+    a,
+  ];
+
+  static Enum? $valueOf(String name) => $valuesMap[name];
+
+  @override
+  bool isUnknown() {
+    return _isUnknown;
+  }
+
+  @override
+  String toString() {
+    switch ($value) {
+      case 0x1:
+        return r'Enum.a';
+      default:
+        return r'Enum.' '${$value}';
+    }
+  }
+
+  static Enum _ctor(int v) => Enum(v);
+}
+
+const $fidl.EnumType<Enum> kEnum_Type = $fidl.EnumType<Enum>(
+    type: $fidl.Uint32Type(), values: {0x1: null}, ctor: Enum._ctor);
+
+class Bits extends $fidl.Bits {
+  factory Bits(int _v) {
+    return Bits._(_v);
+  }
+  static const Bits a = Bits._(0x1);
+  static const Bits $none = Bits._(0);
+  static const Bits $mask = Bits._(0x1);
+
+  const Bits._(this.$value);
+
+  Bits operator |(Bits other) {
+    return Bits._($value | other.$value);
+  }
+
+  Bits operator &(Bits other) {
+    return Bits._($value & other.$value);
+  }
+
+  Bits operator ~() {
+    return Bits._(~$value & $mask.$value);
+  }
+
+  @override
+  final int $value;
+
+  @override
+  bool hasUnknownBits() {
+    return getUnknownBits() != 0;
+  }
+
+  @override
+  int getUnknownBits() {
+    return $value & ~$mask.$value;
+  }
+
+  @override
+  String toString() {
+    List<String> parts = [];
+    if ($value & 0x1 != 0) {
+      parts.add(r'Bits.a');
+    }
+    if (hasUnknownBits()) {
+      parts.add('0x${getUnknownBits().toRadixString(16)}');
+    }
+    if (parts.isEmpty) {
+      return r'Bits.$none';
+    } else {
+      return parts.join(" | ");
+    }
+  }
+
+  static Bits _ctor(int v) => Bits(v);
+}
+
+const $fidl.BitsType<Bits> kBits_Type =
+    $fidl.BitsType<Bits>(type: $fidl.Uint32Type(), ctor: Bits._ctor);
+
+enum UnionTag {
+  $unknown,
+  x, // 0x1
+}
+
+const Map<int, UnionTag> _UnionTag_map = {
+  1: UnionTag.x,
+};
+
+class Union extends $fidl.Union {
+  const Union.withX(int value)
+      : _ordinal = 1,
+        _data = value;
+  const Union.with$UnknownData(this._ordinal, $fidl.UnknownRawData data)
+      : _data = data;
+
+  Union._(int ordinal, Object data)
+      : _ordinal = ordinal,
+        _data = data;
+
+  final int _ordinal;
+  final _data;
+
+  UnionTag get $tag => _UnionTag_map[_ordinal] ?? UnionTag.$unknown;
+
+  int? get x {
+    if (_ordinal != 1) {
+      return null;
+    }
+    return _data;
+  }
+
+  $fidl.UnknownRawData? get $unknownData {
+    switch (_ordinal) {
+      case 1:
+        return null;
+      default:
+        return _data;
+    }
+  }
+
+  @override
+  String toString() {
+    switch (_ordinal) {
+      case 1:
+        return r'Union.x(' + x.toString() + ')';
+      default:
+        return r'Union.<UNKNOWN>';
+    }
+  }
+
+  @override
+  int get $ordinal => _ordinal;
+
+  @override
+  Object get $data => _data;
+
+  static Union _ctor(int ordinal, Object data) {
+    return Union._(ordinal, data);
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.UnionType<Union> kUnion_Type = $fidl.UnionType<Union>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Uint32Type(),
+  },
+  ctor: Union._ctor,
+  flexible: true,
+  resource: false,
+);
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.NullableUnionType<Union> kUnion_OptType =
+    $fidl.NullableUnionType<Union>(
+  members: <int, $fidl.FidlType>{
+    1: $fidl.Uint32Type(),
+  },
+  ctor: Union._ctor,
+  flexible: true,
+  resource: false,
+);
+
+class Struct extends $fidl.Struct {
+  const Struct({
+    required this.x,
+  });
+  Struct.clone(
+    Struct $orig, {
+    int? x,
+  }) : this(
+          x: x ?? $orig.x,
+        );
+
+  final int x;
+
+  @override
+  List<Object?> get $fields {
+    return <Object?>[
+      x,
+    ];
+  }
+
+  static const $fieldType0 = $fidl.Uint32Type();
+
+  @override
+  void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
+    switch ($encoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        $fieldType0.encode($encoder, x, $offset + 0, $depth);
+        break;
+      case $fidl.WireFormat.v2:
+        $fieldType0.encode($encoder, x, $offset + 0, $depth);
+        break;
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+
+  @override
+  String toString() {
+    return r'Struct' r'(x: ' + x.toString() + r')';
+  }
+
+  static Struct _structDecode($fidl.Decoder $decoder, int $offset, int $depth) {
+    switch ($decoder.wireFormat) {
+      case $fidl.WireFormat.v1:
+        return Struct(x: $fieldType0.decode($decoder, $offset + 0, $depth));
+      case $fidl.WireFormat.v2:
+        return Struct(x: $fieldType0.decode($decoder, $offset + 0, $depth));
+      default:
+        throw $fidl.FidlError('unknown wire format');
+    }
+  }
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.StructType<Struct> kStruct_Type = $fidl.StructType<Struct>(
+    inlineSizeV1: 4, inlineSizeV2: 4, structDecode: Struct._structDecode);
+
+class Table extends $fidl.Table {
+  const Table({
+    this.$unknownData,
+    this.x,
+  });
+
+  Table._(Map<int, dynamic> argv, this.$unknownData) : x = argv[1];
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+  final int? x;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+      case 0:
+        return x;
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {
+      1: x,
+    };
+  }
+
+  static Table _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      Table._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<Table> kTable_Type = $fidl.TableType<Table>(
+  inlineSize: 16,
+  members: [
+    $fidl.Uint32Type(),
+  ],
+  ctor: Table._ctor,
+  resource: false,
+);
+
+abstract class OtherProtocol {
+  $fidl.ServiceData? get $serviceData => OtherProtocolData();
+}
+
+// TODO: Remove ServiceData for non-service
+class OtherProtocolData implements $fidl.ServiceData<OtherProtocol> {
+  const OtherProtocolData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return OtherProtocolBinding();
+  }
+}
+
+class OtherProtocolProxy extends $fidl.AsyncProxy<OtherProtocol>
+    implements OtherProtocol {
+  OtherProtocolProxy()
+      : super($fidl.AsyncProxyController<OtherProtocol>(
+            $interfaceName: r'OtherProtocol')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+}
+
+class OtherProtocolBinding extends $fidl.AsyncBinding<OtherProtocol> {
+  OtherProtocolBinding() : super(r"OtherProtocol");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      default:
+        throw $fidl.FidlError(
+            r'Unexpected message name for OtherProtocolBinding');
+    }
+  }
+}
+
+// foo: ()
+const int _kProtocol_Foo_Ordinal = 0x6d892a52b86296e3;
+const $fidl.MethodType _kProtocol_Foo_Type = $fidl.MethodType(
+  request: [],
+  response: [],
+  name: r"Protocol.Foo",
+  requestInlineSizeV1: 0,
+  requestInlineSizeV2: 0,
+  responseInlineSizeV1: 0,
+  responseInlineSizeV2: 0,
+);
+
+abstract class Protocol {
+  $fidl.ServiceData? get $serviceData => ProtocolData();
+  $async.Future<void> foo();
+}
+
+// TODO: Remove ServiceData for non-service
+class ProtocolData implements $fidl.ServiceData<Protocol> {
+  const ProtocolData();
+
+  @override
+  String getName() {
+    return "";
+  }
+
+  @override
+  $fidl.AsyncBinding getBinding() {
+    return ProtocolBinding();
+  }
+}
+
+class ProtocolProxy extends $fidl.AsyncProxy<Protocol> implements Protocol {
+  ProtocolProxy()
+      : super(
+            $fidl.AsyncProxyController<Protocol>($interfaceName: r'Protocol')) {
+    ctrl.onResponse = _handleResponse;
+  }
+  @override
+  Null get $serviceData => null;
+
+  void _handleEvent($fidl.IncomingMessage $message) {
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  void _handleResponse($fidl.IncomingMessage $message) {
+    final int $txid = $message.txid;
+    if ($txid == 0) {
+      _handleEvent($message);
+      return;
+    }
+    final $async.Completer? $completer = ctrl.getCompleter($txid);
+    if ($completer == null) {
+      $message.closeHandles();
+      return;
+    }
+    switch ($message.ordinal) {
+      default:
+        $fidl.handleCtrlError(
+            ctrl, 'Unexpected message ordinal: ${$message.ordinal}');
+        break;
+    }
+  }
+
+  @override
+  $async.Future<void> foo() async {
+    if (!ctrl.isBound) {
+      return $async.Future.error(
+          $fidl.FidlStateException('Proxy<${ctrl.$interfaceName}> is closed.'),
+          StackTrace.current);
+    }
+
+    final $fidl.Encoder $encoder = $fidl.Encoder($fidl.kWireFormatDefault);
+    $encoder.encodeMessageHeader(_kProtocol_Foo_Ordinal, 0);
+    return $async.Future.sync(() {
+      ctrl.sendMessage($encoder.message);
+    });
+  }
+}
+
+class ProtocolBinding extends $fidl.AsyncBinding<Protocol> {
+  ProtocolBinding() : super(r"Protocol");
+
+  @override
+  void handleMessage(
+      $fidl.IncomingMessage $message, $fidl.OutgoingMessageSink $respond) {
+    switch ($message.ordinal) {
+      case _kProtocol_Foo_Ordinal:
+        final String _name = _kProtocol_Foo_Type.name;
+        $fidl.performWithExceptionHandling(_name, () {
+          final List<$fidl.MemberType> $types = _kProtocol_Foo_Type.request!;
+          // ignore: prefer_const_declarations
+          final _impl = impl!;
+          final $async.Future<void> $future = $fidl
+              .decodeMessageWithCallback<$async.Future<void>>($message,
+                  _kProtocol_Foo_Type.requestInlineSize($message.wireFormat),
+                  ($fidl.Decoder decoder) {
+            return _impl.foo();
+          });
+        }, close);
+        break;
+      default:
+        throw $fidl.FidlError(r'Unexpected message name for ProtocolBinding');
+    }
+  }
+}

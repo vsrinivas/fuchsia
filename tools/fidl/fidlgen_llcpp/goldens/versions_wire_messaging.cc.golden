@@ -3,3 +3,145 @@
 #include <fidl/fidl.test.versions/cpp/wire_messaging.h>
 
 #include <memory>
+
+#ifdef __Fuchsia__
+
+std::optional<::fidl::UnbindInfo> fidl::internal::
+    WireClientImpl<::fidl_test_versions::OtherProtocol>::DispatchEvent(
+        fidl::IncomingMessage& msg,
+        ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+        const internal::IncomingTransportContext* transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
+    ::fidl_test_versions::OtherProtocol>::entries_[] = {};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
+    ::fidl_test_versions::OtherProtocol>::entries_end_ = &entries_[0];
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_versions::OtherProtocol>::TryDispatch(
+        ::fidl::WireServer<::fidl_test_versions::OtherProtocol>* impl,
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::fidl_test_versions::OtherProtocol>::
+    Dispatch(::fidl::WireServer<::fidl_test_versions::OtherProtocol>* impl,
+             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
+}
+void fidl::WireServer<::fidl_test_versions::OtherProtocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    const ::fidl::internal::IncomingTransportContext* transport_context) {
+  ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_versions::OtherProtocol>::Dispatch(this, std::move(msg), txn);
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+namespace fidl_test_versions {
+[[maybe_unused]] constexpr uint64_t kProtocol_Foo_Ordinal =
+    7892886356712658659lu;
+
+extern "C" const fidl_type_t fidl_test_versions_ProtocolFooRequestMessageTable;
+
+extern "C" const fidl_type_t fidl_test_versions_ProtocolFooResponseMessageTable;
+#ifdef __Fuchsia__
+}  // namespace fidl_test_versions
+::fidl::WireResult<::fidl_test_versions::Protocol::Foo>::WireResult(
+    ::fidl::UnownedClientEnd<::fidl_test_versions::Protocol> client,
+    ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>* request) {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>>
+      request_message(::fidl::internal::AllowUnownedInputRef{}, request);
+  auto& outgoing = request_message.GetOutgoingMessage();
+  outgoing.Write(client.channel());
+  SetResult(outgoing);
+}
+namespace fidl_test_versions {
+#endif  // __Fuchsia__
+
+}  // namespace fidl_test_versions
+#ifdef __Fuchsia__
+
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_versions::Protocol>::Foo() {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo> _request_object{};
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>>
+      _request_message(::fidl::internal::AllowUnownedInputRef{},
+                       &_request_object);
+  return ::fidl::internal::ClientBase::SendOneWay(
+      _request_message.GetOutgoingMessage());
+}
+
+std::optional<::fidl::UnbindInfo>
+fidl::internal::WireClientImpl<::fidl_test_versions::Protocol>::DispatchEvent(
+    fidl::IncomingMessage& msg,
+    ::fidl::internal::AsyncEventHandler* maybe_event_handler,
+    const internal::IncomingTransportContext* transport_context) {
+  return ::fidl::UnbindInfo::UnknownOrdinal();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
+    ::fidl_test_versions::Protocol>::entries_[] = {
+    {
+        ::fidl_test_versions::kProtocol_Foo_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           ::fidl::Transaction* txn) {
+          auto* primary = reinterpret_cast<
+              ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>*>(
+              msg.bytes());
+          ::fidl::internal::WireCompleter<
+              ::fidl_test_versions::Protocol::Foo>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<::fidl_test_versions::Protocol>*>(
+              interface)
+              ->Foo(primary, completer);
+          return ZX_OK;
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
+    ::fidl_test_versions::Protocol>::entries_end_ = &entries_[1];
+
+::fidl::DispatchResult fidl::internal::
+    WireServerDispatcher<::fidl_test_versions::Protocol>::TryDispatch(
+        ::fidl::WireServer<::fidl_test_versions::Protocol>* impl,
+        ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
+  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
+}
+
+void fidl::internal::WireServerDispatcher<::fidl_test_versions::Protocol>::
+    Dispatch(::fidl::WireServer<::fidl_test_versions::Protocol>* impl,
+             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
+}
+void fidl::WireServer<::fidl_test_versions::Protocol>::dispatch_message(
+    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    const ::fidl::internal::IncomingTransportContext* transport_context) {
+  ::fidl::internal::WireServerDispatcher<
+      ::fidl_test_versions::Protocol>::Dispatch(this, std::move(msg), txn);
+}
+#endif  // __Fuchsia__
+
+void ::fidl::WireRequest<::fidl_test_versions::Protocol::Foo>::_InitHeader() {
+  fidl_init_txn_header(&_hdr, 0, ::fidl_test_versions::kProtocol_Foo_Ordinal);
+}
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

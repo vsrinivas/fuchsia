@@ -9,4 +9,85 @@
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
-namespace fidl {}  // namespace fidl
+namespace fidl_test_versions {
+class Struct;
+
+using Union = ::fidl::test::versions::Union;
+
+using Table = ::fidl::test::versions::Table;
+
+using Enum = ::fidl::test::versions::Enum;
+
+using Bits = ::fidl::test::versions::Bits;
+
+}  // namespace fidl_test_versions
+template <>
+struct ::fidl::internal::DesignatedInitializationProxy<
+    ::fidl_test_versions::Struct>
+    final {
+ public:
+  uint32_t x = {};
+};
+
+namespace fidl_test_versions {
+class Struct final : public ::fidl::internal::CodableBase<Struct> {
+ private:
+  friend ::fidl::internal::CodableBase<Struct>;
+  Struct(::fidl::Decoder& decoder);
+
+ public:
+  Struct() = default;
+  Struct(uint32_t x) : storage_({x}) {}
+  Struct(::fidl::internal::DesignatedInitializationProxy<
+         ::fidl_test_versions::Struct>
+             storage)
+      : storage_(std::move(storage)) {}
+  ~Struct() = default;
+  Struct(Struct&&) noexcept = default;
+  Struct& operator=(Struct&&) noexcept = default;
+
+  const uint32_t& x() const { return storage_.x; }
+
+  Struct& set_x(uint32_t _value) {
+    storage_.x = std::move(_value);
+    return *this;
+  }
+
+ private:
+  friend struct ::fidl::CodingTraits<::fidl_test_versions::Struct>;
+
+  ::fidl::internal::DesignatedInitializationProxy<::fidl_test_versions::Struct>
+      storage_ = {};
+};
+
+constexpr uint32_t Const = ::fidl::test::versions::Const;
+
+}  // namespace fidl_test_versions
+namespace fidl {
+#ifdef __Fuchsia__
+extern "C" const fidl_type_t fidl_test_versions_StructTable;
+
+template <>
+struct IsFidlType<::fidl_test_versions::Struct> : public std::true_type {};
+
+template <>
+struct ::fidl::internal::TypeTraits<::fidl_test_versions::Struct> final {
+ public:
+  static constexpr const fidl_type_t* kCodingTable =
+      &fidl_test_versions_StructTable;
+};
+
+template <>
+struct CodingTraits<::fidl_test_versions::Struct> {
+  static constexpr size_t inline_size_v1_no_ee = 4;
+  static constexpr size_t inline_size_v2 = 4;
+
+  template <typename DecoderImpl>
+  static void Decode(DecoderImpl* decoder, ::fidl_test_versions::Struct* value,
+                     size_t offset) {
+    ::fidl::Decode(decoder, &value->storage_.x, offset + 0);
+  }
+};
+#endif  // __Fuchsia__
+
+}  // namespace fidl

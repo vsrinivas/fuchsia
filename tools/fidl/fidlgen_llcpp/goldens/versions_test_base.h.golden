@@ -3,3 +3,27 @@
 #pragma once
 
 #include <fidl/fidl.test.versions/cpp/wire.h>
+namespace fidl_test_versions {
+namespace testing {
+
+class OtherProtocol_TestBase
+    : public ::fidl::WireServer<::fidl_test_versions::OtherProtocol> {
+ public:
+  virtual ~OtherProtocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+};
+
+class Protocol_TestBase
+    : public ::fidl::WireServer<::fidl_test_versions::Protocol> {
+ public:
+  virtual ~Protocol_TestBase() {}
+  virtual void NotImplemented_(const std::string& name,
+                               ::fidl::CompleterBase& completer) = 0;
+  virtual void Foo(FooRequestView request,
+                   FooCompleter::Sync& _completer) override {
+    NotImplemented_("Foo", _completer);
+  }
+};
+}  // namespace testing
+}  // namespace fidl_test_versions

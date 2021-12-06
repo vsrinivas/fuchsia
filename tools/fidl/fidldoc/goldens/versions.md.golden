@@ -6,17 +6,176 @@
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
 
+## **PROTOCOLS**
+
+## OtherProtocol {#OtherProtocol}
+*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=45)*
+
+
+
+## Protocol {#Protocol}
+*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=48)*
+
+<p><b>Added:1 Deprecated:2 Removed:3</b></p>
+
+### Foo {#Protocol.Foo}
+
+<p><b>Added:1 Deprecated:2 Removed:3</b></p>
+
+#### Request {#Protocol.Foo_Request}
+&lt;EMPTY&gt;
 
 
 
 
 
+## **STRUCTS**
+
+### Struct  {#Struct data-text="Struct"}
+*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=24)*
+
+<p><b>Added:1 Deprecated:2 Removed:3</b></p>
+
+
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.x">
+            <td><code>x</code></td>
+            <td>
+                <code>uint32</code>
+            </td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+            <td>No default</td>
+        </tr>
+</table>
 
 
 
+## **ENUMS**
+
+### Enum [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Enum}
+Type: <code>uint32</code>
+
+*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=18)*
+
+<p><b>Added:1 Deprecated:2 Removed:3</b></p>
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Enum.A">
+            <td><code>A</code></td>
+            <td><code>1</code></td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+        </tr></table>
 
 
 
+## **TABLES**
+
+### Table  {#Table data-text="Table"}
 
 
+*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=30)*
+
+<p><b>Added:1 Deprecated:2 Removed:3</b></p>
+
+
+<table>
+    <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
+    <tr id="Table.x">
+            <td>1</td>
+            <td><code>x</code></td>
+            <td>
+                <code>uint32</code>
+            </td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+        </tr><tr id="Table.">
+            <td>2</td>
+            <td><code>RESERVED</code></td>
+            <td>
+                <code></code>
+            </td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+        </tr></table>
+
+
+
+## **UNIONS**
+
+### Union [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#Union data-text="Union"}
+*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=38)*
+
+<p><b>Added:1 Deprecated:2 Removed:3</b></p>
+
+<table>
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Union.x">
+            <td>1</td>
+            <td><code>x</code></td>
+            <td>
+                <code>uint32</code>
+            </td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+        </tr><tr id="Union.">
+            <td>2</td>
+            <td><code></code></td>
+            <td>
+                <code></code>
+            </td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+        </tr></table>
+
+
+
+## **BITS**
+
+### Bits [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Bits}
+Type: <code>uint32</code>
+
+*Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=12)*
+
+<p><b>Added:1 Deprecated:2 Removed:3</b></p>
+
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Bits.A">
+            <td>A</td>
+            <td>1</td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+        </tr></table>
+
+
+
+## **CONSTANTS**
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Type</th><th>Description</th></tr><tr id="Const">
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=9">Const</a></td>
+            <td>
+                    <code>0</code>
+                </td>
+                <td><code>uint32</code></td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+        </tr>
+    
+</table>
+
+
+
+## **TYPE ALIASES**
+
+<table>
+    <tr><th>Name</th><th>Value</th><th>Description</th></tr><tr id="Alias">
+            <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=6">Alias</a></td>
+            <td>
+                <code>string</code></td>
+            <td><p><b>Added:1 Deprecated:2 Removed:3</b></p>
+</td>
+        </tr></table>
 
