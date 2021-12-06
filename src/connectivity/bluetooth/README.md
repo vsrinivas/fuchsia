@@ -1,13 +1,13 @@
 # Bluetooth
 
-The Fuchsia Bluetooth system aims to provide a dual-mode implementation of the
+The Fuchsia Bluetooth system aims to provide a dual mode implementation of the
 Bluetooth Host Subsystem (5.0+) supporting a framework for developing Low Energy
 and Traditional profiles.
 
 Source code shortcuts:
 
 -   Public API:
-    *   [shared](/sdk/fidl/fuchsia.bluetooth)
+    *   [Shared](/sdk/fidl/fuchsia.bluetooth)
     *   [System API](/sdk/fidl/fuchsia.bluetooth.sys)
     *   [BR/EDR (Profile)](/sdk/fidl/fuchsia.bluetooth.bredr)
     *   [GATT](/sdk/fidl/fuchsia.bluetooth.gatt)
@@ -66,26 +66,24 @@ command line tools for testing/debugging.
 
 Your build configuration may or may not include Bluetooth tests. Ensure
 Bluetooth tests are built and installed when paving or OTA'ing with
-[`fx set`](docs/development/build/fx.md#configure-a-build):
+[`fx set`](/docs/development/build/fx.md#configure-a-build):
 
 ```
-  $ fx set workstation.x64 --with-base="//bundles:tools,//src/connectivity/bluetooth"
+  $ fx set workstation.x64 --with //src/connectivity/bluetooth,//bundles:tools
 ```
 
 #### Tests
 
-In general, the Bluetooth codebase defines an associated unit test binary for
-each production binary and library, as well as a number of integration test
-binaries. Look in the GN file of a production binary or library to find its
-associated unit tests.
+The Bluetooth codebase follows the
+[Fuchsia testing best practices](/docs/contribute/testing/best-practices.md). In
+general, the Bluetooth codebase defines an associated unit test binary for each
+production binary and library, as well as a number of integration test binaries.
+Without good reason, no code should be added without an appropriate (unit,
+integration, etc) corresponding test. Look in the `GN` file of a production
+binary or library to find its associated unit tests.
 
-Each test binary is a [component](/docs/glossary.md#component) whose runtime
-environment is defined by its
-[`.cmx` component manifest](/docs/the-book/package_metadata.md#Component-Manifest)
-
-For example, `bt-host-l2cap-tests` is a
-[Google Test](https://github.com/google/googletest) binary that contains all the
-C++ L2CAP subsystem unit tests and is a standalone test package.
+For more information, see the
+[Fuchsia testing guide](docs/development/testing/run_fuchsia_tests.md).
 
 ##### Running on a Fuchsia device
 
@@ -95,13 +93,22 @@ C++ L2CAP subsystem unit tests and is a standalone test package.
     $ fx test //src/connectivity/bluetooth/core/bt-host
     ```
 
+*   Run a specific test within `bt-host`:
+
+    ```
+    $ fx test //src/connectivity/bluetooth/core/bt-host -- --gtest_filter='Foo.Bar'
+    ```
+
+    Where `Foo` and `Bar` in `Foo.Bar` are the fixture name and the test name,
+    respectively.
+
 To see all options for running these tests, run `fx test --help`.
 
-##### Running on QEMU
+##### Running on the Fuchsia Emulator
 
-If you don't have physical hardware available, you can run the tests in FEMU
-using the same commands as above. See
-[FEMU set up instructions](https://fuchsia.dev/fuchsia-src/get-started/set_up_femu).
+If you don't have physical hardware available, you can run the tests in the
+Fuchsia emulator (FEMU) using the same commands as above. See
+[FEMU set up instructions](/docs/get-started/set_up_femu.md).
 
 #### Integration Tests
 
@@ -123,43 +130,17 @@ writes these values into the image, so they will survive a restart. For more
 detail on driver logging, see
 [Zircon driver logging](/docs/concepts/drivers/driver-development.md#logging)
 
-#### Profile Level Logging
-
-Each Bluetooth profile has logging that can be turned on and can be useful
-during debugging. They're fully documented in the
-[profile-specific README's here](/src/connectivity/bluetooth/profiles/README.md)
-but there are a couple of examples below.
-
-```
-  a2dp-sink=trace
-  a2dp-source=trace
-```
-
-#### bin/bt-gap
+#### `core/bt-gap`
 
 The Bluetooth system service is invoked by sysmgr to resolve service requests.
 The mapping between environment service names and their handlers is defined in
 [//src/sys/sysmgr/config/services.config](/src/sys/sysmgr/config/services.config).
-Add the `--verbose` option to the Bluetooth entries to increase verbosity, for
-example:
-
-```
-  ...
-    "fuchsia.bluetooth.bredr.Profile":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
-    "fuchsia.bluetooth.sys.Access": "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
-    "fuchsia.bluetooth.gatt.Server":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
-    "fuchsia.bluetooth.le.Central":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
-    "fuchsia.bluetooth.le.Peripheral":  "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cmx",
-    "fuchsia.bluetooth.snoop.Snoop":  "fuchsia-pkg://fuchsia.com/bt-snoop#meta/bt-snoop.cmx",
-  ...
-
-```
 
 ### Inspecting Component State
 
 The Bluetooth system supports inspection through the
-[Inspect API](/docs/development/diagnostics/inspect). bt-gap, bt-host,
-bt-a2dp-sink, and bt-snoop all expose information though Inspect.
+[Inspect API](/docs/development/diagnostics/inspect). bt-gap, bt-host, bt-a2dp,
+and bt-snoop all expose information though Inspect.
 
 #### Usage
 
@@ -167,8 +148,8 @@ bt-a2dp-sink, and bt-snoop all expose information though Inspect.
     exposes information about the controller, peers, and services.
 *   bt-gap: `fx iquery show bt-gap` exposes information on host devices managed
     by bt-gap, pairing capabilities, stored bonds, and actively connected peers.
-*   bt-a2dp-sink: `fx iquery show bt-a2dp-sink` exposes information on audio
-    streaming capabilities and active streams
+*   bt-a2dp: `fx iquery show bt-a2dp` exposes information on audio streaming
+    capabilities and active streams
 *   bt-snoop: `fx iquery show bt-snoop` exposes information about which hci
     devices are being logged and how much data is stored.
 *   All Bluetooth components: `fx iquery show bt-*`
@@ -190,5 +171,5 @@ longer allow uses of the prior terms. For more information, see the
 [Appropriate Language Mapping Table](https://specificationrefs.bluetooth.com/language-mapping/Appropriate_Language_Mapping_Table.pdf)
 published by the Bluetooth SIG.
 
-See the Fuchsia project [guide](//docs/best-practices/respectful_code.md) on
-best practices for more information.
+See the Fuchsia project [guide](/docs/best-practices/respectful_code.md) on best
+practices for more information.
