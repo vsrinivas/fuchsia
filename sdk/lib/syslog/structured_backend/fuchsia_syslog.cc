@@ -598,6 +598,17 @@ static cpp17::optional<cpp17::string_view> CStringToStringView(const char* str, 
   return cpp17::string_view(str, len);
 }
 
+void syslog_begin_record_transitional(fuchsia_syslog_log_buffer_t* buffer,
+                                      FuchsiaLogSeverity severity, const char* file_name,
+                                      size_t file_name_length, unsigned int line,
+                                      const char* message, size_t message_length, bool is_printf,
+                                      zx_handle_t socket, uint32_t dropped_count, zx_koid_t pid,
+                                      zx_koid_t tid) {
+  fuchsia_syslog::BeginRecord(buffer, severity, CStringToStringView(file_name, file_name_length),
+                              line, CStringToStringView(message, message_length), cpp17::nullopt,
+                              is_printf, zx::unowned_socket(socket), dropped_count, pid, tid);
+}
+
 __BEGIN_CDECLS
 void syslog_begin_record(fuchsia_syslog_log_buffer_t* buffer, FuchsiaLogSeverity severity,
                          const char* file_name, size_t file_name_length, unsigned int line,

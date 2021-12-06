@@ -32,8 +32,7 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
       }
       fuchsia_syslog::LogBuffer buffer;
 
-      BeginRecord(&buffer, min_log_level_, __FILE__, __LINE__, "Changed severity",
-                  std::nullopt /* condition */);
+      BeginRecord(&buffer, min_log_level_, __FILE__, __LINE__, "Changed severity");
       buffer.FlushRecord();
     };
     ConnectAsync();
@@ -41,16 +40,14 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
   void EmitPuppetStarted() {
     fuchsia_syslog::LogBuffer buffer;
 
-    BeginRecord(&buffer, FUCHSIA_LOG_INFO, __FILE__, __LINE__, "Puppet started.",
-                std::nullopt /* condition */);
+    BeginRecord(&buffer, FUCHSIA_LOG_INFO, __FILE__, __LINE__, "Puppet started.");
     buffer.FlushRecord();
   }
 
   void BeginRecord(fuchsia_syslog::LogBuffer* buffer, FuchsiaLogSeverity severity,
                    cpp17::optional<cpp17::string_view> file_name, unsigned int line,
-                   cpp17::optional<cpp17::string_view> msg,
-                   cpp17::optional<cpp17::string_view> condition) {
-    buffer->BeginRecord(severity, file_name, line, msg, condition, false, socket_.borrow(), 0,
+                   cpp17::optional<cpp17::string_view> msg) {
+    buffer->BeginRecord(severity, file_name, line, msg, false, socket_.borrow(), 0,
                         GetKoid(zx_process_self()), GetKoid(zx_thread_self()));
   }
 
@@ -168,8 +165,7 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
         }
       }
     } else {
-      BeginRecord(&buffer, severity, spec.file.data(), spec.line, std::nullopt /* message */,
-                  std::nullopt /* condition */);
+      BeginRecord(&buffer, severity, spec.file.data(), spec.line, std::nullopt /* message */);
     }
     for (auto& arg : spec.record.arguments) {
       switch (arg.value.Which()) {

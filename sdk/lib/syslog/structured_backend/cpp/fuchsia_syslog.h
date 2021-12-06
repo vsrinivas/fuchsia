@@ -62,6 +62,18 @@ class LogBuffer final {
                         socket->get(), dropped_count, pid, tid);
   }
 
+  // Transitional BeginRecord method, which doesn't include condition.
+  // The other one will be deleted once everyone switches to this one.
+  void BeginRecord(FuchsiaLogSeverity severity, cpp17::optional<cpp17::string_view> file_name,
+                   unsigned int line, cpp17::optional<cpp17::string_view> message, bool is_printf,
+                   zx::unowned_socket socket, uint32_t dropped_count, zx_koid_t pid,
+                   zx_koid_t tid) {
+    syslog_begin_record_transitional(&data_, severity, StringViewToCStr(file_name),
+                                     StringViewLength(file_name), line, StringViewToCStr(message),
+                                     StringViewLength(message), is_printf, socket->get(),
+                                     dropped_count, pid, tid);
+  }
+
   // Writes a key/value pair to the buffer.
   void WriteKeyValue(cpp17::string_view key, cpp17::string_view value) {
     syslog_write_key_value_string(&data_, StringViewToCStr(key), StringViewLength(key),
