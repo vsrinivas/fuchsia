@@ -46,5 +46,5 @@ readonly BUILD_ID_DIR_1=$(printf "${BUILD_ID}" | head -c 2)
 readonly BUILD_ID_DIR_2=$(printf "${BUILD_ID}" | tail -c +3)
 readonly DEBUG_FILE="${BUILD_ID_DIR}/${BUILD_ID_DIR_1}/${BUILD_ID_DIR_2}.debug"
 
-/bin/cp "${DEBUG_FILE}" "${OUTPUT}"
+cp "${DEBUG_FILE}" "${OUTPUT}"
 echo "${OUTPUT}: ${DEBUG_FILE}" > "${DEPFILE}"
