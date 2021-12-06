@@ -22,18 +22,14 @@ struct FsckInfo {
     uint32_t valid_node_count = 0;
     uint32_t valid_inode_count = 0;
     uint32_t multi_hard_link_files = 0;
-    uint64_t sit_valid_blocks = 0;
-    uint32_t sit_free_segments = 0;
   } result;
 
   std::map<nid_t, uint32_t> hard_link_map;
   std::unique_ptr<uint8_t[]> main_area_bitmap;
   std::unique_ptr<uint8_t[]> nat_area_bitmap;
-  std::unique_ptr<uint8_t[]> sit_area_bitmap;
 
   uint64_t main_area_bitmap_size = 0;
   uint32_t nat_area_bitmap_size = 0;
-  uint32_t sit_area_bitmap_size = 0;
   uint64_t nr_main_blocks = 0;
   uint32_t nr_nat_entries = 0;
   uint32_t dentry_depth = 0;
@@ -67,6 +63,11 @@ struct DumpOption {
 
 constexpr uint32_t kDefaultDirTreeLen = 256;
 
+struct TraverseResult {
+  uint64_t block_count;  // number of blocks occupied by the inode subtree structure.
+  uint32_t link_count;   // number of child directories (valid only for directories).
+};
+
 class FsckWorker {
  public:
   // Not copyable or movable
@@ -76,24 +77,44 @@ class FsckWorker {
   FsckWorker &operator=(FsckWorker &&) = delete;
   FsckWorker(std::unique_ptr<Bcache> bc) : tree_mark_(kDefaultDirTreeLen) { bc_ = std::move(bc); }
 
-  zx_status_t CheckNodeBlock(Inode *inode, nid_t nid, FileType ftype, NodeType ntype,
-                             uint32_t &block_count);
-  zx_status_t CheckInodeBlock(nid_t nid, FileType ftype, Node &node_block, uint32_t &block_count,
-                              NodeInfo &ni);
-  zx_status_t CheckDataBlock(Inode *inode, uint32_t block_address, uint32_t &child_count,
-                             uint32_t &child_files, int last_block, FileType ftype,
-                             uint32_t parent_nid, uint16_t index_in_node, uint8_t ver);
-  void CheckDnodeBlock(Inode *inode, nid_t nid, FileType ftype, Node &node_block,
-                       uint32_t &block_count, NodeInfo &ni);
-  void CheckIndirectNodeBlock(Inode *inode, nid_t nid, FileType ftype, Node &node_block,
-                              uint32_t &block_count);
-  void CheckDoubleIndirectNodeBlock(Inode *inode, nid_t nid, FileType ftype, Node &node_block,
-                                    uint32_t &block_count);
-  void CheckDentries(uint32_t &child_count, uint32_t &child_files, int last_block,
-                     const uint8_t *dentry_bitmap, const DirEntry *dentries,
-                     const uint8_t (*filename)[kNameLen], int max_entries);
-  void CheckDentryBlock(uint32_t block_address, uint32_t &child_count, uint32_t &child_files,
-                        int last_block);
+  zx_status_t ReadBlock(FsBlock &fs_block, block_t bno);
+  zx_status_t WriteBlock(FsBlock &fs_block, block_t bno);
+
+  // This is the main logic of fsck.
+  // It reads and validates a node block, updates the context and traverse along its child blocks.
+  zx::status<TraverseResult> CheckNodeBlock(const Inode *inode, nid_t nid, FileType ftype,
+                                            NodeType ntype);
+
+  // Even in a successful return, the returned pair can be |{*nullptr*, node_info}| if
+  // |node_info.blkaddr| is |kNewAddr|.
+  zx::status<std::pair<std::unique_ptr<FsBlock>, NodeInfo>> ReadNodeBlock(nid_t nid);
+  zx_status_t ValidateNodeBlock(const Node &node_block, NodeInfo node_info, FileType ftype,
+                                NodeType ntype);
+  // This function checks the sanity of a node block with respect to the traverse context and
+  // updates the context. In a successful return, this function returns a bool value to indicate
+  // whether the caller should traverse deeper.
+  zx::status<bool> UpdateContext(const Node &node_block, NodeInfo node_info, FileType ftype,
+                                 NodeType ntype);
+
+  // Below traverse functions describe how to iterate over for each data structures.
+  zx::status<TraverseResult> TraverseInodeBlock(const Node &node_block, NodeInfo node_info,
+                                                FileType ftype);
+  zx::status<TraverseResult> TraverseDnodeBlock(const Inode *inode, const Node &node_block,
+                                                NodeInfo node_info, FileType ftype);
+  zx::status<TraverseResult> TraverseIndirectNodeBlock(const Inode *inode, const Node &node_block,
+                                                       FileType ftype);
+  zx::status<TraverseResult> TraverseDoubleIndirectNodeBlock(const Inode *inode,
+                                                             const Node &node_block,
+                                                             FileType ftype);
+
+  zx_status_t CheckDataBlock(uint32_t block_address, uint32_t &child_count, uint32_t &child_files,
+                             int last_block, FileType ftype, uint32_t parent_nid,
+                             uint16_t index_in_node, uint8_t ver);
+  zx_status_t CheckDentries(uint32_t &child_count, uint32_t &child_files, int last_block,
+                            const uint8_t *dentry_bitmap, const DirEntry *dentries,
+                            const uint8_t (*filename)[kNameLen], int max_entries);
+  zx_status_t CheckDentryBlock(uint32_t block_address, uint32_t &child_count, uint32_t &child_files,
+                               int last_block);
 
   void PrintRawSuperblockInfo();
   void PrintCheckpointInfo();
@@ -113,7 +134,7 @@ class FsckWorker {
   // DoFsck() references it for checking the block validity.
   zx_status_t Init();
   // 3. It checks orphan nodes, and it updates nat_area_bitmap.
-  void CheckOrphanNode();
+  zx_status_t CheckOrphanNodes();
   // 4. It traverses blocks from the root inode to leaf inodes to check the validity of
   //   the data/node blocks based on SSA and SIT and to update nat_area_bitmap and main_area_bitmap.
   //   In case of dir block, it checks the validity of child dentries and regarding inodes.
@@ -127,14 +148,14 @@ class FsckWorker {
   zx_status_t Verify();
   void DoUmount();
   zx_status_t Run();
-  zx_status_t ReadBlock(FsBlock &fs_block, block_t bno);
 
   void InitSuperblockInfo();
-  zx::status<std::pair<std::unique_ptr<FsBlock>, uint64_t>> ValidateCheckpoint(block_t cp_addr);
+  zx::status<std::unique_ptr<FsBlock>> GetSuperblock(block_t index);
   zx_status_t SanityCheckRawSuper(const Superblock *raw_super);
-  zx_status_t ValidateSuperblock(block_t block);
-  zx_status_t GetValidCheckpoint();
+  zx_status_t GetValidSuperblock();
+  zx::status<std::pair<std::unique_ptr<FsBlock>, uint64_t>> ValidateCheckpoint(block_t cp_addr);
   zx_status_t SanityCheckCkpt();
+  zx_status_t GetValidCheckpoint();
   zx_status_t InitNodeManager();
   zx_status_t BuildNodeManager();
   zx_status_t BuildSitInfo();
@@ -171,9 +192,8 @@ class FsckWorker {
   inline bool IsValidSsaDataBlock(uint32_t block_address, uint32_t parent_nid,
                                   uint16_t index_in_node, uint8_t version);
   bool IsValidNid(nid_t nid) {
-    ZX_ASSERT(nid <= (kNatEntryPerBlock * superblock_info_.GetRawSuperblock().segment_count_nat
-                      << (superblock_info_.GetLogBlocksPerSeg() - 1)));
-    return true;
+    return nid <= (kNatEntryPerBlock * superblock_info_.GetRawSuperblock().segment_count_nat
+                   << (superblock_info_.GetLogBlocksPerSeg() - 1));
   }
   bool IsValidBlockAddress(uint32_t addr) {
     if (addr >= superblock_info_.GetRawSuperblock().block_count ||
@@ -213,12 +233,18 @@ class FsckWorker {
   std::unique_ptr<Bcache> Destroy() { return std::move(bc_); }
 
  private:
+  // Saves the traverse context. It should be re-initialized every traverse.
   FsckInfo fsck_;
   SuperblockInfo superblock_info_;
   std::unique_ptr<NodeManager> node_manager_;
   std::unique_ptr<SegmentManager> segment_manager_;
   std::unique_ptr<Bcache> bc_;
   std::vector<char> tree_mark_;
+
+  bool mounted_ = false;
+
+  std::unique_ptr<uint8_t[]> sit_area_bitmap_;
+  uint32_t sit_area_bitmap_size_ = 0;
 };
 
 zx_status_t Fsck(std::unique_ptr<Bcache> bc, std::unique_ptr<Bcache> *out = nullptr);

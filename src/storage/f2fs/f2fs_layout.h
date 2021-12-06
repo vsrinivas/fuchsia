@@ -18,6 +18,7 @@ constexpr block_t kNewAddr = -1U;
 
 // Superblock location.
 constexpr size_t kSuperblockStart = 0;
+constexpr size_t kSuperblockCopies = 2;
 
 // for mkfs
 constexpr uint16_t kMajorVersion = 1;
@@ -240,7 +241,7 @@ enum class BitShift { kColdBitShift = 0, kFsyncBitShift, kDentBitShift, kOffsetB
 
 struct NodeFooter {
   uint32_t nid = 0;           // node id
-  uint32_t ino = 0;           // inode nunmber
+  uint32_t ino = 0;           // inode number
   uint32_t flag = 0;          // include cold/fsync/dentry marks and offset
   uint64_t cp_ver = 0;        // checkpoint version
   uint32_t next_blkaddr = 0;  // next node page block address
