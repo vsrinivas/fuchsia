@@ -6,6 +6,7 @@ use {
     crate::{
         boot::flash_boot,
         common::{file::EmptyResolver, prepare},
+        info::flash_info,
         lock::flash_lock,
         manifest::{from_path, from_sdk},
         unlock::flash_unlock,
@@ -16,7 +17,7 @@ use {
     ffx_core::ffx_plugin,
     ffx_flash_args::{
         BootCommand, FlashCommand, OemFile,
-        Subcommand::{Boot, Lock, Unlock},
+        Subcommand::{Boot, Info, Lock, Unlock},
         UnlockCommand,
     },
     fidl_fuchsia_developer_bridge::FastbootProxy,
@@ -26,6 +27,7 @@ use {
 
 mod boot;
 mod common;
+mod info;
 mod lock;
 mod manifest;
 mod unlock;
@@ -49,6 +51,7 @@ pub async fn flash_plugin_impl<W: Write>(
 ) -> Result<()> {
     // Some operations don't need the manifest, just return early.
     match &cmd.subcommand {
+        Some(Info(_)) => return flash_info(writer, &fastboot_proxy).await,
         Some(Lock(_)) => return flash_lock(writer, &fastboot_proxy).await,
         Some(Unlock(UnlockCommand { cred, force })) => {
             if !force {

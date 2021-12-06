@@ -93,12 +93,18 @@ pub enum Subcommand {
     Lock(LockCommand),
     Unlock(UnlockCommand),
     Boot(BootCommand),
+    Info(InfoCommand),
 }
 
 #[derive(FromArgs, Clone, PartialEq, Debug)]
 /// Locks a fastboot target.
 #[argh(subcommand, name = "lock")]
 pub struct LockCommand {}
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+/// Prints fastboot variables for target.
+#[argh(subcommand, name = "info")]
+pub struct InfoCommand {}
 
 #[derive(FromArgs, Clone, PartialEq, Debug)]
 /// Unlocks a fastboot target.

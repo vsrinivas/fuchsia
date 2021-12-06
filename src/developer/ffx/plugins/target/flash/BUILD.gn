@@ -43,6 +43,7 @@ ffx_plugin("ffx_flash") {
     "src/common/crypto.rs",
     "src/common/file.rs",
     "src/common/mod.rs",
+    "src/info/mod.rs",
     "src/lib.rs",
     "src/lock/mod.rs",
     "src/manifest/mod.rs",
