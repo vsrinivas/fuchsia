@@ -77,7 +77,12 @@ class DataGenerator {
   }
 
   template <typename T>
-  std::enable_if_t<std::is_integral_v<T>, T> next() {
+  std::enable_if_t<std::is_same_v<T, bool>, T> next() {
+    return std::uniform_int_distribution<short>{}(rand_engine_) % 2;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, T> next() {
     return std::uniform_int_distribution<T>{}(rand_engine_);
   }
 
@@ -574,7 +579,7 @@ void InitializeStruct(Struct* s) {
   // Using randomness to avoid having to come up with varied values by hand.
   // Seed deterministically so that this function's outputs are predictable.
   rand_engine.seed(42);
-  std::uniform_int_distribution<bool> bool_distribution;
+  std::bernoulli_distribution bool_distribution;
   std::uniform_int_distribution<int8_t> int8_distribution;
   std::uniform_int_distribution<int16_t> int16_distribution;
   std::uniform_int_distribution<int32_t> int32_distribution;
