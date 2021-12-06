@@ -150,9 +150,6 @@ bool MsdIntelDevice::Init(void* device_handle, bool exec_init_batch) {
   InitEngine(render_engine_cs());
   InitEngine(video_command_streamer());
 
-  // WaEnableGapsTsvCreditFix
-  registers::ArbiterControl::workaround(register_io());
-
   if (exec_init_batch) {
     if (!RenderInitBatch())
       return DRETF(false, "RenderInitBatch failed");
@@ -259,6 +256,9 @@ void MsdIntelDevice::InitEngine(EngineCommandStreamer* engine) {
 
   switch (engine->id()) {
     case RENDER_COMMAND_STREAMER:
+      // WaEnableGapsTsvCreditFix
+      registers::ArbiterControl::workaround(register_io());
+
       // Enable render command streamer interrupts.
       registers::GtInterruptMask0::write(register_io(), registers::InterruptRegisterBase::USER,
                                          registers::InterruptRegisterBase::UNMASK);
