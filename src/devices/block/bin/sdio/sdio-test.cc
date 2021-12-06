@@ -26,7 +26,7 @@ class SdioTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_s
 
   void GetDevHwInfo(GetDevHwInfoRequestView request,
                     GetDevHwInfoCompleter::Sync& completer) override {
-    completer.ReplySuccess({});
+    completer.ReplySuccess({}, 1);
   }
 
   void EnableFn(EnableFnRequestView request, EnableFnCompleter::Sync& completer) override {

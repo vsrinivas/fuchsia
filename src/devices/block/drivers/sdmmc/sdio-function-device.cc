@@ -110,7 +110,7 @@ void SdioFunctionDevice::GetDevHwInfo(GetDevHwInfoRequestView request,
   static_assert(sizeof(fidl_hw_info) == sizeof(hw_info));
   memcpy(&fidl_hw_info, &hw_info, sizeof(fidl_hw_info));
 
-  completer.ReplySuccess(fidl_hw_info);
+  completer.ReplySuccess(fidl_hw_info, function_);
 }
 
 void SdioFunctionDevice::EnableFn(EnableFnRequestView request, EnableFnCompleter::Sync& completer) {

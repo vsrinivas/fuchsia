@@ -67,6 +67,8 @@ type SdioRwTxn = resource struct {
 protocol Device {
     GetDevHwInfo() -> (struct {
         hw_info SdioHwInfo;
+        /// The function number of this device.
+        function uint8;
     }) error zx.status;
     EnableFn() -> (struct {}) error zx.status;
     DisableFn() -> (struct {}) error zx.status;
