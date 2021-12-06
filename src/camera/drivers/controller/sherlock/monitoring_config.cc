@@ -58,7 +58,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlDSFrameRate);
   stream.set_buffer_count_for_camping(kExtraBuffers);
-  stream.set_min_buffer_count(kGdcBufferForCamping + kNumClientBuffers + kExtraBuffers);
+  stream.set_min_buffer_count(kGdcBufferForCamping + kNumClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
