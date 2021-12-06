@@ -256,7 +256,7 @@ Note: See fxbug.dev/83948; Tools tests are not yet supported in CTS.
 [Fuchsia language policy]: /docs/contribute/governance/policy/programming_languages.md
 [Packages]: /docs/concepts/packages/package.md
 [Start the Fuchsia Emulator]: /docs/get-started/set_up_femu.md
-[Test Components]: /docs/concepts/testing/v2/test_component.md
+[Test Components]: /docs/development/testing/components/test_component.md
 [file a bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ADeveloperExperience%3ECTS
 [relative component URL]: /docs/concepts/components/component_urls.md
 [CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234

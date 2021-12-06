@@ -1,7 +1,5 @@
 # Integration testing topologies
 
-<<../../components/_v2_banner.md>>
-
 Integration testing scenarios involve two or more components operating in the
 same realm and exchanging capabilities. While the majority of tests are unit
 tests that span only a single component, integration testing scenarios call for

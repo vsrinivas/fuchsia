@@ -314,7 +314,7 @@ covered in a [separate roadmap document][oot-system-testing].
 [cfv2-roadmap-2020]: /docs/contribute/roadmap/2020/overview.md#components_v2
 [components]: /docs/concepts/components/v2/introduction.md
 [components-build]: /docs/development/components/build.md
-[components-test]: /docs/concepts/testing/v2/README.md
+[components-test]: /docs/development/testing/components/README.md
 [covargs]: /tools/debug/covargs/
 [coverage]: /docs/concepts/testing/coverage.md
 [dac]: /docs/contribute/roadmap/2020/overview.md#implementing_drivers_as_components
@@ -348,10 +348,10 @@ covered in a [separate roadmap document][oot-system-testing].
 [realm-builder-languages]: /docs/development/components/v2/realm_builder.md#language-feature-matrix
 [rfc-0015]: /docs/contribute/governance/rfcs/0015_cts.md
 [rfc-0106]: /docs/contribute/governance/rfcs/0106_manifest_includes_in_sdk.md
-[runner-elf]: /docs/concepts/testing/v2/test_runner_framework.md#elf-test-runner
-[runner-go]: /docs/concepts/testing/v2/test_runner_framework.md#gotest-runner
-[runner-gtest]: /docs/concepts/testing/v2/test_runner_framework.md#gtest-runner
-[runner-rust]: /docs/concepts/testing/v2/test_runner_framework.md#rust-runner
+[runner-elf]: /docs/development/testing/components/test_runner_framework.md#elf-test-runner
+[runner-go]: /docs/development/testing/components/test_runner_framework.md#gotest-runner
+[runner-gtest]: /docs/development/testing/components/test_runner_framework.md#gtest-runner
+[runner-rust]: /docs/development/testing/components/test_runner_framework.md#rust-runner
 [rust]: https://www.rust-lang.org/
 [sanitizers]: /docs/concepts/testing/sanitizers.md
 [sdk-tools]: https://fuchsia.dev/reference/tools/sdk/README.md
@@ -362,7 +362,7 @@ covered in a [separate roadmap document][oot-system-testing].
 [tefmocheck]: /tools/testing/tefmocheck/README.md
 [testrunner]: /tools/testing/testrunner/README.md
 [testwithenvironment]: /sdk/lib/sys/cpp/testing/test_with_environment.h
-[trf]: /docs/concepts/testing/v2/test_runner_framework.md
+[trf]: /docs/development/testing/components/test_runner_framework.md
 [troubleshooting-run-test-component]: /docs/development/components/v2/troubleshooting.md#troubleshoot-test
 [v1-test-system-services]: /docs/concepts/testing/v1_test_component.md#additional_system_services
 [workstation-out-of-tree]: /docs/contribute/roadmap/2021/workstation_out_of_tree.md

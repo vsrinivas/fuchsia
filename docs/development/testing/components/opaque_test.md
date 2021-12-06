@@ -1,9 +1,7 @@
 # [DEPRECATED] Hermetic testing using OpaqueTest
 
-Warning: OpaqueTest is deprecated. Refer to [this document](/docs/concepts/testing/v2/README.md) for
-information about testing v2 components using the Test Runner Framework.
-
-<<../_v2_banner.md>>
+Warning: OpaqueTest is deprecated. Refer to [Component testing][testing-overview]
+for information about testing v2 components using the Test Runner Framework.
 
 ## Motivation
 
@@ -24,7 +22,7 @@ is normally started.
 To test the behavior of a v2 component, OpaqueTest lets you:
 
 - Start component manager in a hermetic environment.
-- Communicate with component manager using only FIDL and the [hub](hub.md).
+- Communicate with component manager using only FIDL and the [hub][concepts-hub].
 - Access the hub of the root component.
 - Wait for events to occur in component manager.
 - Halt a component manager task on an event.
@@ -68,7 +66,7 @@ By the end of this statement:
 - A component manager instance has been created in a hermetic environment.
 - The root component is specified by the given URL.
 - Component manager is waiting to be unblocked by the `EventSource`.
-- The root [component manifest](component_manifests.md) (`root.cm`) has been resolved.
+- The root [component manifest][concepts-manifest] (`root.cm`) has been resolved.
 - No component has been started.
 - Component manager’s outgoing directory is serving:
   - The hub of the root component at `$out/hub`.
@@ -127,7 +125,7 @@ Since the `EventSource` is built on top of system events:
 
 - A subscription can only be set on a system event.
 - It supports all system events in component manager.
-- It can be scoped down to a [realm](realms.md) of the component hierarchy.
+- It can be scoped down to a [realm][concepts-realm] of the component hierarchy.
 - It follows the component manager’s rules of event propagation (i.e - an
 event dispatched at a child realm is also dispatched to its parent).
 
@@ -483,4 +481,8 @@ When component manager is in debug mode, it does the following:
 
 1. Starts up the root component (including any eager children).
 
-[event-capabilities]: capabilities/event.md
+[concepts-hub]: /docs/concepts/components/v2/hub.md
+[concepts-manifest]: /docs/concepts/components/v2/component_manifests.md
+[concepts-realm]: /docs/concepts/components/v2/realms.md
+[event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
+[testing-overview]: /docs/development/testing/components/README.md

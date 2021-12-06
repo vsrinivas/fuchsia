@@ -39,12 +39,6 @@ toc:
   section:
   - title: "Hub"
     path: /docs/concepts/components/v2/hub.md
-- title: "Testing"
-  section:
-  - include: /docs/concepts/testing/v2/_toc.yaml
-  - title: "Hermetic testing using OpaqueTest"
-    path: /docs/concepts/components/v2/opaque_test.md
-    status: deprecated
 - title: "Internals"
   section:
   - title: "Component Framework design principles"

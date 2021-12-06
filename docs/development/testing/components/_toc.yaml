@@ -8,10 +8,13 @@
 
 toc:
 - title: "Overview"
-  path: /docs/concepts/testing/v2/README.md
+  path: /docs/development/testing/components/README.md
 - title: "Test components"
-  path: /docs/concepts/testing/v2/test_component.md
+  path: /docs/development/testing/components/test_component.md
 - title: "Test Runner Framework"
-  path: /docs/concepts/testing/v2/test_runner_framework.md
+  path: /docs/development/testing/components/test_runner_framework.md
 - title: "Integration testing"
-  path: /docs/concepts/testing/v2/integration_testing.md
+  path: /docs/development/testing/components/integration_testing.md
+- title: "Hermetic testing using OpaqueTest"
+  path: /docs/development/testing/components/opaque_test.md
+  status: deprecated

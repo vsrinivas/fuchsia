@@ -142,7 +142,7 @@ rustc_binary("bin") {
 }
 ```
 [build-tests]:/docs/development/components/build.md#test-packages
-[component-tests]:/docs/concepts/testing/v2/test_component.md
+[component-tests]:/docs/development/testing/components/test_component.md
 [example-src]: /examples/hello_world/rust
 [glossary.component-manifest]: /docs/glossary/README.md#component-manifest
 [`matches`]: https://fuchsia-docs.firebaseapp.com/rust/matches/index.html

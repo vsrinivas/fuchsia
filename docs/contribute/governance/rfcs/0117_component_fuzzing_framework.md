@@ -793,11 +793,11 @@ Additionally, there have been a few projects that combine AFL with qemu:
 [207]: /docs/concepts/kernel/concepts.md#shared_memory_virtual_memory_objects_vmos
 [208]: /docs/concepts/kernel/exceptions.md
 [209]: /docs/concepts/testing/fuzz_testing.md#coverage-guided-fuzzing
-[210]: /docs/concepts/testing/v2/test_runner_framework.md
-[211]: /docs/concepts/testing/v2/test_runner_framework.md#elf-test-runner
-[212]: /docs/concepts/testing/v2/test_runner_framework.md#test-runners
-[213]: /docs/concepts/testing/v2/test_runner_framework.md#the_test_manager
-[214]: /docs/concepts/testing/v2/integration_testing.md
+[210]: /docs/development/testing/components/test_runner_framework.md
+[211]: /docs/development/testing/components/test_runner_framework.md#elf-test-runner
+[212]: /docs/development/testing/components/test_runner_framework.md#test-runners
+[213]: /docs/development/testing/components/test_runner_framework.md#the_test_manager
+[214]: /docs/development/testing/components/integration_testing.md
 [215]: /docs/development/build/toolchain.md
 [216]: /docs/development/languages
 [217]: /docs/development/testing/fuzzing/overview.md

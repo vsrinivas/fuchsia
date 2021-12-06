@@ -334,5 +334,5 @@ Areas for future work:
 [llvm-coverage-mapping-format]: https://llvm.org/docs/CoverageMappingFormat.html
 [llvm-coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
 [llvm-profdata]: https://llvm.org/docs/CommandGuide/llvm-profdata.html
-[trf]: /docs/concepts/testing/v2/test_runner_framework.md
+[trf]: /docs/development/testing/components/test_runner_framework.md
 [vmo]: /docs/reference/kernel_objects/vm_object.md

@@ -250,6 +250,6 @@ even if CTS coverage never reaches 100% of the platform surface.
 [test-double]: /docs/contribute/testing/principles.md#test_doubles_stubs_mocks_fakes
 [topology]: /docs/concepts/components/v2/topology.md
 [tracing]: /docs/concepts/kernel/tracing-system.md
-[trf]: /docs/concepts/testing/v2/test_runner_framework.md
+[trf]: /docs/development/testing/components/test_runner_framework.md
 [workstation-oot]: /docs/contribute/roadmap/2021/workstation_out_of_tree.md
 [zx-object-get-info]: /docs/reference/syscalls/object_get_info.md

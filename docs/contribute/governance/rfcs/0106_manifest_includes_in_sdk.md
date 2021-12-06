@@ -463,5 +463,5 @@ preprocessor on a given file and prints the postprocessed result. See:
 [rfc-0083]: /docs/contribute/governance/rfcs/0083_fidl_versioning.md
 [rfc-0089]: /docs/contribute/governance/rfcs/0089_core_realm_variations.md
 [test-manager-common-shard]: /src/sys/test_manager/meta/common.shard.cml
-[trf-inventory]: /docs/concepts/testing/v2/test_runner_framework.md#inventory_of_test_runners
+[trf-inventory]: /docs/development/testing/components/test_runner_framework.md#inventory_of_test_runners
 [vulkan-runtime-deps]: /docs/concepts/graphics/magma/vulkan.md#runtime_dependencies

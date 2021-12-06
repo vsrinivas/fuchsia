@@ -508,5 +508,5 @@ controller, see [offering external capabilities](#routes-from-outside).
 [resolver]: /docs/concepts/components/v2/capabilities/resolvers.md
 [runner]: /docs/concepts/components/v2/capabilities/runners.md
 [shard-includes]: /docs/concepts/components/v2/component_manifests.md#include
-[test-runner]: /docs/concepts/testing/v2/test_runner_framework.md#test-runners
+[test-runner]: /docs/development/testing/components/test_runner_framework.md#test-runners
 [use]: /docs/concepts/components/v2/component_manifests.md#use

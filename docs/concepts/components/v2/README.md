@@ -41,17 +41,6 @@ modern component framework. For details on legacy components, see
 
 -   [Hub](hub.md): A live view of the component topology at runtime.
 
-## Testing
-
--   [Test components][test-components]: defining components that implement tests
-    and running them.
--   [Test Runner Framework][trf]: writing idiomatic tests in different languages
-    that use common testing frameworks.
--   [Complex topologies and integration testing][integration-testing]: testing
-    interactions between multiple components in isolation from the rest of the
-    system.
--   [OpaqueTest](opaque_test.md): Hermetic testing framework (DEPRECATED).
-
 ## Internals
 
 -   [Component Framework design principles](design_principles.md)
@@ -70,6 +59,3 @@ modern component framework. For details on legacy components, see
 [legacy-components]: /docs/concepts/components/v1/README.md
 [migration]: /docs/contribute/open_projects/components/migration.md
 [rfc0093]: /docs/contribute/governance/rfcs/0093_component_manifest_design_principles.md
-[test-components]: /docs/concepts/testing/v2/test_component.md
-[trf]: /docs/concepts/testing/v2/test_runner_framework.md
-[integration-testing]: /docs/concepts/testing/v2/integration_testing.md

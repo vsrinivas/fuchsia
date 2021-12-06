@@ -25,7 +25,7 @@ various supported languages. A test component has two key elements:
 ### Executable test suite {#executable-test}
 
 Fuchsia test suites are built as components and execute within a
-[test runner](/docs/concepts/testing/v2/test_runner_framework.md) for supported
+[test runner](/docs/development/testing/components/test_runner_framework.md) for supported
 testing frameworks, such as GoogleTest.
 The test suite binary includes test cases written against these
 language-specific frameworks.
@@ -43,7 +43,7 @@ language-specific frameworks.
    ```
 
 For more details on testing Fuchsia components, see
-[Testing with Components](/docs/concepts/testing/v2)
+[Testing with Components](/docs/development/testing/components)
 
 ### BUILD.gn {#build-gn}
 

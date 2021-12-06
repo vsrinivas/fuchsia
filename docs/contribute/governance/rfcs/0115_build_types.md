@@ -571,7 +571,7 @@ The Android operating system:
 [docs-femu]: /docs/get-started/set_up_femu.md
 [docs-ffx]: /docs/development/tools/ffx/overview.md
 [docs-rfc]: /docs/contribute/governance/rfcs/README.md
-[docs-test-runner]: /docs/concepts/testing/v2/test_runner_framework.md
+[docs-test-runner]: /docs/development/testing/components/test_runner_framework.md
 [docs-testing]: /docs/concepts/testing/sl4f.md
 [fidl-metrics]: https://fuchsia.dev/reference/fidl/fuchsia.metrics
 [fidl-crash-reporter]: https://fuchsia.dev/reference/fidl/fuchsia.feedback#CrashReporter

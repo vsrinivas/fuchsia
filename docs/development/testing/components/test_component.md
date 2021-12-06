@@ -1,7 +1,5 @@
 # Test Components
 
-<<../../components/_v2_banner.md>>
-
 ## Introduction
 
 Test components are [components][glossary.component] that implement a test.

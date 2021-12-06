@@ -217,8 +217,8 @@ Further reading:
 [syscalls]: /docs/reference/syscalls/README.md
 [test-coverage]: /docs/concepts/testing/coverage.md
 [test-package-gn]: /docs/development/components/build.md#test-packages
-[testing-integration]: /docs/concepts/testing/v2/integration_testing.md
-[testing-v2]: /docs/concepts/testing/v2/README.md
+[testing-integration]: /docs/development/testing/components/integration_testing.md
+[testing-v2]: /docs/development/testing/components/README.md
 [timer-slack]: /docs/concepts/kernel/timer_slack.md
 [timer-tests]: /zircon/kernel/tests/timer_tests.cc
 [timers-test]: https://fuchsia.googlesource.com/fuchsia/+/main/src/zircon/tests/timers/timers.cc

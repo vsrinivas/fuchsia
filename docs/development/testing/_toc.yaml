@@ -32,6 +32,9 @@ toc:
 - title: "Compatibility Testing"
   section:
   - include: /docs/development/testing/cts/_toc.yaml
+- title: "Component testing"
+  section:
+  - include: /docs/development/testing/components/_toc.yaml
 - title: "Driver testing"
   section:
   - title: "Testing a USB device"

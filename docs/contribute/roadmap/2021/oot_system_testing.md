@@ -493,4 +493,4 @@ additional justification or otherwise be discouraged by the platform team.
 [ssh]: /docs/development/idk/documentation/ssh.md
 [v1-test-system-services]: /docs/concepts/testing/v1_test_component.md#additional_system_services
 [v2-migration]: /docs/contribute/open_projects/components/migration.md
-[v2-testing]: /docs/concepts/testing/v2/README.md
+[v2-testing]: /docs/development/testing/components/README.md

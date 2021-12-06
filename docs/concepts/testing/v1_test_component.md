@@ -199,5 +199,5 @@ allowlisted as shown below:
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md
 [run-test-component]: /docs/development/testing/run_fuchsia_tests.md
 [test-packages]: /docs/development/components/build.md#test-packages
-[testing-v2]: /docs/concepts/testing/v2/README.md
+[testing-v2]: /docs/development/testing/components/README.md
 [unit-tests]: /docs/development/components/build.md#unit-tests

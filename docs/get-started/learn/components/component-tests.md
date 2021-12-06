@@ -60,7 +60,7 @@ tests.
 
 Note: For complete details on the Test Runner Framework and component testing,
 see the
-[testing documentation](/docs/concepts/testing/v2/test_runner_framework.md).
+[testing documentation](/docs/development/testing/components/test_runner_framework.md).
 
 ## Unit tests
 

@@ -411,10 +411,10 @@ offer: [
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
 [doc-epitaphs]: /docs/reference/fidl/language/wire-format/README.md#epitaphs
-[doc-trf-driver]: /docs/concepts/testing/v2/test_runner_framework.md#test-roles
-[doc-trf-root]: /docs/concepts/testing/v2/test_runner_framework.md#tests-as-components
-[doc-trf-runner]: /docs/concepts/testing/v2/test_runner_framework.md#test-runners
-[doc-trf]: /docs/concepts/testing/v2/test_runner_framework.md
+[doc-trf-driver]: /docs/development/testing/components/test_runner_framework.md#test-roles
+[doc-trf-root]: /docs/development/testing/components/test_runner_framework.md#tests-as-components
+[doc-trf-runner]: /docs/development/testing/components/test_runner_framework.md#test-runners
+[doc-trf]: /docs/development/testing/components/test_runner_framework.md
 [doc-intro]: /docs/concepts/components/v2/introduction.md
 [doc-logs]: /docs/concepts/diagnostics/logs/README.md
 [doc-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program

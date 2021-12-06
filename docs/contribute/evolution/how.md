@@ -264,7 +264,7 @@ platform interfaces are observed and respected.
 [test-double]: /docs/contribute/testing/principles.md#test_doubles_stubs_mocks_fakes
 [topology]: /docs/concepts/components/v2/topology.md
 [tracing]: /docs/concepts/kernel/tracing-system.md
-[trf]: /docs/concepts/testing/v2/test_runner_framework.md
+[trf]: /docs/development/testing/components/test_runner_framework.md
 [vdso]: /docs/concepts/kernel/vdso.md
 [vdso-enforcement]: /docs/concepts/kernel/vdso.md#enforcement
 [vmar]: /docs/reference/kernel_objects/vm_address_region.md
