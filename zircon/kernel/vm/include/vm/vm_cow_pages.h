@@ -351,6 +351,10 @@ class VmCowPages final
   // remove the old_page from pmm_page_queues() and free the old_page.
   void SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t* new_page) TA_REQ(lock_);
 
+  // If page is still at offset, replace it with a different page.  If with_loaned is true, replace
+  // with a loaned page.  If with_loaned is false, replace with a non-loaned page.
+  zx_status_t ReplacePage(vm_page_t* page, uint64_t offset, bool with_loaned) TA_EXCL(lock_);
+
   // Attempts to dedup the given page at the specified offset with the zero page. The only
   // correctness requirement for this is that `page` must be *some* valid vm_page_t, meaning that
   // all race conditions are handled internally. This function returns false if
@@ -1007,13 +1011,15 @@ class VmCowPagesContainer : public fbl::RefCountedUpgradeable<VmCowPagesContaine
   VmCowPagesContainer() = default;
   ~VmCowPagesContainer();
 
-  // This is currently the only VmCowPages method that's ok to call via ref on VmCowPagesContainer
-  // while holding no ref on the contained VmCowPages.  The page can get removed despite potential
-  // concurrent VmCowPages::fbl_recycle() on a different thread, and despite VmCowPages refcount_
+  // These are the only VmCowPages methods that are ok to call via ref on VmCowPagesContainer while
+  // holding no ref on the contained VmCowPages.  These will operate correctly despite potential
+  // concurrent VmCowPages::fbl_recycle() on a different thread and despite VmCowPages refcount_
   // potentially being 0.  The VmCowPagesContainer ref held by the caller keeps the actual
   // VmCowPages object alive during this call.
   bool RemovePageForEviction(vm_page_t* page, uint64_t offset,
                              VmCowPages::EvictionHintAction hint_action);
+
+  zx_status_t ReplacePage(vm_page_t* page, uint64_t offset, bool with_loaned);
 
  private:
   friend class VmCowPages;

@@ -3562,6 +3562,44 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   DEBUG_ASSERT(status == ZX_OK);
 }
 
+zx_status_t VmCowPages::ReplacePage(vm_page_t* page, uint64_t offset, bool with_loaned) {
+  Guard<Mutex> guard{&lock_};
+  VmPageOrMarker* p = page_list_.Lookup(offset);
+  if (!p) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (!p->IsPage()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  vm_page_t* old_page = p->Page();
+  if (old_page != page) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  DEBUG_ASSERT(page != vm_get_zero_page());
+  if (page->object.pin_count != 0) {
+    DEBUG_ASSERT(!pmm_is_loaned(page));
+    return ZX_ERR_BAD_STATE;
+  }
+  uint32_t pmm_alloc_flags = pmm_alloc_flags_;
+  if (with_loaned) {
+    if (!(pmm_alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    pmm_alloc_flags |= PMM_ALLOC_FLAG_MUST_BORROW;
+  } else {
+    pmm_alloc_flags &= ~PMM_ALLOC_FLAG_CAN_BORROW;
+  }
+  vm_page_t* new_page;
+  zx_status_t status = pmm_alloc_page(pmm_alloc_flags, &new_page);
+  if (status != ZX_OK) {
+    return status;
+  }
+  SwapPageLocked(offset, old_page, new_page);
+  pmm_page_queues()->Remove(old_page);
+  pmm_free_page(old_page);
+  return ZX_OK;
+}
+
 bool VmCowPages::DebugValidatePageSplitsHierarchyLocked() const {
   const VmCowPages* cur = this;
   AssertHeld(cur->lock_);
@@ -4348,6 +4386,13 @@ bool VmCowPagesContainer::RemovePageForEviction(vm_page_t* page, uint64_t offset
   // on VmCowPages, for RemovePageForEviction() in particular.
   DEBUG_ASSERT(ref_count_debug() >= 1);
   return cow().RemovePageForEviction(page, offset, hint_action);
+}
+
+zx_status_t VmCowPagesContainer::ReplacePage(vm_page_t* page, uint64_t offset, bool with_loaned) {
+  // While the caller must have a ref on VmCowPagesContainer, the caller doesn't need to have a ref
+  // on VmCowPages, for ReplacePage() in particular.
+  DEBUG_ASSERT(ref_count_debug() >= 1);
+  return cow().ReplacePage(page, offset, with_loaned);
 }
 
 template <class... Args>
