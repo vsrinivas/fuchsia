@@ -400,8 +400,7 @@ def Main(args):
       logging.critical(
           ('Path {} does not exist, use --create to create a disk image.\n'
            'Detected USB devices:\n'
-           '{}').format(path, '\n'.join(GetUsbDisks())),
-          file=sys.stderr)
+           '{}').format(path, '\n'.join(GetUsbDisks())))
       return 1
     if not IsUsbDisk(path):
       logging.critical(
