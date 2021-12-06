@@ -9,9 +9,10 @@
 #include <lib/zx/debuglog.h>
 #include <lib/zx/resource.h>
 
+#include <vector>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/vector.h>
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"

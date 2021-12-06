@@ -245,7 +245,7 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
   return ZX_OK;
 }
 
-zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf) {
+zx_status_t ParseBootArgs(std::string_view str, std::vector<char>* buf) {
   buf->reserve(buf->size() + str.size());
   for (auto it = str.begin(); it != str.end();) {
     // Skip any leading whitespace.
@@ -294,18 +294,20 @@ zx_status_t CreateVnodeConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vn
   return ZX_OK;
 }
 
-fbl::Vector<fbl::String> SplitString(fbl::String input, char delimiter) {
-  fbl::Vector<fbl::String> result;
+std::vector<std::string> SplitString(std::string_view input, char delimiter) {
+  const bool ends_with_delimiter = !input.empty() && input.back() == delimiter;
 
-  // No fbl::String::find, do it ourselves.
-  const char* start = input.begin();
-  for (auto end = start; end != input.end(); start = end + 1) {
-    end = start;
-    while (end != input.end() && *end != delimiter) {
-      ++end;
-    }
-    result.push_back(fbl::String(start, end - start));
+  std::vector<std::string> result;
+  while (!input.empty()) {
+    std::string_view word = input.substr(0, input.find_first_of(delimiter));
+    result.push_back(std::string{word});
+    input.remove_prefix(std::min(input.size(), word.size() + sizeof(delimiter)));
   }
+
+  if (ends_with_delimiter) {
+    result.push_back("");
+  }
+
   return result;
 }
 

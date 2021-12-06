@@ -27,12 +27,9 @@
 #include <cstdint>
 #include <string>
 #include <utility>
+#include <vector>
 
-#include <fbl/algorithm.h>
-#include <fbl/string.h>
-#include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
 #include "../util.h"
@@ -41,7 +38,7 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-static fbl::Vector<fbl::String> arguments;
+static std::vector<std::string> arguments;
 
 constexpr char kFactoryItemsPath[] = "/svc/" fuchsia_boot_FactoryItems_Name;
 constexpr char kItemsPath[] = "/svc/" fuchsia_boot_Items_Name;
@@ -273,7 +270,7 @@ TEST(BootsvcIntegrationTest, BootItems) {
     // path below.
     if (type == ZBI_TYPE_CRASHLOG) {
       ASSERT_TRUE(payload.is_valid());
-      fbl::String path = fbl::StringPrintf("/boot/%s", bootsvc::kLastPanicFilePath);
+      std::string path = std::stringPrintf("/boot/%s", bootsvc::kLastPanicFilePath);
       fbl::unique_fd fd(open(path.data(), O_RDONLY));
       ASSERT_TRUE(fd.is_valid());
 
@@ -379,7 +376,7 @@ TEST(BootsvcIntegrationTest, ResourcesAvailable) {
 int main(int argc, char** argv) {
   // Copy arguments for later use in tests.
   for (int i = 0; i < argc; ++i) {
-    arguments.push_back(fbl::String(argv[i]));
+    arguments.push_back(std::string(argv[i]));
   }
 
   int result = RUN_ALL_TESTS(argc, argv);

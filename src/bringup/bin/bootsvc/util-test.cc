@@ -6,9 +6,12 @@
 
 #include <zircon/types.h>
 
-#include <fbl/string.h>
-#include <fbl/string_printf.h>
-#include <fbl/vector.h>
+#include <algorithm>
+#include <array>
+#include <string>
+#include <string_view>
+#include <vector>
+
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -20,29 +23,31 @@ struct SplitStringTestCase {
 
 // Test the SplitString util individually.
 TEST(UtilTest, TestSplitString) {
-  // Makeshift parametrized test.
-  struct {
-    const char* input;
+  struct TestCase {
+    std::string_view input;
     char delimiter;
-  } cases[] = {
-      {.input = "", .delimiter = ','},        {.input = "abcd", .delimiter = ','},
-      {.input = "a,b c,d", .delimiter = ','}, {.input = "a,b c,d", .delimiter = ' '},
-      {.input = "::a:", .delimiter = ':'},
+    std::vector<std::string> expected;
   };
-  fbl::Vector<fbl::String> expected[] = {
-      {}, {"abcd"}, {"a", "b c", "d"}, {"a,b", "c,d"}, {"", "", "a", ""},
-  };
-  for (size_t n = 0; n < sizeof(cases) / sizeof(*cases); ++n) {
-    fbl::String case_msg = fbl::StringPrintf("Test Case %zu", n);
-    auto result = bootsvc::SplitString(cases[n].input, cases[n].delimiter);
 
-    // We use EXPECT_EQ rather than ASSERT_EQ so that we can continue with
-    // other test cases if one fails.
-    EXPECT_EQ(result.size(), expected[n].size(), "%s", case_msg.c_str());
-    if (result.size() == expected[n].size()) {
-      for (size_t i = 0; i < result.size(); ++i) {
-        EXPECT_STR_EQ(result[i].c_str(), expected[n][i].c_str(), "%s", case_msg.c_str());
-      }
+  // Makeshift parametrized test.
+  const std::array cases = {
+      TestCase{.input = "", .delimiter = ',', .expected = {}},
+      TestCase{.input = "abcd", .delimiter = ',', .expected = {"abcd"}},
+      TestCase{.input = "a,b c,d", .delimiter = ',', .expected = {"a", "b c", "d"}},
+      TestCase{.input = "a,b c,d", .delimiter = ' ', .expected = {"a,b", "c,d"}},
+      TestCase{.input = "::a:", .delimiter = ':', .expected = {"", "", "a", ""}},
+  };
+
+  for (auto test_case : cases) {
+    std::string_view input = test_case.input;
+    const auto& expected = test_case.expected;
+
+    auto actual = bootsvc::SplitString(input, test_case.delimiter);
+    EXPECT_EQ(actual.size(), expected.size(), "Input: %.*s", static_cast<int>(input.size()),
+              input.data());
+    for (size_t i = 0; i < std::min(actual.size(), expected.size()); ++i) {
+      EXPECT_STR_EQ(actual[i], expected[i], "Input: %.*s", static_cast<int>(input.size()),
+                    input.data());
     }
   }
 }
@@ -57,7 +62,7 @@ key=value
 )";
 
   // Parse a valid config.
-  fbl::Vector<char> buf;
+  std::vector<char> buf;
   zx_status_t status = bootsvc::ParseBootArgs(config1, &buf);
   ASSERT_EQ(ZX_OK, status);
 

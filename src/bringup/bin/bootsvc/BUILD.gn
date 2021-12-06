@@ -112,7 +112,6 @@ test("util_test") {
   sources = [ "util-test.cc" ]
   deps = [
     ":util",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxtest",
   ]
 }

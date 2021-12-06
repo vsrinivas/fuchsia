@@ -195,7 +195,7 @@ BootfsService::~BootfsService() {
     // Since the lifetime of the VMOs are coupled with the BootfsService, all
     // connections to these Vnodes must be terminated (with Shutdown) before
     // we can safely close the VMOs
-    parts.reset();
+    parts.clear();
     event.signal(0, ZX_USER_SIGNAL_0);
   };
   vfs_->Shutdown(std::move(callback));

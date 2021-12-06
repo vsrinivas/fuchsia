@@ -26,12 +26,11 @@
 #include <iterator>
 #include <memory>
 #include <sstream>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
 
-#include <fbl/string.h>
-#include <fbl/vector.h>
 #include <launchpad/launchpad.h>
 
 #include "bootfs-loader-service.h"
@@ -95,7 +94,7 @@ zx_status_t InitializeClock() {
 }
 
 // Parse ZBI_TYPE_IMAGE_ARGS item into boot args buffer
-zx_status_t ExtractBootArgsFromImage(fbl::Vector<char>* buf, const zx::vmo& image_vmo,
+zx_status_t ExtractBootArgsFromImage(std::vector<char>* buf, const zx::vmo& image_vmo,
                                      bootsvc::ItemMap* item_map) {
   auto it = item_map->find(bootsvc::ItemKey{ZBI_TYPE_IMAGE_ARGS, 0});
   if (it == item_map->end()) {
@@ -121,7 +120,7 @@ zx_status_t ExtractBootArgsFromImage(fbl::Vector<char>* buf, const zx::vmo& imag
   return ZX_OK;
 }
 
-zx_status_t ExtractBootArgsFromBootfs(fbl::Vector<char>* buf,
+zx_status_t ExtractBootArgsFromBootfs(std::vector<char>* buf,
                                       const fbl::RefPtr<bootsvc::BootfsService>& bootfs) {
   // TODO(teisenbe): Rename this file
   const char* config_path = "config/devmgr";
@@ -153,7 +152,7 @@ zx_status_t ExtractBootArgsFromBootfs(fbl::Vector<char>* buf,
 zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
                          const zx::vmo& image_vmo, bootsvc::ItemMap* item_map, zx::vmo* out,
                          uint64_t* size) {
-  fbl::Vector<char> boot_args;
+  std::vector<char> boot_args;
   zx_status_t status;
 
   status = ExtractBootArgsFromImage(&boot_args, image_vmo, item_map);
@@ -220,7 +219,7 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   // Split the bootsvc.next value into 1 or more arguments using ',' as a
   // delimiter.
   printf("bootsvc: bootsvc.next = %s\n", bootsvc_next);
-  fbl::Vector<fbl::String> next_args = bootsvc::SplitString(bootsvc_next, ',');
+  std::vector<std::string> next_args = bootsvc::SplitString(bootsvc_next, ',');
 
   // Open the executable we will start next
   zx::vmo program;

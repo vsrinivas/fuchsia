@@ -10,9 +10,10 @@
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
+#include <vector>
+
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/vector.h>
 
 namespace bootsvc {
 
@@ -56,7 +57,7 @@ class BootfsService : public fbl::RefCounted<BootfsService> {
                                 size_t len);
 
   // owned_vmos contains all VMOs that are claimed by the underlying VFS
-  fbl::Vector<zx::vmo> owned_vmos_;
+  std::vector<zx::vmo> owned_vmos_;
 
   std::unique_ptr<memfs::Vfs> vfs_;
   // root of the vfs

@@ -9,10 +9,9 @@
 #include <lib/zx/vmo.h>
 
 #include <map>
+#include <string>
 #include <string_view>
-
-#include <fbl/string.h>
-#include <fbl/vector.h>
+#include <vector>
 
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
@@ -54,7 +53,7 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
 
 // Parse boot arguments in |str|, and add them to |buf|. |buf| is a series of
 // null-separated "key" or "key=value" pairs.
-zx_status_t ParseBootArgs(std::string_view str, fbl::Vector<char>* buf);
+zx_status_t ParseBootArgs(std::string_view str, std::vector<char>* buf);
 
 // Create a connection to a |vnode| in a |vfs|.
 zx_status_t CreateVnodeConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
@@ -63,7 +62,7 @@ zx_status_t CreateVnodeConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vn
 // Path relative to /boot used for crashlogs.
 extern const char* const kLastPanicFilePath;
 
-fbl::Vector<fbl::String> SplitString(fbl::String input, char delimiter);
+std::vector<std::string> SplitString(std::string_view input, char delimiter);
 
 }  // namespace bootsvc
 
