@@ -1,0 +1,23 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/docs/documentation-navigation-toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Glossary"
+  path: /docs/glossary/README.md
+- heading: "Component Framework"
+- title: "Component manifest (.cml)"
+  path: /reference/cml.md
+- heading: "FIDL"
+- title: "Bindings"
+  section:
+  - include: /docs/reference/fidl/bindings/_toc.yaml
+- title: "Language"
+  section:
+  - include: /docs/reference/fidl/bindings/_toc.yaml
+- heading: "Tracing"
+- title: "Fuchsia trace format"
+  path: /docs/reference/tracing/trace-format.md
