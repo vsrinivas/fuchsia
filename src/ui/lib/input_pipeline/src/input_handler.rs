@@ -10,8 +10,9 @@ use {crate::input_device, async_trait::async_trait};
 /// For example, an [`ImeInputHandler`] holds a proxy to IME and keyboard services.
 ///
 /// [`InputHandler`]s process individual input events through [`handle_input_event()`], which can
-/// produce multiple events as an outcome. If the [`InputHandler`] sends an InputEvent to a service
-/// that consumes the event, then the [`InputHandler`] doesn't return any events.
+/// produce multiple events as an outcome. If the [`InputHandler`] sends an [`InputEvent`] to a service
+/// that consumes the event, then the [`InputHandler`] updates the [`InputEvent.handled`] accordingly.
+///
 /// [`handle_input_event()`] should not be invoked concurrently since sequences of events must be
 /// preserved. The state created by event n may affect the interpretation of event n+1.
 #[async_trait(?Send)]
