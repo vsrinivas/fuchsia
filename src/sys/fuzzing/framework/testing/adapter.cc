@@ -41,11 +41,22 @@ void FakeTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,
 }
 
 zx_signals_t FakeTargetAdapter::AwaitSignal() {
-  sync_completion_wait(&rsync_, ZX_TIME_INFINITE);
-  sync_completion_reset(&rsync_);
-  auto observed = observed_;
-  sync_completion_signal(&wsync_);
+  zx_signals_t observed;
+  AwaitSignal(zx::duration::infinite(), &observed);
   return observed;
+}
+
+zx_status_t FakeTargetAdapter::AwaitSignal(const zx::duration& timeout, zx_signals_t* out) {
+  auto status = sync_completion_wait(&rsync_, timeout.get());
+  if (status != ZX_OK) {
+    return status;
+  }
+  sync_completion_reset(&rsync_);
+  if (out) {
+    *out = observed_;
+  }
+  sync_completion_signal(&wsync_);
+  return ZX_OK;
 }
 
 void FakeTargetAdapter::SignalPeer(Signal signal) { coordinator_.SignalPeer(signal); }

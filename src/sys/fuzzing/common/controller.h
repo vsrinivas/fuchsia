@@ -19,6 +19,7 @@
 #include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/response.h"
+#include "src/sys/fuzzing/common/run-once.h"
 #include "src/sys/fuzzing/common/runner.h"
 #include "src/sys/fuzzing/common/transceiver.h"
 
@@ -40,7 +41,7 @@ class ControllerImpl : public Controller {
   ~ControllerImpl() override;
 
   // Sets the runner used to perform tasks.
-  void SetRunner(const std::shared_ptr<Runner>& runner);
+  void SetRunner(std::unique_ptr<Runner> runner);
 
   // Binds the FIDL interface request to this object.
   void Bind(fidl::InterfaceRequest<Controller> request);
@@ -62,6 +63,11 @@ class ControllerImpl : public Controller {
   void Cleanse(FidlInput fidl_input, CleanseCallback callback) override;
   void Fuzz(FuzzCallback callback) override;
   void Merge(MergeCallback callback) override;
+
+  // Stages of stopping: close sources of new tasks, interrupt the current task, and join it.
+  void Close() { close_.Run(); }
+  void Interrupt() { interrupt_.Run(); }
+  void Join() { join_.Run(); }
 
  private:
   // Adds defaults for unset options.
@@ -85,10 +91,13 @@ class ControllerImpl : public Controller {
   // Thread body for the corpus reader client.
   void ReadCorpusLoop() FXL_LOCKS_EXCLUDED(mutex_);
 
-  Binding<Controller> binding_;
+  // Stop-related methods.
+  void CloseImpl();
+  void InterruptImpl();
+  void JoinImpl();
 
-  // This pointer is shared with the controller by the controller provider that instantiates it.
-  std::shared_ptr<Runner> runner_;
+  Binding<Controller> binding_;
+  std::unique_ptr<Runner> runner_;
 
   // These pointers are instantiated by the controller and shared with other objects.
   std::shared_ptr<Dispatcher> dispatcher_;
@@ -102,6 +111,10 @@ class ControllerImpl : public Controller {
   std::deque<CorpusReaderRequest> readers_ FXL_GUARDED_BY(mutex_);
   bool reading_ FXL_GUARDED_BY(mutex_) = true;
   sync_completion_t pending_readers_;
+
+  RunOnce close_;
+  RunOnce interrupt_;
+  RunOnce join_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(ControllerImpl);
 };

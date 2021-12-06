@@ -15,9 +15,8 @@ namespace fuzzing {
 
 // Public methods.
 
-ProcessProxyImpl::ProcessProxyImpl(const std::shared_ptr<Dispatcher>& dispatcher,
-                                   const std::shared_ptr<ModulePool>& pool)
-    : binding_(this, dispatcher), pool_(std::move(pool)) {}
+ProcessProxyImpl::ProcessProxyImpl(const std::shared_ptr<ModulePool>& pool)
+    : binding_(this), pool_(std::move(pool)) {}
 
 ProcessProxyImpl::~ProcessProxyImpl() {
   // Ensure the channel will close by killing the attached process.

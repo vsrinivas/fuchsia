@@ -49,7 +49,9 @@ class FakeRunner final : public Runner {
   zx_status_t SyncCleanse(const Input& input) override { return Run(); }
   zx_status_t SyncFuzz() override { return Run(); }
   zx_status_t SyncMerge() override { return Run(); }
-  Status CollectStatusLocked() override;
+  void Interrupt() override {}
+
+  Status CollectStatus() override;
 
  private:
   zx_status_t Run();

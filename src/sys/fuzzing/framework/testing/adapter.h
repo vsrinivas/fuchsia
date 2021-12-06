@@ -13,11 +13,11 @@
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
-#include "src/sys/fuzzing/common/testing/binding.h"
 
 namespace fuzzing {
 
@@ -44,13 +44,17 @@ class FakeTargetAdapter final : public TargetAdapter {
   // Waits for a signal from the engine.
   zx_signals_t AwaitSignal();
 
+  // Like |AwaitSignal|, but returns ZX_OK and the observed signals via |out| if they are received
+  // before |timeout| elapses; otherwise returns ZX_ERR_TIMED_OUT.
+  zx_status_t AwaitSignal(const zx::duration& timeout, zx_signals_t* out);
+
   // Sends a signal to the engine.
   void SignalPeer(Signal signal);
 
  private:
-  FakeBinding<TargetAdapter> binding_;
-  SharedMemory test_input_;
+  Binding<TargetAdapter> binding_;
   SignalCoordinator coordinator_;
+  SharedMemory test_input_;
 
   // When the adapter receives a signal, it blocks on |wsync_|, stores it in |observed_|, and
   // signals |rsync_|. When |AwaitSignals| is called, it blocks on |rsync_|, reads |obeserved_|, and

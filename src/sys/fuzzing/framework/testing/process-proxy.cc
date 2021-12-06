@@ -11,9 +11,8 @@
 
 namespace fuzzing {
 
-FakeProcessProxy::FakeProcessProxy(const std::shared_ptr<Dispatcher>& dispatcher,
-                                   const std::shared_ptr<ModulePool>& pool)
-    : binding_(this, dispatcher), pool_(std::move(pool)) {}
+FakeProcessProxy::FakeProcessProxy(const std::shared_ptr<ModulePool>& pool)
+    : binding_(this), pool_(std::move(pool)) {}
 
 bool FakeProcessProxy::has_module(FakeFrameworkModule* module) const {
   auto id = module->id();

@@ -57,6 +57,6 @@ zx_status_t FakeRunner::Run() {
   return error_;
 }
 
-Status FakeRunner::CollectStatusLocked() { return CopyStatus(status_); }
+Status FakeRunner::CollectStatus() { return CopyStatus(status_); }
 
 }  // namespace fuzzing

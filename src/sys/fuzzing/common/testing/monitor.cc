@@ -15,8 +15,7 @@ fidl::InterfaceHandle<Monitor> FakeMonitor::NewBinding() { return binding_.NewBi
 
 MonitorPtr FakeMonitor::Bind(const std::shared_ptr<Dispatcher>& dispatcher) {
   MonitorPtr ptr;
-  auto status = binding_.Bind(ptr.NewRequest(dispatcher->get()));
-  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
+  binding_.Bind(ptr.NewRequest(dispatcher->get()));
   return ptr;
 }
 

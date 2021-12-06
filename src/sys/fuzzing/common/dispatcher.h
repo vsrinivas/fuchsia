@@ -6,9 +6,13 @@
 #define SRC_SYS_FUZZING_COMMON_DISPATCHER_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fit/function.h>
 #include <threads.h>
 
+#include <atomic>
 #include <memory>
+
+#include "src/sys/fuzzing/common/run-once.h"
 
 namespace fuzzing {
 
@@ -19,16 +23,24 @@ class Dispatcher final {
   Dispatcher();
   ~Dispatcher();
 
+  bool is_running() const { return running_; }
   async_dispatcher_t* get() const { return loop_->dispatcher(); }
   thrd_t thrd() const { return thrd_; }
+
+  // Queues a task to be run on the dispatcher thread.
+  zx_status_t PostTask(fit::closure&& task);
 
   // Shuts down the underlying async loop. This can be used to ensure references in callbacks are no
   // longer required.
   void Shutdown();
 
  private:
+  void ShutdownImpl();
+
+  std::atomic<bool> running_ = true;
   std::unique_ptr<async::Loop> loop_;
   thrd_t thrd_;
+  RunOnce shutdown_;
 };
 
 }  // namespace fuzzing

@@ -6,10 +6,7 @@
 
 namespace fuzzing {
 
-void ProcessProxyTest::SetUp() {
-  dispatcher_ = std::make_shared<Dispatcher>();
-  pool_ = std::make_shared<ModulePool>();
-}
+void ProcessProxyTest::SetUp() { pool_ = std::make_shared<ModulePool>(); }
 
 ProcessProxySyncPtr ProcessProxyTest::Bind(ProcessProxyImpl* impl) {
   ProcessProxySyncPtr proxy;
@@ -34,7 +31,5 @@ Options* ProcessProxyTest::IgnoreOptions() { return &ignored_; }
 void IgnoreReceivedSignals() {}
 
 void IgnoreErrors(ProcessProxyImpl* ignored) {}
-
-void ProcessProxyTest::TearDown() { dispatcher_->Shutdown(); }
 
 }  // namespace fuzzing

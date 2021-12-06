@@ -10,7 +10,6 @@
 
 #include <memory>
 
-#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
 #include "src/sys/fuzzing/common/testing/module.h"
@@ -26,18 +25,12 @@ using fuchsia::fuzzer::Result;
 class RunnerImplTest : public RunnerTest {
  protected:
   // RunnerTest methods.
-  void SetUp() override;
   void Configure(Runner* runner, const std::shared_ptr<Options>& options) override;
+  bool HasTestInput(const zx::duration& timeout) override;
   Input GetTestInput() override;
   void SetFeedback(const Coverage& coverage, Result result, bool leak) override;
 
-  // Unit test implementations and overrides.
-  void RunAllForFuzzUntilTime() override;
-  void MergeSeedError(Runner* runner) override;
-  void RunAllForMerge() override;
-
  private:
-  std::shared_ptr<Dispatcher> dispatcher_;
   FakeTargetAdapter target_adapter_;
   FakeProcess process_;
   fidl::InterfaceRequestHandler<ProcessProxy> process_proxy_handler_;

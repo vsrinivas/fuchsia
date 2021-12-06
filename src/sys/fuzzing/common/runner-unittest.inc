@@ -61,12 +61,7 @@ TEST_F(RUNNER_TEST, FuzzUntilTime) {
   FuzzUntilTime(&runner);
 }
 
-TEST_F(RUNNER_TEST, MergeSeedError) {
+TEST_F(RUNNER_TEST, Stop) {
   RUNNER_TYPE runner;
-  MergeSeedError(&runner);
-}
-
-TEST_F(RUNNER_TEST, Merge) {
-  RUNNER_TYPE runner;
-  Merge(&runner);
+  Stop(&runner);
 }

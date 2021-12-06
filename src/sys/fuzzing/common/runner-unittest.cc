@@ -47,37 +47,70 @@ bool RunnerTest::HasLeak(const Input& input) {
 void RunnerTest::SetLeak(const Input& input, bool leak) { feedback_[input.ToHex()].leak = leak; }
 
 Input RunnerTest::RunOne() {
+  EXPECT_TRUE(HasTestInput());
   auto input = GetTestInput();
   SetFeedback(GetCoverage(input), GetResult(input), HasLeak(input));
   return input;
 }
 
 Input RunnerTest::RunOne(const Coverage& coverage) {
+  EXPECT_TRUE(HasTestInput());
   auto input = GetTestInput();
   SetFeedback(coverage, GetResult(input), HasLeak(input));
   return input;
 }
 
 Input RunnerTest::RunOne(Result result) {
+  EXPECT_TRUE(HasTestInput());
   auto input = GetTestInput();
   SetFeedback(GetCoverage(input), result, HasLeak(input));
   return input;
 }
 
-Input RunnerTest::RunOne(bool leak) {
+Input RunnerTest::RunOne(bool has_leak) {
+  EXPECT_TRUE(HasTestInput());
   auto input = GetTestInput();
-  SetFeedback(GetCoverage(input), GetResult(input), leak);
+  SetFeedback(GetCoverage(input), GetResult(input), has_leak);
   return input;
+}
+
+void RunnerTest::RunUntilIdle() {
+  // Ensure the fuzzer is up and running before enforcing timeout.
+  if (!HasTestInput()) {
+    return;
+  }
+  while (true) {
+    auto input = GetTestInput();
+    zx::nanosleep(zx::deadline_after(zx::msec(10)));
+    SetFeedback(GetCoverage(input), GetResult(input), HasLeak(input));
+    while (!HasTestInput(zx::msec(10))) {
+      if (HasStatus()) {
+        // Engine is indicating it is idle.
+        return;
+      }
+      zx::nanosleep(zx::deadline_after(zx::msec(10)));
+    }
+  }
+}
+
+bool RunnerTest::HasTestInput() {
+  bool has_input = HasTestInput(zx::duration::infinite());
+  sync_completion_signal(&started_sync_);
+  return has_input;
+}
+
+void RunnerTest::AwaitStarted() { sync_completion_wait(&started_sync_, ZX_TIME_INFINITE); }
+
+bool RunnerTest::HasStatus() const { return sync_completion_signaled(&status_sync_); }
+
+zx_status_t RunnerTest::GetStatus() {
+  sync_completion_wait(&status_sync_, ZX_TIME_INFINITE);
+  return status_;
 }
 
 void RunnerTest::SetStatus(zx_status_t status) {
   status_ = status;
-  sync_completion_signal(&sync_);
-}
-
-zx_status_t RunnerTest::GetStatus() {
-  sync_completion_wait(&sync_, ZX_TIME_INFINITE);
-  return status_;
+  sync_completion_signal(&status_sync_);
 }
 
 // Unit tests.
@@ -255,42 +288,37 @@ void RunnerTest::FuzzUntilError(Runner* runner) {
 
 void RunnerTest::FuzzUntilRuns(Runner* runner) {
   auto options = RunnerTest::DefaultOptions(runner);
-  options->set_runs(3);
+  const size_t kNumRuns = 10;
+  options->set_runs(kNumRuns);
   Configure(runner, options);
+  std::vector<std::string> expected({""});
 
   // Add some seed corpus elements.
   Input input1({0x01, 0x11});
-  Input input2({0x02, 0x22});
-  Input input3({0x03, 0x33});
   EXPECT_EQ(runner->AddToCorpus(CorpusType::SEED, input1.Duplicate()), ZX_OK);
+  expected.push_back(input1.ToHex());
+
+  Input input2({0x02, 0x22});
   EXPECT_EQ(runner->AddToCorpus(CorpusType::SEED, input2.Duplicate()), ZX_OK);
-  EXPECT_EQ(runner->AddToCorpus(CorpusType::SEED, input3.Duplicate()), ZX_OK);
+  expected.push_back(input2.ToHex());
 
-  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
-  for (size_t i = 0; i < 3; ++i) {
-    RunOne(Result::NO_ERRORS);
-  }
-  EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+  Input input3({0x03, 0x33});
+  EXPECT_EQ(runner->AddToCorpus(CorpusType::LIVE, input3.Duplicate()), ZX_OK);
+  expected.push_back(input3.ToHex());
 
-  // The seed corpus elements should be included in the live corpus.
-  EXPECT_EQ(runner->ReadFromCorpus(CorpusType::LIVE, 1).ToHex(), input1.ToHex());
-  EXPECT_EQ(runner->ReadFromCorpus(CorpusType::LIVE, 2).ToHex(), input2.ToHex());
-  EXPECT_EQ(runner->ReadFromCorpus(CorpusType::LIVE, 3).ToHex(), input3.ToHex());
-}
-
-void RunnerTest::FuzzUntilTime(Runner* runner) {
-  auto options = RunnerTest::DefaultOptions(runner);
-  options->set_max_total_time(zx::msec(100).get());
-  Configure(runner, options);
-
+  // Subscribe to status updates.
   FakeMonitor monitor;
   auto dispatcher = std::make_shared<Dispatcher>();
   runner->AddMonitor(monitor.Bind(dispatcher));
-  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
-  RunAllForFuzzUntilTime();
-  EXPECT_EQ(GetStatus(), ZX_OK);
 
+  // Fuzz for exactly |kNumRuns|.
+  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
+  std::vector<std::string> actual;
+  for (size_t i = 0; i < kNumRuns; ++i) {
+    actual.push_back(RunOne({{i, i}}).ToHex());
+  }
+
+  // Check that we get the expected status updates.
   UpdateReason reason;
   auto status = monitor.NextStatus(&reason);
   EXPECT_EQ(size_t(reason), UpdateReason::INIT);
@@ -319,31 +347,62 @@ void RunnerTest::FuzzUntilTime(Runner* runner) {
   EXPECT_GT(status.covered_pcs(), covered_pcs);
   covered_pcs = status.covered_pcs();
 
-  status = monitor.NextStatus(&reason);
+  // Skip others up to DONE.
+  while (reason != UpdateReason::DONE) {
+    status = monitor.NextStatus(&reason);
+  }
   EXPECT_EQ(size_t(reason), UpdateReason::DONE);
   ASSERT_TRUE(status.has_running());
   EXPECT_FALSE(status.running());
   ASSERT_TRUE(status.has_runs());
   EXPECT_GE(status.runs(), runs);
   ASSERT_TRUE(status.has_elapsed());
-  EXPECT_GE(status.elapsed(), options->max_total_time());
+  EXPECT_GT(status.elapsed(), elapsed);
   ASSERT_TRUE(status.has_covered_pcs());
   EXPECT_GE(status.covered_pcs(), covered_pcs);
 
+  // All done.
+  EXPECT_EQ(GetStatus(), ZX_OK);
   EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+
+  // All corpus inputs should have been run.
+  std::sort(expected.begin(), expected.end());
+  std::sort(actual.begin(), actual.end());
+  std::vector<std::string> missing;
+  std::set_difference(expected.begin(), expected.end(), actual.begin(), actual.end(),
+                      std::inserter(missing, missing.begin()));
+  EXPECT_EQ(missing, std::vector<std::string>());
 }
 
-void RunnerTest::MergeSeedError(Runner* runner) {
+void RunnerTest::FuzzUntilTime(Runner* runner) {
+  // Time is always tricky to test. As a result, this test verifies the bare minimum, namely that
+  // the runner exits at least 100 ms after it started. All other verification is performed in more
+  // controllable tests, such as |FuzzUntilRuns| above.
+  auto options = RunnerTest::DefaultOptions(runner);
+  options->set_max_total_time(zx::msec(100).get());
+  Configure(runner, options);
+
+  auto start = zx::clock::get_monotonic();
+  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
+  RunUntilIdle();
+  auto elapsed = zx::clock::get_monotonic() - start;
+
+  EXPECT_EQ(GetStatus(), ZX_OK);
+  EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+  EXPECT_GE(elapsed, zx::msec(100));
+}
+
+void RunnerTest::MergeSeedError(Runner* runner, zx_status_t expected) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_oom_limit(1ULL << 25);  // 32 Mb
   Configure(runner, options);
   runner->AddToCorpus(CorpusType::SEED, Input({0x09}));
   runner->Merge([&](zx_status_t status) { SetStatus(status); });
   RunOne(Result::OOM);
-  // Derived classes should call and check |GetResult|.
+  EXPECT_EQ(GetStatus(), expected);
 }
 
-void RunnerTest::Merge(Runner* runner) {
+void RunnerTest::Merge(Runner* runner, bool keeps_errors) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_oom_limit(1ULL << 25);  // 32 Mb
   Configure(runner, options);
@@ -365,7 +424,7 @@ void RunnerTest::Merge(Runner* runner) {
   Input input2({0x0b});
   SetResult(input2, Result::OOM);
   runner->AddToCorpus(CorpusType::LIVE, input2.Duplicate());
-  if (MergePreservesErrors()) {
+  if (keeps_errors) {
     expected_live.push_back(input2.ToHex());
   }
 
@@ -397,7 +456,7 @@ void RunnerTest::Merge(Runner* runner) {
   runner->AddToCorpus(CorpusType::LIVE, input7.Duplicate());
 
   runner->Merge([&](zx_status_t status) { SetStatus(status); });
-  RunAllForMerge();
+  RunUntilIdle();
   EXPECT_EQ(GetStatus(), ZX_OK);
 
   std::vector<std::string> actual_seed;
@@ -414,6 +473,23 @@ void RunnerTest::Merge(Runner* runner) {
   }
   std::sort(actual_live.begin(), actual_live.end());
   EXPECT_EQ(expected_live, actual_live);
+}
+
+void RunnerTest::Stop(Runner* runner) {
+  Configure(runner, RunnerTest::DefaultOptions(runner));
+  runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
+  std::thread t([this]() { RunUntilIdle(); });
+  AwaitStarted();
+  // Each stage of stopping should be idempotent.
+  runner->Close();
+  runner->Close();
+  runner->Interrupt();
+  runner->Interrupt();
+  runner->Join();
+  runner->Join();
+  EXPECT_EQ(GetStatus(), ZX_OK);
+  EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+  t.join();
 }
 
 }  // namespace fuzzing

@@ -31,10 +31,9 @@ class ControllerTest : public ::testing::Test {
  public:
   // Implicitly tests |Controller::SetRunner| and |Controller::Bind|.
   ControllerSyncPtr Bind() {
-    // The shared_ptr will be responsible for deleting the FakeRunner memory.
-    auto runner = std::make_shared<FakeRunner>();
+    auto runner = std::make_unique<FakeRunner>();
     runner_ = runner.get();
-    controller_.SetRunner(runner);
+    controller_.SetRunner(std::move(runner));
 
     ControllerSyncPtr controller;
     controller_.Bind(controller.NewRequest());
@@ -184,9 +183,8 @@ TEST_F(ControllerTest, ReadCorpus) {
   AddToCorpus(CorpusType::LIVE, input3.Duplicate());
   AddToCorpus(CorpusType::LIVE, input4.Duplicate());
 
-  auto dispatcher = std::make_shared<Dispatcher>();
-  FakeCorpusReader seed_reader(dispatcher);
-  FakeCorpusReader live_reader(dispatcher);
+  FakeCorpusReader seed_reader;
+  FakeCorpusReader live_reader;
   EXPECT_EQ(controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding()), ZX_OK);
   EXPECT_EQ(controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding()), ZX_OK);
 

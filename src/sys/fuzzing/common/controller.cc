@@ -12,7 +12,11 @@
 
 namespace fuzzing {
 
-ControllerImpl::ControllerImpl() : binding_(this, std::make_shared<Dispatcher>()) {
+ControllerImpl::ControllerImpl()
+    : binding_(this),
+      close_([this]() { CloseImpl(); }),
+      interrupt_([this]() { InterruptImpl(); }),
+      join_([this]() { JoinImpl(); }) {
   dispatcher_ = binding_.dispatcher();
   options_ = std::make_shared<Options>();
   transceiver_ = std::make_shared<Transceiver>();
@@ -20,21 +24,18 @@ ControllerImpl::ControllerImpl() : binding_(this, std::make_shared<Dispatcher>()
 }
 
 ControllerImpl::~ControllerImpl() {
-  // No new requests.
-  dispatcher_->Shutdown();
-  // Finish sending the corpus.
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    reading_ = false;
-    sync_completion_signal(&pending_readers_);
-  }
-  reader_.join();
-  // Finish up data transfers.
-  transceiver_->Shutdown();
+  Close();
+  Interrupt();
+  Join();
 }
 
-void ControllerImpl::SetRunner(const std::shared_ptr<Runner>& runner) {
-  runner_ = runner;
+void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
+  FX_DCHECK(runner_);
+  binding_.Bind(std::move(request));
+}
+
+void ControllerImpl::SetRunner(std::unique_ptr<Runner> runner) {
+  runner_ = std::move(runner);
   AddDefaults();
   runner_->Configure(options_);
 }
@@ -61,11 +62,6 @@ void ControllerImpl::ReceiveAndThen(FidlInput fidl_input, Response response,
 
 ///////////////////////////////////////////////////////////////
 // FIDL methods.
-
-void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
-  FX_DCHECK(runner_);
-  binding_.Bind(std::move(request));
-}
 
 void ControllerImpl::Configure(Options options, ConfigureCallback callback) {
   *options_ = std::move(options);
@@ -157,9 +153,8 @@ void ControllerImpl::GetStatus(GetStatusCallback callback) { callback(runner_->C
 
 void ControllerImpl::AddMonitor(fidl::InterfaceHandle<Monitor> monitor,
                                 AddMonitorCallback callback) {
-  MonitorPtr ptr;
-  ptr.Bind(std::move(monitor), dispatcher_->get());
-  runner_->AddMonitor(std::move(ptr));
+  FX_DCHECK(runner_);
+  runner_->AddMonitor(std::move(monitor));
   callback();
 }
 
@@ -208,6 +203,33 @@ void ControllerImpl::Merge(MergeCallback callback) {
   runner_->Merge([response = NewResponse(std::move(callback))](zx_status_t status) mutable {
     response.Send(status);
   });
+}
+
+void ControllerImpl::CloseImpl() {
+  binding_.Unbind();
+  if (runner_) {
+    runner_->Close();
+  }
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    reading_ = false;
+    sync_completion_signal(&pending_readers_);
+  }
+  transceiver_->Close();
+}
+
+void ControllerImpl::InterruptImpl() {
+  if (runner_) {
+    runner_->Interrupt();
+  }
+}
+
+void ControllerImpl::JoinImpl() {
+  if (runner_) {
+    runner_->Join();
+  }
+  reader_.join();
+  transceiver_->Join();
 }
 
 }  // namespace fuzzing

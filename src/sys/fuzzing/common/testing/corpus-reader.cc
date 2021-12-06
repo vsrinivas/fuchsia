@@ -9,8 +9,7 @@
 
 namespace fuzzing {
 
-FakeCorpusReader::FakeCorpusReader(std::shared_ptr<Dispatcher> dispatcher)
-    : binding_(this, std::move(dispatcher)) {}
+FakeCorpusReader::FakeCorpusReader() : binding_(this) {}
 
 fidl::InterfaceHandle<CorpusReader> FakeCorpusReader::NewBinding() { return binding_.NewBinding(); }
 

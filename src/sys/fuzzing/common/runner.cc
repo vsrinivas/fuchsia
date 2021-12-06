@@ -19,15 +19,20 @@ enum Action : uint8_t {
   kCleanse,
   kFuzz,
   kMerge,
+  kIdle,
   kStop,
 };
 
 }  // namespace
 
-Runner::Runner() : action_(kStop) {
+Runner::Runner()
+    : action_(kIdle),
+      close_([this]() { CloseImpl(); }),
+      interrupt_([this] { InterruptImpl(); }),
+      join_([this]() { JoinImpl(); }) {
   // Start the worker and ensure is up and running.
   worker_ = std::thread([this]() { Worker(); });
-  bool idle = false;
+  bool idle = true;
   do {
     std::this_thread::yield();
     {
@@ -38,12 +43,9 @@ Runner::Runner() : action_(kStop) {
 }
 
 Runner::~Runner() {
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-    action_ = kStop;
-  }
-  sync_completion_signal(&worker_sync_);
-  worker_.join();
+  close_.Run();
+  interrupt_.Run();
+  join_.Run();
 }
 
 zx_status_t Runner::Configure(const std::shared_ptr<Options>& options) {
@@ -57,10 +59,15 @@ zx_status_t Runner::Configure(const std::shared_ptr<Options>& options) {
 }
 
 ///////////////////////////////////////////////////////////////
-// Dispatcher methods
+// Worker methods
 
 void Runner::Pend(uint8_t action, Input input, fit::function<void(zx_status_t)> callback) {
   std::lock_guard<std::mutex> lock(mutex_);
+  if (action_ == kStop) {
+    FX_LOGS(WARNING) << "Attempted to perform action when engine is stopping.";
+    callback(ZX_ERR_BAD_STATE);
+    return;
+  }
   if (!idle_) {
     FX_LOGS(WARNING) << "Attempted to perform action when fuzzing already in progress.";
     callback(ZX_ERR_BAD_STATE);
@@ -101,7 +108,7 @@ void Runner::Worker() {
       std::lock_guard<std::mutex> lock(mutex_);
       idle_ = true;
     }
-    // Wait indefinitely. Destroying this object will send |kStop|.
+    // Wait indefinitely. Destroying this object will call |StopImpl|.
     sync_completion_wait(&worker_sync_, ZX_TIME_INFINITE);
     sync_completion_reset(&worker_sync_);
     uint8_t action;
@@ -109,12 +116,12 @@ void Runner::Worker() {
     fit::function<void(zx_status_t)> callback;
     {
       std::lock_guard<std::mutex> lock(mutex_);
+      if (action_ == kStop) {
+        return;
+      }
       action = action_;
       input = std::move(input_);
       callback = std::move(callback_);
-    }
-    if (action == kStop) {
-      return;
     }
     zx_status_t status = ZX_OK;
     ClearErrors();
@@ -144,31 +151,39 @@ void Runner::Worker() {
 ///////////////////////////////////////////////////////////////
 // Status-related methods.
 
-void Runner::AddMonitor(MonitorPtr monitor) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  monitors_.push_back(std::move(monitor));
-}
-
-Status Runner::CollectStatus() {
-  std::lock_guard<std::mutex> lock(mutex_);
-  return CollectStatusLocked();
+void Runner::AddMonitor(fidl::InterfaceHandle<Monitor> monitor) {
+  monitors_.Add(std::move(monitor));
 }
 
 void Runner::UpdateMonitors(UpdateReason reason) {
-  std::lock_guard<std::mutex> lock(mutex_);
-  auto status = CollectStatusLocked();
-  for (auto& monitor : monitors_) {
-    auto copy = CopyStatus(status);
-    monitor->Update(reason, std::move(copy), []() {});
-  }
-  if (reason == UpdateReason::DONE) {
-    monitors_.clear();
-  }
+  monitors_.SetStatus(CollectStatus());
+  monitors_.Update(reason);
 }
 
 void Runner::ClearErrors() {
   result_ = Result::NO_ERRORS;
   result_input_.Clear();
+}
+
+///////////////////////////////////////////////////////////////
+// Stop-related methods.
+
+void Runner::CloseImpl() {
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    idle_ = false;
+    action_ = kStop;
+    sync_completion_signal(&worker_sync_);
+  }
+}
+
+void Runner::InterruptImpl() {
+  // no-op in the base class.
+}
+
+void Runner::JoinImpl() {
+  FX_DCHECK(worker_.joinable());
+  worker_.join();
 }
 
 }  // namespace fuzzing

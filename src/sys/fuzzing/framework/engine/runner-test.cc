@@ -10,20 +10,23 @@
 
 namespace fuzzing {
 
-void RunnerImplTest::SetUp() {
-  RunnerTest::SetUp();
-  dispatcher_ = std::make_shared<Dispatcher>();
-}
-
 void RunnerImplTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
   RunnerTest::Configure(runner, options);
   auto* runner_impl = static_cast<RunnerImpl*>(runner);
   runner_impl->SetTargetAdapterHandler(target_adapter_.GetHandler());
-  process_proxy_handler_ = runner_impl->GetProcessProxyHandler(dispatcher_);
+  process_proxy_handler_ = runner_impl->GetProcessProxyHandler();
+}
+
+bool RunnerImplTest::HasTestInput(const zx::duration& timeout) {
+  zx_signals_t observed;
+  if (target_adapter_.AwaitSignal(timeout, &observed) != ZX_OK) {
+    return false;
+  }
+  EXPECT_EQ(observed, kStart);
+  return true;
 }
 
 Input RunnerImplTest::GetTestInput() {
-  EXPECT_EQ(target_adapter_.AwaitSignal(), kStart);
   if (stopped_) {
     process_proxy_handler_(process_.NewRequest());
     process_.Connect();
@@ -75,41 +78,6 @@ void RunnerImplTest::SetFeedback(const Coverage& coverage, Result result, bool l
   if (stopped_ && fatal) {
     EXPECT_EQ(target_adapter_.AwaitSignal(), ZX_EVENTPAIR_PEER_CLOSED);
   }
-}
-
-void RunnerImplTest::RunAllForFuzzUntilTime() {
-  RunOne({{1, 2}});
-  zx::nanosleep(zx::deadline_after(zx::msec(200)));
-  RunOne();
-}
-
-void RunnerImplTest::MergeSeedError(Runner* runner) {
-  RunnerTest::MergeSeedError(runner);
-  EXPECT_EQ(GetStatus(), ZX_ERR_INVALID_ARGS);
-}
-
-void RunnerImplTest::RunAllForMerge() {
-  // Seed corpus.
-  EXPECT_EQ(RunOne().ToHex(), "");
-  EXPECT_EQ(RunOne().ToHex(), "0a");
-
-  // Live corpus, first pass. Should be in same order as added to corpus.
-  EXPECT_EQ(RunOne().ToHex(), "");
-  EXPECT_EQ(RunOne().ToHex(), "0b");
-  EXPECT_EQ(RunOne().ToHex(), "0c0c");
-  EXPECT_EQ(RunOne().ToHex(), "0d0d0d");
-  EXPECT_EQ(RunOne().ToHex(), "0e0e");
-  EXPECT_EQ(RunOne().ToHex(), "0f");
-  EXPECT_EQ(RunOne().ToHex(), "10101010");
-
-  // Live corpus, second pass. Inputs should be ordered by size, smallest to largest, then by most
-  // unique features to fewest to break ties.
-  // input2 is skipped, as error-triggering inputs are always included.
-  // input6 is skipped, as it is redundant with the seed corpus.
-  EXPECT_EQ(RunOne().ToHex(), "0c0c");
-  EXPECT_EQ(RunOne().ToHex(), "0e0e");
-  EXPECT_EQ(RunOne().ToHex(), "0d0d0d");
-  EXPECT_EQ(RunOne().ToHex(), "10101010");
 }
 
 }  // namespace fuzzing

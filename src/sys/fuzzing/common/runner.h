@@ -6,7 +6,7 @@
 #define SRC_SYS_FUZZING_COMMON_RUNNER_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
-#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 
@@ -17,7 +17,9 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/input.h"
+#include "src/sys/fuzzing/common/monitors.h"
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/common/run-once.h"
 
 namespace fuzzing {
 
@@ -34,6 +36,9 @@ using CorpusType = ::fuchsia::fuzzer::Corpus;
 // controller's FIDL dispatcher thread.
 class Runner {
  public:
+  // Note that the destructor cannot call |Close|, |Interrupt| or |Join|, as they are virtual.
+  // Instead, both this class and any derived class should have corresponding non-virtual "Impl"
+  // methods and call those on destruction.
   virtual ~Runner();
 
   // Accessors.
@@ -68,10 +73,21 @@ class Runner {
   void Merge(fit::function<void(zx_status_t)> callback) FXL_LOCKS_EXCLUDED(mutex_);
 
   // Adds a subscriber for status updates.
-  void AddMonitor(MonitorPtr monitor) FXL_LOCKS_EXCLUDED(mutex_);
+  void AddMonitor(fidl::InterfaceHandle<Monitor> monitor) FXL_LOCKS_EXCLUDED(mutex_);
 
   // Creates a |Status| object representing all attached processes.
-  Status CollectStatus() FXL_LOCKS_EXCLUDED(mutex_);
+  virtual Status CollectStatus() = 0;
+
+  // Close any sources of new tasks. Derived classes should call their base class's method BEFORE
+  // performing actions specific to the derived class.
+  virtual void Close() { close_.Run(); }
+
+  // Interrupt the current task. Calling order should not matter.
+  virtual void Interrupt() { interrupt_.Run(); }
+
+  // Join any separate threads or other asynchronous workflows. Derived classes should call their
+  // base class's method AFTER performing actions specific to the derived class.
+  virtual void Join() { join_.Run(); }
 
  protected:
   Runner();
@@ -86,9 +102,6 @@ class Runner {
   virtual zx_status_t SyncCleanse(const Input& input) = 0;
   virtual zx_status_t SyncFuzz() = 0;
   virtual zx_status_t SyncMerge() = 0;
-
-  // Creates a |Status| object representing all attached processes.
-  virtual Status CollectStatusLocked() = 0;
 
   // Resets the error state for subsequent actions.
   virtual void ClearErrors();
@@ -105,12 +118,23 @@ class Runner {
   // The worker thread body.
   void Worker() FXL_LOCKS_EXCLUDED(mutex_);
 
+  // Like |UpdateMonitors|, but uses UpdateReason::DONE as the reason and disconnects monitors after
+  // they acknowledge receipt.
+  void FinishMonitoring();
+
+  // Stop-related methods.
+  void CloseImpl();
+  void InterruptImpl();
+  void JoinImpl();
+
   std::mutex mutex_;
 
   // Worker variables.
   std::thread worker_;
   sync_completion_t worker_sync_;
   bool idle_ FXL_GUARDED_BY(mutex_) = false;
+  std::atomic<bool> stopped_ = false;
+
   uint8_t action_ FXL_GUARDED_BY(mutex_);
   Input input_ FXL_GUARDED_BY(mutex_);
   fit::function<void(zx_status_t)> callback_ FXL_GUARDED_BY(mutex_);
@@ -118,7 +142,11 @@ class Runner {
   // Result variables.
   Result result_ = Result::NO_ERRORS;
   Input result_input_;
-  std::vector<MonitorPtr> monitors_ FXL_GUARDED_BY(mutex_);
+  MonitorClients monitors_;
+
+  RunOnce close_;
+  RunOnce interrupt_;
+  RunOnce join_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Runner);
 };

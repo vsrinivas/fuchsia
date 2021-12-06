@@ -56,12 +56,12 @@ TEST(TransceiverTest, Receive) {
   EXPECT_EQ(rx_result, ZX_OK);
   EXPECT_EQ(rx_input, input);
 
-  // Try to receive after shutdown.
+  // Try to receive after closing.
   FidlInput fidl_input3;
   sync_completion_reset(&sync);
   fidl_input3.size = input.size();
   EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &sender, &fidl_input3.socket), ZX_OK);
-  transceiver.Shutdown();
+  transceiver.Close();
   transceiver.Receive(std::move(fidl_input3), [&](zx_status_t result, Input received) {
     rx_result = result;
     sync_completion_signal(&sync);
@@ -88,8 +88,8 @@ TEST(TransceiverTest, Transmit) {
     EXPECT_EQ(data[i], u8);
   }
 
-  // Try to transmit after shutdown.
-  transceiver.Shutdown();
+  // Try to transmit after closing.
+  transceiver.Close();
   EXPECT_EQ(transceiver.Transmit(input.Duplicate(), &fidl_input), ZX_ERR_BAD_STATE);
 }
 

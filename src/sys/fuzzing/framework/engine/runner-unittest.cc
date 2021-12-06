@@ -36,5 +36,15 @@ TEST_F(RunnerImplTest, AddDefaults) {
 #undef RUNNER_TYPE
 #undef RUNNER_TEST
 
+TEST_F(RunnerImplTest, MergeSeedError) {
+  RunnerImpl runner;
+  MergeSeedError(&runner, /* expected */ ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(RunnerImplTest, Merge) {
+  RunnerImpl runner;
+  Merge(&runner, /* keep_errors= */ true);
+}
+
 }  // namespace
 }  // namespace fuzzing

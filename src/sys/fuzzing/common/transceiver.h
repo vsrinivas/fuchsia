@@ -19,6 +19,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/input.h"
+#include "src/sys/fuzzing/common/run-once.h"
 
 namespace fuzzing {
 
@@ -39,10 +40,9 @@ class Transceiver final {
   // |ZX_ERR_BAD_STATE| if |Shutdown| has been called.
   zx_status_t Transmit(Input input, FidlInput* out_fidl_input) FXL_LOCKS_EXCLUDED(mutex_);
 
-  // Prevents any new requests, and blocks until pending requests are complete. This is called
-  // automatically by the destructor; consumers can also invoke it explicitly to ensure references
-  // to inputs being transmitted or received are no longer needed.
-  void Shutdown();
+  // Stages of stopping: close sources of new tasks, and join the current task.
+  void Close() { close_.Run(); }
+  void Join() { join_.Run(); }
 
  private:
   // Opaque struct representing one request to the worker thread.
@@ -57,12 +57,18 @@ class Transceiver final {
   static void ReceiveImpl(FidlInput&& fidl_input, Transceiver::ReceiveCallback callback);
   static void TransmitImpl(const Input& input, zx::socket sender);
 
-  // async_dispatcher_t* dispatcher_ = nullptr;
+  // Stop-related methods.
+  void CloseImpl();
+  void JoinImpl();
+
   std::thread worker_;
   std::mutex mutex_;
   std::deque<std::unique_ptr<Request>> requests_ FXL_GUARDED_BY(mutex_);
   bool stopped_ FXL_GUARDED_BY(mutex_) = false;
   sync_completion_t sync_;
+
+  RunOnce close_;
+  RunOnce join_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Transceiver);
 };

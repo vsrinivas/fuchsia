@@ -14,8 +14,8 @@
 #include <mutex>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
-#include "src/sys/fuzzing/common/testing/binding.h"
 
 namespace fuzzing {
 
@@ -34,6 +34,7 @@ class FakeMonitor final : public Monitor {
   // FIDL-related methods.
   fidl::InterfaceHandle<Monitor> NewBinding();
   MonitorPtr Bind(const std::shared_ptr<Dispatcher>& dispatcher);
+
   void Update(UpdateReason reason, Status status, UpdateCallback callback) override;
 
   // Blocks until the next call to |Update| and returns the provided reason.
@@ -43,8 +44,10 @@ class FakeMonitor final : public Monitor {
   // null.
   Status NextStatus(UpdateReason* out_reason = nullptr);
 
+  zx_status_t AwaitClose() { return binding_.AwaitClose(); }
+
  private:
-  FakeBinding<Monitor> binding_;
+  Binding<Monitor> binding_;
   std::mutex mutex_;
   std::deque<UpdateReason> reasons_;
   std::deque<Status> statuses_;

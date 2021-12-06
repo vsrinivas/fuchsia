@@ -13,8 +13,7 @@
 
 namespace fuzzing {
 
-LLVMTargetAdapter::LLVMTargetAdapter(const std::shared_ptr<Dispatcher>& dispatcher)
-    : binding_(this, dispatcher) {}
+LLVMTargetAdapter::LLVMTargetAdapter() : binding_(this) {}
 
 fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler(fit::closure on_close) {
   on_close_ = std::move(on_close);

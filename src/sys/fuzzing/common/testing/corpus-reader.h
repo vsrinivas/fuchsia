@@ -13,9 +13,8 @@
 #include <mutex>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
+#include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/input.h"
-#include "src/sys/fuzzing/common/testing/binding.h"
 #include "src/sys/fuzzing/common/transceiver.h"
 
 namespace fuzzing {
@@ -26,7 +25,7 @@ using ::fuchsia::fuzzer::CorpusReader;
 // from the engine and adds them to a queue that can be waited on.
 class FakeCorpusReader final : public CorpusReader {
  public:
-  explicit FakeCorpusReader(std::shared_ptr<Dispatcher> dispatcher);
+  FakeCorpusReader();
   ~FakeCorpusReader() override = default;
 
   // FIDL methods.

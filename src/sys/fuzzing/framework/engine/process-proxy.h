@@ -19,7 +19,6 @@
 #include <unordered_map>
 
 #include "src/sys/fuzzing/common/binding.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
@@ -39,8 +38,7 @@ using ::fuchsia::fuzzer::Result;
 // provide its coverage data and notify the fuzzing engine of errors.
 class ProcessProxyImpl final : public ProcessProxy {
  public:
-  ProcessProxyImpl(const std::shared_ptr<Dispatcher>& dispatcher,
-                   const std::shared_ptr<ModulePool>& pool);
+  ProcessProxyImpl(const std::shared_ptr<ModulePool>& pool);
   ~ProcessProxyImpl() override;
 
   bool leak_suspected() const { return leak_suspected_; }

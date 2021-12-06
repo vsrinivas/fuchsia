@@ -35,8 +35,7 @@ using ::fuchsia::fuzzer::ProcessProxySyncPtr;
 // |ModulePool|.
 class FakeProcessProxy : public ProcessProxy {
  public:
-  FakeProcessProxy(const std::shared_ptr<Dispatcher>& dispatcher,
-                   const std::shared_ptr<ModulePool>& pool);
+  FakeProcessProxy(const std::shared_ptr<ModulePool>& pool);
   ~FakeProcessProxy() override = default;
 
   zx_koid_t process_koid() const { return process_koid_; }

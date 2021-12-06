@@ -15,7 +15,7 @@ namespace {
 using ProcessProxyFatalTest = ProcessProxyTest;
 
 TEST_F(ProcessProxyFatalTest, Crash) {
-  ProcessProxyImpl impl(dispatcher(), pool());
+  ProcessProxyImpl impl(pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);

@@ -39,11 +39,14 @@ struct Transceiver::Request {
   }
 };
 
-Transceiver::Transceiver() {
+Transceiver::Transceiver() : close_([this]() { CloseImpl(); }), join_([this]() { JoinImpl(); }) {
   worker_ = std::thread([this]() { Worker(); });
 }
 
-Transceiver::~Transceiver() { Shutdown(); }
+Transceiver::~Transceiver() {
+  Close();
+  Join();
+}
 
 zx_status_t Transceiver::Pend(std::unique_ptr<Request> request) {
   bool stopped;
@@ -150,11 +153,11 @@ void Transceiver::TransmitImpl(const Input& input, zx::socket sender) {
   }
 }
 
-void Transceiver::Shutdown() {
-  Pend(std::make_unique<Request>());
-  if (worker_.joinable()) {
-    worker_.join();
-  }
+void Transceiver::CloseImpl() { Pend(std::make_unique<Request>()); }
+
+void Transceiver::JoinImpl() {
+  FX_DCHECK(worker_.joinable());
+  worker_.join();
 }
 
 }  // namespace fuzzing

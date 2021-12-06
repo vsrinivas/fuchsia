@@ -62,51 +62,76 @@ class RunnerTest : public ::testing::Test {
   Input RunOne(const Coverage& coverage);
   Input RunOne(bool leak);
 
-  // Returns the test input for the next run.
+  // Fakes the interactions needed with the runner to perform a sequence of fuzzing runs until the
+  // engine indicates it is idle. See also |HasStatus| below.
+  void RunUntilIdle();
+
+  // Waits until the runner is started and producing test inputs, or until it stops without
+  // providing any inputs. Useful when another thread is responsible for driving the runner, e.g.
+  // via |RunUntilIdle|.
+  void AwaitStarted();
+
+  // Returns false if the runner stops before providing any test inputs; otherwise waits for the
+  // first input (either indefinitely or until |timeout| elapses, depending on the version) and
+  // returns true. Unblocks |AwaitStarted| before returning.
+  bool HasTestInput();
+  virtual bool HasTestInput(const zx::duration& timeout) = 0;
+
+  // Returns the test input for the next run. This must not be called unless |HasTestInput| returns
+  // true.
   virtual Input GetTestInput() = 0;
 
   // Sts the feedback for the next run.
   virtual void SetFeedback(const Coverage& coverage, Result result, bool leak) = 0;
 
-  // Records the |status| of a fuzzing workflow.
-  void SetStatus(zx_status_t status);
+  // Returns whether |SetStatus| has been called. If true, the workflow is complete and the engine
+  // is idle.
+  bool HasStatus() const;
 
-  // Blocks until a workflow completes and calls |SetResult|, then returns its argument.
+  // Blocks until a workflow completes and calls |SetStatus|, then returns its argument. Upon
+  // return, the engine is idle.
   zx_status_t GetStatus();
+
+  // Records the |status| of a fuzzing workflow. This implies the engine is now idle.
+  void SetStatus(zx_status_t status);
 
   //////////////////////////////////////
   // Unit tests, organized by fuzzing workflow.
 
-  virtual void ExecuteNoError(Runner* runner);
-  virtual void ExecuteWithError(Runner* runner);
-  virtual void ExecuteWithLeak(Runner* runner);
+  void ExecuteNoError(Runner* runner);
+  void ExecuteWithError(Runner* runner);
+  void ExecuteWithLeak(Runner* runner);
 
-  virtual void MinimizeNoError(Runner* runner);
-  virtual void MinimizeEmpty(Runner* runner);
-  virtual void MinimizeOneByte(Runner* runner);
-  virtual void MinimizeReduceByTwo(Runner* runner);
-  virtual void MinimizeNewError(Runner* runner);
+  void MinimizeNoError(Runner* runner);
+  void MinimizeEmpty(Runner* runner);
+  void MinimizeOneByte(Runner* runner);
+  void MinimizeReduceByTwo(Runner* runner);
+  void MinimizeNewError(Runner* runner);
 
-  virtual void CleanseNoReplacement(Runner* runner);
-  virtual void CleanseAlreadyClean(Runner* runner);
-  virtual void CleanseTwoBytes(Runner* runner);
+  void CleanseNoReplacement(Runner* runner);
+  void CleanseAlreadyClean(Runner* runner);
+  void CleanseTwoBytes(Runner* runner);
 
-  virtual void FuzzUntilError(Runner* runner);
-  virtual void FuzzUntilRuns(Runner* runner);
-  virtual void FuzzUntilTime(Runner* runner);
+  void FuzzUntilError(Runner* runner);
+  void FuzzUntilRuns(Runner* runner);
+  void FuzzUntilTime(Runner* runner);
 
-  virtual void MergeSeedError(Runner* runner);
-  virtual void Merge(Runner* runner);
+  // The |Merge| unit tests have extra parameters and are not included in runner-unittest.inc.
+  // They should be added directly, e.g.:
+  //
+  //   TEST_F(DerivedRunnerTest, MergeSeedError) {
+  //     DerivedRunner runner;
+  //     MergeSeedError(&runner, /* expected= */ ZX_ERR_NOT_SUPPORTED);
+  //   }
 
-  //////////////////////////////////////
-  // Partial unit test implementations deferred to derived classes.
+  // |expected| indicates the anticipated return value when merging a corpus with an error-causing
+  // input.
+  void MergeSeedError(Runner* runner, zx_status_t expected);
 
-  // Provides runner-specific sequences of runs for individual unit tests.
-  virtual void RunAllForFuzzUntilTime() = 0;
-  virtual void RunAllForMerge() = 0;
+  // |keeps_errors| indicates whether merge keeps error-causing inputs in the final corpus.
+  void Merge(Runner* runner, bool keeps_errors);
 
-  // Some engines (e.g. libFuzzer) discard error causing inputs when merging.
-  virtual bool MergePreservesErrors() { return true; }
+  void Stop(Runner* runner);
 
  private:
   struct Feedback {
@@ -117,8 +142,10 @@ class RunnerTest : public ::testing::Test {
 
   std::shared_ptr<Options> options_;
   std::unordered_map<std::string, Feedback> feedback_;
+  sync_completion_t started_sync_;
+
   zx_status_t status_ = ZX_ERR_INTERNAL;
-  sync_completion_t sync_;
+  sync_completion_t status_sync_;
 };
 
 }  // namespace fuzzing

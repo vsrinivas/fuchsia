@@ -31,7 +31,10 @@ const uintptr_t kTimeout = std::numeric_limits<uintptr_t>::max();
 
 }  // namespace
 
-RunnerImpl::RunnerImpl() {
+RunnerImpl::RunnerImpl()
+    : close_([this] { CloseImpl(); }),
+      interrupt_([this]() { InterruptImpl(); }),
+      join_([this]() { JoinImpl(); }) {
   timer_ = std::thread([this]() { Timer(); });
   seed_corpus_ = std::make_shared<Corpus>();
   live_corpus_ = std::make_shared<Corpus>();
@@ -39,9 +42,9 @@ RunnerImpl::RunnerImpl() {
 }
 
 RunnerImpl::~RunnerImpl() {
-  run_deadline_ = zx::time::infinite_past();
-  sync_completion_signal(&timer_sync_);
-  timer_.join();
+  close_.Run();
+  interrupt_.Run();
+  join_.Run();
 }
 
 void RunnerImpl::AddDefaults(Options* options) {
@@ -254,6 +257,7 @@ zx_status_t RunnerImpl::SyncFuzz() {
     seed_corpus_->At(offset, &input);
     live_corpus_->Add(std::move(input));
   }
+  TestCorpus(live_corpus_);
   FuzzLoop();
   return ZX_OK;
 }
@@ -266,13 +270,7 @@ zx_status_t RunnerImpl::SyncMerge() {
   // using that causes some test flake. Switch to that version once the source of it is resolved.
   size_t offset = 0;
   Input input;
-  Input* next_input = &input;
-  FuzzLoopStrict(
-      /* next_input */
-      [this, &offset, next_input](bool first) {
-        return seed_corpus_->At(offset++, next_input) ? next_input : nullptr;
-      },
-      /* finish_run */ [this](const Input* last_input) { pool_->Accumulate(); });
+  TestCorpus(seed_corpus_);
   if (result() != Result::NO_ERRORS) {
     FX_LOGS(WARNING) << "Seed corpus input triggered an error.";
     return ZX_ERR_INVALID_ARGS;
@@ -284,8 +282,8 @@ zx_status_t RunnerImpl::SyncMerge() {
   offset = 0;
   FuzzLoopStrict(
       /* next_input */
-      [this, &offset, next_input](bool first) {
-        return live_corpus_->At(offset++, next_input) ? next_input : nullptr;
+      [this, &offset, &input](bool first) {
+        return live_corpus_->At(offset++, &input) ? &input : nullptr;
       },
       /* finish_run */
       [this, &error_inputs, &inputs](Input* last_input) {
@@ -335,6 +333,17 @@ void RunnerImpl::TestOne(const Input& input) {
   auto dup = input.Duplicate();
   FuzzLoopStrict(/* next_input */ [&dup](bool first) { return first ? &dup : nullptr; },
                  /* finish_run */ [](Input* last_input) {});
+}
+
+void RunnerImpl::TestCorpus(const std::shared_ptr<Corpus>& corpus) {
+  size_t offset = 0;
+  Input input;
+  FuzzLoopStrict(
+      /* next_input */
+      [corpus, &offset, &input](bool first) {
+        return corpus->At(offset++, &input) ? &input : nullptr;
+      },
+      /* finish_run */ [this](const Input* last_input) { pool_->Accumulate(); });
 }
 
 void RunnerImpl::FuzzLoop() {
@@ -568,10 +577,9 @@ void RunnerImpl::SetTargetAdapterHandler(fidl::InterfaceRequestHandler<TargetAda
   coordinator_.Reset();
 }
 
-fidl::InterfaceRequestHandler<ProcessProxy> RunnerImpl::GetProcessProxyHandler(
-    const std::shared_ptr<Dispatcher>& dispatcher) {
-  return [this, dispatcher](fidl::InterfaceRequest<ProcessProxy> request) {
-    auto proxy = std::make_unique<ProcessProxyImpl>(dispatcher, pool_);
+fidl::InterfaceRequestHandler<ProcessProxy> RunnerImpl::GetProcessProxyHandler() {
+  return [this](fidl::InterfaceRequest<ProcessProxy> request) {
+    auto proxy = std::make_unique<ProcessProxyImpl>(pool_);
     proxy->Bind(std::move(request));
     proxy->Configure(options_);
     {
@@ -711,7 +719,7 @@ fit::deferred_action<fit::closure> RunnerImpl::SyncScope() {
   });
 }
 
-Status RunnerImpl::CollectStatusLocked() {
+Status RunnerImpl::CollectStatus() {
   Status status;
   status.set_running(!stopped_);
   status.set_runs(run_);
@@ -728,22 +736,44 @@ Status RunnerImpl::CollectStatusLocked() {
   status.set_corpus_total_size(seed_corpus_->total_size() + live_corpus_->total_size());
 
   std::vector<ProcessStats> all_stats;
-  all_stats.reserve(std::min<size_t>(proxies_.size(), MAX_PROCESS_STATS));
-  for (auto& proxy : proxies_) {
-    if (all_stats.size() == all_stats.capacity()) {
-      break;
-    }
-    ProcessStats stats;
-    auto status = proxy->GetStats(&stats);
-    if (status == ZX_OK) {
-      all_stats.push_back(stats);
-    } else {
-      FX_LOGS(WARNING) << "Failed to get stats for process: " << zx_status_get_string(status);
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    all_stats.reserve(std::min<size_t>(proxies_.size(), MAX_PROCESS_STATS));
+    for (auto& proxy : proxies_) {
+      if (all_stats.size() == all_stats.capacity()) {
+        break;
+      }
+      ProcessStats stats;
+      auto status = proxy->GetStats(&stats);
+      if (status == ZX_OK) {
+        all_stats.push_back(stats);
+      } else {
+        FX_LOGS(WARNING) << "Failed to get stats for process: " << zx_status_get_string(status);
+      }
     }
   }
   status.set_process_stats(std::move(all_stats));
 
   return status;
+}
+
+///////////////////////////////////////////////////////////////
+// Stop-related methods.
+
+void RunnerImpl::CloseImpl() { Runner::Close(); }
+
+void RunnerImpl::InterruptImpl() {
+  Runner::Interrupt();
+  deadline_ = zx::time::infinite_past();
+  run_deadline_ = zx::time::infinite_past();
+  sync_completion_signal(&timer_sync_);
+}
+
+void RunnerImpl::JoinImpl() {
+  if (timer_.joinable()) {
+    timer_.join();
+  }
+  Runner::Join();
 }
 
 }  // namespace fuzzing

@@ -51,7 +51,7 @@ source_set("testing") {
     ":engine",
     "../target:no_hooks",
     "../testing",
-    "//src/sys/fuzzing/common:runner-unittests-common",
+    "//src/sys/fuzzing/common:runner-unittests",
     "//src/sys/fuzzing/common/testing",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
     "//third_party/googletest:gtest",

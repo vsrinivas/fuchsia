@@ -24,6 +24,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
+#include "src/sys/fuzzing/common/run-once.h"
 #include "src/sys/fuzzing/common/runner.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
@@ -54,13 +55,13 @@ class RunnerImpl final : public Runner {
   Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
   zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
+  Status CollectStatus() override FXL_LOCKS_EXCLUDED(mutex_);
 
   // Configure where to send |TargetAdapter| requests.
   void SetTargetAdapterHandler(fidl::InterfaceRequestHandler<TargetAdapter> handler);
 
   // Handle incoming |ProcessProxy| requests.
-  fidl::InterfaceRequestHandler<ProcessProxy> GetProcessProxyHandler(
-      const std::shared_ptr<Dispatcher>& dispatcher);
+  fidl::InterfaceRequestHandler<ProcessProxy> GetProcessProxyHandler();
 
   // Callback for signals received from the target adapter and process proxies that are used to
   // notify the runner that they have started or finished.
@@ -73,6 +74,11 @@ class RunnerImpl final : public Runner {
   //   * other:        pointer to process proxy with error.
   void OnError(uintptr_t error);
 
+  // Stages of stopping: close sources of new tasks, interrupt the current task, and join it.
+  void Close() override { close_.Run(); }
+  void Interrupt() override { interrupt_.Run(); }
+  void Join() override { join_.Run(); }
+
  protected:
   // Fuzzing workflow implementations.
   void ConfigureImpl(const std::shared_ptr<Options>& options) override;
@@ -82,7 +88,6 @@ class RunnerImpl final : public Runner {
   zx_status_t SyncFuzz() override;
   zx_status_t SyncMerge() override;
 
-  Status CollectStatusLocked() override FXL_REQUIRE(mutex_);
   void ClearErrors() override;
 
  private:
@@ -101,6 +106,9 @@ class RunnerImpl final : public Runner {
 
   // Sends the test input to the target adapter.
   void TestOne(const Input& input);
+
+  // Sends each test input in the given |corpus| to the target adapter in turn.
+  void TestCorpus(const std::shared_ptr<Corpus>& corpus);
 
   // The core loop, implemented two ways. In both, the loop will repeatedly generate the
   // |next_input|, send it to the target adapter, and perform additional actions using |finish_run|.
@@ -127,7 +135,7 @@ class RunnerImpl final : public Runner {
   // A loop that handles signalling the target adapter and proxies. This is started on a dedicated
   // thread by one of |FuzzLoop*|s above, allowing it to generate inputs and analyze feedback while
   // waiting for other processes to respond.
-  void RunLoop(bool ignore_errors);
+  void RunLoop(bool ignore_errors) FXL_LOCKS_EXCLUDED(mutex_);
 
   // Wraps |FuzzLoopStrict| to perform "normal" fuzzing, i.e. mutates an input from the live corpus,
   // accumulates feedback from each input, and exits on error, max runs, or max time.
@@ -146,7 +154,12 @@ class RunnerImpl final : public Runner {
   // Returns false if no error is pending. Otherwise, if the error is recoverable (e.g. a process
   // exit when not detecting exits), it recovers and returns false. Otherwise, it records the
   // |last_input|, determines its result, and returns true.
-  bool HasError(const Input* last_input);
+  bool HasError(const Input* last_input) FXL_LOCKS_EXCLUDED(mutex_);
+
+  // Stop-related methods.
+  void CloseImpl();
+  void InterruptImpl();
+  void JoinImpl();
 
   // General configuration.
   std::shared_ptr<Options> options_;
@@ -192,6 +205,10 @@ class RunnerImpl final : public Runner {
   // Represents the different types of fuzzing-ending errors. If an input results in multiple errors
   // from different processes, only the first assignment is handled as the primary error.
   std::atomic<uintptr_t> error_ = 0;
+
+  RunOnce close_;
+  RunOnce interrupt_;
+  RunOnce join_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(RunnerImpl);
 };

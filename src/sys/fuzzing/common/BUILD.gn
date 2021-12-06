@@ -17,11 +17,15 @@ source_set("common") {
     "input.cc",
     "input.h",
     "module.h",
+    "monitors.cc",
+    "monitors.h",
     "options.cc",
     "options.h",
     "options.inc",
     "response.cc",
     "response.h",
+    "run-once.cc",
+    "run-once.h",
     "runner.cc",
     "runner.h",
     "sancov.h",
@@ -50,7 +54,7 @@ source_set("common") {
 }
 
 source_set("runner-unittests-common") {
-  visibility = [ "../*" ]
+  visibility = [ ":*" ]
   testonly = true
   sources = [
     "runner-unittest.cc",
@@ -67,14 +71,14 @@ source_set("runner-unittests") {
   visibility = [ "../*" ]
   testonly = true
   sources = [ "runner-unittest.inc" ]
-  deps = [ ":runner-unittests-common" ]
+  public_deps = [ ":runner-unittests-common" ]
 }
 
 source_set("runner-fatal-unittests") {
   visibility = [ "../*" ]
   testonly = true
   sources = [ "runner-fatal-unittest.inc" ]
-  deps = [ ":runner-unittests-common" ]
+  public_deps = [ ":runner-unittests-common" ]
 }
 
 test("unittests_bin") {
@@ -84,7 +88,9 @@ test("unittests_bin") {
   sources = [
     "controller-unittest.cc",
     "input-unittest.cc",
+    "monitors-unittest.cc",
     "options-unittest.cc",
+    "run-once-unittest.cc",
     "shared-memory-unittest.cc",
     "signal-coordinator-unittest.cc",
     "transceiver-unittest.cc",

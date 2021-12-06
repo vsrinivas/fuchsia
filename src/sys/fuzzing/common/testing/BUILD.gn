@@ -6,7 +6,6 @@ source_set("testing") {
   visibility = [ "//src/sys/fuzzing/*" ]
   testonly = true
   sources = [
-    "binding.h",
     "corpus-reader.cc",
     "corpus-reader.h",
     "module.cc",

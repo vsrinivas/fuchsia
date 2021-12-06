@@ -17,7 +17,6 @@
 
 #include <gtest/gtest.h>
 
-#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
@@ -64,7 +63,6 @@ class ProcessTest : public ::testing::Test {
     // Create and destroy a process. This will "consume" any extra modules added if the unit test
     // itself is instrumented.
     { TestProcess process; }
-    dispatcher_ = std::make_shared<Dispatcher>();
     pool_ = std::make_shared<ModulePool>();
   }
 
@@ -72,7 +70,7 @@ class ProcessTest : public ::testing::Test {
   std::unique_ptr<FakeProcessProxy> MakeAndBindProxy(TestProcess& process,
                                                      const std::shared_ptr<Options>& options,
                                                      bool disable_warnings = true) {
-    auto proxy = std::make_unique<FakeProcessProxy>(dispatcher_, pool_);
+    auto proxy = std::make_unique<FakeProcessProxy>(pool_);
     proxy->Configure(options);
     auto ptr = proxy->Bind(disable_warnings);
     process.Connect(std::move(ptr));
@@ -82,7 +80,6 @@ class ProcessTest : public ::testing::Test {
   size_t MeasurePool() { return pool_->Measure(); }
 
  private:
-  std::shared_ptr<Dispatcher> dispatcher_;
   std::shared_ptr<ModulePool> pool_;
 };
 

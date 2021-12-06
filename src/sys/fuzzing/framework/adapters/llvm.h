@@ -16,7 +16,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/binding.h"
-#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
 
@@ -30,7 +29,7 @@ using ::fuchsia::mem::Buffer;
 
 class LLVMTargetAdapter final : public TargetAdapter {
  public:
-  explicit LLVMTargetAdapter(const std::shared_ptr<Dispatcher>& dispatcher);
+  LLVMTargetAdapter();
   ~LLVMTargetAdapter() override = default;
 
   // Returns an interface request handler. The given |on_close| closure will be invoked when a
