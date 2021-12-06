@@ -19,6 +19,12 @@ project_root="$(readlink -f "$script_dir"/../..)"
 # in this script.
 remote_project_root="/b/f/w"
 
+# Script to check (local) determinism.
+check_determinism_command=(
+  ../../build/tracer/output_cacher.py
+  --check-repeatability
+)
+
 function usage() {
 cat <<EOF
 This wrapper script helps dispatch a remote Rust compilation action by inferring
@@ -52,6 +58,9 @@ Options:
       compare the outputs, failing if there are any differences.
       On comparison failure, if --fsatrace is enabled, compare file accesses.
 
+  --check-determinism: [requires --local]
+      Locally run the same command twice and compare outputs.
+
   All other options before -- are forwarded to
   $script_dir/fuchsia-rbe-action.sh,
   most of which are forwarded to 'rewrapper'.
@@ -76,6 +85,7 @@ dry_run=0
 verbose=0
 compare=0
 rewrapper_options=()
+check_determinism=0
 
 # Extract script options before --
 for opt
@@ -100,6 +110,7 @@ do
     --fsatrace) trace=1 ;;
     --verbose|-v) verbose=1 ;;
     --compare) compare=1 ;;
+    --check-determinism) check_determinism=1 ;;
     --project-root=*) project_root="$optarg" ;;
     --project-root) prev_opt=project_root ;;
     --source=*) top_source="$optarg" ;;
@@ -448,18 +459,6 @@ test "$trace" = 0 || {
   )
 }
 
-if test "$local_only" = 1
-then
-  test "${#local_trace_prefix[@]}" = 0 || {
-    echo "Logging file access trace to $output.fsatrace."
-  }
-  # Run original command and exit (no remote execution).
-  "${local_trace_prefix[@]}" "${rustc_command[@]}"
-  exit "$?"
-fi
-
-# Otherwise, prepare for remote execution.
-
 # Specify the rustc binary to be uploaded.
 rustc_relative="$(realpath --relative-to="$project_root" "$rustc")"
 
@@ -580,13 +579,13 @@ extra_outputs+=( "${extra_linker_outputs[@]}" )
 
 test "$llvm_ir_output" = "no" || {
   # Expect a llvm-ir .ll file.
-  extra_outputs+="$build_subdir/$(dirname "$output")/$(basename "$output" .rlib)$extra_filename".ll
+  extra_outputs+="$(dirname "$output")/$(basename "$output" .rlib)$extra_filename".ll
 }
 
 test "$save_analysis" = 0 || {
   analysis_file=save-analysis-temp/"$(basename "$output" .rlib)".json
   analysis_file_stripped="${analysis_file#./}"
-  extra_outputs+=( "$build_subdir/$analysis_file_stripped" )
+  extra_outputs+=( "$analysis_file_stripped" )
 }
 
 # When using the linker, also grab the necessary libraries.
@@ -727,19 +726,25 @@ done > "$inputs_file_list"
 cleanup_files+=("$inputs_file_list")
 
 # Outputs include the declared output file and a depfile.
-outputs=("$build_subdir/$output")
-test -z "$depfile" || outputs+=("$build_subdir/$depfile")
-outputs+=("${extra_outputs[@]}")
+relative_outputs=( "$output" )
+test -z "$depfile" || relative_outputs+=( "$depfile" )
+relative_outputs+=( "${extra_outputs[@]}" )
 # Removing outputs these avoids any unintended reuse of them.
-rm -f "${outputs[@]}"
-outputs_joined="$(IFS=, ; echo "${outputs[*]}")"
+# This works around b/198660330, where a stale output causes a cache miss.
+rm -f "${relative_outputs[@]}"
+
+remote_outputs=()
+for f in "${relative_outputs[@]}"
+do remote_outputs+=( "$build_subdir/$f" )
+done
+remote_outputs_joined="$(IFS=, ; echo "${remote_outputs[*]}")"
 
 dump_vars() {
   debug_var "build subdir" "$build_subdir"
   debug_var "clang dir" "${clang_dir[@]}"
   debug_var "target triple" "$target_triple"
   debug_var "clang lib triple" "$clang_lib_triple"
-  debug_var "outputs" "${outputs[@]}"
+  debug_var "outputs" "${remote_outputs[@]}"
   debug_var "rustc binary" "$rustc_relative"
   debug_var "rustc shlibs" "${rustc_shlibs[@]}"
   debug_var "rust stdlibs" "${extra_rust_stdlibs[@]}"
@@ -763,6 +768,36 @@ dump_vars() {
 
 dump_vars
 
+if test "$local_only" = 1
+then
+  check_determinism_prefix=()
+  test "$check_determinism" = 0 || {
+    # When checking determinism, backup a copy of declared outputs
+    # and compare.
+    check_determinism_prefix=(
+      "${check_determinism_command[@]}"
+      --outputs "${relative_outputs[@]}"
+      --
+    )
+  }
+
+  test "${#local_trace_prefix[@]}" = 0 || {
+    echo "Logging file access trace to $output.fsatrace."
+  }
+
+  # Don't bother mentioning the fsatrace file as an output,
+  # for checking determinism, as it may be sensitive to process id,
+  # and other temporary file accesses.
+
+  # Run original command and exit (no remote execution).
+  "${check_determinism_prefix[@]}" \
+    "${local_trace_prefix[@]}" \
+    "${rustc_command[@]}"
+  exit "$?"
+fi
+
+# Otherwise, prepare for remote execution.
+
 remote_trace_flags=()
 test "$trace" = 0 || {
   remote_trace_flags=( --fsatrace-path="$fsatrace" )
@@ -779,7 +814,7 @@ remote_rustc_command=(
   --exec_root="$project_root"
   "${remote_trace_flags[@]}"
   --input_list_paths="$inputs_file_list"
-  --output_files="$outputs_joined"
+  --output_files="$remote_outputs_joined"
   "${rewrapper_options[@]}"
   --
   "${rustc_command[@]}"
