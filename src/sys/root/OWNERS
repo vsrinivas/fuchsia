@@ -1,4 +1,2 @@
+include /src/sys/component_manager/OWNERS
 bryanhenry@google.com
-geb@google.com
-thatguy@google.com
-ypomortsev@google.com
