@@ -70,7 +70,7 @@ void main() {
     );
 
     await tester.pumpWidget(webView);
-    await webViewController.evaluateJavascript(kSampleScript);
+    await webViewController.runJavascript(kSampleScript);
     expect(success, true);
   });
 }

@@ -150,12 +150,11 @@ void main() {
       );
     });
 
-    testWidgets('evaluateJavascript', (WidgetTester tester) async {
+    testWidgets('runJavascript', (WidgetTester tester) async {
       await tester.pumpWidget(webView);
       const script = 'console.log("hello");';
-      // ignore: deprecated_member_use
-      await webViewController.evaluateJavascript(script);
-      verify(mockWebServices!.evaluateJavascript(['*'], script));
+      await webViewController.runJavascript(script);
+      verify(mockWebServices!.runJavascript(['*'], script));
     });
   });
 

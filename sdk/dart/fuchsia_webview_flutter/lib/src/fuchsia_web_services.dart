@@ -164,7 +164,29 @@ class FuchsiaWebServices {
   ///                 values in [origins] or [origins] is an empty vector.
   // TODO(crbug.com/900391): Investigate if we can run the scripts in
   // isolated JS worlds.
-  Future<String> evaluateJavascript(List<String> origins, String script) async {
+  Future<void> runJavascript(List<String> origins, String script) async {
+    await runJavascriptReturningResult(origins, script);
+  }
+
+  /// Executes a UTF-8 encoded [script] in the frame if the frame's URL has
+  /// an origin which matches entries in [origins].
+  ///
+  /// At least one [origins] entry must be specified.
+  /// If a wildcard "*" is specified in [origins], then the script will be
+  /// evaluated unconditionally.
+  ///
+  /// Note that scripts share the same execution context as the document,
+  /// meaning that document may modify variables, classes, or objects set by
+  /// the script in arbitrary or unpredictable ways.
+  ///
+  /// If an error occured, the FrameError will be set to one of these values:
+  /// BUFFER_NOT_UTF8: [script] is not UTF-8 encoded.
+  /// INVALID_ORIGIN: The Frame's current URL does not match any of the
+  ///                 values in [origins] or [origins] is an empty vector.
+  // TODO(crbug.com/900391): Investigate if we can run the scripts in
+  // isolated JS worlds.
+  Future<String> runJavascriptReturningResult(
+      List<String> origins, String script) async {
     final buffer = utils.stringToBuffer(script);
     // TODO(nkosote): add catchError and decorate the error based on the error
     // code.
@@ -189,7 +211,7 @@ class FuchsiaWebServices {
   /// If an error occured, the [`fuchsia.web.FrameError`] will be set to one of these values:
   /// - `BUFFER_NOT_UTF8`: `script` is not UTF-8 encoded.
   /// - `INVALID_ORIGIN`: `origins` is an empty vector.
-  Future<void> evaluateJavascriptBeforeLoad(
+  Future<void> runJavascriptBeforeLoad(
       int id, List<String> origins, String script) async {
     final buffer = utils.stringToBuffer(script);
     // TODO(miguelfrde): add catchError and decorate the error based on the error

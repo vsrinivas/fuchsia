@@ -99,8 +99,14 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
   }
 
   @override
-  Future<String> evaluateJavascript(String javascriptString) async {
-    return fuchsiaWebServices.evaluateJavascript(['*'], javascriptString);
+  Future<void> runJavascript(String javascriptString) async {
+    return fuchsiaWebServices.runJavascript(['*'], javascriptString);
+  }
+
+  @override
+  Future<String> runJavascriptReturningResult(String javascriptString) async {
+    return fuchsiaWebServices
+        .runJavascriptReturningResult(['*'], javascriptString);
   }
 
   @override
@@ -151,7 +157,7 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
             .cancel();
         _javascriptChannelSubscriptions.remove(channelName);
         await fuchsiaWebServices
-            .evaluateJavascript(['*'], 'window.$channelName = undefined;');
+            .runJavascript(['*'], 'window.$channelName = undefined;');
       }
     }
   }
@@ -252,14 +258,14 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
         // versions.
         // ignore: prefer_collection_literals
         final script = _scriptForChannels(Set.from([channel]));
-        return fuchsiaWebServices.evaluateJavascriptBeforeLoad(
+        return fuchsiaWebServices.runJavascriptBeforeLoad(
             _javascriptChannelSubscriptions[channel]!.id, ['*'], script);
       }));
       return;
     }
 
     final script = _scriptForChannels(javascriptChannelNames);
-    await evaluateJavascript(script);
+    await runJavascript(script);
 
     await _establishCommunication(javascriptChannelNames);
   }
