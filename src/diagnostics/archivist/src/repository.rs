@@ -6,6 +6,7 @@ use {
     crate::{
         constants::{ARCHIVIST_MONIKER, ARCHIVIST_URL},
         container::{ComponentDiagnostics, ComponentIdentity},
+        error::Error,
         events::types::{ComponentIdentifier, UniqueKey},
         inspect::container::{InspectArtifactsContainer, UnpopulatedInspectDataContainer},
         lifecycle::container::{LifecycleArtifactsContainer, LifecycleDataContainer},
@@ -19,7 +20,6 @@ use {
         },
         ImmutableString,
     },
-    anyhow::{format_err, Error},
     diagnostics_data::LogsData,
     diagnostics_hierarchy::{
         trie::{self, TrieIterableNode},
@@ -315,13 +315,7 @@ impl DataRepoState {
                         }
                     }
                     _ => {
-                        return Err(format_err!(
-                            concat!(
-                                "Encountered a diagnostics data repository node with more",
-                                "than one artifact container, moniker: {:?}."
-                            ),
-                            unique_key,
-                        ));
+                        return Err(Error::MultipleArtifactContainers(unique_key));
                     }
                 }
             }
@@ -473,13 +467,7 @@ impl DataRepoState {
                         }
                     }
                     _ => {
-                        return Err(format_err!(
-                            concat!(
-                                "Encountered a diagnostics data repository node with more",
-                                "than one artifact container, moniker: {:?}."
-                            ),
-                            unique_key
-                        ));
+                        return Err(Error::MultipleArtifactContainers(unique_key));
                     }
                 }
             }

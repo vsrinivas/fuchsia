@@ -11,7 +11,6 @@ use {
         moniker_rewriter::OutputRewriter,
         ImmutableString,
     },
-    anyhow::Error,
     collector::Moniker,
     diagnostics_data::{self as schema, Data, Inspect},
     diagnostics_hierarchy::{DiagnosticsHierarchy, InspectHierarchyMatcher},
@@ -89,10 +88,10 @@ pub struct ReaderServer {
 
 fn convert_snapshot_to_node_hierarchy(
     snapshot: ReadSnapshot,
-) -> Result<DiagnosticsHierarchy, Error> {
+) -> Result<DiagnosticsHierarchy, fuchsia_inspect::reader::ReaderError> {
     match snapshot {
         ReadSnapshot::Single(snapshot) => Ok(PartialNodeHierarchy::try_from(snapshot)?.into()),
-        ReadSnapshot::Tree(snapshot_tree) => Ok(snapshot_tree.try_into()?),
+        ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into(),
         ReadSnapshot::Finished(hierarchy) => Ok(hierarchy),
     }
 }
@@ -335,7 +334,6 @@ mod tests {
             accessor::BatchIterator, container::ComponentIdentity, diagnostics::AccessorStats,
             events::types::ComponentIdentifier, pipeline::Pipeline, repository::DataRepo,
         },
-        anyhow::format_err,
         diagnostics_hierarchy::trie::TrieIterableNode,
         fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
@@ -696,10 +694,7 @@ mod tests {
 
         for (directory_name, filecount) in dir_name_and_filecount.clone() {
             for i in 0..filecount {
-                let vmo = inspector
-                    .duplicate_vmo()
-                    .ok_or(format_err!("Failed to duplicate VMO"))
-                    .unwrap();
+                let vmo = inspector.duplicate_vmo().expect("Failed to duplicate vmo");
 
                 let size = vmo.get_size().unwrap();
                 fs.dir(directory_name.clone()).add_vmo_file_at(

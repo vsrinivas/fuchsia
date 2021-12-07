@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{
         component, health::Reporter, ExponentialHistogramParams, HistogramProperty,
@@ -79,7 +78,9 @@ pub fn init() {
     component::health().set_starting_up();
 }
 
-pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Error> {
+pub fn serve(
+    service_fs: &mut ServiceFs<impl ServiceObjTrait>,
+) -> Result<(), fuchsia_inspect::Error> {
     component::serve_inspect_stats();
     inspect_runtime::serve(component::inspector(), service_fs)?;
     Ok(())

@@ -32,10 +32,7 @@
 //! ```
 
 use {
-    crate::reader::{
-        error::ReaderError,
-        snapshot::{ScannedBlock, Snapshot},
-    },
+    crate::reader::snapshot::{ScannedBlock, Snapshot},
     diagnostics_hierarchy::{testing::DiagnosticsHierarchyGetter, *},
     fuchsia_zircon::Vmo,
     inspect_format::{utils, BlockType, PropertyFormat},
@@ -44,7 +41,7 @@ use {
 };
 
 pub use {
-    crate::reader::{readable_tree::ReadableTree, tree_reader::read},
+    crate::reader::{error::ReaderError, readable_tree::ReadableTree, tree_reader::read},
     diagnostics_hierarchy::{
         ArrayContent, ArrayFormat, Bucket, DiagnosticsHierarchy, LinkNodeDisposition, LinkValue,
         Property,

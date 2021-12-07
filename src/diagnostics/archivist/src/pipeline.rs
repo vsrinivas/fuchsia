@@ -6,6 +6,7 @@ use {
         accessor::ArchiveAccessor,
         configs, constants,
         diagnostics::AccessorStats,
+        error::Error,
         inspect::container::UnpopulatedInspectDataContainer,
         lifecycle::container::LifecycleDataContainer,
         logs::redact::{RedactedItem, Redactor},
@@ -13,7 +14,6 @@ use {
         repository::DataRepo,
         ImmutableString,
     },
-    anyhow::Error,
     diagnostics_data::LogsData,
     diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl::endpoints::ProtocolMarker,
@@ -236,10 +236,9 @@ impl Pipeline {
         // are are static selectors for the pipeline, and some of them are applicable to
         // the inspect source's relative moniker. Otherwise, ignore.
         if let Some(selectors) = &self.static_selectors {
-            let matched_selectors = selectors::match_component_moniker_against_selectors(
-                &relative_moniker,
-                &selectors,
-            )?;
+            let matched_selectors =
+                selectors::match_component_moniker_against_selectors(&relative_moniker, &selectors)
+                    .map_err(Error::MatchComponentMoniker)?;
 
             match &matched_selectors[..] {
                 [] => {}

@@ -7,6 +7,7 @@ use {
         component_lifecycle, configs,
         container::ComponentIdentity,
         diagnostics,
+        error::Error,
         events::{
             source_registry::EventSourceRegistry,
             sources::{StaticEventStream, UnattributedLogSinkSource},
@@ -16,7 +17,6 @@ use {
         pipeline::Pipeline,
         repository::DataRepo,
     },
-    anyhow::{Context, Error},
     fidl_fuchsia_sys2::EventSourceMarker,
     fuchsia_async::{self as fasync, Task},
     fuchsia_component::{
@@ -263,7 +263,7 @@ impl Archivist {
 
     /// Spawns a task that will drain klog as another log source.
     pub async fn start_draining_klog(&mut self) -> Result<(), Error> {
-        let debuglog = KernelDebugLog::new().await.context("Failed to read kernel logs")?;
+        let debuglog = KernelDebugLog::new().await?;
         self._drain_klog_task =
             Some(fasync::Task::spawn(self.data_repo().clone().drain_debuglog(debuglog)));
         Ok(())
@@ -276,8 +276,8 @@ impl Archivist {
         debug!("Running Archivist.");
 
         let data_repo = { self.data_repo().clone() };
-        self.fs.serve_connection(outgoing_channel)?;
-        // Start servcing all outgoing services.
+        self.fs.serve_connection(outgoing_channel).map_err(Error::ServeOutgoing)?;
+        // Start servicing all outgoing services.
         let run_outgoing = self.fs.collect::<()>();
         // collect events.
         let events = self.event_source_registry.take_stream().await.expect("Created event stream");

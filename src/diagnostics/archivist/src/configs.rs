@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::constants::DEFAULT_PIPELINES_PATH;
-use anyhow::{Context as _, Error};
+use crate::{constants::DEFAULT_PIPELINES_PATH, error::Error};
 use fidl_fuchsia_diagnostics::Selector;
 use fuchsia_inspect as inspect;
 use selectors::{contains_recursive_glob, parse_selector_file};
@@ -176,18 +175,19 @@ impl PipelineConfig {
 
 pub fn parse_config(path: impl AsRef<Path>) -> Result<Config, Error> {
     let path = path.as_ref();
-    let json_string: String =
-        fs::read_to_string(path).with_context(|| format!("parsing config: {}", path.display()))?;
-    let config: Config = serde_json::from_str(&json_string).context("parsing json config")?;
+    let json_string =
+        fs::read_to_string(path).map_err(|_| Error::ParseConfig(path.to_path_buf()))?;
+    let config: Config =
+        serde_json::from_str(&json_string).map_err(|_| Error::ParseConfig(path.to_path_buf()))?;
     Ok(config)
 }
 
 pub fn parse_service_config(path: impl AsRef<Path>) -> Result<ServiceConfig, Error> {
     let path = path.as_ref();
-    let json_string: String = fs::read_to_string(path)
-        .with_context(|| format!("parsing service config: {}", path.display()))?;
-    let config: ServiceConfig =
-        serde_json::from_str(&json_string).context("parsing json service config")?;
+    let json_string =
+        fs::read_to_string(path).map_err(|_| Error::ParseServiceConfig(path.to_path_buf()))?;
+    let config: ServiceConfig = serde_json::from_str(&json_string)
+        .map_err(|_| Error::ParseServiceConfig(path.to_path_buf()))?;
     Ok(config)
 }
 

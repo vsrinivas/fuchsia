@@ -129,20 +129,6 @@ pub struct PopulatedInspectDataContainer {
     pub inspect_matcher: Option<InspectHierarchyMatcher>,
 }
 
-impl PopulatedInspectDataContainer {
-    fn no_success(message: String, unpopulated: &UnpopulatedInspectDataContainer) -> Self {
-        let no_success_snapshot_data = SnapshotData::failed(
-            schema::Error { message },
-            NO_FILE_SUCCEEDED.to_string().into_boxed_str(),
-        );
-        PopulatedInspectDataContainer {
-            identity: unpopulated.identity.clone(),
-            snapshot: no_success_snapshot_data,
-            inspect_matcher: unpopulated.inspect_matcher.clone(),
-        }
-    }
-}
-
 enum Status {
     Begin,
     Pending(VecDeque<(ImmutableString, InspectData)>),
@@ -182,26 +168,11 @@ impl State {
         loop {
             match &mut self.status {
                 Status::Begin => {
-                    match collector::populate_data_map(
-                        &self.unpopulated.component_diagnostics_proxy,
-                    )
-                    .await
-                    {
-                        Err(e) => {
-                            let message = format!("Failed to extract any inspect data: {:?}", e);
-                            let result = PopulatedInspectDataContainer::no_success(
-                                message,
-                                &self.unpopulated,
-                            );
-                            return Some((result, self.into_pending(VecDeque::new(), start_time)));
-                        }
-                        Ok(data_map) => {
-                            self = self.into_pending(
-                                data_map.into_iter().collect::<VecDeque<_>>(),
-                                start_time,
-                            );
-                        }
-                    }
+                    let data_map =
+                        collector::populate_data_map(&self.unpopulated.component_diagnostics_proxy)
+                            .await;
+                    self = self
+                        .into_pending(data_map.into_iter().collect::<VecDeque<_>>(), start_time);
                 }
                 Status::Pending(ref mut pending) => match pending.pop_front() {
                     None => {

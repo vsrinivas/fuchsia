@@ -2,11 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::logs::error::LogsError;
 use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{self, BatchIteratorControlHandle};
 use fuchsia_zircon_status::Status as ZxStatus;
+use std::path::PathBuf;
 use thiserror::Error;
 use tracing::warn;
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error(transparent)]
+    Logs(#[from] LogsError),
+
+    #[error("Failed to serve outgoing dir: {0}")]
+    ServeOutgoing(#[source] anyhow::Error),
+
+    #[error(transparent)]
+    Inspect(#[from] fuchsia_inspect::Error),
+
+    #[error("Failed to parse config at path {0}")]
+    ParseConfig(PathBuf),
+
+    #[error("Failed to parse service config at path {0}")]
+    ParseServiceConfig(PathBuf),
+
+    #[error("Encountered a diagnostics data repository node with more than one artifact container. {0:?}")]
+    MultipleArtifactContainers(Vec<String>),
+
+    #[error("Failed to match component moniker agianst selectors: {0:?}")]
+    MatchComponentMoniker(#[source] anyhow::Error),
+
+    #[error(transparent)]
+    Hierarchy(#[from] diagnostics_hierarchy::Error),
+}
 
 #[derive(Debug, Error)]
 pub enum AccessorError {

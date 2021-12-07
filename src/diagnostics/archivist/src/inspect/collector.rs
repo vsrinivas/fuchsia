@@ -4,7 +4,6 @@
 
 use {
     crate::ImmutableString,
-    anyhow::Error,
     fidl::endpoints::{DiscoverableProtocolMarker, Proxy},
     fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
     fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy},
@@ -48,21 +47,10 @@ pub enum InspectData {
     DeprecatedFidl(InspectProxy),
 }
 
-/// Convert a fully-qualified path to a directory-proxy in the executing namespace.
-/// NOTE: Currently does a synchronous directory-open, since there are no available
-///       async apis.
-pub async fn find_directory_proxy(path: &Path) -> Result<DirectoryProxy, Error> {
-    // TODO(fxbug.dev/36762): When available, use the async directory-open api.
-    io_util::open_directory_in_namespace(
-        &path.to_string_lossy(),
-        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-    )
-}
-
 fn maybe_load_service<P: DiscoverableProtocolMarker>(
     dir_proxy: &DirectoryProxy,
     entry: &files_async::DirEntry,
-) -> Result<Option<P::Proxy>, Error> {
+) -> Result<Option<P::Proxy>, anyhow::Error> {
     if entry.name.ends_with(P::PROTOCOL_NAME) {
         let (proxy, server) = fidl::endpoints::create_proxy::<P>()?;
         fdio::service_connect_at(
@@ -77,7 +65,7 @@ fn maybe_load_service<P: DiscoverableProtocolMarker>(
 
 /// Searches the directory specified by inspect_directory_proxy for
 /// .inspect files and populates the `inspect_data_map` with the found VMOs.
-pub async fn populate_data_map(inspect_proxy: &DirectoryProxy) -> Result<DataMap, Error> {
+pub async fn populate_data_map(inspect_proxy: &DirectoryProxy) -> DataMap {
     // TODO(fxbug.dev/36762): Use a streaming and bounded readdir API when available to avoid
     // being hung.
     let entries =
@@ -125,8 +113,9 @@ pub async fn populate_data_map(inspect_proxy: &DirectoryProxy) -> Result<DataMap
                     data_map.insert(entry.name.into_boxed_str(), InspectData::Vmo(vmofile.vmo));
                 }
                 NodeInfo::File(_) => {
-                    let contents = io_util::read_file_bytes(&file_proxy).await?;
-                    data_map.insert(entry.name.into_boxed_str(), InspectData::File(contents));
+                    if let Ok(contents) = io_util::read_file_bytes(&file_proxy).await {
+                        data_map.insert(entry.name.into_boxed_str(), InspectData::File(contents));
+                    }
                 }
                 ty @ _ => {
                     error!(
@@ -139,7 +128,19 @@ pub async fn populate_data_map(inspect_proxy: &DirectoryProxy) -> Result<DataMap
         }
     }
 
-    Ok(data_map)
+    data_map
+}
+
+/// Convert a fully-qualified path to a directory-proxy in the executing namespace.
+/// NOTE: Currently does a synchronous directory-open, since there are no available
+///       async apis.
+#[cfg(test)]
+pub async fn find_directory_proxy(path: &Path) -> Result<DirectoryProxy, anyhow::Error> {
+    // TODO(fxbug.dev/36762): When available, use the async directory-open api.
+    io_util::open_directory_in_namespace(
+        &path.to_string_lossy(),
+        io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+    )
 }
 
 #[cfg(test)]
@@ -158,7 +159,7 @@ pub fn collect(
             }
         };
 
-        populate_data_map(&inspect_proxy).await
+        Ok(populate_data_map(&inspect_proxy).await)
     }
     .boxed()
 }
