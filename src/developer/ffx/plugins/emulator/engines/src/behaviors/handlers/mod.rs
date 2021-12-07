@@ -22,5 +22,7 @@
 /// always be included, a SimpleBehavior is provided.
 pub mod hvf_behavior;
 pub mod kvm_behavior;
+pub mod mouse_behavior;
 pub mod no_acceleration_behavior;
 pub mod simple_behavior;
+pub mod touch_behavior;

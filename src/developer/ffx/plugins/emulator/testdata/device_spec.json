@@ -93,6 +93,38 @@
                     }
                 },
                 "handler": "SimpleBehavior"
+            },
+            "mouse": {
+                "description": "Enables mouse support.",
+                "handler": "MouseBehavior",
+                "data": {
+                    "femu": {
+                        "args": [
+                            "-device",
+                            "virtio-mouse-pci"
+                        ],
+                        "features": [
+                            "VirtioMouse"
+                        ],
+                        "kernel_args": [],
+                        "options": []
+                    }
+                }
+            },
+            "touch": {
+                "description": "Enables touchscreen support.",
+                "handler": "TouchBehavior",
+                "data": {
+                    "femu": {
+                        "args": [
+                            "-device",
+                            "virtio_input_multi_touch_pci_1"
+                        ],
+                        "features": [],
+                        "kernel_args": [],
+                        "options": []
+                    }
+                }
             }
         },
         "name": "qemu-x64",

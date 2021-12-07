@@ -8,8 +8,9 @@ mod handlers;
 use anyhow::{anyhow, Result};
 use ffx_emulator_config::{Behavior, BehaviorTrait};
 use handlers::{
-    hvf_behavior::HvfBehavior, kvm_behavior::KvmBehavior,
+    hvf_behavior::HvfBehavior, kvm_behavior::KvmBehavior, mouse_behavior::MouseBehavior,
     no_acceleration_behavior::NoAccelerationBehavior, simple_behavior::SimpleBehavior,
+    touch_behavior::TouchBehavior,
 };
 use serde::{Deserialize, Serialize};
 use std::str::FromStr;
@@ -21,7 +22,9 @@ pub(crate) enum BehaviorHandler {
     SimpleBehavior,
     KvmBehavior,
     HvfBehavior,
+    MouseBehavior,
     NoAccelerationBehavior,
+    TouchBehavior,
 }
 
 impl FromStr for BehaviorHandler {
@@ -53,6 +56,12 @@ pub fn get_handler_for_behavior(behavior: &Behavior) -> Result<Box<dyn BehaviorT
     let b = match behavior_handler {
         BehaviorHandler::HvfBehavior => {
             Box::new(HvfBehavior { behavior: &behavior }) as Box<dyn BehaviorTrait>
+        }
+        BehaviorHandler::MouseBehavior => {
+            Box::new(MouseBehavior { behavior: &behavior }) as Box<dyn BehaviorTrait>
+        }
+        BehaviorHandler::TouchBehavior => {
+            Box::new(TouchBehavior { behavior: &behavior }) as Box<dyn BehaviorTrait>
         }
         BehaviorHandler::KvmBehavior => {
             Box::new(KvmBehavior { behavior: &behavior }) as Box<dyn BehaviorTrait>
