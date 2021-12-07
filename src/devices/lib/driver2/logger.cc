@@ -9,6 +9,8 @@
 
 #include <cstdarg>
 
+namespace flog = fuchsia_syslog;
+
 namespace driver {
 
 zx_koid_t GetKoid(zx_handle_t handle) {
@@ -18,7 +20,7 @@ zx_koid_t GetKoid(zx_handle_t handle) {
   return status == ZX_OK ? info.koid : ZX_KOID_INVALID;
 }
 
-bool Logger::FlushRecord(fuchsia_syslog::LogBuffer& buffer, uint32_t dropped) {
+bool Logger::FlushRecord(flog::LogBuffer& buffer, uint32_t dropped) {
   if (!buffer.FlushRecord()) {
     dropped_logs_.fetch_add(dropped, std::memory_order_relaxed);
     return false;
@@ -26,7 +28,7 @@ bool Logger::FlushRecord(fuchsia_syslog::LogBuffer& buffer, uint32_t dropped) {
   return true;
 }
 
-void Logger::BeginRecord(fuchsia_syslog::LogBuffer& buffer, FuchsiaLogSeverity severity,
+void Logger::BeginRecord(flog::LogBuffer& buffer, FuchsiaLogSeverity severity,
                          cpp17::optional<cpp17::string_view> file_name, unsigned int line,
                          cpp17::optional<cpp17::string_view> message,
                          cpp17::optional<cpp17::string_view> condition, bool is_printf,
@@ -151,7 +153,7 @@ void Logger::logvf(FuchsiaLogSeverity severity, const char* tag, const char* fil
   // TODO(fxbug.dev/72675): Pass file/line info regardless of severity in all cases.
   // This is currently only enabled for drivers.
   file = StripFile(file, severity);
-  fuchsia_syslog::LogBuffer buffer;
+  flog::LogBuffer buffer;
   BeginRecord(buffer, severity, file, line, fmt_string, std::nullopt, this->socket_.get(), dropped);
   buffer.WriteKeyValue("tag", tag_);
   if (tag) {
