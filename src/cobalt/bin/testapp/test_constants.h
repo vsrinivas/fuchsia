@@ -9,8 +9,7 @@
 
 #include "src/cobalt/bin/testapp/testapp_metrics_registry.cb.h"
 
-namespace cobalt {
-namespace testapp {
+namespace cobalt::testapp {
 
 // error_occurred metric constants.
 const uint32_t kErrorOccurredIndicesToUse[] = {0, 1, 2, 9};
@@ -114,7 +113,9 @@ const uint32_t kErrorOccurredComponentsStatusIndices[] = {0, 1, 2};
 // features_active_unique_devices: 20 UniqueActivesObservations
 //                  (10 event codes * 2 window sizes)
 // connection_attempts_per_device_count: 1 ReportParticipationObservation
+// connection_attempts_per_device_histogram: 1 ReportParticipationObservation
 // streaming_time_per_device_total: 1 ReportParticipationObservation
+// streaming_time_per_device_histogram: 1 ReportParticipationObservation
 std::map<std::pair<uint32_t, uint32_t>, uint64_t> kNumAggregatedObservations = {
     {{cobalt_registry::kFeaturesActiveMetricId,
       cobalt_registry::kFeaturesActiveFeaturesActiveUniqueDevicesReportId},
@@ -122,11 +123,16 @@ std::map<std::pair<uint32_t, uint32_t>, uint64_t> kNumAggregatedObservations = {
     {{cobalt_registry::kConnectionAttemptsMetricId,
       cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId},
      1},
+    {{cobalt_registry::kConnectionAttemptsMetricId,
+      cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceHistogramReportId},
+     1},
     {{cobalt_registry::kStreamingTimeMetricId,
       cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId},
+     1},
+    {{cobalt_registry::kStreamingTimeMetricId,
+      cobalt_registry::kStreamingTimeStreamingTimePerDeviceHistogramReportId},
      1}};
 
-}  // namespace testapp
-}  // namespace cobalt
+}  // namespace cobalt::testapp
 
 #endif  // SRC_COBALT_BIN_TESTAPP_TEST_CONSTANTS_H_

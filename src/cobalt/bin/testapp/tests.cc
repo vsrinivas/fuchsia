@@ -447,6 +447,10 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockIn
             cobalt_registry::kConnectionAttemptsMetricId,
             cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId}] +=
             kConnectionAttemptsNumWindowSizes;
+        expected_num_obs[{
+            cobalt_registry::kConnectionAttemptsMetricId,
+            cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceHistogramReportId}] +=
+            kConnectionAttemptsNumWindowSizes;
       }
     }
   }
@@ -499,6 +503,10 @@ bool TestLogElapsedTimeWithAggregation(CobaltTestAppLogger* logger, SystemClockI
         }
         expected_num_obs[{cobalt_registry::kStreamingTimeMetricId,
                           cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId}] +=
+            kStreamingTimeNumWindowSizes;
+        expected_num_obs[{
+            cobalt_registry::kStreamingTimeMetricId,
+            cobalt_registry::kStreamingTimeStreamingTimePerDeviceHistogramReportId}] +=
             kStreamingTimeNumWindowSizes;
       }
     }
