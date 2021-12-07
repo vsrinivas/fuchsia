@@ -43,6 +43,7 @@ class HandlesInTypes final
  private:
   friend ::fidl::internal::CodableBase<HandlesInTypes>;
   HandlesInTypes(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   HandlesInTypes() = default;
@@ -155,6 +156,60 @@ template <>
 struct CodingTraits<::fidl_test_handlesintypes::HandlesInTypes> {
   static constexpr size_t inline_size_v1_no_ee = 104;
   static constexpr size_t inline_size_v2 = 96;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_handlesintypes::HandlesInTypes* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.normal_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.handle_in_vec,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
+                                                                           : 24;
+    ::fidl::Encode(encoder, &value->storage_.handle_in_array,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 48
+                                                                           : 48;
+    ::fidl::Encode(encoder, &value->storage_.handle_in_mixed_vec_array,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 64
+                                                                           : 64;
+    ::fidl::Encode(encoder, &value->storage_.table_with_handle,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 80
+                                                                           : 80;
+    ::fidl::Encode(encoder, &value->storage_.union_with_handle,
+                   offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,

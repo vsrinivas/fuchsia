@@ -4,6 +4,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_escaping::DocCommentWithQuotes::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_escaping::DocCommentWithQuotes,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_escaping::DocCommentWithQuotes>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_escaping::DocCommentWithQuotes::DocCommentWithQuotes(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}

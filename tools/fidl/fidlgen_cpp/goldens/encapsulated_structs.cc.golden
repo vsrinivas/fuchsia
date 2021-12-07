@@ -4,6 +4,16 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_encapsulatedstructs::
+                           NonInlineStructTestStruct>::Encode(&encoder, this,
+                                                              offset);
+}
+
 ::fidl_test_encapsulatedstructs::NonInlineStructTestStruct::
     NonInlineStructTestStruct(::fidl::Decoder& decoder)
     : storage_(
@@ -15,6 +25,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_encapsulatedstructs::Int8Int32::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_encapsulatedstructs::Int8Int32,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_encapsulatedstructs::Int8Int32>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_encapsulatedstructs::Int8Int32::Int8Int32(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int8_t>(&decoder, 0),
                 ::fidl::DecodeAs<int32_t>(&decoder, 4)}) {}
@@ -22,12 +41,31 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_encapsulatedstructs::Int16Int8::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_encapsulatedstructs::Int16Int8,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_encapsulatedstructs::Int16Int8>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_encapsulatedstructs::Int16Int8::Int16Int8(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int16_t>(&decoder, 0),
                 ::fidl::DecodeAs<int8_t>(&decoder, 2)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_encapsulatedstructs::ArrayInt16Int8::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_encapsulatedstructs::ArrayInt16Int8, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<::fidl_test_encapsulatedstructs::ArrayInt16Int8>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_encapsulatedstructs::ArrayInt16Int8::ArrayInt16Int8(
     ::fidl::Decoder& decoder)
@@ -37,6 +75,16 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_encapsulatedstructs::StructPaddingTestStruct::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_encapsulatedstructs::StructPaddingTestStruct,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_encapsulatedstructs::
+                           StructPaddingTestStruct>::Encode(&encoder, this,
+                                                            offset);
+}
 
 ::fidl_test_encapsulatedstructs::StructPaddingTestStruct::
     StructPaddingTestStruct(::fidl::Decoder& decoder)
@@ -50,6 +98,16 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_encapsulatedstructs::TopLevelStruct::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_encapsulatedstructs::TopLevelStruct, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<::fidl_test_encapsulatedstructs::TopLevelStruct>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_encapsulatedstructs::TopLevelStruct::TopLevelStruct(
     ::fidl::Decoder& decoder)

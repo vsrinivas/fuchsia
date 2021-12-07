@@ -4,11 +4,30 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_emptystruct::Empty::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_emptystruct::Empty,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_emptystruct::Empty>::Encode(&encoder, this,
+                                                               offset);
+}
+
 ::fidl_test_emptystruct::Empty::Empty(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_emptystruct::EmptyProtocolSendRequest::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_emptystruct::EmptyProtocolSendRequest, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_emptystruct::EmptyProtocolSendRequest>::Encode(&encoder, this,
+                                                                 offset);
+}
 
 ::fidl_test_emptystruct::EmptyProtocolSendRequest::EmptyProtocolSendRequest(
     ::fidl::Decoder& decoder)
@@ -18,6 +37,16 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse::
     EmptyProtocolSendAndReceiveTopResponse(::fidl::Decoder& decoder)
     : storage_(
@@ -26,6 +55,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_emptystruct::
+                           EmptyProtocolSendAndReceiveRequest>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
 ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest::
     EmptyProtocolSendAndReceiveRequest(::fidl::Decoder& decoder)
     : storage_(
@@ -33,6 +73,17 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_emptystruct::EmptyProtocolReceiveRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_emptystruct::EmptyProtocolReceiveRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_emptystruct::EmptyProtocolReceiveRequest>::Encode(&encoder,
+                                                                    this,
+                                                                    offset);
+}
 
 ::fidl_test_emptystruct::EmptyProtocolReceiveRequest::
     EmptyProtocolReceiveRequest(::fidl::Decoder& decoder)

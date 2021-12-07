@@ -1,0 +1,151 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <fidl/llcpp/types/test/cpp/fidl_v2.h>
+
+#include <iostream>
+#include <string>
+#include <utility>
+#include <vector>
+
+#include <zxtest/zxtest.h>
+
+#include "test_util.h"
+
+TEST(NaturalResponse, DecodeMessage) {
+  // Set up a message.
+  // clang-format off
+  std::vector<uint8_t> bytes = {
+      // Transaction header.
+      // Txid, flags, magic
+      1, 0, 0, 0, 2, 0, 0, 1,
+
+      // Ordinal. Leaving them zero is fine since they are validated in dispatch
+      // logic at upper layers.
+      0, 0, 0, 0, 0, 0, 0, 0,
+
+      // Payload, a single uint32_t.
+      42, 0, 0, 0, 0, 0, 0, 0,
+  };
+  // clang-format on
+  EXPECT_EQ(bytes.size(), 24U);
+  auto message = fidl::IncomingMessage::Create<fidl::internal::ChannelTransport>(
+      bytes.data(), static_cast<uint32_t>(bytes.size()), nullptr, nullptr, 0);
+
+  // Perform decoding.
+  fitx::result result =
+      fidl::Response<fidl_llcpp_types_test::Baz::Foo>::DecodeTransactional(std::move(message));
+  ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
+              result.error_value().FormatDescription().c_str());
+  fidl::Response<fidl_llcpp_types_test::Baz::Foo>& response = result.value();
+
+  // Check decoded value.
+  EXPECT_EQ(42, response->res().bar());
+}
+
+TEST(NaturalResponsePayload, Decode) {
+  // Set up a message.
+  // clang-format off
+  std::vector<uint8_t> bytes = {
+      // Payload, a single uint32_t.
+      42, 0, 0, 0, 0, 0, 0, 0,
+  };
+  // clang-format on
+  EXPECT_EQ(bytes.size(), 8U);
+  auto message = fidl::IncomingMessage::Create<fidl::internal::ChannelTransport>(
+      bytes.data(), static_cast<uint32_t>(bytes.size()), nullptr, nullptr, 0,
+      fidl::IncomingMessage::kSkipMessageHeaderValidation);
+
+  // Create a fake V2 |WireFormatMetadata|.
+  fidl_message_header_t header;
+  fidl_init_txn_header(&header, 0, 0);
+  header.flags[0] = FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2;
+  auto metadata = fidl::internal::WireFormatMetadata::FromTransactionalHeader(header);
+
+  // Perform decoding.
+  fitx::result result =
+      fidl_llcpp_types_test::BazFooTopResponse::DecodeFrom(std::move(message), metadata);
+  ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
+              result.error_value().FormatDescription().c_str());
+  fidl_llcpp_types_test::BazFooTopResponse& response = result.value();
+
+  // Check decoded value.
+  EXPECT_EQ(42, response.res().bar());
+}
+
+TEST(NaturalResponsePayload, Encode) {
+  // Set up an object.
+  fidl_llcpp_types_test::BazFooTopResponse response;
+  response.set_res(fidl_llcpp_types_test::FooResponse{{.bar = 42}});
+
+  // Perform encoding.
+  fidl::internal::EncodeResult result = response.Internal__Encode();
+  ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
+              result.message().error().FormatDescription().c_str());
+
+  // Expected message.
+  // clang-format off
+  std::vector<uint8_t> bytes = {
+      // Payload, a single uint32_t.
+      42, 0, 0, 0, 0, 0, 0, 0,
+  };
+  // clang-format on
+  EXPECT_EQ(bytes.size(), 8U);
+
+  // Check encoded bytes.
+  fidl::OutgoingMessage::CopiedBytes actual = result.message().CopyBytes();
+  ASSERT_NO_FAILURES(
+      fidl_testing::ComparePayload(cpp20::span(actual.data(), actual.size()), cpp20::span(bytes)));
+}
+
+TEST(NaturalResponseWithHandle, Encode) {
+  // Expected message.
+  // TODO(fxbug.dev/79584): Remove the V2 wire format enabler once that is the default.
+  fidl::internal::HLCPPWireFormatV2Enabler v2_enabler;
+  // clang-format off
+  std::vector<uint8_t> bytes = {
+      // Payload, a union with the handle variant selected.
+      3, 0, 0, 0, 0, 0, 0, 0,  // tag
+      0xff, 0xff, 0xff, 0xff, 0x1, 0x0, 0x1, 0x0  // inlined data, num_handles, flags
+  };
+  // clang-format on
+  EXPECT_EQ(bytes.size(), 16U);
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+  zx_handle_t handles[1] = {event.get()};
+  fidl_channel_handle_metadata_t handle_metadata[1] = {
+      fidl_channel_handle_metadata_t{
+          .obj_type = ZX_OBJ_TYPE_NONE,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+      },
+  };
+
+  // Set up an object.
+  fidl_llcpp_types_test::MsgWrapperTestXUnionTopResponse response;
+  response.set_result(::fidl_llcpp_types_test::TestXUnion::WithH(std::move(event)));
+
+  // Perform encoding.
+  fidl::internal::EncodeResult result = response.Internal__Encode();
+  ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
+              result.message().error().FormatDescription().c_str());
+  // Handles are moved.
+  ASSERT_EQ(fidl_llcpp_types_test::TestXUnion::kH, response.result().Which());
+  ASSERT_EQ(zx::handle(), response.result().h());
+
+  // Check encoded bytes.
+  fidl::OutgoingMessage& message = result.message();
+  fidl::OutgoingMessage::CopiedBytes actual = message.CopyBytes();
+  ASSERT_NO_FAILURES(
+      fidl_testing::ComparePayload(cpp20::span(actual.data(), actual.size()), cpp20::span(bytes)));
+
+  // Check encoded handles.
+  ASSERT_EQ(FIDL_TRANSPORT_TYPE_CHANNEL, message.transport_type());
+  ASSERT_NO_FAILURES(fidl_testing::ComparePayload<zx_handle_t>(
+      cpp20::span(message.handles(), message.handle_actual()), cpp20::span(handles)));
+  ASSERT_NO_FAILURES(fidl_testing::ComparePayload<fidl_channel_handle_metadata_t>(
+      cpp20::span(static_cast<fidl_channel_handle_metadata_t*>(message.handle_metadata()),
+                  message.handle_actual()),
+      cpp20::span(handle_metadata)));
+}

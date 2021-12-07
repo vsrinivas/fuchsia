@@ -4,6 +4,19 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_requestflexibleenvelope::
+    ProtocolRequestStrictResponseFlexibleRequest::EncodeWithoutValidating(
+        ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_requestflexibleenvelope::
+                    ProtocolRequestStrictResponseFlexibleRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleRequest>::Encode(&encoder, this,
+                                                                offset);
+}
+
 ::fidl_test_requestflexibleenvelope::
     ProtocolRequestStrictResponseFlexibleRequest::
         ProtocolRequestStrictResponseFlexibleRequest(::fidl::Decoder& decoder)
@@ -13,6 +26,20 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_requestflexibleenvelope::
+    ProtocolRequestFlexibleResponseStrictTopResponse::EncodeWithoutValidating(
+        ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_requestflexibleenvelope::
+                    ProtocolRequestFlexibleResponseStrictTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictTopResponse>::Encode(&encoder,
+                                                                    this,
+                                                                    offset);
+}
 
 ::fidl_test_requestflexibleenvelope::
     ProtocolRequestFlexibleResponseStrictTopResponse::
@@ -25,6 +52,20 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_requestflexibleenvelope::
+    ProtocolRequestStrictResponseFlexibleTopResponse::EncodeWithoutValidating(
+        ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_requestflexibleenvelope::
+                    ProtocolRequestStrictResponseFlexibleTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleTopResponse>::Encode(&encoder,
+                                                                    this,
+                                                                    offset);
+}
+
 ::fidl_test_requestflexibleenvelope::
     ProtocolRequestStrictResponseFlexibleTopResponse::
         ProtocolRequestStrictResponseFlexibleTopResponse(
@@ -35,6 +76,19 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_requestflexibleenvelope::
+    ProtocolRequestFlexibleResponseStrictRequest::EncodeWithoutValidating(
+        ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_requestflexibleenvelope::
+                    ProtocolRequestFlexibleResponseStrictRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictRequest>::Encode(&encoder, this,
+                                                                offset);
+}
 
 ::fidl_test_requestflexibleenvelope::
     ProtocolRequestFlexibleResponseStrictRequest::

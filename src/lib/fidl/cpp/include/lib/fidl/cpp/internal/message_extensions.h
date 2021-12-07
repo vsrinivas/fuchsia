@@ -24,6 +24,10 @@ namespace internal {
     ::fidl::IncomingMessage message,
     ::cpp20::span<zx_handle_info_t, ZX_CHANNEL_MAX_MSG_HANDLES> handle_storage);
 
+::fidl::OutgoingMessage ConvertFromHLCPPOutgoingMessage(
+    const fidl_type_t* type, HLCPPOutgoingMessage&& message, zx_handle_t* handles,
+    fidl_channel_handle_metadata_t* handle_metadata);
+
 }  // namespace internal
 }  // namespace fidl
 

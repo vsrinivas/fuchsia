@@ -27,6 +27,7 @@ class MyStruct final : public ::fidl::internal::CodableBase<MyStruct> {
  private:
   friend ::fidl::internal::CodableBase<MyStruct>;
   MyStruct(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   MyStruct() = default;
@@ -75,6 +76,18 @@ template <>
 struct CodingTraits<::fidl_test_importedconstvalues::MyStruct> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_importedconstvalues::MyStruct* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,

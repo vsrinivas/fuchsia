@@ -42,6 +42,9 @@ class Encoder final {
   explicit Encoder(NoHeader marker, internal::WireFormatVersion wire_format)
       : wire_format_(wire_format) {}
 
+  Encoder(Encoder&&) noexcept = default;
+  Encoder& operator=(Encoder&&) noexcept = default;
+
   ~Encoder();
 
   size_t Alloc(size_t size);

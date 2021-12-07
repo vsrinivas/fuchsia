@@ -4,6 +4,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_handles::Handles::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_handles::Handles, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<::fidl_test_handles::Handles>::Encode(&encoder, this,
+                                                             offset);
+}
+
 ::fidl_test_handles::Handles::Handles(::fidl::Decoder& decoder)
     : storage_(
           {::fidl::DecodeAs<::zx::handle>(&decoder, 0),

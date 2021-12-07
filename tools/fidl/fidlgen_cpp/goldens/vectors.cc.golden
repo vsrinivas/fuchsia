@@ -4,6 +4,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_vectors::ExampleUseOfVectors::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_vectors::ExampleUseOfVectors,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_vectors::ExampleUseOfVectors>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_vectors::ExampleUseOfVectors::ExampleUseOfVectors(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::std::vector<uint8_t>>(&decoder, 0),

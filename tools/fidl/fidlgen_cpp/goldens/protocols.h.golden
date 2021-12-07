@@ -125,6 +125,7 @@ class WithErrorSyntax_HandleInResult_Response final
  private:
   friend ::fidl::internal::CodableBase<WithErrorSyntax_HandleInResult_Response>;
   WithErrorSyntax_HandleInResult_Response(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithErrorSyntax_HandleInResult_Response() = default;
@@ -178,6 +179,7 @@ class WithErrorSyntaxHandleInResultTopResponse final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntaxHandleInResultTopResponse>;
   WithErrorSyntaxHandleInResultTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithErrorSyntaxHandleInResultTopResponse() = default;
@@ -236,6 +238,7 @@ class HandleRightsProtocolResponseMethodTopResponse final
   friend ::fidl::internal::CodableBase<
       HandleRightsProtocolResponseMethodTopResponse>;
   HandleRightsProtocolResponseMethodTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   HandleRightsProtocolResponseMethodTopResponse() = default;
@@ -289,6 +292,7 @@ class HandleRightsProtocolResponseMethodRequest final
   friend ::fidl::internal::CodableBase<
       HandleRightsProtocolResponseMethodRequest>;
   HandleRightsProtocolResponseMethodRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   HandleRightsProtocolResponseMethodRequest() = default;
@@ -342,6 +346,7 @@ class HandleRightsProtocolNoResponseMethodRequest final
   friend ::fidl::internal::CodableBase<
       HandleRightsProtocolNoResponseMethodRequest>;
   HandleRightsProtocolNoResponseMethodRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   HandleRightsProtocolNoResponseMethodRequest() = default;
@@ -393,6 +398,7 @@ class HandleRightsProtocolAnEventRequest final
  private:
   friend ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest>;
   HandleRightsProtocolAnEventRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   HandleRightsProtocolAnEventRequest() = default;
@@ -444,6 +450,7 @@ class ChannelProtocolTakeHandleRequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest>;
   ChannelProtocolTakeHandleRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ChannelProtocolTakeHandleRequest() = default;
@@ -496,6 +503,7 @@ class ChannelProtocolMutateSocketTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketTopResponse>;
   ChannelProtocolMutateSocketTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ChannelProtocolMutateSocketTopResponse() = default;
@@ -547,6 +555,7 @@ class ChannelProtocolMutateSocketRequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest>;
   ChannelProtocolMutateSocketRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ChannelProtocolMutateSocketRequest() = default;
@@ -600,6 +609,7 @@ class WithProtocolEndsServerEndsTopResponse final
  private:
   friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsTopResponse>;
   WithProtocolEndsServerEndsTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithProtocolEndsServerEndsTopResponse() = default;
@@ -659,6 +669,7 @@ class WithProtocolEndsServerEndsRequest final
  private:
   friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest>;
   WithProtocolEndsServerEndsRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithProtocolEndsServerEndsRequest() = default;
@@ -719,6 +730,7 @@ class WithProtocolEndsClientEndsTopResponse final
  private:
   friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsTopResponse>;
   WithProtocolEndsClientEndsTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithProtocolEndsClientEndsTopResponse() = default;
@@ -778,6 +790,7 @@ class WithProtocolEndsClientEndsRequest final
  private:
   friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest>;
   WithProtocolEndsClientEndsRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithProtocolEndsClientEndsRequest() = default;
@@ -842,6 +855,7 @@ class WithErrorSyntax_ResponseAsStruct_Response final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntax_ResponseAsStruct_Response>;
   WithErrorSyntax_ResponseAsStruct_Response(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithErrorSyntax_ResponseAsStruct_Response() = default;
@@ -905,6 +919,7 @@ class WithErrorSyntaxResponseAsStructTopResponse final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntaxResponseAsStructTopResponse>;
   WithErrorSyntaxResponseAsStructTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithErrorSyntaxResponseAsStructTopResponse() = default;
@@ -959,6 +974,7 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntax_ErrorAsPrimitive_Response>;
   WithErrorSyntax_ErrorAsPrimitive_Response(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithErrorSyntax_ErrorAsPrimitive_Response() = default;
@@ -1008,6 +1024,7 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntaxErrorAsPrimitiveTopResponse>;
   WithErrorSyntaxErrorAsPrimitiveTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithErrorSyntaxErrorAsPrimitiveTopResponse() = default;
@@ -1061,6 +1078,7 @@ class WithErrorSyntax_ErrorAsEnum_Response final
  private:
   friend ::fidl::internal::CodableBase<WithErrorSyntax_ErrorAsEnum_Response>;
   WithErrorSyntax_ErrorAsEnum_Response(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithErrorSyntax_ErrorAsEnum_Response() = default;
@@ -1112,6 +1130,7 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
       WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
       ::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse() = default;
@@ -1170,6 +1189,7 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
       WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
   WithAndWithoutRequestResponseWithRequestWithResponseRequest(
       ::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithAndWithoutRequestResponseWithRequestWithResponseRequest() = default;
@@ -1227,6 +1247,7 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
       WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
   WithAndWithoutRequestResponseWithRequestNoResponseRequest(
       ::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithAndWithoutRequestResponseWithRequestNoResponseRequest() = default;
@@ -1284,6 +1305,7 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final
       WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
   WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
       ::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithAndWithoutRequestResponseWithRequestEmptyResponseRequest() = default;
@@ -1340,6 +1362,7 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final
   friend ::fidl::internal::CodableBase<
       WithAndWithoutRequestResponseOnWithResponseRequest>;
   WithAndWithoutRequestResponseOnWithResponseRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithAndWithoutRequestResponseOnWithResponseRequest() = default;
@@ -1394,6 +1417,7 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final
       WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
   WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
       ::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithAndWithoutRequestResponseNoRequestWithResponseTopResponse() = default;
@@ -1448,6 +1472,7 @@ class TransitionalRequestTopResponse final
  private:
   friend ::fidl::internal::CodableBase<TransitionalRequestTopResponse>;
   TransitionalRequestTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   TransitionalRequestTopResponse() = default;
@@ -1494,6 +1519,7 @@ class TransitionalRequestRequest final
  private:
   friend ::fidl::internal::CodableBase<TransitionalRequestRequest>;
   TransitionalRequestRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   TransitionalRequestRequest() = default;
@@ -1538,6 +1564,7 @@ class TransitionalOneWayRequest final
  private:
   friend ::fidl::internal::CodableBase<TransitionalOneWayRequest>;
   TransitionalOneWayRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   TransitionalOneWayRequest() = default;
@@ -1582,6 +1609,7 @@ class TransitionalEventRequest final
  private:
   friend ::fidl::internal::CodableBase<TransitionalEventRequest>;
   TransitionalEventRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   TransitionalEventRequest() = default;
@@ -1626,6 +1654,7 @@ class MethodWithUnionUnionMethodRequest final
  private:
   friend ::fidl::internal::CodableBase<MethodWithUnionUnionMethodRequest>;
   MethodWithUnionUnionMethodRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   MethodWithUnionUnionMethodRequest() = default;
@@ -1676,6 +1705,7 @@ class SyscallProtocolMethodCRequest final
  private:
   friend ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest>;
   SyscallProtocolMethodCRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   SyscallProtocolMethodCRequest() = default;
@@ -1738,6 +1768,7 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
  private:
   friend ::fidl::internal::CodableBase<ProtocolEnds>;
   ProtocolEnds(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ProtocolEnds() = default;
@@ -1835,6 +1866,7 @@ class WithProtocolEndsStructContainingEndsTopResponse final
   friend ::fidl::internal::CodableBase<
       WithProtocolEndsStructContainingEndsTopResponse>;
   WithProtocolEndsStructContainingEndsTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithProtocolEndsStructContainingEndsTopResponse() = default;
@@ -1893,6 +1925,7 @@ class WithProtocolEndsStructContainingEndsRequest final
   friend ::fidl::internal::CodableBase<
       WithProtocolEndsStructContainingEndsRequest>;
   WithProtocolEndsStructContainingEndsRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithProtocolEndsStructContainingEndsRequest() = default;
@@ -1974,6 +2007,7 @@ class ManyParametersFifteenRequest final
  private:
   friend ::fidl::internal::CodableBase<ManyParametersFifteenRequest>;
   ManyParametersFifteenRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ManyParametersFifteenRequest() = default;
@@ -2123,6 +2157,7 @@ class WithErrorSyntaxErrorAsEnumTopResponse final
  private:
   friend ::fidl::internal::CodableBase<WithErrorSyntaxErrorAsEnumTopResponse>;
   WithErrorSyntaxErrorAsEnumTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   WithErrorSyntaxErrorAsEnumTopResponse() = default;
@@ -2175,6 +2210,7 @@ class ChannelProtocolMethodBTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodBTopResponse>;
   ChannelProtocolMethodBTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ChannelProtocolMethodBTopResponse() = default;
@@ -2223,6 +2259,7 @@ class ChannelProtocolMethodBRequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodBRequest>;
   ChannelProtocolMethodBRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ChannelProtocolMethodBRequest() = default;
@@ -2278,6 +2315,7 @@ class ChannelProtocolMethodARequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodARequest>;
   ChannelProtocolMethodARequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ChannelProtocolMethodARequest() = default;
@@ -2333,6 +2371,7 @@ class ChannelProtocolEventARequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolEventARequest>;
   ChannelProtocolEventARequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ChannelProtocolEventARequest() = default;
@@ -2401,6 +2440,23 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2439,6 +2495,19 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2476,6 +2545,24 @@ struct CodingTraits<
     ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x1,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -2516,6 +2603,23 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2554,6 +2658,23 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2589,6 +2710,23 @@ struct CodingTraits<::fidl_test_protocols::HandleRightsProtocolAnEventRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::HandleRightsProtocolAnEventRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x3,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2623,6 +2761,23 @@ template <>
 struct CodingTraits<::fidl_test_protocols::ChannelProtocolTakeHandleRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::ChannelProtocolTakeHandleRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.h, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -2660,6 +2815,23 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2694,6 +2866,23 @@ template <>
 struct CodingTraits<::fidl_test_protocols::ChannelProtocolMutateSocketRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::ChannelProtocolMutateSocketRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -2731,6 +2920,23 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.out, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2765,6 +2971,23 @@ template <>
 struct CodingTraits<::fidl_test_protocols::WithProtocolEndsServerEndsRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithProtocolEndsServerEndsRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.in, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -2802,6 +3025,23 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.out, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2837,6 +3077,23 @@ struct CodingTraits<::fidl_test_protocols::WithProtocolEndsClientEndsRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithProtocolEndsClientEndsRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.in, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2870,6 +3127,27 @@ struct CodingTraits<
     ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 24;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 16
+                                                                           : 16;
+    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -2907,6 +3185,19 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -2940,6 +3231,19 @@ struct CodingTraits<
     ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -2975,6 +3279,19 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3007,6 +3324,19 @@ struct CodingTraits<
     ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -3044,6 +3374,21 @@ struct CodingTraits<
         WithAndWithoutRequestResponseWithRequestWithResponseTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse*
+              value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.ret, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -3084,6 +3429,20 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.arg, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3120,6 +3479,20 @@ struct CodingTraits<
         WithAndWithoutRequestResponseWithRequestNoResponseRequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.arg, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -3159,6 +3532,20 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.arg, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3193,6 +3580,20 @@ struct CodingTraits<
     ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.ret, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -3232,6 +3633,20 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.ret, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3265,6 +3680,19 @@ struct CodingTraits<::fidl_test_protocols::TransitionalRequestTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::TransitionalRequestTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.y, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3297,6 +3725,18 @@ struct CodingTraits<::fidl_test_protocols::TransitionalRequestRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::TransitionalRequestRequest* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.x, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_protocols::TransitionalRequestRequest* value,
@@ -3326,6 +3766,18 @@ template <>
 struct CodingTraits<::fidl_test_protocols::TransitionalOneWayRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::TransitionalOneWayRequest* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.x, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -3357,6 +3809,18 @@ struct CodingTraits<::fidl_test_protocols::TransitionalEventRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::TransitionalEventRequest* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.x, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_protocols::TransitionalEventRequest* value,
@@ -3387,6 +3851,19 @@ template <>
 struct CodingTraits<::fidl_test_protocols::MethodWithUnionUnionMethodRequest> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::MethodWithUnionUnionMethodRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.u, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -3420,6 +3897,23 @@ struct CodingTraits<::fidl_test_protocols::SyscallProtocolMethodCRequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::SyscallProtocolMethodCRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3452,6 +3946,46 @@ template <>
 struct CodingTraits<::fidl_test_protocols::ProtocolEnds> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_protocols::ProtocolEnds* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.client, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.server, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.client_opt, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 12
+                                                                           : 12;
+    ::fidl::Encode(encoder, &value->storage_.server_opt, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -3493,6 +4027,20 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.out, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3532,6 +4080,19 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.in, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3563,6 +4124,74 @@ template <>
 struct CodingTraits<::fidl_test_protocols::ManyParametersFifteenRequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::ManyParametersFifteenRequest* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.p1, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 1
+                                                                           : 1;
+    ::fidl::Encode(encoder, &value->storage_.p2, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
+                                                                           : 2;
+    ::fidl::Encode(encoder, &value->storage_.p3, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 3
+                                                                           : 3;
+    ::fidl::Encode(encoder, &value->storage_.p4, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.p5, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 5
+                                                                           : 5;
+    ::fidl::Encode(encoder, &value->storage_.p6, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 6
+                                                                           : 6;
+    ::fidl::Encode(encoder, &value->storage_.p7, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 7
+                                                                           : 7;
+    ::fidl::Encode(encoder, &value->storage_.p8, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.p9, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 9
+                                                                           : 9;
+    ::fidl::Encode(encoder, &value->storage_.p10, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 10
+                                                                           : 10;
+    ::fidl::Encode(encoder, &value->storage_.p11, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 11
+                                                                           : 11;
+    ::fidl::Encode(encoder, &value->storage_.p12, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 12
+                                                                           : 12;
+    ::fidl::Encode(encoder, &value->storage_.p13, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 13
+                                                                           : 13;
+    ::fidl::Encode(encoder, &value->storage_.p14, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 14
+                                                                           : 14;
+    ::fidl::Encode(encoder, &value->storage_.p15, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -3610,6 +4239,19 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3642,6 +4284,19 @@ struct CodingTraits<::fidl_test_protocols::ChannelProtocolMethodBTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::ChannelProtocolMethodBTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3673,6 +4328,23 @@ template <>
 struct CodingTraits<::fidl_test_protocols::ChannelProtocolMethodBRequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::ChannelProtocolMethodBRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -3707,6 +4379,23 @@ struct CodingTraits<::fidl_test_protocols::ChannelProtocolMethodARequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::ChannelProtocolMethodARequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -3739,6 +4428,22 @@ template <>
 struct CodingTraits<::fidl_test_protocols::ChannelProtocolEventARequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocols::ChannelProtocolEventARequest* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,

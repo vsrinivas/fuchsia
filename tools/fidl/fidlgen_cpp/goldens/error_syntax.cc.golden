@@ -4,12 +4,40 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_errorsyntax::
+    ExampleUseOfErrorSyntax_CallWhichMayFail_Response::EncodeWithoutValidating(
+        ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_errorsyntax::
+                    ExampleUseOfErrorSyntax_CallWhichMayFail_Response,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntax_CallWhichMayFail_Response>::Encode(&encoder,
+                                                                     this,
+                                                                     offset);
+}
+
 ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Response::
     ExampleUseOfErrorSyntax_CallWhichMayFail_Response(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_errorsyntax::
+    ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::EncodeWithoutValidating(
+        ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_errorsyntax::
+                    ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
 
 ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::
     ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::Decoder& decoder)
@@ -19,6 +47,17 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_errorsyntax::
+                    ExampleUseOfErrorSyntaxCallWhichMayFailRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
     ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::Decoder& decoder)

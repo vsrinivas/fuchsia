@@ -30,6 +30,7 @@ class ParentFirstRequest final
  private:
   friend ::fidl::internal::CodableBase<ParentFirstRequest>;
   ParentFirstRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ParentFirstRequest() = default;
@@ -87,6 +88,7 @@ class ChildSecondRequest final
  private:
   friend ::fidl::internal::CodableBase<ChildSecondRequest>;
   ChildSecondRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ChildSecondRequest() = default;
@@ -156,6 +158,23 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.request, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -191,6 +210,23 @@ struct CodingTraits<
     ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.request, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(

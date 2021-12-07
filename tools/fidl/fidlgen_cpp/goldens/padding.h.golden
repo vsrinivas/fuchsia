@@ -59,6 +59,7 @@ class Padding7ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding7ByteMiddle>;
   Padding7ByteMiddle(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding7ByteMiddle() = default;
@@ -110,6 +111,7 @@ class Padding7ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding7ByteEnd>;
   Padding7ByteEnd(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding7ByteEnd() = default;
@@ -161,6 +163,7 @@ class Padding6ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding6ByteMiddle>;
   Padding6ByteMiddle(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding6ByteMiddle() = default;
@@ -212,6 +215,7 @@ class Padding6ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding6ByteEnd>;
   Padding6ByteEnd(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding6ByteEnd() = default;
@@ -265,6 +269,7 @@ class Padding5ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding5ByteMiddle>;
   Padding5ByteMiddle(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding5ByteMiddle() = default;
@@ -325,6 +330,7 @@ class Padding5ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding5ByteEnd>;
   Padding5ByteEnd(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding5ByteEnd() = default;
@@ -383,6 +389,7 @@ class Padding4ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding4ByteMiddle>;
   Padding4ByteMiddle(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding4ByteMiddle() = default;
@@ -434,6 +441,7 @@ class Padding4ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding4ByteEnd>;
   Padding4ByteEnd(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding4ByteEnd() = default;
@@ -489,6 +497,7 @@ class Padding4ByteAlignmentLength12 final
  private:
   friend ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12>;
   Padding4ByteAlignmentLength12(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding4ByteAlignmentLength12() = default;
@@ -559,6 +568,7 @@ class Padding3ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding3ByteMiddle>;
   Padding3ByteMiddle(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding3ByteMiddle() = default;
@@ -610,6 +620,7 @@ class Padding3ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding3ByteEnd>;
   Padding3ByteEnd(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding3ByteEnd() = default;
@@ -661,6 +672,7 @@ class Padding2ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding2ByteMiddle>;
   Padding2ByteMiddle(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding2ByteMiddle() = default;
@@ -712,6 +724,7 @@ class Padding2ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding2ByteEnd>;
   Padding2ByteEnd(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding2ByteEnd() = default;
@@ -765,6 +778,7 @@ class Padding2ByteAlignmentLength6 final
  private:
   friend ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6>;
   Padding2ByteAlignmentLength6(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding2ByteAlignmentLength6() = default;
@@ -828,6 +842,7 @@ class Padding1ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding1ByteMiddle>;
   Padding1ByteMiddle(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding1ByteMiddle() = default;
@@ -879,6 +894,7 @@ class Padding1ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding1ByteEnd>;
   Padding1ByteEnd(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Padding1ByteEnd() = default;
@@ -935,6 +951,22 @@ struct CodingTraits<::fidl_test_padding::Padding7ByteMiddle> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding7ByteMiddle* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding7ByteMiddle* value,
@@ -964,6 +996,22 @@ template <>
 struct CodingTraits<::fidl_test_padding::Padding7ByteEnd> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding7ByteEnd* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -995,6 +1043,22 @@ struct CodingTraits<::fidl_test_padding::Padding6ByteMiddle> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding6ByteMiddle* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding6ByteMiddle* value,
@@ -1025,6 +1089,22 @@ struct CodingTraits<::fidl_test_padding::Padding6ByteEnd> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding6ByteEnd* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding6ByteEnd* value,
@@ -1054,6 +1134,26 @@ template <>
 struct CodingTraits<::fidl_test_padding::Padding5ByteMiddle> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding5ByteMiddle* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
+                                                                           : 2;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -1086,6 +1186,26 @@ struct CodingTraits<::fidl_test_padding::Padding5ByteEnd> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding5ByteEnd* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 10
+                                                                           : 10;
+    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding5ByteEnd* value,
@@ -1117,6 +1237,22 @@ struct CodingTraits<::fidl_test_padding::Padding4ByteMiddle> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding4ByteMiddle* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding4ByteMiddle* value,
@@ -1146,6 +1282,22 @@ template <>
 struct CodingTraits<::fidl_test_padding::Padding4ByteEnd> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding4ByteEnd* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -1179,6 +1331,30 @@ struct CodingTraits<::fidl_test_padding::Padding4ByteAlignmentLength12> {
   static constexpr size_t inline_size_v1_no_ee = 12;
   static constexpr size_t inline_size_v2 = 12;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_padding::Padding4ByteAlignmentLength12* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 6
+                                                                           : 6;
+    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.d, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding4ByteAlignmentLength12* value,
@@ -1211,6 +1387,22 @@ struct CodingTraits<::fidl_test_padding::Padding3ByteMiddle> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding3ByteMiddle* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding3ByteMiddle* value,
@@ -1240,6 +1432,22 @@ template <>
 struct CodingTraits<::fidl_test_padding::Padding3ByteEnd> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding3ByteEnd* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -1271,6 +1479,22 @@ struct CodingTraits<::fidl_test_padding::Padding2ByteMiddle> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding2ByteMiddle* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding2ByteMiddle* value,
@@ -1300,6 +1524,22 @@ template <>
 struct CodingTraits<::fidl_test_padding::Padding2ByteEnd> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding2ByteEnd* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -1333,6 +1573,26 @@ struct CodingTraits<::fidl_test_padding::Padding2ByteAlignmentLength6> {
   static constexpr size_t inline_size_v1_no_ee = 6;
   static constexpr size_t inline_size_v2 = 6;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_padding::Padding2ByteAlignmentLength6* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
+                                                                           : 2;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding2ByteAlignmentLength6* value,
@@ -1364,6 +1624,22 @@ struct CodingTraits<::fidl_test_padding::Padding1ByteMiddle> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding1ByteMiddle* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
+                                                                           : 2;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_padding::Padding1ByteMiddle* value,
@@ -1393,6 +1669,22 @@ template <>
 struct CodingTraits<::fidl_test_padding::Padding1ByteEnd> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_padding::Padding1ByteEnd* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 2
+                                                                           : 2;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,

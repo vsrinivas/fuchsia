@@ -33,6 +33,7 @@ class ParentTakeChildRequestRequest final
  private:
   friend ::fidl::internal::CodableBase<ParentTakeChildRequestRequest>;
   ParentTakeChildRequestRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ParentTakeChildRequestRequest() = default;
@@ -89,6 +90,7 @@ class ParentTakeChildRequest final
  private:
   friend ::fidl::internal::CodableBase<ParentTakeChildRequest>;
   ParentTakeChildRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ParentTakeChildRequest() = default;
@@ -142,6 +144,7 @@ class ParentGetChildTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ParentGetChildTopResponse>;
   ParentGetChildTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ParentGetChildTopResponse() = default;
@@ -196,6 +199,7 @@ class ParentGetChildRequestTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ParentGetChildRequestTopResponse>;
   ParentGetChildRequestTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ParentGetChildRequestTopResponse() = default;
@@ -265,6 +269,23 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.r, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -300,6 +321,22 @@ struct CodingTraits<::fidl_test_protocolrequest::ParentTakeChildRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocolrequest::ParentTakeChildRequest* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_protocolrequest::ParentTakeChildRequest* value,
@@ -333,6 +370,23 @@ template <>
 struct CodingTraits<::fidl_test_protocolrequest::ParentGetChildTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocolrequest::ParentGetChildTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.c, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(
@@ -369,6 +423,23 @@ struct CodingTraits<
     ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.r, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(

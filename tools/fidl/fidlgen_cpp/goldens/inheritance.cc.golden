@@ -4,12 +4,30 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_inheritance::SuperFooTopResponse::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_inheritance::SuperFooTopResponse,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_inheritance::SuperFooTopResponse>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_inheritance::SuperFooTopResponse::SuperFooTopResponse(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_inheritance::SuperFooRequest::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_inheritance::SuperFooRequest,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_inheritance::SuperFooRequest>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_inheritance::SuperFooRequest::SuperFooRequest(
     ::fidl::Decoder& decoder)

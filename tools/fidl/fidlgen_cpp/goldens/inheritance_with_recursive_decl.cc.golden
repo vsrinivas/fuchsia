@@ -4,6 +4,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_inheritancewithrecursivedecl::
+                           ParentFirstRequest>::Encode(&encoder, this, offset);
+}
+
 ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest::
     ParentFirstRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::fidl::InterfaceRequest<
@@ -11,6 +20,15 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_inheritancewithrecursivedecl::
+                           ChildSecondRequest>::Encode(&encoder, this, offset);
+}
 
 ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest::
     ChildSecondRequest(::fidl::Decoder& decoder)

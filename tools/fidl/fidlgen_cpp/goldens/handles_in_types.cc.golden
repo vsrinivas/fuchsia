@@ -4,6 +4,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_handlesintypes::HandlesInTypes::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_handlesintypes::HandlesInTypes,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_handlesintypes::HandlesInTypes>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_handlesintypes::HandlesInTypes::HandlesInTypes(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::zx::vmo>(&decoder, 0),

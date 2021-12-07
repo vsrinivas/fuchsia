@@ -37,6 +37,7 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
   friend ::fidl::internal::CodableBase<
       ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
   ExampleUseOfErrorSyntax_CallWhichMayFail_Response(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ExampleUseOfErrorSyntax_CallWhichMayFail_Response() = default;
@@ -90,6 +91,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
   friend ::fidl::internal::CodableBase<
       ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse() = default;
@@ -150,6 +152,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
   friend ::fidl::internal::CodableBase<
       ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
   ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ExampleUseOfErrorSyntaxCallWhichMayFailRequest() = default;
@@ -209,6 +212,20 @@ struct CodingTraits<::fidl_test_errorsyntax::
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntax_CallWhichMayFail_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.value, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -244,6 +261,20 @@ struct CodingTraits<::fidl_test_errorsyntax::
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_errorsyntax::
+          ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -278,6 +309,20 @@ struct CodingTraits<
     ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest*
+          value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.s, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(

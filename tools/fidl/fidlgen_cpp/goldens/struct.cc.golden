@@ -4,12 +4,29 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_struct::Simple::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_struct::Simple, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<::fidl_test_struct::Simple>::Encode(&encoder, this,
+                                                           offset);
+}
+
 ::fidl_test_struct::Simple::Simple(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0),
                 ::fidl::DecodeAs<bool>(&decoder, 1)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_struct::BasicStruct::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_struct::BasicStruct,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_struct::BasicStruct>::Encode(&encoder, this,
+                                                                offset);
+}
 
 ::fidl_test_struct::BasicStruct::BasicStruct(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0),

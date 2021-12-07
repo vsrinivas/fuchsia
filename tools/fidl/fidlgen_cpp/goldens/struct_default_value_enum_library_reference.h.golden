@@ -27,6 +27,7 @@ class Foo final : public ::fidl::internal::CodableBase<Foo> {
  private:
   friend ::fidl::internal::CodableBase<Foo>;
   Foo(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Foo() = default;
@@ -78,6 +79,19 @@ template <>
 struct CodingTraits<::fidl_test_structdefaultvalueenumlibraryreference::Foo> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_structdefaultvalueenumlibraryreference::Foo* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.field, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(

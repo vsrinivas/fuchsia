@@ -4,6 +4,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_union::StructWithNullableXUnion::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_union::StructWithNullableXUnion,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_union::StructWithNullableXUnion>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_union::StructWithNullableXUnion::StructWithNullableXUnion(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<
@@ -12,6 +21,20 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_union::
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
+        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_union::
+              TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_union::
     TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse::
@@ -23,17 +46,49 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_union::Pizza::EncodeWithoutValidating(::fidl::Encoder& encoder,
+                                                       size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_union::Pizza, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<::fidl_test_union::Pizza>::Encode(&encoder, this,
+                                                         offset);
+}
+
 ::fidl_test_union::Pizza::Pizza(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::std::vector<::std::string>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_union::Pasta::EncodeWithoutValidating(::fidl::Encoder& encoder,
+                                                       size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_union::Pasta, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<::fidl_test_union::Pasta>::Encode(&encoder, this,
+                                                         offset);
+}
+
 ::fidl_test_union::Pasta::Pasta(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_union::
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
+        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_union::
+              TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_union::
     TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse::
@@ -45,6 +100,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_union::NullableUnionStruct::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_union::NullableUnionStruct,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_union::NullableUnionStruct>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_union::NullableUnionStruct::NullableUnionStruct(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::std::unique_ptr<::fidl_test_union::Union>>(
@@ -52,6 +116,14 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_union::UnionSandwich::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_union::UnionSandwich,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_union::UnionSandwich>::Encode(&encoder, this,
+                                                                 offset);
+}
 
 ::fidl_test_union::UnionSandwich::UnionSandwich(::fidl::Decoder& decoder)
     : storage_(
@@ -61,6 +133,15 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_union::Empty::EncodeWithoutValidating(::fidl::Encoder& encoder,
+                                                       size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_union::Empty, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<::fidl_test_union::Empty>::Encode(&encoder, this,
+                                                         offset);
+}
 
 ::fidl_test_union::Empty::Empty(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}

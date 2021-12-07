@@ -4,6 +4,14 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_doccomments::Struct::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_doccomments::Struct,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_doccomments::Struct>::Encode(&encoder, this,
+                                                                offset);
+}
+
 ::fidl_test_doccomments::Struct::Struct(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__

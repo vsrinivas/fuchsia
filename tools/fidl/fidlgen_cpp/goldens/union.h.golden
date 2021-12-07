@@ -84,6 +84,7 @@ class StructWithNullableXUnion final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableXUnion>;
   StructWithNullableXUnion(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   StructWithNullableXUnion() = default;
@@ -137,6 +138,7 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
       TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
       ::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse() =
@@ -194,6 +196,7 @@ class Pizza final : public ::fidl::internal::CodableBase<Pizza> {
  private:
   friend ::fidl::internal::CodableBase<Pizza>;
   Pizza(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Pizza() = default;
@@ -236,6 +239,7 @@ class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
  private:
   friend ::fidl::internal::CodableBase<Pasta>;
   Pasta(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Pasta() = default;
@@ -282,6 +286,7 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
       TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
       ::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse() =
@@ -339,6 +344,7 @@ class NullableUnionStruct final
  private:
   friend ::fidl::internal::CodableBase<NullableUnionStruct>;
   NullableUnionStruct(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   NullableUnionStruct() = default;
@@ -389,6 +395,7 @@ class UnionSandwich final
  private:
   friend ::fidl::internal::CodableBase<UnionSandwich>;
   UnionSandwich(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   UnionSandwich() = default;
@@ -444,6 +451,7 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
  private:
   friend ::fidl::internal::CodableBase<Empty>;
   Empty(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Empty() = default;
@@ -492,6 +500,18 @@ struct CodingTraits<::fidl_test_union::StructWithNullableXUnion> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_union::StructWithNullableXUnion* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.x1, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_union::StructWithNullableXUnion* value,
@@ -528,6 +548,21 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+              value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.xu, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -558,6 +593,17 @@ struct CodingTraits<::fidl_test_union::Pizza> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_union::Pizza* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.toppings, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::fidl_test_union::Pizza* value,
                      size_t offset) {
@@ -583,6 +629,17 @@ template <>
 struct CodingTraits<::fidl_test_union::Pasta> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_union::Pasta* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.sauce, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::fidl_test_union::Pasta* value,
@@ -619,6 +676,21 @@ struct CodingTraits<
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+              value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.xu, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -651,6 +723,18 @@ struct CodingTraits<::fidl_test_union::NullableUnionStruct> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_union::NullableUnionStruct* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.the_union, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_union::NullableUnionStruct* value,
@@ -677,6 +761,26 @@ template <>
 struct CodingTraits<::fidl_test_union::UnionSandwich> {
   static constexpr size_t inline_size_v1_no_ee = 40;
   static constexpr size_t inline_size_v2 = 32;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_union::UnionSandwich* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.u, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 32
+                                                                           : 24;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -705,6 +809,17 @@ template <>
 struct CodingTraits<::fidl_test_union::Empty> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_union::Empty* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.__reserved, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::fidl_test_union::Empty* value,

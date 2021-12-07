@@ -48,6 +48,7 @@ class StructWithNullableVector final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableVector>;
   StructWithNullableVector(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   StructWithNullableVector() = default;
@@ -93,6 +94,7 @@ class StructWithNullableUnion final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableUnion>;
   StructWithNullableUnion(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   StructWithNullableUnion() = default;
@@ -142,6 +144,7 @@ class StructWithNullableStruct final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableStruct>;
   StructWithNullableStruct(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   StructWithNullableStruct() = default;
@@ -191,6 +194,7 @@ class StructWithNullableString final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableString>;
   StructWithNullableString(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   StructWithNullableString() = default;
@@ -236,6 +240,7 @@ class StructWithNullableRequest final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableRequest>;
   StructWithNullableRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   StructWithNullableRequest() = default;
@@ -289,6 +294,7 @@ class StructWithNullableProtocol final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableProtocol>;
   StructWithNullableProtocol(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   StructWithNullableProtocol() = default;
@@ -343,6 +349,7 @@ class StructWithNullableHandle final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableHandle>;
   StructWithNullableHandle(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   StructWithNullableHandle() = default;
@@ -390,6 +397,7 @@ class SimpleProtocolAddTopResponse final
  private:
   friend ::fidl::internal::CodableBase<SimpleProtocolAddTopResponse>;
   SimpleProtocolAddTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   SimpleProtocolAddTopResponse() = default;
@@ -438,6 +446,7 @@ class SimpleProtocolAddRequest final
  private:
   friend ::fidl::internal::CodableBase<SimpleProtocolAddRequest>;
   SimpleProtocolAddRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   SimpleProtocolAddRequest() = default;
@@ -488,6 +497,7 @@ class Int32Wrapper final : public ::fidl::internal::CodableBase<Int32Wrapper> {
  private:
   friend ::fidl::internal::CodableBase<Int32Wrapper>;
   Int32Wrapper(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Int32Wrapper() = default;
@@ -538,6 +548,18 @@ struct CodingTraits<::fidl_test_nullable::StructWithNullableVector> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::StructWithNullableVector* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_nullable::StructWithNullableVector* value,
@@ -567,6 +589,18 @@ template <>
 struct CodingTraits<::fidl_test_nullable::StructWithNullableUnion> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::StructWithNullableUnion* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -598,6 +632,18 @@ struct CodingTraits<::fidl_test_nullable::StructWithNullableStruct> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::StructWithNullableStruct* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_nullable::StructWithNullableStruct* value,
@@ -627,6 +673,18 @@ template <>
 struct CodingTraits<::fidl_test_nullable::StructWithNullableString> {
   static constexpr size_t inline_size_v1_no_ee = 16;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::StructWithNullableString* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -661,6 +719,22 @@ struct CodingTraits<::fidl_test_nullable::StructWithNullableRequest> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::StructWithNullableRequest* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_nullable::StructWithNullableRequest* value,
@@ -693,6 +767,22 @@ template <>
 struct CodingTraits<::fidl_test_nullable::StructWithNullableProtocol> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::StructWithNullableProtocol* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -727,6 +817,22 @@ struct CodingTraits<::fidl_test_nullable::StructWithNullableHandle> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::StructWithNullableHandle* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_nullable::StructWithNullableHandle* value,
@@ -758,6 +864,18 @@ struct CodingTraits<::fidl_test_nullable::SimpleProtocolAddTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::SimpleProtocolAddTopResponse* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.sum, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_nullable::SimpleProtocolAddTopResponse* value,
@@ -788,6 +906,22 @@ struct CodingTraits<::fidl_test_nullable::SimpleProtocolAddRequest> {
   static constexpr size_t inline_size_v1_no_ee = 8;
   static constexpr size_t inline_size_v2 = 8;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_nullable::SimpleProtocolAddRequest* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.a, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.b, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_nullable::SimpleProtocolAddRequest* value,
@@ -816,6 +950,18 @@ template <>
 struct CodingTraits<::fidl_test_nullable::Int32Wrapper> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_nullable::Int32Wrapper* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.val, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,

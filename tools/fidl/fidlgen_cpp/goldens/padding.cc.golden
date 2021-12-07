@@ -4,6 +4,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding7ByteMiddle::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_padding::Padding7ByteMiddle,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding7ByteMiddle>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding7ByteMiddle::Padding7ByteMiddle(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0),
@@ -12,12 +21,29 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding7ByteEnd::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_padding::Padding7ByteEnd,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding7ByteEnd>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding7ByteEnd::Padding7ByteEnd(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint64_t>(&decoder, 0),
                 ::fidl::DecodeAs<uint8_t>(&decoder, 8)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_padding::Padding6ByteMiddle::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_padding::Padding6ByteMiddle,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding6ByteMiddle>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_padding::Padding6ByteMiddle::Padding6ByteMiddle(
     ::fidl::Decoder& decoder)
@@ -27,12 +53,29 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding6ByteEnd::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_padding::Padding6ByteEnd,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding6ByteEnd>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding6ByteEnd::Padding6ByteEnd(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint64_t>(&decoder, 0),
                 ::fidl::DecodeAs<uint16_t>(&decoder, 8)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_padding::Padding5ByteMiddle::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_padding::Padding5ByteMiddle,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding5ByteMiddle>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_padding::Padding5ByteMiddle::Padding5ByteMiddle(
     ::fidl::Decoder& decoder)
@@ -43,6 +86,14 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding5ByteEnd::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_padding::Padding5ByteEnd,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding5ByteEnd>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding5ByteEnd::Padding5ByteEnd(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint64_t>(&decoder, 0),
                 ::fidl::DecodeAs<uint16_t>(&decoder, 8),
@@ -50,6 +101,15 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_padding::Padding4ByteMiddle::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_padding::Padding4ByteMiddle,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding4ByteMiddle>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_padding::Padding4ByteMiddle::Padding4ByteMiddle(
     ::fidl::Decoder& decoder)
@@ -59,12 +119,31 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding4ByteEnd::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_padding::Padding4ByteEnd,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding4ByteEnd>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding4ByteEnd::Padding4ByteEnd(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint64_t>(&decoder, 0),
                 ::fidl::DecodeAs<uint32_t>(&decoder, 8)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_padding::Padding4ByteAlignmentLength12::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_padding::Padding4ByteAlignmentLength12, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_padding::Padding4ByteAlignmentLength12>::Encode(&encoder,
+                                                                  this, offset);
+}
 
 ::fidl_test_padding::Padding4ByteAlignmentLength12::
     Padding4ByteAlignmentLength12(::fidl::Decoder& decoder)
@@ -76,6 +155,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding3ByteMiddle::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_padding::Padding3ByteMiddle,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding3ByteMiddle>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding3ByteMiddle::Padding3ByteMiddle(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0),
@@ -84,12 +172,29 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding3ByteEnd::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_padding::Padding3ByteEnd,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding3ByteEnd>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding3ByteEnd::Padding3ByteEnd(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0),
                 ::fidl::DecodeAs<uint8_t>(&decoder, 4)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_padding::Padding2ByteMiddle::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_padding::Padding2ByteMiddle,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding2ByteMiddle>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_padding::Padding2ByteMiddle::Padding2ByteMiddle(
     ::fidl::Decoder& decoder)
@@ -99,12 +204,31 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding2ByteEnd::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_padding::Padding2ByteEnd,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding2ByteEnd>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding2ByteEnd::Padding2ByteEnd(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0),
                 ::fidl::DecodeAs<uint16_t>(&decoder, 4)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_padding::Padding2ByteAlignmentLength6::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_padding::Padding2ByteAlignmentLength6, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_padding::Padding2ByteAlignmentLength6>::Encode(&encoder, this,
+                                                                 offset);
+}
 
 ::fidl_test_padding::Padding2ByteAlignmentLength6::Padding2ByteAlignmentLength6(
     ::fidl::Decoder& decoder)
@@ -115,6 +239,15 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_padding::Padding1ByteMiddle::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_padding::Padding1ByteMiddle,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding1ByteMiddle>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_padding::Padding1ByteMiddle::Padding1ByteMiddle(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0),
@@ -122,6 +255,14 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_padding::Padding1ByteEnd::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_padding::Padding1ByteEnd,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_padding::Padding1ByteEnd>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_padding::Padding1ByteEnd::Padding1ByteEnd(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint16_t>(&decoder, 0),

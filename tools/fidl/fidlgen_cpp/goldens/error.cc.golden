@@ -4,12 +4,30 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_error::Example_foo_Response::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_error::Example_foo_Response,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_error::Example_foo_Response>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_error::Example_foo_Response::Example_foo_Response(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_error::ExampleFooTopResponse::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<::fidl_test_error::ExampleFooTopResponse,
+                                 ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_error::ExampleFooTopResponse>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_error::ExampleFooTopResponse::ExampleFooTopResponse(
     ::fidl::Decoder& decoder)
@@ -18,6 +36,14 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_error::ExampleFooRequest::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_error::ExampleFooRequest,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_error::ExampleFooRequest>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_error::ExampleFooRequest::ExampleFooRequest(
     ::fidl::Decoder& decoder)

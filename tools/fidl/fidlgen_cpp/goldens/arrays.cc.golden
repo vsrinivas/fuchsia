@@ -4,11 +4,27 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_arrays::StructSmallArray::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_arrays::StructSmallArray,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_arrays::StructSmallArray>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_arrays::StructSmallArray::StructSmallArray(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::std::array<uint32_t, 2>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_arrays::StructLargeArray::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_arrays::StructLargeArray,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_arrays::StructLargeArray>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_arrays::StructLargeArray::StructLargeArray(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::std::array<uint32_t, 100>>(&decoder, 0)}) {}

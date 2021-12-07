@@ -29,6 +29,7 @@ class ExampleUseOfVectors final
  private:
   friend ::fidl::internal::CodableBase<ExampleUseOfVectors>;
   ExampleUseOfVectors(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ExampleUseOfVectors() = default;
@@ -93,6 +94,24 @@ template <>
 struct CodingTraits<::fidl_test_vectors::ExampleUseOfVectors> {
   static constexpr size_t inline_size_v1_no_ee = 32;
   static constexpr size_t inline_size_v2 = 32;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_vectors::ExampleUseOfVectors* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.vector_of_uint8,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 16
+                                                                           : 16;
+    ::fidl::Encode(encoder, &value->storage_.vector_of_vector_of_bool,
+                   offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,

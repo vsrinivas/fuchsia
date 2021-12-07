@@ -4,6 +4,16 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocolrequest::ParentTakeChildRequestRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocolrequest::ParentTakeChildRequestRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocolrequest::
+                           ParentTakeChildRequestRequest>::Encode(&encoder,
+                                                                  this, offset);
+}
+
 ::fidl_test_protocolrequest::ParentTakeChildRequestRequest::
     ParentTakeChildRequestRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<
@@ -12,6 +22,18 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocolrequest::ParentTakeChildRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocolrequest::ParentTakeChildRequest, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocolrequest::ParentTakeChildRequest>::Encode(&encoder,
+                                                                   this,
+                                                                   offset);
+}
 
 ::fidl_test_protocolrequest::ParentTakeChildRequest::ParentTakeChildRequest(
     ::fidl::Decoder& decoder)
@@ -22,6 +44,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocolrequest::ParentGetChildTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocolrequest::ParentGetChildTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocolrequest::ParentGetChildTopResponse>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
+
 ::fidl_test_protocolrequest::ParentGetChildTopResponse::
     ParentGetChildTopResponse(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<
@@ -30,6 +63,17 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocolrequest::
+                           ParentGetChildRequestTopResponse>::Encode(&encoder,
+                                                                     this,
+                                                                     offset);
+}
 
 ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse::
     ParentGetChildRequestTopResponse(::fidl::Decoder& decoder)

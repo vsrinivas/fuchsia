@@ -4,6 +4,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
 ::fidl_test_unionsandwich::SandwichUnionSize8Alignment4::
     SandwichUnionSize8Alignment4(::fidl::Decoder& decoder)
     : storage_(
@@ -14,6 +25,16 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_unionsandwich::
+                           SandwichUnionSize36Alignment4>::Encode(&encoder,
+                                                                  this, offset);
+}
 
 ::fidl_test_unionsandwich::SandwichUnionSize36Alignment4::
     SandwichUnionSize36Alignment4(::fidl::Decoder& decoder)
@@ -26,6 +47,16 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_unionsandwich::
+                           SandwichUnionSize12Alignment4>::Encode(&encoder,
+                                                                  this, offset);
+}
+
 ::fidl_test_unionsandwich::SandwichUnionSize12Alignment4::
     SandwichUnionSize12Alignment4(::fidl::Decoder& decoder)
     : storage_(
@@ -37,6 +68,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_unionsandwich::StructSize16Alignment8::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_unionsandwich::StructSize16Alignment8, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_unionsandwich::StructSize16Alignment8>::Encode(&encoder, this,
+                                                                 offset);
+}
+
 ::fidl_test_unionsandwich::StructSize16Alignment8::StructSize16Alignment8(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint64_t>(&decoder, 0),
@@ -44,6 +86,16 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_unionsandwich::
+                           SandwichUnionSize24Alignment8>::Encode(&encoder,
+                                                                  this, offset);
+}
 
 ::fidl_test_unionsandwich::SandwichUnionSize24Alignment8::
     SandwichUnionSize24Alignment8(::fidl::Decoder& decoder)

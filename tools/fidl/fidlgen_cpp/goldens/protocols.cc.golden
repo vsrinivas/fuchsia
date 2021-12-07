@@ -4,12 +4,32 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::WithErrorSyntax_HandleInResult_Response::
     WithErrorSyntax_HandleInResult_Response(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::zx::handle>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse::
     WithErrorSyntaxHandleInResultTopResponse(::fidl::Decoder& decoder)
@@ -20,12 +40,34 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse::
     HandleRightsProtocolResponseMethodTopResponse(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::zx::socket>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest::
     HandleRightsProtocolResponseMethodRequest(::fidl::Decoder& decoder)
@@ -34,12 +76,34 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest::
     HandleRightsProtocolNoResponseMethodRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::zx::socket>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::HandleRightsProtocolAnEventRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::HandleRightsProtocolAnEventRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocols::
+                           HandleRightsProtocolAnEventRequest>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
 
 ::fidl_test_protocols::HandleRightsProtocolAnEventRequest::
     HandleRightsProtocolAnEventRequest(::fidl::Decoder& decoder)
@@ -48,12 +112,33 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::ChannelProtocolTakeHandleRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::ChannelProtocolTakeHandleRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolTakeHandleRequest>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
 ::fidl_test_protocols::ChannelProtocolTakeHandleRequest::
     ChannelProtocolTakeHandleRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::zx::handle>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse::
     ChannelProtocolMutateSocketTopResponse(::fidl::Decoder& decoder)
@@ -62,12 +147,33 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::ChannelProtocolMutateSocketRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::ChannelProtocolMutateSocketRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocols::
+                           ChannelProtocolMutateSocketRequest>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
 ::fidl_test_protocols::ChannelProtocolMutateSocketRequest::
     ChannelProtocolMutateSocketRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::zx::socket>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse::
     WithProtocolEndsServerEndsTopResponse(::fidl::Decoder& decoder)
@@ -77,6 +183,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithProtocolEndsServerEndsRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::WithProtocolEndsServerEndsRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocols::
+                           WithProtocolEndsServerEndsRequest>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
+
 ::fidl_test_protocols::WithProtocolEndsServerEndsRequest::
     WithProtocolEndsServerEndsRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::fidl::InterfaceRequest<
@@ -84,6 +201,16 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse::
     WithProtocolEndsClientEndsTopResponse(::fidl::Decoder& decoder)
@@ -93,6 +220,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithProtocolEndsClientEndsRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::WithProtocolEndsClientEndsRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocols::
+                           WithProtocolEndsClientEndsRequest>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
+
 ::fidl_test_protocols::WithProtocolEndsClientEndsRequest::
     WithProtocolEndsClientEndsRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::fidl::InterfaceHandle<
@@ -100,6 +238,17 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::WithErrorSyntax_ResponseAsStruct_Response::
     WithErrorSyntax_ResponseAsStruct_Response(::fidl::Decoder& decoder)
@@ -110,6 +259,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse::
     WithErrorSyntaxResponseAsStructTopResponse(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<
@@ -119,12 +279,34 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::WithErrorSyntax_ErrorAsPrimitive_Response::
     WithErrorSyntax_ErrorAsPrimitive_Response(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse::
     WithErrorSyntaxErrorAsPrimitiveTopResponse(::fidl::Decoder& decoder)
@@ -135,12 +317,36 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::WithErrorSyntax_ErrorAsEnum_Response::
     WithErrorSyntax_ErrorAsEnum_Response(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::
+    WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::
+        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseWithRequestWithResponseTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::
     WithAndWithoutRequestResponseWithRequestWithResponseTopResponse::
@@ -151,6 +357,19 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::
+    WithAndWithoutRequestResponseWithRequestWithResponseRequest::
+        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::
+                    WithAndWithoutRequestResponseWithRequestWithResponseRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::
     WithAndWithoutRequestResponseWithRequestWithResponseRequest::
         WithAndWithoutRequestResponseWithRequestWithResponseRequest(
@@ -159,6 +378,19 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::
+    WithAndWithoutRequestResponseWithRequestNoResponseRequest::
+        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::
+                    WithAndWithoutRequestResponseWithRequestNoResponseRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::
     WithAndWithoutRequestResponseWithRequestNoResponseRequest::
@@ -169,6 +401,20 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::
+    WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::
+        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseWithRequestEmptyResponseRequest,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::
     WithAndWithoutRequestResponseWithRequestEmptyResponseRequest::
         WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
@@ -178,12 +424,39 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::
+                    WithAndWithoutRequestResponseOnWithResponseRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseOnWithResponseRequest>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
+
 ::fidl_test_protocols::WithAndWithoutRequestResponseOnWithResponseRequest::
     WithAndWithoutRequestResponseOnWithResponseRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::
+    WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::
+        EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::
+              WithAndWithoutRequestResponseNoRequestWithResponseTopResponse,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>::
+      Encode(&encoder, this, offset);
+}
 
 ::fidl_test_protocols::
     WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::
@@ -194,12 +467,34 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::TransitionalRequestTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::TransitionalRequestTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::TransitionalRequestTopResponse>::Encode(&encoder,
+                                                                     this,
+                                                                     offset);
+}
+
 ::fidl_test_protocols::TransitionalRequestTopResponse::
     TransitionalRequestTopResponse(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::TransitionalRequestRequest::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::TransitionalRequestRequest, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::TransitionalRequestRequest>::Encode(&encoder, this,
+                                                                 offset);
+}
 
 ::fidl_test_protocols::TransitionalRequestRequest::TransitionalRequestRequest(
     ::fidl::Decoder& decoder)
@@ -208,6 +503,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::TransitionalOneWayRequest::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::TransitionalOneWayRequest, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::TransitionalOneWayRequest>::Encode(&encoder, this,
+                                                                offset);
+}
+
 ::fidl_test_protocols::TransitionalOneWayRequest::TransitionalOneWayRequest(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
@@ -215,12 +521,33 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::TransitionalEventRequest::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::TransitionalEventRequest, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<::fidl_test_protocols::TransitionalEventRequest>::Encode(
+      &encoder, this, offset);
+}
+
 ::fidl_test_protocols::TransitionalEventRequest::TransitionalEventRequest(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::MethodWithUnionUnionMethodRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::MethodWithUnionUnionMethodRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocols::
+                           MethodWithUnionUnionMethodRequest>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
 
 ::fidl_test_protocols::MethodWithUnionUnionMethodRequest::
     MethodWithUnionUnionMethodRequest(::fidl::Decoder& decoder)
@@ -230,6 +557,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::SyscallProtocolMethodCRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::SyscallProtocolMethodCRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::SyscallProtocolMethodCRequest>::Encode(&encoder,
+                                                                    this,
+                                                                    offset);
+}
+
 ::fidl_test_protocols::SyscallProtocolMethodCRequest::
     SyscallProtocolMethodCRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0),
@@ -237,6 +575,14 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::ProtocolEnds::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_protocols::ProtocolEnds,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocols::ProtocolEnds>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_protocols::ProtocolEnds::ProtocolEnds(::fidl::Decoder& decoder)
     : storage_(
@@ -253,6 +599,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::
+                    WithProtocolEndsStructContainingEndsTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse::
     WithProtocolEndsStructContainingEndsTopResponse(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::fidl_test_protocols::ProtocolEnds>(&decoder,
@@ -261,6 +618,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest,
+          ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest::
     WithProtocolEndsStructContainingEndsRequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::fidl_test_protocols::ProtocolEnds>(&decoder,
@@ -268,6 +636,18 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::ManyParametersFifteenRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::ManyParametersFifteenRequest, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::ManyParametersFifteenRequest>::Encode(&encoder,
+                                                                   this,
+                                                                   offset);
+}
 
 ::fidl_test_protocols::ManyParametersFifteenRequest::
     ManyParametersFifteenRequest(::fidl::Decoder& decoder)
@@ -290,6 +670,16 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse>::
+      Encode(&encoder, this, offset);
+}
+
 ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse::
     WithErrorSyntaxErrorAsEnumTopResponse(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<
@@ -299,12 +689,34 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::ChannelProtocolMethodBTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::ChannelProtocolMethodBTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_protocols::
+                           ChannelProtocolMethodBTopResponse>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
+
 ::fidl_test_protocols::ChannelProtocolMethodBTopResponse::
     ChannelProtocolMethodBTopResponse(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::ChannelProtocolMethodBRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::ChannelProtocolMethodBRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolMethodBRequest>::Encode(&encoder,
+                                                                    this,
+                                                                    offset);
+}
 
 ::fidl_test_protocols::ChannelProtocolMethodBRequest::
     ChannelProtocolMethodBRequest(::fidl::Decoder& decoder)
@@ -314,6 +726,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_protocols::ChannelProtocolMethodARequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_protocols::ChannelProtocolMethodARequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolMethodARequest>::Encode(&encoder,
+                                                                    this,
+                                                                    offset);
+}
+
 ::fidl_test_protocols::ChannelProtocolMethodARequest::
     ChannelProtocolMethodARequest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<int64_t>(&decoder, 0),
@@ -321,6 +744,18 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_protocols::ChannelProtocolEventARequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(
+      ::fidl::EncodingInlineSize<
+          ::fidl_test_protocols::ChannelProtocolEventARequest, ::fidl::Encoder>(
+          &encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_protocols::ChannelProtocolEventARequest>::Encode(&encoder,
+                                                                   this,
+                                                                   offset);
+}
 
 ::fidl_test_protocols::ChannelProtocolEventARequest::
     ChannelProtocolEventARequest(::fidl::Decoder& decoder)

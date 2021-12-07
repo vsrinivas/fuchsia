@@ -54,6 +54,7 @@ class TableData final : public ::fidl::internal::CodableBase<TableData> {
  private:
   friend ::fidl::internal::CodableBase<TableData>;
   TableData(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   TableData() = default;
@@ -98,6 +99,7 @@ class SomeProtocolSomeMethodRequest final
  private:
   friend ::fidl::internal::CodableBase<SomeProtocolSomeMethodRequest>;
   SomeProtocolSomeMethodRequest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   SomeProtocolSomeMethodRequest() = default;
@@ -162,6 +164,7 @@ class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
  private:
   friend ::fidl::internal::CodableBase<OverrideTest>;
   OverrideTest(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   OverrideTest() = default;
@@ -227,6 +230,7 @@ class SomeProtocol_SomeMethod_Response final
  private:
   friend ::fidl::internal::CodableBase<SomeProtocol_SomeMethod_Response>;
   SomeProtocol_SomeMethod_Response(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   SomeProtocol_SomeMethod_Response() = default;
@@ -278,6 +282,7 @@ class SomeProtocolSomeMethodTopResponse final
  private:
   friend ::fidl::internal::CodableBase<SomeProtocolSomeMethodTopResponse>;
   SomeProtocolSomeMethodTopResponse(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   SomeProtocolSomeMethodTopResponse() = default;
@@ -334,6 +339,18 @@ struct CodingTraits<::fidl_test_anonymous::TableData> {
   static constexpr size_t inline_size_v1_no_ee = 1;
   static constexpr size_t inline_size_v2 = 1;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_anonymous::TableData* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.data, offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
                      ::fidl_test_anonymous::TableData* value, size_t offset) {
@@ -364,6 +381,25 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodRequest> {
   static constexpr size_t inline_size_v1_no_ee = 40;
   static constexpr size_t inline_size_v2 = 32;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.union_member,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
+                                                                           : 16;
+    ::fidl::Encode(encoder, &value->storage_.table_member,
+                   offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -393,6 +429,26 @@ template <>
 struct CodingTraits<::fidl_test_anonymous::OverrideTest> {
   static constexpr size_t inline_size_v1_no_ee = 56;
   static constexpr size_t inline_size_v2 = 40;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_anonymous::OverrideTest* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.op, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.left, offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 32
+                                                                           : 24;
+    ::fidl::Encode(encoder, &value->storage_.right, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,
@@ -427,6 +483,20 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocol_SomeMethod_Response> {
   static constexpr size_t inline_size_v1_no_ee = 4;
   static constexpr size_t inline_size_v2 = 4;
 
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.bits_member,
+                   offset + field_offset);
+  }
+
   template <typename DecoderImpl>
   static void Decode(
       DecoderImpl* decoder,
@@ -458,6 +528,19 @@ template <>
 struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse> {
   static constexpr size_t inline_size_v1_no_ee = 24;
   static constexpr size_t inline_size_v2 = 16;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse* value,
+      size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.result, offset + field_offset);
+  }
 
   template <typename DecoderImpl>
   static void Decode(

@@ -95,6 +95,7 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
  private:
   friend ::fidl::internal::CodableBase<Handles>;
   Handles(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   Handles() = default;
@@ -456,6 +457,310 @@ template <>
 struct CodingTraits<::fidl_test_handles::Handles> {
   static constexpr size_t inline_size_v1_no_ee = 132;
   static constexpr size_t inline_size_v2 = 132;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder, ::fidl_test_handles::Handles* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.plain_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 4
+                                                                           : 4;
+    ::fidl::Encode(encoder, &value->storage_.bti_handle, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_BTI,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.channel_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 12
+                                                                           : 12;
+    ::fidl::Encode(encoder, &value->storage_.clock_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CLOCK,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 16
+                                                                           : 16;
+    ::fidl::Encode(encoder, &value->storage_.debuglog_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_LOG,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 20
+                                                                           : 20;
+    ::fidl::Encode(encoder, &value->storage_.event_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_EVENT,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
+                                                                           : 24;
+    ::fidl::Encode(encoder, &value->storage_.eventpair_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_EVENTPAIR,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 28
+                                                                           : 28;
+    ::fidl::Encode(encoder, &value->storage_.exception_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_EXCEPTION,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 32
+                                                                           : 32;
+    ::fidl::Encode(encoder, &value->storage_.fifo_handle, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_FIFO,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 36
+                                                                           : 36;
+    ::fidl::Encode(encoder, &value->storage_.guest_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_GUEST,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 40
+                                                                           : 40;
+    ::fidl::Encode(encoder, &value->storage_.interrupt_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_INTERRUPT,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 44
+                                                                           : 44;
+    ::fidl::Encode(encoder, &value->storage_.iommu_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_IOMMU,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 48
+                                                                           : 48;
+    ::fidl::Encode(encoder, &value->storage_.job_handle, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_JOB,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 52
+                                                                           : 52;
+    ::fidl::Encode(encoder, &value->storage_.pager_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_PAGER,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 56
+                                                                           : 56;
+    ::fidl::Encode(encoder, &value->storage_.pcidevice_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_PCI_DEVICE,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 60
+                                                                           : 60;
+    ::fidl::Encode(encoder, &value->storage_.pmt_handle, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_PMT,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 64
+                                                                           : 64;
+    ::fidl::Encode(encoder, &value->storage_.port_handle, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_PORT,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 68
+                                                                           : 68;
+    ::fidl::Encode(encoder, &value->storage_.process_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_PROCESS,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 72
+                                                                           : 72;
+    ::fidl::Encode(encoder, &value->storage_.profile_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_PROFILE,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 76
+                                                                           : 76;
+    ::fidl::Encode(encoder, &value->storage_.resource_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_RESOURCE,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 80
+                                                                           : 80;
+    ::fidl::Encode(encoder, &value->storage_.socket_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SOCKET,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 84
+                                                                           : 84;
+    ::fidl::Encode(encoder, &value->storage_.suspendtoken_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_SUSPEND_TOKEN,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 88
+                                                                           : 88;
+    ::fidl::Encode(encoder, &value->storage_.thread_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_THREAD,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 92
+                                                                           : 92;
+    ::fidl::Encode(encoder, &value->storage_.timer_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_TIMER,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 96
+                                                                           : 96;
+    ::fidl::Encode(encoder, &value->storage_.vcpu_handle, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VCPU,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
+            ? 100
+            : 100;
+    ::fidl::Encode(encoder, &value->storage_.vmar_handle, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMAR,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
+            ? 104
+            : 104;
+    ::fidl::Encode(encoder, &value->storage_.vmo_handle, offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
+            ? 108
+            : 108;
+    ::fidl::Encode(encoder, &value->storage_.rights_handle,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x5,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
+            ? 112
+            : 112;
+    ::fidl::Encode(encoder, &value->storage_.aliased_plain_handle_field,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_NONE,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
+            ? 116
+            : 116;
+    ::fidl::Encode(encoder, &value->storage_.aliased_subtype_handle_field,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
+            ? 120
+            : 120;
+    ::fidl::Encode(encoder, &value->storage_.aliased_rights_handle_field,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_VMO,
+                       .rights = 0x1,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
+            ? 124
+            : 124;
+    ::fidl::Encode(encoder, &value->storage_.some_protocol,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1
+            ? 128
+            : 128;
+    ::fidl::Encode(encoder, &value->storage_.request_some_protocol,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = ZX_DEFAULT_CHANNEL_RIGHTS,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, ::fidl_test_handles::Handles* value,

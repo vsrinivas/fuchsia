@@ -30,6 +30,7 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}> {
  private:
   friend ::fidl::internal::CodableBase<{{ .Name }}>;
   {{ .Self }}(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   {{ .Self }}() = default;
@@ -72,6 +73,11 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}> {
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 
+void {{ . }}::EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<{{ . }}, ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<{{ . }}>::Encode(&encoder, this, offset);
+}
+
 {{ . }}::{{ .Self }}(::fidl::Decoder& decoder) : storage_({
     {{- range $index, $member := .Members -}}
       {{- if $index }}, {{ end -}}
@@ -112,6 +118,26 @@ template <>
 struct CodingTraits<{{ . }}> {
   static constexpr size_t inline_size_v1_no_ee = {{ .TypeShapeV1.InlineSize }};
   static constexpr size_t inline_size_v2 = {{ .TypeShapeV2.InlineSize }};
+
+  template <class EncoderImpl>
+  static void Encode(EncoderImpl* encoder, {{ . }}* value, size_t offset,
+                     cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    {{- range .Members }}
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ?
+        {{ .OffsetV1 }} : {{ .OffsetV2 }};
+    ::fidl::Encode(
+        encoder,
+        &value->storage_.{{ .Name }},
+        offset + field_offset
+        {{- if .HandleInformation }}, ::fidl::HandleInformation {
+          .object_type = {{ .HandleInformation.ObjectType }},
+          .rights = {{ .HandleInformation.Rights }},
+        }{{ end }}
+    );
+    {{- end }}
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder, {{ . }}* value, size_t offset) {

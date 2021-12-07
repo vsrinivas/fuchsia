@@ -14,8 +14,9 @@ group("coding") {
 test("fidl_cpp_natural_coding_tests_bin") {
   output_name = "fidl_cpp_natural_coding_tests"
   sources = [
-    "natural_response_decoding_test.cc",
-    "natural_struct_decoding_test.cc",
+    "natural_response_test.cc",
+    "natural_struct_test.cc",
+    "test_util.h",
   ]
   deps = [
     "//sdk/lib/stdcompat",

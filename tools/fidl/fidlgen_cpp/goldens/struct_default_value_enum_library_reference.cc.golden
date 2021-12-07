@@ -4,6 +4,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_structdefaultvalueenumlibraryreference::Foo::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_structdefaultvalueenumlibraryreference::Foo,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_structdefaultvalueenumlibraryreference::Foo>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
 ::fidl_test_structdefaultvalueenumlibraryreference::Foo::Foo(
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::dependent::MyEnum>(&decoder, 0)}) {}

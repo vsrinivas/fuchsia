@@ -12,6 +12,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "test_util.h"
+
 namespace {
 
 constexpr fidl_message_header_t kV2Header = {
@@ -88,4 +90,76 @@ TEST(NaturalStructWithHandle, Decode) {
   EXPECT_EQ(event.get(), obj.h().get());
   // Handle is moved into |obj|.
   (void)event.release();
+}
+
+TEST(NaturalStruct, Encode) {
+  // Set up an object.
+  fidl_llcpp_types_test::CopyableStruct obj;
+  obj.set_x(42);
+
+  // Perform encoding.
+  fidl::internal::EncodeResult result = obj.Internal__Encode();
+  ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
+              result.message().error().FormatDescription().c_str());
+
+  // Expected message.
+  // clang-format off
+  std::vector<uint8_t> bytes = {
+      // Payload, a single uint32_t.
+      42, 0, 0, 0, 0, 0, 0, 0,
+  };
+  // clang-format on
+  EXPECT_EQ(bytes.size(), 8U);
+
+  // Check encoded bytes.
+  fidl::OutgoingMessage::CopiedBytes actual = result.message().CopyBytes();
+  ASSERT_NO_FAILURES(
+      fidl_testing::ComparePayload(cpp20::span(actual.data(), actual.size()), cpp20::span(bytes)));
+}
+
+TEST(NaturalStructWithHandle, Encode) {
+  // Expected message.
+  // clang-format off
+  std::vector<uint8_t> bytes = {
+      // Payload, a single handle.
+      0xff, 0xff, 0xff, 0xff, 0, 0, 0, 0,
+  };
+  // clang-format on
+  EXPECT_EQ(bytes.size(), 8U);
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+  zx_handle_t handles[1] = {event.get()};
+  fidl_channel_handle_metadata_t handle_metadata[1] = {
+      fidl_channel_handle_metadata_t{
+          .obj_type = ZX_OBJ_TYPE_EVENT,
+          .rights = ZX_RIGHT_SAME_RIGHTS,
+      },
+  };
+
+  // Set up an object.
+  fidl_llcpp_types_test::HandleStruct obj;
+  obj.set_h(std::move(event));
+
+  // Perform encoding.
+  fidl::internal::EncodeResult result = obj.Internal__Encode();
+  ASSERT_TRUE(result.message().ok(), "Error encoding: %s",
+              result.message().error().FormatDescription().c_str());
+  // Handles are moved.
+  ASSERT_EQ(zx::event(), obj.h());
+
+  // Check encoded bytes.
+  fidl::OutgoingMessage& message = result.message();
+  fidl::OutgoingMessage::CopiedBytes actual = message.CopyBytes();
+  ASSERT_NO_FAILURES(
+      fidl_testing::ComparePayload(cpp20::span(actual.data(), actual.size()), cpp20::span(bytes)));
+
+  // Check encoded handles.
+  ASSERT_EQ(FIDL_TRANSPORT_TYPE_CHANNEL, message.transport_type());
+  ASSERT_NO_FAILURES(fidl_testing::ComparePayload<zx_handle_t>(
+      cpp20::span(message.handles(), message.handle_actual()), cpp20::span(handles)));
+  ASSERT_NO_FAILURES(fidl_testing::ComparePayload<fidl_channel_handle_metadata_t>(
+      cpp20::span(static_cast<fidl_channel_handle_metadata_t*>(message.handle_metadata()),
+                  message.handle_actual()),
+      cpp20::span(handle_metadata)));
 }

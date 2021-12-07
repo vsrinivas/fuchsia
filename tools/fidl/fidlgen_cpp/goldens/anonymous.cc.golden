@@ -4,11 +4,30 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_anonymous::TableData::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_anonymous::TableData,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_anonymous::TableData>::Encode(&encoder, this,
+                                                                 offset);
+}
+
 ::fidl_test_anonymous::TableData::TableData(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_anonymous::SomeProtocolSomeMethodRequest::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_anonymous::SomeProtocolSomeMethodRequest,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest>::Encode(&encoder,
+                                                                    this,
+                                                                    offset);
+}
 
 ::fidl_test_anonymous::SomeProtocolSomeMethodRequest::
     SomeProtocolSomeMethodRequest(::fidl::Decoder& decoder)
@@ -19,6 +38,14 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_anonymous::OverrideTest::EncodeWithoutValidating(
+    ::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<::fidl_test_anonymous::OverrideTest,
+                                           ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_anonymous::OverrideTest>::Encode(
+      &encoder, this, offset);
+}
 
 ::fidl_test_anonymous::OverrideTest::OverrideTest(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::fidl_test_anonymous::Op>(&decoder, 0),
@@ -32,6 +59,17 @@
 
 #ifdef __Fuchsia__
 
+void ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<
+      ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response>::Encode(&encoder,
+                                                                       this,
+                                                                       offset);
+}
+
 ::fidl_test_anonymous::SomeProtocol_SomeMethod_Response::
     SomeProtocol_SomeMethod_Response(::fidl::Decoder& decoder)
     : storage_(
@@ -39,6 +77,17 @@
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
+void ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse::
+    EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset) {
+  encoder.Alloc(::fidl::EncodingInlineSize<
+                ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse,
+                ::fidl::Encoder>(&encoder));
+  ::fidl::CodingTraits<::fidl_test_anonymous::
+                           SomeProtocolSomeMethodTopResponse>::Encode(&encoder,
+                                                                      this,
+                                                                      offset);
+}
 
 ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse::
     SomeProtocolSomeMethodTopResponse(::fidl::Decoder& decoder)

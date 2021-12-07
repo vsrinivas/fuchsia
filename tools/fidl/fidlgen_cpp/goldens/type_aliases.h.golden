@@ -45,6 +45,7 @@ class ExampleOfUseOfAliases final
  private:
   friend ::fidl::internal::CodableBase<ExampleOfUseOfAliases>;
   ExampleOfUseOfAliases(::fidl::Decoder& decoder);
+  void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
   ExampleOfUseOfAliases() = default;
@@ -186,6 +187,67 @@ template <>
 struct CodingTraits<::fidl_test_typealiases::ExampleOfUseOfAliases> {
   static constexpr size_t inline_size_v1_no_ee = 88;
   static constexpr size_t inline_size_v2 = 88;
+
+  template <class EncoderImpl>
+  static void Encode(
+      EncoderImpl* encoder,
+      ::fidl_test_typealiases::ExampleOfUseOfAliases* value, size_t offset,
+      cpp17::optional<HandleInformation> maybe_handle_info = cpp17::nullopt) {
+    [[maybe_unused]] uint32_t field_offset;
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 0
+                                                                           : 0;
+    ::fidl::Encode(encoder, &value->storage_.field_of_u32,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 8
+                                                                           : 8;
+    ::fidl::Encode(encoder, &value->storage_.field_of_vec_of_strings,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 24
+                                                                           : 24;
+    ::fidl::Encode(encoder,
+                   &value->storage_.field_of_vec_of_strings_at_most_nine,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 40
+                                                                           : 40;
+    ::fidl::Encode(encoder, &value->storage_.field_of_vec_of_strings_at_most_5,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 56
+                                                                           : 56;
+    ::fidl::Encode(encoder, &value->storage_.field_of_vec_of_ref_me_at_most_5,
+                   offset + field_offset);
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 72
+                                                                           : 72;
+    ::fidl::Encode(encoder, &value->storage_.field_of_channel,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 76
+                                                                           : 76;
+    ::fidl::Encode(encoder, &value->storage_.field_of_client_end,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = 0x80000000,
+                   });
+    field_offset =
+        encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1 ? 80
+                                                                           : 80;
+    ::fidl::Encode(encoder, &value->storage_.field_of_nullable_client_end,
+                   offset + field_offset,
+                   ::fidl::HandleInformation{
+                       .object_type = ZX_OBJ_TYPE_CHANNEL,
+                       .rights = 0x80000000,
+                   });
+  }
 
   template <typename DecoderImpl>
   static void Decode(DecoderImpl* decoder,

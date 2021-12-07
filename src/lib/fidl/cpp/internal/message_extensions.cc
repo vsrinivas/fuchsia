@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/cpp/encoder.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
@@ -37,6 +38,41 @@ namespace internal {
       ::fidl::BytePart{static_cast<uint8_t*>(c_msg.bytes), c_msg.num_bytes, c_msg.num_bytes},
       ::fidl::HandleInfoPart{handle_storage.data(), c_msg.num_handles, c_msg.num_handles},
   };
+}
+
+::fidl::OutgoingMessage ConvertFromHLCPPOutgoingMessage(
+    const fidl_type_t* type, HLCPPOutgoingMessage&& message, zx_handle_t* handles,
+    fidl_channel_handle_metadata_t* handle_metadata) {
+  const char* error_msg = nullptr;
+  zx_status_t status = message.ValidateWithVersion_InternalMayBreak(DefaultHLCPPEncoderWireFormat(),
+                                                                    type, &error_msg);
+  if (status != ZX_OK) {
+    return fidl::OutgoingMessage(fidl::Result::EncodeError(status, error_msg));
+  }
+
+  for (size_t i = 0; i < message.handles().actual(); i++) {
+    zx_handle_disposition_t handle_disposition = message.handles().data()[i];
+    handles[i] = handle_disposition.handle;
+    handle_metadata[i] = {
+        .obj_type = handle_disposition.type,
+        .rights = handle_disposition.rights,
+    };
+  }
+
+  fidl_outgoing_msg_t c_msg = {
+      .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+      .byte =
+          {
+              .bytes = message.bytes().data(),
+              .handles = handles,
+              .handle_metadata = handle_metadata,
+              .num_bytes = message.bytes().actual(),
+              .num_handles = message.handles().actual(),
+          },
+  };
+  // Ownership will be transferred to |fidl::OutgoingMessage|.
+  message.ClearHandlesUnsafe();
+  return fidl::OutgoingMessage::FromEncodedCMessage(&c_msg);
 }
 
 }  // namespace internal
