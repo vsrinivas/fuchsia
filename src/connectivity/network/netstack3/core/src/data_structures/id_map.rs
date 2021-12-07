@@ -260,7 +260,7 @@ impl<T> IdMap<T> {
                         *tail = new_tail;
                     }
                     None => {
-                        self.freelist = Some(FreeList::singleton(new_tail));
+                        self.freelist = Some(FreeList { head: start_len, tail: new_tail });
                     }
                 }
             }
@@ -287,7 +287,10 @@ impl<T> IdMap<T> {
                 core::mem::replace(self.data.get_mut(ret).unwrap(), IdMapEntry::Allocated(item));
             // Update the head of the freelist.
             match old.freelist_link().next {
-                Some(new_head) => *head = new_head,
+                Some(new_head) => {
+                    *head = new_head;
+                    self.data[new_head].freelist_link_mut().prev = None;
+                }
                 None => self.freelist = None,
             }
             ret
@@ -780,6 +783,28 @@ mod tests {
     }
 
     #[test]
+    fn test_insert_gap() {
+        // Regression test for https://fxbug.dev/89714: a sequence of inserts that creates a run of
+        // free elements with size > 1 followed by removes can result in `freelist` = None even
+        // though `data` contains FreeListLink entries.
+        let mut map = IdMap::new();
+        assert_eq!(map.insert(0, 0), None);
+        assert_eq!(map.insert(3, 5), None);
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(0), free_head(2), free_tail(1), Allocated(5)]);
+        assert_eq!(freelist, &Some(FreeList { head: 1, tail: 2 }));
+
+        assert_eq!(map.push(6), 1);
+        assert_eq!(map.remove(1), Some(6));
+        assert_eq!(map.remove(3), Some(5));
+
+        // The remove() call compresses the list, which leaves just the 0 element.
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(0)]);
+        assert_eq!(freelist, &None);
+    }
+
+    #[test]
     fn test_iter() {
         let mut map = IdMap::new();
         assert_eq!(map.insert(1, 0), None);
@@ -1060,5 +1085,144 @@ mod tests {
             assert_eq!(map1.data, map2.data);
             assert_eq!(map1.freelist, map2.freelist);
         }
+    }
+
+    #[derive(Debug)]
+    enum Operation<K, V> {
+        Get { key: K },
+        Insert { key: K, value: V },
+        Remove { key: K },
+        Push { value: V },
+    }
+
+    impl<V> Operation<usize, V> {
+        fn apply(self, map: &mut IdMap<V>) {
+            match self {
+                Self::Get { key } => {
+                    let _ = map.get(key);
+                }
+                Self::Insert { key, value } => {
+                    let _ = map.insert(key, value);
+                }
+                Self::Remove { key } => {
+                    let _ = map.remove(key);
+                }
+                Self::Push { value } => {
+                    let _ = map.push(value);
+                }
+            }
+        }
+    }
+
+    use proptest::strategy::Strategy;
+
+    fn operation_strategy() -> impl Strategy<Value = Operation<usize, i32>> {
+        let key_strategy = || 0..20usize;
+        // Use a small range for values since we don't do anything fancy with them
+        // so a larger range probably won't expose additional issues.
+        let value_strategy = || 0..10i32;
+
+        proptest::prop_oneof![
+            key_strategy().prop_map(|key| Operation::Get { key }),
+            (key_strategy(), value_strategy())
+                .prop_map(|(key, value)| Operation::Insert { key, value }),
+            key_strategy().prop_map(|key| Operation::Remove { key }),
+            value_strategy().prop_map(|value| Operation::Push { value }),
+        ]
+    }
+
+    /// Searches through the given data entries to identify the free list. Returns the indices of
+    /// elements in the free list in order, panicking if there is any inconsistency in the list.
+    fn find_free_elements<T>(data: &[IdMapEntry<T>]) -> Vec<usize> {
+        let head = data.iter().enumerate().find_map(|(i, e)| match e {
+            IdMapEntry::Free(link) => {
+                let FreeListLink { prev, next: _ } = link;
+                if prev == &None {
+                    Some((i, link))
+                } else {
+                    None
+                }
+            }
+            IdMapEntry::Allocated(_) => None,
+        });
+        let mut found = Vec::new();
+        let mut next = head;
+
+        // Traverse the free list, collecting all indices into `found`.
+        while let Some((index, link)) = next {
+            found.push(index);
+            next = link.next.map(|next_i| {
+                let next_free = data[next_i].freelist_link();
+                assert_eq!(Some(index), next_free.prev, "data[{}] and data[{}]", index, next_i);
+                (next_i, next_free)
+            })
+        }
+
+        // The freelist should contain all of the free data elements.
+        data.iter().enumerate().for_each(|(i, e)| {
+            if e.is_free() {
+                assert!(found.contains(&i), "data[{}] is free but not in the list", i);
+            }
+        });
+        found
+    }
+
+    #[test]
+    fn test_find_free_elements() {
+        let data = vec![Allocated(1), free_tail(2), free(3, 1), free_head(2)];
+        assert_eq!(find_free_elements(&data), vec![3, 2, 1]);
+    }
+
+    #[test]
+    fn test_find_free_elements_none_free() {
+        let data = vec![Allocated(1), Allocated(2), Allocated(3), Allocated(2)];
+        assert_eq!(find_free_elements(&data), vec![]);
+    }
+
+    #[test]
+    #[should_panic(expected = "allocated")]
+    fn test_find_free_elements_includes_allocated() {
+        let data = vec![Allocated(1), free_head(0), free_tail(0)];
+        let _ = find_free_elements(&data);
+    }
+
+    #[test]
+    #[should_panic(expected = "is free but not in the list")]
+    fn test_find_free_elements_in_cycle() {
+        let data = vec![free(2, 1), free(0, 2), free(1, 0), Allocated(5)];
+        let _ = find_free_elements(&data);
+    }
+
+    #[test]
+    #[should_panic(expected = "is free but not in the list")]
+    fn test_find_free_elements_multiple_lists() {
+        let data = vec![free_head(1), free_tail(0), Allocated(13), free_head(4), free_tail(3)];
+        let _ = find_free_elements(&data);
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn test_arbitrary_operations(operations in proptest::collection::vec(operation_strategy(), 10)) {
+            let mut map = IdMap::new();
+            for op in operations {
+                op.apply(&mut map);
+
+                // Now check the invariants that the map should be guaranteeing.
+                let IdMap {data, freelist} = &map;
+
+                match freelist {
+                    None => {
+                        // No freelist means all nodes are allocated.
+                        data.iter().enumerate().for_each(|(i, d)| assert!(d.is_allocated(), "no freelist but data[{}] is free", i));
+                    },
+                    Some(FreeList {head, tail}) => {
+                        let traversed = find_free_elements(data);
+                        assert_eq!(traversed.first(), Some(head));
+                        assert_eq!(traversed.last(), Some(tail));
+                    }
+                }
+            }
+        }
+
     }
 }
