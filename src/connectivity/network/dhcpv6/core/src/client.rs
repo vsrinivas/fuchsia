@@ -2408,7 +2408,7 @@ mod tests {
     use test_case::test_case;
 
     #[test]
-    fn test_information_request_and_reply() {
+    fn send_information_request_and_receive_reply() {
         // Try to start information request with different list of requested options.
         for options in std::array::IntoIter::new([
             Vec::new(),
@@ -2489,7 +2489,7 @@ mod tests {
     }
 
     #[test]
-    fn test_information_request_retransmission() {
+    fn send_information_request_on_retransmission_timeout() {
         let (mut client, actions) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
@@ -2509,7 +2509,7 @@ mod tests {
     }
 
     #[test]
-    fn test_information_request_refresh() {
+    fn send_information_request_on_refresh_timeout() {
         let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
@@ -2557,7 +2557,7 @@ mod tests {
        2,
        vec![std_ip_v6!("::ffff:c00a:2ff"), std_ip_v6!("::ffff:c00a:3ff")],
        vec![v6::OptionCode::DnsServers])]
-    fn test_solicit(
+    fn send_solicit(
         address_count: u32,
         preferred_addresses: Vec<Ipv6Addr>,
         options_to_request: Vec<v6::OptionCode>,
@@ -2573,14 +2573,20 @@ mod tests {
     }
 
     #[test]
-    fn test_preferred_address_count_computation() {
+    fn compute_preferred_address_count() {
         // No preferred addresses configured.
         let got_addresses: HashMap<u32, IdentityAssociation> = (0..)
             .zip(vec![IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff"))].into_iter())
             .collect();
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
-        assert_eq!(compute_preferred_address_count(&got_addresses, &configured_addresses), 0);
-        assert_eq!(compute_preferred_address_count(&HashMap::new(), &configured_addresses), 0);
+        assert_eq!(
+            super::compute_preferred_address_count(&got_addresses, &configured_addresses),
+            0
+        );
+        assert_eq!(
+            super::compute_preferred_address_count(&HashMap::new(), &configured_addresses),
+            0
+        );
 
         // All obtained addresses are preferred addresses.
         let got_addresses: HashMap<u32, IdentityAssociation> = (0..)
@@ -2596,7 +2602,10 @@ mod tests {
             2,
             vec![std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
         );
-        assert_eq!(compute_preferred_address_count(&got_addresses, &configured_addresses), 2);
+        assert_eq!(
+            super::compute_preferred_address_count(&got_addresses, &configured_addresses),
+            2
+        );
 
         // Only one of the obtained addresses is a preferred address.
         let got_addresses: HashMap<u32, IdentityAssociation> = (0..)
@@ -2618,11 +2627,14 @@ mod tests {
                 std_ip_v6!("::ffff:c00a:4ff"),
             ],
         );
-        assert_eq!(compute_preferred_address_count(&got_addresses, &configured_addresses), 1);
+        assert_eq!(
+            super::compute_preferred_address_count(&got_addresses, &configured_addresses),
+            1
+        );
     }
 
     #[test]
-    fn test_advertise_is_complete() {
+    fn advertise_message_is_complete() {
         let preferred_address = std_ip_v6!("::ffff:c00a:1ff");
         let configured_addresses = testutil::to_configured_addresses(2, vec![preferred_address]);
 
@@ -2667,7 +2679,7 @@ mod tests {
     }
 
     #[test]
-    fn test_advertise_ord() {
+    fn advertise_message_ord() {
         let preferred_address = std_ip_v6!("::ffff:c00a:1ff");
         let configured_addresses = testutil::to_configured_addresses(3, vec![preferred_address]);
 
@@ -2720,7 +2732,7 @@ mod tests {
     }
 
     #[test]
-    fn test_receive_complete_advertise_with_max_preference() {
+    fn receive_complete_advertise_with_max_preference() {
         let client_id = v6::duid_uuid();
         let (mut client, _actions) = testutil::start_server_discovery(
             [0, 1, 2],
@@ -2801,7 +2813,7 @@ mod tests {
     }
 
     #[test]
-    fn test_select_first_server_while_retransmitting() {
+    fn select_first_server_while_retransmitting() {
         let client_id = v6::duid_uuid();
         let (mut client, _actions) = testutil::start_server_discovery(
             [0, 1, 2],
@@ -2885,7 +2897,7 @@ mod tests {
     }
 
     #[test]
-    fn test_request() {
+    fn send_request() {
         let client_id = v6::duid_uuid();
         let configured_addresses = testutil::to_configured_addresses(3, vec![]);
         let advertised_addresses = [
@@ -2979,7 +2991,7 @@ mod tests {
     }
 
     #[test]
-    fn test_request_reply_failure_status_code() {
+    fn requesting_receive_reply_with_failure_status_code() {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let advertised_addresses = [std_ip_v6!("::ffff:c00a:1ff")];
@@ -3185,7 +3197,7 @@ mod tests {
     }
 
     #[test]
-    fn test_request_reply_ia_not_on_link() {
+    fn requesting_receive_reply_with_ia_not_on_link() {
         let options_to_request = vec![];
         let configured_addresses =
             testutil::to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
@@ -3257,7 +3269,7 @@ mod tests {
     #[test_case(60, 0, false)]
     #[test_case(0, 0, false)]
     #[test_case(30, 60, true)]
-    fn test_process_reply_with_invalid_ia_lifetimes(
+    fn requesting_receive_reply_with_invalid_ia_lifetimes(
         preferred_lifetime: u32,
         valid_lifetime: u32,
         valid_ia: bool,
@@ -3345,8 +3357,9 @@ mod tests {
         }
     }
 
+    // Test that T1/T2 are calculated correctly on receiving a Reply to Request.
     #[test]
-    fn test_t1_t2_calculation() {
+    fn compute_t1_t2_on_reply_to_request() {
         let configured_addresses =
             testutil::to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
         let selected_advertise = AdvertiseMessage::new_default(
@@ -3433,8 +3446,9 @@ mod tests {
         }
     }
 
+    // Test that Request retransmission respects max retransmission count.
     #[test]
-    fn test_request_max_retrans_count() {
+    fn requesting_retransmit_max_retrans_count() {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
         let (mut client, _actions) = testutil::start_server_discovery(
@@ -3610,8 +3624,9 @@ mod tests {
         );
     }
 
+    // Test 4-msg exchange for address assignment.
     #[test]
-    fn test_address_assignment() {
+    fn assign_addresses() {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
         let (mut client, _actions) = testutil::start_server_discovery(
@@ -3762,7 +3777,7 @@ mod tests {
     #[test_case(60, 90, false)]
     #[test_case(60, INFINITY, false)]
     #[test_case(INFINITY, INFINITY, false)]
-    fn test_receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
+    fn receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
         let (mut client, _actions) = testutil::start_server_discovery(
@@ -3842,7 +3857,7 @@ mod tests {
     }
 
     #[test]
-    fn test_request_sol_max_rt() {
+    fn update_sol_max_rt_on_reply_to_request() {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let address = std_ip_v6!("::ffff:c00a:1ff");
@@ -3974,7 +3989,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unexpected_messages_are_ignored() {
+    fn unexpected_messages_are_ignored() {
         let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
@@ -4021,7 +4036,7 @@ mod tests {
     }
 
     #[test]
-    fn test_unexpected_events_are_ignored() {
+    fn unexpected_events_are_ignored() {
         let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
@@ -4077,30 +4092,42 @@ mod tests {
     // NOTE: All comparisons are done on millisecond, so this test is not affected by precision
     // loss from floating point arithmetic.
     #[test]
-    fn test_retransmission_timeout() {
+    fn retransmission_timeout() {
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let initial_rt = Duration::from_secs(1);
         let max_rt = Duration::from_secs(100);
 
         // Start with initial timeout if previous timeout is zero.
-        let t = retransmission_timeout(Duration::from_nanos(0), initial_rt, max_rt, &mut rng);
+        let t =
+            super::retransmission_timeout(Duration::from_nanos(0), initial_rt, max_rt, &mut rng);
         assert_eq!(t.as_millis(), initial_rt.as_millis());
 
         // Use previous timeout when it's not zero and apply the formula.
-        let t = retransmission_timeout(Duration::from_secs(10), initial_rt, max_rt, &mut rng);
+        let t =
+            super::retransmission_timeout(Duration::from_secs(10), initial_rt, max_rt, &mut rng);
         assert_eq!(t, Duration::from_secs(20));
 
         // Cap at max timeout.
-        let t = retransmission_timeout(100 * max_rt, initial_rt, max_rt, &mut rng);
+        let t = super::retransmission_timeout(100 * max_rt, initial_rt, max_rt, &mut rng);
         assert_eq!(t.as_millis(), max_rt.as_millis());
-        let t = retransmission_timeout(MAX_DURATION, initial_rt, max_rt, &mut rng);
+        let t = super::retransmission_timeout(MAX_DURATION, initial_rt, max_rt, &mut rng);
         assert_eq!(t.as_millis(), max_rt.as_millis());
         // Zero max means no cap.
-        let t = retransmission_timeout(100 * max_rt, initial_rt, Duration::from_nanos(0), &mut rng);
+        let t = super::retransmission_timeout(
+            100 * max_rt,
+            initial_rt,
+            Duration::from_nanos(0),
+            &mut rng,
+        );
         assert_eq!(t.as_millis(), (200 * max_rt).as_millis());
         // Overflow durations are clipped.
-        let t = retransmission_timeout(MAX_DURATION, initial_rt, Duration::from_nanos(0), &mut rng);
+        let t = super::retransmission_timeout(
+            MAX_DURATION,
+            initial_rt,
+            Duration::from_nanos(0),
+            &mut rng,
+        );
         assert_eq!(t.as_millis(), MAX_DURATION.as_millis());
 
         // Steps through the range with deterministic randomness, 20% at a time.
@@ -4123,7 +4150,7 @@ mod tests {
         ]
         .iter()
         .for_each(|(rt, want_ms)| {
-            let t = retransmission_timeout(*rt, initial_rt, max_rt, &mut rng);
+            let t = super::retransmission_timeout(*rt, initial_rt, max_rt, &mut rng);
             assert_eq!(t.as_millis(), *want_ms);
         });
     }
@@ -4156,19 +4183,19 @@ mod tests {
         v6::TimeValue::Finite(v6::NonZeroOrMaxU32::new(120).expect("should succeed for non-zero or u32::MAX values"))
     )]
     #[test_case(v6::TimeValue::Infinity, v6::TimeValue::Infinity, v6::TimeValue::Infinity)]
-    fn test_time_value_maybe_get_nonzero_min(
+    fn maybe_get_nonzero_min(
         old_value: v6::TimeValue,
         new_value: v6::TimeValue,
         expected_value: v6::TimeValue,
     ) {
-        assert_eq!(maybe_get_nonzero_min(old_value, new_value), expected_value);
+        assert_eq!(super::maybe_get_nonzero_min(old_value, new_value), expected_value);
     }
 
     #[test_case(INFINITY, T1_MIN_LIFETIME_RATIO, INFINITY)]
     #[test_case(100, T1_MIN_LIFETIME_RATIO, 50)]
     #[test_case(INFINITY, T2_T1_RATIO, INFINITY)]
     #[test_case(INFINITY - 1, T2_T1_RATIO, INFINITY)]
-    fn test_compute_t(min: u32, ratio: Ratio<u32>, expected_t: u32) {
-        assert_eq!(compute_t(min, ratio), expected_t);
+    fn compute_t(min: u32, ratio: Ratio<u32>, expected_t: u32) {
+        assert_eq!(super::compute_t(min, ratio), expected_t);
     }
 }
