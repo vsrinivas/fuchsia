@@ -3661,10 +3661,10 @@ zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offse
   }
   uint32_t pmm_alloc_flags = pmm_alloc_flags_;
   if (with_loaned) {
-    if (!(pmm_alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)) {
+    if (!can_borrow_locked()) {
       return ZX_ERR_NOT_SUPPORTED;
     }
-    pmm_alloc_flags |= PMM_ALLOC_FLAG_MUST_BORROW;
+    pmm_alloc_flags |= PMM_ALLOC_FLAG_CAN_BORROW | PMM_ALLOC_FLAG_MUST_BORROW;
   } else {
     pmm_alloc_flags &= ~PMM_ALLOC_FLAG_CAN_BORROW;
   }
