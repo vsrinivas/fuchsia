@@ -40,6 +40,10 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
                        bool crash_on_guard_failure, async_dispatcher_t* dispatcher);
   void FillUnusedRangeWithGuard(uint64_t start_offset, uint64_t size);
 
+  // Call after InitGuardRegion() (if any), but during the same dispatcher call-out, before
+  // returning to the dispatcher.
+  void SetupUnusedPages();
+
   // TODO(fxbug.dev/13609): Use this for VDEC.
   //
   // This uses a physical VMO as the parent VMO.
@@ -73,6 +77,16 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
 
   bool is_already_cleared_on_allocate() override;
 
+  // When this is set from unit tests only, we skip any operation that's only allowed on contiguous
+  // VMOs, since we don't have a real contiguous VMO, since a fake BTI can't be used to create one.
+  // This ends up limiting the fidelity of the unit tests somewhat; in the long run we probably
+  // should plumb a real BTI to the unit tests somehow.
+  void SetBtiFakeForUnitTests() {
+    ZX_ASSERT(!is_ready());
+    is_bti_fake_ = true;
+  }
+  bool is_bti_fake() { return is_bti_fake_; }
+
   static constexpr zx::duration kDefaultUnusedPageCheckCyclePeriod = zx::sec(600);
 
  private:
@@ -103,6 +117,29 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   void DumpPoolHighWaterMark();
   void TracePoolSize(bool initial_trace);
   uint64_t CalculateLargeContiguousRegionSize();
+
+  // This method iterates over all the sub-regions of an unused region.  The sub-regions are regions
+  // we need to pattern and keep, loan to zircon, or zero.  Any given page that's unused will always
+  // (in any given boot) be pattern, loan, or zero, regardless of the alignment of the unused
+  // region.  This way we'll know which pages are supposed to be patterned, loaned, or zeroed
+  // despite unused regions getting merged/split.
+  //
+  // Depending on settings, some sub-region types won't exist, so their corresponding callable won't
+  // be called.
+  //
+  // The pattern_func, loan_func, and zero_func take different actions depending on calling context,
+  // but generally each func is supposed to handle the pages that are supposed to be patterned,
+  // loaned, or zeroed.  For example, write the pattern or check the pattern, loan the page or
+  // un-loan the page, zero the page or nop.
+  //
+  // All the funcs take const ralloc_region_t&.
+  template <typename F1, typename F2, typename F3>
+  void ForUnusedGuardPatternRanges(const ralloc_region_t& region, F1 pattern_func, F2 loan_func,
+                                   F3 zero_func);
+
+  void OnRegionUnused(const ralloc_region_t& region);
+  zx_status_t CommitRegion(const ralloc_region_t& region);
+
   Owner* const parent_device_{};
   const char* const allocation_name_{};
   const uint64_t pool_id_{};
@@ -127,6 +164,9 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   zx_paddr_t phys_start_{};
   uint64_t size_{};
   bool is_cpu_accessible_{};
+  // Based on the VMO being a normal contiguous VMO (not a physical VMO), and the VMO being
+  // CPU-accessible (for now).
+  bool can_decommit_{};
   bool is_ready_{};
   // True if the allocator can be deleted after it's marked ready.
   bool can_be_torn_down_{};
@@ -143,6 +183,8 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
   inspect::UintProperty used_size_property_;
   inspect::UintProperty allocations_failed_property_;
   inspect::UintProperty last_allocation_failed_timestamp_ns_property_;
+  inspect::UintProperty commits_failed_property_;
+  inspect::UintProperty last_commit_failed_timestamp_ns_property_;
   // Keeps track of how many allocations would have succeeded but failed due to fragmentation.
   inspect::UintProperty allocations_failed_fragmentation_property_;
   // This is the size of a the largest free contiguous region when high_water_mark_property_ was
@@ -182,6 +224,19 @@ class ContiguousPooledMemoryAllocator : public MemoryAllocator {
                     &ContiguousPooledMemoryAllocator::CheckUnusedPagesCallback>
       unused_checker_{this};
   SysmemMetrics& metrics_;
+
+  // Keep < 1% of pages aside for being unused page guard pattern.  The rest get loaned back to
+  // Zircon.
+  static constexpr uint64_t kUnusedGuardPatternPeriodPages = 128;
+  // While we'll typically pattern only 1 page per pattern period and adjust the pattern period to
+  // get the % we want, being able to vary this might potentially help catch a suspected problem
+  // faster; in any case it's simple enough to allow this to be adjusted.
+  static constexpr uint64_t kUnusedToPatternPages = 1;
+  const uint64_t unused_guard_pattern_period_bytes_ =
+      kUnusedGuardPatternPeriodPages * zx_system_get_page_size();
+  const uint64_t unused_to_pattern_bytes_ = kUnusedToPatternPages * zx_system_get_page_size();
+
+  bool is_bti_fake_ = false;
 };
 
 }  // namespace sysmem_driver

@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/zx/clock.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
@@ -18,6 +19,7 @@
 #include "fbl/algorithm.h"
 #include "lib/fidl/llcpp/arena.h"
 #include "macros.h"
+#include "region-alloc/region-alloc.h"
 #include "src/devices/sysmem/metrics/metrics.cb.h"
 
 namespace sysmem_driver {
@@ -41,6 +43,24 @@ fuchsia_sysmem2::wire::HeapProperties BuildHeapProperties(fidl::AnyArena& alloca
   heap_properties.set_need_flush(is_cpu_accessible);
 
   return heap_properties;
+}
+
+// true - a and b have at least one page in common, and the pages in common are returned via out.
+// false - a and b don't have any pages in common and out is unmodified.
+bool Intersect(const ralloc_region_t& a, const ralloc_region_t& b, ralloc_region_t* out) {
+  ZX_DEBUG_ASSERT(out);
+  uint64_t a_base = a.base;
+  uint64_t a_end = a.base + a.size;
+  uint64_t b_base = b.base;
+  uint64_t b_end = b.base + b.size;
+  uint64_t intersected_base = std::max(a_base, b_base);
+  uint64_t intersected_end = std::min(a_end, b_end);
+  if (intersected_end <= intersected_base) {
+    return false;
+  }
+  out->base = intersected_base;
+  out->size = intersected_end - intersected_base;
+  return true;
 }
 
 }  // namespace
@@ -73,6 +93,8 @@ ContiguousPooledMemoryAllocator::ContiguousPooledMemoryAllocator(
   allocations_failed_property_ = node_.CreateUint("allocations_failed", 0);
   last_allocation_failed_timestamp_ns_property_ =
       node_.CreateUint("last_allocation_failed_timestamp_ns", 0);
+  commits_failed_property_ = node_.CreateUint("commits_failed", 0);
+  last_commit_failed_timestamp_ns_property_ = node_.CreateUint("last_commit_failed_timstamp_ns", 0);
   allocations_failed_fragmentation_property_ =
       node_.CreateUint("allocations_failed_fragmentation", 0);
   max_free_at_high_water_property_ = node_.CreateUint("max_free_at_high_water", size);
@@ -135,9 +157,6 @@ void ContiguousPooledMemoryAllocator::InitGuardRegion(size_t guard_region_size,
   for (size_t i = 0; i < min_guard_data_size; i++) {
     guard_region_data_[i] = ((i + 1) % 256);
   }
-  if (unused_pages_guarded_) {
-    FillUnusedRangeWithGuard(0, size_);
-  }
   if (!guard_region_size) {
     return;
   }
@@ -162,19 +181,32 @@ void ContiguousPooledMemoryAllocator::InitGuardRegion(size_t guard_region_size,
   ZX_ASSERT(status == ZX_OK);
 }
 
+void ContiguousPooledMemoryAllocator::SetupUnusedPages() {
+  std::vector<ralloc_region_t> todo;
+  region_allocator_.WalkAvailableRegions([&todo](const ralloc_region_t* region) {
+    todo.emplace_back(*region);
+    return true;
+  });
+  for (auto& region : todo) {
+    OnRegionUnused(region);
+  }
+}
+
 void ContiguousPooledMemoryAllocator::FillUnusedRangeWithGuard(uint64_t start_offset,
                                                                uint64_t size) {
   ZX_DEBUG_ASSERT(unused_check_mapping_);
   ZX_DEBUG_ASSERT(start_offset % zx_system_get_page_size() == 0);
   ZX_DEBUG_ASSERT(size % zx_system_get_page_size() == 0);
+  ZX_DEBUG_ASSERT(unused_guard_pattern_period_bytes_ % zx_system_get_page_size() == 0);
   uint64_t end = start_offset + size;
   uint64_t to_copy_size;
-  for (uint64_t offset = start_offset; offset < end; offset += to_copy_size) {
+  for (uint64_t offset = fbl::round_up(start_offset, unused_guard_pattern_period_bytes_);
+       offset < end; offset += unused_guard_pattern_period_bytes_) {
     to_copy_size = std::min(unused_guard_data_size_, end - offset);
     memcpy(&unused_check_mapping_[offset], guard_region_data_.data(), to_copy_size);
+    zx_cache_flush(&unused_check_mapping_[offset], to_copy_size, ZX_CACHE_FLUSH_DATA);
+    // zx_cache_flush() takes care of dsb sy when __aarch64__.
   }
-  zx_cache_flush(&unused_check_mapping_[start_offset], size, ZX_CACHE_FLUSH_DATA);
-  // zx_cache_flush() takes care of dsb sy when __aarch64__.
 }
 
 ContiguousPooledMemoryAllocator::~ContiguousPooledMemoryAllocator() {
@@ -295,12 +327,21 @@ zx_status_t ContiguousPooledMemoryAllocator::InitCommon(zx::vmo local_contiguous
     LOG(ERROR, "Could not pin memory, status %d", status);
     return status;
   }
-
   phys_start_ = addrs;
+
+  // Since the VMO is contiguous or physical, we don't need to keep the VMO pinned for it to remain
+  // physically contiguous.  A physical VMO can't have any pages decommitted, while a contiguous
+  // VMO can.  In order to decommit pages from a contiguous VMO, we can't have the decommitting
+  // pages pinned (from user mode, ignoring any pinning internal to Zircon).
+  status = pool_pmt_.unpin();
+  // All possible failures are bugs in how we called zx_pmt_unpin().
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+
   contiguous_vmo_ = std::move(local_contiguous_vmo);
+  can_decommit_ = is_cpu_accessible_ && (ZX_INFO_VMO_TYPE(info.flags) == ZX_INFO_VMO_TYPE_PAGED);
+
   ralloc_region_t region = {0, size_};
   region_allocator_.AddRegion(region);
-  // It is intentional here that ~pmt doesn't imply zx_pmt_unpin().  If sysmem dies, we'll reboot.
   return ZX_OK;
 }
 
@@ -336,6 +377,19 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
       // fragmentation.
       allocations_failed_fragmentation_property_.Add(1);
     }
+    return status;
+  }
+
+  // We rely on this commit not destroying existing unused region guard pages.  This commit will
+  // commit the gaps between guard pages.  These gaps are what we previously decommitted.  In
+  // contrast to decommitting, when we commit we don't need to separately commit only the gaps,
+  // since a commit range that also overlaps the unused range guard pages doesn't change the
+  // contents of the already-committed guard pages.
+  status = CommitRegion(*region.get());
+  if (status != ZX_OK) {
+    LOG(WARNING, "CommitRegion() failed (OOM?) - size: %zu status %d", size, status);
+    commits_failed_property_.Add(1);
+    last_commit_failed_timestamp_ns_property_.Set(zx::clock::get_monotonic().get());
     return status;
   }
 
@@ -409,9 +463,7 @@ void ContiguousPooledMemoryAllocator::Delete(zx::vmo parent_vmo) {
   ZX_ASSERT(it != regions_.end());
   auto& region_data = it->second;
   CheckGuardRegionData(region_data);
-  if (unused_pages_guarded_) {
-    FillUnusedRangeWithGuard(region_data.ptr->base, region_data.ptr->size);
-  }
+  OnRegionUnused(*it->second.ptr.get());
   regions_.erase(it);
   // region_data now invalid
   parent_vmo.reset();
@@ -592,30 +644,48 @@ void ContiguousPooledMemoryAllocator::CheckUnusedRange(uint64_t offset, uint64_t
   uint32_t succeeded_count = 0;
   uint32_t failed_count = 0;
   uint32_t page_size = zx_system_get_page_size();
-  uint64_t iter = offset;
-  uint64_t end = offset + size;
   zx_cache_flush(&unused_check_mapping_[offset], size,
                  ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE);
-  uint64_t todo_size;
-  for (iter = offset; iter < end; iter += todo_size) {
-    todo_size = std::min(unused_guard_data_size_, end - iter);
-    ZX_DEBUG_ASSERT(todo_size % page_size == 0);
-    if (unlikely(memcmp(guard_region_data_.data(), &unused_check_mapping_[iter], todo_size))) {
-      ++failed_count;
-      ++failed_guard_region_checks_;
-      // So we don't keep finding the same corruption over and over.
-      if (!and_also_zero) {
-        FillUnusedRangeWithGuard(iter, todo_size);
-      }
-    } else {
-      ++succeeded_count;
+  auto maybe_zero_range = [this, and_also_zero](const ralloc_region_t& range) {
+    if (!and_also_zero) {
+      return;
     }
-    // We zero here because it's faster than zeroing later after we've checked the whole range.  We
-    // don't have to flush here becuase the logical_buffer_collection.cc caller does that.
-    if (and_also_zero) {
-      memset(&unused_check_mapping_[iter], 0x00, todo_size);
-    }
-  }
+    memset(&unused_check_mapping_[range.base], 0x00, range.size);
+  };
+  const ralloc_region_t unused_range{.base = offset, .size = size};
+  ForUnusedGuardPatternRanges(
+      unused_range,
+      /*pattern_func=*/
+      [this, page_size, and_also_zero, &succeeded_count,
+       &failed_count](const ralloc_region_t& range) {
+        uint64_t end = range.base + range.size;
+        uint64_t todo_size;
+        for (uint64_t iter = range.base; iter < end; iter += todo_size) {
+          todo_size = std::min(unused_guard_data_size_, end - iter);
+          ZX_DEBUG_ASSERT(todo_size % page_size == 0);
+          if (unlikely(
+                  memcmp(guard_region_data_.data(), &unused_check_mapping_[iter], todo_size))) {
+            ++failed_count;
+            ++failed_guard_region_checks_;
+            // So we don't keep finding the same corruption over and over.
+            if (!and_also_zero) {
+              FillUnusedRangeWithGuard(iter, todo_size);
+            }
+          } else {
+            ++succeeded_count;
+          }
+          // We zero here because it's faster than zeroing later after we've checked the whole
+          // range.  We don't have to flush here becuase the logical_buffer_collection.cc caller
+          // does that.
+          if (and_also_zero) {
+            // We memset() incrementally for better cache locality (vs. forwarding to
+            // maybe_zero_range to zero the whole incoming range).
+            memset(&unused_check_mapping_[iter], 0x00, todo_size);
+          }
+        }
+      },
+      /*loan_func=*/maybe_zero_range,
+      /*zero_func=*/maybe_zero_range);
   metrics_.LogUnusedPageCheckCounts(succeeded_count, failed_count);
 }
 
@@ -706,6 +776,119 @@ uint64_t ContiguousPooledMemoryAllocator::GetVmoRegionOffsetForTest(const zx::vm
 
 bool ContiguousPooledMemoryAllocator::is_already_cleared_on_allocate() {
   return unused_pages_guarded_;
+}
+
+template <typename F1, typename F2, typename F3>
+void ContiguousPooledMemoryAllocator::ForUnusedGuardPatternRanges(const ralloc_region_t& region,
+                                                                  F1 pattern_func, F2 loan_func,
+                                                                  F3 zero_func) {
+  if (!can_decommit_ && !unused_pages_guarded_) {
+    zero_func(region);
+    return;
+  }
+  if (!can_decommit_) {
+    pattern_func(region);
+    return;
+  }
+  if (!unused_pages_guarded_) {
+    loan_func(region);
+    return;
+  }
+  // We already know that the passed-in region doesn't overlap with any used region.  It may be
+  // adjacent to another unused range.
+  uint64_t region_base = region.base;
+  uint64_t region_end = region.base + region.size;
+  ZX_DEBUG_ASSERT(region_end > region_base);
+  // The "meta pattern" is just a page aligned to unused_guard_pattern_period_ that's kept for
+  // DMA-write-after-free detection purposes, followed by the rest of unused_guard_pattern_period_
+  // that's loaned.  The meta pattern repeats through the whole offset space from 0 to size_, but
+  // only applies to portions of the space which are not currently used.
+  uint64_t meta_pattern_start = fbl::round_down(region_base, unused_guard_pattern_period_bytes_);
+  uint64_t meta_pattern_end = fbl::round_up(region_end, unused_guard_pattern_period_bytes_);
+  for (uint64_t meta_pattern_base = meta_pattern_start; meta_pattern_base < meta_pattern_end;
+       meta_pattern_base += unused_guard_pattern_period_bytes_) {
+    ralloc_region_t raw_keep{
+        .base = meta_pattern_base,
+        .size = unused_to_pattern_bytes_,
+    };
+    ralloc_region_t keep;
+    if (Intersect(raw_keep, region, &keep)) {
+      pattern_func(keep);
+    }
+
+    ralloc_region_t raw_loan{
+        .base = raw_keep.base + raw_keep.size,
+        .size = unused_guard_pattern_period_bytes_ - unused_to_pattern_bytes_,
+    };
+    ralloc_region_t loan;
+    if (Intersect(raw_loan, region, &loan)) {
+      loan_func(loan);
+    }
+  }
+}
+
+void ContiguousPooledMemoryAllocator::OnRegionUnused(const ralloc_region_t& region) {
+  ForUnusedGuardPatternRanges(
+      region,
+      /*pattern_func=*/
+      [this](const ralloc_region_t& pattern_range) {
+        ZX_DEBUG_ASSERT(unused_pages_guarded_);
+        FillUnusedRangeWithGuard(pattern_range.base, pattern_range.size);
+      },
+      /*loan_func=*/
+      [this](const ralloc_region_t& loan_range) {
+        ZX_DEBUG_ASSERT(can_decommit_);
+        zx_status_t zero_status = ZX_OK;
+        zx_status_t decommit_status = contiguous_vmo_.op_range(ZX_VMO_OP_DECOMMIT, loan_range.base,
+                                                               loan_range.size, nullptr, 0);
+        if (decommit_status != ZX_OK) {
+          // sysmem only calls the current method on one thread
+          static zx::time next_log_time = zx::time::infinite_past();
+          zx::time now = zx::clock::get_monotonic();
+          if (now >= next_log_time) {
+            LOG(INFO,
+                "(log rate limited) ZX_VMO_OP_DECOMMIT failed on contiguous VMO - decommit_status: "
+                "%d",
+                decommit_status);
+            next_log_time = now + zx::sec(30);
+          }
+          // If we can't decommit (unexpected), we try to zero before giving up.  Overall, we rely
+          // on OnRegionUnused() to logically zero.  If we also can't zero, we assert.  The decommit
+          // is not expected to fail unless decommit of contiguous VMO pages is disabled via kernel
+          // command line flag.  The zero op is never expected to fail.
+          zero_status = contiguous_vmo_.op_range(ZX_VMO_OP_ZERO, loan_range.base, loan_range.size,
+                                                 nullptr, 0);
+          // We don't expect DECOMMIT or ZERO to ever fail.
+          ZX_ASSERT_MSG(zero_status == ZX_OK,
+                        "ZX_VMO_OP_DECOMMIT and ZX_VMO_OP_ZERO both failed - zero_status: %d\n",
+                        zero_status);
+        }
+      },
+      /*zero_func=*/
+      [this](const ralloc_region_t& zero_range) {
+        ZX_DEBUG_ASSERT(!can_decommit_);
+        ZX_DEBUG_ASSERT(!unused_pages_guarded_);
+        if (!is_cpu_accessible_) {
+          // TODO(fxbug.dev/34590): Zero secure/protected VMOs.
+          return;
+        }
+        // We don't use unused_check_mapping_ for this for now, and since this case isn't expected
+        // to happen outside of local testing (at least for now), we don't need to optimize this.
+        zx_status_t zero_status =
+            contiguous_vmo_.op_range(ZX_VMO_OP_ZERO, zero_range.base, zero_range.size, nullptr, 0);
+        // This isn't expected to fail, and we don't expect to be here outside of local testing.
+        ZX_ASSERT_MSG(zero_status == ZX_OK, "ZX_VMO_OP_ZERO failed - zero_status: %d\n",
+                      zero_status);
+      });
+}
+
+zx_status_t ContiguousPooledMemoryAllocator::CommitRegion(const ralloc_region_t& region) {
+  if (!can_decommit_) {
+    return ZX_OK;
+  }
+  zx_status_t status =
+      contiguous_vmo_.op_range(ZX_VMO_OP_COMMIT, region.base, region.size, nullptr, 0);
+  return status;
 }
 
 }  // namespace sysmem_driver

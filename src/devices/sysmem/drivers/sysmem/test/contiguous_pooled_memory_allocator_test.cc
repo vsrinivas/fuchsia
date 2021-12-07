@@ -22,10 +22,7 @@ namespace {
 
 class FakeOwner : public MemoryAllocator::Owner {
  public:
-  explicit FakeOwner(inspect::Node* heap_node)
-      : heap_node_(heap_node)
-
-  {
+  explicit FakeOwner(inspect::Node* heap_node) : heap_node_(heap_node) {
     EXPECT_OK(fake_bti_create(bti_.reset_and_get_address()));
   }
 
@@ -56,6 +53,16 @@ class ContiguousPooledSystem : public zxtest::Test {
     // nothing else to do here
   }
 
+  zx_status_t PrepareAllocator() {
+    zx_status_t status = allocator_.Init();
+    if (status != ZX_OK) {
+      return status;
+    }
+    allocator_.SetBtiFakeForUnitTests();
+    allocator_.set_ready();
+    return ZX_OK;
+  }
+
  protected:
   static constexpr uint32_t kVmoSize = 4096;
   static constexpr uint32_t kVmoCount = 1024;
@@ -68,8 +75,7 @@ class ContiguousPooledSystem : public zxtest::Test {
 };
 
 TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {
-  EXPECT_OK(allocator_.Init());
-  allocator_.set_ready();
+  EXPECT_OK(PrepareAllocator());
 
   char name[ZX_MAX_NAME_LEN] = {};
   EXPECT_OK(allocator_.GetPoolVmoForTest().get_property(ZX_PROP_NAME, name, sizeof(name)));
@@ -83,8 +89,7 @@ TEST_F(ContiguousPooledSystem, VmoNamesAreSet) {
 }
 
 TEST_F(ContiguousPooledSystem, Full) {
-  EXPECT_OK(allocator_.Init());
-  allocator_.set_ready();
+  EXPECT_OK(PrepareAllocator());
 
   auto hierarchy = inspect::ReadFromVmo(inspector_.DuplicateVmo());
   auto* value = hierarchy.value().GetByPath({"test-pool"});
@@ -163,8 +168,7 @@ TEST_F(ContiguousPooledSystem, Full) {
 }
 
 TEST_F(ContiguousPooledSystem, GetPhysicalMemoryInfo) {
-  EXPECT_OK(allocator_.Init());
-  allocator_.set_ready();
+  EXPECT_OK(PrepareAllocator());
 
   zx_paddr_t base;
   size_t size;
@@ -176,6 +180,7 @@ TEST_F(ContiguousPooledSystem, GetPhysicalMemoryInfo) {
 TEST_F(ContiguousPooledSystem, InitPhysical) {
   // Using fake-bti and the FakeOwner above, it won't be a real physical VMO anyway.
   EXPECT_OK(allocator_.InitPhysical(FAKE_BTI_PHYS_ADDR));
+  allocator_.SetBtiFakeForUnitTests();
   allocator_.set_ready();
 
   zx_paddr_t base;
@@ -191,6 +196,7 @@ TEST_F(ContiguousPooledSystem, InitPhysical) {
 
 TEST_F(ContiguousPooledSystem, SetReady) {
   EXPECT_OK(allocator_.Init());
+  allocator_.SetBtiFakeForUnitTests();
   EXPECT_FALSE(allocator_.is_ready());
   zx::vmo vmo;
   EXPECT_EQ(ZX_ERR_BAD_STATE, allocator_.Allocate(kVmoSize, {}, &vmo));
@@ -204,9 +210,12 @@ TEST_F(ContiguousPooledSystem, GuardPages) {
   async::TestLoop loop;
   const uint32_t kGuardRegionSize = zx_system_get_page_size();
   EXPECT_OK(allocator_.Init());
+  allocator_.SetBtiFakeForUnitTests();
   const zx::duration kUnusedPageCheckCyclePeriod = zx::sec(600);
-  allocator_.InitGuardRegion(kGuardRegionSize, true, kUnusedPageCheckCyclePeriod, true, false,
-                             loop.dispatcher());
+  allocator_.InitGuardRegion(kGuardRegionSize, /*unused_pages_guarded=*/false,
+                             kUnusedPageCheckCyclePeriod, /*internal_guard_regions=*/true,
+                             /*crash_on_guard_failure=*/false, loop.dispatcher());
+  allocator_.SetupUnusedPages();
   allocator_.set_ready();
 
   zx::vmo vmo;
@@ -240,9 +249,12 @@ TEST_F(ContiguousPooledSystem, ExternalGuardPages) {
   async::TestLoop loop;
   const uint32_t kGuardRegionSize = zx_system_get_page_size();
   EXPECT_OK(allocator_.Init());
+  allocator_.SetBtiFakeForUnitTests();
   const zx::duration kUnusedPageCheckCyclePeriod = zx::sec(600);
-  allocator_.InitGuardRegion(kGuardRegionSize, true, kUnusedPageCheckCyclePeriod, false, false,
-                             loop.dispatcher());
+  allocator_.InitGuardRegion(kGuardRegionSize, /*unused_pages_guarded=*/false,
+                             kUnusedPageCheckCyclePeriod, /*internal_guard_regions=*/false,
+                             /*crash_on_guard_failure=*/false, loop.dispatcher());
+  allocator_.SetupUnusedPages();
   allocator_.set_ready();
 
   zx::vmo vmo;
@@ -290,6 +302,7 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
   EXPECT_OK(allocator_.Init());
   allocator_.InitGuardRegion(0, true, unused_page_check_cycle_period, false, false,
                              loop.dispatcher());
+  allocator_.SetupUnusedPages();
   allocator_.set_ready();
 
   zx::vmo vmo;
@@ -331,8 +344,7 @@ TEST_F(ContiguousPooledSystem, UnusedGuardPages) {
 }
 
 TEST_F(ContiguousPooledSystem, FreeRegionReporting) {
-  EXPECT_OK(allocator_.Init());
-  allocator_.set_ready();
+  EXPECT_OK(PrepareAllocator());
 
   std::vector<zx::vmo> vmos;
   for (uint32_t i = 0; i < kVmoCount; ++i) {
