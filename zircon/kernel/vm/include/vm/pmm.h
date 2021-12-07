@@ -27,6 +27,7 @@ typedef struct pmm_arena_info {
 } pmm_arena_info_t;
 
 class PhysicalPageBorrowingConfig;
+class LoanSweeper;
 
 #define PMM_ARENA_FLAG_LO_MEM \
   (0x1)  // this arena is contained within architecturally-defined 'low memory'

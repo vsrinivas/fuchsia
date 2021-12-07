@@ -49,6 +49,9 @@ KCOUNTER(boot_memory_bytes, "boot.memory.post_init_free_bytes")
 // The (currently) one and only pmm node
 static PmmNode pmm_node;
 
+// Singleton
+static PhysicalPageBorrowingConfig ppb_config;
+
 static void pmm_fill_free_pages(uint level) { pmm_node.FillFreePagesAndArm(); }
 LK_INIT_HOOK(pmm_fill, &pmm_fill_free_pages, LK_INIT_LEVEL_VM)
 
@@ -168,7 +171,8 @@ PageQueues* pmm_page_queues() { return pmm_node.GetPageQueues(); }
 Evictor* pmm_evictor() { return pmm_node.GetEvictor(); }
 
 PhysicalPageBorrowingConfig* pmm_physical_page_borrowing_config() {
-  return pmm_node.GetPhysicalPageBorrowingConfig();
+  // singleton
+  return &ppb_config;
 }
 
 zx_status_t pmm_init_reclamation(const uint64_t* watermarks, uint8_t watermark_count,

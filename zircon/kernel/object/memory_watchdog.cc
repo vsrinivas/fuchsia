@@ -202,6 +202,7 @@ void MemoryWatchdog::WorkerThread() {
           "total: %zu MiB newest: %zu MiB oldest: %zu MiB\n",
           pager_counts.total * PAGE_SIZE / MB, pager_counts.newest * PAGE_SIZE / MB,
           pager_counts.oldest * PAGE_SIZE / MB);
+      pmm_print_physical_page_borrowing_stats();
     }
 
     // Get a local copy of the atomic. It's possible by the time we read this that we've already

@@ -11,6 +11,7 @@
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
+#include <vm/loan_sweeper.h>
 #include <vm/physical_page_borrowing_config.h>
 #include <vm/pmm.h>
 #include <vm/pmm_checker.h>
@@ -134,8 +135,6 @@ class PmmNode {
 
   Evictor* GetEvictor() { return &evictor_; }
 
-  PhysicalPageBorrowingConfig* GetPhysicalPageBorrowingConfig() { return &ppb_config_; }
-
  private:
   void FreePageHelperLocked(vm_page* page) TA_REQ(lock_);
   void FreeListLocked(list_node* list) TA_REQ(lock_);
@@ -240,7 +239,6 @@ class PmmNode {
   PageQueues page_queues_;
 
   Evictor evictor_;
-  PhysicalPageBorrowingConfig ppb_config_;
 
   bool free_fill_enabled_ TA_GUARDED(lock_) = false;
   PmmChecker checker_ TA_GUARDED(lock_);
