@@ -30,11 +30,25 @@ using ::fuchsia::fuzzer::TargetAdapterSyncPtr;
 
 // Unit tests.
 
+TEST(LLVMTargetAdapterTest, GetParameters) {
+  LLVMTargetAdapter adapter;
+  std::vector<std::string> sent({"foo", "bar", "baz"});
+  adapter.SetParameters(sent);
+
+  auto handler = adapter.GetHandler([&]() {});
+  TargetAdapterSyncPtr ptr;
+  handler(ptr.NewRequest());
+
+  std::vector<std::string> received;
+  EXPECT_EQ(ptr->GetParameters(&received), ZX_OK);
+  EXPECT_EQ(sent, received);
+}
+
 TEST(LLVMTargetAdapterTest, Connect) {
   LLVMTargetAdapter adapter;
 
   sync_completion_t closed;
-  auto handler = adapter.GetHandler([&]() { /* on_close */ sync_completion_signal(&closed); });
+  auto handler = adapter.GetHandler(/* on_close */ [&]() { sync_completion_signal(&closed); });
 
   TargetAdapterSyncPtr ptr;
   handler(ptr.NewRequest());

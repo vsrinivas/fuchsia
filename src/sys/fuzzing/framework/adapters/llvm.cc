@@ -21,9 +21,12 @@ fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler(fit::
       [this](fidl::InterfaceRequest<TargetAdapter> request) { binding_.Bind(std::move(request)); };
 }
 
+void LLVMTargetAdapter::SetParameters(const std::vector<std::string>& parameters) {
+  parameters_ = std::vector<std::string>(parameters.begin(), parameters.end());
+}
+
 void LLVMTargetAdapter::GetParameters(GetParametersCallback callback) {
-  // Stub; actual implementation is in a subsequent CL.
-  callback(std::vector<std::string>());
+  callback(std::vector<std::string>(parameters_.begin(), parameters_.end()));
 }
 
 void LLVMTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,

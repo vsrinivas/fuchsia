@@ -37,6 +37,9 @@ class FakeTargetAdapter final : public TargetAdapter {
   // Provides a request handler for the engine to connect to the target adapter.
   fidl::InterfaceRequestHandler<TargetAdapter> GetHandler();
 
+  // Records the command-line parameters.
+  void SetParameters(const std::vector<std::string>& parameters);
+
   // FIDL methods.
   void GetParameters(GetParametersCallback callback) override;
   void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
@@ -53,6 +56,7 @@ class FakeTargetAdapter final : public TargetAdapter {
 
  private:
   Binding<TargetAdapter> binding_;
+  std::vector<std::string> parameters_;
   SignalCoordinator coordinator_;
   SharedMemory test_input_;
 

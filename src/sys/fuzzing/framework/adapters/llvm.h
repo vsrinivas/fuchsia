@@ -36,6 +36,9 @@ class LLVMTargetAdapter final : public TargetAdapter {
   // |Connect|ed peer, i.e. the engine, disconnects.
   fidl::InterfaceRequestHandler<TargetAdapter> GetHandler(fit::closure on_close);
 
+  // Records the command-line parameters.
+  void SetParameters(const std::vector<std::string>& parameters);
+
   // FIDL methods.
   void GetParameters(GetParametersCallback callback) override;
   void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
@@ -44,6 +47,7 @@ class LLVMTargetAdapter final : public TargetAdapter {
   bool OnSignal(zx_signals_t observed);
 
   Binding<TargetAdapter> binding_;
+  std::vector<std::string> parameters_;
   SignalCoordinator coordinator_;
   fit::closure on_close_;
   SharedMemory test_input_;

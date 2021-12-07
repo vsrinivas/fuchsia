@@ -22,9 +22,12 @@ fidl::InterfaceRequestHandler<TargetAdapter> FakeTargetAdapter::GetHandler() {
   };
 }
 
+void FakeTargetAdapter::SetParameters(const std::vector<std::string>& parameters) {
+  parameters_ = std::vector<std::string>(parameters.begin(), parameters.end());
+}
+
 void FakeTargetAdapter::GetParameters(GetParametersCallback callback) {
-  // Stub; actual implementation is in a subsequent CL.
-  callback(std::vector<std::string>());
+  callback(std::vector<std::string>(parameters_.begin(), parameters_.end()));
 }
 
 void FakeTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,

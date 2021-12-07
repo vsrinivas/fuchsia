@@ -10,6 +10,7 @@
 int main(int argc, char const *argv[]) {
   auto dispatcher = std::make_shared<Dispatcher>();
   fuzzing::LLVMTargetAdapter adapter(dispatcher);
+  adapter.SetParameters(std::vector<std::string>(argv + 1, argv + argc));
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
   context->outgoing()->AddPublicService(
       adapter.GetHandler(/* on_close= */ [&dispatcher]() { dispatcher.Quit(); }));
