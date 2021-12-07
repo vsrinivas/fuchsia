@@ -46,6 +46,7 @@ enum/member fuchsia.element/ProposeElementError.NOT_FOUND 2
 strict enum fuchsia.element/ProposeElementError uint32
 table/member fuchsia.element/Spec.additional_services fuchsia.sys/ServiceList
 table/member fuchsia.element/Spec.annotations vector<fuchsia.element/Annotation>:1024
+table/member fuchsia.element/Spec.arguments vector<string>
 table/member fuchsia.element/Spec.component_url string:4096
 resource table fuchsia.element/Spec
 enum/member fuchsia.element/UpdateAnnotationsError.INVALID_ARGS 1

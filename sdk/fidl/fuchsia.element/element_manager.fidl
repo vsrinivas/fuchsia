@@ -46,6 +46,11 @@ protocol Manager {
     ///   the services ([`fuchsia.sys/ServiceList.provider`] is not supported
     ///   and must be null)
     ///
+    /// If `spec.arguments` is specified,
+    ///
+    /// * `spec.component_url` must point to a CFv1 component
+    ///   (`arguments` is not supported for CFv2 components)
+    ///
     /// + `spec` describes the element to add
     /// + `controller` can be used to observe and affect the lifecycle of the
     ///   element, and to set and get annotations on the element
@@ -56,6 +61,8 @@ protocol Manager {
     ///   - is specified for a CFv2 `spec.component_url`, or
     ///   - does not have a valid [`fuchsia.sys/ServiceList.host_directory`], or
     ///   - contains a non-null [`fuchsia.sys/ServiceList.provider`]
+    ///   if `spec.arguments`:
+    ///   - is specified for a CFv2 `spec.component_url`
     ProposeElement(resource struct {
         spec Spec;
         controller server_end:<Controller, optional>;
@@ -72,6 +79,9 @@ type Spec = resource table {
 
     /// A list of services passed to the Element. Optional.
     3: additional_services fuchsia.sys.ServiceList;
+
+    /// Arguments provided to the component. Optional.
+    4: arguments vector<string:MAX>:MAX;
 };
 
 /// Errors that can be returned when attempting to add elements to a session.
