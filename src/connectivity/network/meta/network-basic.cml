@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    use: [
+    include: [ "//src/connectivity/network/meta/common.shard.cml" ],
+    children: [
         {
-            protocol: "fuchsia.net.virtualization.Control",
-            from: "#network",
+            name: "netcfg",
+            url: "#meta/netcfg-basic.cm",
+            startup: "eager",
         },
     ],
 }

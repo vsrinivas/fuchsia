@@ -7,7 +7,24 @@ import("//src/sys/core/build/core_shard.gni")
 
 fuchsia_component("component") {
   component_name = "network"
-  manifest = "meta/network.cml"
+  manifest = "meta/network-default.cml"
+  deps = [
+    "dhcp:component",
+    "dhcpv6/client:component",
+    "dns:component",
+    "http-client:component",
+    "netcfg:component-advanced",
+    "netstack:component",
+  ]
+}
+
+# TODO(https://fxbug.dev/85450): use subassembly-based product assembly to
+# assemble the network realm from shards depending on the product, rather than
+# creating two separate component manifests and relying on include shards to
+# reduce duplication.
+fuchsia_component("component-basic") {
+  component_name = "network"
+  manifest = "meta/network-basic.cml"
   deps = [
     "dhcp:component",
     "dhcpv6/client:component",
@@ -22,11 +39,9 @@ fuchsia_package("network") {
   deps = [ ":component" ]
 }
 
-# TODO(https://fxbug.dev/87819): Introduce a network-basic component and include
-# it here instead of the regular network realm.
 fuchsia_package("network-basic") {
   package_name = "network"
-  deps = [ ":component" ]
+  deps = [ ":component-basic" ]
 }
 
 core_shard("virtualization-core-shard") {

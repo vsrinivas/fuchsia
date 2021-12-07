@@ -20,11 +20,6 @@
             url: "#meta/http-client.cm",
         },
         {
-            name: "netcfg",
-            url: "#meta/netcfg-basic.cm",
-            startup: "eager",
-        },
-        {
             name: "netstack",
             url: "#meta/netstack.cm",
             on_terminate: "reboot",
