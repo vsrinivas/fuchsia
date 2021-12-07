@@ -16,5 +16,4 @@ group("tests") {
 
 rustc_library("dynfidl") {
   sources = [ "src/lib.rs" ]
-  deps = [ "//src/lib/fidl/rust/fidl" ]
 }

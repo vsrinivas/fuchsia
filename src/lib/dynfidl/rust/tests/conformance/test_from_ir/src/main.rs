@@ -49,7 +49,10 @@ fn main() {
     let mut file_tokens = TokenStream::new();
     file_tokens.extend(quote! {
         use dynfidl::{BasicField, Field, Structure, VectorField};
-        use fidl::encoding::{decode_persistent, encode_persistent, Persistable};
+        use fidl::encoding::{
+            decode_persistent, Context, Encoder, Persistable, PersistentHeader, PersistentMessage,
+            WireFormatVersion, MAGIC_NUMBER_INITIAL,
+        };
         use std::{cmp::PartialEq, fmt::Debug};
 
         #[track_caller]
@@ -57,7 +60,15 @@ fn main() {
             mut domain_value: T,
             structure: Structure,
         ) {
-            let binding_encoded = encode_persistent(&mut domain_value).unwrap();
+            let context = Context { wire_format_version: WireFormatVersion::V2 };
+            let header = PersistentHeader::new_full(&context, MAGIC_NUMBER_INITIAL);
+            let mut message = PersistentMessage { header, body: &mut domain_value };
+            let mut binding_encoded = Vec::new();
+            let mut handles = Vec::new();
+            Encoder::encode(&mut binding_encoded, &mut handles, &mut message)
+                .expect("must be able to encode domain value using rust bindings");
+            assert_eq!(handles.len(), 0, "persistent encoding can't produce any handles");
+
             let dynamic_encoded = structure.encode_persistent();
             assert_eq!(
                 binding_encoded,

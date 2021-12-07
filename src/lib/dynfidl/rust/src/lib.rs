@@ -7,7 +7,6 @@
 //!
 //! [FIDL wire format]: https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format
 
-use fidl::encoding::{create_persistent_header, encode_persistent_header};
 use std::default::Default;
 
 /// A FIDL struct for encoding. Fields are defined in order.
@@ -32,10 +31,15 @@ impl Structure {
     ///
     /// [persistent message encoding]: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0120_standalone_use_of_fidl_wire_format
     pub fn encode_persistent(&self) -> Vec<u8> {
-        // TODO(https://fxbug.dev/86328) we should have our own implementation of this header
-        let mut header = create_persistent_header();
-        let mut buf = encode_persistent_header(&mut header).unwrap();
+        let mut buf = Vec::new();
 
+        // encode the persistent header:
+        buf.push(0); // disambiguator
+        buf.push(1); // current wire format magic number
+        buf.extend(2u16.to_le_bytes()); // v2 wire format
+        buf.extend([0; 4]); // reserved with zeroes
+
+        // encode the struct's fields:
         if self.fields.is_empty() {
             // A structure can be:
             //

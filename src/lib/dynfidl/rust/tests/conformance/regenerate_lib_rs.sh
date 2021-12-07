@@ -44,6 +44,7 @@ fx-command-run build host_x64/dynfidl_conformance_test_from_fidl_ir || ( \
   conformance/Length2StringWrapper \
   conformance/LotsOfVectors \
   conformance/MultipleNonnullableStrings \
+  conformance/MultipleBoundedNonnullableVectorsOfUint32s \
   conformance/MultipleNonnullableVectorsOfUint32s \
   conformance/MultipleShortNonnullableStrings \
   conformance/MultipleShortNullableStrings \
