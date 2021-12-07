@@ -115,6 +115,11 @@ being dispatched. It is suitable for single-threaded and object oriented usage
 styles.
 
 `fidl::WireClient` can only be used with a single-threaded async dispatcher.
+One particular usage of `async::Loop` is creating a single worker thread via
+`loop.StartThread()`, and joining that and shutting down the loop via
+`loop.Shutdown()` from a different thread. Here, two threads are technically
+involved, but this is safe from the perspective of mutual exclusive access, and
+`fidl::WireClient` is designed to allow this usage.
 
 `fidl::WireClient` reports errors via the `on_fidl_error` virtual method of the
 event handler. User-initiated teardown (e.g. by destroying the client) is not
@@ -157,9 +162,42 @@ destroyed - the client binding will be torn down as part of the process, and
 the threading checks performed by `WireClient` are sufficient to prevent this
 class of use-after-frees.
 
+#### Additional use-after-free risks in result callbacks
+
+Pending response callbacks (i.e. those with the signature
+`[] (fidl::WireResponse<Foo>*) { ... }`) are silently discarded when a client
+tears down. In the case of result callbacks (i.e. those with the signature
+`[] (fidl::WireUnownedResult<Foo>&) { ... }`), a cancellation error will be
+asynchronously delivered. Care is needed to ensure any lambda captures are still
+alive. For example, if an object contains a `fidl::WireClient` and captures
+`this` in result callbacks, then manipulating the captured this within the
+result callbacks after destroying the object will lead to use-after-free. One
+way to avoid it is to return immediately if the error was due to destroying the
+`fidl::WireClient` (you may identify it by checking that the error reason is
+`fidl::Reason::kUnbind`). Using the `MyDevice` example above:
+
+```cpp
+void MyDevice::DoOtherThing() {
+  // Capture |this| such that the |MyDevice| instance may be
+  // accessed in the callback.
+  client_.Foo(args, [this] (fidl::WireUnownedResult<Foo>& result) {
+    if (!result.ok()) {
+      if (result.error().reason() == fidl::Reason::kUnbind) {
+        // When we receive a cancellation error, |MyDevice| has already
+        // destructed. The captured |this| pointer is invalid. We must not
+        // access any member objects.
+        return;
+      }
+    }
+    // Safe to proceed to use the |MyDevice|...
+  });
+}
+```
+
 ### WireSharedClient
 
-`fidl::WireSharedClient` implements [solution #3 (two-phase
+`fidl::WireSharedClient` supports [solution #2 (reference
+counting)](#solution_2_ref_counting) and [solution #3 (two-phase
 shutdown)](#solution_3_two_phase_shutdown). Unlike `WireClient` where destroying
 a client immediately guarantees that there are no more **to-user** calls,
 destroying a `WireSharedClient` merely initiates asynchronous bindings teardown.

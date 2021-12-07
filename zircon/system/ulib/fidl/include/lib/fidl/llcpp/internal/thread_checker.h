@@ -27,11 +27,18 @@ class __TA_CAPABILITY("mutex") WorkingThreadChecker final {
  public:
   explicit WorkingThreadChecker(ThreadingPolicy policy) : policy_(policy) {}
 
+  // Checks for exclusive access by checking that the current thread is the
+  // same as the constructing thread.
   void check() const __TA_ACQUIRE() {
     if (policy_ == ThreadingPolicy::kCreateAndTeardownFromDispatcherThread) {
       checker_.lock();
     }
   }
+
+  // Assumes exclusive access without checking threads. This should only be used
+  // when mutual exclusion is guaranteed via other means (e.g. external
+  // synchronization between two threads).
+  void assume_exclusive() const __TA_ACQUIRE() {}
 
  private:
   const ThreadingPolicy policy_;
@@ -44,6 +51,8 @@ class __TA_CAPABILITY("mutex") NoopThreadChecker final {
   explicit NoopThreadChecker(ThreadingPolicy policy) {}
 
   void check() const __TA_ACQUIRE() {}
+
+  void assume_exclusive() const __TA_ACQUIRE() {}
 };
 
 // |ThreadChecker| accepts a threading policy that specifies how it should check

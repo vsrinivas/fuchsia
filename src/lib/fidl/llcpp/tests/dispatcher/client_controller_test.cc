@@ -10,6 +10,7 @@
 #include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
 
+#include "lsan_disabler.h"
 #include "mock_client_impl.h"
 
 using ::fidl_testing::TestProtocol;
@@ -28,14 +29,12 @@ TEST(ClientController, BindingTwicePanics) {
                   fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
 
   ASSERT_DEATH([&] {
-#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
-    // Disable LSAN for this thread. It is expected to leak by way of a crash.
-    __lsan::ScopedDisabler _;
-#endif
-    controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(),
-                    MakeAnyTransport(std::move(h2)), loop.dispatcher(), nullptr,
-                    fidl::AnyTeardownObserver::Noop(),
-                    fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
+    fidl_testing::RunWithLsanDisabled([&] {
+      controller.Bind(std::make_shared<WireClientImpl<TestProtocol>>(),
+                      MakeAnyTransport(std::move(h2)), loop.dispatcher(), nullptr,
+                      fidl::AnyTeardownObserver::Noop(),
+                      fidl::internal::ThreadingPolicy::kCreateAndTeardownFromAnyThread);
+    });
   });
 }
 

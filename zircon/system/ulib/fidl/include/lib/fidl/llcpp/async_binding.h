@@ -182,8 +182,11 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   //
   // If |lifecycle_| is not yet in |MustTeardown|, |info| must be present to
   // specify the teardown reason.
+  //
+  // Always releases |thread_checker_| because the binding (the current object)
+  // is destroyed during this function.
   void PerformTeardown(cpp17::optional<UnbindInfo> info) __TA_REQUIRES(thread_checker_)
-      __TA_EXCLUDES(lock_);
+      __TA_RELEASE(thread_checker_) __TA_EXCLUDES(lock_);
 
   // Override |FinishTeardown| to perform cleanup work at the final stage of
   // binding teardown.
@@ -212,8 +215,11 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   // |FinishTeardown| will be invoked on a dispatcher thread if the dispatcher is
   // running, and will be invoked on the thread that is calling shutdown if the
   // dispatcher is shutting down.
+  //
+  // Always releases |thread_checker_| because the binding (the current object)
+  // is destroyed during this function.
   virtual void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info)
-      __TA_REQUIRES(thread_checker_) = 0;
+      __TA_RELEASE(thread_checker_) __TA_REQUIRES(thread_checker_) = 0;
 
   async_dispatcher_t* dispatcher_ = nullptr;
 

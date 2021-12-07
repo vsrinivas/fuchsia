@@ -88,9 +88,19 @@ void AsyncBinding::MessageHandler(fidl::IncomingMessage& msg,
 }
 
 void AsyncBinding::WaitFailureHandler(UnbindInfo info) {
-  ScopedThreadGuard guard(thread_checker_);
-  ZX_ASSERT(keep_alive_);
+  // When a dispatcher error of |ZX_ERR_CANCELED| happens, it indicates that the
+  // dispatcher is shutting down. We have ensured that the dispatcher is
+  // single-threaded via thread checkers at various places during message
+  // dispatch. Here, we can relax the thread checking since there will not be
+  // any parallel up-calls to user objects during shutdown under a
+  // single-threaded dispatcher.
+  if (info.reason() == fidl::Reason::kDispatcherError && info.status() == ZX_ERR_CANCELED) {
+    thread_checker_.assume_exclusive();
+  } else {
+    thread_checker_.check();
+  }
 
+  ZX_ASSERT(keep_alive_);
   return PerformTeardown(info);
 }
 
@@ -241,9 +251,11 @@ auto AsyncBinding::StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling
       ZX_DEBUG_ASSERT(!binding.unique());
       binding.reset();
 
-      ScopedThreadGuard guard(binding_raw->thread_checker_);
       // At this point, no other thread will touch the internal reference.
       // Either the message handler never started or was canceled.
+      // Therefore, we can relax any thread checking here, since there are no
+      // parallel up-calls to user objects regardless of the current thread.
+      binding_raw->thread_checker_.assume_exclusive();
       binding_raw->PerformTeardown(cpp17::nullopt);
     }
 

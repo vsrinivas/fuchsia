@@ -18,6 +18,7 @@ group("dispatcher") {
 source_set("client_test_helpers") {
   public = [
     "client_checkers.h",
+    "lsan_disabler.h",
     "mock_client_impl.h",
   ]
   testonly = true

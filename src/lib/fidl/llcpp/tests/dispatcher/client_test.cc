@@ -18,10 +18,10 @@
 #include <thread>
 #include <vector>
 
-#include <sanitizer/lsan_interface.h>
 #include <zxtest/zxtest.h>
 
 #include "client_checkers.h"
+#include "lsan_disabler.h"
 #include "mock_client_impl.h"
 
 namespace fidl {
@@ -469,12 +469,7 @@ TEST(WireClient, UseOnDispatcherThread) {
 }
 
 TEST(WireClient, CannotDestroyOnAnotherThread) {
-  // Run our test in a thread with LSAN disabled.
-  std::thread([&] {
-#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
-    // Disable LSAN for this thread. It is expected to leak by way of a crash.
-    __lsan::ScopedDisabler _;
-#endif
+  fidl_testing::RunWithLsanDisabled([&] {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     auto endpoints = fidl::CreateEndpoints<TestProtocol>();
     ASSERT_OK(endpoints.status_value());
@@ -488,16 +483,52 @@ TEST(WireClient, CannotDestroyOnAnotherThread) {
     std::thread foreign_thread([&] { ASSERT_DEATH([&] { client = {}; }); });
     foreign_thread.join();
 #endif
-  }).join();
+  });
+}
+
+TEST(WireClient, CanShutdownLoopFromAnotherThread) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  fidl::WireClient client(std::move(local), loop.dispatcher());
+
+  std::thread foreign_thread([&] { loop.Shutdown(); });
+  foreign_thread.join();
+}
+
+TEST(WireClient, CanShutdownLoopFromAnotherThreadWhileWorkingThreadIsRunning) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  loop.StartThread();
+  fidl::WireClient client(std::move(local), loop.dispatcher());
+
+  // Async teardown work may happen on |foreign_thread| or the worker thread
+  // started by |StartThread|, but we should support both.
+  std::thread foreign_thread([&] { loop.Shutdown(); });
+  foreign_thread.join();
+}
+
+TEST(WireClient, CanShutdownLoopFromAnotherThreadWhileTeardownIsPending) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  auto endpoints = fidl::CreateEndpoints<TestProtocol>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  fidl::WireClient client(std::move(local), loop.dispatcher());
+  client = {};
+
+  // Allow any async teardown work to happen on |foreign_thread|.
+  std::thread foreign_thread([&] { loop.Shutdown(); });
+  foreign_thread.join();
 }
 
 TEST(WireClient, CannotDispatchOnAnotherThread) {
-  // Run our test in a thread with LSAN disabled.
-  std::thread([&] {
-#if __has_feature(address_sanitizer) || __has_feature(leak_sanitizer)
-    // Disable LSAN for this thread. It is expected to leak by way of a crash.
-    __lsan::ScopedDisabler _;
-#endif
+  fidl_testing::RunWithLsanDisabled([&] {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
     auto endpoints = fidl::CreateEndpoints<TestProtocol>();
     ASSERT_OK(endpoints.status_value());
@@ -511,7 +542,7 @@ TEST(WireClient, CannotDispatchOnAnotherThread) {
     std::thread foreign_thread([&] { ASSERT_DEATH([&] { loop.RunUntilIdle(); }); });
     foreign_thread.join();
 #endif
-  }).join();
+  });
 }
 
 }  // namespace
