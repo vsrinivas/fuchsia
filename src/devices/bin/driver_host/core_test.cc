@@ -251,7 +251,6 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
 
       for (auto& child : children) {
         child->set_flag(DEV_FLAG_DEAD);
-        child->vnode.reset();
       }
     }
     // Join the thread running in the background, then run the rest of the tasks locally.
