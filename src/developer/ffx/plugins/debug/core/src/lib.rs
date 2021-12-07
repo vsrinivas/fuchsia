@@ -8,7 +8,7 @@ use {
     std::process::Command,
 };
 
-#[ffx_core::ffx_plugin("debug.enabled")]
+#[ffx_core::ffx_plugin()]
 pub async fn core(cmd: ffx_debug_core_args::CoreCommand) -> Result<()> {
     if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
         log::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);

@@ -43,7 +43,6 @@ impl ProcessArguments {
 }
 
 #[ffx_core::ffx_plugin(
-    "debug.enabled",
     fidl_fuchsia_debugger::DebugAgentProxy = "core/appmgr:out:fuchsia.debugger.DebugAgent"
 )]
 pub async fn fidlcat(
