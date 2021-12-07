@@ -299,6 +299,25 @@ class FlatlandTouchIntegrationTest : public gtest::TestWithEnvironmentFixture {
     touch_source->Watch({}, watch_loops_.at(index));
   }
 
+  void ConnectChildView(fuchsia::ui::composition::FlatlandPtr& flatland,
+                        ViewportCreationToken&& token) {
+    // Let the client_end die.
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    ViewportProperties properties;
+    properties.set_logical_size({kDefaultSize, kDefaultSize});
+
+    const TransformId kTransform{.value = 1};
+    flatland->CreateTransform(kTransform);
+    flatland->SetRootTransform(kTransform);
+
+    const ContentId kContent{.value = 1};
+    flatland->CreateViewport(kContent, std::move(token), std::move(properties),
+                             child_view_watcher.NewRequest());
+    flatland->SetContent(kTransform, kContent);
+
+    BlockingPresent(flatland);
+  }
+
   const uint32_t kDefaultSize = 1;
   bool injector_channel_closed_ = false;
   float display_width_ = 0;
@@ -333,18 +352,8 @@ TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
   });
 
   // Set up the root graph.
-  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
   auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
-  ViewportProperties properties;
-  properties.set_logical_size({kDefaultSize, kDefaultSize});
-  const TransformId kRootTransform{.value = 1};
-  const ContentId kRootContent{.value = 1};
-  root_session_->CreateTransform(kRootTransform);
-  root_session_->CreateViewport(kRootContent, std::move(parent_token), std::move(properties),
-                                child_view_watcher.NewRequest());
-  root_session_->SetRootTransform(kRootTransform);
-  root_session_->SetContent(kRootTransform, kRootContent);
-  BlockingPresent(root_session_);
+  ConnectChildView(root_session_, std::move(parent_token));
 
   // Set up the child view and its TouchSource channel.
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
@@ -384,4 +393,68 @@ TEST_F(FlatlandTouchIntegrationTest, BasicInputTest) {
   }
 }
 
+// Creates a view tree of the form
+// root_view
+//    |
+// parent_view
+//    |
+// child_view
+// The parent's view gets created using CreateView2 but the child's view gets created using
+// CreateView. As a result, the child  will not receive any input events since it does not have an
+// associated ViewRef.
+TEST_F(FlatlandTouchIntegrationTest, ChildCreatedUsingCreateView_DoesNotGetInput) {
+  fuchsia::ui::composition::FlatlandPtr parent_session;
+  fuchsia::ui::pointer::TouchSourcePtr parent_touch_source;
+  parent_touch_source.set_error_handler([](zx_status_t status) {
+    FX_LOGS(ERROR) << "Touch source closed with status: " << zx_status_get_string(status);
+  });
+
+  // Create the parent view using CreateView2 and attach it to |root_session_|. Register the parent
+  // view to receive input events.
+  {
+    auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+    environment_->ConnectToService(parent_session.NewRequest());
+    fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+    ViewBoundProtocols protocols;
+    protocols.set_touch_source(parent_touch_source.NewRequest());
+    auto identity = scenic::NewViewIdentityOnCreation();
+    auto parent_view_ref = fidl::Clone(identity.view_ref);
+
+    ConnectChildView(root_session_, std::move(parent_token));
+
+    parent_session->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
+                                parent_viewport_watcher.NewRequest());
+
+    // The parent's Present call generates a snapshot which includes the ViewRef.
+    BlockingPresent(parent_session);
+    RegisterInjector(fidl::Clone(root_view_ref_), fidl::Clone(parent_view_ref),
+                     DispatchPolicy::TOP_HIT_AND_ANCESTORS_IN_TARGET);
+  }
+
+  // Create the child view using CreateView and attach it to |parent_session|.
+  fuchsia::ui::composition::FlatlandPtr child_session;
+  {
+    auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+    environment_->ConnectToService(child_session.NewRequest());
+
+    ConnectChildView(parent_session, std::move(parent_token));
+
+    fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+    child_session->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+
+    // The child's Present call generates a snapshot which will not include a ViewRef.
+    BlockingPresent(child_session);
+  }
+
+  // Listen for input events.
+  std::vector<TouchEvent> parent_events;
+  StartWatchLoop(parent_touch_source, parent_events);
+  // (0,0) is the origin. The child and the parent both overlap at the origin so they both are
+  // eligible to receive the input event at this point.
+  Inject(0, 0, fupi_EventPhase::ADD);
+  RunLoopUntilIdle();
+
+  // |parent_session| receives the input event.
+  EXPECT_EQ(parent_events.size(), 1u);
+}
 }  // namespace integration_tests

@@ -55,8 +55,9 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
       /* link_resolved = */
       [ref = shared_from_this(), impl, child_view_watcher_map_key](ParentLinkInfo info) mutable {
         *child_view_watcher_map_key = info.child_view_watcher_handle;
-        impl->SetViewRef({.reference = utils::CopyEventpair(info.view_ref->reference)});
-
+        if (info.view_ref != nullptr) {
+          impl->SetViewRef({.reference = utils::CopyEventpair(info.view_ref->reference)});
+        }
         std::scoped_lock lock(ref->map_mutex_);
         ref->child_view_watcher_map_[*child_view_watcher_map_key] = impl;
       },
@@ -79,12 +80,17 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
 
 LinkSystem::ParentLink LinkSystem::CreateParentLink(
     std::shared_ptr<utils::DispatcherHolder> dispatcher_holder, ViewCreationToken token,
-    fuchsia::ui::views::ViewIdentityOnCreation view_identity,
+    std::optional<fuchsia::ui::views::ViewIdentityOnCreation> view_identity,
     fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher,
     TransformHandle child_view_watcher_handle, LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
 
-  auto view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_identity.view_ref));
+  std::shared_ptr<fuchsia::ui::views::ViewRef> view_ref;
+  std::optional<fuchsia::ui::views::ViewRefControl> view_ref_control;
+  if (view_identity.has_value()) {
+    view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_identity->view_ref));
+    view_ref_control = std::move(view_identity->view_ref_control);
+  }
 
   auto impl = std::make_shared<ParentViewportWatcherImpl>(
       dispatcher_holder, std::move(parent_viewport_watcher), error_callback);
@@ -135,12 +141,10 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
       },
       dispatcher_holder);
 
-  return ParentLink({
-      .child_view_watcher_handle = child_view_watcher_handle,
-      .exporter = std::move(exporter),
-      .view_ref = std::move(view_ref),
-      .view_ref_control = std::move(view_identity.view_ref_control),
-  });
+  return ParentLink({.child_view_watcher_handle = child_view_watcher_handle,
+                     .exporter = std::move(exporter),
+                     .view_ref = std::move(view_ref),
+                     .view_ref_control = std::move(view_ref_control)});
 }
 
 void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_topology,

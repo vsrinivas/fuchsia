@@ -7,6 +7,7 @@
 #include <lib/async/time.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_identity.h>
 
 #include <limits>
 
@@ -205,6 +206,8 @@ float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
       return glm::three_over_two_pi<float>();
   }
 }
+
+fuchsia::ui::composition::ViewBoundProtocols NoViewProtocols() { return {}; }
 
 // Testing FlatlandDisplay requires much of the same setup as testing Flatland, so we use the same
 // test fixture class (defined immediately below), but renamed to group FlatlandDisplay tests.
@@ -440,7 +443,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
     properties.set_logical_size({kDefaultSize, kDefaultSize});
     parent->CreateViewport(id, std::move(parent_token), std::move(properties),
                            child_view_watcher->NewRequest());
-    child->CreateView(std::move(child_token), parent_viewport_watcher->NewRequest());
+    child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                       NoViewProtocols(), parent_viewport_watcher->NewRequest());
     PRESENT(parent, true);
     PRESENT(child, true);
 
@@ -472,7 +476,8 @@ class FlatlandTest : public gtest::TestLoopFixture {
         ScheduleUpdateForSession(
             zx::time(0), scheduling::SchedulingIdPair{display->session_id(), present_id}, true));
     display->SetContent(std::move(parent_token), child_view_watcher->NewRequest());
-    child->CreateView(std::move(child_token), parent_viewport_watcher->NewRequest());
+    child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                       NoViewProtocols(), parent_viewport_watcher->NewRequest());
   }
 
   // Creates an image in |flatland| with the specified |image_id| and backing properties.
@@ -1408,7 +1413,8 @@ TEST_F(FlatlandTest, CreateViewReplaceWithoutConnection) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  flatland->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
   ViewportCreationToken parent_token2;
@@ -1416,7 +1422,8 @@ TEST_F(FlatlandTest, CreateViewReplaceWithoutConnection) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token2.value, &child_token2.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher2;
-  flatland->CreateView(std::move(child_token2), parent_viewport_watcher2.NewRequest());
+  flatland->CreateView2(std::move(child_token2), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher2.NewRequest());
 
   RunLoopUntilIdle();
 
@@ -1450,7 +1457,8 @@ TEST_F(FlatlandTest, ParentViewportWatcherReplaceWithConnection) {
 
   // Creating the new ParentViewportWatcher doesn't invalidate either of the old links until
   // Present() is called on the child->
-  child->CreateView(std::move(child_token), parent_viewport_watcher2.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     parent_viewport_watcher2.NewRequest());
 
   RunLoopUntilIdle();
 
@@ -1475,7 +1483,8 @@ TEST_F(FlatlandTest, ParentViewportWatcherUnbindsOnParentDeath) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  flatland->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
   parent_token.value.reset();
@@ -1490,7 +1499,8 @@ TEST_F(FlatlandTest, ParentViewportWatcherUnbindsImmediatelyWithInvalidToken) {
   ViewCreationToken child_token;
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  flatland->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
 
   // The link will be unbound even before Present() is called.
   RunLoopUntilIdle();
@@ -1515,7 +1525,8 @@ TEST_F(FlatlandTest, ReleaseViewSucceedsWithLink) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  flatland->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
   // Killing the peer token does not prevent the instance from releasing view.
@@ -1534,7 +1545,8 @@ TEST_F(FlatlandTest, CreateViewSuccceedsAfterReleaseView) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  flatland->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
   // Killing the peer token does not prevent the instance from releasing view.
@@ -1545,7 +1557,8 @@ TEST_F(FlatlandTest, CreateViewSuccceedsAfterReleaseView) {
   ViewCreationToken child_token2;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token2.value, &child_token2.value));
 
-  flatland->CreateView(std::move(child_token2), parent_viewport_watcher.NewRequest());
+  flatland->CreateView2(std::move(child_token2), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 }
 
@@ -1558,7 +1571,8 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  flatland->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
   // Killing the peer token does not prevent the instance from returning a valid token.
@@ -1574,7 +1588,8 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOrphanedTokenOnParentDeath) {
 
   // But trying to link with that token will immediately fail because it is already orphaned.
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher2;
-  flatland->CreateView(std::move(graph_token), parent_viewport_watcher2.NewRequest());
+  flatland->CreateView2(std::move(graph_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher2.NewRequest());
   PRESENT(flatland, true);
 
   EXPECT_FALSE(parent_viewport_watcher2.is_bound());
@@ -1591,7 +1606,8 @@ TEST_F(FlatlandTest, DISABLED_GraphUnlinkReturnsOriginalToken) {
   const zx_koid_t expected_koid = fsl::GetKoid(child_token.value.get());
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  flatland->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  flatland->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                        NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(flatland, true);
 
   ViewCreationToken graph_token;
@@ -1840,19 +1856,18 @@ TEST_F(FlatlandTest, ChildGetsLayoutUpdateWithoutPresenting) {
                          child_view_watcher.NewRequest());
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     parent_viewport_watcher.NewRequest());
 
   // Request a layout update.
-  bool layout_updated = false;
-  parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-    EXPECT_EQ(1u, info.logical_size().width);
-    EXPECT_EQ(2u, info.logical_size().height);
-    layout_updated = true;
-  });
+  std::optional<LayoutInfo> layout;
+  parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
   // Without even presenting, the child is able to get the initial properties from the parent->
   UpdateLinks(parent->GetRoot());
-  EXPECT_TRUE(layout_updated);
+  EXPECT_TRUE(layout.has_value());
+  EXPECT_EQ(1u, layout->logical_size().width);
+  EXPECT_EQ(2u, layout->logical_size().height);
 }
 
 TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
@@ -1872,7 +1887,8 @@ TEST_F(FlatlandTest, OverwrittenHangingGetsReturnError) {
                          child_view_watcher.NewRequest());
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     parent_viewport_watcher.NewRequest());
   UpdateLinks(parent->GetRoot());
 
   // First layout request should succeed immediately.
@@ -1936,8 +1952,9 @@ TEST_F(FlatlandTest, HangingGetsReturnOnCorrectDispatcher) {
   // Create child link. Use another loop for ParentViewportWatcher channel.
   async::TestLoop parent_viewport_watcher_loop;
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child_ptr->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest(
-                                                    parent_viewport_watcher_loop.dispatcher()));
+  child_ptr->CreateView2(
+      std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+      parent_viewport_watcher.NewRequest(parent_viewport_watcher_loop.dispatcher()));
   EXPECT_TRUE(child_loop.RunUntilIdle());
 
   // Complete linking sessions.
@@ -2000,35 +2017,34 @@ TEST_F(FlatlandTest, ConnectedToDisplayParentPresentsBeforeChild) {
   parent->SetContent(kTransformId, kLinkId);
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     parent_viewport_watcher.NewRequest());
 
   // Request a status update.
-  bool status_updated = false;
-  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
-    EXPECT_EQ(status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
-    status_updated = true;
-  });
+  std::optional<ParentViewportStatus> parent_status;
+  parent_viewport_watcher->GetStatus(
+      [&](ParentViewportStatus status) { parent_status = std::move(status); });
 
   // The child begins disconnected from the display.
   UpdateLinks(parent->GetRoot());
-  EXPECT_TRUE(status_updated);
+  EXPECT_TRUE(parent_status.has_value());
+  EXPECT_EQ(*parent_status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
 
   // The ParentViewportStatus will update when both the parent and child Present().
-  status_updated = false;
-  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
-    EXPECT_EQ(status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
-    status_updated = true;
-  });
+  parent_status.reset();
+  parent_viewport_watcher->GetStatus(
+      [&](ParentViewportStatus status) { parent_status = std::move(status); });
 
   // The parent presents first, no update.
   PRESENT(parent, true);
   UpdateLinks(parent->GetRoot());
-  EXPECT_FALSE(status_updated);
+  EXPECT_FALSE(parent_status.has_value());
 
   // The child presents second and the status updates.
   PRESENT(child, true);
   UpdateLinks(parent->GetRoot());
-  EXPECT_TRUE(status_updated);
+  EXPECT_TRUE(parent_status.has_value());
+  EXPECT_EQ(*parent_status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
@@ -2057,35 +2073,34 @@ TEST_F(FlatlandTest, ConnectedToDisplayChildPresentsBeforeParent) {
   parent->SetContent(kTransformId, kLinkId);
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     parent_viewport_watcher.NewRequest());
 
   // Request a status update.
-  bool status_updated = false;
-  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
-    EXPECT_EQ(status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
-    status_updated = true;
-  });
+  std::optional<ParentViewportStatus> parent_status;
+  parent_viewport_watcher->GetStatus(
+      [&](ParentViewportStatus status) { parent_status = std::move(status); });
 
   // The child begins disconnected from the display.
   UpdateLinks(parent->GetRoot());
-  EXPECT_TRUE(status_updated);
+  EXPECT_TRUE(parent_status.has_value());
+  EXPECT_EQ(*parent_status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
 
   // The ParentViewportStatus will update when both the parent and child Present().
-  status_updated = false;
-  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
-    EXPECT_EQ(status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
-    status_updated = true;
-  });
+  parent_status.reset();
+  parent_viewport_watcher->GetStatus(
+      [&](ParentViewportStatus status) { parent_status = std::move(status); });
 
   // The child presents first, no update.
   PRESENT(child, true);
   UpdateLinks(parent->GetRoot());
-  EXPECT_FALSE(status_updated);
+  EXPECT_FALSE(parent_status.has_value());
 
   // The parent presents second and the status updates.
   PRESENT(parent, true);
   UpdateLinks(parent->GetRoot());
-  EXPECT_TRUE(status_updated);
+  EXPECT_TRUE(parent_status.has_value());
+  EXPECT_EQ(*parent_status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
@@ -2114,38 +2129,37 @@ TEST_F(FlatlandTest, ChildReceivesDisconnectedFromDisplay) {
   parent->SetContent(kTransformId, kLinkId);
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     parent_viewport_watcher.NewRequest());
 
   // The ParentViewportStatus will update when both the parent and child Present().
-  bool status_updated = false;
-  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
-    EXPECT_EQ(status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
-    status_updated = true;
-  });
+  std::optional<ParentViewportStatus> parent_status;
+  parent_viewport_watcher->GetStatus(
+      [&](ParentViewportStatus status) { parent_status = std::move(status); });
 
   PRESENT(child, true);
   PRESENT(parent, true);
   UpdateLinks(parent->GetRoot());
-  EXPECT_TRUE(status_updated);
+  EXPECT_TRUE(parent_status.has_value());
+  EXPECT_EQ(*parent_status, ParentViewportStatus::CONNECTED_TO_DISPLAY);
 
   // The ParentViewportStatus will update again if the parent removes the child link from its
   // topology.
-  status_updated = false;
-  parent_viewport_watcher->GetStatus([&](ParentViewportStatus status) {
-    EXPECT_EQ(status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
-    status_updated = true;
-  });
+  parent_status.reset();
+  parent_viewport_watcher->GetStatus(
+      [&](ParentViewportStatus status) { parent_status = std::move(status); });
 
   parent->SetContent(kTransformId, {0});
   PRESENT(parent, true);
 
   UpdateLinks(parent->GetRoot());
-  EXPECT_TRUE(status_updated);
+  EXPECT_TRUE(parent_status.has_value());
+  EXPECT_EQ(*parent_status, ParentViewportStatus::DISCONNECTED_FROM_DISPLAY);
 }
 
 // This test doesn't use the helper function to create a link, because it tests intermediate steps
 // and timing corner cases.
-TEST_F(FlatlandTest, ValidChildToParentFlow) {
+TEST_F(FlatlandTest, ValidChildToParentFlow_ChildUsedCreateView2) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 
@@ -2163,25 +2177,25 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
                          child_view_watcher.NewRequest());
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child->CreateView(std::move(child_view_token), parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_view_token), scenic::NewViewIdentityOnCreation(),
+                     NoViewProtocols(), parent_viewport_watcher.NewRequest());
 
-  bool status_updated = false;
+  std::optional<ChildViewStatus> child_status;
   child_view_watcher->GetStatus([&](ChildViewStatus status) {
     ASSERT_EQ(ChildViewStatus::CONTENT_HAS_PRESENTED, status);
-    status_updated = true;
+    child_status = std::move(status);
   });
 
   std::optional<fuchsia::ui::views::ViewRef> child_viewref;
   child_view_watcher->GetViewRef(
       [&](fuchsia::ui::views::ViewRef viewref) { child_viewref = std::move(viewref); });
 
-  // The content link status changes as soon as the child presents - the parent does not have to
-  // present.
-  EXPECT_FALSE(status_updated);
+  // ChildViewStatus changes as soon as the child presents. The parent does not have to present.
+  EXPECT_FALSE(child_status.has_value());
 
   PRESENT(child, true);
   UpdateLinks(parent->GetRoot());
-  EXPECT_TRUE(status_updated);
+  EXPECT_TRUE(child_status.has_value());
 
   // Note that although CONTENT_HAS_PRESENTED is signaled, GetViewRef() does not yet return the ref.
   // This is because although the parent and child are connected, neither appears in the global
@@ -2222,6 +2236,38 @@ TEST_F(FlatlandTest, ValidChildToParentFlow) {
   EXPECT_TRUE(child_viewref.value().reference);
 }
 
+TEST_F(FlatlandTest, ValidChildToParentFlow_ChildUsedCreateView) {
+  std::shared_ptr<Flatland> parent = CreateFlatland();
+  std::shared_ptr<Flatland> child = CreateFlatland();
+
+  ViewportCreationToken parent_viewport_token;
+  ViewCreationToken child_view_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_viewport_token.value, &child_view_token.value));
+
+  const ContentId kLinkId = {1};
+  const TransformId kRootTransform = {1};
+
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  ViewportProperties properties;
+  properties.set_logical_size({1, 2});
+  parent->CreateViewport(kLinkId, std::move(parent_viewport_token), std::move(properties),
+                         child_view_watcher.NewRequest());
+
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child->CreateView(std::move(child_view_token), parent_viewport_watcher.NewRequest());
+
+  std::optional<ChildViewStatus> child_status;
+  child_view_watcher->GetStatus([&](ChildViewStatus status) { child_status = std::move(status); });
+
+  // ChildViewStatus changes as soon as the child presents. The parent does not have to present.
+  EXPECT_FALSE(child_status.has_value());
+
+  PRESENT(child, true);
+  UpdateLinks(parent->GetRoot());
+  EXPECT_TRUE(child_status.has_value());
+  ASSERT_EQ(ChildViewStatus::CONTENT_HAS_PRESENTED, *child_status);
+}
+
 TEST_F(FlatlandTest, ContentHasPresentedSignalWaitsForAcquireFences) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
@@ -2239,7 +2285,8 @@ TEST_F(FlatlandTest, ContentHasPresentedSignalWaitsForAcquireFences) {
                          child_view_watcher.NewRequest());
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  child->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     parent_viewport_watcher.NewRequest());
 
   std::optional<ChildViewStatus> cvs;
   child_view_watcher->GetStatus([&cvs](ChildViewStatus status) {
@@ -2247,8 +2294,7 @@ TEST_F(FlatlandTest, ContentHasPresentedSignalWaitsForAcquireFences) {
     cvs = status;
   });
 
-  // The content link status changes as soon as the child presents - the parent does not have to
-  // present.
+  // ChildViewStatus changes as soon as the child presents. The parent does not have to present.
   EXPECT_FALSE(cvs.has_value());
 
   // Present the child with unsignalled acquire fence.
@@ -2288,16 +2334,14 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
 
   // Confirm that the initial logical size is available immediately.
   {
-    bool layout_updated = false;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kDefaultSize, info.logical_size().width);
-      EXPECT_EQ(kDefaultSize, info.logical_size().height);
-      layout_updated = true;
-    });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(kDefaultSize, layout->logical_size().width);
+    EXPECT_EQ(kDefaultSize, layout->logical_size().height);
   }
 
   // Set the logical size to something new.
@@ -2309,17 +2353,13 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
   }
 
   {
-    bool layout_updated = false;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(2u, info.logical_size().width);
-      EXPECT_EQ(3u, info.logical_size().height);
-      layout_updated = true;
-    });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
     // Confirm that no update is triggered since the child is not in the global topology.
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
 
     // Attach the child to the global topology.
     parent->CreateTransform(kTransformId);
@@ -2328,9 +2368,11 @@ TEST_F(FlatlandTest, LayoutOnlyUpdatesChildrenInGlobalTopology) {
     PRESENT(parent, true);
 
     // Confirm that the new logical size is accessible.
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(2u, layout->logical_size().width);
+    EXPECT_EQ(3u, layout->logical_size().height);
   }
 }
 
@@ -2354,16 +2396,14 @@ TEST_F(FlatlandTest, SetViewportPropertiesDefaultBehavior) {
 
   // Confirm that the initial layout is the default.
   {
-    bool layout_updated = false;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kDefaultSize, info.logical_size().width);
-      EXPECT_EQ(kDefaultSize, info.logical_size().height);
-      layout_updated = true;
-    });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(kDefaultSize, layout->logical_size().width);
+    EXPECT_EQ(kDefaultSize, layout->logical_size().height);
   }
 
   // Set the logical size to something new.
@@ -2376,16 +2416,14 @@ TEST_F(FlatlandTest, SetViewportPropertiesDefaultBehavior) {
 
   // Confirm that the new logical size is accessible.
   {
-    bool layout_updated = false;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(2u, info.logical_size().width);
-      EXPECT_EQ(3u, info.logical_size().height);
-      layout_updated = true;
-    });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(2u, layout->logical_size().width);
+    EXPECT_EQ(3u, layout->logical_size().height);
   }
 
   // Set link properties using a properties object with an unset size field.
@@ -2397,12 +2435,12 @@ TEST_F(FlatlandTest, SetViewportPropertiesDefaultBehavior) {
 
   // Confirm that no update has been triggered.
   {
-    bool layout_updated = false;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout_updated = true; });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
   }
 }
 
@@ -2523,16 +2561,14 @@ TEST_F(FlatlandTest, SetViewportPropertiesOnMultipleChildren) {
 
   // Confirm that all children are at the default value
   for (int i = 0; i < kNumChildren; ++i) {
-    bool layout_updated = false;
-    parent_viewport_watcher[i]->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kDefaultSize, info.logical_size().width);
-      EXPECT_EQ(kDefaultSize, info.logical_size().height);
-      layout_updated = true;
-    });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher[i]->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(kDefaultSize, layout->logical_size().width);
+    EXPECT_EQ(kDefaultSize, layout->logical_size().height);
   }
 
   // Resize the content on all children.
@@ -2548,16 +2584,14 @@ TEST_F(FlatlandTest, SetViewportPropertiesOnMultipleChildren) {
   PRESENT(parent, true);
 
   for (int i = 0; i < kNumChildren; ++i) {
-    bool layout_updated = false;
-    parent_viewport_watcher[i]->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(kLinkIds[i].value, info.logical_size().width);
-      EXPECT_EQ(kLinkIds[i].value * 2, info.logical_size().height);
-      layout_updated = true;
-    });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher[i]->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(kLinkIds[i].value, layout->logical_size().width);
+    EXPECT_EQ(kLinkIds[i].value * 2, layout->logical_size().height);
   }
 }
 
@@ -2588,16 +2622,14 @@ TEST_F(FlatlandTest, DisplayPixelScaleAffectsPixelScale) {
 
   // Confirm that the new pixel scale is (.1, .2).
   {
-    bool layout_updated = false;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-      EXPECT_EQ(new_display_pixel_scale.x, info.pixel_scale().width);
-      EXPECT_EQ(new_display_pixel_scale.y, info.pixel_scale().height);
-      layout_updated = true;
-    });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_EQ(new_display_pixel_scale.x, layout->pixel_scale().width);
+    EXPECT_EQ(new_display_pixel_scale.y, layout->pixel_scale().height);
   }
 }
 
@@ -2634,16 +2666,14 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
 
   // Confirm that the new pixel scale is (2, 3).
   {
-    bool layout_updated = false;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
-      EXPECT_FLOAT_EQ(scale.width, info.pixel_scale().width);
-      EXPECT_FLOAT_EQ(scale.height, info.pixel_scale().height);
-      layout_updated = true;
-    });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_TRUE(layout_updated);
+    EXPECT_TRUE(layout.has_value());
+    EXPECT_FLOAT_EQ(scale.width, layout->pixel_scale().width);
+    EXPECT_FLOAT_EQ(scale.height, layout->pixel_scale().height);
   }
 
   // Set a negative scale, but confirm that pixel scale is still positive.
@@ -2657,12 +2687,12 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
 
   // Pixel scale is still (2, 3), so nothing changes.
   {
-    bool layout_updated = false;
-    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout_updated = true; });
+    std::optional<LayoutInfo> layout;
+    parent_viewport_watcher->GetLayout([&](LayoutInfo info) { layout = std::move(info); });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
   }
 
   // Set a rotation on the parent transform.
@@ -2674,16 +2704,16 @@ TEST_F(FlatlandTest, DISABLED_GeometricAttributesAffectPixelScale) {
 
   // This call hangs
   {
-    bool layout_updated = false;
+    std::optional<LayoutInfo> layout;
     parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
       EXPECT_FLOAT_EQ(scale.width, info.pixel_scale().width);
       EXPECT_FLOAT_EQ(scale.height, info.pixel_scale().height);
-      layout_updated = true;
+      layout = std::move(info);
     });
 
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
     UpdateLinks(parent->GetRoot());
-    EXPECT_FALSE(layout_updated);
+    EXPECT_FALSE(layout.has_value());
   }
 }
 
@@ -2902,7 +2932,8 @@ TEST_F(FlatlandTest, CreateViewportPresentedBeforeCreateView) {
 
   // Link the child to the parent->
   fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
-  child->CreateView(std::move(child_token), child_parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     child_parent_viewport_watcher.NewRequest());
 
   // The child should only be accessible from the parent when Present() is called on the child->
   EXPECT_FALSE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
@@ -2922,7 +2953,8 @@ TEST_F(FlatlandTest, CreateViewPresentedBeforeCreateViewport) {
 
   // Link the child to the parent
   fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
-  child->CreateView(std::move(child_token), child_parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     child_parent_viewport_watcher.NewRequest());
 
   PRESENT(child, true);
 
@@ -2978,7 +3010,8 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
 
   // Link the child to the parent->
   fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
-  child->CreateView(std::move(child_token), child_parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     child_parent_viewport_watcher.NewRequest());
 
   // The child should only be accessible from the parent when Present() is called on both the parent
   // and the child->
@@ -3016,7 +3049,8 @@ TEST_F(FlatlandTest, ClearChildLink) {
   parent->SetContent(kId1, kLinkId);
 
   fidl::InterfacePtr<ParentViewportWatcher> child_parent_viewport_watcher;
-  child->CreateView(std::move(child_token), child_parent_viewport_watcher.NewRequest());
+  child->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(), NoViewProtocols(),
+                     child_parent_viewport_watcher.NewRequest());
 
   PRESENT(parent, true);
   PRESENT(child, true);
@@ -3071,7 +3105,8 @@ TEST_F(FlatlandTest, DISABLED_RelinkUnlinkedParentSameToken) {
 
   // The same token can be used to link a different instance.
   std::shared_ptr<Flatland> child2 = CreateFlatland();
-  child2->CreateView(std::move(graph_token), parent_viewport_watcher.NewRequest());
+  child2->CreateView2(std::move(graph_token), scenic::NewViewIdentityOnCreation(),
+                      NoViewProtocols(), parent_viewport_watcher.NewRequest());
   PRESENT(child2, true);
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child2->GetRoot()));
 

@@ -246,7 +246,7 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
 
   uber_struct->images = image_metadatas_;
 
-  if (parent_link_.has_value()) {
+  if (parent_link_.has_value() && parent_link_->view_ref != nullptr) {
     uber_struct->view_ref = parent_link_->view_ref;
   }
 
@@ -292,14 +292,22 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
 
 void Flatland::CreateView(ViewCreationToken token,
                           fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
-  CreateView2(std::move(token), scenic::NewViewIdentityOnCreation(),
-              fuchsia::ui::composition::ViewBoundProtocols(), std::move(parent_viewport_watcher));
+  CreateViewHelper(std::move(token), std::move(parent_viewport_watcher), std::nullopt,
+                   std::nullopt);
 }
 
 void Flatland::CreateView2(ViewCreationToken token,
                            fuchsia::ui::views::ViewIdentityOnCreation view_identity,
                            fuchsia::ui::composition::ViewBoundProtocols protocols,
                            fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher) {
+  CreateViewHelper(std::move(token), std::move(parent_viewport_watcher), std::move(view_identity),
+                   std::move(protocols));
+}
+
+void Flatland::CreateViewHelper(
+    ViewCreationToken token, fidl::InterfaceRequest<ParentViewportWatcher> parent_viewport_watcher,
+    std::optional<fuchsia::ui::views::ViewIdentityOnCreation> view_identity,
+    std::optional<fuchsia::ui::composition::ViewBoundProtocols> protocols) {
   // Attempting to link with an invalid token will never succeed, so its better to fail early and
   // immediately close the link connection.
   if (!token.value.is_valid()) {
@@ -308,7 +316,8 @@ void Flatland::CreateView2(ViewCreationToken token,
     return;
   }
 
-  if (!scenic_impl::gfx::validate_viewref(view_identity.view_ref_control, view_identity.view_ref)) {
+  if (view_identity.has_value() && !scenic_impl::gfx::validate_viewref(
+                                       view_identity->view_ref_control, view_identity->view_ref)) {
     error_reporter_->ERROR() << "CreateView failed, ViewIdentityOnCreation was invalid";
     ReportBadOperationError();
     return;
@@ -316,8 +325,10 @@ void Flatland::CreateView2(ViewCreationToken token,
 
   FX_DCHECK(link_system_);
 
-  RegisterViewBoundProtocols(std::move(protocols), utils::ExtractKoid(view_identity.view_ref));
-
+  if (protocols.has_value()) {
+    FX_DCHECK(view_identity.has_value()) << "required for view-bound protocols";
+    RegisterViewBoundProtocols(std::move(*protocols), utils::ExtractKoid(view_identity->view_ref));
+  }
   // This portion of the method is not feed forward. This makes it possible for clients to receive
   // layout information before this operation has been presented. By initializing the link
   // immediately, parents can inform children of layout changes, and child clients can perform

@@ -205,6 +205,14 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   void ReportLinkProtocolError(const std::string& error_log);
   void CloseConnection(fuchsia::ui::composition::FlatlandError error);
 
+  // Note: Any new CreateView function must use this helper function for it to have the same
+  // test coverage as its siblings.
+  void CreateViewHelper(fuchsia::ui::views::ViewCreationToken token,
+                        fidl::InterfaceRequest<fuchsia::ui::composition::ParentViewportWatcher>
+                            parent_viewport_watcher,
+                        std::optional<fuchsia::ui::views::ViewIdentityOnCreation> view_identity,
+                        std::optional<fuchsia::ui::composition::ViewBoundProtocols> protocols);
+
   void RegisterViewBoundProtocols(fuchsia::ui::composition::ViewBoundProtocols protocols,
                                   zx_koid_t view_ref_koid);
 
