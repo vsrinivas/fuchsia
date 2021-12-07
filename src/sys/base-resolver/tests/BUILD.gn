@@ -49,12 +49,10 @@ rustc_binary("fake_pkgfs_bin") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-runtime",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/base-resolver:fake_pkgfs",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
   ]
   sources = [ "fake_pkgfs.rs" ]
 }

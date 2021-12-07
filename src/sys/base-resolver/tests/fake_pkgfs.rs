@@ -5,15 +5,13 @@
 use {
     fake_pkgfs::{Entry, MockDir},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
     futures::future::pending,
     std::sync::Arc,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    fuchsia_syslog::init().expect("failed to initialize logging");
-
     let outgoing_handle =
         fuchsia_runtime::take_startup_handle(fuchsia_runtime::HandleType::DirectoryRequest.into())
             .expect("failed to take startup handle");
