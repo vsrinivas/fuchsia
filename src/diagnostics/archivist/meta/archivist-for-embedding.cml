@@ -1,14 +1,12 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/diagnostics/archivist/meta/common.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/archivist",
         args: [
-            "--disable-klog",
-            "--disable-log-connector",
-            "--disable-component-event-provider",
+            "--enable-event-source",
             "--listen-to-lifecycle",
             "--config-path",
             "/pkg/data/embedding-config.json",

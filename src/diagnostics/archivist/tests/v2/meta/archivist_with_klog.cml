@@ -7,8 +7,8 @@
     program: {
         binary: "bin/archivist",
         args: [
-            "--disable-log-connector",
-            "--disable-component-event-provider",
+            "--enable-event-source",
+            "--enable-klog",
             "--config-path",
             "/pkg/data/config/archivist_config.json",
         ],

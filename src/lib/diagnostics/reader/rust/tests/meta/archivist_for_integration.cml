@@ -7,9 +7,7 @@
         runner: "elf",
         binary: "bin/archivist",
         args: [
-            "--disable-klog",
-            "--disable-log-connector",
-            "--disable-component-event-provider",
+            "--enable-event-source",
             "--config-path",
             "/pkg/config/archivist_config.json",
         ],

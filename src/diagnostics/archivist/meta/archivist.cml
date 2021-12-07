@@ -3,6 +3,10 @@
     program: {
         binary: "bin/archivist",
         args: [
+            "--enable-component-event-provider",
+            "--enable-klog",
+            "--enable-event-source",
+            "--enable-log-connector",
             "--log-to-debuglog",
             "--listen-to-lifecycle",
             "--config-path",

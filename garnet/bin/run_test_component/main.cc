@@ -169,9 +169,9 @@ std::string log_level(int32_t severity) {
 
 std::unique_ptr<run::Component> launch_archivist(const fuchsia::sys::LauncherPtr& launcher,
                                                  async_dispatcher_t* dispatcher) {
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx"};
-  launch_info.arguments = {"--disable-log-connector"};
+  fuchsia::sys::LaunchInfo launch_info{.url =
+                                           "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/"
+                                           "archivist-for-embedding-no-log-connector.cmx"};
 
   return run::Component::Launch(launcher, std::move(launch_info), dispatcher);
 }

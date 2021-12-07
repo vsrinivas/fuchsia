@@ -7,9 +7,7 @@
     program: {
         binary: "bin/archivist",
         args: [
-            "--disable-klog",
-            "--disable-log-connector",
-            "--disable-component-event-provider",
+            "--enable-event-source",
             "--config-path",
             "/pkg/data/config/small-caches-config.json",
         ],

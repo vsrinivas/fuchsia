@@ -1,4 +1,5 @@
 fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx
+fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding-no-log-connector.cmx
 fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx
 fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/component_events_integration_test.cmx
 fuchsia-pkg://fuchsia.com/component_events_integration_tests#meta/test_component_with_subrealm.cmx

@@ -4,8 +4,10 @@
     ],
     "program": {
         "args": [
+            "--enable-component-event-provider",
+            "--enable-klog",
+            "--enable-log-connector",
             "--install-controller",
-            "--disable-event-source",
             "--config-path",
             "/pkg/data/embedding-config.json"
         ],

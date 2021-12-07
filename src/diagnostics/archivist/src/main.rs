@@ -30,24 +30,24 @@ use {
 // TODO(fxbug.dev/67983) make flags positive rather than negative
 #[derive(Debug, Default, FromArgs)]
 pub struct Args {
-    /// disables proxying kernel logger
+    /// enables proxying kernel logger
     #[argh(switch)]
-    disable_klog: bool,
+    enable_klog: bool,
 
-    /// disables log connector so that indivisual instances of
-    /// observer don't compete for log connector listener.
+    /// enables log connector for this instance of the archivist. Do not enable so that indivisual
+    /// instances of observer don't compete for log connector listener.
     #[argh(switch)]
-    disable_log_connector: bool,
+    enable_log_connector: bool,
 
-    /// whether to connecto to event source or not. This can be set to true when the archivist won't
+    /// whether to connect to event source or not. This can be set to false when the archivist won't
     /// consume events from the Component Framework v2 to remove log spam.
     #[argh(switch)]
-    disable_event_source: bool,
+    enable_event_source: bool,
 
-    /// whether to connecto to the component event provider or not. This can be set to true when the
+    /// whether to connect to the component event provider or not. This can be set to false when the
     /// archivist won't consume events from the Component Framework v1 to remove log spam.
     #[argh(switch)]
-    disable_component_event_provider: bool,
+    enable_component_event_provider: bool,
 
     // TODO(fxbug.dev/72046) delete when netemul no longer using
     /// initializes syslog library with a log socket to itself
@@ -126,8 +126,8 @@ async fn async_main(
     let mut archivist = Archivist::new(archivist_configuration)?;
     debug!("Archivist initialized from configuration.");
 
-    archivist.install_log_services(LogOpts { ingest_v2_logs: !opt.disable_event_source }).await;
-    if !opt.disable_component_event_provider {
+    archivist.install_log_services(LogOpts { ingest_v2_logs: opt.enable_event_source }).await;
+    if opt.enable_component_event_provider {
         let legacy_event_provider: ComponentEventProvider =
             connect_to_protocol::<ComponentEventProviderMarker>()
                 .context("failed to connect to event provider")?
@@ -135,7 +135,7 @@ async fn async_main(
         archivist.add_event_source("v1", Box::new(legacy_event_provider)).await;
     }
 
-    if !opt.disable_event_source {
+    if opt.enable_event_source {
         let event_source: EventSourceConnection = connect_to_protocol::<EventSourceMarker>()
             .context("failed to connect to event source")?
             .into();
@@ -159,14 +159,14 @@ async fn async_main(
         archivist.serve_lifecycle_protocol();
     }
 
-    if !opt.disable_log_connector {
+    if opt.enable_log_connector {
         let connector = connect_to_protocol::<LogConnectorMarker>()?;
         archivist
             .add_event_source("log_connector", Box::new(LogConnectorEventSource::new(connector)))
             .await;
     }
 
-    if !opt.disable_klog {
+    if opt.enable_klog {
         archivist.start_draining_klog().await?;
     }
 
