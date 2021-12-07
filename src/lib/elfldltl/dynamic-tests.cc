@@ -4,6 +4,7 @@
 
 #include <lib/elfldltl/diagnostics.h>
 #include <lib/elfldltl/dynamic.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/elfldltl/memory.h>
 
 #include <array>
@@ -104,6 +105,722 @@ constexpr auto RejectTextrelTest = [](auto&& elf) {
 
 TEST(ElfldltlDynamicTests, RejectTextrel) { TestAllFormats(RejectTextrelTest); }
 
+class TestDiagnostics {
+ public:
+  using DiagType = decltype(elfldltl::CollectStringsDiagnostics(
+      std::declval<std::vector<std::string>&>(), kDiagFlags));
+
+  DiagType& diag() { return diag_; }
+
+  const std::vector<std::string>& errors() const { return errors_; }
+
+  std::string ExplainErrors() const {
+    std::string str = std::to_string(diag_.errors()) + " errors, " +
+                      std::to_string(diag_.warnings()) + " warnings:";
+    for (const std::string& line : errors_) {
+      str += "\n\t";
+      str += line;
+    }
+    return str;
+  }
+
+ private:
+  std::vector<std::string> errors_;
+  DiagType diag_ = elfldltl::CollectStringsDiagnostics(errors_, kDiagFlags);
+};
+
+constexpr auto RelocationInfoObserverEmptyTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  elfldltl::DirectMemory empty_memory({}, 0);
+
+  // PT_DYNAMIC with no reloc info.
+  constexpr std::array dyn_noreloc{
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), empty_memory, DynSpan(dyn_noreloc),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(0, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_TRUE(diag.errors().empty());
+
+  EXPECT_TRUE(info.rel_relative().empty());
+  EXPECT_TRUE(info.rel_symbolic().empty());
+  EXPECT_TRUE(info.rela_relative().empty());
+  EXPECT_TRUE(info.rela_symbolic().empty());
+  EXPECT_TRUE(info.relr().empty());
+  std::visit([](const auto& table) { EXPECT_TRUE(table.empty()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverEmpty) {
+  TestAllFormats(RelocationInfoObserverEmptyTest);
+}
+
+// This synthesizes a memory image of relocation test data with known
+// offsets and addresses that can be referenced in dynamic section entries in
+// the specific test data.  The same image contents are used for several tests
+// below with different dynamic section data.  Because the Memory API admits
+// mutation of the image, the same image buffer shouldn't be reused for
+// multiple tests just in case a test mutates the buffer (though they are meant
+// not to).  So this helper object is created in each test case to reconstruct
+// the same data afresh.
+template <typename Elf>
+class RelocInfoTestImage {
+ public:
+  using size_type = typename Elf::size_type;
+  using Addr = typename Elf::Addr;
+  using Dyn = typename Elf::Dyn;
+  using Rel = typename Elf::Rel;
+  using Rela = typename Elf::Rela;
+  using Sym = typename Elf::Sym;
+
+  static size_type size_bytes() { return sizeof(image_); }
+
+  static size_type image_addr() { return kImageAddr; }
+
+  static size_type rel_size_bytes() { return sizeof(image_.rel); }
+
+  static size_type relent_size_bytes() { return sizeof(image_.rel[0]); }
+
+  static size_type rela_size_bytes() { return sizeof(image_.rela); }
+
+  static size_type relaent_size_bytes() { return sizeof(image_.rela[0]); }
+
+  static size_type relr_size_bytes() { return sizeof(image_.relr); }
+
+  static size_type relrent_size_bytes() { return sizeof(image_.relr[0]); }
+
+  size_type rel_addr() const { return ImageAddr(image_.rel); }
+
+  size_type rela_addr() const { return ImageAddr(image_.rela); }
+
+  size_type relr_addr() const { return ImageAddr(image_.relr); }
+
+  elfldltl::DirectMemory memory() { return elfldltl::DirectMemory(image_bytes(), kImageAddr); }
+
+ private:
+  // Build up some good relocation data in a memory image.
+
+  static constexpr size_type kImageAddr = 0x123400;
+  static constexpr auto kTestMachine = elfldltl::ElfMachine::kNone;
+  using TestType = elfldltl::RelocationTraits<kTestMachine>::Type;
+  static constexpr uint32_t kRelativeType = static_cast<uint32_t>(TestType::kRelative);
+  static constexpr uint32_t kAbsoluteType = static_cast<uint32_t>(TestType::kAbsolute);
+
+  template <typename T>
+  size_type ImageAddr(const T& data) const {
+    return static_cast<size_type>(reinterpret_cast<const std::byte*>(&data) -
+                                  reinterpret_cast<const std::byte*>(&image_)) +
+           kImageAddr;
+  }
+
+  struct ImageData {
+    Rel rel[3] = {
+        {8, kRelativeType},
+        {24, kRelativeType},
+        {4096, kAbsoluteType},
+    };
+
+    Rela rela[3] = {
+        {{8, kRelativeType}, 0x11111111},
+        {{24, kRelativeType}, 0x33333333},
+        {{4096, kAbsoluteType}, 0x1234},
+    };
+
+    Addr relr[3] = {
+        32,
+        0x55555555,
+        0xaaaaaaaa | 1,
+    };
+  } image_;
+
+  cpp20::span<std::byte> image_bytes() { return cpp20::as_writable_bytes(cpp20::span(&image_, 1)); }
+};
+
+constexpr auto RelocationInfoObserverFullValidTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  // PT_DYNAMIC with full valid reloc info.
+
+  const std::array dyn_goodreloc{
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = test_image.relent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = test_image.relaent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kPltRel,
+          .val = static_cast<size_type>(elfldltl::ElfDynTag::kRel),
+      },
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = test_image.relrent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_goodreloc),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(0, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_TRUE(diag.errors().empty(), "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(2, info.rel_relative().size());
+  EXPECT_EQ(1, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(3, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverFullValid) {
+  TestAllFormats(RelocationInfoObserverFullValidTest);
+}
+
+// We'll reuse that same image for the various error case tests.
+// These cases only differ in their PT_DYNAMIC contents.
+
+constexpr auto RelocationInfoObserverBadRelentTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  const std::array dyn_bad_relent{
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = 17},  // Wrong size.
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = test_image.relaent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kPltRel,
+          .val = static_cast<size_type>(elfldltl::ElfDynTag::kRel),
+      },
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = test_image.relrent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_bad_relent),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(1, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_EQ(1, diag.errors().size(), "%s", diag.ExplainErrors().c_str());
+
+  // With keep-going, the data is delivered anyway.
+  EXPECT_EQ(2, info.rel_relative().size());
+  EXPECT_EQ(1, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(3, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverBadRelent) {
+  TestAllFormats(RelocationInfoObserverBadRelentTest);
+}
+
+constexpr auto RelocationInfoObserverBadRelaentTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  const std::array dyn_bad_relaent{
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = test_image.relent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = 17},  // Wrong size.
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kPltRel,
+          .val = static_cast<size_type>(elfldltl::ElfDynTag::kRel),
+      },
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = test_image.relrent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_bad_relaent),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(1, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_EQ(1, diag.errors().size(), "%s", diag.ExplainErrors().c_str());
+
+  // With keep-going, the data is delivered anyway.
+  EXPECT_EQ(2, info.rel_relative().size());
+  EXPECT_EQ(1, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(3, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverBadRelaent) {
+  TestAllFormats(RelocationInfoObserverBadRelaentTest);
+}
+
+constexpr auto RelocationInfoObserverBadRelrentTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  const std::array dyn_bad_relrent{
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = test_image.relent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = test_image.relaent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kPltRel,
+          .val = static_cast<size_type>(elfldltl::ElfDynTag::kRel),
+      },
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = 3},  // Wrong size.
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_bad_relrent),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(1, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_EQ(1, diag.errors().size(), "%s", diag.ExplainErrors().c_str());
+
+  // With keep-going, the data is delivered anyway.
+  EXPECT_EQ(2, info.rel_relative().size());
+  EXPECT_EQ(1, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(3, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverBadRelrent) {
+  TestAllFormats(RelocationInfoObserverBadRelrentTest);
+}
+
+constexpr auto RelocationInfoObserverMissingPltrelTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  const std::array dyn_missing_pltrel{
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = test_image.relent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = test_image.relaent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      // Missing DT_PLTREL.
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = test_image.relrent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_missing_pltrel),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(1, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_EQ(1, diag.errors().size(), "%s", diag.ExplainErrors().c_str());
+
+  // DT_JMPREL was ignored but the rest is normal.
+  EXPECT_EQ(2, info.rel_relative().size());
+  EXPECT_EQ(1, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(0, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverMissingPltrel) {
+  TestAllFormats(RelocationInfoObserverMissingPltrelTest);
+}
+
+constexpr auto RelocationInfoObserverBadPltrelTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  const std::array dyn_bad_pltrel{
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = test_image.relent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = test_image.relaent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRel, .val = 0},  // Invalid value.
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = test_image.relrent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_bad_pltrel),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(1, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_EQ(1, diag.errors().size(), "%s", diag.ExplainErrors().c_str());
+
+  // DT_JMPREL was ignored but the rest is normal.
+  EXPECT_EQ(2, info.rel_relative().size());
+  EXPECT_EQ(1, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(0, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverBadPltrel) {
+  TestAllFormats(RelocationInfoObserverBadPltrelTest);
+}
+
+// The bad address, size, and alignment cases are all the same template code
+// paths for each table so we only test DT_REL to stand in for the rest.
+
+constexpr auto RelocationInfoObserverBadRelAddrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  const std::array dyn_bad_rel_addr{
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRel,
+          // This is an invalid address, before the image starts.
+          .val = test_image.image_addr() - 1,
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = test_image.relent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = test_image.relaent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kPltRel,
+          .val = static_cast<size_type>(elfldltl::ElfDynTag::kRel),
+      },
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = test_image.relrent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_bad_rel_addr),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(1, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_EQ(1, diag.errors().size(), "%s", diag.ExplainErrors().c_str());
+
+  // DT_REL was ignored but the rest is normal.
+  EXPECT_EQ(0, info.rel_relative().size());
+  EXPECT_EQ(0, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(3, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverBadRelAddr) {
+  TestAllFormats(RelocationInfoObserverBadRelAddrTest);
+}
+
+constexpr auto RelocationInfoObserverBadRelSzTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  const std::array dyn_bad_relsz{
+      Dyn{.tag = elfldltl::ElfDynTag::kRel, .val = test_image.rel_addr()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelSz,
+          // This is an invalid size, bigger than the whole image.
+          .val = test_image.size_bytes() + 1,
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = test_image.relent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = test_image.relaent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kPltRel,
+          .val = static_cast<size_type>(elfldltl::ElfDynTag::kRel),
+      },
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = test_image.relrent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_bad_relsz),
+                                      elfldltl::DynamicRelocationInfoObserver(info)),
+              "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(1, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_EQ(1, diag.errors().size(), "%s", diag.ExplainErrors().c_str());
+
+  // DT_REL was ignored but the rest is normal.
+  EXPECT_EQ(0, info.rel_relative().size());
+  EXPECT_EQ(0, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(3, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverBadRelSz) {
+  TestAllFormats(RelocationInfoObserverBadRelSzTest);
+}
+
+constexpr auto RelocationInfoObserverBadRelSzAlignTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using size_type = typename Elf::size_type;
+  using Dyn = typename Elf::Dyn;
+
+  TestDiagnostics diag;
+  RelocInfoTestImage<Elf> test_image;
+
+  const std::array dyn_bad_relsz_align{
+      Dyn{.tag = elfldltl::ElfDynTag::kRel, .val = test_image.rel_addr()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelSz,
+          // This size is not a multiple of the entry size.
+          .val = test_image.rel_size_bytes() - 3,
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelEnt, .val = test_image.relent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRela,
+          .val = static_cast<size_type>(test_image.rela_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaSz, .val = test_image.rela_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaEnt, .val = test_image.relaent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelaCount, .val = 2},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kJmpRel,
+          .val = static_cast<size_type>(test_image.rel_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kPltRelSz, .val = test_image.rel_size_bytes()},
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kPltRel,
+          .val = static_cast<size_type>(elfldltl::ElfDynTag::kRel),
+      },
+      Dyn{
+          .tag = elfldltl::ElfDynTag::kRelr,
+          .val = static_cast<size_type>(test_image.relr_addr()),
+      },
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrSz, .val = test_image.relr_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kRelrEnt, .val = test_image.relrent_size_bytes()},
+      Dyn{.tag = elfldltl::ElfDynTag::kNull},
+  };
+
+  elfldltl::RelocationInfo<Elf> info;
+  EXPECT_TRUE(
+      elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_bad_relsz_align),
+                              elfldltl::DynamicRelocationInfoObserver(info)),
+      "%s", diag.ExplainErrors().c_str());
+
+  EXPECT_EQ(1, diag.diag().errors());
+  EXPECT_EQ(0, diag.diag().warnings());
+  EXPECT_EQ(1, diag.errors().size(), "%s", diag.ExplainErrors().c_str());
+
+  // DT_REL was ignored but the rest is normal.
+  EXPECT_EQ(0, info.rel_relative().size());
+  EXPECT_EQ(0, info.rel_symbolic().size());
+  EXPECT_EQ(2, info.rela_relative().size());
+  EXPECT_EQ(1, info.rela_symbolic().size());
+  EXPECT_EQ(3, info.relr().size());
+  std::visit([](const auto& table) { EXPECT_EQ(3, table.size()); }, info.jmprel());
+};
+
+TEST(ElfldltlDynamicTests, RelocationInfoObserverBadRelSzAlign) {
+  TestAllFormats(RelocationInfoObserverBadRelSzAlignTest);
+}
+
 // This synthesizes a memory image of symbol-related test data with known
 // offsets and addresses that can be referenced in dynamic section entries in
 // the specific test data.  The same image contents are used for several tests
@@ -179,30 +896,6 @@ class SymbolInfoTestImage {
   size_type gnu_hash_addr_ = 0;
 };
 
-class TestDiagnostics {
- public:
-  using DiagType = decltype(elfldltl::CollectStringsDiagnostics(
-      std::declval<std::vector<std::string>&>(), kDiagFlags));
-
-  DiagType& diag() { return diag_; }
-
-  const std::vector<std::string>& errors() const { return errors_; }
-
-  std::string ExplainErrors() const {
-    std::string str = std::to_string(diag_.errors()) + " errors, " +
-                      std::to_string(diag_.warnings()) + " warnings:";
-    for (const std::string& line : errors_) {
-      str += "\n\t";
-      str += line;
-    }
-    return str;
-  }
-
- private:
-  std::vector<std::string> errors_;
-  DiagType diag_ = elfldltl::CollectStringsDiagnostics(errors_, kDiagFlags);
-};
-
 constexpr auto SymbolInfoObserverEmptyTest = [](auto&& elf) {
   using Elf = std::decay_t<decltype(elf)>;
   using Dyn = typename Elf::Dyn;
@@ -241,7 +934,6 @@ constexpr auto SymbolInfoObserverFullValidTest = [](auto&& elf) {
 
   TestDiagnostics diag;
   SymbolInfoTestImage<Elf> test_image;
-  elfldltl::DirectMemory image_memory = test_image.memory();
 
   // PT_DYNAMIC with full valid symbol info.
   const std::array dyn_goodsyms{
@@ -259,7 +951,7 @@ constexpr auto SymbolInfoObserverFullValidTest = [](auto&& elf) {
   };
 
   elfldltl::SymbolInfo<Elf> info;
-  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), image_memory, DynSpan(dyn_goodsyms),
+  EXPECT_TRUE(elfldltl::DecodeDynamic(diag.diag(), test_image.memory(), DynSpan(dyn_goodsyms),
                                       elfldltl::DynamicSymbolInfoObserver(info)),
               "%s", diag.ExplainErrors().c_str());
 

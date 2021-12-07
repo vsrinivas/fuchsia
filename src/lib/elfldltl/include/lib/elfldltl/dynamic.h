@@ -14,6 +14,7 @@
 
 #include "internal/dynamic-tag-error.h"
 #include "layout.h"
+#include "relocation.h"
 #include "symbol.h"
 
 namespace elfldltl {
@@ -137,19 +138,24 @@ class DynamicInfoObserver : public DynamicTagObserver<Observer, Tags...> {
   // calls to diagnostics.FormatError, and does nothing at all if neither tag
   // is present.
   //
+  // The optional third tag is for a related count that also may be present.
+  // If this tag is supplied, the setter takes a second argument.  If the
+  // CountTag was not present at runtime, that second argument will be zero.
+  //
   // The SizedArray object is contextually convertible to bool to test whether
   // either tag was present at all.
   class SizedArray {
    public:
     template <typename T, auto Setter, ElfDynTag AddressTag, ElfDynTag SizeBytesTag,
-              class DiagnosticsType, class Memory>
-    constexpr bool Finish(DiagnosticsType&& diagnostics, Memory&& memory, Info& info) {
+              ElfDynTag CountTag = ElfDynTag::kNull, class DiagnosticsType, class Memory>
+    constexpr bool Finish(DiagnosticsType&& diagnostics, Memory&& memory, Info& info,
+                          typename Elf::size_type count = 0) {
       if (!address_ && !size_bytes_) {
         // No corresponding entries were found.
         return true;
       }
       // Check invariants.
-      using Error = internal::DynamicTagError<AddressTag, SizeBytesTag>;
+      using Error = internal::DynamicTagError<AddressTag, SizeBytesTag, CountTag>;
       if (!address_) [[unlikely]] {
         return diagnostics.FormatError(Error::kMissingAddress);
       }
@@ -167,7 +173,14 @@ class DynamicInfoObserver : public DynamicTagObserver<Observer, Tags...> {
       }
       // Fetch the table.
       if (auto table = memory.template ReadArray<T>(*address_, *size_bytes_ / sizeof(T))) {
-        (info.*Setter)(*table);
+        if constexpr (CountTag != ElfDynTag::kNull) {
+          if (count > table->size()) [[unlikely]] {
+            return diagnostics.FormatError(Error::kInvalidCount);
+          }
+          (info.*Setter)(*table, count);
+        } else {
+          (info.*Setter)(*table);
+        }
         return true;
       }
       return diagnostics.FormatError(Error::kRead);
@@ -186,6 +199,165 @@ class DynamicInfoObserver : public DynamicTagObserver<Observer, Tags...> {
  private:
   Info& info_;
 };
+
+// This is an observer to fill in an elfldltl::RelocationInfo<Elf> object.
+// Its constructor takes (elfldltl::RelocationInfo<Elf>&, Memory&).
+template <class Elf>
+class DynamicRelocationInfoObserver;
+
+// This is just a shorthand to avoid repeating the long list of parameters.
+template <class Elf>
+using DynamicRelocationInfoObserverBase =
+    DynamicInfoObserver<DynamicRelocationInfoObserver<Elf>, RelocationInfo<Elf>, Elf,
+                        ElfDynTag::kJmpRel, ElfDynTag::kPltRel, ElfDynTag::kPltRelSz,
+                        ElfDynTag::kRelr, ElfDynTag::kRelrSz, ElfDynTag::kRelrEnt, ElfDynTag::kRel,
+                        ElfDynTag::kRelCount, ElfDynTag::kRelEnt, ElfDynTag::kRelSz,
+                        ElfDynTag::kRela, ElfDynTag::kRelaCount, ElfDynTag::kRelaEnt,
+                        ElfDynTag::kRelaSz>;
+
+template <class Elf>
+class DynamicRelocationInfoObserver : public DynamicRelocationInfoObserverBase<Elf> {
+ public:
+  using Base = DynamicRelocationInfoObserverBase<Elf>;
+  using Info = RelocationInfo<Elf>;
+  using size_type = typename Elf::size_type;
+
+  using Base::Base;
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kJmpRel> tag, size_type val) {
+    jmprel_.set_address(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kPltRelSz> tag, size_type val) {
+    jmprel_.set_size_bytes(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kPltRel> tag, size_type val) {
+    pltrel_ = val;
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelr> tag, size_type val) {
+    relr_.set_address(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelrSz> tag, size_type val) {
+    relr_.set_size_bytes(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRel> tag, size_type val) {
+    rel_.set_address(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelSz> tag, size_type val) {
+    rel_.set_size_bytes(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelCount> tag, size_type val) {
+    relcount_ = val;
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRela> tag, size_type val) {
+    rela_.set_address(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelaSz> tag, size_type val) {
+    rela_.set_size_bytes(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelaCount> tag, size_type val) {
+    relacount_ = val;
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelEnt> tag, size_type val) {
+    return val == sizeof(typename Elf::Rel) ||
+           diagnostics.FormatError("incorrect DT_RELENT value"sv);
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelaEnt> tag, size_type val) {
+    return val == sizeof(typename Elf::Rela) ||
+           diagnostics.FormatError("incorrect DT_RELAENT value"sv);
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory,
+                         DynamicTagMatch<ElfDynTag::kRelrEnt> tag, size_type val) {
+    return val == sizeof(typename Elf::Addr) ||
+           diagnostics.FormatError("incorrect DT_RELRENT value"sv);
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Finish(DiagnosticsType& diagnostics, Memory& memory) {
+    // DT_PLTREL says which format DT_JMPREL uses: DT_REL or DT_RELA.
+    if (pltrel_ == static_cast<uint32_t>(ElfDynTag::kRel)) {
+      if (!jmprel_.template Finish<typename Elf::Rel, &Info::set_jmprel, ElfDynTag::kJmpRel,
+                                   ElfDynTag::kPltRelSz>(diagnostics, memory, this->info())) {
+        return false;
+      }
+    } else if (pltrel_ == static_cast<uint32_t>(ElfDynTag::kRela)) {
+      if (!jmprel_.template Finish<typename Elf::Rela, &Info::set_jmprel, ElfDynTag::kJmpRel,
+                                   ElfDynTag::kPltRelSz>(diagnostics, memory, this->info())) {
+        return false;
+      }
+    } else if (jmprel_ && !diagnostics.FormatError(pltrel_ ? "missing DT_PLTREL entry"sv
+                                                           : "invalid DT_PLTREL entry"sv)) {
+      return false;
+    }
+    return relr_.template Finish<typename Elf::Addr, &Info::set_relr, ElfDynTag::kRelr,
+                                 ElfDynTag::kRelrSz>(diagnostics, memory, this->info()) &&
+           rel_.template Finish<typename Elf::Rel, &Info::set_rel, ElfDynTag::kRel,
+                                ElfDynTag::kRelSz, ElfDynTag::kRelCount>(diagnostics, memory,
+                                                                         this->info(), relcount_) &&
+           rela_.template Finish<typename Elf::Rela, &Info::set_rela, ElfDynTag::kRela,
+                                 ElfDynTag::kRelaSz, ElfDynTag::kRelaCount>(
+               diagnostics, memory, this->info(), relacount_);
+  }
+
+ private:
+  typename Base::SizedArray relr_, rel_, rela_, jmprel_;
+  typename Elf::size_type relcount_ = 0, relacount_ = 0;
+  std::optional<typename Elf::size_type> pltrel_;
+};
+
+// Deduction guide.
+template <class Elf>
+DynamicRelocationInfoObserver(RelocationInfo<Elf>& info) -> DynamicRelocationInfoObserver<Elf>;
 
 // This is an observer to fill in an elfldltl::SymbolInfo<Elf> object.
 // Its constructor takes (elfldltl::SymbolInfo<Elf>&, Memory&).
