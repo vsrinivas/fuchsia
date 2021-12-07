@@ -459,6 +459,9 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
       if (!result.has_addresses()) {
         return 0;
       }
+      ZX_ASSERT_MSG(result.addresses().count() <= MAXADDRS,
+                    "%lu addresses in DNS response, maximum is %d", result.addresses().count(),
+                    MAXADDRS);
       int count = 0;
       for (const fnet::wire::IpAddress& addr : result.addresses()) {
         address& address = buf[count++];

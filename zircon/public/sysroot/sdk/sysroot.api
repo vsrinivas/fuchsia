@@ -211,7 +211,7 @@
   "include/zircon/hw/usb/video.h": "9a71c9e1dcb62fe94207dddb001ebf4b",
   "include/zircon/limits.h": "564b9d2902c5e1992e2c75cca156ef30",
   "include/zircon/listnode.h": "adc44cc353c4b9b7de4f20c250ddd299",
-  "include/zircon/lookup.h": "c8c83cf5cd38fa63828bb281f7f42f50",
+  "include/zircon/lookup.h": "053d29f711949d3d47b7a6b97b62d735",
   "include/zircon/pixelformat.h": "950bbf354a91ebf0f53195ab59fd90c0",
   "include/zircon/process.h": "e890bf8ab56a3b8dd935774112e3fd45",
   "include/zircon/processargs.h": "e504cb7c4fc36f575dadbb27de8237ec",

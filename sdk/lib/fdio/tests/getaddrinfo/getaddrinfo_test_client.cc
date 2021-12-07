@@ -10,6 +10,7 @@
 #include <netinet/in.h>
 #include <stdio.h>
 #include <string.h>
+#include <zircon/lookup.h>
 
 #include <gtest/gtest.h>
 
@@ -22,6 +23,7 @@ struct GetAddrInfoRequest {
 struct GetAddrInfoResponse {
   const in_port_t port;
   const char* address;
+  const size_t count;
 };
 
 class GetAddrInfoTest
@@ -46,7 +48,12 @@ std::string to_string(const GetAddrInfoTest::ParamType& param) {
   if (expectation.is_error()) {
     ss << "Fails";  // Can't use gai_strerror here because the returned string contains spaces.
   } else {
-    ss << "Succeds";
+    const GetAddrInfoResponse& response = expectation.value();
+    ss << "Succeeds"
+       << "With" << response.count << "Record";
+    if (response.count != 1) {
+      ss << "s";
+    }
   }
   return ss.str();
 }
@@ -118,7 +125,7 @@ TEST_P(GetAddrInfoTest, Basic) {
 
     i++;
   }
-  EXPECT_EQ(i, 1u);
+  EXPECT_EQ(i, response.count);
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -133,6 +140,7 @@ INSTANTIATE_TEST_SUITE_P(
                                     fitx::ok(GetAddrInfoResponse{
                                         .port = 80,
                                         .address = "192.0.2.1",
+                                        .count = 1,
                                     })),
                     std::make_tuple(GetAddrInfoRequest{.node = "example.com",
                                                        .service = "ntp",
@@ -144,6 +152,19 @@ INSTANTIATE_TEST_SUITE_P(
                                     fitx::ok(GetAddrInfoResponse{
                                         .port = 123,
                                         .address = "2001:db8::1",
+                                        .count = 1,
+                                    })),
+                    std::make_tuple(GetAddrInfoRequest{.node = "lotsofrecords.com",
+                                                       .service = "http",
+                                                       .hints =
+                                                           {
+                                                               .ai_family = AF_INET,
+                                                               .ai_socktype = SOCK_STREAM,
+                                                           }},
+                                    fitx::ok(GetAddrInfoResponse{
+                                        .port = 80,
+                                        .address = "192.0.2.1",
+                                        .count = MAXADDRS,
                                     })),
                     std::make_tuple(GetAddrInfoRequest{.node = "google.com",
                                                        .service = "http",
