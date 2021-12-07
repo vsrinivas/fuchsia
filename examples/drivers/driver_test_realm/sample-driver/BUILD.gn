@@ -1,0 +1,40 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/fidl/fidl.gni")
+import("//build/test.gni")
+
+fidl("fuchsia.hardware.sample") {
+  sources = [ "sample.test.fidl" ]
+}
+
+driver_bind_rules("bind") {
+  rules = "sample_driver.bind"
+  header_output = "sample_driver-bind.h"
+  bind_output = "sample_driver.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("driver") {
+  output_name = "sample-driver"
+  sources = [ "sample_driver.cc" ]
+  deps = [
+    ":bind",
+    ":fuchsia.hardware.sample_llcpp",
+    "//src/devices/lib/driver",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("sample-driver") {
+  component_name = "sample-driver"
+  deps = [ ":driver" ]
+  info = "sample_driver-info.json"
+}

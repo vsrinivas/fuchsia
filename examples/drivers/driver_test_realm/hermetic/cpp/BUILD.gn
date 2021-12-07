@@ -14,6 +14,7 @@ group("tests") {
 test("driver_test_realm_example_hermetic_cpp") {
   sources = [ "test.cc" ]
   deps = [
+    "//examples/drivers/driver_test_realm/sample-driver:fuchsia.hardware.sample_llcpp",
     "//sdk/fidl/fuchsia.driver.test",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/device-watcher/cpp",
@@ -30,7 +31,13 @@ test("driver_test_realm_example_hermetic_cpp") {
 fuchsia_unittest_package("package") {
   package_name = "driver_test_realm_example_hermetic_cpp"
   deps = [
+    # Include your test component.
     ":driver_test_realm_example_hermetic_cpp",
+
+    # Include the driver(s) you will be testing.
+    "//examples/drivers/driver_test_realm/sample-driver",
+
+    # Include the test parent (if your driver binds to it).
     "//src/devices/misc/drivers/test-parent",
   ]
 }

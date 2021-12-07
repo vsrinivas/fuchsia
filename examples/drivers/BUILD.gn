@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 group("drivers") {
-  deps = [ "dotmatrix_display" ]
+  deps = [ "driver_test_realm/sample-driver" ]
 }
 
 group("tests") {

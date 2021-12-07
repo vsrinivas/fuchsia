@@ -187,6 +187,7 @@ group("diagnostics-eng") {
 group("drivers-not-templates") {
   testonly = true
   deps = [
+    "//examples/drivers",
     "//src/camera:drivers",
     "//src/connectivity/bundles:drivers",
     "//src/devices/bundles:drivers",

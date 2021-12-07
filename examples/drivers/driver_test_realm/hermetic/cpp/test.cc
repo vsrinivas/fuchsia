@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.sample/cpp/wire.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/driver_test_realm/realm_builder/cpp/lib.h>
@@ -38,7 +39,20 @@ TEST_F(DriverTestRealmTest, DriversExist) {
   status = fdio_fd_create(dev.TakeChannel().release(), root_fd.reset_and_get_address());
   ASSERT_EQ(status, ZX_OK);
 
+  // Wait for driver.
   fbl::unique_fd out;
-  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/sample_driver", &out));
+
+  // Turn the connection into FIDL.
+  zx_handle_t handle;
+  ASSERT_EQ(ZX_OK, fdio_fd_clone(out.get(), &handle));
+  auto client =
+      fidl::BindSyncClient(fidl::ClientEnd<fuchsia_hardware_sample::Echo>(zx::channel(handle)));
+
+  // Send a FIDL request.
+  std::string_view sent_string = "hello";
+  auto result = client->EchoString(fidl::StringView::FromExternal(sent_string));
+  ASSERT_EQ(ZX_OK, result.status());
+  ASSERT_EQ(sent_string, result->response.get());
 }
 // [END example]

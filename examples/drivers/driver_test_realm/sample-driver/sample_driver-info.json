@@ -1,0 +1,10 @@
+{
+    "short_description": "Test driver for DriverTestRealm",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

@@ -1,3 +1,4 @@
+//examples/drivers/driver_test_realm/sample-driver:driver
 //src/camera/drivers/bus/aml_mipicsi:aml_mipicsi_driver-driver
 //src/camera/drivers/controller/sherlock:sherlock-camera-controller_driver
 //src/camera/drivers/hw_accel/gdc:fuchsia_driver
@@ -126,8 +127,8 @@
 //src/devices/internal/drivers/fragment:fragment-driver
 //src/devices/internal/drivers/fragment:fragment.proxy-driver
 //src/devices/light-sensor/drivers/ams-light:ams-light-driver
-//src/devices/mcu/drivers/chromiumos-ec-lpc:driver
 //src/devices/mcu/drivers/chromiumos-ec-core:driver
+//src/devices/mcu/drivers/chromiumos-ec-lpc:driver
 //src/devices/mcu/drivers/vim3-mcu:vim3-mcu-driver
 //src/devices/misc/drivers/builtin:builtin-driver
 //src/devices/misc/drivers/chromeos-acpi:driver
@@ -201,8 +202,8 @@
 //src/devices/tests/ddk-power:ddk-power-test-driver
 //src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child-driver
 //src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-driver
-//src/devices/tests/device-watcher:test-driver-driver
 //src/devices/tests/devfs_exporter:root_driver
+//src/devices/tests/device-watcher:test-driver-driver
 //src/devices/tests/driver-inspect-test:fuchsia_driver
 //src/devices/tests/driver-runtime:child-driver
 //src/devices/tests/driver-runtime:parent-driver
