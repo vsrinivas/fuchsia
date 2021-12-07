@@ -24,6 +24,7 @@ test("f2fs_unit") {
     "unit/dir_entry_cache.cc",
     "unit/f2fs.cc",
     "unit/file.cc",
+    "unit/fsck.cc",
     "unit/inline.cc",
     "unit/mkfs.cc",
     "unit/mount.cc",
