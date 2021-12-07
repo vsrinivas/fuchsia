@@ -9,6 +9,7 @@ use {
     async_trait::async_trait,
     diagnostics_data::Timestamp,
     ffx_build_version::build_info,
+    ffx_core::metrics::{add_daemon_launch_event, add_daemon_metrics_event},
     ffx_core::TryStreamUtilExt,
     ffx_daemon_core::events::{self, EventHandler},
     ffx_daemon_events::{
@@ -321,6 +322,7 @@ impl Daemon {
             hash,
             pid
         );
+        add_daemon_launch_event().await;
         Ok(())
     }
 
@@ -517,12 +519,17 @@ impl Daemon {
 
     async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
         log::debug!("daemon received request: {:?}", req);
+
         match req {
-            DaemonRequest::Crash { .. } => panic!("instructed to crash by client!"),
+            DaemonRequest::Crash { .. } => {
+                add_daemon_metrics_event("panic").await;
+                panic!("instructed to crash by client!");
+            }
             DaemonRequest::EchoString { value, responder } => {
                 log::info!("Received echo request for string {:?}", value);
                 responder.send(value.as_ref()).context("error sending response")?;
                 log::info!("echo response sent successfully");
+                add_daemon_metrics_event("echo").await;
             }
             // Hang intends to block the reactor indefinitely, however
             // that's a little tricky to do exactly. This approximation
@@ -530,6 +537,7 @@ impl Daemon {
             // again periodically on timers, depending on implementation
             // details of the underlying reactor.
             DaemonRequest::Hang { .. } => loop {
+                add_daemon_metrics_event("hang").await;
                 std::thread::park()
             },
             DaemonRequest::Quit { responder } => {
@@ -549,6 +557,7 @@ impl Daemon {
                     .await
                     .unwrap_or_else(|e| log::error!("shutting down service register: {:?}", e));
 
+                add_daemon_metrics_event("quit").await;
                 // It is desirable for the client to receive an ACK for the quit
                 // request. As Overnet has a potentially complicated routing
                 // path, it is tricky to implement some notion of a bounded
@@ -578,6 +587,7 @@ impl Daemon {
                 responder.send(&hash).context("error sending response")?;
             }
             DaemonRequest::ConnectToService { name, server_channel, responder } => {
+                let name_for_analytics = name.clone();
                 match self
                     .service_register
                     .open(
@@ -604,6 +614,10 @@ impl Daemon {
                         }
                     }
                 }
+                add_daemon_metrics_event(
+                    format!("connect_to_service: {}", &name_for_analytics).as_str(),
+                )
+                .await;
             }
             DaemonRequest::StreamDiagnostics {
                 target: target_str,
@@ -611,6 +625,7 @@ impl Daemon {
                 iterator,
                 responder,
             } => {
+                add_daemon_metrics_event("stream_diagnostics").await;
                 let stream_mode = if let Some(mode) = parameters.stream_mode {
                     mode
                 } else {
@@ -868,6 +883,7 @@ impl Daemon {
                 task.await?;
             }
         }
+
         Ok(())
     }
 
