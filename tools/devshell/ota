@@ -63,7 +63,7 @@ function main {
 
   if $build; then
     fx-info "Building/refreshing ${build_targets[@]}"
-    fx-command-run build "${build_targets[@]}"
+    fx-command-run build "${build_targets[@]}" || return 1
   fi
 
   # Note: the following command continues to run as the system goes into

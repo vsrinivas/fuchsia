@@ -5,8 +5,8 @@ mangini@google.com
 
 per-file             add-update-source,build-push,lib/updates.sh = file: /src/sys/pkg/OWNERS
 # per-file-COMPONENT add-update-source,build-push,lib/updates.sh = Packages
-per-file             push-package,serve,serve-updates,update     = file: /src/sys/pkg/OWNERS
-# per-file-COMPONENT push-package,serve,serve-updates,update     = Packages
+per-file             push-package,ota,serve,serve-updates,update = file: /src/sys/pkg/OWNERS
+# per-file-COMPONENT push-package,ota,serve,serve-updates,update = Packages
 
 per-file             flash,flash-migration,flash-remote                = file: /src/firmware/OWNERS
 # per-file-COMPONENT flash,flash-migration,flash-remote                = Firmware
