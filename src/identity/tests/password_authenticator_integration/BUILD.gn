@@ -32,7 +32,6 @@ rustc_test("driver") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rand_core",
   ]
 
   source_root = "src/account_manager.rs"

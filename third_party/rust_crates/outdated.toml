@@ -84,8 +84,6 @@ skip_updating = [
     "pulldown-cmark",
     "quote",
     "rand",
-    "rand_core",
-    "rand_os",
     "rand_xorshift",
     "rayon",
     "regex",

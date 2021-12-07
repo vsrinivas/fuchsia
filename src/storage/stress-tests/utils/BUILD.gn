@@ -31,7 +31,6 @@ rustc_library("utils") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",  # for recording messages
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:rand_core",
   ]
 
   sources = [

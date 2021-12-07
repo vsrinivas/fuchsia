@@ -1318,8 +1318,6 @@ dependencies = [
  "pulldown-cmark",
  "quote 1.0.7",
  "rand 0.6.5",
- "rand_core 0.4.0",
- "rand_os",
  "rand_xorshift",
  "rayon",
  "regex",

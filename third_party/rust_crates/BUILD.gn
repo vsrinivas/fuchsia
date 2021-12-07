@@ -578,14 +578,6 @@ group("rand") {
   deps = [ ":rand-v0_6_5" ]
 }
 
-group("rand_core") {
-  deps = [ ":rand_core-v0_4_0" ]
-}
-
-group("rand_os") {
-  deps = [ ":rand_os-v0_1_2" ]
-}
-
 group("rand_xorshift") {
   deps = [ ":rand_xorshift-v0_1_1" ]
 }
