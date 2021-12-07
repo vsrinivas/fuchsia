@@ -58,7 +58,7 @@ class RootDriver {
     return zx::ok();
   }
 
-  promise<void, zx_status_t> AddChild() {
+  promise<void, fdf::wire::NodeError> AddChild() {
     fidl::Arena arena;
 
     // Set the properties of the node that a driver will bind to.
@@ -75,30 +75,17 @@ class RootDriver {
     // Create endpoints of the `NodeController` for the node.
     auto endpoints = fidl::CreateEndpoints<fdf::NodeController>();
     if (endpoints.is_error()) {
-      return fpromise::make_error_promise(endpoints.error_value());
+      return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
     }
 
-    fpromise::bridge<void, zx_status_t> bridge;
-    auto callback = [this, completer = std::move(bridge.completer),
-                     client = std::move(endpoints->client)](
-                        fidl::WireUnownedResult<fdf::Node::AddChild>& result) mutable {
-      if (!result.ok()) {
-        completer.complete_error(result.status());
-        return;
-      }
-      if (result->result.is_err()) {
-        completer.complete_error(ZX_ERR_INTERNAL);
-        return;
-      }
-      controller_.Bind(std::move(client), dispatcher_);
-      completer.complete_ok();
-    };
-    node_->AddChild(std::move(args), std::move(endpoints->server), {}, std::move(callback));
-    return bridge.consumer.promise_or(error(ZX_ERR_UNAVAILABLE));
+    return driver::AddChild(node_, std::move(args), std::move(endpoints->server), {})
+        .and_then([this, client = std::move(endpoints->client)]() mutable {
+          controller_.Bind(std::move(client), dispatcher_);
+        });
   }
 
-  result<> UnbindNode(const zx_status_t& status) {
-    FDF_LOG(ERROR, "Failed to start root driver: %s", zx_status_get_string(status));
+  result<> UnbindNode(const fdf::wire::NodeError& error) {
+    FDF_LOG(ERROR, "Failed to start root driver: %d", error);
     node_.AsyncTeardown();
     return ok();
   }
