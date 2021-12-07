@@ -89,7 +89,6 @@ struct Instance {
     pub has_resolved_directory: bool, // the existence of the resolved directory.
     pub directory: Directory,
     pub children_directory: Directory,
-    pub deleting_directory: Directory,
 }
 
 /// The execution state for a component that has started running.
@@ -230,10 +229,6 @@ impl Hub {
         let children = pfs::simple();
         instance.add_node("children", children.clone(), &abs_moniker)?;
 
-        // Add a deleting directory.
-        let deleting = pfs::simple();
-        instance.add_node("deleting", deleting.clone(), &abs_moniker)?;
-
         Self::add_debug_directory(lifecycle_controller, instance.clone(), abs_moniker)?;
 
         instance_map.insert(
@@ -245,7 +240,6 @@ impl Hub {
                 has_resolved_directory: false,
                 directory: instance.clone(),
                 children_directory: children.clone(),
-                deleting_directory: deleting.clone(),
             },
         );
 
@@ -573,14 +567,6 @@ impl Hub {
     async fn on_purged_async(&self, target_moniker: &AbsoluteMoniker) -> Result<(), ModelError> {
         trace::duration!("component_manager", "hub:on_purged_async");
         let mut instance_map = self.instances.lock().await;
-
-        // TODO(xbhatnag): Investigate error handling scenarios here.
-        //                 Can these errors arise from faulty components or from
-        //                 a bug in ComponentManager?
-        let parent_moniker = target_moniker.parent().expect("a root component cannot be dynamic");
-        let leaf = target_moniker.leaf().expect("a root component cannot be dynamic");
-
-        instance_map[&parent_moniker].deleting_directory.remove_node(leaf.as_str())?;
         instance_map
             .remove(&target_moniker)
             .expect("the dynamic component must exist in the instance map");
@@ -611,16 +597,10 @@ impl Hub {
         // are two concurrent `DestroyChild` operations. In such cases we should probably cause
         // this update to no-op instead of returning an error.
         let partial_moniker = leaf.to_partial();
-        let directory = instance_map[&parent_moniker]
+        instance_map[&parent_moniker]
             .children_directory
             .remove_node(partial_moniker.as_str())
             .map_err(|_| ModelError::remove_entry_error(leaf.as_str()))?;
-
-        instance_map[&parent_moniker].deleting_directory.add_node(
-            leaf.as_str(),
-            directory,
-            target_moniker,
-        )?;
         Ok(())
     }
 
@@ -1113,16 +1093,7 @@ mod tests {
         .expect("Failed to open directory");
 
         assert_eq!(
-            vec![
-                "children",
-                "component_type",
-                "debug",
-                "deleting",
-                "exec",
-                "id",
-                "resolved",
-                "url"
-            ],
+            vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
             list_directory(&hub_dir).await
         );
     }

@@ -9,12 +9,12 @@ async fn main() {
     syslog::init_with_tags(&["resolver"]).unwrap();
     expect_dir_listing(
         "/hub/children/child_a",
-        vec!["children", "component_type", "debug", "deleting", "id", "url"],
+        vec!["children", "component_type", "debug", "id", "url"],
     )
     .await;
     expect_dir_listing(
         "/hub/children/child_b",
-        vec!["children", "component_type", "debug", "deleting", "id", "url"],
+        vec!["children", "component_type", "debug", "id", "url"],
     )
     .await;
     expect_dir_listing("/hub/debug", vec!["fuchsia.sys2.LifecycleController"]).await;
@@ -32,37 +32,37 @@ async fn main() {
         .await;
     expect_dir_listing(
         "/hub/children/child_a",
-        vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "id", "resolved", "url"],
     )
     .await;
     resolve_component("/hub/debug/fuchsia.sys2.LifecycleController", "./child_b", true).await;
     expect_dir_listing(
         "/hub/children/child_b",
-        vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "id", "resolved", "url"],
     )
     .await;
     bind_component("/hub/debug/fuchsia.sys2.LifecycleController", "./child_b", true).await;
     expect_dir_listing(
         "/hub/children/child_b",
-        vec!["children", "component_type", "debug", "deleting", "exec", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
     )
     .await;
     bind_component("/hub/children/child_a/debug/fuchsia.sys2.LifecycleController", ".", true).await;
     expect_dir_listing(
         "/hub/children/child_a",
-        vec!["children", "component_type", "debug", "deleting", "exec", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "exec", "id", "resolved", "url"],
     )
     .await;
     stop_component("/hub/debug/fuchsia.sys2.LifecycleController", "./child_b", true).await;
     expect_dir_listing(
         "/hub/children/child_b",
-        vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "id", "resolved", "url"],
     )
     .await;
     stop_component("/hub/children/child_a/debug/fuchsia.sys2.LifecycleController", ".", true).await;
     expect_dir_listing(
         "/hub/children/child_a",
-        vec!["children", "component_type", "debug", "deleting", "id", "resolved", "url"],
+        vec!["children", "component_type", "debug", "id", "resolved", "url"],
     )
     .await;
     expect_dir_listing("/hub/resolved/config", vec!["logging", "tags", "verbosity"]).await;
