@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.hardware.network/cpp/wire.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
+#include <fuchsia/hardware/network/mac/cpp/banjo.h>
 #include <zircon/system/public/zircon/compiler.h>
 
 #include <queue>
@@ -28,12 +29,16 @@ using DeviceType = ddk::Device<NetdeviceMigration>;
 class NetdeviceMigration : public DeviceType,
                            public ddk::EthernetIfcProtocol<NetdeviceMigration>,
                            public ddk::NetworkDeviceImplProtocol<NetdeviceMigration>,
-                           public ddk::NetworkPortProtocol<NetdeviceMigration> {
+                           public ddk::NetworkPortProtocol<NetdeviceMigration>,
+                           public ddk::MacAddrProtocol<NetdeviceMigration> {
  public:
   static constexpr uint8_t kPortId = 13;
   // Equivalent to generic ethernet driver FIFO depth; see
   // eth::EthDev::kFifoDepth in //src/connectivity/ethernet/drivers/ethernet/ethernet.h.
   static constexpr uint32_t kFifoDepth = 256;
+  static constexpr mode_t kSupportedMacFilteringModes =
+      MODE_MULTICAST_FILTER | MODE_MULTICAST_PROMISCUOUS | MODE_PROMISCUOUS;
+  static constexpr uint32_t kMulticastFilterMax = MAX_MAC_FILTER;
   static zx::status<std::unique_ptr<NetdeviceMigration>> Create(zx_device_t* dev);
   virtual ~NetdeviceMigration() {
     size_t diff = cookie_storage_.size() - tx_frame_cookies_.size();
@@ -79,9 +84,14 @@ class NetdeviceMigration : public DeviceType,
   void NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc);
   void NetworkPortRemoved();
 
+  // For MacAddrProtocol.
+  void MacAddrGetAddress(uint8_t out_mac[MAC_SIZE]);
+  void MacAddrGetFeatures(features_t* out_features);
+  void MacAddrSetMode(mode_t mode, const uint8_t* multicast_macs_list, size_t multicast_macs_count);
+
  private:
   NetdeviceMigration(zx_device_t* parent, ddk::EthernetImplProtocolClient ethernet, uint32_t mtu,
-                     zx::bti eth_bti, vmo_store::Options opts)
+                     zx::bti eth_bti, vmo_store::Options opts, std::array<uint8_t, MAC_SIZE> mac)
       : DeviceType(parent),
         ethernet_(ethernet),
         ethernet_ifc_proto_({&ethernet_ifc_protocol_ops_, this}),
@@ -100,11 +110,14 @@ class NetdeviceMigration : public DeviceType,
             // Ensures that an rx buffer will always be large enough to the ethernet MTU.
             .min_rx_buffer_length = mtu,
         }),
+        mac_(mac),
         vmo_store_(opts) {
     for (FrameCookie& cookie : cookie_storage_) {
       tx_frame_cookies_.push_back(&cookie);
     }
   }
+  void SetMacParam(uint32_t param, int32_t value, const uint8_t* data_buffer,
+                   size_t data_size) const;
 
   ddk::NetworkDeviceIfcProtocolClient netdevice_;
 
@@ -112,6 +125,7 @@ class NetdeviceMigration : public DeviceType,
   const ethernet_ifc_protocol_t ethernet_ifc_proto_;
   const zx::bti eth_bti_;
   const device_info_t info_;
+  const std::array<uint8_t, MAC_SIZE> mac_;
 
   std::mutex status_lock_;
   fuchsia_hardware_network::wire::StatusFlags port_status_flags_ __TA_GUARDED(status_lock_);

@@ -120,6 +120,7 @@ class NetdeviceMigrationTest : public ::testing::Test {
           *out_info = {
               .features = features,
               .mtu = ETH_MTU_SIZE,
+              .mac = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF},
           };
           return ZX_OK;
         });
@@ -761,4 +762,89 @@ INSTANTIATE_TEST_SUITE_P(
       QueueTxFailedPreconditionInput input = info.param;
       return input.name;
     });
+
+TEST_F(NetdeviceMigrationDefaultSetupTest, MacAddrGetAddress) {
+  uint8_t out[MAC_SIZE];
+  Device().MacAddrGetAddress(out);
+  uint8_t expected[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF};
+  for (size_t i = 0; i < MAC_SIZE; ++i) {
+    EXPECT_EQ(out[i], expected[i]);
+  }
+}
+
+TEST_F(NetdeviceMigrationDefaultSetupTest, MacAddrGetFeatures) {
+  features_t out;
+  Device().MacAddrGetFeatures(&out);
+  EXPECT_EQ(out.multicast_filter_count,
+            netdevice_migration::NetdeviceMigration::kMulticastFilterMax);
+  EXPECT_EQ(out.supported_modes,
+            netdevice_migration::NetdeviceMigration::kSupportedMacFilteringModes);
+}
+
+struct MacAddrSetModeFailedPreconditionInput {
+  const char* name;
+  mode_t mode;
+  size_t mcast_macs;
+};
+
+class MacAddrSetModeFailedPreconditionTest
+    : public NetdeviceMigrationDefaultSetupTest,
+      public testing::WithParamInterface<MacAddrSetModeFailedPreconditionInput> {};
+
+TEST_P(MacAddrSetModeFailedPreconditionTest, RemovesDriver) {
+  MacAddrSetModeFailedPreconditionInput param = GetParam();
+  auto* device = TakeDevice();
+  ASSERT_OK(device->DeviceAdd());
+  ASSERT_EQ(Parent().child_count(), 1u);
+  device->MacAddrSetMode(param.mode, nullptr, param.mcast_macs);
+  ASSERT_TRUE(Parent().GetLatestChild()->AsyncRemoveCalled());
+  ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(&Parent()));
+  ASSERT_EQ(Parent().child_count(), 0u);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    NetDeviceMigration, MacAddrSetModeFailedPreconditionTest,
+    testing::Values(
+        MacAddrSetModeFailedPreconditionInput{
+            .name = "TooManyMulticastMacFilters",
+            .mode = MODE_MULTICAST_FILTER,
+            .mcast_macs = netdevice_migration::NetdeviceMigration::kMulticastFilterMax + 1,
+        },
+        MacAddrSetModeFailedPreconditionInput{
+            .name = "InvalidMode",
+            .mode = MODE_MULTICAST_FILTER | MODE_MULTICAST_PROMISCUOUS | MODE_PROMISCUOUS,
+            .mcast_macs = netdevice_migration::NetdeviceMigration::kMulticastFilterMax,
+        }),
+    [](const testing::TestParamInfo<MacAddrSetModeFailedPreconditionTest::ParamType>& info) {
+      MacAddrSetModeFailedPreconditionInput input = info.param;
+      return input.name;
+    });
+
+TEST_F(NetdeviceMigrationDefaultSetupTest, MacAddrSetMode) {
+  EXPECT_CALL(MockEthernet(),
+              EthernetImplSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 0, nullptr, 0))
+      .WillOnce([](uint32_t p, int32_t v, const uint8_t* data, size_t data_len) { return ZX_OK; });
+  EXPECT_CALL(MockEthernet(), EthernetImplSetParam(ETHERNET_SETPARAM_PROMISC, 0, nullptr, 0))
+      .WillOnce([](uint32_t p, int32_t v, const uint8_t* data, size_t data_len) { return ZX_OK; });
+  std::array<uint8_t, netdevice_migration::NetdeviceMigration::kMulticastFilterMax * MAC_SIZE>
+      mac_filter;
+  EXPECT_CALL(MockEthernet(),
+              EthernetImplSetParam(ETHERNET_SETPARAM_MULTICAST_FILTER,
+                                   netdevice_migration::NetdeviceMigration::kMulticastFilterMax,
+                                   testing::Pointer(mac_filter.data()), mac_filter.size()))
+      .WillOnce([](uint32_t p, int32_t v, const uint8_t* data, size_t data_len) { return ZX_OK; });
+  Device().MacAddrSetMode(MODE_MULTICAST_FILTER, mac_filter.data(),
+                          netdevice_migration::NetdeviceMigration::kMulticastFilterMax);
+
+  EXPECT_CALL(MockEthernet(), EthernetImplSetParam(ETHERNET_SETPARAM_PROMISC, 0, nullptr, 0))
+      .WillOnce([](uint32_t p, int32_t v, const uint8_t* data, size_t data_len) { return ZX_OK; });
+  EXPECT_CALL(MockEthernet(),
+              EthernetImplSetParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 1, nullptr, 0))
+      .WillOnce([](uint32_t p, int32_t v, const uint8_t* data, size_t data_len) { return ZX_OK; });
+  Device().MacAddrSetMode(MODE_MULTICAST_PROMISCUOUS, nullptr, 0u);
+
+  EXPECT_CALL(MockEthernet(), EthernetImplSetParam(ETHERNET_SETPARAM_PROMISC, 1, nullptr, 0))
+      .WillOnce([](uint32_t p, int32_t v, const uint8_t* data, size_t data_len) { return ZX_OK; });
+  Device().MacAddrSetMode(MODE_PROMISCUOUS, nullptr, 0u);
+}
 }  // namespace

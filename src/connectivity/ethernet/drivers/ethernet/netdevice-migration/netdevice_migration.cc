@@ -77,9 +77,11 @@ zx::status<std::unique_ptr<NetdeviceMigration>> NetdeviceMigration::Create(zx_de
         .index = true,
     };
   }
+  std::array<uint8_t, sizeof(eth_info.mac)> mac;
+  std::copy_n(eth_info.mac, sizeof(eth_info.mac), mac.begin());
   fbl::AllocChecker ac;
   auto netdevm = std::unique_ptr<NetdeviceMigration>(
-      new (&ac) NetdeviceMigration(dev, ethernet, eth_info.mtu, std::move(eth_bti), opts));
+      new (&ac) NetdeviceMigration(dev, ethernet, eth_info.mtu, std::move(eth_bti), opts, mac));
   if (!ac.check()) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
@@ -412,6 +414,57 @@ void NetdeviceMigration::NetworkPortSetActive(bool active) {}
 void NetdeviceMigration::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) { *out_mac_ifc = {}; }
 
 void NetdeviceMigration::NetworkPortRemoved() {}
+
+void NetdeviceMigration::MacAddrGetAddress(uint8_t out_mac[MAC_SIZE]) {
+  static_assert(sizeof(mac_) == MAC_SIZE);
+  std::copy(mac_.begin(), mac_.end(), out_mac);
+}
+
+void NetdeviceMigration::MacAddrGetFeatures(features_t* out_features) {
+  *out_features = {
+      .multicast_filter_count = kMulticastFilterMax,
+      .supported_modes = kSupportedMacFilteringModes,
+  };
+}
+
+void NetdeviceMigration::MacAddrSetMode(mode_t mode, const uint8_t* multicast_macs_list,
+                                        size_t multicast_macs_count) {
+  if (multicast_macs_count > kMulticastFilterMax) {
+    zxlogf(ERROR, "netdevice-migration: multicast macs count exceeds maximum: %zu > %du",
+           multicast_macs_count, kMulticastFilterMax);
+    DdkAsyncRemove();
+    return;
+  }
+  switch (mode) {
+    case MODE_MULTICAST_FILTER:
+      SetMacParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 0, nullptr, 0);
+      SetMacParam(ETHERNET_SETPARAM_PROMISC, 0, nullptr, 0);
+      SetMacParam(ETHERNET_SETPARAM_MULTICAST_FILTER, static_cast<int32_t>(multicast_macs_count),
+                  multicast_macs_list, multicast_macs_count * MAC_SIZE);
+      break;
+    case MODE_MULTICAST_PROMISCUOUS:
+      SetMacParam(ETHERNET_SETPARAM_PROMISC, 0, nullptr, 0);
+      SetMacParam(ETHERNET_SETPARAM_MULTICAST_PROMISC, 1, nullptr, 0);
+      break;
+    case MODE_PROMISCUOUS:
+      SetMacParam(ETHERNET_SETPARAM_PROMISC, 1, nullptr, 0);
+      break;
+    default:
+      zxlogf(ERROR, "netdevice-migration: mac addr filtering mode set with unsupported mode %du",
+             mode);
+      DdkAsyncRemove();
+      return;
+  }
+}
+
+void NetdeviceMigration::SetMacParam(uint32_t param, int32_t value, const uint8_t* data_buffer,
+                                     size_t data_size) const {
+  if (zx_status_t status = ethernet_.SetParam(param, value, data_buffer, data_size);
+      status != ZX_OK) {
+    zxlogf(WARNING, "netdevice-migration: failed to set ethernet parameter %du to value %d: %s",
+           param, value, zx_status_get_string(status));
+  }
+}
 
 static zx_driver_ops_t netdevice_migration_driver_ops = []() -> zx_driver_ops_t {
   return {
