@@ -93,10 +93,10 @@ class WiFiService implements TaskService {
       await _clientController?.scanForNetworks(InterfaceRequest(
           _scanResultIteratorProvider?.ctrl.request().passChannel()));
 
-      _scannedNetworks.clear();
       List<policy.ScanResult>? scanResults;
       try {
         scanResults = await _scanResultIteratorProvider?.getNext();
+        _scannedNetworks.clear();
         while (scanResults != null && scanResults.isNotEmpty) {
           _scannedNetworks.addAll(scanResults);
           scanResults = await _scanResultIteratorProvider?.getNext();
