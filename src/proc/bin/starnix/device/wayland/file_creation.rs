@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::device::magma_file::MagmaNode;
 use crate::device::wayland::DmaBufNode;
 use crate::fs::socket::*;
 use crate::fs::FdNumber;
@@ -38,5 +39,13 @@ pub fn create_device_file(current_task: &CurrentTask, device_path: FsString) -> 
         current_task.lookup_parent_at(FdNumber::AT_FDCWD, &device_path)?;
     let mode = current_task.fs.apply_umask(mode!(IFREG, 0o765));
     let _device_entry = device_parent.entry.add_node_ops(device_basename, mode, DmaBufNode {})?;
+    Ok(())
+}
+
+pub fn create_magma_file(task: &CurrentTask, device_path: FsString) -> Result<(), Errno> {
+    let (device_parent, device_basename) =
+        task.lookup_parent_at(FdNumber::AT_FDCWD, &device_path)?;
+    let mode = task.fs.apply_umask(mode!(IFREG, 0o765));
+    let _device_entry = device_parent.entry.add_node_ops(device_basename, mode, MagmaNode {})?;
     Ok(())
 }

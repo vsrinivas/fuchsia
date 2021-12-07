@@ -87,6 +87,7 @@ if (target_cpu == "x64") {
       "collections/range_map.rs",
       "device/features.rs",
       "device/magma.rs",
+      "device/magma_file.rs",
       "device/mem.rs",
       "device/mod.rs",
       "device/registry.rs",

@@ -53,6 +53,7 @@ pub fn serve_wayland(
 ) -> Result<(), Errno> {
     let display_socket = create_display_socket(current_task, display_path)?;
     create_device_file(current_task, device_path)?;
+    create_magma_file(current_task, b"/data/tmp/magma0".to_vec())?;
 
     let kernel = current_task.thread_group.kernel.clone();
     let outgoing_dir_channel = kernel.outgoing_dir.lock().take().ok_or(errno!(EINVAL))?;
