@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1629
+From //build/config/BUILDCONFIG.gn:1633
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1262,7 +1262,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1386
+From //build/config/BUILDCONFIG.gn:1390
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2204,7 +2204,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1226
+From //build/config/BUILDCONFIG.gn:1230
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3556,7 +3556,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1619
+From //build/config/BUILDCONFIG.gn:1623
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3565,7 +3565,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1624
+From //build/config/BUILDCONFIG.gn:1628
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3609,7 +3609,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1432
+From //build/config/BUILDCONFIG.gn:1436
 
 ### size_checker_input
 The input to the size checker.
@@ -3889,7 +3889,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1416
+From //build/config/BUILDCONFIG.gn:1420
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
