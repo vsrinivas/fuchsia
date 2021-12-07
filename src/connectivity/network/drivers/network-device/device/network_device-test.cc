@@ -1306,15 +1306,25 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
   fidl::StringView name = fidl::StringView::FromExternal(name_str, 5u);
 
   bool reply_called = false;
+  std::vector<zx::handle> handles;
   class T : public fidl::Transaction {
    public:
-    explicit T(bool* r) : reply_called_(r) {}
+    explicit T(bool* r, std::vector<zx::handle>* handles) : reply_called_(r), handles_(handles) {}
     std::unique_ptr<Transaction> TakeOwnership() override {
-      auto t = std::make_unique<T>(reply_called_);
+      auto t = std::make_unique<T>(reply_called_, handles_);
       reply_called_ = nullptr;
+      handles_ = nullptr;
       return t;
     }
-    zx_status_t Reply(fidl::OutgoingMessage* message) override {
+    zx_status_t Reply(fidl::OutgoingMessage* m) override {
+      fidl::OutgoingMessage& message = *m;
+      // We have to store the handles as if the message was sent, since the
+      // channel that encodes the lifetime of the created session is somewhere
+      // in the outgoing message's handles.
+      for (const fidl_handle_t& handle : cpp20::span(message.handles(), message.handle_actual())) {
+        handles_->emplace_back(handle);
+      }
+      message.ReleaseHandles();
       *reply_called_ = true;
       return ZX_OK;
     }
@@ -1324,15 +1334,17 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
 
    private:
     bool* reply_called_;
-  } transaction(&reply_called);
+    std::vector<zx::handle>* handles_;
+  } transaction(&reply_called, &handles);
 
   fidl::WireServer<netdev::Device>::OpenSessionCompleter::Sync completer(&transaction);
   fidl::WireRequest<netdev::Device::OpenSession> req(name, info);
   fidl::WireServer<netdev::Device>::OpenSessionRequestView view(&req);
   dev->OpenSession(view, completer);
   ASSERT_TRUE(reply_called);
-  const auto& session = GetDeviceSessionsUnsafe(*dev).front();
-  ASSERT_STREQ("hello", session.name());
+  const internal::SessionList& sessions = GetDeviceSessionsUnsafe(*dev);
+  ASSERT_FALSE(sessions.is_empty());
+  ASSERT_STREQ("hello", sessions.front().name());
 }
 
 TEST_F(NetworkDeviceTest, RejectsSmallRxBuffers) {
