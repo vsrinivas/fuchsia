@@ -6,7 +6,16 @@
 
 namespace {{snake_case PROJECT_NAME}} {
 
-zx_status_t {{pascal_case PROJECT_NAME}}::Bind(void* ctx, zx_device_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t {{pascal_case PROJECT_NAME}}::Bind(void* ctx, zx_device_t* dev) {
+  auto driver = std::make_unique<{{pascal_case PROJECT_NAME}}>(dev);
+  zx_status_t status = driver->Bind();
+  if (status != ZX_OK) {
+    return status;
+  }
+  // The DriverFramework now owns driver.
+  __UNUSED auto ptr = driver.release();
+  return ZX_OK;
+}
 
 zx_status_t {{pascal_case PROJECT_NAME}}::Bind() {
   is_bound.Set(true);

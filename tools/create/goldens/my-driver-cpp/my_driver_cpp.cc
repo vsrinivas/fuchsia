@@ -8,7 +8,16 @@
 
 namespace my_driver_cpp {
 
-zx_status_t MyDriverCpp::Bind(void* ctx, zx_device_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t MyDriverCpp::Bind(void* ctx, zx_device_t* dev) {
+  auto driver = std::make_unique<MyDriverCpp>(dev);
+  zx_status_t status = driver->Bind();
+  if (status != ZX_OK) {
+    return status;
+  }
+  // The DriverFramework now owns driver.
+  __UNUSED auto ptr = driver.release();
+  return ZX_OK;
+}
 
 zx_status_t MyDriverCpp::Bind() {
   is_bound.Set(true);
