@@ -46,6 +46,8 @@ if (target_cpu == "x64") {
       "//src/lib/fuchsia-runtime",
       "//src/lib/fuchsia-url",
       "//src/lib/process_builder",
+
+      # TODO(fxb/89887): Remove the carnelian dependency.
       "//src/lib/ui/carnelian",
       "//src/lib/ui/fuchsia-scenic",
       "//src/lib/vulkan",

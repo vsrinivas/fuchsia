@@ -31,7 +31,7 @@ pub struct BufferCollectionTokens {
     pub vulkan_token: ClientEnd<fsysmem::BufferCollectionTokenMarker>,
 }
 
-/// `Loader` stores all the identifiers for the created devices and instances.
+/// `Loader` stores all the interfaces/entry points for the created devices and instances.
 pub struct Loader {
     /// The vulkan instance pointers associated with this loader. These are fetched at loader
     /// creation time.
@@ -39,14 +39,14 @@ pub struct Loader {
 
     /// The instance that is created for this loader. Not currently used after the loader has been
     /// created.
-    _instance: usize,
+    _instance: vk::Instance,
 
     /// The physical device associated with this loader. Not currently used after the loader has
     /// been created.
     _physical_device: vk::PhysicalDevice,
 
     /// The device that is created by this Loader.
-    device: usize,
+    device: vk::Device,
 }
 
 impl Loader {
@@ -71,26 +71,28 @@ impl Loader {
 
         let instance_pointers = instance_pointers(instance);
         let mut device_count: u32 = 0;
-        assert!(
-            unsafe {
-                instance_pointers.EnumeratePhysicalDevices(
-                    instance,
-                    &mut device_count as *mut u32,
-                    std::ptr::null_mut(),
-                )
-            } == vk::SUCCESS
-        );
+        if unsafe {
+            instance_pointers.EnumeratePhysicalDevices(
+                instance,
+                &mut device_count as *mut u32,
+                std::ptr::null_mut(),
+            )
+        } != vk::SUCCESS
+        {
+            return Err(vk::ERROR_INITIALIZATION_FAILED);
+        }
 
         let mut physical_devices: Vec<vk::PhysicalDevice> = vec![0; device_count as usize];
-        assert!(
-            unsafe {
-                instance_pointers.EnumeratePhysicalDevices(
-                    instance,
-                    &mut device_count as *mut u32,
-                    physical_devices.as_mut_ptr(),
-                )
-            } == vk::SUCCESS
-        );
+        if unsafe {
+            instance_pointers.EnumeratePhysicalDevices(
+                instance,
+                &mut device_count as *mut u32,
+                physical_devices.as_mut_ptr(),
+            )
+        } != vk::SUCCESS
+        {
+            return Err(vk::ERROR_INITIALIZATION_FAILED);
+        }
 
         let physical_device = physical_devices[physical_device_index as usize];
 
@@ -266,7 +268,9 @@ impl Loader {
             constraints.image_format_constraints[index] = image_constraints;
         }
 
-        buffer_collection.set_constraints(true, &mut constraints).expect("");
+        buffer_collection
+            .set_constraints(true, &mut constraints)
+            .map_err(|_| vk::ERROR_INITIALIZATION_FAILED)?;
 
         Ok((scenic_import_token, buffer_collection))
     }
