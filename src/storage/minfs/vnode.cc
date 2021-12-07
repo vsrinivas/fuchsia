@@ -876,17 +876,6 @@ void VnodeMinfs::Sync(SyncCallback closure) {
   return;
 }
 
-zx_status_t VnodeMinfs::AttachRemote(fs::MountChannel h) {
-  if (kMinfsRootIno == ino_) {
-    return ZX_ERR_ACCESS_DENIED;
-  } else if (!IsDirectory() || IsUnlinked()) {
-    return ZX_ERR_NOT_DIR;
-  } else if (IsRemote()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
-  SetRemote(std::move(h.client_end()));
-  return ZX_OK;
-}
 #endif
 
 }  // namespace minfs

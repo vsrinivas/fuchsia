@@ -276,7 +276,6 @@ class VnodeMinfs : public fs::Vnode,
                                      fs::VnodeRepresentation* info) final;
 
   void Sync(SyncCallback closure) final;
-  zx_status_t AttachRemote(fs::MountChannel h) final;
 
   // Initializes vmo that contains file's data by reading data from the disk.
   // Since we cannot yet register the filesystem as a paging service (and
