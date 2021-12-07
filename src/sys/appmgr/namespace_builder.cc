@@ -219,9 +219,11 @@ void NamespaceBuilder::PushDirectoryFromPath(std::string path) {
 }
 
 void NamespaceBuilder::PushDirectoryFromPathAs(std::string src_path, std::string dst_path) {
-  PushDirectoryFromPathAsWithPermissions(
-      std::move(src_path), std::move(dst_path),
-      fio::wire::kOpenFlagDirectory | fio::wire::kOpenFlagPosix | fio::wire::kOpenRightReadable);
+  // The POSIX flags below specify that the resulting directory will inherit the maximum set of
+  // rights from the root connection serving the namespace (write and/or execute).
+  uint32_t flags = fio::wire::kOpenFlagDirectory | fio::wire::kOpenRightReadable |
+                   fio::wire::kOpenFlagPosixWritable | fio::wire::kOpenFlagPosixExecutable;
+  PushDirectoryFromPathAsWithPermissions(std::move(src_path), std::move(dst_path), flags);
 }
 
 void NamespaceBuilder::PushDirectoryFromPathAsWithPermissions(std::string src_path,
