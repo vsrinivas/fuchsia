@@ -222,15 +222,15 @@ Evictor::EvictedPageCounts Evictor::EvictUntilTargetsMet(uint64_t min_pages_to_e
     no_ongoing_eviction_.Signal();
   });
 
-  uint64_t total_pages_freed = 0;
+  uint64_t total_non_loaned_pages_freed = 0;
 
   DEBUG_ASSERT(pmm_node_);
 
   while (true) {
     const uint64_t free_pages = pmm_node_->CountFreePages();
     uint64_t pages_to_free = 0;
-    if (total_pages_freed < min_pages_to_evict) {
-      pages_to_free = min_pages_to_evict - total_pages_freed;
+    if (total_non_loaned_pages_freed < min_pages_to_evict) {
+      pages_to_free = min_pages_to_evict - total_non_loaned_pages_freed;
     } else if (free_pages < free_pages_target) {
       pages_to_free = free_pages_target - free_pages;
     } else {
@@ -252,7 +252,7 @@ Evictor::EvictedPageCounts Evictor::EvictUntilTargetsMet(uint64_t min_pages_to_e
 
     uint64_t pages_freed = EvictDiscardable(pages_to_free_discardable);
     total_evicted_counts.discardable += pages_freed;
-    total_pages_freed += pages_freed;
+    total_non_loaned_pages_freed += pages_freed;
 
     // If we've already met the current target, continue to the next iteration of the loop.
     if (pages_freed >= pages_to_free) {
@@ -262,11 +262,13 @@ Evictor::EvictedPageCounts Evictor::EvictUntilTargetsMet(uint64_t min_pages_to_e
     // Free pager backed memory to get to |pages_to_free|.
     uint64_t pages_to_free_pager_backed = pages_to_free - pages_freed;
 
-    uint64_t pages_freed_pager_backed = EvictPagerBacked(pages_to_free_pager_backed, level);
-    total_evicted_counts.pager_backed += pages_freed_pager_backed;
-    total_pages_freed += pages_freed_pager_backed;
+    EvictedPageCounts pages_freed_pager_backed =
+        EvictPagerBacked(pages_to_free_pager_backed, level);
+    total_evicted_counts.pager_backed += pages_freed_pager_backed.pager_backed;
+    total_evicted_counts.pager_backed_loaned += pages_freed_pager_backed.pager_backed_loaned;
+    total_non_loaned_pages_freed += pages_freed_pager_backed.pager_backed;
 
-    pages_freed += pages_freed_pager_backed;
+    pages_freed += pages_freed_pager_backed.pager_backed;
 
     // Should we fail to free any pages then we give up and consider the eviction request complete.
     if (pages_freed == 0) {
@@ -301,12 +303,14 @@ uint64_t Evictor::EvictDiscardable(uint64_t target_pages) const {
   return count;
 }
 
-uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction_level) const {
+Evictor::EvictedPageCounts Evictor::EvictPagerBacked(uint64_t target_pages,
+                                                     EvictionLevel eviction_level) const {
+  EvictedPageCounts counts = {};
+
   if (!IsEvictionEnabled()) {
-    return 0;
+    return counts;
   }
 
-  uint64_t count = 0;
   list_node_t freed_list;
   list_initialize(&freed_list);
 
@@ -328,7 +332,7 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   DEBUG_ASSERT(page_queues_);
-  while (count < target_pages) {
+  while (counts.pager_backed < target_pages) {
     // TODO(rashaeqbal): The sequence of actions in PeekPagerBacked() and RemovePageForEviction()
     // implicitly guarantee forward progress in this loop, so that we're not stuck trying to evict
     // the same page (i.e. PeekPagerBacked keeps returning the same page). It would be nice to have
@@ -341,7 +345,11 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
       }
       if (backlink->cow->RemovePageForEviction(backlink->page, backlink->offset, hint_action)) {
         list_add_tail(&freed_list, &backlink->page->queue_node);
-        count++;
+        if (pmm_is_loaned(backlink->page)) {
+          counts.pager_backed_loaned++;
+        } else {
+          counts.pager_backed++;
+        }
       }
     } else {
       break;
@@ -351,8 +359,8 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
   DEBUG_ASSERT(pmm_node_);
   pmm_node_->FreeList(&freed_list);
 
-  pager_backed_pages_evicted.Add(count);
-  return count;
+  pager_backed_pages_evicted.Add(counts.pager_backed + counts.pager_backed_loaned);
+  return counts;
 }
 
 void Evictor::EnableContinuousEviction(uint64_t min_mem_to_free, uint64_t free_mem_target,

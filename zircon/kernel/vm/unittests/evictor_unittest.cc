@@ -169,6 +169,13 @@ static zx_status_t create_precommitted_pager_backed_vmo(uint64_t size,
     return status;
   }
 
+  // Pin the pages momentarily to force the pages to be non-loaned pages.  This allows us to be more
+  // strict with asserts that verify how many non-loaned pages are evicted.  Loaned pages can also
+  // be evicted along the way to evicting non-loaned pages, but only non-loaned pages count as fully
+  // free.
+  ASSERT(ZX_OK == vmo->CommitRangePinned(0, size));
+  vmo->Unpin(0, size);
+
   *vmo_out = ktl::move(vmo);
   return ZX_OK;
 }

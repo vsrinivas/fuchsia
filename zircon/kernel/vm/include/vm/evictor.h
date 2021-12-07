@@ -52,8 +52,19 @@ class Evictor {
     bool print_counts = false;
   };
 
+  // We count non-loaned and loaned evicted pages separately since the eviction goal is set in terms
+  // of non-loaned pages (for now) so in order to verify expected behavior in tests we keep separate
+  // counts.
   struct EvictedPageCounts {
+    // The pager_backed and pager_backed_loaned counts are exclusive; any given evicted page is
+    // counted as pager_backed or pager_backed_loaned depending on whether it's non-loaned or loaned
+    // respectively.
+    //
+    // evicted from pager-backed VMO non-loaned page count
     uint64_t pager_backed = 0;
+    // evicted from pager-backed VMO loaned page count
+    uint64_t pager_backed_loaned = 0;
+    // evicted from/via discardable VMO page count
     uint64_t discardable = 0;
   };
 
@@ -143,10 +154,11 @@ class Evictor {
   // number of pages evicted. This may acquire arbitrary vmo and aspace locks.
   uint64_t EvictDiscardable(uint64_t target_pages) const TA_EXCL(lock_);
 
-  // Evict the requested number of |target_pages| from pager-backed vmos. The return value is the
-  // number of pages evicted. The |eviction_level| is a rough control that maps to how old a page
-  // needs to be for being considered for eviction. This may acquire arbitrary vmo and aspace locks.
-  uint64_t EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction_level) const
+  // Evict the requested number of |target_pages| from pager-backed vmos. The returned struct has
+  // the number of pages evicted (discardable will be 0). The |eviction_level| is a rough control
+  // that maps to how old a page needs to be for being considered for eviction. This may acquire
+  // arbitrary vmo and aspace locks.
+  EvictedPageCounts EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction_level) const
       TA_EXCL(lock_);
 
   // The main loop for the eviction thread.
