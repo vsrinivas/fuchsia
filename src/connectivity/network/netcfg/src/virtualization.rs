@@ -27,7 +27,7 @@ use crate::{
     DeviceClass,
 };
 
-/// Wrapper around a `[fnet_virtualization::NetworkRequest]` that allows for the
+/// Wrapper around a [`fnet_virtualization::NetworkRequest`] that allows for the
 /// server to notify all existing interfaces to shut down when the client closes
 /// the `Network` channel.
 #[derive(Debug)]
@@ -166,7 +166,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                     // Create a oneshot channel we can use when the `Network` channel is closed, to
                     // notify each interface task to close its corresponding `Interface` channel as
                     // well.
-                    let (close_channel_tx, close_channel_rx) = futures::channel::oneshot::channel();
+                    let (close_channel_tx, close_channel_rx) = oneshot::channel();
                     let close_channel_rx = close_channel_rx.shared();
                     let stream = network
                         .into_stream()
