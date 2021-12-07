@@ -7,7 +7,7 @@ the session, that presents multiple graphical views to the user; most commonly,
 views from the session's [components][glossary.component].
 
 Although the same session component could also implement the Graphical Presenter
-roll, there is a [FIDL][glossary.FIDL] protocol,
+role, there is a [FIDL][glossary.FIDL] protocol,
 [`fuchsia.element.GraphicalPresenter`],
 that allows a [session][glossary.session]
 component to delegate Graphical Presenter responsibilities another component. This makes it possible
