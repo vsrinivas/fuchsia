@@ -34,7 +34,7 @@ use crate::auth::Credentials;
 use crate::device::run_features;
 use crate::errno;
 use crate::fs::ext4::ExtFilesystem;
-use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
+use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::signals::signal_handling::*;
@@ -220,6 +220,12 @@ fn parse_numbered_handles(
                 ));
             }
         }
+    } else {
+        // If no numbered handles are provided default 0, 1, and 2 to a syslog file.
+        let stdio = SyslogFile::new(&kernel);
+        files.insert(FdNumber::from_raw(0), stdio.clone());
+        files.insert(FdNumber::from_raw(1), stdio.clone());
+        files.insert(FdNumber::from_raw(2), stdio);
     }
     Ok(StartupHandles { shell_controller })
 }
