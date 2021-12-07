@@ -160,8 +160,8 @@ Result ProcessProxyImpl::Join() {
   if (status != ZX_OK) {
     FX_LOGS(FATAL) << "Failed to wait for process to terminate: " << zx_status_get_string(status);
   }
-  zx_info_process_v2_t info;
-  status = process_.get_info(ZX_INFO_PROCESS_V2, &info, sizeof(info), nullptr, nullptr);
+  zx_info_process_t info;
+  status = process_.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     FX_LOGS(FATAL) << "Failed to get info for process: " << zx_status_get_string(status);
   }

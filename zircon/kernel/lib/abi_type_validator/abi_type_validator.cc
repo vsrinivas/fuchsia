@@ -214,16 +214,10 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_info_maps_t, type, 56, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_maps_t, u, 64, 32);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_maps_t, u.mapping, 64, 32);
 
-VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_process_v1_t, 16, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_v1_t, return_code, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_v1_t, started, 8, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_v1_t, exited, 9, 1);
-VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_v1_t, debugger_attached, 10, 1);
-
-VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_process_v2_t, 24, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_v2_t, return_code, 0, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_v2_t, start_time, 8, 8);
-VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_v2_t, flags, 16, 4);
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_process_t, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_t, return_code, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_t, start_time, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_info_process_t, flags, 16, 4);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_info_socket_t, 48, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_info_socket_t, options, 0, 4);

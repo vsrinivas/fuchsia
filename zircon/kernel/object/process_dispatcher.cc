@@ -453,21 +453,7 @@ void ProcessDispatcher::FinishDeadTransition() {
   }
 }
 
-void ProcessDispatcher::GetInfo(zx_info_process_v1_t* info) const {
-  canary_.Assert();
-
-  zx_info_process_v2_t v2_info{};
-  GetInfo(&v2_info);
-  *info = {
-      .return_code = v2_info.return_code,
-      .started = (v2_info.flags & ZX_INFO_PROCESS_FLAG_STARTED) != 0,
-      .exited = (v2_info.flags & ZX_INFO_PROCESS_FLAG_EXITED) != 0,
-      .debugger_attached = (v2_info.flags & ZX_INFO_PROCESS_FLAG_DEBUGGER_ATTACHED) != 0,
-      .padding1 = {},
-  };
-}
-
-void ProcessDispatcher::GetInfo(zx_info_process_v2_t* info) const {
+void ProcessDispatcher::GetInfo(zx_info_process_t* info) const {
   canary_.Assert();
 
   State state;
@@ -499,7 +485,7 @@ void ProcessDispatcher::GetInfo(zx_info_process_v2_t* info) const {
       break;
   }
 
-  *info = zx_info_process_v2_t{
+  *info = zx_info_process_t{
       .return_code = return_code,
       .start_time = start_time,
       .flags = flags,

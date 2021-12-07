@@ -498,8 +498,7 @@ void PrettyPrinter::DisplayObjectInfoTopic(uint32_t topic) {
     TopicCase(ZX_INFO_NONE);
     TopicCase(ZX_INFO_HANDLE_VALID);
     TopicCase(ZX_INFO_HANDLE_BASIC);
-    TopicCase(ZX_INFO_PROCESS_V1);
-    TopicCase(ZX_INFO_PROCESS_V2);
+    TopicCase(ZX_INFO_PROCESS);
     TopicCase(ZX_INFO_PROCESS_THREADS);
     TopicCase(ZX_INFO_VMAR);
     TopicCase(ZX_INFO_JOB_CHILDREN);

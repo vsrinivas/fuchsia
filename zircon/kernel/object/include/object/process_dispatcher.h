@@ -114,11 +114,7 @@ class ProcessDispatcher final
   void Resume();
 
   // Syscall helpers
-  //
-  // TODO(fxbug.dev/30751): The v1 GetInfo() signature is deprecated in favor
-  // of the v2 one.
-  void GetInfo(zx_info_process_v1_t* info) const;
-  void GetInfo(zx_info_process_v2_t* info) const;
+  void GetInfo(zx_info_process_t* info) const;
   zx_status_t GetStats(zx_info_task_stats_t* stats) const;
 
   // Accumulate the runtime of all threads that previously ran or are currently running under this

@@ -222,22 +222,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }
-    case ZX_INFO_PROCESS_V1: {
-      // TODO(fxbug.dev/30418): Handle forward/backward compatibility issues
-      // with changes to the struct.
-
-      // grab a reference to the dispatcher
-      fbl::RefPtr<ProcessDispatcher> process;
-      auto error = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &process);
-      if (error != ZX_OK)
-        return error;
-
-      // build the info structure
-      zx_info_process_v1_t info = {};
-      process->GetInfo(&info);
-      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
-    }
-    case ZX_INFO_PROCESS_V2: {
+    case ZX_INFO_PROCESS: {
       // TODO(fxbug.dev/30418): Handle forward/backward compatibility issues
       // with changes to the struct.
 
@@ -247,7 +232,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       if (error != ZX_OK)
         return error;
 
-      zx_info_process_v2_t info = {};
+      zx_info_process_t info = {};
       process->GetInfo(&info);
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }

@@ -187,46 +187,14 @@ Note that |exited| will immediately report that the job has exited following a
 |zx_task_kill| or equivalent (e.g. an OOM kill), but child jobs and processes
 may still be in the process of exiting.
 
-### ZX_INFO_PROCESS (a.k.a. ZX_INFO_PROCESS_V1)
+### ZX_INFO_PROCESS
 
 *handle* type: **Process**
 
 *buffer* type: `zx_info_process_t[1]`
 
-TODO(fxbug.dev/30751): Deprecated in favor of ZX_INFO_PROCESS_V2.
-
 ```
 typedef struct zx_info_process {
-    // The process's return code; only valid if |exited| is true.
-    // Guaranteed to be non-zero if the process was killed by |zx_task_kill|.
-    int64_t return_code;
-
-    // True if the process has ever left the initial creation state,
-    // even if it has exited as well.
-    bool started;
-
-    // If true, the process has exited and |return_code| is valid.
-    bool exited;
-
-    // True if a debugger is attached to the process.
-    bool debugger_attached;
-} zx_info_process_t;
-```
-
-Note that |exited| will immediately report that the process has exited following
-a |zx_task_kill|, but child threads may still be in the process of exiting.
-
-### ZX_INFO_PROCESS_V2
-
-*handle* type: **Process**
-
-*buffer* type: `zx_info_process_v2_t[1]`
-
-TODO(fxbug.dev/30751): This will replace `ZX_INFO_PROCESS_V1` and will be
-renamed to `ZX_INFO_PROCESS` later in the transition.
-
-```
-typedef struct zx_info_process_v2 {
     // The process's return code; only valid if the
     // |ZX_PROCESS_INFO_FLAG_EXITED| flag is set. If the process was killed, it
     // will be one of the |ZX_TASK_RETCODE| values.
@@ -238,7 +206,7 @@ typedef struct zx_info_process_v2 {
 
     // Bitwise OR of ZX_INFO_PROCESS_FLAG_* values.
     uint32_t flags;
-} zx_info_process_v2_t;
+} zx_info_process_t;
 ```
 
 Note that |flags| will immediately report that the process has exited (i.e. it

@@ -381,8 +381,7 @@ GetInfoController *GetInfoController::GetCorrectController(JSContext *ctx, uint3
       return nullptr;
     case ZX_INFO_HANDLE_BASIC:
       return new BasicInfoController(ctx, topic);
-    case ZX_INFO_PROCESS_V1:
-    case ZX_INFO_PROCESS_V2:
+    case ZX_INFO_PROCESS:
     case ZX_INFO_VMAR:
     case ZX_INFO_THREAD:
     case ZX_INFO_THREAD_EXCEPTION_REPORT:
@@ -521,8 +520,7 @@ const JSCFunctionListEntry funcs_[] = {
     FLAG(ZX_INFO_NONE),
     FLAG(ZX_INFO_HANDLE_VALID),
     FLAG(ZX_INFO_HANDLE_BASIC),
-    FLAG(ZX_INFO_PROCESS_V1),
-    FLAG(ZX_INFO_PROCESS_V2),
+    FLAG(ZX_INFO_PROCESS),
     FLAG(ZX_INFO_PROCESS_THREADS),
     FLAG(ZX_INFO_VMAR),
     FLAG(ZX_INFO_JOB_CHILDREN),

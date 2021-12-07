@@ -81,8 +81,8 @@ int main(void) {
     printf("zx_object_wait_one: %s\n", zx_status_get_string(status));
     return status;
   }
-  zx_info_process_v2_t info;
-  status = zx_object_get_info(proc, ZX_INFO_PROCESS_V2, &info, sizeof(info), NULL, NULL);
+  zx_info_process_t info;
+  status = zx_object_get_info(proc, ZX_INFO_PROCESS, &info, sizeof(info), NULL, NULL);
   if (status != ZX_OK) {
     printf("zx_object_get_info: %s\n", zx_status_get_string(status));
     return status;
