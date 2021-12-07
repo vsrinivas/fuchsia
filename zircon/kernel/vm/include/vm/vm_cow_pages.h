@@ -511,9 +511,10 @@ class VmCowPages final
     // Exclude ShouldTrapDirtyTransitions() for now to prevent write-back and borrowing from
     // interesecting until we get a chance to fix that up.
     bool result = page_source_ && page_source_->properties().is_preserving_page_content &&
-                  !is_latency_sensitive_ && !page_source_->ShouldTrapDirtyTransitions();
+                  !is_latency_sensitive_ && !ever_pinned_ &&
+                  !page_source_->ShouldTrapDirtyTransitions();
     DEBUG_ASSERT(result == (debug_is_user_pager_backed_locked() && !is_latency_sensitive_ &&
-                            !page_source_->ShouldTrapDirtyTransitions()));
+                            !ever_pinned_ && !page_source_->ShouldTrapDirtyTransitions()));
     return result;
   }
 
@@ -974,6 +975,16 @@ class VmCowPages final
   // be advanced (by calling AdvanceIf()) before removing any element from the discardable lists.
   static fbl::DoublyLinkedList<Cursor*> discardable_vmos_cursors_
       TA_GUARDED(DiscardableVmosLock::Get());
+
+  // With this bool we achieve these things:
+  //  * Avoid using loaned pages for a VMO that will just get pinned and replace the loaned pages
+  //    with non-loaned pages again, possibly repeatedly.
+  //  * Avoid increasing pin latency in the (more) common case of pinning a VMO the 2nd or
+  //    subsequent times (vs the 1st time).
+  //  * Once we have any form of active sweeping (of data from non-loaned to loaned physical pages)
+  //    this bool is part of mitigating any potential DMA-while-not-pinned (which is not permitted
+  //    but is also difficult to detect or prevent without an IOMMU).
+  bool ever_pinned_ TA_GUARDED(lock_) = false;
 };
 
 // VmCowPagesContainer exists to essentially split the VmCowPages ref_count_ into two counts, so
