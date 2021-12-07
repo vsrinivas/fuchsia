@@ -485,7 +485,7 @@
 
 - name: 'RFC-0037'
   title: 'Transactional message header v3'
-  short_description: 'This proposal modifies the FIDL wire format. The reserved bytes of the transaction header are allocated to a one byte magic number to identify the wire format used aAnd three bytes for flags meant to be temporarily used for soft migrations.'
+  short_description: 'This proposal modifies the FIDL wire format. The reserved bytes of the transaction header are allocated to a one byte magic number to identify the wire format used and three bytes for flags meant to be temporarily used for soft migrations.'
   authors: ['pascallouis@google.com']
   file: '0037_transactional_message_header_v3.md'
   area: ['FIDL']
