@@ -1,0 +1,51 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+import("//tools/cmc/build/expect_includes.gni")
+
+rustc_library("battery-client") {
+  name = "battery-client"
+  with_unit_tests = true
+
+  deps = [
+    ":battery_client_includes",
+    "//sdk/fidl/fuchsia.power:fuchsia.power-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:derivative",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  test_deps = [
+    "//src/lib/async-utils",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:matches",
+  ]
+
+  sources = [
+    "src/error.rs",
+    "src/lib.rs",
+  ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+expect_includes("battery_client_includes") {
+  includes = [ "meta/client.shard.cml" ]
+}
+
+fuchsia_unittest_package("battery-client-tests") {
+  deps = [ ":battery-client_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":battery-client-tests" ]
+}

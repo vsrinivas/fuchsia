@@ -6,6 +6,7 @@ group("lib") {
   testonly = true
   deps = [
     "async-helpers",
+    "battery-client",
     "bt-a2dp",
     "bt-avctp",
     "bt-avdtp",
@@ -29,6 +30,7 @@ group("tests") {
   testonly = true
   deps = [
     "async-helpers:tests",
+    "battery-client:tests",
     "bt-a2dp:tests",
     "bt-avctp:tests",
     "bt-avdtp:tests",
