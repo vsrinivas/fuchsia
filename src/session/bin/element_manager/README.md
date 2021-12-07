@@ -64,3 +64,13 @@ $ fx test element_manager_tests
 ## Source layout
 
 The entrypoint is located in `src/main.rs`. Unit tests are co-located with the code.
+
+## Element annotations
+
+`element_manager` [writes annotations] in the namespace "element_manager".
+
+| Namespace         | Key    | Value [type]                 | Description                                                                                                                                                                                              |
+|-------------------|--------|------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `element_manager` | `url`  | Element component URL [text] | Set from the value from `component_url` in the proposed element spec. The `GraphicalPresenter` implementation can use this annotation to determine which component is associated with an element's view. |
+
+[writes annotations]: https://fuchsia.dev/reference/fidl/fuchsia.element#Annotation
