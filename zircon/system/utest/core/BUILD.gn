@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components/fuchsia_unittest_package.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//build/testing/zbi_test.gni")
@@ -94,6 +95,40 @@ foreach(test_name, core_tests) {
     name = "core-$test_name"
     deps = [ ":$test_name" ]
   }
+}
+
+# Requires use_next_vdso in the manifest. Build as a package and unified bootfs test, but not a
+# standalone bootfs test.
+# TODO(fxbug.dev/89597): Remove this one standalone bootfs tests can access the next vDSO.
+requires_next_vdso = [ "pager-writeback" ]
+
+test_packages = []
+
+foreach(test_name, requires_next_vdso) {
+  test(test_name) {
+    output_name = "core-$test_name"
+
+    if (is_fuchsia) {
+      fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+      if (configs + fdio_config - fdio_config != configs) {
+        configs -= fdio_config
+      }
+    }
+    deps = [ test_name ]
+  }
+
+  test_package = "core-$test_name-test"
+  fuchsia_unittest_package(test_package) {
+    deps = [ ":$test_name" ]
+    manifest = "$test_name/meta/$test_name.cml"
+  }
+
+  test_packages += [ ":$test_package" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = test_packages
 }
 
 # Now build all of those (and more) together into the core-tests

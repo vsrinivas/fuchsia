@@ -3,8 +3,8 @@
 The "core" tests exist for one main purpose:
 To test basic functionality when things like devmgr aren't working.
 
-There are two different ways in which core tests are built and run:
-unified and standalone.
+There are three different ways in which core tests are built and run:
+unified, standalone, and as components.
 
 ## Unified mode
 
@@ -57,6 +57,36 @@ or
 
 ```
 runtests /boot/test/core-*
+```
+
+## Components
+
+Some tests require the next vDSO, which is not available in the
+standalone mode on bringup builds. These tests are built as standalone
+binaries and packaged as Fuchsia components instead of standalone bootfs
+tests. Note that this is a temporary workaround for the next vDSO not
+being available in the standalone mode in bringup builds. Refer to
+fxbug.dev/89597 for more context. See `requires_next_vdso` in BUILD.gn
+for a list of such tests.
+
+### Example usage
+
+```
+fx set core.x64 --with //zircon/system/utest/core:tests
+fx build
+fx qemu -N ...
+```
+
+Then on the host,
+
+```
+fx serve
+```
+
+and separately,
+
+```
+fx test fuchsia-pkg://fuchsia.com/core-pager-writeback-test
 ```
 
 ## Notes

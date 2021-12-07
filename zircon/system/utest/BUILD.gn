@@ -13,6 +13,7 @@ group("tests") {
     "cleanup:tests",
     "cmdline:tests",
     "compiler:tests",
+    "core:tests",
     "cprng:tests",
     "ctor:tests",
     "dash:tests",
