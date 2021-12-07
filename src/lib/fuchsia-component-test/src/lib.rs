@@ -487,9 +487,6 @@ pub struct ChildOptions {
     startup: fdecl::StartupMode,
 }
 
-// This is a temporary alias to support a soft migration from ChildProperties to ChildOptions.
-pub type ChildProperties = ChildOptions;
-
 impl ChildOptions {
     pub fn new() -> Self {
         Self { startup: fdecl::StartupMode::Lazy }

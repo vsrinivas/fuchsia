@@ -9,7 +9,7 @@ use {
     fuchsia_async::futures::{StreamExt, TryStreamExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
-        mock::MockHandles, ChildProperties, RealmBuilder, RouteBuilder, RouteEndpoint,
+        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
     },
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     futures::channel::mpsc,
@@ -45,7 +45,7 @@ async fn test_interop() -> Result<()> {
         .add_mock_child(
             WAITER_NAME,
             move |handles: MockHandles| Box::pin(waiter_component(handles, sender.clone())),
-            ChildProperties::new(),
+            ChildOptions::new(),
         )
         .await?
         .add_route(
