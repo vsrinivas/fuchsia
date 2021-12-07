@@ -347,6 +347,7 @@ executable("device_tests") {
   deps = [
     ":device",
     ":magma_image",
+    "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.ui.scenic",

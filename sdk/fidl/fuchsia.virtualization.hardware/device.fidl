@@ -5,7 +5,6 @@ library fuchsia.virtualization.hardware;
 
 using fuchsia.hardware.ethernet;
 using fuchsia.io;
-using fuchsia.media;
 using fuchsia.sysmem;
 using fuchsia.ui.composition;
 using fuchsia.ui.gfx;
@@ -211,15 +210,12 @@ protocol VirtioSound {
     /// The response contains the device's expected static configuration.
     ///
     /// + request `start_info` basic info to start the device
-    /// + request `audio` connection to an audio server (used to play and
-    ///     capture audio)
     /// - response `features` supported features
     /// - response `jacks` the virtio_snd_config.jacks value to advertise
     /// - response `streams` the virtio_snd_config.streams value to advertise
     /// - response `chmaps` the virtio_snd_config.chaps value to advertise
     Start(resource struct {
         start_info StartInfo;
-        audio client_end:fuchsia.media.Audio;
     }) -> (struct {
         features uint32;
         jacks uint32;

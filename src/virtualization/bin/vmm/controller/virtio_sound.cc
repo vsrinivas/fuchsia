@@ -31,12 +31,8 @@ zx_status_t VirtioSound::Start(const zx::guest& guest, fuchsia::sys::Launcher* l
     return status;
   }
 
-  fuchsia::media::AudioSyncPtr audio;
-  services->Connect(audio.NewRequest());
-
   uint32_t features, jacks, streams, chmaps;
-  status =
-      sound_->Start(std::move(start_info), std::move(audio), &features, &jacks, &streams, &chmaps);
+  status = sound_->Start(std::move(start_info), &features, &jacks, &streams, &chmaps);
   if (status != ZX_OK) {
     return status;
   }

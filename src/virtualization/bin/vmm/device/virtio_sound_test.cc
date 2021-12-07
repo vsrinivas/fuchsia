@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/media/cpp/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
 
 #include <array>
@@ -148,16 +149,18 @@ class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
 
 class FakeAudio : public fuchsia::media::Audio {
  public:
-  FakeAudio(fidl::InterfaceRequest<fuchsia::media::Audio> request, async_dispatcher_t* dispatcher)
-      : binding_(this, std::move(request), dispatcher) {}
+  explicit FakeAudio(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   void CreateAudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request) final {
-    renderers_.push_back(
-        std::make_unique<FakeAudioRenderer>(std::move(request), binding_.dispatcher()));
+    renderers_.push_back(std::make_unique<FakeAudioRenderer>(std::move(request), dispatcher_));
   }
   void CreateAudioCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
                            bool loopback) final {
     // not implemented yet
+  }
+
+  fidl::InterfaceRequestHandler<fuchsia::media::Audio> Handler() {
+    return binding_set_.GetHandler(this, dispatcher_);
   }
 
   FakeAudioRenderer* get_audio_renderer(size_t k) {
@@ -168,7 +171,8 @@ class FakeAudio : public fuchsia::media::Audio {
   }
 
  private:
-  fidl::Binding<fuchsia::media::Audio> binding_;
+  async_dispatcher_t* dispatcher_;
+  fidl::BindingSet<fuchsia::media::Audio> binding_set_;
   std::vector<std::unique_ptr<FakeAudioRenderer>> renderers_;
 };
 
@@ -220,23 +224,22 @@ class VirtioSoundTest : public TestWithDevice {
   }
 
   void SetUp() override {
-    // Launch fake audio service.
-    fuchsia::media::AudioPtr audio;
-    audio_service_ = std::make_unique<FakeAudio>(audio.NewRequest(), dispatcher());
+    // Launch a fake audio service.
+    audio_service_ = std::make_unique<FakeAudio>(dispatcher());
+    std::unique_ptr<sys::testing::EnvironmentServices> env_services = CreateServices();
+    ASSERT_EQ(ZX_OK, env_services->AddService(audio_service_->Handler()));
 
-    // Launch device process.
+    // Launch a device process.
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = LaunchDevice(kVirtioSoundUrl, phys_mem_size_, &start_info);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(ZX_OK,
+              LaunchDevice(kVirtioSoundUrl, phys_mem_size_, &start_info, std::move(env_services)));
 
     // Start device execution.
     services_->Connect(sound_.NewRequest());
     RunLoopUntilIdle();
 
     uint32_t features, jacks, streams, chmaps;
-    status = sound_->Start(std::move(start_info), std::move(audio), &features, &jacks, &streams,
-                           &chmaps);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(ZX_OK, sound_->Start(std::move(start_info), &features, &jacks, &streams, &chmaps));
     ASSERT_EQ(features, 0u);
     ASSERT_EQ(jacks, kNumJacks);
     ASSERT_EQ(streams, kNumStreams);
@@ -244,15 +247,14 @@ class VirtioSoundTest : public TestWithDevice {
 
     // Configure device queues.
     for (uint16_t k = 0; k < queues_.size(); k++) {
+      SCOPED_TRACE(fxl::StringPrintf("queue %u", k));
       auto& q = *queues_[k];
       q.Configure(queue_data_addrs_[k], kQueueConfigs[k].data_bytes);
-      status = sound_->ConfigureQueue(k, q.size(), q.desc(), q.avail(), q.used());
-      ASSERT_EQ(ZX_OK, status) << "failed to configure queue " << k;
+      ASSERT_EQ(ZX_OK, sound_->ConfigureQueue(k, q.size(), q.desc(), q.avail(), q.used()));
     }
 
     // Finish negotiating features.
-    status = sound_->Ready(0);
-    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(ZX_OK, sound_->Ready(0));
   }
 
   FakeAudio& audio_service() { return *audio_service_; }

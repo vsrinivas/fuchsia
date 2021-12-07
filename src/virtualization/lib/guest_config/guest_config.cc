@@ -380,6 +380,9 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOption
   handlers.emplace("virtio-rng",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_virtio_rng,
                                                        &GuestConfig::mutable_virtio_rng, true));
+  handlers.emplace("virtio-sound",
+                   std::make_unique<BoolOptionHandler>(&GuestConfig::has_virtio_sound,
+                                                       &GuestConfig::mutable_virtio_sound, true));
   handlers.emplace("virtio-vsock",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_virtio_vsock,
                                                        &GuestConfig::mutable_virtio_vsock, true));

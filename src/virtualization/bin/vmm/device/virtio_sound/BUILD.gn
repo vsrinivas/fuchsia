@@ -27,11 +27,14 @@ rustc_binary("virtio_sound_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler-rustc",
+    "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
     "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/mapped-vmo",
     "//src/lib/shared-buffer",
     "//src/lib/syslog",

@@ -15,7 +15,10 @@ use {
     crate::wire_convert::*,
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::RequestStream,
+    fidl_fuchsia_media, fidl_fuchsia_scheduler,
     fidl_fuchsia_virtualization_hardware::{VirtioSoundRequest, VirtioSoundRequestStream},
+    fuchsia_runtime,
+    fuchsia_zircon::{self as zx, DurationNum},
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     once_cell::sync::Lazy,
     service::VirtSoundService,
@@ -139,12 +142,13 @@ static CONFIG: Lazy<wire::VirtioSndConfig> = Lazy::new(|| wire::VirtioSndConfig 
     chmaps: LE32::new(CHMAPS.len() as u32),
 });
 
-async fn run_virtio_sound(mut con: VirtioSoundRequestStream) -> Result<(), Error> {
+async fn run_virtio_sound(
+    mut con: VirtioSoundRequestStream,
+    audio: &fidl_fuchsia_media::AudioProxy,
+) -> Result<(), Error> {
     // First method call must be Start().
-    let (start_info, audio, responder) = match con.try_next().await? {
-        Some(VirtioSoundRequest::Start { start_info, audio, responder }) => {
-            (start_info, audio, responder)
-        }
+    let (start_info, responder) = match con.try_next().await? {
+        Some(VirtioSoundRequest::Start { start_info, responder }) => (start_info, responder),
         Some(msg) => {
             return Err(anyhow!("Expected Start message, got {:?}", msg));
         }
@@ -170,11 +174,14 @@ async fn run_virtio_sound(mut con: VirtioSoundRequestStream) -> Result<(), Error
     // Make sure each queue has been initialized.
     let controlq_stream = device.take_stream(wire::CONTROLQ)?;
     let txq_stream = device.take_stream(wire::TXQ)?;
+    // TODO(fxbug.dev/87645): use this when implementing AudioInput
+    // If we don't initialize this queue via device.take_stream (even though it's unused),
+    // we'll crash when the guest sends us messages on this queue.
+    let _rxq_stream = device.take_stream(wire::RXQ)?;
     ready_responder.send()?;
 
     // Create a VirtSoundService to handle all virtq requests.
-    let audio = audio.into_proxy()?;
-    let vss = Rc::new(VirtSoundService::new(&JACKS, &STREAMS, &CHMAPS, &audio));
+    let vss = Rc::new(VirtSoundService::new(&JACKS, &STREAMS, &CHMAPS, audio));
 
     tracing::info!(
         "Virtio sound device initialized with features = {:?}, config = {:?}",
@@ -185,7 +192,7 @@ async fn run_virtio_sound(mut con: VirtioSoundRequestStream) -> Result<(), Error
     // Process everything to completion.
     let mut txq_sequencer = sequencer::Sequencer::new();
     futures::try_join!(
-        device.run_device_notify(con).err_into(),
+        device.run_device_notify(con).map_err(|e| anyhow!("run_device_notify: {}", e)),
         controlq_stream
             // Process controlq requests synchronously.
             .map(|chain| Ok((chain, vss.clone())))
@@ -212,14 +219,60 @@ async fn run_virtio_sound(mut con: VirtioSoundRequestStream) -> Result<(), Error
     return Ok(());
 }
 
+async fn apply_deadline_profile() -> Result<(), Error> {
+    let profile_provider = fuchsia_component::client::connect_to_protocol::<
+        fidl_fuchsia_scheduler::ProfileProviderMarker,
+    >()
+    .context("Failed to connect to fuchsia.scheduler.ProfileProvider")?;
+
+    // Obtain a deadline profile for our (only) thread.
+    // Currently requesting 0.5ms of CPU every 5ms.
+    // TODO(fxbug.dev/87645): tune this profile
+    let (status, profile) = profile_provider
+        .get_deadline_profile(
+            500.micros().into_nanos() as u64, // capacity
+            5.millis().into_nanos() as u64,   // deadline
+            5.millis().into_nanos() as u64,   // period
+            "virtio-sound",
+        )
+        .await
+        .context("fuchsia.scheduler.ProfileProvider.GetDeadlineProfile failed")?;
+
+    let status = zx::Status::from_raw(status);
+    if status != zx::Status::OK {
+        return Err(anyhow!(
+            "fuchsia.scheduler.ProfileProvider.GetDeadlineProfile returned status {}",
+            status
+        ));
+    }
+
+    match profile {
+        Some(profile) => fuchsia_runtime::thread_self()
+            .set_profile(profile, 0)
+            .context("zx_object_set_profile failed"),
+        None => Err(anyhow!("fuchsia.scheduler.ProfileProvider.GetDeadlineProfile returned invalid profile with OK status")),
+    }
+}
+
 #[fuchsia::component(logging = true, threads = 1)]
 async fn main() -> Result<(), Error> {
+    let audio = fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_media::AudioMarker>()
+        .context("Failed to connect to fuchsia.media.Audio")?;
+
+    // Failing to apply a deadline profile is not fatal (e.g., it may happen in tests),
+    // but warn because performance may suffer.
+    match apply_deadline_profile().await {
+        Ok(_) => tracing::info!("Applied deadline profile"),
+        Err(err) => tracing::warn!("Failed to apply deadline profile: {}", err),
+    };
+
+    // Run the virtio-sound server.
     let mut fs = fuchsia_component::server::ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream: VirtioSoundRequestStream| stream);
     fs.take_and_serve_directory_handle().context("Error starting server")?;
 
     fs.for_each_concurrent(None, |stream| async {
-        if let Err(e) = run_virtio_sound(stream).await {
+        if let Err(e) = run_virtio_sound(stream, &audio).await {
             tracing::error!("Error running virtio_sound service: {}", e);
         }
     })
