@@ -140,10 +140,11 @@ impl Step {
 
     /// Returns a zx::ClockUpdate describing the update to make to a clock to implement this `Step`.
     fn clock_update(&self) -> zx::ClockUpdate {
-        zx::ClockUpdate::new()
-            .value(self.utc)
+        zx::ClockUpdate::builder()
+            .approximate_value(self.utc)
             .rate_adjust(self.rate_adjust_ppm)
             .error_bounds(self.error_bound)
+            .build()
     }
 }
 
@@ -207,9 +208,10 @@ impl Slew {
         // The final vector is composed of an initial update to start the slew...
         let mut updates = vec![(
             start_time,
-            zx::ClockUpdate::new()
+            zx::ClockUpdate::builder()
                 .rate_adjust(self.total_rate_adjust())
-                .error_bounds(begin_error_bound),
+                .error_bounds(begin_error_bound)
+                .build(),
             ClockUpdateReason::BeginSlew,
         )];
 
@@ -225,8 +227,9 @@ impl Slew {
             while start_time + error_update_interval * i < finish_time {
                 updates.push((
                     start_time + error_update_interval * i,
-                    zx::ClockUpdate::new()
-                        .error_bounds(self.start_error_bound - ERROR_BOUND_UPDATE * i as u64),
+                    zx::ClockUpdate::builder()
+                        .error_bounds(self.start_error_bound - ERROR_BOUND_UPDATE * i as u64)
+                        .build(),
                     ClockUpdateReason::ReduceError,
                 ));
                 i += 1;
@@ -236,9 +239,10 @@ impl Slew {
         // ... and a final update to return the rate to normal.
         updates.push((
             finish_time,
-            zx::ClockUpdate::new()
+            zx::ClockUpdate::builder()
                 .rate_adjust(self.base_rate_adjust)
-                .error_bounds(self.end_error_bound),
+                .error_bounds(self.end_error_bound)
+                .build(),
             ClockUpdateReason::EndSlew,
         ));
         updates
@@ -465,7 +469,11 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
                 fasync::Timer::new(step_async_time).await;
                 let step_error_bound = transform.error_bound(step_mono_time);
                 info!("increasing {:?} error bound to {:?}ns", track, step_error_bound);
-                update_clock(&clock, &track, zx::ClockUpdate::new().error_bounds(step_error_bound));
+                update_clock(
+                    &clock,
+                    &track,
+                    zx::ClockUpdate::builder().error_bounds(step_error_bound),
+                );
                 diagnostics
                     .record(Event::UpdateClock { track, reason: ClockUpdateReason::IncreaseError });
                 step_async_time += ERROR_REFRESH_INTERVAL;
@@ -475,7 +483,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
     }
 
     /// Applies an update to the clock.
-    fn update_clock(&mut self, update: zx::ClockUpdate) {
+    fn update_clock(&mut self, update: impl Into<zx::ClockUpdate>) {
         update_clock(&self.clock, &self.track, update);
     }
 
@@ -491,7 +499,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
 }
 
 /// Applies an update to the supplied clock, panicking with a comprehensible error on failure.
-fn update_clock(clock: &Arc<zx::Clock>, track: &Track, update: zx::ClockUpdate) {
+fn update_clock(clock: &Arc<zx::Clock>, track: &Track, update: impl Into<zx::ClockUpdate>) {
     if let Err(status) = clock.update(update) {
         // Clock update errors should only be caused by an invalid clock (or potentially a
         // serious bug in the generation of a time update). There isn't anything Timekeeper
@@ -540,7 +548,7 @@ mod tests {
     /// Creates and starts a new clock with default options.
     fn create_clock() -> Arc<zx::Clock> {
         let clock = zx::Clock::create(*CLOCK_OPTS, Some(BACKSTOP_TIME)).unwrap();
-        clock.update(zx::ClockUpdate::new().value(BACKSTOP_TIME)).unwrap();
+        clock.update(zx::ClockUpdate::builder().approximate_value(BACKSTOP_TIME)).unwrap();
         Arc::new(clock)
     }
 
@@ -684,10 +692,10 @@ mod tests {
 
         // Simple constructor lambdas to improve readability of the test logic.
         let full_update = |rate: i32, error_bound: u64| -> zx::ClockUpdate {
-            zx::ClockUpdate::new().rate_adjust(rate).error_bounds(error_bound)
+            zx::ClockUpdate::builder().rate_adjust(rate).error_bounds(error_bound).build()
         };
         let error_update = |error_bound: u64| -> zx::ClockUpdate {
-            zx::ClockUpdate::new().error_bounds(error_bound)
+            zx::ClockUpdate::builder().error_bounds(error_bound).build()
         };
         let time_seconds =
             |seconds: i64| -> fasync::Time { fasync::Time::from_nanos(seconds * NANOS_PER_SECOND) };

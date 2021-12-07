@@ -50,7 +50,9 @@ async fn main() {
     debug!("got clock details");
 
     let maintainer_set_time = details.backstop + TEST_OFFSET;
-    clock.update(ClockUpdate::new().value(maintainer_set_time).error_bounds(100)).unwrap();
+    clock
+        .update(ClockUpdate::builder().approximate_value(maintainer_set_time).error_bounds(100))
+        .unwrap();
     debug!("updated clock");
 
     let maintainer_set_time = maintainer_set_time.into_nanos();

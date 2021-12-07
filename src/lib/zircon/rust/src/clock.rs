@@ -177,9 +177,10 @@ impl Clock {
     /// `ZX_RIGHT_WRITE`.
     ///
     /// [zx_clock_update]: https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_update
-    pub fn update(&self, update: ClockUpdate) -> Result<(), Status> {
+    pub fn update(&self, update: impl Into<ClockUpdate>) -> Result<(), Status> {
+        let update = update.into();
         let options = update.options();
-        let args = sys::zx_clock_update_args_v1_t::from(update);
+        let args = sys::zx_clock_update_args_v2_t::from(update);
         let status = unsafe {
             sys::zx_clock_update(self.raw_handle(), options, &args as *const _ as *const u8)
         };
@@ -245,7 +246,12 @@ mod tests {
 
         // Update all properties.
         clock
-            .update(ClockUpdate::new().value(Time::from_nanos(42)).rate_adjust(52).error_bounds(52))
+            .update(
+                ClockUpdate::builder()
+                    .absolute_value(Time::from_nanos(999), Time::from_nanos(42))
+                    .rate_adjust(52)
+                    .error_bounds(52),
+            )
             .expect("failed to update clock");
         let after_details = clock.get_details().expect("failed to get details");
         assert!(before_details.generation_counter < after_details.generation_counter);
@@ -260,12 +266,13 @@ mod tests {
         );
         assert_eq!(after_details.error_bounds, 52);
         assert_eq!(after_details.ticks_to_synthetic.synthetic_offset, 42);
+        assert_eq!(after_details.mono_to_synthetic.reference_offset, 999);
         assert_eq!(after_details.mono_to_synthetic.synthetic_offset, 42);
 
         let before_details = after_details;
 
         // Update only one property.
-        clock.update(ClockUpdate::new().error_bounds(100)).expect("failed to update clock");
+        clock.update(ClockUpdate::builder().error_bounds(100)).expect("failed to update clock");
         let after_details = clock.get_details().expect("failed to get details");
         assert!(before_details.generation_counter < after_details.generation_counter);
         assert!(

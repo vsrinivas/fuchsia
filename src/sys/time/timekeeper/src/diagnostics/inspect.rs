@@ -657,8 +657,8 @@ mod tests {
         // Perform two updates to the clock. The inspect data should reflect the most recent.
         clock
             .update(
-                zx::ClockUpdate::new()
-                    .value(zx::Time::from_nanos(BACKSTOP_TIME + 1234))
+                zx::ClockUpdate::builder()
+                    .approximate_value(zx::Time::from_nanos(BACKSTOP_TIME + 1234))
                     .rate_adjust(0)
                     .error_bounds(0),
             )
@@ -667,8 +667,8 @@ mod tests {
             .record(Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc });
         clock
             .update(
-                zx::ClockUpdate::new()
-                    .value(zx::Time::from_nanos(BACKSTOP_TIME + 2345))
+                zx::ClockUpdate::builder()
+                    .approximate_value(zx::Time::from_nanos(BACKSTOP_TIME + 2345))
                     .rate_adjust(RATE_ADJUST)
                     .error_bounds(ERROR_BOUNDS),
             )

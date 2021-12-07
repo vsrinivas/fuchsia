@@ -67,10 +67,11 @@ impl Transform {
     /// should be as close as possible to the time this method is called and the `ClockUpdate`
     /// should be used as soon as possible. RFC-0077 will resolve this situation.
     pub fn jump_to(&self, monotonic: zx::Time) -> zx::ClockUpdate {
-        zx::ClockUpdate::new()
-            .value(self.synthetic(monotonic))
+        zx::ClockUpdate::builder()
+            .approximate_value(self.synthetic(monotonic))
             .rate_adjust(self.rate_adjust_ppm)
             .error_bounds(self.error_bound(monotonic))
+            .build()
     }
 }
 
@@ -263,10 +264,11 @@ mod test {
         let clock_update = transform.jump_to(monotonic);
         assert_eq!(
             clock_update,
-            zx::ClockUpdate::new()
-                .value(transform.synthetic(monotonic))
+            zx::ClockUpdate::builder()
+                .approximate_value(transform.synthetic(monotonic))
                 .rate_adjust(-15)
                 .error_bounds(transform.error_bound(monotonic))
+                .build()
         );
 
         let clock = zx::Clock::create(zx::ClockOpts::empty(), None).unwrap();
@@ -294,7 +296,7 @@ mod test {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 
         let mono_before = zx::Time::get_monotonic();
-        clock.update(zx::ClockUpdate::new().value(BACKSTOP)).unwrap();
+        clock.update(zx::ClockUpdate::builder().approximate_value(BACKSTOP)).unwrap();
         let mono_after = zx::Time::get_monotonic();
 
         let mono_radius = (mono_after - mono_before) / 2;
@@ -310,7 +312,11 @@ mod test {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 
         let mono_before = zx::Time::get_monotonic();
-        clock.update(zx::ClockUpdate::new().value(BACKSTOP).rate_adjust(SLEW_RATE_PPM)).unwrap();
+        clock
+            .update(
+                zx::ClockUpdate::builder().approximate_value(BACKSTOP).rate_adjust(SLEW_RATE_PPM),
+            )
+            .unwrap();
         let mono_after = zx::Time::get_monotonic();
 
         let mono_radius = (mono_after - mono_before) / 2;
@@ -334,7 +340,11 @@ mod test {
         let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(BACKSTOP)).unwrap();
 
         let mono_before = zx::Time::get_monotonic();
-        clock.update(zx::ClockUpdate::new().value(BACKSTOP).rate_adjust(-SLEW_RATE_PPM)).unwrap();
+        clock
+            .update(
+                zx::ClockUpdate::builder().approximate_value(BACKSTOP).rate_adjust(-SLEW_RATE_PPM),
+            )
+            .unwrap();
         let mono_after = zx::Time::get_monotonic();
 
         let mono_radius = (mono_after - mono_before) / 2;

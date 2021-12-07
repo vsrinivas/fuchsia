@@ -183,7 +183,10 @@ mod tests {
         assert!(exec.run_until_stalled(&mut set_fut).is_pending());
 
         clock
-            .update(zx::ClockUpdate::new().value(zx::Time::from_nanos(1 * 1_000_000_000)))
+            .update(
+                zx::ClockUpdate::builder()
+                    .approximate_value(zx::Time::from_nanos(1 * 1_000_000_000)),
+            )
             .expect("Clock update should succeed");
 
         // Clock has been started, so the clock should be set.

@@ -167,7 +167,9 @@ fn create_monitor_clock(primary_clock: &zx::Clock) -> zx::Clock {
     let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(backstop))
         .expect("failed to create new monitor clock");
     // Note: Failure should not be possible from a freshly created zx::Clock.
-    clock.update(zx::ClockUpdate::new().value(backstop)).expect("failed to start monitor clock");
+    clock
+        .update(zx::ClockUpdate::builder().approximate_value(backstop))
+        .expect("failed to start monitor clock");
     clock
 }
 
@@ -219,7 +221,7 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
         outcome: InitializeRtcOutcome::Succeeded,
         time: Some(time),
     });
-    if let Err(status) = clock.update(zx::ClockUpdate::new().value(time)) {
+    if let Err(status) = clock.update(zx::ClockUpdate::builder().approximate_value(time)) {
         error!("failed to start UTC clock from RTC at time {}: {}", utc_chrono, status);
     } else {
         diagnostics
@@ -327,7 +329,7 @@ mod tests {
     /// initial update time in ticks.
     fn create_clock() -> (Arc<zx::Clock>, i64) {
         let clock = zx::Clock::create(*CLOCK_OPTS, Some(BACKSTOP_TIME)).unwrap();
-        clock.update(zx::ClockUpdate::new().value(BACKSTOP_TIME)).unwrap();
+        clock.update(zx::ClockUpdate::builder().approximate_value(BACKSTOP_TIME)).unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
         (Arc::new(clock), initial_update_ticks)
     }
@@ -496,7 +498,10 @@ mod tests {
         // Create a clock and set it slightly after backstop
         let (clock, _) = create_clock();
         clock
-            .update(zx::ClockUpdate::new().value(BACKSTOP_TIME + zx::Duration::from_millis(1)))
+            .update(
+                zx::ClockUpdate::builder()
+                    .approximate_value(BACKSTOP_TIME + zx::Duration::from_millis(1)),
+            )
             .unwrap();
         let initial_update_ticks = clock.get_details().unwrap().last_value_update_ticks;
         let rtc = FakeRtc::valid(VALID_RTC_TIME);
@@ -534,11 +539,15 @@ mod tests {
         let clock =
             zx::Clock::create(zx::ClockOpts::empty(), Some(zx::Time::from_nanos(1_000))).unwrap();
         // The clock must be started with an initial value.
-        clock.update(zx::ClockUpdate::new().value(zx::Time::from_nanos(1_000))).unwrap();
+        clock
+            .update(zx::ClockUpdate::builder().approximate_value(zx::Time::from_nanos(1_000)))
+            .unwrap();
         assert_eq!(initial_clock_state(&clock), InitialClockState::NotSet);
 
         // Update the clock, which is already running.
-        clock.update(zx::ClockUpdate::new().value(zx::Time::from_nanos(1_000_000))).unwrap();
+        clock
+            .update(zx::ClockUpdate::builder().approximate_value(zx::Time::from_nanos(1_000_000)))
+            .unwrap();
         assert_eq!(initial_clock_state(&clock), InitialClockState::PreviouslySet);
     }
 }

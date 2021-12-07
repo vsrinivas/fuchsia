@@ -430,7 +430,10 @@ mod test {
         // synchronized we can assert that the reported samples are within some bound.
         let test_clock = zx::Clock::create(zx::ClockOpts::empty(), None).unwrap();
         test_clock
-            .update(zx::ClockUpdate::new().value(zx::Time::get_monotonic() + TEST_UTC_OFFSET))
+            .update(
+                zx::ClockUpdate::builder()
+                    .approximate_value(zx::Time::get_monotonic() + TEST_UTC_OFFSET),
+            )
             .unwrap();
         // The actual offset from monotonic can differ slightly as the exact monotonic time at
         // which the update occurs affects the offset. We pull the exact offset from clock details.

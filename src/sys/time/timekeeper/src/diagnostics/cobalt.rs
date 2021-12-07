@@ -256,7 +256,7 @@ mod test {
 
     fn create_clock(time: zx::Time) -> Arc<zx::Clock> {
         let clk = zx::Clock::create(zx::ClockOpts::empty(), None).unwrap();
-        clk.update(zx::ClockUpdate::new().value(time)).unwrap();
+        clk.update(zx::ClockUpdate::builder().approximate_value(time)).unwrap();
         Arc::new(clk)
     }
 

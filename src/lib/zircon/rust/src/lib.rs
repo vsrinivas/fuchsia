@@ -169,7 +169,7 @@ mod vmo;
 
 pub use self::channel::*;
 pub use self::clock::*;
-pub use self::clock_update::ClockUpdate;
+pub use self::clock_update::{ClockUpdate, ClockUpdateBuilder};
 pub use self::cprng::*;
 pub use self::debuglog::*;
 pub use self::event::*;
