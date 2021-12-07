@@ -79,25 +79,27 @@ protocol NodeController {
 
 /// Error codes for the Node protocol.
 type NodeError = strict enum {
+    // An internal error occurred.
+    INTERNAL = 1;
     // The Node was removed from the topology.
-    NODE_REMOVED = 1;
+    NODE_REMOVED = 2;
     // The Node's name is missing.
-    NAME_MISSING = 2;
+    NAME_MISSING = 3;
     /// The Node's name is invalid. Specifically, it must not contain a period
     /// in its name.
-    NAME_INVALID = 3;
+    NAME_INVALID = 4;
     /// A sibling Node exists with the same name.
-    NAME_ALREADY_EXISTS = 4;
+    NAME_ALREADY_EXISTS = 5;
     /// An offer for this Node is missing a source name.
-    OFFER_SOURCE_NAME_MISSING = 5;
+    OFFER_SOURCE_NAME_MISSING = 6;
     /// An offer for this Node should not have a source or target.
-    OFFER_REF_EXISTS = 6;
+    OFFER_REF_EXISTS = 7;
     /// A symbol for this Node is missing a name.
-    SYMBOL_NAME_MISSING = 7;
+    SYMBOL_NAME_MISSING = 8;
     /// A symbol for this Node is missing an address.
-    SYMBOL_ADDRESS_MISSING = 8;
+    SYMBOL_ADDRESS_MISSING = 9;
     /// There is another symbol for this Node with the same name.
-    SYMBOL_ALREADY_EXISTS = 9;
+    SYMBOL_ALREADY_EXISTS = 10;
 };
 
 /// Protocol through which a driver manages a node that it is bound to.

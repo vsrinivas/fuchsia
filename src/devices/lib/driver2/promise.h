@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_LIB_DRIVER2_PROMISE_H_
 #define SRC_DEVICES_LIB_DRIVER2_PROMISE_H_
 
+#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/fpromise/promise.h>
 
 #include "src/devices/lib/driver2/namespace.h"
@@ -13,7 +14,7 @@ namespace driver {
 
 namespace internal {
 
-// Connects to the given |path| in |ns|, and returns a fpromise::result containing a
+// Connects to the given `path` in `ns`, and returns a fpromise::result containing a
 // fidl::WireSharedClient on success.
 template <typename T>
 fpromise::result<fidl::WireSharedClient<T>, zx_status_t> ConnectWithResult(
@@ -29,7 +30,7 @@ fpromise::result<fidl::WireSharedClient<T>, zx_status_t> ConnectWithResult(
 
 }  // namespace internal
 
-// Connects to the given |path| in |ns|, and returns a fpromise::promise containing a
+// Connects to the given `path` in `ns`, and returns a fpromise::promise containing a
 // fidl::WireSharedClient on success.
 template <typename T>
 fpromise::promise<fidl::WireSharedClient<T>, zx_status_t> Connect(
@@ -38,6 +39,14 @@ fpromise::promise<fidl::WireSharedClient<T>, zx_status_t> Connect(
     uint32_t flags = ZX_FS_RIGHT_READABLE) {
   return fpromise::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path, flags));
 }
+
+// Adds a child to `client`, using `args`. `controller` must be provided, but
+// `node` is optional.
+fpromise::promise<void, fuchsia_driver_framework::wire::NodeError> AddChild(
+    fidl::WireSharedClient<fuchsia_driver_framework::Node>& client,
+    fuchsia_driver_framework::wire::NodeAddArgs args,
+    fidl::ServerEnd<fuchsia_driver_framework::NodeController> controller,
+    fidl::ServerEnd<fuchsia_driver_framework::Node> node);
 
 }  // namespace driver
 

@@ -48,6 +48,7 @@ source_set("llcpp") {
     "logger_internal.h",
     "namespace.cc",
     "namespace.h",
+    "promise.cc",
     "promise.h",
     "record_cpp.h",
     "start_args.h",
