@@ -2812,6 +2812,96 @@ mod tests {
         assert_eq!(msg.msg_type(), v6::MessageType::Request);
     }
 
+    // T1 and T2 are non-zero and T1 > T2, the client should ignore this IA_NA option.
+    #[test_case(60, 30, true)]
+    #[test_case(INFINITY, 30, true)]
+    // T1 > T2, but T2 is zero, the client should process this IA_NA option.
+    #[test_case(60, 0, false)]
+    // T1 is zero, the client should process this IA_NA option.
+    #[test_case(0, 30, false)]
+    // T1 <= T2, the client should process this IA_NA option.
+    #[test_case(60, 90, false)]
+    #[test_case(60, INFINITY, false)]
+    #[test_case(INFINITY, INFINITY, false)]
+    fn receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
+        let client_id = v6::duid_uuid();
+        let transaction_id = [0, 1, 2];
+        let (mut client, _actions) = testutil::start_server_discovery(
+            transaction_id,
+            client_id.clone(),
+            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+        );
+
+        let preferred_lifetime = 10;
+        let valid_lifetime = 20;
+        let ia = IdentityAssociation {
+            address: std_ip_v6!("::ffff:c00a:1ff"),
+            preferred_lifetime: v6::TimeValue::Finite(
+                v6::NonZeroOrMaxU32::new(preferred_lifetime)
+                    .expect("should succeed for non-zero or u32::MAX values"),
+            ),
+            valid_lifetime: v6::TimeValue::Finite(
+                v6::NonZeroOrMaxU32::new(valid_lifetime)
+                    .expect("should succeed for non-zero or u32::MAX values"),
+            ),
+        };
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            ia.address,
+            preferred_lifetime,
+            valid_lifetime,
+            &[],
+        ))];
+        let options = [
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, t1, t2, &iana_options)),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+
+        assert_matches!(client.handle_message_receive(msg)[..], []);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let collected_advertise = match state {
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_addresses: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise,
+                collected_sol_max_rt: _,
+            })) => collected_advertise,
+            state => panic!("unexpected state {:?}", state),
+        };
+        match ignore_iana {
+            true => assert!(
+                collected_advertise.is_empty(),
+                "collected_advertise = {:?}",
+                collected_advertise
+            ),
+            false => {
+                let addresses = match collected_advertise.peek() {
+                    Some(AdvertiseMessage {
+                        server_id: _,
+                        addresses,
+                        dns_servers: _,
+                        preference: _,
+                        receive_time: _,
+                        preferred_addresses_count: _,
+                    }) => addresses,
+                    advertise => panic!("unexpected advertise {:?}", advertise),
+                };
+                assert_eq!(*addresses, HashMap::from([(0, ia)]));
+            }
+        }
+    }
+
     #[test]
     fn select_first_server_while_retransmitting() {
         let client_id = v6::duid_uuid();
@@ -3764,96 +3854,6 @@ mod tests {
         assert_eq!(*t2, Duration::from_secs(120));
         assert_eq!(*addresses_to_request, HashMap::new());
         assert_eq!(*dns_servers, Vec::<Ipv6Addr>::new());
-    }
-
-    // T1 and T2 are non-zero and T1 > T2, the client should ignore this IA_NA option.
-    #[test_case(60, 30, true)]
-    #[test_case(INFINITY, 30, true)]
-    // T1 > T2, but T2 is zero, the client should process this IA_NA option.
-    #[test_case(60, 0, false)]
-    // T1 is zero, the client should process this IA_NA option.
-    #[test_case(0, 30, false)]
-    // T1 <= T2, the client should process this IA_NA option.
-    #[test_case(60, 90, false)]
-    #[test_case(60, INFINITY, false)]
-    #[test_case(INFINITY, INFINITY, false)]
-    fn receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
-        let client_id = v6::duid_uuid();
-        let transaction_id = [0, 1, 2];
-        let (mut client, _actions) = testutil::start_server_discovery(
-            transaction_id,
-            client_id.clone(),
-            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
-            Vec::new(),
-            StepRng::new(std::u64::MAX / 2, 0),
-        );
-
-        let preferred_lifetime = 10;
-        let valid_lifetime = 20;
-        let ia = IdentityAssociation {
-            address: std_ip_v6!("::ffff:c00a:1ff"),
-            preferred_lifetime: v6::TimeValue::Finite(
-                v6::NonZeroOrMaxU32::new(preferred_lifetime)
-                    .expect("should succeed for non-zero or u32::MAX values"),
-            ),
-            valid_lifetime: v6::TimeValue::Finite(
-                v6::NonZeroOrMaxU32::new(valid_lifetime)
-                    .expect("should succeed for non-zero or u32::MAX values"),
-            ),
-        };
-        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            ia.address,
-            preferred_lifetime,
-            valid_lifetime,
-            &[],
-        ))];
-        let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, t1, t2, &iana_options)),
-        ];
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-
-        assert_matches!(client.handle_message_receive(msg)[..], []);
-        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
-            &client;
-        let collected_advertise = match state {
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
-                client_id: _,
-                configured_addresses: _,
-                first_solicit_time: _,
-                retrans_timeout: _,
-                solicit_max_rt: _,
-                collected_advertise,
-                collected_sol_max_rt: _,
-            })) => collected_advertise,
-            state => panic!("unexpected state {:?}", state),
-        };
-        match ignore_iana {
-            true => assert!(
-                collected_advertise.is_empty(),
-                "collected_advertise = {:?}",
-                collected_advertise
-            ),
-            false => {
-                let addresses = match collected_advertise.peek() {
-                    Some(AdvertiseMessage {
-                        server_id: _,
-                        addresses,
-                        dns_servers: _,
-                        preference: _,
-                        receive_time: _,
-                        preferred_addresses_count: _,
-                    }) => addresses,
-                    advertise => panic!("unexpected advertise {:?}", advertise),
-                };
-                assert_eq!(*addresses, HashMap::from([(0, ia)]));
-            }
-        }
     }
 
     #[test]
