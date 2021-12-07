@@ -169,10 +169,10 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager, zx_device_
       zxlogf(ERROR, "Error while encoding metadata for '%s': %s", name(), metadata.status_string());
       return metadata.take_error();
     }
-    device = std::make_unique<Device>(manager, parent_->zx_device_, handle_, platform_bus,
+    device = std::make_unique<Device>(manager, manager->acpi_root(), handle_, platform_bus,
                                       std::move(*metadata), bus_type_, GetBusId());
   } else {
-    device = std::make_unique<Device>(manager, parent_->zx_device_, handle_, platform_bus);
+    device = std::make_unique<Device>(manager, manager->acpi_root(), handle_, platform_bus);
   }
 
   // Narrow our custom type down to zx_device_str_prop_t.

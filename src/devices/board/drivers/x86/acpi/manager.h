@@ -41,6 +41,7 @@ class Manager {
   zx_status_t StartFidlLoop() { return loop_.StartThread("acpi-fidl-thread"); }
 
   Acpi* acpi() { return acpi_; }
+  zx_device_t* acpi_root() { return acpi_root_; }
 
   async_dispatcher_t* fidl_dispatcher() { return loop_.dispatcher(); }
   async::Executor& executor() { return executor_; }
