@@ -5,7 +5,7 @@
 {%- set fuchsia_editor = "https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=" %}
 {%- set issue_url = "https://fxbug.dev/" %}
 {%- set cs_url = "https://cs.opensource.google/fuchsia/fuchsia/+/main:" %}
-{%- set fuchsia_source_tree_change = "https://fuchsia.googlesource.com/fuchsia/+/" %}
+{%- set fuchsia_source_tree_change = "https://cs.opensource.google/fuchsia/fuchsia/+/" %}
 {%- set drivers_dir = "reference/drivers/" %}
 {%- set drivers_metadata_file = "all_drivers_doc.yaml" %}
 {%- set areas_yaml_file = "_drivers_areas.yaml" %}

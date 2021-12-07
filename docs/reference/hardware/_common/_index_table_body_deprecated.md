@@ -22,7 +22,7 @@
             <td><a href="{{ gerrit_change_url }}{{ epitaph.gerrit_change_id }}">{{ epitaph.gerrit_change_id }}</a></td>
           </tr>
           {%- endif %}
-          {%- if epitaph.availabe_in_git %}
+          {%- if epitaph.available_in_git %}
           <tr>
             <td>Available in Fuchsia revision</td>
             <td><a href="{{ fuchsia_source_tree_change }}{{ epitaph.available_in_git }}">{{ epitaph.available_in_git }}</a></td>
@@ -44,12 +44,24 @@
           {%- if epitaph.path %}
           <tr>
             <td>Path</td>
-          {%- if epitaph.path|first in 's' %}
+          {%- if epitaph.path[0] != '/' %}
+            {%- if epitaph.available_in_git %}
+            <td><a href="{{ fuchsia_source_tree_change }}{{ epitaph.available_in_git }}:{{ epitaph.path }}"><code>//{{ epitaph.path }}</code></a></td>
+            {%- else %}
             <td><a href="{{ cs_url }}{{ epitaph.path }}"><code>//{{ epitaph.path }}</code></a></td>
+            {%- endif %}
           {%- elif epitaph.path[0] == '/' and epitaph.path[1] != '/' %}
+            {%- if epitaph.available_in_git %}
+            <td><a href="{{ fuchsia_source_tree_change }}{{ epitaph.available_in_git }}:{{ epitaph.path }}"><code>/{{ epitaph.path }}</code></a></td>
+            {%- else %}
             <td><a href="{{ cs_url }}{{ epitaph.path }}"><code>/{{ epitaph.path }}</code></a></td>
+            {%- endif %}
           {%- else %}
+            {%- if epitaph.available_in_git %}
+            <td><a href="{{ fuchsia_source_tree_change }}{{ epitaph.available_in_git }}:{{ epitaph.path }}"><code>{{ epitaph.path }}</code></a></td>
+            {%- else %}
             <td><a href="{{ cs_url }}{{ epitaph.path }}"><code>{{ epitaph.path }}</code></a></td>
+            {%- endif %}
           {%- endif %}
           </tr>
           {%- endif %}
