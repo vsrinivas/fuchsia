@@ -80,6 +80,11 @@ fuchsia_unittest_package("elfldltl-tests") {
   deps = [ ":elfldltl-unittests" ]
 }
 
+cpp_fuzzer("dynamic-fuzzer") {
+  sources = [ "dynamic-fuzzer.cc" ]
+  deps = [ "." ]
+}
+
 cpp_fuzzer("note-fuzzer") {
   sources = [ "note-fuzzer.cc" ]
   deps = [ "." ]
@@ -98,6 +103,7 @@ cpp_fuzzer("symbol-fuzzer") {
 fuzzer_package("elfldltl-fuzzers") {
   fuzz_host = true
   cpp_fuzzers = [
+    ":dynamic-fuzzer",
     ":note-fuzzer",
     ":relocation-fuzzer",
     ":symbol-fuzzer",
