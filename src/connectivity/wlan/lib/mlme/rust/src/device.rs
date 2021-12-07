@@ -6,8 +6,7 @@ use {
     crate::{buffer::OutBuf, key},
     banjo_fuchsia_hardware_wlan_info::*,
     banjo_fuchsia_hardware_wlan_mac::{
-        self as banjo_wlan_mac, WlanHwScanConfig, WlanHwScanResult, WlanRxPacket, WlanTxPacket,
-        WlanTxStatus, WlanmacInfo,
+        self as banjo_wlan_mac, WlanRxPacket, WlanTxPacket, WlanTxStatus, WlanmacInfo,
     },
     banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_internal::BssConfig,
@@ -139,8 +138,18 @@ impl Device {
         self.raw_device.set_key(key)
     }
 
-    pub fn start_hw_scan(&self, config: &WlanHwScanConfig) -> Result<(), zx::Status> {
-        self.raw_device.start_hw_scan(config)
+    pub fn start_passive_scan(
+        &self,
+        passive_scan_args: &banjo_wlan_mac::WlanmacPassiveScanArgs,
+    ) -> Result<u64, zx::Status> {
+        self.raw_device.start_passive_scan(&passive_scan_args)
+    }
+
+    pub fn start_active_scan(
+        &self,
+        active_scan_args: &banjo_wlan_mac::WlanmacActiveScanArgs,
+    ) -> Result<u64, zx::Status> {
+        self.raw_device.start_active_scan(&active_scan_args)
     }
 
     pub fn channel(&self) -> banjo_common::WlanChannel {
@@ -221,8 +230,7 @@ pub struct WlanmacIfcProtocolOps {
     indication: extern "C" fn(ctx: &mut crate::DriverEventSink, ind: u32),
     report_tx_status:
         extern "C" fn(ctx: &mut crate::DriverEventSink, tx_status: *const WlanTxStatus),
-    hw_scan_complete:
-        extern "C" fn(ctx: &mut crate::DriverEventSink, result: *const WlanHwScanResult),
+    scan_complete: extern "C" fn(ctx: &mut crate::DriverEventSink, status: i32, scan_id: u64),
 }
 
 #[no_mangle]
@@ -265,20 +273,11 @@ extern "C" fn handle_report_tx_status(
     let _ = ctx.0.unbounded_send(crate::DriverEvent::TxStatusReport { tx_status });
 }
 #[no_mangle]
-extern "C" fn handle_hw_scan_complete(
-    ctx: &mut crate::DriverEventSink,
-    result: *const WlanHwScanResult,
-) {
-    if result.is_null() {
-        return;
-    }
-    let result = unsafe { *result };
-    let ind = match result.code {
-        banjo_wlan_mac::WlanHwScan::SUCCESS => banjo_wlan_mac::WlanIndication::HW_SCAN_COMPLETE,
-        banjo_wlan_mac::WlanHwScan::ABORTED => banjo_wlan_mac::WlanIndication::HW_SCAN_ABORTED,
-        _ => return,
-    };
-    let _ = ctx.0.unbounded_send(crate::DriverEvent::HwIndication { ind });
+extern "C" fn handle_scan_complete(ctx: &mut crate::DriverEventSink, status: i32, scan_id: u64) {
+    let _ = ctx.0.unbounded_send(crate::DriverEvent::ScanComplete {
+        status: zx::Status::from_raw(status),
+        scan_id,
+    });
 }
 
 const PROTOCOL_OPS: WlanmacIfcProtocolOps = WlanmacIfcProtocolOps {
@@ -287,7 +286,7 @@ const PROTOCOL_OPS: WlanmacIfcProtocolOps = WlanmacIfcProtocolOps {
     complete_tx: handle_complete_tx,
     indication: handle_indication,
     report_tx_status: handle_report_tx_status,
-    hw_scan_complete: handle_hw_scan_complete,
+    scan_complete: handle_scan_complete,
 };
 
 impl<'a> WlanmacIfcProtocol<'a> {
@@ -330,8 +329,18 @@ pub struct DeviceInterface {
     /// Set a key on the device.
     /// |key| is mutable because the underlying API does not take a const wlan_key_config_t.
     set_key: extern "C" fn(device: *mut c_void, key: *mut key::KeyConfig) -> i32,
-    /// Make scan request to the driver
-    start_hw_scan: extern "C" fn(device: *mut c_void, config: *const WlanHwScanConfig) -> i32,
+    /// Make passive scan request to the driver
+    start_passive_scan: extern "C" fn(
+        device: *mut c_void,
+        passive_scan_args: *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+        out_scan_id: *mut u64,
+    ) -> zx::sys::zx_status_t,
+    /// Make active scan request to the driver
+    start_active_scan: extern "C" fn(
+        device: *mut c_void,
+        active_scan_args: *const banjo_wlan_mac::WlanmacActiveScanArgs,
+        out_scan_id: *mut u64,
+    ) -> zx::sys::zx_status_t,
     /// Get information and capabilities of this WLAN interface
     get_wlanmac_info: extern "C" fn(device: *mut c_void) -> WlanmacInfo,
     /// Configure the device's BSS.
@@ -394,9 +403,30 @@ impl DeviceInterface {
         zx::ok(status)
     }
 
-    fn start_hw_scan(&self, config: &WlanHwScanConfig) -> Result<(), zx::Status> {
-        let status = (self.start_hw_scan)(self.device, config as *const WlanHwScanConfig);
-        zx::ok(status)
+    fn start_passive_scan(
+        &self,
+        passive_scan_args: &banjo_wlan_mac::WlanmacPassiveScanArgs,
+    ) -> Result<u64, zx::Status> {
+        let mut out_scan_id = 0;
+        let status = (self.start_passive_scan)(
+            self.device,
+            passive_scan_args as *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+            &mut out_scan_id as *mut u64,
+        );
+        zx::ok(status).map(|_| out_scan_id)
+    }
+
+    fn start_active_scan(
+        &self,
+        active_scan_args: &banjo_wlan_mac::WlanmacActiveScanArgs,
+    ) -> Result<u64, zx::Status> {
+        let mut out_scan_id = 0;
+        let status = (self.start_active_scan)(
+            self.device,
+            active_scan_args as *const banjo_wlan_mac::WlanmacActiveScanArgs,
+            &mut out_scan_id as *mut u64,
+        );
+        zx::ok(status).map(|_| out_scan_id)
     }
 
     fn channel(&self) -> banjo_common::WlanChannel {
@@ -470,8 +500,85 @@ mod test_utils {
         },
         banjo_ddk_hw_wlan_ieee80211::*,
         banjo_fuchsia_hardware_wlanphyinfo::*,
-        fuchsia_async as fasync,
+        banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211, fuchsia_async as fasync,
+        fuchsia_zircon as zircon,
     };
+
+    pub struct CapturedWlanmacPassiveScanArgs {
+        pub channels: Vec<u8>,
+        pub min_channel_time: zircon::sys::zx_duration_t,
+        pub max_channel_time: zircon::sys::zx_duration_t,
+        pub min_home_time: zircon::sys::zx_duration_t,
+    }
+
+    impl CapturedWlanmacPassiveScanArgs {
+        pub fn from_banjo(
+            banjo_args_ptr: *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+        ) -> CapturedWlanmacPassiveScanArgs {
+            unsafe {
+                let banjo_args = *banjo_args_ptr;
+                CapturedWlanmacPassiveScanArgs {
+                    channels: std::slice::from_raw_parts(
+                        banjo_args.channels_list,
+                        banjo_args.channels_count,
+                    )
+                    .to_vec(),
+                    min_channel_time: banjo_args.min_channel_time,
+                    max_channel_time: banjo_args.max_channel_time,
+                    min_home_time: banjo_args.min_home_time,
+                }
+            }
+        }
+    }
+
+    pub struct CapturedWlanmacActiveScanArgs {
+        pub channels: Vec<u8>,
+        pub ssids: Vec<banjo_ieee80211::CSsid>,
+        pub mac_header_buffer: Vec<u8>,
+        pub ies_buffer: Vec<u8>,
+        pub min_channel_time: zircon::sys::zx_duration_t,
+        pub max_channel_time: zircon::sys::zx_duration_t,
+        pub min_home_time: zircon::sys::zx_duration_t,
+        pub min_probes_per_channel: u8,
+        pub max_probes_per_channel: u8,
+    }
+
+    impl CapturedWlanmacActiveScanArgs {
+        pub fn from_banjo(
+            banjo_args_ptr: *const banjo_wlan_mac::WlanmacActiveScanArgs,
+        ) -> CapturedWlanmacActiveScanArgs {
+            unsafe {
+                let banjo_args = *banjo_args_ptr;
+                CapturedWlanmacActiveScanArgs {
+                    channels: std::slice::from_raw_parts(
+                        banjo_args.channels_list,
+                        banjo_args.channels_count,
+                    )
+                    .to_vec(),
+                    ssids: std::slice::from_raw_parts(
+                        banjo_args.ssids_list,
+                        banjo_args.ssids_count,
+                    )
+                    .to_vec(),
+                    mac_header_buffer: std::slice::from_raw_parts(
+                        banjo_args.mac_header_buffer,
+                        banjo_args.mac_header_size,
+                    )
+                    .to_vec(),
+                    ies_buffer: std::slice::from_raw_parts(
+                        banjo_args.ies_buffer,
+                        banjo_args.ies_size,
+                    )
+                    .to_vec(),
+                    min_channel_time: banjo_args.min_channel_time,
+                    max_channel_time: banjo_args.max_channel_time,
+                    min_home_time: banjo_args.min_home_time,
+                    min_probes_per_channel: banjo_args.min_probes_per_channel,
+                    max_probes_per_channel: banjo_args.max_probes_per_channel,
+                }
+            }
+        }
+    }
 
     pub struct FakeDevice {
         pub eth_queue: Vec<Vec<u8>>,
@@ -479,7 +586,9 @@ mod test_utils {
         pub sme_sap: (fidl_mlme::MlmeControlHandle, zx::Channel),
         pub wlan_channel: banjo_common::WlanChannel,
         pub keys: Vec<key::KeyConfig>,
-        pub hw_scan_req: Option<WlanHwScanConfig>,
+        pub next_scan_id: u64,
+        pub captured_passive_scan_args: Option<CapturedWlanmacPassiveScanArgs>,
+        pub captured_active_scan_args: Option<CapturedWlanmacActiveScanArgs>,
         pub info: WlanmacInfo,
         pub bss_cfg: Option<BssConfig>,
         pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
@@ -501,7 +610,9 @@ mod test_utils {
                     cbw: banjo_common::ChannelBandwidth::CBW20,
                     secondary80: 0,
                 },
-                hw_scan_req: None,
+                next_scan_id: 0,
+                captured_passive_scan_args: None,
+                captured_active_scan_args: None,
                 info: fake_wlanmac_info(),
                 keys: vec![],
                 bss_cfg: None,
@@ -598,20 +709,49 @@ mod test_utils {
             }
         }
 
-        pub extern "C" fn start_hw_scan(
+        pub extern "C" fn start_passive_scan(
             device: *mut c_void,
-            config: *const WlanHwScanConfig,
-        ) -> i32 {
+            passive_scan_args: *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+            out_scan_id: *mut u64,
+        ) -> zx::sys::zx_status_t {
             unsafe {
-                (*(device as *mut Self)).hw_scan_req = Some((*config).clone());
+                let self_ = &mut *(device as *mut Self);
+                *out_scan_id = self_.next_scan_id;
+                self_.next_scan_id += 1;
+                self_.captured_passive_scan_args =
+                    Some(CapturedWlanmacPassiveScanArgs::from_banjo(passive_scan_args));
             }
             zx::sys::ZX_OK
         }
 
-        pub extern "C" fn start_hw_scan_fails(
+        pub extern "C" fn start_active_scan(
+            device: *mut c_void,
+            active_scan_args: *const banjo_wlan_mac::WlanmacActiveScanArgs,
+            out_scan_id: *mut u64,
+        ) -> zx::sys::zx_status_t {
+            unsafe {
+                let self_ = &mut *(device as *mut Self);
+                *out_scan_id = self_.next_scan_id;
+                self_.next_scan_id += 1;
+                self_.captured_active_scan_args =
+                    Some(CapturedWlanmacActiveScanArgs::from_banjo(active_scan_args));
+            }
+            zx::sys::ZX_OK
+        }
+
+        pub extern "C" fn start_passive_scan_fails(
             _device: *mut c_void,
-            _config: *const WlanHwScanConfig,
-        ) -> i32 {
+            _passive_scan_args: *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+            _out_scan_id: *mut u64,
+        ) -> zx::sys::zx_status_t {
+            zx::sys::ZX_ERR_NOT_SUPPORTED
+        }
+
+        pub extern "C" fn start_active_scan_fails(
+            _device: *mut c_void,
+            _active_scan_args: *const banjo_wlan_mac::WlanmacActiveScanArgs,
+            _out_scan_id: *mut u64,
+        ) -> zx::sys::zx_status_t {
             zx::sys::ZX_ERR_NOT_SUPPORTED
         }
 
@@ -705,7 +845,8 @@ mod test_utils {
                 get_wlan_channel: Self::get_wlan_channel,
                 set_wlan_channel: Self::set_wlan_channel,
                 set_key: Self::set_key,
-                start_hw_scan: Self::start_hw_scan,
+                start_passive_scan: Self::start_passive_scan,
+                start_active_scan: Self::start_active_scan,
                 get_wlanmac_info: Self::get_wlanmac_info,
                 configure_bss: Self::configure_bss,
                 enable_beaconing: Self::enable_beaconing,
@@ -724,9 +865,15 @@ mod test_utils {
             dev
         }
 
-        pub fn as_device_fail_start_hw_scan(&mut self) -> Device {
+        pub fn as_device_fail_start_passive_scan(&mut self) -> Device {
             let mut dev = self.as_device();
-            dev.raw_device.start_hw_scan = Self::start_hw_scan_fails;
+            dev.raw_device.start_passive_scan = Self::start_passive_scan_fails;
+            dev
+        }
+
+        pub fn as_device_fail_start_active_scan(&mut self) -> Device {
+            let mut dev = self.as_device();
+            dev.raw_device.start_active_scan = Self::start_active_scan_fails;
             dev
         }
     }
@@ -831,11 +978,15 @@ mod test_utils {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::ddk_converter, banjo_ddk_hw_wlan_ieee80211::*,
-        banjo_fuchsia_hardware_wlan_mac::WlanHwScanType, banjo_fuchsia_hardware_wlanphyinfo::*,
+        super::*,
+        crate::ddk_converter::{self, cssid_from_ssid_unchecked},
+        banjo_ddk_hw_wlan_ieee80211::*,
+        banjo_fuchsia_hardware_wlanphyinfo::*,
         banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
         banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,
+        ieee80211::Ssid,
+        std::convert::TryFrom,
         wlan_common::assert_variant,
     };
 
@@ -943,27 +1094,96 @@ mod tests {
     }
 
     #[test]
-    fn start_hw_scan() {
+    fn start_passive_scan() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
-        let result = dev.start_hw_scan(&WlanHwScanConfig {
-            scan_type: WlanHwScanType::PASSIVE,
-            num_channels: 3,
-            channels: arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize),
-            ssid: banjo_ieee80211::CSsid {
-                len: 3,
-                data: arr!([65; 3], fidl_ieee80211::MAX_SSID_BYTE_LEN as usize),
-            },
+        let result = dev.start_passive_scan(&banjo_wlan_mac::WlanmacPassiveScanArgs {
+            channels_list: &[1u8, 2, 3] as *const u8,
+            channels_count: 3,
+            min_channel_time: zx::Duration::from_millis(0).into_nanos(),
+            max_channel_time: zx::Duration::from_millis(200).into_nanos(),
+            min_home_time: 0,
         });
         assert!(result.is_ok());
-        assert_variant!(fake_device.hw_scan_req, Some(config) => {
-            assert_eq!(config.scan_type, WlanHwScanType::PASSIVE);
-            assert_eq!(config.num_channels, 3);
-            assert_eq!(&config.channels[..], &arr!([1, 2, 3], WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS as usize)[..]);
-            assert_eq!(config.ssid, banjo_ieee80211::CSsid { len: 3, data: arr!([65; 3], fidl_ieee80211::MAX_SSID_BYTE_LEN as usize) });
-        }, "expected HW scan config");
+        assert_variant!(fake_device.captured_passive_scan_args, Some(passive_scan_args) => {
+            assert_eq!(passive_scan_args.channels.len(), 3);
+            assert_eq!(passive_scan_args.channels, vec![1, 2, 3]);
+            assert_eq!(passive_scan_args.min_channel_time, 0);
+            assert_eq!(passive_scan_args.max_channel_time, 200_000_000);
+            assert_eq!(passive_scan_args.min_home_time, 0);
+        }, "No passive scan argument available.");
+    }
+
+    #[test]
+    fn start_active_scan() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut fake_device = FakeDevice::new(&exec);
+        let dev = fake_device.as_device();
+
+        let result = dev.start_active_scan(&banjo_wlan_mac::WlanmacActiveScanArgs {
+            channels_list: &[1u8, 2, 3] as *const u8,
+            channels_count: 3,
+            ssids_list: &[
+                cssid_from_ssid_unchecked(&Ssid::try_from("foo").unwrap().into()),
+                cssid_from_ssid_unchecked(&Ssid::try_from("bar").unwrap().into()),
+            ] as *const banjo_ieee80211::CSsid,
+            ssids_count: 2,
+            #[rustfmt::skip]
+            mac_header_buffer: &[
+                0x40u8, 0x00, // Frame Control
+                0x00, 0x00, // Duration
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 1
+                0x66, 0x66, 0x66, 0x66, 0x66, 0x66, // Address 2
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 3
+                0x70, 0xdc, // Sequence Control
+            ] as *const u8,
+            mac_header_size: 24,
+            #[rustfmt::skip]
+            ies_buffer: &[
+                0x01u8, // Element ID for Supported Rates
+                0x08, // Length
+                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 // Supported Rates
+            ] as *const u8,
+            ies_size: 10,
+            min_channel_time: zx::Duration::from_millis(0).into_nanos(),
+            max_channel_time: zx::Duration::from_millis(200).into_nanos(),
+            min_home_time: 0,
+            min_probes_per_channel: 1,
+            max_probes_per_channel: 3,
+        });
+        assert!(result.is_ok());
+        assert_variant!(fake_device.captured_active_scan_args, Some(active_scan_args) => {
+            assert_eq!(active_scan_args.channels.len(), 3);
+            assert_eq!(active_scan_args.channels, vec![1, 2, 3]);
+            assert_eq!(active_scan_args.ssids.len(), 2);
+            assert_eq!(active_scan_args.ssids,
+                       vec![
+                           cssid_from_ssid_unchecked(&Ssid::try_from("foo").unwrap().into()),
+                           cssid_from_ssid_unchecked(&Ssid::try_from("bar").unwrap().into()),
+                       ]);
+            assert_eq!(active_scan_args.mac_header_buffer.len(), 24);
+            assert_eq!(active_scan_args.mac_header_buffer, vec![
+                0x40, 0x00, // Frame Control
+                0x00, 0x00, // Duration
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 1
+                0x66, 0x66, 0x66, 0x66, 0x66, 0x66, // Address 2
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 3
+                0x70, 0xdc, // Sequence Control
+            ]);
+            assert_eq!(active_scan_args.ies_buffer.len(), 10);
+            assert_eq!(active_scan_args.ies_buffer, vec![
+                0x01u8, // Element ID for Supported Rates
+                0x08, // Length
+                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08 // Supported Rates
+            ][..]);
+            assert_eq!(active_scan_args.min_channel_time, 0);
+            assert_eq!(active_scan_args.max_channel_time, 200_000_000);
+            assert_eq!(active_scan_args.min_home_time, 0);
+            assert_eq!(active_scan_args.min_probes_per_channel, 1);
+            assert_eq!(active_scan_args.max_probes_per_channel, 3);
+        }, "No active scan argument available.");
     }
 
     #[test]

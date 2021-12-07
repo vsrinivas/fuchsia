@@ -18,7 +18,7 @@ use {
     fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
     ieee80211::{Bssid, MacAddr, Ssid},
-    log::{error, info, log},
+    log::{error, info, log, warn},
     std::fmt,
     wlan_common::{
         mac::{self, CapabilityInfo},
@@ -143,6 +143,10 @@ impl crate::MlmeImpl for Ap {
     }
     fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
         Self::handle_hw_indication(self, ind);
+    }
+    fn handle_scan_complete(&mut self, _status: zx::Status, _scan_id: u64) {
+        warn!("Unexpected ScanComplete for AP MLME.");
+        return;
     }
     fn handle_timeout(&mut self, event_id: EventId, event: TimedEvent) {
         Self::handle_timed_event(self, event_id, event)

@@ -371,11 +371,9 @@ static const char* iwl_mvm_ebs_status_str(enum iwl_scan_ebs_status status) {
   }
 }
 
-static void notify_mlme_scan_completion(struct iwl_mvm_vif* mvmvif, bool successful) {
-  wlan_hw_scan_result_t scan_result = {
-      .code = successful ? WLAN_HW_SCAN_SUCCESS : WLAN_HW_SCAN_ABORTED,
-  };
-  wlanmac_ifc_hw_scan_complete(&mvmvif->ifc, &scan_result);
+static void notify_mlme_scan_completion(struct iwl_mvm_vif* mvmvif, zx_status_t status) {
+  // TODO(fxbug.dev/88934): scan_id is always 0
+  wlanmac_ifc_scan_complete(&mvmvif->ifc, status, 0);
 }
 
 void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb) {
@@ -454,7 +452,7 @@ void iwl_mvm_rx_lmac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
 
     mvm->scan_status &= ~IWL_MVM_SCAN_REGULAR;
     if (mvm->scan_vif) {
-      notify_mlme_scan_completion(mvm->scan_vif, !aborted);
+      notify_mlme_scan_completion(mvm->scan_vif, aborted ? ZX_ERR_CANCELED : ZX_OK);
     } else {
       IWL_WARN(mvm, "mvm->scan_vif is not registered, but got a SCAN completion\n");
     }
@@ -1455,7 +1453,7 @@ static zx_status_t iwl_mvm_scan_umac(struct iwl_mvm_vif* mvmvif, struct iwl_mvm_
   return ZX_OK;
 }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
 static int iwl_mvm_num_scans(struct iwl_mvm* mvm) {
     return hweight32(mvm->scan_status & IWL_MVM_SCAN_MASK);
 }
@@ -1541,7 +1539,7 @@ void iwl_mvm_scan_timeout_wk(void* data) {
 
   mvm->scan_status &= ~IWL_MVM_SCAN_REGULAR;
   if (mvm->scan_vif) {
-    notify_mlme_scan_completion(mvm->scan_vif, false);
+    notify_mlme_scan_completion(mvm->scan_vif, ZX_ERR_TIMED_OUT);
   } else {
     IWL_ERR(mvm, "mvm->scan_vif is not registered, but got a SCAN timeout\n");
   }
@@ -1561,8 +1559,17 @@ static void iwl_mvm_fill_scan_type(struct iwl_mvm* mvm, struct iwl_mvm_scan_para
 }
 #endif  // NEEDS_PORTING
 
-zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
-                                   const wlan_hw_scan_config_t* scan_config) {
+// TODO(fxbug.dev/89682): Fuchsia-specific wlanmac_passive_scan_args_t should be moved out
+// of these function arguments or this function should be moved to platform/mvm-mlme.cc.
+zx_status_t iwl_mvm_reg_scan_start_passive(struct iwl_mvm_vif* mvmvif,
+                                           const wlanmac_passive_scan_args_t* passive_scan_args) {
+  // TODO(fxbug.dev/89693): iwlwifi only uses the channels field.
+  return iwl_mvm_reg_scan_start(mvmvif, passive_scan_args->channels_list,
+                                passive_scan_args->channels_count);
+}
+
+zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif, const uint8_t* channels_list,
+                                   size_t channels_count) {
   struct iwl_mvm* mvm = mvmvif->mvm;
   struct iwl_host_cmd hcmd = {
       .len =
@@ -1607,6 +1614,8 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
     return ZX_ERR_SHOULD_WAIT;
   }
 
+// TODO(fxbug.dev/89683): The number of SSIDs and channels is not actually limitless
+// and should be checked.
 #if 0   // NEEDS_PORTING
     if (!iwl_mvm_scan_fits(mvm, req->n_ssids, ies, req->n_channels)) { return ZX_ERR_BUFFER_TOO_SMALL; }
 #endif  // NEEDS_PORTING
@@ -1619,9 +1628,9 @@ zx_status_t iwl_mvm_reg_scan_start(struct iwl_mvm_vif* mvmvif,
       .delay = 0,
   };
 
-  params.n_channels = scan_config->num_channels;
+  params.n_channels = channels_count;
   for (uint32_t i = 0; i < params.n_channels; ++i) {
-    params.channels[i] = scan_config->channels[i];
+    params.channels[i] = channels_list[i];
   }
 
 #if 0   // NEEDS_PORTING
@@ -1817,7 +1826,7 @@ void iwl_mvm_rx_umac_scan_complete_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_
     }
 
     if (mvm->scan_vif != NULL) {
-      notify_mlme_scan_completion(mvm->scan_vif, !aborted);
+      notify_mlme_scan_completion(mvm->scan_vif, aborted ? ZX_ERR_CANCELED : ZX_OK);
     }
 
     mvm->scan_vif = NULL;

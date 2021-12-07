@@ -81,8 +81,13 @@ zx_status_t ClientMlme::Init() {
       .set_key = [](void* device, wlan_key_config_t* key) -> zx_status_t {
         return DEVICE(device)->SetKey(key);
       },
-      .start_hw_scan = [](void* device, const wlan_hw_scan_config_t* config) -> zx_status_t {
-        return DEVICE(device)->StartHwScan(config);
+      .start_passive_scan = [](void* device, const wlanmac_passive_scan_args_t* passive_scan_args,
+                               uint64_t* out_scan_id) -> zx_status_t {
+        return DEVICE(device)->StartPassiveScan(passive_scan_args, out_scan_id);
+      },
+      .start_active_scan = [](void* device, const wlanmac_active_scan_args_t* active_scan_args,
+                              uint64_t* out_scan_id) -> zx_status_t {
+        return DEVICE(device)->StartActiveScan(active_scan_args, out_scan_id);
       },
       .get_wlanmac_info = [](void* device) -> wlanmac_info_t {
         return DEVICE(device)->GetWlanMacInfo();

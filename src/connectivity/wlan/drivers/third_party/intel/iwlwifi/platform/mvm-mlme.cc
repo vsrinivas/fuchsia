@@ -756,15 +756,15 @@ out:
   return ret;
 }
 
-zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config) {
+zx_status_t mac_start_passive_scan(void* ctx, const wlanmac_passive_scan_args_t* passive_scan_args,
+                                   uint64_t* out_scan_id) {
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
+  return iwl_mvm_mac_hw_scan_passive(mvmvif, passive_scan_args, out_scan_id);
+}
 
-  if (scan_config->scan_type != WLAN_HW_SCAN_TYPE_PASSIVE) {
-    IWL_ERR(ctx, "Unsupported scan type: %s\n", wlan_hw_scan_type_to_str(scan_config->scan_type));
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  return iwl_mvm_mac_hw_scan(mvmvif, scan_config);
+zx_status_t mac_start_active_scan(void* ctx, const wlanmac_active_scan_args_t* active_scan_args,
+                                  uint64_t* out_scan_id) {
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, uint16_t idx) {
@@ -789,7 +789,8 @@ wlanmac_protocol_ops_t wlanmac_ops = {
     .set_key = mac_set_key,
     .configure_assoc = mac_configure_assoc,
     .clear_assoc = mac_clear_assoc,
-    .start_hw_scan = mac_start_hw_scan,
+    .start_passive_scan = mac_start_passive_scan,
+    .start_active_scan = mac_start_active_scan,
 };
 
 void mac_unbind(void* ctx) {

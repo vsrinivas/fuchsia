@@ -45,7 +45,10 @@ class WlanmacDevice : public WlanmacDeviceType,
   zx_status_t WlanmacConfigureAssoc(uint32_t options, const wlan_assoc_ctx_t* assoc_ctx);
   zx_status_t WlanmacClearAssoc(uint32_t options,
                                 const uint8_t peer_addr_list[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]);
-  zx_status_t WlanmacStartHwScan(const wlan_hw_scan_config_t* scan_config);
+  zx_status_t WlanmacStartPassiveScan(const wlanmac_passive_scan_args_t* passive_scan_args,
+                                      uint64_t* out_scan_id);
+  zx_status_t WlanmacStartActiveScan(const wlanmac_active_scan_args_t* active_scan_args,
+                                     uint64_t* out_scan_id);
   zx_status_t WlanmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_params_t* params);
 
  protected:

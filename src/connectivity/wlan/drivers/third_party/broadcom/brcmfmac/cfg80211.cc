@@ -901,7 +901,7 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
 
   fill_with_broadcast_addr(params_le->bssid);
 
-  /* Wildcard SSID serves as a fallback value if ssid_list is empty. Otherwise,
+  /* Wildcard SSID serves as a fallback value if ssids_list is empty. Otherwise,
      this field is ignored. */
   fill_with_wildcard_ssid(&params_le->ssid_le);
 
@@ -946,7 +946,7 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   n_ssids = request->ssids_count;
   BRCMF_DBG(SCAN, "### List of SSIDs to scan ### %d", n_ssids);
 
-  /* Copy ssid_list if non-empty */
+  /* Copy ssids_list if non-empty */
   if (n_ssids > 0) {
     offset = offsetof(struct brcmf_scan_params_le, channel_list) + n_channels * sizeof(uint16_t);
     offset = roundup(offset, sizeof(uint32_t));

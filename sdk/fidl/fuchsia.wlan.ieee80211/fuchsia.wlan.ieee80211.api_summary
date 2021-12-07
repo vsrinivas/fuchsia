@@ -19,7 +19,13 @@ enum/member fuchsia.wlan.ieee80211/CipherSuiteType.WEP_40 1
 flexible enum fuchsia.wlan.ieee80211/CipherSuiteType uint32
 const fuchsia.wlan.ieee80211/MAC_ADDR_LEN uint8 6
 const fuchsia.wlan.ieee80211/MAX_MESH_ID_BYTE_LEN uint8 32
+const fuchsia.wlan.ieee80211/MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN uint8 28
+const fuchsia.wlan.ieee80211/MAX_MMPDU_BYTE_LEN uint16 2304
 const fuchsia.wlan.ieee80211/MAX_SSID_BYTE_LEN uint8 32
+const fuchsia.wlan.ieee80211/MAX_UNIQUE_CHANNEL_NUMBERS uint8 255
+const fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_0 uint16 3895
+const fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_1 uint16 7991
+const fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_2 uint16 11454
 enum/member fuchsia.wlan.ieee80211/ReasonCode.AP_INITIATED 47
 enum/member fuchsia.wlan.ieee80211/ReasonCode.BAD_CIPHER_OR_AKM 29
 enum/member fuchsia.wlan.ieee80211/ReasonCode.BSS_TRANSITION_DISASSOC 12
@@ -87,6 +93,7 @@ enum/member fuchsia.wlan.ieee80211/ReasonCode.UNSPECIFIED_QOS_REASON 32
 enum/member fuchsia.wlan.ieee80211/ReasonCode.UNSPECIFIED_REASON 1
 enum/member fuchsia.wlan.ieee80211/ReasonCode.UNSUPPORTED_RSNE_VERSION 21
 strict enum fuchsia.wlan.ieee80211/ReasonCode uint16
+const fuchsia.wlan.ieee80211/SSID_LIST_MAX uint8 84
 enum/member fuchsia.wlan.ieee80211/StatusCode.ANTI_CLOGGING_TOKEN_REQUIRED 76
 enum/member fuchsia.wlan.ieee80211/StatusCode.AUTHORIZATION_DEENABLED 107
 enum/member fuchsia.wlan.ieee80211/StatusCode.BAD_INTERVAL_WITH_U_APSD_COEX 75

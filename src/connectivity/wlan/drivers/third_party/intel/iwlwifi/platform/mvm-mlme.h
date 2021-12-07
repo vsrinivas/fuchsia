@@ -59,7 +59,10 @@ zx_status_t mac_set_key(void* ctx, uint32_t options, const wlan_key_config_t* ke
 zx_status_t mac_configure_assoc(void* ctx, uint32_t options, const wlan_assoc_ctx_t* assoc_ctx);
 zx_status_t mac_clear_assoc(void* ctx, uint32_t options,
                             const uint8_t peer_addr[fuchsia_wlan_ieee80211_MAC_ADDR_LEN]);
-zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_config);
+zx_status_t mac_start_passive_scan(void* ctx, const wlanmac_passive_scan_args_t* passive_scan_args,
+                                   uint64_t* out_scan_id);
+zx_status_t mac_start_active_scan(void* ctx, const wlanmac_active_scan_args_t* active_scan_args,
+                                  uint64_t* out_scan_id);
 zx_status_t mac_init(void* ctx, struct iwl_trans* drvdata, zx_device_t* zxdev, uint16_t idx);
 void mac_unbind(void* ctx);
 void mac_release(void* ctx);

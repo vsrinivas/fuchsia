@@ -7,7 +7,8 @@ use {
     banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
     banjo_fuchsia_hardware_wlanphyinfo as banjo_ddk_wlanphyinfo,
-    banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
+    banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
     ieee80211::Bssid,
     log::warn,
@@ -213,6 +214,16 @@ fn convert_driver_features(
         out.push(fidl_common::DriverFeature::Mfp);
     }
     out
+}
+
+pub fn cssid_from_ssid_unchecked(ssid: &Vec<u8>) -> banjo_ieee80211::CSsid {
+    let mut cssid = banjo_ieee80211::CSsid {
+        len: ssid.len() as u8,
+        data: [0; fidl_ieee80211::MAX_SSID_BYTE_LEN as usize],
+    };
+    // Ssid never exceeds fidl_ieee80211::MAX_SSID_BYTE_LEN bytes, so this assignment will never panic
+    cssid.data[..ssid.len()].copy_from_slice(&ssid[..]);
+    cssid
 }
 
 #[cfg(test)]
