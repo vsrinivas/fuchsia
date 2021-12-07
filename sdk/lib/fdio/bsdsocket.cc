@@ -295,6 +295,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
 __EXPORT
 int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const char* name,
                           int family) {
+  static_assert(MAXADDRS == fnet::wire::kMaxLookupIps);
   auto& name_lookup = get_client<fnet::NameLookup>();
   if (name_lookup.is_error()) {
     errno = fdio_status_to_errno(name_lookup.status_value());
@@ -331,8 +332,14 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   const fnet::wire::NameLookupLookupIp2Result& wire_result = fidl_result.value().result;
   switch (wire_result.which()) {
     case fnet::wire::NameLookupLookupIp2Result::Tag::kResponse: {
-      int count = 0;
       const fnet::wire::LookupResult& result = wire_result.response().result;
+      if (!result.has_addresses()) {
+        return 0;
+      }
+      ZX_ASSERT_MSG(result.addresses().count() <= MAXADDRS,
+                    "%lu addresses in DNS response, maximum is %d", result.addresses().count(),
+                    MAXADDRS);
+      int count = 0;
       if (result.has_addresses()) {
         for (const fnet::wire::IpAddress& addr : result.addresses()) {
           switch (addr.which()) {

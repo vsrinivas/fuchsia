@@ -7,6 +7,7 @@ use {
     fuchsia_component::client,
     fuchsia_component::server::ServiceFs,
     futures::{FutureExt as _, StreamExt as _, TryStreamExt as _},
+    std::convert::TryInto as _,
 };
 
 #[fasync::run_singlethreaded(test)]
@@ -26,28 +27,29 @@ async fn test_getaddrinfo() {
     let mut fs = fs.map(Ok).try_for_each_concurrent(None, |stream| {
         stream.try_for_each_concurrent(None, |request| match request {
             fnet::NameLookupRequest::LookupIp2 { hostname, options, responder } => {
-                futures::future::ready(responder.send(&mut if hostname == "example.com" {
-                    let addresses = std::iter::empty()
-                        .chain(
-                            options
-                                .ipv4_lookup
-                                .unwrap_or(false)
-                                .then(|| net_declare::fidl_ip!("192.0.2.1"))
-                                .into_iter(),
-                        )
-                        .chain(
-                            options
-                                .ipv6_lookup
-                                .unwrap_or(false)
-                                .then(|| net_declare::fidl_ip!("2001:db8::1"))
-                                .into_iter(),
-                        )
-                        .collect();
-                    let addresses = Some(addresses);
+                futures::future::ready(responder.send(&mut (|| {
+                    let size = match hostname.as_str() {
+                        "example.com" => 1,
+                        "lotsofrecords.com" => fnet::MAX_LOOKUP_IPS.try_into().unwrap(),
+                        "google.com" => return Err(fnet::LookupError::NotFound),
+                        hostname => panic!("unexpected hostname {}", hostname),
+                    };
+                    let fnet::LookupIpOptions2 {
+                        ipv4_lookup, ipv6_lookup, sort_addresses: _, ..
+                    } = options;
+                    let ipv4_addresses = ipv4_lookup
+                        .unwrap_or(false)
+                        .then(|| std::iter::repeat(net_declare::fidl_ip!("192.0.2.1")).take(size))
+                        .into_iter()
+                        .flatten();
+                    let ipv6_addresses = ipv6_lookup
+                        .unwrap_or(false)
+                        .then(|| std::iter::repeat(net_declare::fidl_ip!("2001:db8::1")).take(size))
+                        .into_iter()
+                        .flatten();
+                    let addresses = Some(ipv4_addresses.chain(ipv6_addresses).collect());
                     Ok(fnet::LookupResult { addresses, ..fnet::LookupResult::EMPTY })
-                } else {
-                    Err(fnet::LookupError::NotFound)
-                }))
+                })()))
             }
             request => panic!("unexpected request: {:?}", request),
         })

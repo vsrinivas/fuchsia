@@ -18,10 +18,9 @@ struct address {
   int sortkey;
 };
 
-/* The limit of 48 results is a non-sharp bound on the number of addresses
- * that can fit in one 512-byte DNS packet full of v4 results and a second
- * packet full of v6 results. Due to headers, the actual limit is lower. */
-#define MAXADDRS 48
+// Bound the number of addresses we can handle in a DNS response at the maximum
+// the server will send, fuchsia.net/MAX_LOOKUP_IPS.
+#define MAXADDRS 256
 
 // This function is used by musl to perform an actual DNS lookup - it takes
 // a name and address family, sends a DNS query, and fills out the addresses
