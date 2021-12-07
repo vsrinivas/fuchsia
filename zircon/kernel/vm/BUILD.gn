@@ -25,6 +25,7 @@ zx_library("vm") {
     "pmm_arena.cc",
     "pmm_checker.cc",
     "pmm_node.cc",
+    "ppb_command.cc",
     "scanner.cc",
     "stack_owned_loaned_pages_interval.cc",
     "vm.cc",
