@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/87645): remove once this is used
-#![allow(dead_code)]
-
 use {
     crate::wire::*, fuchsia_zircon as zx, num_traits::cast::cast, once_cell::sync::Lazy,
     std::collections::HashMap,

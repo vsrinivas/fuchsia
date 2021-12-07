@@ -2,7 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fzl/vmo-mapper.h>
+
 #include <array>
+#include <deque>
+#include <memory>
+#include <set>
+#include <unordered_map>
+#include <unordered_set>
+#include <vector>
 
 #include <virtio/sound.h>
 
@@ -13,28 +21,158 @@
 static constexpr char kVirtioSoundUrl[] =
     "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cmx";
 
+#define UNEXPECTED_METHOD_CALL ADD_FAILURE() << "unexpected method call " << __func__
+
 namespace {
+
+class FakeAudioRenderer : public fuchsia::media::AudioRenderer {
+ public:
+  FakeAudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request,
+                    async_dispatcher_t* dispatcher)
+      : binding_(this, std::move(request), dispatcher) {
+    binding_.set_error_handler([this](zx_status_t status) {
+      calls_.push_back({.method = Method::Disconnect, .disconnect_status = status});
+    });
+  }
+
+  // FakeAudioRenderer records every method call using the following types.
+  enum class Method {
+    AddPayloadBuffer,
+    SetUsage,
+    SetPcmStreamType,
+    EnableMinLeadTimeEvents,
+    Play,
+    Pause,
+    Disconnect,
+  };
+
+  struct Call {
+    Method method;
+    // AddPayloadBuffer
+    size_t payload_buffer_size;
+    // SetPcmStreamType
+    fuchsia::media::AudioStreamType stream_type;
+    // Disconnect
+    zx_status_t disconnect_status;
+  };
+
+  std::deque<Call>& calls() { return calls_; }
+
+  struct Packet {
+    std::string buffer;
+    SendPacketCallback callback;
+  };
+
+  std::deque<Packet>& packets() { return packets_; }
+
+  // Generate an OnMinLeadTimeChanged event.
+  // This is automatically called with kDefaultMinLeadTime when the user calls
+  // EnableMinLeadTimeEvents.
+  void ReportMinLeadTime(zx::duration lead_time) {
+    binding_.events().OnMinLeadTimeChanged(lead_time.to_nsecs());
+  }
+
+  // Arbitrary.
+  static constexpr auto kDefaultMinLeadTime = zx::msec(10);
+
+ protected:
+  // Expected methods.
+  void AddPayloadBuffer(uint32_t id, zx::vmo payload_buffer) override {
+    EXPECT_EQ(id, 0u);
+    ASSERT_TRUE(payload_buffer.is_valid());
+    size_t size;
+    ASSERT_EQ(payload_buffer.get_size(&size), ZX_OK);
+    calls_.push_back({.method = Method::AddPayloadBuffer, .payload_buffer_size = size});
+    ASSERT_EQ(ZX_OK, payload_mapper_.Map(std::move(payload_buffer)));
+  }
+  void SetUsage(fuchsia::media::AudioRenderUsage usage) override {
+    EXPECT_EQ(usage, fuchsia::media::AudioRenderUsage::MEDIA);
+    calls_.push_back({.method = Method::SetUsage});
+  }
+  void SetPcmStreamType(fuchsia::media::AudioStreamType type) override {
+    calls_.push_back({.method = Method::SetPcmStreamType, .stream_type = type});
+  }
+  void Play(int64_t reference_time, int64_t media_time, PlayCallback callback) override {
+    EXPECT_EQ(reference_time, fuchsia::media::NO_TIMESTAMP);
+    EXPECT_EQ(media_time, fuchsia::media::NO_TIMESTAMP);
+    calls_.push_back({.method = Method::Play});
+    callback(0, 0);  // arbitrary: these values are unused by the virtio-sound device
+  }
+  void Pause(PauseCallback callback) override {
+    calls_.push_back({.method = Method::Pause});
+    callback(0, 0);  // arbitrary: these values are unused by the virtio-sound device
+  }
+  void EnableMinLeadTimeEvents(bool enabled) override {
+    EXPECT_TRUE(enabled);
+    calls_.push_back({.method = Method::EnableMinLeadTimeEvents});
+    ReportMinLeadTime(kDefaultMinLeadTime);
+  }
+  void SendPacket(fuchsia::media::StreamPacket packet, SendPacketCallback callback) override {
+    EXPECT_EQ(packet.pts, fuchsia::media::NO_TIMESTAMP);
+    EXPECT_EQ(packet.payload_buffer_id, 0u);
+    EXPECT_EQ(packet.flags, 0u);
+    ASSERT_LT(packet.payload_offset, payload_mapper_.size());
+    ASSERT_LE(packet.payload_offset + packet.payload_size, payload_mapper_.size());
+    char* start = reinterpret_cast<char*>(payload_mapper_.start()) + packet.payload_offset;
+    char* end = start + packet.payload_size;
+    packets_.push_back({.buffer = std::string(start, end), .callback = std::move(callback)});
+  }
+
+  // Unexpected methods.
+  void RemovePayloadBuffer(uint32_t id) override { UNEXPECTED_METHOD_CALL; }
+  void SendPacketNoReply(fuchsia::media::StreamPacket packet) override { UNEXPECTED_METHOD_CALL; }
+  void EndOfStream() override { UNEXPECTED_METHOD_CALL; }
+  void DiscardAllPackets(DiscardAllPacketsCallback callback) override { UNEXPECTED_METHOD_CALL; }
+  void DiscardAllPacketsNoReply() override { UNEXPECTED_METHOD_CALL; }
+  void SetPtsUnits(uint32_t tick_per_second_numerator,
+                   uint32_t tick_per_second_denominator) override {
+    UNEXPECTED_METHOD_CALL;
+  }
+  void SetPtsContinuityThreshold(float threshold_seconds) override { UNEXPECTED_METHOD_CALL; }
+  void GetReferenceClock(GetReferenceClockCallback callback) override { UNEXPECTED_METHOD_CALL; }
+  void SetReferenceClock(::zx::clock reference_clock) override { UNEXPECTED_METHOD_CALL; }
+  void PlayNoReply(int64_t reference_time, int64_t media_time) override { UNEXPECTED_METHOD_CALL; }
+  void PauseNoReply() override { UNEXPECTED_METHOD_CALL; }
+  void GetMinLeadTime(GetMinLeadTimeCallback callback) override { UNEXPECTED_METHOD_CALL; }
+  void BindGainControl(::fidl::InterfaceRequest<::fuchsia::media::audio::GainControl>
+                           gain_control_request) override {
+    UNEXPECTED_METHOD_CALL;
+  }
+
+ private:
+  fidl::Binding<fuchsia::media::AudioRenderer> binding_;
+  fzl::VmoMapper payload_mapper_;
+  std::deque<Call> calls_;
+  std::deque<Packet> packets_;
+};
 
 class FakeAudio : public fuchsia::media::Audio {
  public:
   FakeAudio(fidl::InterfaceRequest<fuchsia::media::Audio> request, async_dispatcher_t* dispatcher)
       : binding_(this, std::move(request), dispatcher) {}
 
-  void CreateAudioRenderer(
-      fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request) final {
+  void CreateAudioRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> request) final {
+    renderers_.push_back(
+        std::make_unique<FakeAudioRenderer>(std::move(request), binding_.dispatcher()));
+  }
+  void CreateAudioCapturer(fidl::InterfaceRequest<fuchsia::media::AudioCapturer> request,
+                           bool loopback) final {
     // not implemented yet
   }
-  void CreateAudioCapturer(
-      fidl::InterfaceRequest<fuchsia::media::AudioCapturer> audio_capturer_request,
-      bool loopback) final {
-    // not implemented yet
+
+  FakeAudioRenderer* get_audio_renderer(size_t k) {
+    if (k >= renderers_.size()) {
+      return nullptr;
+    }
+    return renderers_[k].get();
   }
 
  private:
   fidl::Binding<fuchsia::media::Audio> binding_;
+  std::vector<std::unique_ptr<FakeAudioRenderer>> renderers_;
 };
 
-static inline uint64_t bit(uint64_t n) { return 1ul << n; }
+uint64_t bit(uint64_t n) { return 1ul << n; }
 
 enum QueueId {
   CONTROLQ = 0,
@@ -46,6 +184,15 @@ enum QueueId {
 static const uint32_t kNumJacks = 1;
 static const uint32_t kNumStreams = 2;
 static const uint32_t kNumChmaps = 3;
+
+static const uint32_t kOutputStreamId = 0;
+static const uint32_t kInputStreamId = 1;
+
+// Each response struct contains a status. We initialize that response status
+// to this value when we want to verify that the response is not written before
+// a certain point in time.
+static constexpr uint32_t kInvalidStatus = 0xffff;
+static_assert(VIRTIO_SND_S_OK != kInvalidStatus);
 
 struct QueueConfig {
   uint16_t descriptors;
@@ -108,12 +255,115 @@ class VirtioSoundTest : public TestWithDevice {
     ASSERT_EQ(ZX_OK, status);
   }
 
+  FakeAudio& audio_service() { return *audio_service_; }
   VirtioQueueFake& controlq() { return *queues_[CONTROLQ]; }
   VirtioQueueFake& eventq() { return *queues_[EVENTQ]; }
   VirtioQueueFake& txq() { return *queues_[TXQ]; }
   VirtioQueueFake& rxq() { return *queues_[RXQ]; }
 
   zx_status_t NotifyQueue(QueueId id) { return sound_->NotifyQueue(id); }
+
+  // Send a message on controlq with the given type and check the response code.
+  // Assumes the response is a simple virtio_snd_hdr.
+  template <class T>
+  void CheckSimpleCall(uint32_t expected_resp_code, T msg) {
+    virtio_snd_hdr* resphdr;
+    ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                         .AppendReadableDescriptor(&msg, sizeof(msg))
+                         .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                         .Build());
+    ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+    ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+    ASSERT_EQ(resphdr->code, expected_resp_code);
+  }
+
+  // Helper that waits for each method to be called exactly once (in any order), then
+  // returns info about each call. Can be used with FakeAudio{Renderer,Capturer}.
+  // On timeout, returns an empty set.
+  template <class Server>
+  std::unordered_map<typename Server::Method, typename Server::Call>  //
+  WaitForCalls(Server& server, std::set<typename Server::Method> expected_methods) {
+    std::unordered_map<typename Server::Method, typename Server::Call> out;
+    while (!expected_methods.empty()) {
+      constexpr auto kTimeout = zx::sec(5);
+      RunLoopWithTimeoutOrUntil([&server]() { return !server.calls().empty(); }, kTimeout);
+      if (server.calls().empty()) {
+        std::ostringstream os;
+        os << "Timeout waiting for method calls: need {";
+        for (auto m : expected_methods) {
+          os << static_cast<int>(m) << ", ";
+        }
+        os << "}, have {";
+        for (auto [m, c] : out) {
+          os << static_cast<int>(m) << ", ";
+        }
+        os << "}";
+        ADD_FAILURE() << os.str();
+        return {};
+      }
+
+      auto call = server.calls().front();
+      if (!expected_methods.count(call.method)) {
+        ADD_FAILURE() << "Got unexpected method call " << static_cast<int>(call.method);
+        return {};
+      }
+      if (out.count(call.method)) {
+        ADD_FAILURE() << "Got duplicate method call " << static_cast<int>(call.method);
+        return {};
+      }
+      out[call.method] = call;
+
+      server.calls().pop_front();
+      expected_methods.erase(call.method);
+    }
+
+    return out;
+  }
+
+  // Helper that waits for the given number of packets to arrive. Can be used with
+  // FakeAudio{Renderer,Capturer}. On timeout, returns an empty set.
+  template <class Server>
+  std::deque<typename Server::Packet> WaitForPackets(Server& server, size_t expected_count) {
+    constexpr auto kTimeout = zx::sec(5);
+    RunLoopWithTimeoutOrUntil(
+        [&server, expected_count]() { return server.packets().size() == expected_count; },
+        kTimeout);
+    if (server.packets().empty()) {
+      ADD_FAILURE() << "Timed out waiting for " << expected_count << " packets; got "
+                    << server.packets().size();
+      return {};
+    }
+    return std::move(server.packets());
+  }
+
+  // Helper that waits until the given descriptor index moves into the "used" ring,
+  // which signals that the request has completed.
+  //
+  // This is useful in tests where multiple requests may complete concurrently. If
+  // at most one test can complete at a time, it's sufficient to call WaitOnInterrupt()
+  // to wait for that request to complete.
+  zx_status_t WaitForDescriptor(VirtioQueueFake& queue, uint32_t idx) {
+    auto& used = used_descriptors_[&queue];
+    while (!used.count(idx)) {
+      auto elem = queue.NextUsed();
+      while (!elem) {
+        if (auto status = WaitOnInterrupt(); status != ZX_OK) {
+          return status;
+        }
+        elem = queue.NextUsed();
+      }
+      used.insert(elem->id);
+    }
+    return ZX_OK;
+  }
+
+  void TestPcmOutputSetParamsAndPrepare(uint8_t channels, uint8_t format, uint8_t rate,
+                                        fuchsia::media::AudioSampleFormat fidl_format,
+                                        uint32_t fidl_rate, uint32_t buffer_bytes = 1024,
+                                        uint32_t period_bytes = 64);
+  void TestPcmOutputStateTraversal(size_t renderer_id);
+  void TestPcmOutputBadTransition(std::vector<uint32_t> commands);
+  void SetUpForXfer(uint32_t buffer_bytes, uint32_t period_bytes, uint32_t* expected_latency_bytes);
 
  private:
   // Using a SyncPtr can risk deadlock if a method call on this SyncPtr needs to wait for
@@ -124,23 +374,24 @@ class VirtioSoundTest : public TestWithDevice {
   zx_gpaddr_t queue_data_addrs_[4];
   size_t phys_mem_size_;
   std::unique_ptr<FakeAudio> audio_service_;
+  std::unordered_map<VirtioQueueFake*, std::unordered_set<uint32_t>> used_descriptors_;
 };
 
 }  // namespace
 
+//
+// GetInfo tests
+//
+
 TEST_F(VirtioSoundTest, BadRequestNoReadableDescriptors) {
   virtio_snd_hdr* resphdr;
   virtio_snd_jack_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, kNumJacks * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, kNumJacks * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
 }
 
@@ -150,17 +401,13 @@ TEST_F(VirtioSoundTest, BadRequestHeaderTooSmall) {
 
   virtio_snd_hdr* resphdr;
   virtio_snd_jack_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, 1)
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, kNumJacks * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, 1)
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, kNumJacks * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
 }
 
@@ -173,17 +420,13 @@ TEST_F(VirtioSoundTest, GetJackInfos) {
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_jack_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, sizeof(query))
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, kNumJacks * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, kNumJacks * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
 
   static_assert(kNumJacks == 1);
 
@@ -193,6 +436,10 @@ TEST_F(VirtioSoundTest, GetJackInfos) {
   EXPECT_EQ(resp->hda_reg_defconf, 0x90100010u);
   EXPECT_EQ(resp->hda_reg_caps, 0x30u);
   EXPECT_EQ(resp->connected, 1u);
+  for (size_t k = 0; k < sizeof(resp->padding); k++) {
+    // 5.14.6.4.1.1: The device MUST initialize the padding bytes to 0
+    EXPECT_EQ(resp->padding[k], 0);
+  }
 }
 
 TEST_F(VirtioSoundTest, GetPcmInfos) {
@@ -204,17 +451,13 @@ TEST_F(VirtioSoundTest, GetPcmInfos) {
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_pcm_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, sizeof(query))
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, kNumStreams * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, kNumStreams * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
 
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_OK);
 
@@ -235,7 +478,12 @@ TEST_F(VirtioSoundTest, GetPcmInfos) {
     EXPECT_EQ(resp[k].rates, supported_rates);
     EXPECT_EQ(resp[k].direction, (k == 0) ? VIRTIO_SND_D_OUTPUT : VIRTIO_SND_D_INPUT);
     EXPECT_EQ(resp[k].channels_min, 1u);
-    EXPECT_EQ(resp[k].channels_max, (k == 0) ? 2u : 1u);
+    EXPECT_EQ(resp[k].channels_max, (k == kOutputStreamId) ? 2u : 1u);
+
+    for (size_t n = 0; n < sizeof(resp[k].padding); n++) {
+      // 5.14.6.6.2.1: The device MUST initialize the padding bytes to 0
+      EXPECT_EQ(resp[k].padding[n], 0);
+    }
   }
 }
 
@@ -248,18 +496,13 @@ TEST_F(VirtioSoundTest, GetChmapInfos) {
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, sizeof(query))
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, kNumChmaps * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
-
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, kNumChmaps * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_OK);
 
   for (size_t k = 0; k < kNumChmaps; k++) {
@@ -291,18 +534,13 @@ TEST_F(VirtioSoundTest, GetChmapInfosJustOne) {
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, sizeof(query))
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, 1 * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
-
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, 1 * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_OK);
 
   // chmaps[0] is OUTPUT, MONO
@@ -321,18 +559,13 @@ TEST_F(VirtioSoundTest, GetChmapInfosSubset) {
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, sizeof(query))
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, 2 * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
-
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, 2 * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_OK);
 
   // chmaps[0] is OUTPUT, MONO
@@ -353,17 +586,13 @@ TEST_F(VirtioSoundTest, BadGetChmapInfosRequestTooSmall) {
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, sizeof(query) - 1)  // too small
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, kNumChmaps * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query) - 1)  // too small
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, kNumChmaps * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
 }
 
@@ -376,17 +605,13 @@ TEST_F(VirtioSoundTest, BadGetChmapInfosRequestTooManyInfos) {
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, sizeof(query))
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, (kNumChmaps + 1) * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, (kNumChmaps + 1) * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
 }
 
@@ -399,16 +624,693 @@ TEST_F(VirtioSoundTest, BadGetChmapInfosRequestBadSize) {
   };
   virtio_snd_hdr* resphdr;
   virtio_snd_chmap_info_t* resp;
-  zx_status_t status = DescriptorChainBuilder(controlq())
-                           .AppendReadableDescriptor(&query, sizeof(query))
-                           .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
-                           .AppendWritableDescriptor(&resp, kNumChmaps * sizeof(*resp))
-                           .Build();
-  ASSERT_EQ(ZX_OK, status);
-
-  status = NotifyQueue(CONTROLQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .AppendWritableDescriptor(&resp, kNumChmaps * sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
   ASSERT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
+}
+
+//
+// Pcm header parsing tests
+//
+
+TEST_F(VirtioSoundTest, BadPcmRequestTooSmall) {
+  virtio_snd_pcm_hdr_t query = {
+      .hdr = {.code = VIRTIO_SND_R_PCM_PREPARE},  // arbitrary
+      .stream_id = kOutputStreamId,
+  };
+  virtio_snd_hdr* resphdr;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query) - 1)  // too small
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+  ASSERT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
+}
+
+TEST_F(VirtioSoundTest, BadPcmBadStreamId) {
+  virtio_snd_pcm_hdr_t query = {
+      .hdr = {.code = VIRTIO_SND_R_PCM_PREPARE},  // arbitrary
+      .stream_id = kOutputStreamId,
+  };
+  virtio_snd_hdr* resphdr;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&query, sizeof(query))
+                       .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+  ASSERT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
+}
+
+//
+// Pcm SetParameters tests
+// These test that calls should succeed or fail as expected. They don't test
+// AudioRenderer or AudioCapturer configurations -- that requires Prepare.
+//
+//
+
+static constexpr virtio_snd_pcm_set_params_t kGoodPcmSetParams = {
+    .hdr =
+        {
+            .hdr = {.code = VIRTIO_SND_R_PCM_SET_PARAMS},
+            .stream_id = kOutputStreamId,
+        },
+    .buffer_bytes = 1024,
+    .period_bytes = 64,
+    .features = 0,
+    .channels = 1,
+    .format = VIRTIO_SND_PCM_FMT_FLOAT,
+    .rate = VIRTIO_SND_PCM_RATE_48000,
+    .padding = 0,
+};
+
+TEST_F(VirtioSoundTest, PcmSetParams) {
+  auto params = kGoodPcmSetParams;
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_OK, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsBadStreamId) {
+  auto params = kGoodPcmSetParams;
+  params.hdr.stream_id = kNumStreams;
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsPeriodBytesNotDivisorOfBufferBytes) {
+  auto params = kGoodPcmSetParams;
+  params.buffer_bytes = 27;
+  params.period_bytes = 9;  // divides into buffer_bytes, but we have 2 bytes/frame,
+  params.channels = 1;      // so there are a non-integer number of frames per period
+  params.format = VIRTIO_SND_PCM_FMT_S16;
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsPeriodBytesNotMultipleOfFrameSize) {
+  auto params = kGoodPcmSetParams;
+  params.period_bytes = 63;  // not a divisor of buffer_bytes
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsBadFeatures) {
+  auto params = kGoodPcmSetParams;
+  params.features = (1 << VIRTIO_SND_PCM_F_EVT_SHMEM_PERIODS);  // features not supported
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsBadOutputChannels) {
+  auto params = kGoodPcmSetParams;
+  params.hdr.stream_id = kOutputStreamId;
+  params.channels = 3;  // mono or stereo only
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsBadInputChannels) {
+  auto params = kGoodPcmSetParams;
+  params.hdr.stream_id = kInputStreamId;
+  params.channels = 2;  // mono only
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsBadFormat) {
+  auto params = kGoodPcmSetParams;
+  params.format = 64;  // all FMT constants are < 64
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsBadRate) {
+  auto params = kGoodPcmSetParams;
+  params.rate = 64;  // all RATE constants are < 64
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+TEST_F(VirtioSoundTest, BadPcmSetParamsBadPadding) {
+  auto params = kGoodPcmSetParams;
+  params.padding = 1;  // must be zero
+  ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_BAD_MSG, params));
+}
+
+//
+// Pcm Output SetParameters+Prepare tests
+// These test that AudioRenderer parameters are configured correctly.
+//
+
+void VirtioSoundTest::TestPcmOutputSetParamsAndPrepare(
+    uint8_t channels, uint8_t wire_format, uint8_t wire_rate,
+    fuchsia::media::AudioSampleFormat fidl_format, uint32_t fidl_rate, uint32_t buffer_bytes,
+    uint32_t period_bytes) {
+  {
+    SCOPED_TRACE("Call SET_PARAMS");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_set_params_t{
+                                             .hdr =
+                                                 {
+                                                     .hdr = {.code = VIRTIO_SND_R_PCM_SET_PARAMS},
+                                                     .stream_id = kOutputStreamId,
+                                                 },
+                                             .buffer_bytes = buffer_bytes,
+                                             .period_bytes = period_bytes,
+                                             .features = 0,
+                                             .channels = channels,
+                                             .format = wire_format,
+                                             .rate = wire_rate,
+                                             .padding = 0,
+                                         }));
+  }
+
+  {
+    SCOPED_TRACE("Call PREPARE");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_PREPARE},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+  }
+
+  // Check that an AudioRenderer was created with the appropriate configs.
+  auto renderer = audio_service().get_audio_renderer(0);
+  ASSERT_TRUE(renderer) << "device did not call CreateAudioRenderer?";
+  auto calls = WaitForCalls(*renderer, {
+                                           FakeAudioRenderer::Method::AddPayloadBuffer,
+                                           FakeAudioRenderer::Method::SetUsage,
+                                           FakeAudioRenderer::Method::SetPcmStreamType,
+                                           FakeAudioRenderer::Method::EnableMinLeadTimeEvents,
+                                       });
+  ASSERT_FALSE(calls.empty());
+
+  auto payload_buffer_size = calls[FakeAudioRenderer::Method::AddPayloadBuffer].payload_buffer_size;
+  EXPECT_GE(payload_buffer_size, buffer_bytes);
+
+  auto stream_type = calls[FakeAudioRenderer::Method::SetPcmStreamType].stream_type;
+  EXPECT_EQ(stream_type.sample_format, fidl_format);
+  EXPECT_EQ(stream_type.channels, static_cast<uint32_t>(channels));
+  EXPECT_EQ(stream_type.frames_per_second, fidl_rate);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareUint8Mono44khz) {
+  TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_U8, VIRTIO_SND_PCM_RATE_48000,
+                                   fuchsia::media::AudioSampleFormat::UNSIGNED_8, 48000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareInt16Mono44khz) {
+  TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_S16, VIRTIO_SND_PCM_RATE_48000,
+                                   fuchsia::media::AudioSampleFormat::SIGNED_16, 48000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareInt24Mono44khz) {
+  TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_S24, VIRTIO_SND_PCM_RATE_48000,
+                                   fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32, 48000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono44khz) {
+  TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_48000,
+                                   fuchsia::media::AudioSampleFormat::FLOAT, 48000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareFloatStereo44khz) {
+  TestPcmOutputSetParamsAndPrepare(2, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_48000,
+                                   fuchsia::media::AudioSampleFormat::FLOAT, 48000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono8khz) {
+  TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_8000,
+                                   fuchsia::media::AudioSampleFormat::FLOAT, 8000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono96khz) {
+  TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_96000,
+                                   fuchsia::media::AudioSampleFormat::FLOAT, 96000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputPrepareFloatMono192khz) {
+  TestPcmOutputSetParamsAndPrepare(1, VIRTIO_SND_PCM_FMT_FLOAT, VIRTIO_SND_PCM_RATE_192000,
+                                   fuchsia::media::AudioSampleFormat::FLOAT, 192000);
+}
+
+//
+// Pcm Output state tests
+// These put the device through various states, including start/stop, but don't
+// test the data which moves through the device, only that the state machine can
+// be traversed as expected.
+//
+// Illegal state transitions are exercised in tests named BadPcmOutputTransition*.
+//
+
+void VirtioSoundTest::TestPcmOutputStateTraversal(size_t renderer_id) {
+  {
+    SCOPED_TRACE("SET_PARAMS");
+    // The specific parameters don't matter except for stream_id.
+    auto params = kGoodPcmSetParams;
+    params.hdr.stream_id = kOutputStreamId;
+    ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_OK, params));
+  }
+
+  {
+    SCOPED_TRACE("PREPARE");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_PREPARE},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+  }
+
+  // Check that an AudioRenderer was created with the appropriate initialization calls.
+  auto renderer = audio_service().get_audio_renderer(renderer_id);
+  ASSERT_TRUE(renderer) << "device did not call CreateAudioRenderer?";
+  auto calls = WaitForCalls(*renderer, {
+                                           FakeAudioRenderer::Method::AddPayloadBuffer,
+                                           FakeAudioRenderer::Method::SetUsage,
+                                           FakeAudioRenderer::Method::SetPcmStreamType,
+                                           FakeAudioRenderer::Method::EnableMinLeadTimeEvents,
+                                       });
+  ASSERT_FALSE(calls.empty());
+
+  {
+    SCOPED_TRACE("START #1");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_START},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+
+    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Play});
+    ASSERT_FALSE(calls.empty());
+  }
+
+  {
+    SCOPED_TRACE("STOP #1");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_STOP},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Pause});
+    ASSERT_FALSE(calls.empty());
+  }
+
+  {
+    SCOPED_TRACE("START #2");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_START},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+
+    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Play});
+    ASSERT_FALSE(calls.empty());
+  }
+
+  {
+    SCOPED_TRACE("STOP #2");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_STOP},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Pause});
+    ASSERT_FALSE(calls.empty());
+  }
+
+  {
+    SCOPED_TRACE("RELEASE");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_RELEASE},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+
+    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Disconnect});
+    ASSERT_FALSE(calls.empty());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, calls[FakeAudioRenderer::Method::Disconnect].disconnect_status);
+  }
+}
+
+TEST_F(VirtioSoundTest, PcmOutputStateTraversal) {
+  {
+    SCOPED_TRACE("First traversal");
+    // Run the full sequence once.
+    TestPcmOutputStateTraversal(0);
+  }
+  {
+    SCOPED_TRACE("Second traversal");
+    // Running the sequence again should create a new renderer.
+    TestPcmOutputStateTraversal(1);
+  }
+}
+
+TEST_F(VirtioSoundTest, PcmOutputTransitionPrepareRelease) {
+  {
+    SCOPED_TRACE("SET_PARAMS");
+    // The specific parameters don't matter except for stream_id.
+    auto params = kGoodPcmSetParams;
+    params.hdr.stream_id = kOutputStreamId;
+    ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_OK, params));
+  }
+
+  {
+    SCOPED_TRACE("PREPARE");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_PREPARE},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+  }
+
+  // Check that an AudioRenderer was created with the appropriate initialization calls.
+  auto renderer = audio_service().get_audio_renderer(0);
+  ASSERT_TRUE(renderer) << "device did not call CreateAudioRenderer?";
+  auto calls = WaitForCalls(*renderer, {
+                                           FakeAudioRenderer::Method::AddPayloadBuffer,
+                                           FakeAudioRenderer::Method::SetUsage,
+                                           FakeAudioRenderer::Method::SetPcmStreamType,
+                                           FakeAudioRenderer::Method::EnableMinLeadTimeEvents,
+                                       });
+  ASSERT_FALSE(calls.empty());
+
+  // Immediately release.
+  {
+    SCOPED_TRACE("RELEASE");
+    ASSERT_NO_FATAL_FAILURE(
+        CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                             .hdr = {.code = VIRTIO_SND_R_PCM_RELEASE},
+                                             .stream_id = kOutputStreamId,
+                                         }));
+
+    calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Disconnect});
+    ASSERT_FALSE(calls.empty());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, calls[FakeAudioRenderer::Method::Disconnect].disconnect_status);
+  }
+}
+
+void VirtioSoundTest::TestPcmOutputBadTransition(std::vector<uint32_t> commands) {
+  {
+    SCOPED_TRACE("SET_PARAMS");
+    // The specific parameters don't matter except for stream_id.
+    auto params = kGoodPcmSetParams;
+    params.hdr.stream_id = kOutputStreamId;
+    ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_OK, params));
+  }
+
+  // All commands except the last should succeed.
+  ASSERT_GT(commands.size(), 0u);
+  for (size_t k = 0; k < commands.size() - 1; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("CODE=%u", commands[k]));
+    ASSERT_NO_FATAL_FAILURE(CheckSimpleCall(VIRTIO_SND_S_OK, virtio_snd_pcm_hdr_t{
+                                                                 .hdr = {.code = commands[k]},
+                                                                 .stream_id = kOutputStreamId,
+                                                             }));
+  }
+
+  // The last command should fail.
+  {
+    virtio_snd_pcm_hdr_t msg{
+        .hdr = {.code = commands.back()},
+        .stream_id = kOutputStreamId,
+    };
+    virtio_snd_hdr* resphdr;
+    ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                         .AppendReadableDescriptor(&msg, sizeof(msg))
+                         .AppendWritableDescriptor(&resphdr, sizeof(*resphdr))
+                         .Build());
+    ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+    ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+    EXPECT_EQ(resphdr->code, VIRTIO_SND_S_BAD_MSG);
+  }
+}
+
+TEST_F(VirtioSoundTest, BadPcmOutputTransitionPrepareStop) {
+  // Can't transition from PREPARE to STOP.
+  TestPcmOutputBadTransition({VIRTIO_SND_R_PCM_PREPARE, VIRTIO_SND_R_PCM_STOP});
+}
+
+TEST_F(VirtioSoundTest, BadPcmOutputTransitionReleaseStart) {
+  // Can't transition from RELEASE to START.
+  TestPcmOutputBadTransition(
+      {VIRTIO_SND_R_PCM_PREPARE, VIRTIO_SND_R_PCM_RELEASE, VIRTIO_SND_R_PCM_START});
+}
+
+TEST_F(VirtioSoundTest, BadPcmOutputTransitionReleaseStop) {
+  // Can't transition from RELEASE to STOP.
+  TestPcmOutputBadTransition(
+      {VIRTIO_SND_R_PCM_PREPARE, VIRTIO_SND_R_PCM_RELEASE, VIRTIO_SND_R_PCM_STOP});
+}
+
+//
+// Pcm Output data tests
+//
+
+void VirtioSoundTest::SetUpForXfer(uint32_t buffer_bytes, uint32_t period_bytes,
+                                   uint32_t* expected_latency_bytes) {
+  // 2 bytes/frame, so the caller must set period_bytes to a multiple of 2.
+  const auto bytes_per_frame = 2;
+  ASSERT_TRUE(period_bytes % bytes_per_frame == 0);
+
+  // U8 with 2 channels is 2 bytes/frame.
+  const auto channels = 2;
+  const auto fidl_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8;
+  const auto fidl_fps = 48000;
+  ASSERT_NO_FATAL_FAILURE(TestPcmOutputSetParamsAndPrepare(channels, VIRTIO_SND_PCM_FMT_U8,
+                                                           VIRTIO_SND_PCM_RATE_48000,
+                                                           // The FIDL equivalents.
+                                                           fidl_format, fidl_fps,
+                                                           // Caller's params.
+                                                           buffer_bytes, period_bytes));
+
+  *expected_latency_bytes =
+      static_cast<uint32_t>(FakeAudioRenderer::kDefaultMinLeadTime.to_nsecs() * fidl_fps *
+                            bytes_per_frame / 1'000'000'000);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputXferOne) {
+  constexpr uint32_t kBufferBytes = 64;
+  constexpr uint32_t kPeriodBytes = 8;
+  uint32_t expected_latency_bytes;
+  ASSERT_NO_FATAL_FAILURE(SetUpForXfer(kBufferBytes, kPeriodBytes, &expected_latency_bytes));
+
+  const std::string kPacket = "12345678";
+  const uint32_t kPacketSize = static_cast<uint32_t>(kPacket.size());
+
+  // Send a packet.
+  virtio_snd_pcm_xfer_t xfer{.stream_id = kOutputStreamId};
+  virtio_snd_pcm_status_t* resp;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
+                       .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                       .AppendReadableDescriptor(&kPacket[0], kPacketSize)
+                       .AppendWritableDescriptor(&resp, sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
+  resp->status = kInvalidStatus;
+
+  // Wait for the packet to arrive.
+  auto renderer = audio_service().get_audio_renderer(0);
+  auto packets = WaitForPackets(*renderer, 1);
+  ASSERT_EQ(packets.size(), 1u);
+  EXPECT_EQ(packets[0].buffer, kPacket);
+  EXPECT_EQ(resp->status, kInvalidStatus);
+
+  // Wait for the reply.
+  packets[0].callback();
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+  EXPECT_EQ(resp->status, VIRTIO_SND_S_OK);
+  EXPECT_EQ(resp->latency_bytes, expected_latency_bytes);
+}
+
+TEST_F(VirtioSoundTest, PcmOutputXferMultiple) {
+  constexpr uint32_t kBufferBytes = 64;
+  constexpr uint32_t kPeriodBytes = 8;
+  uint32_t expected_latency_bytes;
+  ASSERT_NO_FATAL_FAILURE(SetUpForXfer(kBufferBytes, kPeriodBytes, &expected_latency_bytes));
+
+  // Send multiple packets.
+  constexpr size_t kNumPackets = 3;
+  const std::string kPackets[kNumPackets] = {"aaaaaaaa", "bbbbbbbb", "cccccccc"};
+  virtio_snd_pcm_xfer_t xfer{.stream_id = kOutputStreamId};
+  virtio_snd_pcm_status_t* resp[kNumPackets];
+  for (size_t k = 0; k < kNumPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    const uint32_t size = static_cast<uint32_t>(kPackets[k].size());
+    ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
+                         .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                         .AppendReadableDescriptor(&kPackets[k][0], size)
+                         .AppendWritableDescriptor(&resp[k], sizeof(resp[k]))
+                         .Build());
+    ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
+    resp[k]->status = kInvalidStatus;
+  }
+
+  // Wait for the packets to arrive.
+  auto renderer = audio_service().get_audio_renderer(0);
+  auto packets = WaitForPackets(*renderer, 3);
+  ASSERT_EQ(packets.size(), kNumPackets);
+  for (size_t k = 0; k < kNumPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    EXPECT_EQ(packets[k].buffer, kPackets[k]);
+    EXPECT_EQ(resp[k]->status, kInvalidStatus);
+  }
+
+  // Wait for the replies.
+  for (size_t k = 0; k < kNumPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    packets[k].callback();
+    ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+    EXPECT_EQ(resp[k]->status, VIRTIO_SND_S_OK);
+    EXPECT_EQ(resp[k]->latency_bytes, expected_latency_bytes);
+  }
+}
+
+TEST_F(VirtioSoundTest, PcmOutputXferThenRelease) {
+  constexpr uint32_t kBufferBytes = 64;
+  constexpr uint32_t kPeriodBytes = 8;
+  uint32_t expected_latency_bytes;
+  ASSERT_NO_FATAL_FAILURE(SetUpForXfer(kBufferBytes, kPeriodBytes, &expected_latency_bytes));
+
+  const std::string kPacket = "12345678";
+  const uint32_t kPacketSize = static_cast<uint32_t>(kPacket.size());
+
+  // Send multiple packets.
+  constexpr size_t kInitialPackets = 2;
+  constexpr size_t kTotalPackets = kInitialPackets + 2;
+  virtio_snd_pcm_xfer_t xfer{.stream_id = kOutputStreamId};
+  virtio_snd_pcm_status_t* xfer_resp[kTotalPackets];
+  uint16_t xfer_index[kTotalPackets];
+  for (size_t k = 0; k < kInitialPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
+                         .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                         .AppendReadableDescriptor(&kPacket[0], kPacketSize)
+                         .AppendWritableDescriptor(&xfer_resp[k], sizeof(xfer_resp[k]))
+                         .Build(&xfer_index[k]));
+    ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
+    xfer_resp[k]->status = kInvalidStatus;
+  }
+
+  auto renderer = audio_service().get_audio_renderer(0);
+  auto packets = WaitForPackets(*renderer, kInitialPackets);
+  ASSERT_EQ(packets.size(), kInitialPackets);
+  for (size_t k = 0; k < kInitialPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    EXPECT_EQ(packets[k].buffer, kPacket);
+    EXPECT_EQ(xfer_resp[k]->status, kInvalidStatus);
+  }
+
+  // Send a RELEASE command.
+  virtio_snd_hdr* release_resp;
+  virtio_snd_pcm_hdr_t release_msg{
+      .hdr = {.code = VIRTIO_SND_R_PCM_RELEASE},
+      .stream_id = kOutputStreamId,
+  };
+  uint16_t release_index;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(controlq())
+                       .AppendReadableDescriptor(&release_msg, sizeof(release_msg))
+                       .AppendWritableDescriptor(&release_resp, sizeof(*release_resp))
+                       .Build(&release_index));
+  ASSERT_EQ(ZX_OK, NotifyQueue(CONTROLQ));
+
+  // Send more packets after the RELEASE.
+  for (size_t k = kInitialPackets; k < kTotalPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
+                         .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                         .AppendReadableDescriptor(&kPacket[0], kPacketSize)
+                         .AppendWritableDescriptor(&xfer_resp[k], sizeof(xfer_resp[k]))
+                         .Build(&xfer_index[k]));
+    ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
+    xfer_resp[k]->status = kInvalidStatus;
+  }
+
+  // All of the packets should complete automatically, then the connection should be closed.
+  for (size_t k = 0; k < kTotalPackets; k++) {
+    SCOPED_TRACE(fxl::StringPrintf("packet %lu", k));
+    ASSERT_EQ(ZX_OK, WaitForDescriptor(txq(), xfer_index[k]));
+    EXPECT_EQ(xfer_resp[k]->status, VIRTIO_SND_S_IO_ERR);
+    EXPECT_EQ(xfer_resp[k]->latency_bytes, 0u);
+  }
+
+  ASSERT_EQ(ZX_OK, WaitForDescriptor(controlq(), release_index));
+  ASSERT_EQ(release_resp->code, VIRTIO_SND_S_OK);
+  auto calls = WaitForCalls(*renderer, {FakeAudioRenderer::Method::Disconnect});
+  ASSERT_EQ(calls.size(), 1u);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, calls[FakeAudioRenderer::Method::Disconnect].disconnect_status);
+}
+
+TEST_F(VirtioSoundTest, BadPcmOutputXferBadStreamId) {
+  constexpr uint32_t kBufferBytes = 64;
+  constexpr uint32_t kPeriodBytes = 8;
+  uint32_t expected_latency_bytes;
+  ASSERT_NO_FATAL_FAILURE(SetUpForXfer(kBufferBytes, kPeriodBytes, &expected_latency_bytes));
+
+  const std::string kPacket = "12345678";
+  const uint32_t kPacketSize = static_cast<uint32_t>(kPacket.size());
+
+  // Send a packet.
+  virtio_snd_pcm_xfer_t xfer{.stream_id = kNumStreams};
+  virtio_snd_pcm_status_t* resp;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
+                       .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                       .AppendReadableDescriptor(&kPacket[0], kPacketSize)
+                       .AppendWritableDescriptor(&resp, sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+  auto renderer = audio_service().get_audio_renderer(0);
+  ASSERT_TRUE(renderer);
+  EXPECT_EQ(renderer->packets().size(), 0u);
+  EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
+}
+
+TEST_F(VirtioSoundTest, BadPcmOutputXferPacketTooBig) {
+  constexpr uint32_t kBufferBytes = 64;
+  constexpr uint32_t kPeriodBytes = 8;
+  uint32_t expected_latency_bytes;
+  ASSERT_NO_FATAL_FAILURE(SetUpForXfer(kBufferBytes, kPeriodBytes, &expected_latency_bytes));
+
+  const std::string kPacket = "1234567890";
+  const uint32_t kPacketSize = static_cast<uint32_t>(kPacket.size());
+  ASSERT_GT(kPacketSize, kPeriodBytes);
+
+  // Send a packet.
+  virtio_snd_pcm_xfer_t xfer{.stream_id = kNumStreams};
+  virtio_snd_pcm_status_t* resp;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
+                       .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                       .AppendReadableDescriptor(&kPacket[0], kPacketSize)
+                       .AppendWritableDescriptor(&resp, sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+  auto renderer = audio_service().get_audio_renderer(0);
+  ASSERT_TRUE(renderer);
+  EXPECT_EQ(renderer->packets().size(), 0u);
+  EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
+}
+
+TEST_F(VirtioSoundTest, BadPcmOutputXferPacketNonintegralFrames) {
+  constexpr uint32_t kBufferBytes = 64;
+  constexpr uint32_t kPeriodBytes = 8;
+  uint32_t expected_latency_bytes;
+  ASSERT_NO_FATAL_FAILURE(SetUpForXfer(kBufferBytes, kPeriodBytes, &expected_latency_bytes));
+
+  const std::string kPacket = "1234567";
+  const uint32_t kPacketSize = static_cast<uint32_t>(kPacket.size());
+  ASSERT_LT(kPacketSize, kPeriodBytes);
+  ASSERT_EQ(kPacketSize % 2, 1u);
+
+  // Send a packet.
+  virtio_snd_pcm_xfer_t xfer{.stream_id = kNumStreams};
+  virtio_snd_pcm_status_t* resp;
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(txq())
+                       .AppendReadableDescriptor(&xfer, sizeof(xfer))
+                       .AppendReadableDescriptor(&kPacket[0], kPacketSize)
+                       .AppendWritableDescriptor(&resp, sizeof(*resp))
+                       .Build());
+  ASSERT_EQ(ZX_OK, NotifyQueue(TXQ));
+  ASSERT_EQ(ZX_OK, WaitOnInterrupt());
+  auto renderer = audio_service().get_audio_renderer(0);
+  ASSERT_TRUE(renderer);
+  EXPECT_EQ(renderer->packets().size(), 0u);
+  EXPECT_EQ(resp->status, VIRTIO_SND_S_BAD_MSG);
 }

@@ -28,7 +28,7 @@ pub type LE64 = U64<LittleEndian>;
 //   named request and response type. For example: JackInfo{Request,Response}.
 //
 // All struct fields use integers, even fields that are logically enums, so
-// that each struct can derive AsBytes (we can't derive AsBytes from an enum
+// that each struct can derive AsBytes, FromBytes (we can't derive AsBytes, FromBytes from an enum
 // field unless the enum covers all possible bit patterns, which isn't true
 // of any the enums below).
 

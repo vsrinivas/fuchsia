@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/87645): remove once this is used
-#![allow(dead_code)]
-#![allow(unused)]
-
 use {std::cell::RefCell, std::rc::Rc, tokio};
 
 // A doubly-linked list of Notify objects. Each node represents a slot in the

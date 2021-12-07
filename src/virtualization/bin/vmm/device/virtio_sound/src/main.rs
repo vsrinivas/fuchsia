@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod audio_streams;
 mod notification;
 mod reply;
 mod sequencer;
@@ -15,11 +16,9 @@ use {
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::{VirtioSoundRequest, VirtioSoundRequestStream},
-    futures::{future, try_join},
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     once_cell::sync::Lazy,
     service::VirtSoundService,
-    std::cell::RefCell,
     std::rc::Rc,
     std::vec::Vec,
     tracing,
@@ -142,8 +141,10 @@ static CONFIG: Lazy<wire::VirtioSndConfig> = Lazy::new(|| wire::VirtioSndConfig 
 
 async fn run_virtio_sound(mut con: VirtioSoundRequestStream) -> Result<(), Error> {
     // First method call must be Start().
-    let (start_info, responder) = match con.try_next().await? {
-        Some(VirtioSoundRequest::Start { start_info, responder, .. }) => (start_info, responder),
+    let (start_info, audio, responder) = match con.try_next().await? {
+        Some(VirtioSoundRequest::Start { start_info, audio, responder }) => {
+            (start_info, audio, responder)
+        }
         Some(msg) => {
             return Err(anyhow!("Expected Start message, got {:?}", msg));
         }
@@ -163,14 +164,17 @@ async fn run_virtio_sound(mut con: VirtioSoundRequestStream) -> Result<(), Error
         &[wire::CONTROLQ, wire::EVENTQ, wire::TXQ, wire::RXQ][..],
         &guest_mem,
     )
-    .await?;
+    .await
+    .context("config_builder_from_stream")?;
 
     // Make sure each queue has been initialized.
     let controlq_stream = device.take_stream(wire::CONTROLQ)?;
+    let txq_stream = device.take_stream(wire::TXQ)?;
     ready_responder.send()?;
 
     // Create a VirtSoundService to handle all virtq requests.
-    let vss = Rc::new(RefCell::new(VirtSoundService::new(&JACKS, &STREAMS, &CHMAPS)));
+    let audio = audio.into_proxy()?;
+    let vss = Rc::new(VirtSoundService::new(&JACKS, &STREAMS, &CHMAPS, &audio));
 
     tracing::info!(
         "Virtio sound device initialized with features = {:?}, config = {:?}",
@@ -179,17 +183,30 @@ async fn run_virtio_sound(mut con: VirtioSoundRequestStream) -> Result<(), Error
     );
 
     // Process everything to completion.
-    try_join!(
+    let mut txq_sequencer = sequencer::Sequencer::new();
+    futures::try_join!(
         device.run_device_notify(con).err_into(),
         controlq_stream
-            .map({
-                let vss = vss.clone();
+            // Process controlq requests synchronously.
+            .map(|chain| Ok((chain, vss.clone())))
+            .try_for_each({
                 let guest_mem = &guest_mem;
-                move |chain| {
-                    vss.borrow_mut().dispatch_controlq(ReadableChain::new(chain, guest_mem))
+                move |(chain, vss)| async move {
+                    vss.dispatch_controlq(ReadableChain::new(chain, guest_mem)).await
                 }
-            })
-            .try_for_each(|_| future::ready(Ok(()))),
+            }),
+        txq_stream
+            // Attach a sequencer ticket to each message so we can order outgoing FIDL messages.
+            // Process asynchronously so we can wait for FIDL replies concurrently.
+            .map(|chain| Ok((chain, txq_sequencer.next(), vss.clone())))
+            .try_for_each_concurrent(None /* unlimited concurrency */, {
+                let guest_mem = &guest_mem;
+                move |(chain, ticket, vss)| async move {
+                    let lock = ticket.wait_turn().await;
+                    vss.dispatch_txq(ReadableChain::new(chain, guest_mem), lock).await
+                }
+            }),
+        vss.do_background_work(),
     )?;
 
     return Ok(());

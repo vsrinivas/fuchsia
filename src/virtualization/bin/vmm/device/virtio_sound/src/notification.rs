@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/87645): remove once this is used
-#![allow(dead_code)]
-#![allow(unused)]
-
 use std::rc::Rc;
 
 /// A single bit notification.
