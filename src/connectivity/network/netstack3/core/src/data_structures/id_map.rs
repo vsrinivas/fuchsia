@@ -674,14 +674,17 @@ mod tests {
     fn test_push() {
         let mut map = IdMap::new();
         assert_eq!(map.insert(1, 2), None);
-        assert_eq!(map.data, vec![free_none(), Allocated(2)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(0)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![free_none(), Allocated(2)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(0)));
         assert_eq!(map.push(1), 0);
-        assert_eq!(map.data, vec![Allocated(1), Allocated(2)]);
-        assert_eq!(map.freelist, None);
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), Allocated(2)]);
+        assert_eq!(freelist, &None);
         assert_eq!(map.push(3), 2);
-        assert_eq!(map.data, vec![Allocated(1), Allocated(2), Allocated(3)]);
-        assert_eq!(map.freelist, None);
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), Allocated(2), Allocated(3)]);
+        assert_eq!(freelist, &None);
     }
 
     #[test]
@@ -689,8 +692,9 @@ mod tests {
         let mut map = IdMap::new();
         assert_eq!(map.push(1), 0);
         assert_eq!(map.insert(2, 3), None);
-        assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(1)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), free_none(), Allocated(3)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(1)));
         assert_eq!(*map.get(0).unwrap(), 1);
         assert_eq!(map.get(1), None);
         assert_eq!(*map.get(2).unwrap(), 3);
@@ -702,8 +706,9 @@ mod tests {
         let mut map = IdMap::new();
         assert_eq!(map.push(1), 0);
         assert_eq!(map.insert(2, 3), None);
-        assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(1)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), free_none(), Allocated(3)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(1)));
         *map.get_mut(2).unwrap() = 10;
         assert_eq!(*map.get(0).unwrap(), 1);
         assert_eq!(*map.get(2).unwrap(), 10);
@@ -726,13 +731,15 @@ mod tests {
         assert_eq!(map.push(1), 0);
         assert_eq!(map.push(2), 1);
         assert_eq!(map.push(3), 2);
-        assert_eq!(map.data, vec![Allocated(1), Allocated(2), Allocated(3)]);
-        assert_eq!(map.freelist, None);
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), Allocated(2), Allocated(3)]);
+        assert_eq!(freelist, &None);
         assert_eq!(map.remove(1).unwrap(), 2);
 
         assert_eq!(map.remove(1), None);
-        assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(1)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), free_none(), Allocated(3)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(1)));
     }
 
     #[test]
@@ -740,11 +747,13 @@ mod tests {
         let mut map = IdMap::new();
         assert_eq!(map.insert(0, 1), None);
         assert_eq!(map.insert(2, 3), None);
-        assert_eq!(map.data, vec![Allocated(1), free_none(), Allocated(3)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(1)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), free_none(), Allocated(3)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(1)));
         assert_eq!(map.remove(2).unwrap(), 3);
-        assert_eq!(map.data, vec![Allocated(1)]);
-        assert_eq!(map.freelist, None);
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1)]);
+        assert_eq!(freelist, &None);
         assert_eq!(map.remove(0).unwrap(), 1);
         assert_empty(map.data);
     }
@@ -753,17 +762,21 @@ mod tests {
     fn test_insert() {
         let mut map = IdMap::new();
         assert_eq!(map.insert(1, 2), None);
-        assert_eq!(map.data, vec![free_none(), Allocated(2)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(0)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![free_none(), Allocated(2)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(0)));
         assert_eq!(map.insert(3, 4), None);
-        assert_eq!(map.data, vec![free_head(2), Allocated(2), free_tail(0), Allocated(4)]);
-        assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 2 }));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![free_head(2), Allocated(2), free_tail(0), Allocated(4)]);
+        assert_eq!(freelist, &Some(FreeList { head: 0, tail: 2 }));
         assert_eq!(map.insert(0, 1), None);
-        assert_eq!(map.data, vec![Allocated(1), Allocated(2), free_none(), Allocated(4)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(2)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), Allocated(2), free_none(), Allocated(4)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(2)));
         assert_eq!(map.insert(3, 5).unwrap(), 4);
-        assert_eq!(map.data, vec![Allocated(1), Allocated(2), free_none(), Allocated(5)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(2)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![Allocated(1), Allocated(2), free_none(), Allocated(5)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(2)));
     }
 
     #[test]
@@ -772,9 +785,10 @@ mod tests {
         assert_eq!(map.insert(1, 0), None);
         assert_eq!(map.insert(3, 1), None);
         assert_eq!(map.insert(6, 2), None);
+        let IdMap { data, freelist } = &map;
         assert_eq!(
-            map.data,
-            vec![
+            data,
+            &vec![
                 free_head(2),
                 Allocated(0),
                 free(0, 4),
@@ -784,7 +798,7 @@ mod tests {
                 Allocated(2),
             ]
         );
-        assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 5 }));
+        assert_eq!(freelist, &Some(FreeList { head: 0, tail: 5 }));
         let mut c = 0;
         for (i, (k, v)) in map.iter().enumerate() {
             assert_eq!(i, *v as usize);
@@ -800,9 +814,10 @@ mod tests {
         assert_eq!(map.insert(1, 0), None);
         assert_eq!(map.insert(3, 1), None);
         assert_eq!(map.insert(6, 2), None);
+        let IdMap { data, freelist } = &map;
         assert_eq!(
-            map.data,
-            vec![
+            data,
+            &vec![
                 free_head(2),
                 Allocated(0),
                 free(0, 4),
@@ -812,13 +827,14 @@ mod tests {
                 Allocated(2),
             ]
         );
-        assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 5 }));
+        assert_eq!(freelist, &Some(FreeList { head: 0, tail: 5 }));
         for (k, v) in map.iter_mut() {
             *v += k as u32;
         }
+        let IdMap { data, freelist } = &map;
         assert_eq!(
-            map.data,
-            vec![
+            data,
+            &vec![
                 free_head(2),
                 Allocated(1),
                 free(0, 4),
@@ -828,7 +844,7 @@ mod tests {
                 Allocated(8),
             ]
         );
-        assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 5 }));
+        assert_eq!(freelist, &Some(FreeList { head: 0, tail: 5 }));
     }
 
     #[test]
@@ -857,8 +873,9 @@ mod tests {
         // First, construct the iterator but then discard it, and test that
         // nothing has been modified.
         let _ = map.update_retain(f);
-        assert_eq!(map.data, old_map.data);
-        assert_eq!(map.freelist, old_map.freelist);
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &old_map.data);
+        assert_eq!(freelist, &old_map.freelist);
 
         // Now actually execute the iterator.
         let taken: Vec<_> = map.update_retain(f).collect();
@@ -890,15 +907,17 @@ mod tests {
         assert_eq!(taken, [(5, 10, ()), (7, 14, ())]);
 
         // Make sure that the underlying vector has been compressed.
-        assert_eq!(map.data, [free_tail(2), Allocated(2), free_head(0), Allocated(6),]);
+        let IdMap { data, freelist: _ } = &map;
+        assert_eq!(data, &[free_tail(2), Allocated(2), free_head(0), Allocated(6),]);
     }
 
     #[test]
     fn test_entry() {
         let mut map = IdMap::new();
         assert_eq!(*map.entry(1).or_insert(2), 2);
-        assert_eq!(map.data, vec![free_none(), Allocated(2)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(0)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![free_none(), Allocated(2)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(0)));
         assert_eq!(
             *map.entry(1)
                 .and_modify(|v| {
@@ -907,8 +926,9 @@ mod tests {
                 .or_insert(5),
             10
         );
-        assert_eq!(map.data, vec![free_none(), Allocated(10)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(0)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![free_none(), Allocated(10)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(0)));
         assert_eq!(
             *map.entry(2)
                 .and_modify(|v| {
@@ -917,26 +937,30 @@ mod tests {
                 .or_insert(5),
             5
         );
-        assert_eq!(map.data, vec![free_none(), Allocated(10), Allocated(5)]);
-        assert_eq!(map.freelist, Some(FreeList::singleton(0)));
+        let IdMap { data, freelist } = &map;
+        assert_eq!(data, &vec![free_none(), Allocated(10), Allocated(5)]);
+        assert_eq!(freelist, &Some(FreeList::singleton(0)));
         assert_eq!(*map.entry(4).or_default(), 0);
+        let IdMap { data, freelist } = &map;
         assert_eq!(
-            map.data,
-            vec![free_head(3), Allocated(10), Allocated(5), free_tail(0), Allocated(0)]
+            data,
+            &vec![free_head(3), Allocated(10), Allocated(5), free_tail(0), Allocated(0)]
         );
-        assert_eq!(map.freelist, Some(FreeList { head: 0, tail: 3 }));
+        assert_eq!(freelist, &Some(FreeList { head: 0, tail: 3 }));
         assert_eq!(*map.entry(3).or_insert_with(|| 7), 7);
+        let IdMap { data, freelist } = &map;
         assert_eq!(
-            map.data,
-            vec![free_none(), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
+            data,
+            &vec![free_none(), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
         );
-        assert_eq!(map.freelist, Some(FreeList::singleton(0)));
+        assert_eq!(freelist, &Some(FreeList::singleton(0)));
         assert_eq!(*map.entry(0).or_insert(1), 1);
+        let IdMap { data, freelist } = &map;
         assert_eq!(
-            map.data,
-            vec![Allocated(1), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
+            data,
+            &vec![Allocated(1), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
         );
-        assert_eq!(map.freelist, None);
+        assert_eq!(freelist, &None);
         match map.entry(0) {
             Entry::Occupied(mut e) => {
                 assert_eq!(*e.key(), 0);
@@ -947,11 +971,12 @@ mod tests {
             }
             _ => panic!("Wrong entry type, should be occupied"),
         }
+        let IdMap { data, freelist } = &map;
         assert_eq!(
-            map.data,
-            vec![free_none(), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
+            data,
+            &vec![free_none(), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
         );
-        assert_eq!(map.freelist, Some(FreeList::singleton(0)));
+        assert_eq!(freelist, &Some(FreeList::singleton(0)));
 
         match map.entry(0) {
             Entry::Vacant(e) => {
@@ -960,12 +985,13 @@ mod tests {
             }
             _ => panic!("Wrong entry type, should be vacant"),
         }
+        let IdMap { data, freelist } = &map;
         assert_eq!(
-            map.data,
-            vec![Allocated(4), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
+            data,
+            &vec![Allocated(4), Allocated(10), Allocated(5), Allocated(7), Allocated(0)]
         );
 
-        assert_eq!(map.freelist, None)
+        assert_eq!(freelist, &None)
     }
 
     #[test]
@@ -1005,8 +1031,9 @@ mod tests {
         for i in 0..100 {
             assert_eq!(map.remove(i), Some(0));
         }
-        assert_empty(map.data.iter());
-        assert_eq!(map.freelist, None);
+        let IdMap { data, freelist } = &map;
+        assert_empty(data.iter());
+        assert_eq!(freelist, &None);
     }
 
     #[test]
