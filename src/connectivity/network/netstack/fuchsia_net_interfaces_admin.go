@@ -634,6 +634,9 @@ func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device netw
 	go func() {
 		impl.deviceClient.Run(ctx)
 		impl.cancelServe()
+		if err := impl.deviceClient.Close(); err != nil {
+			_ = syslog.ErrorTf(deviceControlName, "deviceClient.Close() = %s", err)
+		}
 	}()
 
 	go func() {

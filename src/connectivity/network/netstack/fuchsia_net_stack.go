@@ -208,7 +208,12 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 
 	// Run the device in a goroutine, cancellingObserver will cancel the context
 	// when the port reports a link down.
-	go client.Run(ctx)
+	go func(client *netdevice.Client) {
+		client.Run(ctx)
+		if err := client.Close(); err != nil {
+			_ = syslog.Errorf("client.Close() = %s", err)
+		}
+	}(client)
 
 	// Prevent deferred functions from cleaning up.
 	client = nil
