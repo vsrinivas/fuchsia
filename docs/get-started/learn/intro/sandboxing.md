@@ -123,7 +123,7 @@ more details about a specific component, list its directory contents.
 Try this for the `http-client` component:
 
 ```posix-terminal
-ls /hub-v2/children/core/children/http-client
+ls /hub-v2/children/core/children/network/children/http-client
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -143,7 +143,7 @@ You'll find a running component's **namespace** under the `exec/in` path inside
 the hub.
 
 ```posix-terminal
-ls /hub-v2/children/core/children/http-client/exec/in
+ls /hub-v2/children/core/children/network/children/http-client/exec/in
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -164,7 +164,7 @@ directory contains
 representing the system services provided to this component.
 
 ```posix-terminal
-ls /hub-v2/children/core/children/http-client/exec/in/svc
+ls /hub-v2/children/core/children/network/children/http-client/exec/in/svc
 ```
 
 ```none {:.devsite-disable-click-to-copy}
@@ -182,7 +182,7 @@ List the contents of the outgoing `svc/` directory to see the system services
 this component provides.
 
 ```posix-terminal
-ls /hub-v2/children/core/children/http-client/exec/out/svc
+ls /hub-v2/children/core/children/network/children/http-client/exec/out/svc
 ```
 
 ```none {:.devsite-disable-click-to-copy}
