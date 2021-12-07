@@ -137,6 +137,10 @@ class Device : public DeviceType,
   void RemoveNotifyHandler();
 
  private:
+  static void DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value, void* context);
+  zx_status_t ReportCurrentResources() __TA_REQUIRES(lock_);
+  ACPI_STATUS AddResource(ACPI_RESOURCE*) __TA_REQUIRES(lock_);
+
   acpi::Manager* manager_;
   acpi::Acpi* acpi_;
   // Handle to the corresponding ACPI node
@@ -159,8 +163,6 @@ class Device : public DeviceType,
 
   // TODO(fxbug.dev/32978): remove once kernel PCI is no longer used.
   std::vector<pci_bdf_t> pci_bdfs_;
-  zx_status_t ReportCurrentResources() __TA_REQUIRES(lock_);
-  ACPI_STATUS AddResource(ACPI_RESOURCE*) __TA_REQUIRES(lock_);
 
   // ACPI events.
   std::optional<fidl::WireSharedClient<fuchsia_hardware_acpi::NotifyHandler>> notify_handler_;
@@ -169,7 +171,6 @@ class Device : public DeviceType,
   std::atomic_bool notify_handler_active_ = false;
   uint32_t notify_handler_type_;
   bool notify_count_warned_ = false;
-  static void DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value, void* context);
 };
 
 }  // namespace acpi

@@ -216,6 +216,25 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager, zx_device_
   return zx::ok(zx_device_);
 }
 
+size_t DeviceBuilder::AddBusChild(DeviceChildEntry d) {
+  return std::visit(
+      [this](auto&& arg) {
+        using T = std::decay_t<decltype(arg)>;
+        // If we haven't initialised the vector yet, populate it.
+        auto pval_empty = std::get_if<std::monostate>(&bus_children_);
+        if (pval_empty) {
+          auto tmp = DeviceChildData(std::vector<T>());
+          bus_children_.swap(tmp);
+        }
+
+        auto pval = std::get_if<std::vector<T>>(&bus_children_);
+        ZX_ASSERT_MSG(pval, "Bus %s had unexpected child type vector", name());
+        pval->emplace_back(arg);
+        return pval->size() - 1;
+      },
+      d);
+}
+
 zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
   using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
   using I2CChannel = fuchsia_hardware_i2c::wire::I2CChannel;

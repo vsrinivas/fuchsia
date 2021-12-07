@@ -89,39 +89,28 @@ class DeviceBuilder {
     return builder;
   }
 
+  // Creates an actual device from this DeviceBuilder, returning a pointer to its zx_device_t.
   zx::status<zx_device_t*> Build(acpi::Manager* acpi, zx_device_t* platform_bus);
 
+  // Set the bus type of this device. A device can only have a single bus type.
   void SetBusType(BusType t) {
     ZX_ASSERT(bus_type_ == kUnknown || bus_type_ == t);
     bus_type_ = t;
   }
 
+  // Set the ID of this bus. For instance, a board might have 3 I2C buses with IDs 0, 1, and 2.
+  // Must call SetBusType first.
   void SetBusId(uint32_t id) {
     ZX_ASSERT(bus_type_ != kUnknown);
     bus_id_ = id;
   }
 
+  // Add a |DeviceChildEntry| containing information used for this bus to identify its child.
+  // For instance, on PCI this is the topology, and on I2C this is the address.
   // Returns the index of the newly added device in the children array.
-  size_t AddBusChild(DeviceChildEntry d) {
-    return std::visit(
-        [this](auto&& arg) {
-          using T = std::decay_t<decltype(arg)>;
-          // If we haven't initialised the vector yet, populate it.
-          auto pval_empty = std::get_if<std::monostate>(&bus_children_);
-          if (pval_empty) {
-            auto tmp = DeviceChildData(std::vector<T>());
-            bus_children_.swap(tmp);
-          }
-
-          auto pval = std::get_if<std::vector<T>>(&bus_children_);
-          ZX_ASSERT_MSG(pval, "Bus %s had unexpected child type vector", name());
-          pval->emplace_back(arg);
-          return pval->size() - 1;
-        },
-        d);
-  }
-
+  size_t AddBusChild(DeviceChildEntry d);
   const DeviceChildData& GetBusChildren() { return bus_children_; }
+  // Returns true if this bus has any children.
   bool HasBusChildren() { return std::get_if<std::monostate>(&bus_children_) == nullptr; }
 
   const char* name() { return name_.data(); }
@@ -129,8 +118,10 @@ class DeviceBuilder {
 
   // Walk this device's resources, checking to see if any are a SerialBus type.
   // If they are, calls |callback| with the handle to the bus, and the type of the bus, and a
-  // "DeviceChildEntry" representing this child. |callback| the index of the child device on the
-  // bus.
+  // "DeviceChildEntry" representing this child. |callback| should return the index of the child
+  // device on the bus.
+  // InferBusTypes is called from |Manager::ConfigureDiscoveredDevice|, and is used to determine bus
+  // IDs and child indexes on the bus.
   using InferBusTypeCallback = std::function<size_t(ACPI_HANDLE, BusType, DeviceChildEntry)>;
   acpi::status<> InferBusTypes(acpi::Acpi* acpi, fidl::AnyArena& allocator, acpi::Manager* manager,
                                InferBusTypeCallback callback);
@@ -147,10 +138,17 @@ class DeviceBuilder {
   // Special HID/CID value for using a device tree "compatible" property. See
   // https://www.kernel.org/doc/html/latest/firmware-guide/acpi/enumeration.html#device-tree-namespace-link-device-id
   constexpr static const char* kDeviceTreeLinkID = "PRP0001";
+  // Encode this bus's child metadata for consumption by the bus driver.
   zx::status<std::vector<uint8_t>> FidlEncodeMetadata();
+  // Build a composite for this device that binds to all of its parents.
+  // For instance, if a device had an i2c and spi resource, this would generate a composite device
+  // that binds to the i2c device, the spi device, and the acpi device.
   zx::status<> BuildComposite(acpi::Manager* acpi, zx_device_t* platform_bus,
                               std::vector<zx_device_str_prop_t>& str_props);
+  // Get bind instructions for the |child_index|th child of this bus.
+  // Used by |BuildComposite| to generate the bus bind rules.
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForChild(size_t child_index);
+  // Get bind instructions for this device, used for generating the ACPI bind rules.
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForSelf();
 
   // Check for "Device Properties for _DSD" containing a "compatible" key.

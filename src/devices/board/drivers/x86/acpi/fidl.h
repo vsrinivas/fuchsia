@@ -16,6 +16,7 @@
 
 namespace acpi {
 
+// Helper class used to implement AcpiEvaluateObject over FIDL.
 class EvaluateObjectFidlHelper {
  public:
   using EvaluateObjectRequestView =
@@ -54,14 +55,19 @@ class EvaluateObjectFidlHelper {
   acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> EncodeReturnValue(
       fidl::AnyArena& alloc, ACPI_OBJECT* value);
 
+  // Take the given ACPI_OBJECT and parse it as resources, turning it into a
+  // DeviceEvaluateObjectResult.
   acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> EncodeResourcesReturnValue(
       fidl::AnyArena& alloc, ACPI_OBJECT* value);
 
+  // Encode an ACPICA MMIO resource into a FIDL resource.
   acpi::status<fuchsia_hardware_acpi::wire::Resource> EncodeMmioResource(fidl::AnyArena& alloc,
                                                                          ACPI_RESOURCE* resource);
 
+  // Encode an ACPICA object into a FIDL object.
   acpi::status<fuchsia_hardware_acpi::wire::Object> EncodeObject(fidl::AnyArena& alloc,
                                                                  ACPI_OBJECT* value);
+  // Decode a FIDL object into an ACPICA object.
   acpi::status<> DecodeObject(const fuchsia_hardware_acpi::wire::Object& obj, ACPI_OBJECT* out);
 
   // For unit testing.
@@ -76,6 +82,7 @@ class EvaluateObjectFidlHelper {
   fidl::VectorView<fuchsia_hardware_acpi::wire::Object> request_params_;
   zx_handle_t mmio_resource_;
 
+  // Objects allocated while converting from FIDL to ACPICA objects.
   std::forward_list<std::vector<ACPI_OBJECT>> allocated_packages_;
   std::forward_list<std::string> allocated_strings_;
 };

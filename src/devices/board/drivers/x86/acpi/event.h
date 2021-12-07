@@ -15,6 +15,8 @@
 namespace acpi {
 class Device;
 
+// This class automatically removes the notification handler from ACPICA when the associated FIDL
+// connection is torn down.
 class NotifyEventHandler
     : public fidl::WireAsyncEventHandler<fuchsia_hardware_acpi::NotifyHandler> {
  public:
