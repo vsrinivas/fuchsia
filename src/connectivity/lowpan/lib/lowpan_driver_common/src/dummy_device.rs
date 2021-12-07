@@ -4,8 +4,10 @@
 
 //! LoWPAN Dummy Driver
 
-use super::*;
+use super::prelude_internal::*;
 
+use crate::Driver;
+use core::future::ready;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
     AllCounters, CoexCounters, DeviceState, EnergyScanParameters, EnergyScanResult, ExternalRoute,
@@ -70,12 +72,9 @@ impl Driver for DummyDevice {
         fx_log_info!("Got form command: {:?}", params);
 
         futures::stream::empty()
-            .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.4)))).into_stream())
-            .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.6)))).into_stream())
-            .chain(
-                ready(Ok(Ok(dummy_device::ProvisioningProgress::Identity(params.identity))))
-                    .into_stream(),
-            )
+            .chain(ready(Ok(Ok(ProvisioningProgress::Progress(0.4)))).into_stream())
+            .chain(ready(Ok(Ok(ProvisioningProgress::Progress(0.6)))).into_stream())
+            .chain(ready(Ok(Ok(ProvisioningProgress::Identity(params.identity)))).into_stream())
             .boxed()
     }
 
@@ -86,9 +85,9 @@ impl Driver for DummyDevice {
         fx_log_info!("Got join command: {:?}", params);
 
         futures::stream::empty()
-            .chain(ready(Ok(Ok(dummy_device::ProvisioningProgress::Progress(0.5)))).into_stream())
+            .chain(ready(Ok(Ok(ProvisioningProgress::Progress(0.5)))).into_stream())
             .chain(
-                ready(Ok(Ok(dummy_device::ProvisioningProgress::Identity(Identity {
+                ready(Ok(Ok(ProvisioningProgress::Identity(Identity {
                     raw_name: Some("MyNet".as_bytes().to_vec()),
                     xpanid: Some(vec![0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77]),
                     net_type: Some(fidl_fuchsia_lowpan::NET_TYPE_THREAD_1_X.to_string()),

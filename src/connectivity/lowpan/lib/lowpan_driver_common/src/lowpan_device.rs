@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+use crate::prelude_internal::*;
 
+use crate::ServeTo;
 use anyhow::Error;
-use fidl::prelude::*;
+use core::future::ready;
 use fidl_fuchsia_factory_lowpan::*;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{
@@ -950,6 +951,7 @@ impl<T: Driver> ServeTo<LegacyJoiningRequestStream> for T {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DummyDevice;
     use fidl::endpoints::create_endpoints;
     use fidl_fuchsia_lowpan_device::{BeaconInfoStreamMarker, DeviceExtraMarker};
     use fidl_fuchsia_lowpan_device::{EnergyScanParameters, EnergyScanResultStreamMarker};

@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
-use crate::prelude::*;
 
-use crate::flow_window::FlowWindow;
 use fidl_fuchsia_lowpan_spinel::DeviceEvent as SpinelDeviceEvent;
 use futures::channel::mpsc;
 use futures::future::LocalBoxFuture;

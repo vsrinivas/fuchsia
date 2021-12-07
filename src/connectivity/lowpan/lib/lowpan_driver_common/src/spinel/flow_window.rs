@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::prelude_internal::*;
 use futures::prelude::*;
 use futures::task::{Context, Poll, Waker};
 use parking_lot::Mutex;
@@ -37,6 +38,7 @@ impl Default for FlowWindow {
     }
 }
 
+#[derive(Debug)]
 pub struct FlowWindowDec<'a>(&'a FlowWindow, u32);
 
 impl<'a> Future for FlowWindowDec<'a> {

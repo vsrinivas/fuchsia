@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 //! LoWPAN Network Tunnel Abstraction
-use crate::driver::*;
-use crate::prelude::*;
+use super::debug::*;
+use super::iface::*;
+use crate::prelude_internal::*;
 
 use crate::spinel::Subnet;
-use anyhow::Context as _;
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl::endpoints::{create_endpoints, create_proxy};

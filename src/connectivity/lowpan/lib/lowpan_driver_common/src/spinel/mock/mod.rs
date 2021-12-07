@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
+#![allow(missing_debug_implementations)]
 
-pub mod mock_device_client;
-pub use mock_device_client::*;
+use crate::prelude_internal::*;
+use crate::spinel::*;
 
-pub mod fake_device_client;
+mod fake_device_client;
+mod mock_device_client;
+
 pub use fake_device_client::*;
+pub use mock_device_client::*;

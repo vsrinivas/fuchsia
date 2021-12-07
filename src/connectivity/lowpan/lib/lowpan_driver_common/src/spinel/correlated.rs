@@ -30,6 +30,7 @@ pub trait Correlated: Sized + Send + core::fmt::Debug {
     }
 }
 
+#[derive(Clone, Debug)]
 pub enum CorrelatedDiff<'a, T: Correlated> {
     /// Entry was added
     Added(&'a T),

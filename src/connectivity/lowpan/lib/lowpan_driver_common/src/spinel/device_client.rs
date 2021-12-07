@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::flow_window::FlowWindow;
-use crate::prelude::*;
-use anyhow::{Context as _, Error};
+use crate::prelude_internal::*;
+
+use super::FlowWindow;
+use anyhow::Error;
 use core::fmt::Debug;
 use core::pin::Pin;
 use fidl_fuchsia_lowpan_spinel::DeviceEvent as SpinelDeviceEvent;
-use futures::prelude::*;
 use futures::task::{Context, Poll};
 use futures::{FutureExt, StreamExt};
 use std::convert::TryInto;

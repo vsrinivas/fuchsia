@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::prelude::*;
-
+use crate::prelude_internal::*;
 use crate::spinel::Subnet;
 use anyhow::Error;
 use async_trait::async_trait;

@@ -8,9 +8,7 @@ mod driver_state;
 mod error_adapter;
 mod inbound;
 mod init;
-mod ipv6_packet_matcher;
 mod misc;
-mod network;
 mod tasks;
 
 #[cfg(test)]
@@ -23,7 +21,8 @@ use error_adapter::*;
 use fidl_fuchsia_lowpan::{ConnectivityState, Role};
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon::Duration;
-pub use ipv6_packet_matcher::*;
+use lowpan_driver_common::net::NetworkInterface;
+pub use lowpan_driver_common::net::*;
 use lowpan_driver_common::AsyncCondition;
 
 const DEFAULT_SCAN_DWELL_TIME_MS: u16 = 100;
@@ -51,8 +50,6 @@ macro_rules! ncp_cmd_timeout (
 );
 
 pub use crate::ncp_cmd_timeout;
-
-pub use network::*;
 
 /// High-level LoWPAN driver implementation for Spinel-based devices.
 /// It covers the basic high-level state machine as well as

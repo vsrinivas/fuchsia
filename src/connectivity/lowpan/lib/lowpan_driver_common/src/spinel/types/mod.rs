@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::enums::*;
-use super::{Correlated, CorrelatedBox, NetFlags, RouteFlags};
-use crate::driver::Ipv6PacketDebug;
-use anyhow::{format_err, Context as _};
+mod enums;
+mod net_flags;
+
+use crate::prelude_internal::*;
+
+use super::{Correlated, CorrelatedBox};
+use crate::net::Ipv6PacketDebug;
 use core::convert::{TryFrom, TryInto};
 use fidl_fuchsia_lowpan::JoinerCommissioningParams;
 use fidl_fuchsia_lowpan_device::{AllCounters, CoexCounters, MacCounters};
@@ -17,6 +20,9 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use std::io;
 use std::num::NonZeroU8;
+
+pub use enums::*;
+pub use net_flags::*;
 
 /// A type for decoding/encoding the Spinel header byte.
 #[derive(Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]

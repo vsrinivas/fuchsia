@@ -2,8 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod commands;
+mod prop_returning;
+mod request_desc;
+mod request_tracker;
+mod response_handler;
+
 use super::*;
-use crate::prelude::*;
+use crate::prelude_internal::*;
 
 use anyhow::Error;
 use derivative::Derivative;
@@ -18,6 +24,12 @@ use slab::Slab;
 use static_assertions::_core::pin::Pin;
 use std::fmt::Debug;
 use std::sync::Arc;
+
+pub use commands::*;
+pub use prop_returning::*;
+pub use request_desc::*;
+pub use request_tracker::*;
+pub use response_handler::*;
 
 const MAX_FRAME_CHANNEL_DEPTH: usize = 4;
 const INITIAL_INSPECTOR_CAPACITY: usize = 4;
@@ -69,6 +81,7 @@ impl<S> FrameHandler<S> {
     }
 }
 
+#[allow(missing_debug_implementations)]
 pub struct InspectAsStream<'a, T>
 where
     T: Send,

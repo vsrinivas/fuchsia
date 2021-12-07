@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use super::{Canceled, ResponseHandler};
+use crate::AsyncCondition;
 use core::fmt::Debug;
-use lowpan_driver_common::AsyncCondition;
 use parking_lot::Mutex;
 use static_assertions::const_assert;
 use std::num::NonZeroU8;

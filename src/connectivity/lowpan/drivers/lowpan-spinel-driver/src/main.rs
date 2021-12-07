@@ -7,10 +7,6 @@
 #![warn(rust_2018_idioms)]
 #![warn(clippy::all)]
 
-// NOTE: This line is a hack to work around some issues
-//       with respect to external rust crates.
-use spinel_pack::{self as spinel_pack};
-
 use std::fmt::Debug;
 
 use serde::Deserialize;
@@ -18,9 +14,6 @@ use std::io;
 use std::path;
 
 mod driver;
-mod flow_window;
-mod spinel;
-mod tun;
 
 #[macro_export]
 macro_rules! traceln (($($args:tt)*) => { fuchsia_syslog::macros::fx_log_trace!($($args)*); }; );
@@ -42,10 +35,10 @@ mod prelude {
 }
 
 use crate::prelude::*;
+use lowpan_driver_common::{net::*, spinel};
 
-use crate::driver::{NetworkInterface, SpinelDriver};
-use crate::spinel::SpinelDeviceSink;
-use crate::tun::*;
+use crate::driver::SpinelDriver;
+use spinel::SpinelDeviceSink;
 
 use anyhow::Error;
 use fidl_fuchsia_factory_lowpan::{FactoryRegisterMarker, FactoryRegisterProxyInterface};
