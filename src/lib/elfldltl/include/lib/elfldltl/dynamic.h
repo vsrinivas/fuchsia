@@ -12,6 +12,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "init-fini.h"
 #include "internal/dynamic-tag-error.h"
 #include "layout.h"
 #include "relocation.h"
@@ -489,6 +490,91 @@ class DynamicSymbolInfoObserver : public DynamicSymbolInfoObserverBase<Elf> {
 // Deduction guide.
 template <class Elf>
 DynamicSymbolInfoObserver(SymbolInfo<Elf>& info) -> DynamicSymbolInfoObserver<Elf>;
+
+// These observers fill the same simple result structure.
+// Their constructors take (elfldltl::InitFiniInfo<Elf>&, Memory&).
+template <class Elf>
+class DynamicInitObserver;
+
+template <class Elf>
+class DynamicFiniObserver;
+
+template <class Elf, ElfDynTag Array, ElfDynTag ArraySz, ElfDynTag Legacy>
+class DynamicInitFiniObserver;
+
+// This is just a shorthand to avoid repeating the long list of parameters.
+template <class Elf, ElfDynTag Array, ElfDynTag ArraySz, ElfDynTag Legacy>
+using DynamicInitFiniObserverBase =
+    DynamicInfoObserver<DynamicInitFiniObserver<Elf, Array, ArraySz, Legacy>, InitFiniInfo<Elf>,
+                        Elf, Array, ArraySz, Legacy>;
+
+template <class Elf, ElfDynTag Array, ElfDynTag ArraySz, ElfDynTag Legacy>
+class DynamicInitFiniObserver : public DynamicInitFiniObserverBase<Elf, Array, ArraySz, Legacy> {
+ public:
+  using Base = DynamicInitFiniObserverBase<Elf, Array, ArraySz, Legacy>;
+  using Info = InitFiniInfo<Elf>;
+  using size_type = typename Elf::size_type;
+
+  using Base::Base;
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory, DynamicTagMatch<Array> tag,
+                         size_type val) {
+    array_.set_address(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory, DynamicTagMatch<ArraySz> tag,
+                         size_type val) {
+    array_.set_size_bytes(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Observe(DiagnosticsType& diagnostics, Memory& memory, DynamicTagMatch<Legacy> tag,
+                         typename Elf::Addr val) {
+    this->info().set_legacy(val);
+    return true;
+  }
+
+  template <class DiagnosticsType, class Memory>
+  constexpr bool Finish(DiagnosticsType& diagnostics, Memory& memory) {
+    return array_.template Finish<typename Elf::Addr, &Info::set_array,  //
+                                  Array, ArraySz>(diagnostics, memory, this->info());
+  }
+
+ private:
+  typename Base::SizedArray array_;
+};
+
+template <class Elf>
+using DynamicInitObserverBase =
+    DynamicInitFiniObserver<Elf, ElfDynTag::kInitArray, ElfDynTag::kInitArraySz, ElfDynTag::kInit>;
+
+template <class Elf>
+using DynamicFiniObserverBase =
+    DynamicInitFiniObserver<Elf, ElfDynTag::kFiniArray, ElfDynTag::kFiniArraySz, ElfDynTag::kFini>;
+
+template <class Elf>
+class DynamicInitObserver : public DynamicInitObserverBase<Elf> {
+ public:
+  using DynamicInitObserverBase<Elf>::DynamicInitObserverBase;
+};
+
+template <class Elf>
+class DynamicFiniObserver : public DynamicFiniObserverBase<Elf> {
+ public:
+  using DynamicFiniObserverBase<Elf>::DynamicFiniObserverBase;
+};
+
+// Deduction guides.
+
+template <class Elf>
+DynamicInitObserver(InitFiniInfo<Elf>& info) -> DynamicInitObserver<Elf>;
+
+template <class Elf>
+DynamicFiniObserver(InitFiniInfo<Elf>& info) -> DynamicFiniObserver<Elf>;
 
 }  // namespace elfldltl
 

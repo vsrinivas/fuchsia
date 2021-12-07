@@ -51,6 +51,14 @@ template <>
 inline constexpr auto kDynamicTagName<ElfDynTag::kStrTab> = ConstString("DT_STRTAB");
 template <>
 inline constexpr auto kDynamicTagName<ElfDynTag::kStrSz> = ConstString("DT_STRSZ");
+template <>
+inline constexpr auto kDynamicTagName<ElfDynTag::kInitArray> = ConstString("DT_INIT_ARRAY");
+template <>
+inline constexpr auto kDynamicTagName<ElfDynTag::kInitArraySz> = ConstString("DT_INIT_ARRAYSZ");
+template <>
+inline constexpr auto kDynamicTagName<ElfDynTag::kFiniArray> = ConstString("DT_FINI_ARRAY");
+template <>
+inline constexpr auto kDynamicTagName<ElfDynTag::kFiniArraySz> = ConstString("DT_FINI_ARRAYSZ");
 
 template <ElfDynTag AddressTag, ElfDynTag SizeBytesTag, ElfDynTag CountTag>
 struct DynamicTagError {
