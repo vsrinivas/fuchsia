@@ -193,6 +193,13 @@ function main {
 
     ffx-register-repository "$source_name" "${register_args[@]}" || return $?
   fi
+
+  fx-command-run shell update channel set "${source_name}"
+  err=$?
+  if [[ $err -ne 0 ]]; then
+    fx-error "Failed to change the update channel to '${source_name}'"
+    return "$err"
+  fi
 }
 
 main "$@"
