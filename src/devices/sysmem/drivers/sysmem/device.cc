@@ -460,6 +460,7 @@ zx_status_t Device::Bind() {
                                         unused_page_check_cycle_period, internal_guard_regions,
                                         crash_on_guard, loop_.dispatcher());
     }
+    pooled_allocator->SetupUnusedPages();
     contiguous_system_ram_allocator_ = std::move(pooled_allocator);
   } else {
     contiguous_system_ram_allocator_ = std::make_unique<ContiguousSystemRamMemoryAllocator>(this);
@@ -481,6 +482,7 @@ zx_status_t Device::Bind() {
       DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
       return status;
     }
+    amlogic_allocator->SetupUnusedPages();
     secure_allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = amlogic_allocator.get();
     allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = std::move(amlogic_allocator);
   }
