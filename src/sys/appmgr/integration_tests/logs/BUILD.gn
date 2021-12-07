@@ -49,8 +49,8 @@ rustc_binary("log_emitter_bin") {
   edition = "2018"
 
   deps = [
-    "//src/lib/syslog/rust:syslog",
-    "//third_party/rust_crates:log",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "log_emitter_for_test.rs" ]
