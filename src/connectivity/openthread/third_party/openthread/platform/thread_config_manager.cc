@@ -38,9 +38,11 @@ ThreadConfigManager::ThreadConfigManager(const std::string& path) : config_store
   if (json_parser_.HasError()) {
     // Report error but don't crash if the file is not a valid json format.
     // Start from a blank object in that case.
-    FX_LOGS(ERROR) << "Failed to load configuration from file: " << config_store_path_
-                   << " with error: " << json_parser_.error_str();
-    FX_LOGS(ERROR) << "Will assume no existing configuration.";
+    otPlatLog(OT_LOG_LEVEL_WARN, otLogRegion::OT_LOG_REGION_PLATFORM,
+              "Failed to load configuration from file: %s with error: %s",
+              config_store_path_.c_str(), json_parser_.error_str().c_str());
+    otPlatLog(OT_LOG_LEVEL_WARN, otLogRegion::OT_LOG_REGION_PLATFORM,
+              "Will assume no existing configuration.");
 
     config_.SetObject();
   }

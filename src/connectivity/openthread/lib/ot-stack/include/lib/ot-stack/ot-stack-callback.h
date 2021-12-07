@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.lowpan.spinel/cpp/wire.h>
 
 #include <openthread/instance.h>
+#include <openthread/platform/logging.h>
 
 /**
  * @file
@@ -24,5 +25,8 @@ extern "C" void platformCallbackSendOneFrameToClient(otInstance* a_instance, uin
                                                      size_t size);
 extern "C" void platformCallbackPostNcpFidlInboundTask(otInstance* a_instance);
 extern "C" void platformCallbackPostDelayedAlarmTask(otInstance* a_instance, zx_duration_t delay);
+
+extern "C" void otPlatLogLine(otLogLevel aLogLevel, otLogRegion aLogRegion, const char* aLine);
+extern "C" void platformLog(otInstance* a_instance, zx_duration_t delay);
 
 #endif  // SRC_CONNECTIVITY_OPENTHREAD_LIB_OT_STACK_INCLUDE_LIB_OT_STACK_OT_STACK_CALLBACK_H_

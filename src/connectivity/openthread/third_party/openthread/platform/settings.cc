@@ -63,15 +63,21 @@ static otError get_ot_error(ThreadConfigMgrError error) {
     case kThreadConfigMgrErrorBufferTooSmall:
       return OT_ERROR_NONE;
     case kThreadConfigMgrErrorPersistedStorageFail:
-      FX_CHECK(0) << "failed to write to config file";
+      otPlatLog(OT_LOG_LEVEL_CRIT, otLogRegion::OT_LOG_REGION_PLATFORM,
+                "failed to write to config file: kThreadConfigMgrErrorPersistedStorageFail");
+      // TODO(rquattle): Do we really want to abort here?
       abort();
+      // return OT_ERROR_FAILED;
     case kThreadConfigMgrErrorConflictingTypes:
       // This happens when either during set or get it is found that key exists
       // but the value type is not array. There is no way to handle this
       // situation as it is totally unexpected unless there is some bug in
       // config manager itself
-      FX_CHECK(0) << "Matching keys with different types";
+      otPlatLog(OT_LOG_LEVEL_CRIT, otLogRegion::OT_LOG_REGION_PLATFORM,
+                "Matching keys with different types");
+      // TODO(rquattle): Do we really want to abort here?
       abort();
+      // return OT_ERROR_FAILED;
     default:
       return OT_ERROR_NONE;
   }

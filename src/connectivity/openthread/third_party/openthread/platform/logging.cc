@@ -55,30 +55,5 @@ void otPlatLog(otLogLevel log_level, otLogRegion log_region, const char *format,
       << ", errno = " << errno;
   va_end(args);
 
-  // Now print the string to appropriate FX_LOG
-  switch (log_level) {
-    case OT_LOG_LEVEL_NONE:
-      FX_LOGS(FATAL) << buffer.get() << std::endl;
-      break;
-
-    case OT_LOG_LEVEL_CRIT:
-      FX_LOGS(ERROR) << buffer.get() << std::endl;
-      break;
-
-    case OT_LOG_LEVEL_WARN:
-      FX_LOGS(WARNING) << buffer.get() << std::endl;
-      break;
-
-    case OT_LOG_LEVEL_NOTE:
-    case OT_LOG_LEVEL_INFO:
-      FX_LOGS(INFO) << buffer.get() << std::endl;
-      break;
-
-    case OT_LOG_LEVEL_DEBG:
-      FX_LOGS(DEBUG) << buffer.get() << std::endl;
-      break;
-
-    default:
-      FX_CHECK(0) << "Unknown log_level";
-  }
+  otPlatLogLine(log_level, log_region, buffer.get());
 }

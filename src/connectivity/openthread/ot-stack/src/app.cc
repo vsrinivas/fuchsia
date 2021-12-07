@@ -653,6 +653,33 @@ void OtStackApp::Shutdown() {
   loop_.Quit();
 }
 
+extern "C" void otPlatLogLine(otLogLevel log_level, otLogRegion log_region, const char* line) {
+  // Print the string to appropriate FX_LOG
+  switch (log_level) {
+    default:
+    case OT_LOG_LEVEL_NONE:
+      FX_LOGS(FATAL) << line << std::endl;
+      break;
+
+    case OT_LOG_LEVEL_CRIT:
+      FX_LOGS(ERROR) << line << std::endl;
+      break;
+
+    case OT_LOG_LEVEL_WARN:
+      FX_LOGS(WARNING) << line << std::endl;
+      break;
+
+    case OT_LOG_LEVEL_NOTE:
+    case OT_LOG_LEVEL_INFO:
+      FX_LOGS(INFO) << line << std::endl;
+      break;
+
+    case OT_LOG_LEVEL_DEBG:
+      FX_LOGS(DEBUG) << line << std::endl;
+      break;
+  }
+}
+
 extern "C" void platformCallbackSendOneFrameToRadio(otInstance* a_instance, uint8_t* buffer,
                                                     size_t size) {
   sLowpanSpinelPtr->SendOneFrameToRadio(buffer, size);
