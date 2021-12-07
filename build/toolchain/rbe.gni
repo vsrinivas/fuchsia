@@ -35,4 +35,19 @@ declare_args() {
   #         not uploaded to the remote cache.
   #   (There are other rewrapper options that are not exposed.)
   rbe_exec_strategy = "remote"
+
+  # Check of determinism of rustc targets by running locally twice
+  # and comparing outputs, failing if any differences are found.
+  # Even though this check doesn't involve RBE, it uses the same
+  # wrapper script, which knows what output files to expect and compare.
+  #
+  # Requires GN args:
+  #   `enable_rbe = true`
+  #     to use the remote wrapper script, even without RBE
+  #
+  # Ignores:
+  #   `rbe_exec_strategy`
+  #     because RBE is not used
+  #
+  check_rustc_determinism = false
 }

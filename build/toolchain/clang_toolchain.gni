@@ -112,15 +112,22 @@ template("clang_toolchain") {
     _rustc_wrapper = ""
     _rust_concurrent_jobs = concurrent_jobs.local
     if (enable_rbe) {
-      assert(rbe_exec_strategy == "remote" || rbe_exec_strategy == "local",
-             "Unsupported RBE exec_strategy: \"$rbe_exec_strategy\".")
-      if (rbe_exec_strategy == "remote") {
-        _rewrapper_flags = " --exec_strategy=remote"
+      if (check_rustc_determinism) {
+        # Determinism check is run locally, and doesn't use RBE,
+        # even though it uses the same wrapper script.
+        _rewrapper_flags = " --local --check-determinism"
+      } else {
+        assert(rbe_exec_strategy == "remote" || rbe_exec_strategy == "local",
+               "Unsupported RBE exec_strategy: \"$rbe_exec_strategy\".")
+        if (rbe_exec_strategy == "remote") {
+          _rewrapper_flags = " --exec_strategy=remote"
 
-        # Use remote-worker parallelism
-        _rust_concurrent_jobs = concurrent_jobs.goma
-      } else if (rbe_exec_strategy == "local") {
-        _rewrapper_flags = " --exec_strategy=local --remote_update_cache=false"
+          # Use remote-worker parallelism
+          _rust_concurrent_jobs = concurrent_jobs.goma
+        } else if (rbe_exec_strategy == "local") {
+          _rewrapper_flags =
+              " --exec_strategy=local --remote_update_cache=false"
+        }
       }
       _rustc_wrapper = rebase_path(rustc_remote_wrapper, root_build_dir) +
                        _rewrapper_flags + " -- "
