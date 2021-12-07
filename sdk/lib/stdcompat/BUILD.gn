@@ -50,4 +50,8 @@ zx_library("stdcompat") {
   ]
 
   friend = [ "test:*" ]
+
+  # Since this doesn't actually compile any code, don't let it contribute any
+  # implicit link inputs from default configs.
+  configs = []
 }

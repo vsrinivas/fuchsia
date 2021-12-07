@@ -23,5 +23,9 @@ source_set("public") {
     "zircon/types.h",
   ]
 
+  # Since this doesn't actually compile any code, don't let it contribute any
+  # implicit link inputs from default configs.
+  configs = []
+
   public_configs = [ ":public_config" ]
 }

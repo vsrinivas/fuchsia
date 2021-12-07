@@ -23,11 +23,14 @@ zx_library("elfldltl") {
     "lib/elfldltl/internal/const-string.h",
     "lib/elfldltl/internal/dynamic-tag-error.h",
     "lib/elfldltl/layout.h",
+    "lib/elfldltl/link.h",
     "lib/elfldltl/machine.h",
     "lib/elfldltl/memory.h",
     "lib/elfldltl/note.h",
     "lib/elfldltl/relocation.h",
+    "lib/elfldltl/relro.h",
     "lib/elfldltl/self.h",
+    "lib/elfldltl/static-pie.h",
     "lib/elfldltl/symbol.h",
   ]
 
@@ -45,6 +48,10 @@ zx_library("elfldltl") {
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
     ]
+  }
+
+  if (current_os == "linux") {
+    configs -= [ "//build/config/linux:implicit-host-libs" ]
   }
 }
 
@@ -75,6 +82,41 @@ source_set("unittests") {
   ]
   if (is_elf) {
     sources += [ "self-tests.cc" ]
+  }
+}
+
+if (current_os == "linux") {
+  config("linux-static-pie.config") {
+    # Avoid libc references from assert() in libc++ header code.
+    defines = [ "NDEBUG=1" ]
+    include_dirs = [ "//third_party/linux-syscall-support" ]
+  }
+
+  static_library("linux-static-pie") {
+    sources = [ "linux-static-pie.cc" ]
+    configs -= [ "//build/config/linux:implicit-host-libs" ]
+    configs += [ ":linux-static-pie.config" ]
+    deps = [ "." ]
+  }
+
+  test("linux-static-pie-test") {
+    disable_syslog_backend = true
+    sources = [ "linux-static-pie-test.cc" ]
+    configs -= [
+      "//build/config/linux:default-pie",
+      "//build/config/linux:implicit-host-libs",
+    ]
+    configs += [ ":linux-static-pie.config" ]
+    cflags = [ "-fPIE" ]
+    ldflags = [
+      "-nostartfiles",
+      "-nostdlib++",
+      "-static-pie",
+      "-nolibc",
+    ]
+    deps = [ ":linux-static-pie" ]
+
+    exclude_toolchain_tags = [ "instrumented" ]
   }
 }
 
@@ -120,4 +162,8 @@ group("tests") {
     ":elfldltl-tests",
     ":elfldltl-unittests($host_toolchain)",
   ]
+
+  if (host_os == "linux") {
+    deps += [ ":linux-static-pie-test(//build/toolchain:linux_$host_cpu)" ]
+  }
 }

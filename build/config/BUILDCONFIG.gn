@@ -406,7 +406,11 @@ if (zircon_toolchain == false) {
     default_common_binary_configs += [ "//build/config/mac:compiler" ]
   }
   if (is_linux) {
-    default_common_binary_configs += [ "//build/config/linux:compiler" ]
+    default_common_binary_configs += [
+      "//build/config/linux:compiler",
+      "//build/config/linux:default-pie",
+      "//build/config/linux:implicit-host-libs",
+    ]
   }
 
   default_common_binary_configs += [ "//build/config/lto:default" ]

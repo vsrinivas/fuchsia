@@ -6,15 +6,6 @@ import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
 
 config("compiler") {
-  cflags = []
-  ldflags = [
-    # Use static C++ standard library.
-    "-static-libstdc++",
-
-    # Set rpath to find dynamically linked libraries placed next to executables
-    # in the host build directory.
-    "-Wl,-rpath=\$ORIGIN/",
-  ]
   configs = [
     ":sysroot",
     ":target",
@@ -25,21 +16,37 @@ config("compiler") {
     "-Clinker=$rebased_clang_prefix/clang++",
     "-Cdefault-linker-libraries",
   ]
-  foreach(flag, ldflags) {
-    rustflags += [ "-Clink-arg=$flag" ]
-  }
+}
 
+config("default-pie") {
   if (!toolchain_variant.is_pic_default) {
     # Rust links are always PIE on Linux.  C/C++ static library code that is
     # linked into Rust programs must be compiled as PIE too.  Since there's no
     # good way to distinguish code going into Rust links from other code, just
     # do it for everything.
     cflags = [ "-fPIE" ]
+    asmflags = cflags
 
     # Since we're compiling as PIE, link as PIE too.
     # This makes `#ifdef __PIE__` checks comport with link-time behavior.
-    ldflags += cflags + [ "-pie" ]
+    ldflags = cflags + [ "-pie" ]
+
+    rustflags = []
+    foreach(flag, ldflags) {
+      rustflags += [ "-Clink-arg=$flag" ]
+    }
   }
+}
+
+config("implicit-host-libs") {
+  ldflags = [
+    # Use static C++ standard library.
+    "-static-libstdc++",
+
+    # Set rpath to find dynamically linked libraries placed next to executables
+    # in the host build directory.
+    "-Wl,-rpath=\$ORIGIN/",
+  ]
 
   # TODO(fxbug.dev/26846) The implicitly linked static libc++.a depends on these.
   libs = [
@@ -47,7 +54,10 @@ config("compiler") {
     "pthread",
   ]
 
-  asmflags = cflags
+  rustflags = []
+  foreach(flag, ldflags) {
+    rustflags += [ "-Clink-arg=$flag" ]
+  }
 }
 
 config("sysroot") {
