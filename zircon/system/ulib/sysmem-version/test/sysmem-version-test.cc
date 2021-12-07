@@ -148,7 +148,7 @@ bool IsEqualByKoid(const LinearSnap<FidlType>& a, const LinearSnap<FidlType>& b)
 std::random_device random_device;
 std::mt19937 prng(random_device());
 
-template <typename T>
+template <typename T, std::enable_if_t<!std::is_same_v<T, bool>, bool> = true>
 void random(T* field) {
   // If one of these complains, consider adding a random<>() specialization below.
   static_assert(std::is_integral<T>::value);
@@ -165,6 +165,11 @@ void random(T* field) {
     }
     return;
   }
+}
+
+void random(bool* field) {
+  // Always return true because zero/false will never be set in the general `random` implementation.
+  *field = true;
 }
 
 template <>
