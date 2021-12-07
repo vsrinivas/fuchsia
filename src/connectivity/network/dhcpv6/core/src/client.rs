@@ -2238,6 +2238,168 @@ impl<R: Rng> ClientStateMachine<R> {
 }
 
 #[cfg(test)]
+pub(crate) mod testutil {
+    use super::*;
+    use packet::ParsablePacket;
+
+    pub(crate) fn to_configured_addresses(
+        address_count: u32,
+        preferred_addresses: Vec<Ipv6Addr>,
+    ) -> HashMap<u32, Option<Ipv6Addr>> {
+        let addresses = preferred_addresses
+            .into_iter()
+            .map(Some)
+            .chain(std::iter::repeat(None))
+            .take(usize::try_from(address_count).unwrap());
+
+        let configured_addresses: HashMap<u32, Option<Ipv6Addr>> = (0..).zip(addresses).collect();
+        configured_addresses
+    }
+
+    /// Creates a stateful client and asserts that:
+    ///    - the client is started in ServerDiscovery state
+    ///    - the state contain the expected value
+    ///    - the actions are correct
+    ///    - the Solicit message is correct
+    ///
+    /// Returns the client in ServerDiscovery state and the actions associated
+    /// with transitioning to this state.
+    pub(crate) fn start_server_discovery<R: Rng>(
+        transaction_id: [u8; 3],
+        client_id: [u8; CLIENT_ID_LEN],
+        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        options_to_request: Vec<v6::OptionCode>,
+        rng: R,
+    ) -> (ClientStateMachine<R>, Actions) {
+        let (client, actions) = ClientStateMachine::start_stateful(
+            transaction_id,
+            client_id.clone(),
+            configured_addresses.clone(),
+            options_to_request.clone(),
+            rng,
+        );
+
+        assert_matches!(&client.state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: got_client_id,
+                configured_addresses: got_configured_addresses,
+                first_solicit_time: Some(_),
+                retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
+                solicit_max_rt: SOLICIT_MAX_RT,
+                collected_advertise,
+                collected_sol_max_rt,
+            })) if collected_advertise.is_empty() &&
+                   collected_sol_max_rt.is_empty() &&
+                   *got_client_id == client_id &&
+                   *got_configured_addresses == configured_addresses
+        );
+
+        // Start of server discovery should send a solicit and schedule a
+        // retransmission timer.
+        let buf = match &actions[..] {
+            [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => {
+                buf
+            }
+            actions => panic!("unexpected actions {:?}", actions),
+        };
+
+        let mut buf = &buf[..];
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
+
+        // The solicit should contain the expected options.
+        let (mut non_ia_opts, ia_opts, other) = msg.options().fold(
+            (Vec::new(), Vec::new(), Vec::new()),
+            |(mut non_ia_opts, mut ia_opts, mut other), opt| {
+                match opt {
+                    v6::ParsedDhcpOption::ClientId(_)
+                    | v6::ParsedDhcpOption::ElapsedTime(_)
+                    | v6::ParsedDhcpOption::Oro(_) => non_ia_opts.push(opt),
+                    v6::ParsedDhcpOption::Iana(iana_data) => ia_opts.push(iana_data),
+                    opt => other.push(opt),
+                }
+                (non_ia_opts, ia_opts, other)
+            },
+        );
+        let option_sorter: fn(
+            &v6::ParsedDhcpOption<'_>,
+            &v6::ParsedDhcpOption<'_>,
+        ) -> std::cmp::Ordering =
+            |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
+
+        non_ia_opts.sort_by(option_sorter);
+        let mut expected_oro = vec![v6::OptionCode::SolMaxRt];
+        expected_oro.extend_from_slice(&options_to_request);
+        let mut expected_non_ia_opts = vec![
+            v6::ParsedDhcpOption::ClientId(&client_id),
+            v6::ParsedDhcpOption::ElapsedTime(0),
+            v6::ParsedDhcpOption::Oro(expected_oro),
+        ];
+        expected_non_ia_opts.sort_by(option_sorter);
+        assert_eq!(non_ia_opts, expected_non_ia_opts);
+
+        let mut solicited_addresses = HashMap::new();
+        for iana_data in ia_opts.iter() {
+            if iana_data.iter_options().count() == 0 {
+                assert_eq!(solicited_addresses.insert(iana_data.iaid(), None), None);
+                continue;
+            }
+            for iana_option in iana_data.iter_options() {
+                match iana_option {
+                    v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
+                        assert_eq!(
+                            solicited_addresses.insert(iana_data.iaid(), Some(iaaddr_data.addr())),
+                            None
+                        );
+                    }
+                    option => panic!("unexpected option {:?}", option),
+                }
+            }
+        }
+        assert_eq!(solicited_addresses, configured_addresses);
+        assert_eq!(&other, &[]);
+
+        (client, actions)
+    }
+
+    impl IdentityAssociation {
+        pub(crate) fn new_default(address: Ipv6Addr) -> IdentityAssociation {
+            IdentityAssociation {
+                address,
+                preferred_lifetime: v6::TimeValue::Zero,
+                valid_lifetime: v6::TimeValue::Zero,
+            }
+        }
+    }
+
+    impl AdvertiseMessage {
+        pub(crate) fn new_default(
+            server_id: Vec<u8>,
+            addresses: &[Ipv6Addr],
+            dns_servers: &[Ipv6Addr],
+            configured_addresses: &HashMap<u32, Option<Ipv6Addr>>,
+        ) -> AdvertiseMessage {
+            let addresses = (0..)
+                .zip(addresses.iter().fold(Vec::new(), |mut addrs, address| {
+                    addrs.push(IdentityAssociation::new_default(*address));
+                    addrs
+                }))
+                .collect();
+            let preferred_addresses_count =
+                compute_preferred_address_count(&addresses, &configured_addresses);
+            AdvertiseMessage {
+                server_id,
+                addresses,
+                dns_servers: dns_servers.to_vec(),
+                preference: 0,
+                receive_time: Instant::now(),
+                preferred_addresses_count,
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use net_declare::std_ip_v6;
@@ -2387,126 +2549,6 @@ mod tests {
         );
     }
 
-    fn to_configured_addresses(
-        address_count: u32,
-        preferred_addresses: Vec<Ipv6Addr>,
-    ) -> HashMap<u32, Option<Ipv6Addr>> {
-        let addresses = preferred_addresses
-            .into_iter()
-            .map(Some)
-            .chain(std::iter::repeat(None))
-            .take(usize::try_from(address_count).unwrap());
-
-        let configured_addresses: HashMap<u32, Option<Ipv6Addr>> = (0..).zip(addresses).collect();
-        configured_addresses
-    }
-
-    /// Creates a stateful client and asserts that:
-    ///    - the client is started in ServerDiscovery state
-    ///    - the state contain the expected value
-    ///    - the actions are correct
-    ///    - the Solicit message is correct
-    ///
-    /// Returns the client in ServerDiscovery state and the actions associated
-    /// with transitioning to this state.
-    fn start_server_discovery<R: Rng>(
-        transaction_id: [u8; 3],
-        client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
-        options_to_request: Vec<v6::OptionCode>,
-        rng: R,
-    ) -> (ClientStateMachine<R>, Actions) {
-        let (client, actions) = ClientStateMachine::start_stateful(
-            transaction_id,
-            client_id.clone(),
-            configured_addresses.clone(),
-            options_to_request.clone(),
-            rng,
-        );
-
-        assert_matches!(&client.state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
-                client_id: got_client_id,
-                configured_addresses: got_configured_addresses,
-                first_solicit_time: Some(_),
-                retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
-                solicit_max_rt: SOLICIT_MAX_RT,
-                collected_advertise,
-                collected_sol_max_rt,
-            })) if collected_advertise.is_empty() &&
-                   collected_sol_max_rt.is_empty() &&
-                   *got_client_id == client_id &&
-                   *got_configured_addresses == configured_addresses
-        );
-
-        // Start of server discovery should send a solicit and schedule a
-        // retransmission timer.
-        let buf = match &actions[..] {
-            [Action::SendMessage(buf), Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)] => {
-                buf
-            }
-            actions => panic!("unexpected actions {:?}", actions),
-        };
-
-        let mut buf = &buf[..];
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
-
-        // The solicit should contain the expected options.
-        let (mut non_ia_opts, ia_opts, other) = msg.options().fold(
-            (Vec::new(), Vec::new(), Vec::new()),
-            |(mut non_ia_opts, mut ia_opts, mut other), opt| {
-                match opt {
-                    v6::ParsedDhcpOption::ClientId(_)
-                    | v6::ParsedDhcpOption::ElapsedTime(_)
-                    | v6::ParsedDhcpOption::Oro(_) => non_ia_opts.push(opt),
-                    v6::ParsedDhcpOption::Iana(iana_data) => ia_opts.push(iana_data),
-                    opt => other.push(opt),
-                }
-                (non_ia_opts, ia_opts, other)
-            },
-        );
-        let option_sorter: fn(
-            &v6::ParsedDhcpOption<'_>,
-            &v6::ParsedDhcpOption<'_>,
-        ) -> std::cmp::Ordering =
-            |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
-
-        non_ia_opts.sort_by(option_sorter);
-        let mut expected_oro = vec![v6::OptionCode::SolMaxRt];
-        expected_oro.extend_from_slice(&options_to_request);
-        let mut expected_non_ia_opts = vec![
-            v6::ParsedDhcpOption::ClientId(&client_id),
-            v6::ParsedDhcpOption::ElapsedTime(0),
-            v6::ParsedDhcpOption::Oro(expected_oro),
-        ];
-        expected_non_ia_opts.sort_by(option_sorter);
-        assert_eq!(non_ia_opts, expected_non_ia_opts);
-
-        let mut solicited_addresses = HashMap::new();
-        for iana_data in ia_opts.iter() {
-            if iana_data.iter_options().count() == 0 {
-                assert_eq!(solicited_addresses.insert(iana_data.iaid(), None), None);
-                continue;
-            }
-            for iana_option in iana_data.iter_options() {
-                match iana_option {
-                    v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
-                        assert_eq!(
-                            solicited_addresses.insert(iana_data.iaid(), Some(iaaddr_data.addr())),
-                            None
-                        );
-                    }
-                    option => panic!("unexpected option {:?}", option),
-                }
-            }
-        }
-        assert_eq!(solicited_addresses, configured_addresses);
-        assert_eq!(&other, &[]);
-
-        (client, actions)
-    }
-
     // Test starting the client in stateful mode with different address
     // configurations.
     #[test_case(1, Vec::new(), Vec::new())]
@@ -2521,23 +2563,13 @@ mod tests {
         options_to_request: Vec<v6::OptionCode>,
     ) {
         // The client and actions are checked inside `start_server_discovery`
-        let (_client, _actions) = start_server_discovery(
+        let (_client, _actions) = testutil::start_server_discovery(
             [0, 1, 2],
             v6::duid_uuid(),
-            to_configured_addresses(address_count, preferred_addresses),
+            testutil::to_configured_addresses(address_count, preferred_addresses),
             options_to_request,
             StepRng::new(std::u64::MAX / 2, 0),
         );
-    }
-
-    impl IdentityAssociation {
-        fn new_default(address: Ipv6Addr) -> IdentityAssociation {
-            IdentityAssociation {
-                address,
-                preferred_lifetime: v6::TimeValue::Zero,
-                valid_lifetime: v6::TimeValue::Zero,
-            }
-        }
     }
 
     #[test]
@@ -2546,7 +2578,7 @@ mod tests {
         let got_addresses: HashMap<u32, IdentityAssociation> = (0..)
             .zip(vec![IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff"))].into_iter())
             .collect();
-        let configured_addresses = to_configured_addresses(1, vec![]);
+        let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         assert_eq!(compute_preferred_address_count(&got_addresses, &configured_addresses), 0);
         assert_eq!(compute_preferred_address_count(&HashMap::new(), &configured_addresses), 0);
 
@@ -2560,7 +2592,7 @@ mod tests {
                 .into_iter(),
             )
             .collect();
-        let configured_addresses = to_configured_addresses(
+        let configured_addresses = testutil::to_configured_addresses(
             2,
             vec![std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
         );
@@ -2578,7 +2610,7 @@ mod tests {
                 .into_iter(),
             )
             .collect();
-        let configured_addresses = to_configured_addresses(
+        let configured_addresses = testutil::to_configured_addresses(
             3,
             vec![
                 std_ip_v6!("::ffff:c00a:2ff"),
@@ -2589,36 +2621,10 @@ mod tests {
         assert_eq!(compute_preferred_address_count(&got_addresses, &configured_addresses), 1);
     }
 
-    impl AdvertiseMessage {
-        fn new_default(
-            server_id: Vec<u8>,
-            addresses: &[Ipv6Addr],
-            dns_servers: &[Ipv6Addr],
-            configured_addresses: &HashMap<u32, Option<Ipv6Addr>>,
-        ) -> AdvertiseMessage {
-            let addresses = (0..)
-                .zip(addresses.iter().fold(Vec::new(), |mut addrs, address| {
-                    addrs.push(IdentityAssociation::new_default(*address));
-                    addrs
-                }))
-                .collect();
-            let preferred_addresses_count =
-                compute_preferred_address_count(&addresses, &configured_addresses);
-            AdvertiseMessage {
-                server_id,
-                addresses,
-                dns_servers: dns_servers.to_vec(),
-                preference: 0,
-                receive_time: Instant::now(),
-                preferred_addresses_count,
-            }
-        }
-    }
-
     #[test]
     fn test_advertise_is_complete() {
         let preferred_address = std_ip_v6!("::ffff:c00a:1ff");
-        let configured_addresses = to_configured_addresses(2, vec![preferred_address]);
+        let configured_addresses = testutil::to_configured_addresses(2, vec![preferred_address]);
 
         let advertise = AdvertiseMessage::new_default(
             vec![1, 2, 3],
@@ -2663,7 +2669,7 @@ mod tests {
     #[test]
     fn test_advertise_ord() {
         let preferred_address = std_ip_v6!("::ffff:c00a:1ff");
-        let configured_addresses = to_configured_addresses(3, vec![preferred_address]);
+        let configured_addresses = testutil::to_configured_addresses(3, vec![preferred_address]);
 
         // `advertise2` is complete, `advertise1` is not.
         let advertise1 = AdvertiseMessage::new_default(
@@ -2716,10 +2722,10 @@ mod tests {
     #[test]
     fn test_receive_complete_advertise_with_max_preference() {
         let client_id = v6::duid_uuid();
-        let (mut client, _actions) = start_server_discovery(
+        let (mut client, _actions) = testutil::start_server_discovery(
             [0, 1, 2],
             client_id.clone(),
-            to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
@@ -2797,10 +2803,10 @@ mod tests {
     #[test]
     fn test_select_first_server_while_retransmitting() {
         let client_id = v6::duid_uuid();
-        let (mut client, _actions) = start_server_discovery(
+        let (mut client, _actions) = testutil::start_server_discovery(
             [0, 1, 2],
             client_id.clone(),
-            to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
@@ -2881,7 +2887,7 @@ mod tests {
     #[test]
     fn test_request() {
         let client_id = v6::duid_uuid();
-        let configured_addresses = to_configured_addresses(3, vec![]);
+        let configured_addresses = testutil::to_configured_addresses(3, vec![]);
         let advertised_addresses = [
             std_ip_v6!("::ffff:c00a:1ff"),
             std_ip_v6!("::ffff:c00a:2ff"),
@@ -2975,7 +2981,7 @@ mod tests {
     #[test]
     fn test_request_reply_failure_status_code() {
         let options_to_request = vec![];
-        let configured_addresses = to_configured_addresses(1, vec![]);
+        let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let advertised_addresses = [std_ip_v6!("::ffff:c00a:1ff")];
         let selected_advertise = AdvertiseMessage::new_default(
             vec![1, 2, 3],
@@ -3181,7 +3187,8 @@ mod tests {
     #[test]
     fn test_request_reply_ia_not_on_link() {
         let options_to_request = vec![];
-        let configured_addresses = to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
+        let configured_addresses =
+            testutil::to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
         let selected_advertise = AdvertiseMessage::new_default(
             vec![1, 2, 3],
             &[std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
@@ -3256,7 +3263,7 @@ mod tests {
         valid_ia: bool,
     ) {
         let options_to_request = vec![];
-        let configured_addresses = to_configured_addresses(1, vec![]);
+        let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let address = std_ip_v6!("::ffff:c00a:5ff");
         let server_id = vec![1, 2, 3];
         let selected_advertise = AdvertiseMessage::new_default(
@@ -3340,7 +3347,8 @@ mod tests {
 
     #[test]
     fn test_t1_t2_calculation() {
-        let configured_addresses = to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
+        let configured_addresses =
+            testutil::to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
         let selected_advertise = AdvertiseMessage::new_default(
             vec![1, 2, 3],
             &[std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
@@ -3429,10 +3437,10 @@ mod tests {
     fn test_request_max_retrans_count() {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
-        let (mut client, _actions) = start_server_discovery(
+        let (mut client, _actions) = testutil::start_server_discovery(
             transaction_id,
             client_id.clone(),
-            to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
@@ -3606,10 +3614,10 @@ mod tests {
     fn test_address_assignment() {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
-        let (mut client, _actions) = start_server_discovery(
+        let (mut client, _actions) = testutil::start_server_discovery(
             transaction_id.clone(),
             client_id.clone(),
-            to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
@@ -3757,10 +3765,10 @@ mod tests {
     fn test_receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
-        let (mut client, _actions) = start_server_discovery(
+        let (mut client, _actions) = testutil::start_server_discovery(
             transaction_id,
             client_id.clone(),
-            to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
@@ -3836,7 +3844,7 @@ mod tests {
     #[test]
     fn test_request_sol_max_rt() {
         let options_to_request = vec![];
-        let configured_addresses = to_configured_addresses(1, vec![]);
+        let configured_addresses = testutil::to_configured_addresses(1, vec![]);
         let address = std_ip_v6!("::ffff:c00a:1ff");
         let server_id = vec![1, 2, 3];
         let selected_advertise = AdvertiseMessage::new_default(
