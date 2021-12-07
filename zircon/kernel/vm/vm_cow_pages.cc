@@ -2145,6 +2145,8 @@ zx_status_t VmCowPages::PinRangeLocked(uint64_t offset, uint64_t len) {
     return parent->PinRangeLocked(offset + parent_offset, len);
   }
 
+  ever_pinned_ = true;
+
   // Tracks our expected page offset when iterating to ensure all pages are present.
   uint64_t next_offset = offset;
 
