@@ -268,7 +268,7 @@ void Ramdisk::Grow(GrowRequestView request, GrowCompleter::Sync& completer) {
 void Ramdisk::ProcessRequests() {
   block::BorrowedOperationQueue<> deferred_list;
   std::random_device random;
-  std::uniform_int_distribution<bool> distribution;
+  std::bernoulli_distribution distribution;
 
   for (;;) {
     std::optional<Transaction> txn;
