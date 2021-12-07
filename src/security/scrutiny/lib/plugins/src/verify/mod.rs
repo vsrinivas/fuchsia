@@ -117,11 +117,10 @@ mod tests {
         cm_fidl_analyzer::component_model::ModelBuilderForAnalyzer,
         cm_rust::{
             CapabilityDecl, CapabilityName, CapabilityPath, ChildDecl, ComponentDecl,
-            DependencyType, DirectoryDecl, NativeIntoFidl, OfferDecl, OfferDirectoryDecl,
-            OfferProtocolDecl, OfferSource, OfferTarget, ProgramDecl, RegistrationSource,
-            ResolverRegistration, UseDecl, UseDirectoryDecl, UseProtocolDecl, UseSource,
+            DependencyType, DirectoryDecl, FidlIntoNative, NativeIntoFidl, OfferDecl,
+            OfferDirectoryDecl, OfferProtocolDecl, OfferSource, OfferTarget, ProgramDecl, UseDecl,
+            UseDirectoryDecl, UseProtocolDecl, UseSource,
         },
-        cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
         fidl::encoding::encode_persistent,
         fidl_fuchsia_component_internal as component_internal,
         fidl_fuchsia_io2::Operations,
@@ -341,6 +340,33 @@ mod tests {
         Ok(model)
     }
 
+    fn cmls_to_model(cmls: Vec<(&'static str, serde_json::Value)>) -> Result<Arc<DataModel>> {
+        let model = data_model();
+
+        let mut id = 0;
+        let mut components = vec![];
+        let mut manifests = vec![];
+        for (uri, json) in cmls {
+            let decl = cml::compile(&serde_json::from_value(json)?)?.fidl_into_native();
+            let manifest = make_v2_manifest(id, decl)?;
+            let component = make_v2_component(id, uri.to_owned());
+
+            components.push(component);
+            manifests.push(manifest);
+
+            id += 1;
+        }
+
+        model.set(Components::new(components))?;
+        model.set(Zbi { ..zbi(None, None, component_id_index::Index::default()) })?;
+        model.set(Manifests::new(manifests))?;
+        model.set(CoreDataDeps { deps: hashset! { CORE_DEP_STR.to_string() } })?;
+
+        V2ComponentModelDataCollector::new().collect(model.clone())?;
+
+        Ok(model)
+    }
+
     fn two_instance_component_model() -> Result<Arc<DataModel>> {
         let model = data_model();
 
@@ -493,245 +519,102 @@ mod tests {
 
     #[test]
     fn test_component_resolvers_child_source() -> Result<()> {
-        let child_env_name = "child_env";
-        let child_resolver_registration = ResolverRegistration {
-            resolver: "child_env_resolver".into(),
-            source: RegistrationSource::Child("my-resolver".to_owned()),
-            scheme: "fuchsia-boot".into(),
-        };
+        let model = cmls_to_model(vec![
+            (
+                "fuchsia-boot:///#meta/root.cm",
+                json!({
+                    "capabilities": [
+                        {
+                            "protocol": "protocol",
+                            "path": "/protocol",
+                        },
+                    ],
+                    "offer": [
+                        {
+                            "protocol": [
+                                "protocol",
+                            ],
+                            "from" : "#self",
+                            "to": "#logger"
+                        },
+                    ],
+                    "children": [
+                        {
+                            "name": "logger",
+                            "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                            "environment" : "#myenv",
+                        },
+                        {
+                            "name" : "my-resolver",
+                            "url" : "fuchsia-pkg://fuchsia.com/resolver#meta/resolver.cm",
 
-        let model = data_model();
-        let root_id = 0;
-        let child_id = 1;
-        let resolver_id = 2;
-
-        let root_url = DEFAULT_ROOT_URL.to_string();
-        let child_url = "fuchsia-boot:///#meta/child.cm".to_string();
-        let resolver_url = "fuchsia-boot:///#meta/my-resolver.cm".to_string();
-
-        let root_component = make_v2_component(root_id, root_url.clone());
-        let child_component = make_v2_component(child_id, child_url.clone());
-        let resolver_component = make_v2_component(resolver_id, resolver_url.clone());
-
-        let protocol_name = CapabilityName("protocol".to_string());
-
-        let root_decl = ComponentDeclBuilder::new()
-            .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferSource::Parent,
-                source_name: protocol_name.clone().into(),
-                target_name: protocol_name.clone().into(),
-                target: OfferTarget::static_child("child".to_string()),
-                dependency_type: DependencyType::Strong,
-            }))
-            .add_child(
-                ChildDeclBuilder::new_lazy_child("child")
-                    .environment(child_env_name)
-                    .url(&child_url)
-                    .build(),
-            )
-            .add_child(ChildDeclBuilder::new_lazy_child("my-resolver").url(&resolver_url).build())
-            .add_environment(
-                EnvironmentDeclBuilder::new()
-                    .name(child_env_name)
-                    .extends(fsys2::EnvironmentExtends::Realm)
-                    .add_resolver(child_resolver_registration.clone())
-                    .build(),
-            )
-            .build();
-
-        let child_decl = new_component_with_capabilities(vec![], vec![], vec![], vec![]);
-        let child_use_protocol = new_use_protocol_decl(UseSource::Parent, protocol_name.clone());
-        let resolver_decl = new_component_with_capabilities(
-            vec![UseDecl::Protocol(child_use_protocol)],
-            vec![],
-            vec![],
-            vec![],
-        );
-
-        let root_manifest = make_v2_manifest(root_id, root_decl)?;
-        let child_manifest = make_v2_manifest(child_id, child_decl)?;
-        let resolver_manifest = make_v2_manifest(resolver_id, resolver_decl)?;
-
-        let deps = hashset! { CORE_DEP_STR.to_string() };
-
-        model.set(Components::new(vec![root_component, child_component, resolver_component]))?;
-
-        model.set(Manifests::new(vec![root_manifest, child_manifest, resolver_manifest]))?;
-        model.set(Zbi { ..zbi(None, None, component_id_index::Index::default()) })?;
-        model.set(CoreDataDeps { deps })?;
-
-        V2ComponentModelDataCollector::new().collect(model.clone())?;
-
-        let controller = ComponentResolversController::default();
-
-        let response = controller.query(
-            model.clone(),
-            json!({ "scheme": "fuchsia-boot", "moniker": "/my-resolver", "protocol": "protocol"}),
-        )?;
-        assert_eq!(response, json!(["/child:0"]));
-        Ok(())
-    }
-
-    #[test]
-    fn test_component_resolvers_self_source() -> Result<()> {
-        let child_env_name = "child_env";
-        let child_resolver_registration = ResolverRegistration {
-            resolver: "child_env_resolver".into(),
-            source: RegistrationSource::Self_,
-            scheme: "fuchsia-boot".into(),
-        };
-
-        let model = data_model();
-        let root_id = 0;
-        let child_id = 1;
-        let resolver_id = 2;
-
-        let root_url = DEFAULT_ROOT_URL.to_string();
-        let child_url = "fuchsia-boot:///#meta/child.cm".to_string();
-        let resolver_url = "fuchsia-boot:///#meta/my-resolver.cm".to_string();
-
-        let root_component = make_v2_component(root_id, root_url.clone());
-        let child_component = make_v2_component(child_id, child_url.clone());
-        let resolver_component = make_v2_component(resolver_id, resolver_url.clone());
-
-        let protocol_name = CapabilityName("protocol".to_string());
-
-        let root_decl = ComponentDeclBuilder::new()
-            .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferSource::Parent,
-                source_name: protocol_name.clone().into(),
-                target_name: protocol_name.clone().into(),
-                target: OfferTarget::static_child("child".to_string()),
-                dependency_type: DependencyType::Strong,
-            }))
-            .add_child(
-                ChildDeclBuilder::new_lazy_child("child")
-                    .environment(child_env_name)
-                    .url(&child_url)
-                    .build(),
-            )
-            .add_child(ChildDeclBuilder::new_lazy_child("my-resolver").url(&resolver_url).build())
-            .add_environment(
-                EnvironmentDeclBuilder::new()
-                    .name(child_env_name)
-                    .extends(fsys2::EnvironmentExtends::Realm)
-                    .add_resolver(child_resolver_registration.clone())
-                    .build(),
-            )
-            .build();
-
-        let child_use_protocol = new_use_protocol_decl(UseSource::Parent, protocol_name.clone());
-        let child_decl = new_component_with_capabilities(
-            vec![UseDecl::Protocol(child_use_protocol)],
-            vec![],
-            vec![],
-            vec![],
-        );
-        let resolver_decl = new_component_with_capabilities(vec![], vec![], vec![], vec![]);
-
-        let root_manifest = make_v2_manifest(root_id, root_decl)?;
-        let child_manifest = make_v2_manifest(child_id, child_decl)?;
-        let resolver_manifest = make_v2_manifest(resolver_id, resolver_decl)?;
-
-        let deps = hashset! { CORE_DEP_STR.to_string() };
-
-        model.set(Components::new(vec![root_component, child_component, resolver_component]))?;
-
-        model.set(Manifests::new(vec![root_manifest, child_manifest, resolver_manifest]))?;
-        model.set(Zbi { ..zbi(None, None, component_id_index::Index::default()) })?;
-        model.set(CoreDataDeps { deps })?;
-
-        V2ComponentModelDataCollector::new().collect(model.clone())?;
+                        },
+                    ],
+                    "environments" : [
+                        {
+                            "name": "myenv",
+                            "extends": "realm",
+                            "resolvers" : [ {
+                                "resolver" : "my-resolver",
+                                "from" : "#my-resolver",
+                                "scheme": "fuchsia-pkg",
+                            },
+                            ],
+                        },
+                    ]
+                }),
+            ),
+            (
+                "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                json!({
+                    "program" : {
+                        "runner" : "elf",
+                        "binary" : "bin/logger",
+                    },
+                }),
+            ),
+            (
+                "fuchsia-pkg://fuchsia.com/resolver#meta/resolver.cm",
+                json!({
+                    "program": {
+                        "runner": "elf",
+                        "binary": "bin/universe_resolver",
+                    },
+                    "capabilities": [
+                        {
+                            "resolver": "resolver",
+                            "path": "/svc/fuchsia.sys2.ComponentResolver",
+                        },
+                        { "protocol": "fuchsia.sys2.ComponentResolver" },
+                    ],
+                    "use": [
+                        {
+                            "protocol": [
+                                "protocol",
+                            ],
+                        },
+                    ],
+                    "expose": [
+                        {
+                            "resolver": "my-resolver",
+                            "from": "self",
+                        },
+                        {
+                            "protocol": "fuchsia.sys2.ComponentResolver",
+                            "from": "self",
+                        },
+                    ],
+                }),
+            ),
+        ])?;
 
         let controller = ComponentResolversController::default();
 
         let response = controller.query(
             model.clone(),
-            json!({ "scheme": "fuchsia-boot", "moniker": "/child", "protocol": "protocol"}),
+            json!({ "scheme": "fuchsia-pkg", "moniker": "/my-resolver", "protocol": "protocol"}),
         )?;
-        assert_eq!(response, json!(["/child:0"]));
-        Ok(())
-    }
-
-    #[test]
-    fn test_component_resolvers_parent_source() -> Result<()> {
-        let child_env_name = "child_env";
-        let child_resolver_registration = ResolverRegistration {
-            resolver: "child_env_resolver".into(),
-            source: RegistrationSource::Parent,
-            scheme: "fuchsia-boot".into(),
-        };
-
-        let model = data_model();
-        let root_id = 0;
-        let child_id = 1;
-        let resolver_id = 2;
-
-        let root_url = DEFAULT_ROOT_URL.to_string();
-        let child_url = "fuchsia-boot:///#meta/child.cm".to_string();
-        let resolver_url = "fuchsia-boot:///#meta/my-resolver.cm".to_string();
-
-        let root_component = make_v2_component(root_id, root_url.clone());
-        let child_component = make_v2_component(child_id, child_url.clone());
-        let resolver_component = make_v2_component(resolver_id, resolver_url.clone());
-
-        let protocol_name = CapabilityName("protocol".to_string());
-
-        let root_decl = ComponentDeclBuilder::new()
-            .offer(OfferDecl::Protocol(OfferProtocolDecl {
-                source: OfferSource::Parent,
-                source_name: protocol_name.clone().into(),
-                target_name: protocol_name.clone().into(),
-                target: OfferTarget::static_child("child".to_string()),
-                dependency_type: DependencyType::Strong,
-            }))
-            .use_(UseDecl::Protocol(new_use_protocol_decl(UseSource::Self_, protocol_name.clone())))
-            .add_child(
-                ChildDeclBuilder::new_lazy_child("child")
-                    .environment(child_env_name)
-                    .url(&child_url)
-                    .build(),
-            )
-            .add_child(ChildDeclBuilder::new_lazy_child("my-resolver").url(&resolver_url).build())
-            .add_environment(
-                EnvironmentDeclBuilder::new()
-                    .name(child_env_name)
-                    .extends(fsys2::EnvironmentExtends::Realm)
-                    .add_resolver(child_resolver_registration.clone())
-                    .build(),
-            )
-            .build();
-
-        let child_use_protocol = new_use_protocol_decl(UseSource::Parent, protocol_name.clone());
-        let child_decl = new_component_with_capabilities(
-            vec![UseDecl::Protocol(child_use_protocol)],
-            vec![],
-            vec![],
-            vec![],
-        );
-        let resolver_decl = new_component_with_capabilities(vec![], vec![], vec![], vec![]);
-
-        let root_manifest = make_v2_manifest(root_id, root_decl)?;
-        let child_manifest = make_v2_manifest(child_id, child_decl)?;
-        let resolver_manifest = make_v2_manifest(resolver_id, resolver_decl)?;
-
-        let deps = hashset! { CORE_DEP_STR.to_string() };
-
-        model.set(Components::new(vec![root_component, child_component, resolver_component]))?;
-
-        model.set(Manifests::new(vec![root_manifest, child_manifest, resolver_manifest]))?;
-        model.set(Zbi { ..zbi(None, None, component_id_index::Index::default()) })?;
-        model.set(CoreDataDeps { deps })?;
-
-        V2ComponentModelDataCollector::new().collect(model.clone())?;
-
-        let controller = ComponentResolversController::default();
-
-        let response = controller.query(
-            model.clone(),
-            json!({ "scheme": "fuchsia-boot", "moniker": "/", "protocol": "protocol"}),
-        )?;
-        assert_eq!(response, json!(["/child:0"]));
+        assert_eq!(response, json!(["/logger:0"]));
         Ok(())
     }
 

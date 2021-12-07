@@ -4,7 +4,7 @@
 
 use {
     crate::verify::collection::V2ComponentModel,
-    anyhow::{anyhow, Context, Result},
+    anyhow::{Context, Result},
     cm_fidl_analyzer::{
         component_instance::ComponentInstanceForAnalyzer, BreadthFirstModelWalker,
         ComponentInstanceVisitor, ComponentModelWalker,
@@ -60,13 +60,8 @@ impl ComponentInstanceVisitor for ComponentResolversVisitor {
         {
             let resolver_instance = {
                 match &resolver.source {
-                    RegistrationSource::Parent => match instance.try_get_parent()? {
-                        ExtendedInstanceInterface::AboveRoot(_top_instance) => {
-                            return Err(anyhow!("unreachable for valid manifests!"))
-                        }
-                        ExtendedInstanceInterface::Component(parent_component) => parent_component,
-                    },
-                    RegistrationSource::Self_ => instance.to_owned(),
+                    RegistrationSource::Parent => todo!("fxbug.dev/89882"),
+                    RegistrationSource::Self_ => todo!("fxbug.dev/89882"),
                     RegistrationSource::Child(moniker) => resolver_parent_instance
                         .get_live_child(&PartialChildMoniker::new(moniker.to_owned(), None))
                         .unwrap(),
