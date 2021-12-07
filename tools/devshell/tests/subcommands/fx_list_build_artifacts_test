@@ -61,6 +61,10 @@ BT_SET_UP() {
           "--boot",
           "--zircona"
         ],
+        "fastboot_flash": [
+          "zircon_a",
+          "zircon_b"
+        ],
         "name": "zircon-a",
         "path": "fuchsia.zbi",
         "type": "zbi"
@@ -68,6 +72,10 @@ BT_SET_UP() {
       {
         "bootserver_pave": [
           "--vbmetaa"
+        ],
+        "fastboot_flash": [
+          "vbmeta_a",
+          "vbmeta_b"
         ],
         "name": "zircon-a",
         "path": "fuchsia.vbmeta",
@@ -81,6 +89,9 @@ BT_SET_UP() {
       {
         "bootserver_pave": [
           "--fvm"
+        ],
+        "fastboot_flash": [
+          "fvm"
         ],
         "name": "storage-sparse",
         "path": "obj/build/images/fvm.sparse.blk",
@@ -101,6 +112,11 @@ BT_SET_UP() {
         "name": "zedboot-efi",
         "path": "zedboot.esp.blk",
         "type": "blk"
+      },
+      {
+        "name": "unlock_creds",
+        "path": "unlock_creds/unlock_creds.zip",
+        "type": "zip"
       }
 ]
 EOF
@@ -199,7 +215,7 @@ TEST_fx-list-build-artifacts-unknown-name() {
 }
 
 TEST_fx-list-build-artifacts-images() {
-  BT_EXPECT_EQ "$(${fx} list-build-artifacts images)" "zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.blk obj/build/images/fvm.sparse.blk netboot.zbi zedboot.esp.blk"
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts images)" "zedboot.zbi zedboot.vbmeta fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.blk obj/build/images/fvm.sparse.blk netboot.zbi zedboot.esp.blk unlock_creds/unlock_creds.zip"
 }
 
 TEST_fx-list-build-artifacts-images-by-name() {
@@ -224,6 +240,10 @@ TEST_fx-list-build-artifacts-pave() {
 
 TEST_fx-list-build-artifacts-pave-zedboot() {
   BT_EXPECT_EQ "$(${fx} list-build-artifacts pave-zedboot)" "pave-zedboot.sh zedboot.zbi zedboot.vbmeta"
+}
+
+TEST_fx-list-build-artifacts-flash() {
+  BT_EXPECT_EQ "$(${fx} list-build-artifacts flash)" "flash.sh fuchsia.zbi fuchsia.vbmeta obj/build/images/fvm.sparse.blk unlock_creds/unlock_creds.zip"
 }
 
 TEST_fx-list-build-artifacts-zbi-tests() {

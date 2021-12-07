@@ -140,7 +140,10 @@ elif [[ "${mode}" == netboot ]]; then
 elif [[ "${mode}" == flash ]]; then
   manifest="${IMAGES_JSON}"
   paths+=("flash.sh")
-  jq_filter+=" | select(.fastboot_flash != null)"
+  # If we switch this to read the ffx manifest instead we can more specifically
+  # filter on the "credentials" key, but for flash.sh the only indicator of
+  # unlock credentials is if they are installed in the unlock_creds/ dir.
+  jq_filter+=" | select((.fastboot_flash != null) or (.path | startswith(\"unlock_creds/\")))"
 elif [[ "${mode}" == mkzedboot ]]; then
   manifest="${IMAGES_JSON}"
   jq_filter+=" |  select(.mkzedboot_mode != null)"
