@@ -16,7 +16,7 @@
         {
             name: "session-manager",
             url: "fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm",
-            environment: "#full-resolver-env",
+            environment: "#session-env",
         },
         {
             name: "system-update-committer",
