@@ -316,7 +316,7 @@ impl InformationRequesting {
             }
         }
 
-        let actions = std::array::IntoIter::new([
+        let actions = IntoIterator::into_iter([
             Action::CancelTimer(ClientTimerType::Retransmission),
             Action::ScheduleTimer(ClientTimerType::Refresh, information_refresh_time),
         ])
@@ -1828,7 +1828,7 @@ impl Requesting {
         }
 
         let actions =
-            std::array::IntoIter::new([Action::CancelTimer(ClientTimerType::Retransmission)])
+            IntoIterator::into_iter([Action::CancelTimer(ClientTimerType::Retransmission)])
                 .chain(
                     dns_servers.clone().map(|server_addrs| Action::UpdateDnsServers(server_addrs)),
                 )
