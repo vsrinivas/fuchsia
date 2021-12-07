@@ -31,6 +31,7 @@ if (is_host) {
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:shared_child",
     ]
     test_deps = [
       "//third_party/rust_crates:futures",

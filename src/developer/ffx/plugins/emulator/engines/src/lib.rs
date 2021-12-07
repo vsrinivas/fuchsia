@@ -12,9 +12,9 @@ pub mod serialization;
 
 use femu::FemuEngine;
 use qemu::QemuEngine;
-use serialization::SERIALIZE_FILE_NAME;
+use serialization::{read_from_disk, SERIALIZE_FILE_NAME};
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{bail, Context, Result};
 use ffx_emulator_common::config::{FfxConfigWrapper, EMU_INSTANCE_ROOT_DIR};
 use ffx_emulator_config::{
     DeviceConfig, EmulatorConfiguration, EmulatorEngine, EngineType, GuestConfig, HostConfig,
@@ -110,7 +110,8 @@ impl EngineBuilder {
         self
     }
 
-    /// Finalize and validate the configuration, set up the engine's instance directory, and return the built engine.
+    /// Finalize and validate the configuration, set up the engine's instance directory,
+    ///  and return the built engine.
     pub async fn build(mut self) -> Result<Box<dyn EmulatorEngine>> {
         // Set up the instance directory, now that we have enough information.
         self.emulator_configuration.runtime.instance_directory =
@@ -121,15 +122,19 @@ impl EngineBuilder {
         let filepath =
             self.emulator_configuration.runtime.instance_directory.join(SERIALIZE_FILE_NAME);
         if filepath.exists() {
-            return Err(anyhow!(
-                "Serialized engine file {:?} already exists. \
-                    Use a different name, or run `ffx emu shutdown {}` to clean up the old instance.",
-                filepath,
-                self.emulator_configuration.runtime.name
-            ));
-        } else {
-            log::debug!("Serialized engine file will be created at {:?}", filepath);
+            let engine =
+                read_from_disk(&self.emulator_configuration.runtime.instance_directory).await?;
+            if engine.is_running() {
+                bail!(
+                    "Emulator named {} is already running. \
+                        Use a different name, or run `ffx emu shutdown {}` \
+                        to shutdown the running emulator.",
+                    self.emulator_configuration.runtime.name,
+                    self.emulator_configuration.runtime.name
+                );
+            }
         }
+        log::debug!("Serialized engine file will be created at {:?}", filepath);
 
         // Build and validate the engine, then pass it back to the caller.
         let engine: Box<dyn EmulatorEngine> = match self.engine_type {

@@ -10,7 +10,7 @@
 use crate::{behaviors::FemuBehavior, serialization::SerializingEngine};
 use anyhow::Result;
 use async_trait::async_trait;
-use ffx_emulator_common::config::FfxConfigWrapper;
+use ffx_emulator_common::{config::FfxConfigWrapper, process};
 use ffx_emulator_config::{Behavior, EmulatorConfiguration, EmulatorEngine, EngineType};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -24,7 +24,7 @@ pub struct QemuEngine {
     pub(crate) ffx_config: FfxConfigWrapper,
 
     pub(crate) emulator_configuration: EmulatorConfiguration,
-    pub(crate) _pid: i32,
+    pub(crate) pid: u32,
     pub(crate) engine_type: EngineType,
 
     pub(crate) args: Vec<String>,
@@ -63,6 +63,10 @@ impl EmulatorEngine for QemuEngine {
     }
     fn engine_type(&self) -> EngineType {
         self.engine_type
+    }
+
+    fn is_running(&self) -> bool {
+        process::is_running(self.pid)
     }
 }
 

@@ -50,6 +50,11 @@ pub trait EmulatorEngine {
     /// Returns the EngineType used when building this engine. Each engine implementation should
     /// always return the same EngineType.
     fn engine_type(&self) -> EngineType;
+
+    /// Returns true if this instance of the emulator is currently running.
+    /// This is checked by using signal to the process id, no consideration is
+    /// made for multi threaded access.
+    fn is_running(&self) -> bool;
 }
 
 /// Collects the specific configurations into a single struct for ease of passing around.

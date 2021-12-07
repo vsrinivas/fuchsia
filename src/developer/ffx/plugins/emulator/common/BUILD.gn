@@ -12,12 +12,16 @@ if (is_host) {
     sources = [
       "src/config.rs",
       "src/lib.rs",
+      "src/process.rs",
     ]
     deps = [
       "//src/developer/ffx/config:lib",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:nix",
       "//third_party/rust_crates:serial_test",
+      "//third_party/rust_crates:shared_child",
+      "//third_party/rust_crates:signal-hook",
     ]
   }
 

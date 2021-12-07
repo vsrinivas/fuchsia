@@ -18,6 +18,12 @@ use {
 
 // These are constants for the keys accessed by ffx emulator plugin.
 
+/// FEMU tool.
+pub const FEMU_TOOL: &'static str = "aemu_internal";
+
+/// QEMU tool.
+pub const QEMU_TOOL: &'static str = "qemu";
+
 /// The SDK tool "fvm" used to modify fvm files.
 pub const FVM_HOST_TOOL: &'static str = "fvm";
 
