@@ -42,6 +42,12 @@ namespace {
 
 static constexpr const char kBootfsVmexName[] = "bootfs_vmex";
 
+constexpr std::string_view kBootsvcNextDefault =
+    "bin/component_manager,"
+    "fuchsia-boot:///#meta/root.cm,"
+    "--config,"
+    "/boot/config/component_manager";
+
 struct Resources {
   // TODO(smpham): Remove root resource.
   zx::resource root;
@@ -93,29 +99,55 @@ zx_status_t InitializeClock() {
   return ZX_OK;
 }
 
-// Parse ZBI_TYPE_IMAGE_ARGS item into boot args buffer
-zx_status_t ExtractBootArgsFromImage(std::vector<char>* buf, const zx::vmo& image_vmo,
-                                     bootsvc::ItemMap* item_map) {
+// Parse ZBI_TYPE_IMAGE_ARGS-encoded arguments out of the given ZBI.
+zx_status_t ExtractLegacyBootArgsFromImage(std::vector<char>* buf, const zx::vmo& image_vmo,
+                                           bootsvc::ItemMap* item_map) {
   auto it = item_map->find(bootsvc::ItemKey{ZBI_TYPE_IMAGE_ARGS, 0});
   if (it == item_map->end()) {
-    return ZX_ERR_NOT_FOUND;
+    return ZX_OK;
   }
 
   for (const bootsvc::ItemValue& value : it->second) {
     auto [offset, length] = value;
 
     auto payload = std::make_unique<char[]>(length);
-    zx_status_t status = image_vmo.read(payload.get(), offset, length);
-    if (status != ZX_OK) {
+    if (zx_status_t status = image_vmo.read(payload.get(), offset, length); status != ZX_OK) {
       return status;
     }
 
     std::string_view str(payload.get(), length);
-    status = bootsvc::ParseBootArgs(str, buf);
-    if (status != ZX_OK) {
+    if (zx_status_t status = bootsvc::ParseLegacyBootArgs(str, buf); status != ZX_OK) {
       return status;
     }
   }
+
+  item_map->erase(it);
+  return ZX_OK;
+}
+
+// Parse ZBI_TYPE_IMAGE_ARGS-encoded arguments out of the given ZBI.
+zx_status_t ExtractBootArgsFromImage(std::vector<char>* buf, const zx::vmo& image_vmo,
+                                     bootsvc::ItemMap* item_map,
+                                     std::optional<std::string>* next_program) {
+  auto it = item_map->find(bootsvc::ItemKey{ZBI_TYPE_CMDLINE, 0});
+  if (it == item_map->end()) {
+    return ZX_OK;
+  }
+
+  for (const bootsvc::ItemValue& value : it->second) {
+    auto [offset, length] = value;
+
+    auto payload = std::make_unique<char[]>(length);
+    if (zx_status_t status = image_vmo.read(payload.get(), offset, length); status != ZX_OK) {
+      return status;
+    }
+
+    std::string_view str(payload.get(), length);
+    if (auto next = bootsvc::ParseBootArgs(str, buf); next) {
+      *next_program = next;
+    }
+  }
+
   item_map->erase(it);
   return ZX_OK;
 }
@@ -145,31 +177,28 @@ zx_status_t ExtractBootArgsFromBootfs(std::vector<char>* buf,
 
   // Parse boot arguments file from bootfs.
   std::string_view str(config.get(), file_size);
-  return bootsvc::ParseBootArgs(std::move(str), buf);
+  return bootsvc::ParseLegacyBootArgs(str, buf);
 }
 
-// Load the boot arguments from bootfs/ZBI_TYPE_IMAGE_ARGS and environment variables.
+// Load the boot arguments from the BOOTFS and select, text-formatted argument
+// ZBI types.
 zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
                          const zx::vmo& image_vmo, bootsvc::ItemMap* item_map, zx::vmo* out,
-                         uint64_t* size) {
+                         uint64_t* size, std::optional<std::string>* next_program) {
   std::vector<char> boot_args;
   zx_status_t status;
 
-  status = ExtractBootArgsFromImage(&boot_args, image_vmo, item_map);
-  ZX_ASSERT_MSG(((status == ZX_OK) || (status == ZX_ERR_NOT_FOUND)),
-                "Retrieving boot args failed: %s\n", zx_status_get_string(status));
+  status = ExtractBootArgsFromImage(&boot_args, image_vmo, item_map, next_program);
+  ZX_ASSERT_MSG(status == ZX_OK, "Retrieving CMDLINE boot args failed: %s\n",
+                zx_status_get_string(status));
+
+  status = ExtractLegacyBootArgsFromImage(&boot_args, image_vmo, item_map);
+  ZX_ASSERT_MSG(status == ZX_OK, "Retrieving IMAGE_ARGS boot args failed: %s\n",
+                zx_status_get_string(status));
 
   status = ExtractBootArgsFromBootfs(&boot_args, bootfs);
   ZX_ASSERT_MSG(status == ZX_OK, "Retrieving boot config failed: %s\n",
                 zx_status_get_string(status));
-
-  // Add boot arguments from environment variables.
-  for (char** e = environ; *e != nullptr; e++) {
-    for (const char* x = *e; *x != 0; x++) {
-      boot_args.push_back(*x);
-    }
-    boot_args.push_back(0);
-  }
 
   // Copy boot arguments into VMO.
   zx::vmo args_vmo;
@@ -201,34 +230,21 @@ zx_status_t LoadBootArgs(const fbl::RefPtr<bootsvc::BootfsService>& bootfs,
 // - A loader that can load libraries from /boot, hosted by bootsvc
 //
 // If the next process terminates, bootsvc will quit.
-void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
+void LaunchNextProcess(const std::vector<std::string>& args,
+                       fbl::RefPtr<bootsvc::BootfsService> bootfs,
                        fbl::RefPtr<bootsvc::SvcfsService> svcfs,
                        std::shared_ptr<bootsvc::BootfsLoaderService> loader_svc,
                        Resources& resources, const zx::debuglog& log, async::Loop& loop,
                        const zx::vmo& bootargs_vmo, const uint64_t bootargs_size) {
-  const char* bootsvc_next = getenv("bootsvc.next");
-  if (bootsvc_next == nullptr) {
-    // Note that arguments are comma-delimited.
-    bootsvc_next =
-        "bin/component_manager,"
-        "fuchsia-boot:///#meta/root.cm,"
-        "--config,"
-        "/boot/config/component_manager";
-  }
-
-  // Split the bootsvc.next value into 1 or more arguments using ',' as a
-  // delimiter.
-  printf("bootsvc: bootsvc.next = %s\n", bootsvc_next);
-  std::vector<std::string> next_args = bootsvc::SplitString(bootsvc_next, ',');
+  ZX_DEBUG_ASSERT(!args.empty());
 
   // Open the executable we will start next
   zx::vmo program;
   uint64_t file_size;
-  const char* next_program = next_args[0].c_str();
+  const char* next_program = args[0].c_str();
   zx_status_t status = bootfs->Open(next_program, /*executable=*/true, &program, &file_size);
   ZX_ASSERT_MSG(status == ZX_OK, "bootsvc: failed to open '%s': %s\n", next_program,
                 zx_status_get_string(status));
-
   // Get the bootfs fuchsia.io.Node service channel that we will hand to the
   // next process in the boot chain.
   zx::channel bootfs_conn;
@@ -276,12 +292,11 @@ void LaunchNextProcess(fbl::RefPtr<bootsvc::BootfsService> bootfs,
   ZX_ASSERT_MSG(status == ZX_OK && root_rsrc_dup.is_valid(), "Failed to duplicate root resource");
   launchpad_add_handle(lp, root_rsrc_dup.release(), PA_HND(PA_RESOURCE, 0));
 
-  int argc = static_cast<int>(next_args.size());
-  const char* argv[argc];
-  for (int i = 0; i < argc; ++i) {
-    argv[i] = next_args[i].c_str();
+  auto argv = std::make_unique<const char*[]>(args.size());
+  for (size_t i = 0; i < args.size(); ++i) {
+    argv[i] = args[i].c_str();
   }
-  launchpad_set_args(lp, argc, argv);
+  launchpad_set_args(lp, static_cast<int>(args.size()), argv.get());
 
   ZX_ASSERT(count <= std::size(nametable));
   launchpad_set_nametable(lp, count, nametable);
@@ -424,10 +439,14 @@ int main(int argc, char** argv) {
   printf("bootsvc: Loading boot arguments...\n");
   zx::vmo args_vmo;
   uint64_t args_size = 0;
-  status = LoadBootArgs(bootfs_svc, image_vmo, &item_map, &args_vmo, &args_size);
+  std::optional<std::string> next_program;
+  status = LoadBootArgs(bootfs_svc, image_vmo, &item_map, &args_vmo, &args_size, &next_program);
   ZX_ASSERT_MSG(status == ZX_OK, "Loading boot arguments failed: %s\n",
                 zx_status_get_string(status));
-
+  if (!next_program) {
+    next_program = kBootsvcNextDefault;
+  }
+  printf("bootsvc: bootsvc.next = %s\n", next_program->c_str());
   // Set up the svcfs service
   printf("bootsvc: Creating svcfs service...\n");
   fbl::RefPtr<bootsvc::SvcfsService> svcfs_svc = bootsvc::SvcfsService::Create(loop.dispatcher());
@@ -452,7 +471,8 @@ int main(int argc, char** argv) {
   // it may issue requests to the loader, which runs in the async loop that
   // starts running after this.
   printf("bootsvc: Launching next process...\n");
-  std::thread(LaunchNextProcess, bootfs_svc, svcfs_svc, loader_svc, std::ref(resources),
+  std::vector<std::string> next_args = bootsvc::SplitString(*next_program, ',');
+  std::thread(LaunchNextProcess, next_args, bootfs_svc, svcfs_svc, loader_svc, std::ref(resources),
               std::cref(log), std::ref(loop), std::cref(args_vmo), args_size)
       .detach();
 

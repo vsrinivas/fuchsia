@@ -13,7 +13,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
 )
 
-var cmdline = []string{"devmgr.log-to-debuglog", "kernel.oom.behavior=reboot"}
+var cmdline = []string{"devmgr.log-to-debuglog=true", "kernel.oom.behavior=reboot"}
 
 // Triggers the OOM signal without leaking memory. Verifies that fileystems are shut down and the
 // system reboots in a somewhat orderly fashion.

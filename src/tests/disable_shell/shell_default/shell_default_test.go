@@ -21,7 +21,7 @@ func TestShellDefault(t *testing.T) {
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exPath, "test_data"), emulator.DistributionParams{Emulator: emulator.Qemu})
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog")
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
 	i := distro.Create(device)
 	i.Start()
 	i.WaitForLogMessage("console.shell: enabled")

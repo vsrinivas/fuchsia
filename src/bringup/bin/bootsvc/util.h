@@ -9,6 +9,7 @@
 #include <lib/zx/vmo.h>
 
 #include <map>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -51,9 +52,16 @@ using BootloaderFileMap = std::map<std::string, ItemValue>;
 zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap* out_factory_map,
                               BootloaderFileMap* out_bootloader_file_map);
 
-// Parse boot arguments in |str|, and add them to |buf|. |buf| is a series of
-// null-separated "key" or "key=value" pairs.
-zx_status_t ParseBootArgs(std::string_view str, std::vector<char>* buf);
+// Parses ' '-separated boot arguments in |str|, and adds them to |buf|. |buf|
+// is a series of NUL-separated "key" or "key=value" pairs. Furthermore, if
+// `bootsvc.next` is present among the given arguments, its value will be
+// returned.
+std::optional<std::string> ParseBootArgs(std::string_view str, std::vector<char>* buf);
+
+// Parses boot arguments in |str| as a ZBI_TYPE_IMAGE_ARGS payload (see
+// <zircon/boot/image.h> for more information), and adds them to |buf|. |buf|
+// is a series of NUL-separated "key" or "key=value" pairs.
+zx_status_t ParseLegacyBootArgs(std::string_view str, std::vector<char>* buf);
 
 // Create a connection to a |vnode| in a |vfs|.
 zx_status_t CreateVnodeConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> vnode,

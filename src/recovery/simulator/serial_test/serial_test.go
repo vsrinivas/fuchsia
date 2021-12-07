@@ -22,7 +22,7 @@ func TestSerialShellEnabled(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.Initrd = "recovery-eng"
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog")
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true")
 	i := distro.Create(device)
 	i.Start()
 	i.WaitForLogMessage("Launching /boot/bin/sh (sh:console)")

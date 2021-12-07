@@ -24,6 +24,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls/system.h>
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <string>
 #include <utility>
@@ -348,8 +350,26 @@ TEST(BootsvcIntegrationTest, VdsosPresent) {
 
 // Test that the boot arguments are extracted from both vbmeta and bootfs.
 TEST(BootsvcIntegrationTest, BootArguments) {
-  EXPECT_STR_EQ(environ[0], "testkey=testvalue");
-  EXPECT_STR_EQ(environ[1], "bootfskey=bootfsvalue");
+  // Some expected environment values, in no particular order.
+  constexpr std::array kExpectedValues = {
+      "userboot.next=bin/bootsvc",
+      "bootsvc.next=bin/bootsvc-integration-test,testargument",
+      "testkey=testvalue",
+      "bootfskey=bootfsvalue",
+  };
+
+  ZX_ASSERT(environ);
+  auto environ_end = environ;
+  while (*environ_end != nullptr) {
+    ++environ_end;
+  }
+
+  std::vector<std::string_view> env(environ, environ_end);
+  for (std::string_view expected : kExpectedValues) {
+    EXPECT_NE(env.end(), std::find(env.begin(), env.end(), expected),
+              "could not find \"%.*s\" in environment", static_cast<int>(expected.size()),
+              expected.data());
+  }
 }
 
 // Test that we can get the resources passed from the kernel.

@@ -53,7 +53,7 @@ TEST(UtilTest, TestSplitString) {
 }
 
 // Make sure that we can parse boot args from a configuration string
-TEST(UtilTest, TestParseBootArgs) {
+TEST(UtilTest, TestParseLegacyBootArgs) {
   const char config1[] = R"(
 # comment
 key
@@ -63,7 +63,7 @@ key=value
 
   // Parse a valid config.
   std::vector<char> buf;
-  zx_status_t status = bootsvc::ParseBootArgs(config1, &buf);
+  zx_status_t status = bootsvc::ParseLegacyBootArgs(config1, &buf);
   ASSERT_EQ(ZX_OK, status);
 
   const char expected[] = "key\0key=value";
@@ -72,12 +72,12 @@ key=value
 
   // Parse a config that doesn't ends with newline.
   const char config2[] = "key=value";
-  status = bootsvc::ParseBootArgs(config2, &buf);
+  status = bootsvc::ParseLegacyBootArgs(config2, &buf);
   ASSERT_EQ(ZX_OK, status);
 
   // Parse an invalid config.
   const char config3[] = "k ey=value";
-  status = bootsvc::ParseBootArgs(config3, &buf);
+  status = bootsvc::ParseLegacyBootArgs(config3, &buf);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
 }
 

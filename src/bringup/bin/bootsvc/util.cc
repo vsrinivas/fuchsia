@@ -5,12 +5,18 @@
 #include "util.h"
 
 #include <ctype.h>
+#include <lib/boot-options/word-view.h>
+#include <lib/stdcompat/string_view.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
+
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include <fbl/algorithm.h>
 #include <safemath/checked_math.h>
@@ -20,9 +26,12 @@
 
 namespace {
 
+constexpr std::string_view kBootsvcNextArg = "bootsvc.next=";
+
 // Returns true for boot item types that should be stored.
 bool StoreItem(uint32_t type) {
   switch (type) {
+    case ZBI_TYPE_CMDLINE:
     case ZBI_TYPE_CRASHLOG:
     case ZBI_TYPE_KERNEL_DRIVER:
     case ZBI_TYPE_PLATFORM_ID:
@@ -247,7 +256,23 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
   return ZX_OK;
 }
 
-zx_status_t ParseBootArgs(std::string_view str, std::vector<char>* buf) {
+std::optional<std::string> ParseBootArgs(std::string_view str, std::vector<char>* buf) {
+  buf->reserve(buf->size() + str.size());
+  std::optional<std::string> next;
+  for (std::string_view word : WordView(str)) {
+    for (char c : word) {
+      buf->push_back(c);
+    }
+    buf->push_back('\0');
+
+    if (cpp20::starts_with(word, kBootsvcNextArg)) {
+      next = word.substr(kBootsvcNextArg.size());
+    }
+  }
+  return next;
+}
+
+zx_status_t ParseLegacyBootArgs(std::string_view str, std::vector<char>* buf) {
   buf->reserve(buf->size() + str.size());
   for (auto it = str.begin(); it != str.end();) {
     // Skip any leading whitespace.

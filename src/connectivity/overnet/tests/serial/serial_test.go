@@ -41,7 +41,7 @@ func TestOvernetSerial(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.Initrd = "overnet"
-	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog", "console.shell=false kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true")
+	device.KernelArgs = append(device.KernelArgs, "devmgr.log-to-debuglog=true", "console.shell=false kernel.enable-debugging-syscalls=true", "kernel.enable-serial-syscalls=true")
 	i := distro.Create(device)
 
 	i.StartPiped(startAscendd(t, exDir))
