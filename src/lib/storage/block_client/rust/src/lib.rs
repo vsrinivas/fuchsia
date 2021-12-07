@@ -59,25 +59,25 @@ fn op_code_str(op_code: u32) -> &'static str {
 
 #[repr(C)]
 #[derive(Default)]
-struct BlockFifoRequest {
-    op_code: u32,
-    request_id: u32,
-    group_id: u16,
-    vmoid: u16,
-    block_count: u32,
-    vmo_block: u64,
-    device_block: u64,
-    trace_flow_id: u64,
+pub struct BlockFifoRequest {
+    pub op_code: u32,
+    pub request_id: u32,
+    pub group_id: u16,
+    pub vmoid: u16,
+    pub block_count: u32,
+    pub vmo_block: u64,
+    pub device_block: u64,
+    pub trace_flow_id: u64,
 }
 
 #[repr(C)]
 #[derive(Default)]
-struct BlockFifoResponse {
-    status: i32,
-    request_id: u32,
-    group_id: u16,
+pub struct BlockFifoResponse {
+    pub status: i32,
+    pub request_id: u32,
+    pub group_id: u16,
     reserved1: u16,
-    count: u32,
+    pub count: u32,
     reserved2: u64,
     reserved3: u64,
     reserved4: u64,

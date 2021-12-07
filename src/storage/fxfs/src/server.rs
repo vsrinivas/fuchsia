@@ -26,6 +26,7 @@ use {
     },
 };
 
+pub mod device;
 pub mod directory;
 pub mod errors;
 pub mod file;
