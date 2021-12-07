@@ -66,9 +66,22 @@ impl From<ItemRef<'_, AllocatorKey, AllocatorValue>> for Allocation {
 }
 
 #[derive(Clone, Debug)]
+#[allow(dead_code)]
+pub struct Key(String);
+
+impl<K: std::fmt::Debug, V> From<ItemRef<'_, K, V>> for Key {
+    fn from(item: ItemRef<'_, K, V>) -> Self {
+        Self(format!("{:?}", item.key))
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum FsckFatal {
     MalformedGraveyard,
     MalformedStore(u64),
+    MalformedLayerFile(u64, u64),
+    MisOrderedLayerFile(u64, u64),
+    OverlappingKeysInLayerFile(u64, u64, Key, Key),
     MissingStoreInfo(u64),
     MissingLayerFile(u64, u64),
     AllocationMismatch(Allocation, Allocation),
@@ -87,6 +100,21 @@ impl FsckFatal {
             }
             FsckFatal::MalformedStore(id) => {
                 format!("Object store {} is malformed; root store is inconsistent", id)
+            }
+            FsckFatal::MalformedLayerFile(store_id, layer_file_id) => {
+                format!("Layer file {} in object store {} is malformed", layer_file_id, store_id)
+            }
+            FsckFatal::MisOrderedLayerFile(store_id, layer_file_id) => {
+                format!(
+                    "Layer file {} for store/allocator {} contains out-of-order records",
+                    store_id, layer_file_id
+                )
+            }
+            FsckFatal::OverlappingKeysInLayerFile(store_id, layer_file_id, key1, key2) => {
+                format!(
+                    "Layer file {} for store/allocator {} contains overlapping keys {:?} and {:?}",
+                    store_id, layer_file_id, key1, key2
+                )
             }
             FsckFatal::MissingStoreInfo(id) => {
                 format!("Object store {} has no store info object", id)

@@ -13,7 +13,7 @@ use {
             skip_list_layer::SkipListLayer,
             types::{
                 BoxedLayerIterator, Item, ItemRef, Layer, LayerIterator, MutableLayer, NextKey,
-                OrdLowerBound, OrdUpperBound,
+                OrdLowerBound, OrdUpperBound, RangeKey,
             },
             LSMTree,
         },
@@ -310,6 +310,13 @@ impl Ord for AllocatorKey {
 impl PartialOrd for AllocatorKey {
     fn partial_cmp(&self, other: &AllocatorKey) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl RangeKey for AllocatorKey {
+    fn overlaps(&self, other: &Self) -> bool {
+        self.device_range.start < other.device_range.end
+            && self.device_range.end > other.device_range.start
     }
 }
 

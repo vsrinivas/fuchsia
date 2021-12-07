@@ -625,6 +625,11 @@ impl ObjectStore {
         self.store_info.lock().unwrap().info().unwrap().clone()
     }
 
+    /// Returns None if called during journal replay.
+    pub fn store_info_handle_object_id(&self) -> Option<u64> {
+        self.store_info_handle.get().map(|h| h.object_id())
+    }
+
     /// Opens a store.
     pub async fn open(&self) -> Result<(), Error> {
         if self.parent_store.is_none() || self.store_info_handle.get().is_some() {

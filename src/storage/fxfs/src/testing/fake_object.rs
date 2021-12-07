@@ -123,10 +123,13 @@ pub struct FakeObjectHandle {
 }
 
 impl FakeObjectHandle {
+    pub fn new_with_block_size(object: Arc<FakeObject>, block_size: usize) -> Self {
+        let allocator =
+            BufferAllocator::new(block_size, Box::new(MemBufferSource::new(32 * 1024 * 1024)));
+        Self { object, allocator }
+    }
     pub fn new(object: Arc<FakeObject>) -> Self {
-        // TODO(jfsulliv): Should this take an allocator as parameter?
-        let allocator = BufferAllocator::new(512, Box::new(MemBufferSource::new(32 * 1024 * 1024)));
-        FakeObjectHandle { object, allocator }
+        Self::new_with_block_size(object, 512)
     }
 }
 

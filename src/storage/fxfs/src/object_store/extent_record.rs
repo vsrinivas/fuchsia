@@ -5,7 +5,7 @@
 // TODO(jfsulliv): need validation after deserialization.
 
 use {
-    crate::lsm_tree::types::{NextKey, OrdLowerBound, OrdUpperBound},
+    crate::lsm_tree::types::{NextKey, OrdLowerBound, OrdUpperBound, RangeKey},
     serde::{Deserialize, Serialize},
     std::cmp::{max, min},
     std::ops::Range,
@@ -119,6 +119,14 @@ impl PartialOrd for ExtentKey {
 impl NextKey for ExtentKey {
     fn next_key(&self) -> Option<Self> {
         Some(ExtentKey::new(self.object_id, self.attribute_id, self.range.end..self.range.end + 1))
+    }
+}
+
+impl RangeKey for ExtentKey {
+    fn overlaps(&self, other: &Self) -> bool {
+        self.object_id == other.object_id
+            && self.attribute_id == other.attribute_id
+            && self.overlap(other).is_some()
     }
 }
 

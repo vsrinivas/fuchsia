@@ -11,8 +11,8 @@ use {
     std::{fmt::Debug, sync::Arc},
 };
 
-// Keys and values need to implement the following traits.  For merging, they need to implement
-// MergeableKey.  TODO: Use trait_alias when available.
+/// Keys and values need to implement the following traits.  For merging, they need to implement
+/// MergeableKey.  TODO: Use trait_alias when available.
 pub trait Key:
     Clone
     + OrdUpperBound
@@ -25,6 +25,12 @@ pub trait Key:
     + 'static
 {
 }
+
+pub trait RangeKey: Key {
+    /// Returns if two keys overlap.
+    fn overlaps(&self, other: &Self) -> bool;
+}
+
 impl<K> Key for K where
     K: Clone
         + OrdUpperBound

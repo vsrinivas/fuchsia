@@ -5,10 +5,14 @@
 use {
     crate::{
         lsm_tree::{
+            simple_persistent_layer::SimplePersistentLayer,
             skip_list_layer::SkipListLayer,
-            types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
+            types::{
+                BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, MutableLayer,
+                OrdUpperBound, RangeKey, Value,
+            },
         },
-        object_handle::{ObjectHandle, ObjectHandleExt},
+        object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             allocator::{
                 self, Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
@@ -42,17 +46,14 @@ mod tests;
 pub struct FsckOptions<F: Fn(&FsckError)> {
     /// Whether to halt fsck on the first warning.
     halt_on_warning: bool,
+    /// Whether to perform slower, more complete checks.
+    do_slow_passes: bool,
     /// A callback to be invoked for each detected error (fatal or not).
     on_error: F,
 }
 
 // TODO(csuter): for now, this just checks allocations. We should think about adding checks for:
 //
-//  + Keys should be in-order.
-//  + Objects should either be <object>[<attribute>[<extent>...]...], or <tombstone>.
-//  + Values need to match keys.
-//  + No overlapping keys within a single layer.
-//  + We might want to individually check layers.
 //  + Extents should be aligned and end > start.
 //  + No child volumes in anything other than the root store.
 //  + The root parent object store ID and root object store ID must not conflict with any other
@@ -64,6 +65,7 @@ pub struct FsckOptions<F: Fn(&FsckError)> {
 pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
     let options = FsckOptions {
         halt_on_warning: false,
+        do_slow_passes: true,
         on_error: |err: &FsckError| {
             if err.is_fatal() {
                 log::error!("{:?}", err.to_string())
@@ -122,6 +124,19 @@ pub async fn fsck_with_options<F: Fn(&FsckError)>(
     let allocator = filesystem.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
     root_store_root_objects.append(&mut allocator.parent_objects());
 
+    if fsck.options.do_slow_passes {
+        // Scan each layer file for the allocator.
+        let layer_set = allocator.tree().immutable_layer_set();
+        for layer in layer_set.layers {
+            fsck.check_layer_file_contents(
+                allocator.object_id(),
+                layer.handle().map(|h| h.object_id()).unwrap_or(INVALID_OBJECT_ID),
+                layer.clone(),
+            )
+            .await?;
+        }
+    }
+
     // Finally scan the root object store.
     fsck.scan_store(root_store, &root_store_root_objects, &graveyard).await?;
 
@@ -165,6 +180,22 @@ pub async fn fsck_with_options<F: Fn(&FsckError)>(
     Ok(())
 }
 
+trait KeyExt: PartialEq {
+    fn overlaps(&self, other: &Self) -> bool {
+        self == other
+    }
+}
+
+// Without https://rust-lang.github.io/rfcs/1210-impl-specialization.html, we can't have one
+// behaviour for RangeKey and another for Key, unless we specify all possible Keys.
+impl KeyExt for ObjectKey {}
+
+impl<K: RangeKey + PartialEq> KeyExt for K {
+    fn overlaps(&self, other: &Self) -> bool {
+        RangeKey::overlaps(self, other)
+    }
+}
+
 struct Fsck<F: Fn(&FsckError)> {
     options: FsckOptions<F>,
     allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
@@ -205,56 +236,122 @@ impl<F: Fn(&FsckError)> Fsck<F> {
         root_store_root_objects: &mut Vec<u64>,
     ) -> Result<(), Error> {
         let root_store = filesystem.root_store();
-        match filesystem.object_manager().open_store(store_id).await {
-            Ok(store) => {
-                self.scan_store(&store, &store.root_objects(), graveyard).await?;
-                let mut parent_objects = store.parent_objects();
-                root_store_root_objects.append(&mut parent_objects);
-                Ok(())
-            }
-            Err(e) => {
-                // Try to find out more about why the store failed to open.
-                let handle = self.assert(
-                    ObjectStore::open_object(&root_store, store_id, HandleOptions::default()).await,
-                    FsckFatal::MissingStoreInfo(store_id),
-                )?;
-                let layer_file_object_ids = {
-                    let info = if handle.get_size() > 0 {
-                        let serialized_info =
-                            handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
-                        self.assert(
-                            deserialize_from(&serialized_info[..])
-                                .context("Failed to deserialize StoreInfo"),
-                            FsckFatal::MalformedStore(store_id),
-                        )?
-                    } else {
-                        // The store_info will be absent for a newly created and empty object store.
-                        StoreInfo::default()
-                    };
-                    // We don't replay the store ReplayInfo here, since it doesn't affect what we
-                    // want to check (mainly the existence of the layer files).  If that changes,
-                    // we'll need to update this.
-                    let mut object_ids = vec![];
-                    object_ids.extend_from_slice(&info.object_tree_layers[..]);
-                    object_ids.extend_from_slice(&info.extent_tree_layers[..]);
-                    object_ids
-                };
-                for layer_file_object_id in layer_file_object_ids {
-                    self.assert(
-                        ObjectStore::open_object(
-                            &root_store,
-                            layer_file_object_id,
-                            HandleOptions::default(),
-                        )
-                        .await,
-                        FsckFatal::MissingLayerFile(store_id, layer_file_object_id),
-                    )?;
-                    // TODO(fxbug.dev/87381): Check the individual layers files.
-                }
-                log::warn!("Object store failed to open but no issues were detected by fsck.");
-                Err(e)
-            }
+
+        // Manually open the store so we can do our own validation.  Later, we will call open_store
+        // to get a regular ObjectStore wrapper.
+        let handle = self.assert(
+            ObjectStore::open_object(&root_store, store_id, HandleOptions::default()).await,
+            FsckFatal::MissingStoreInfo(store_id),
+        )?;
+        let (object_layer_file_object_ids, extent_layer_file_object_ids) = {
+            let info = if handle.get_size() > 0 {
+                let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
+                self.assert(
+                    deserialize_from(&serialized_info[..])
+                        .context("Failed to deserialize StoreInfo"),
+                    FsckFatal::MalformedStore(store_id),
+                )?
+            } else {
+                // The store_info will be absent for a newly created and empty object store.
+                StoreInfo::default()
+            };
+            // We don't replay the store ReplayInfo here, since it doesn't affect what we
+            // want to check (mainly the existence of the layer files).  If that changes,
+            // we'll need to update this.
+            (info.object_tree_layers.clone(), info.extent_tree_layers.clone())
+        };
+        for layer_file_object_id in object_layer_file_object_ids {
+            self.check_layer_file::<ObjectKey, ObjectValue>(
+                &root_store,
+                store_id,
+                layer_file_object_id,
+            )
+            .await?;
         }
+        for layer_file_object_id in extent_layer_file_object_ids {
+            self.check_layer_file::<ExtentKey, ExtentValue>(
+                &root_store,
+                store_id,
+                layer_file_object_id,
+            )
+            .await?;
+        }
+
+        let store = filesystem.object_manager().open_store(store_id).await?;
+        self.scan_store(&store, &store.root_objects(), graveyard).await?;
+        let mut parent_objects = store.parent_objects();
+        root_store_root_objects.append(&mut parent_objects);
+        Ok(())
+    }
+
+    async fn check_layer_file<
+        K: Key + KeyExt + OrdUpperBound + std::fmt::Debug,
+        V: Value + std::fmt::Debug,
+    >(
+        &self,
+        root_store: &Arc<ObjectStore>,
+        store_object_id: u64,
+        layer_file_object_id: u64,
+    ) -> Result<(), Error> {
+        let layer_file = self.assert(
+            ObjectStore::open_object(root_store, layer_file_object_id, HandleOptions::default())
+                .await,
+            FsckFatal::MissingLayerFile(store_object_id, layer_file_object_id),
+        )?;
+        if self.options.do_slow_passes {
+            // TODO(ripper): When we have multiple layer file formats, we'll need some way of
+            // detecting which format we are dealing with.  For now, we just assume it's
+            // SimplePersistentLayer.
+            let layer = SimplePersistentLayer::open(layer_file).await?;
+            self.check_layer_file_contents(
+                store_object_id,
+                layer_file_object_id,
+                layer as Arc<dyn Layer<K, V>>,
+            )
+            .await?;
+        }
+        Ok(())
+    }
+
+    async fn check_layer_file_contents<
+        K: Key + KeyExt + OrdUpperBound + std::fmt::Debug,
+        V: Value + std::fmt::Debug,
+    >(
+        &self,
+        store_object_id: u64,
+        layer_file_object_id: u64,
+        layer: Arc<dyn Layer<K, V>>,
+    ) -> Result<(), Error> {
+        let mut iter: BoxedLayerIterator<'_, K, V> = self.assert(
+            layer.seek(Bound::Unbounded).await,
+            FsckFatal::MalformedLayerFile(store_object_id, layer_file_object_id),
+        )?;
+
+        let mut last_item: Option<Item<K, V>> = None;
+        while let Some(item) = iter.get() {
+            if let Some(last) = last_item {
+                if !last.key.cmp_upper_bound(&item.key).is_le() {
+                    self.error(FsckFatal::MisOrderedLayerFile(
+                        store_object_id,
+                        layer_file_object_id,
+                    ))?;
+                }
+                if last.key.overlaps(&item.key) {
+                    self.error(FsckFatal::OverlappingKeysInLayerFile(
+                        store_object_id,
+                        layer_file_object_id,
+                        item.into(),
+                        last.as_item_ref().into(),
+                    ))?;
+                }
+            }
+            last_item = Some(item.cloned());
+            self.assert(
+                iter.advance().await,
+                FsckFatal::MalformedLayerFile(store_object_id, layer_file_object_id),
+            )?;
+        }
+        Ok(())
     }
 
     async fn scan_store(

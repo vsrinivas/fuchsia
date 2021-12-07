@@ -4,26 +4,32 @@
 
 use {
     crate::{
-        lsm_tree::types::{Item, ItemRef, LayerIterator},
-        object_handle::ObjectHandle,
+        lsm_tree::{
+            simple_persistent_layer::SimplePersistentLayerWriter,
+            types::{Item, ItemRef, LayerIterator, LayerWriter},
+        },
+        object_handle::{ObjectHandle, Writer},
         object_store::{
             allocator::{
                 Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
             },
             crypt::InsecureCrypt,
             directory::Directory,
+            extent_record::{ExtentKey, ExtentValue},
             filesystem::{Filesystem, FxFilesystem, Mutations, OpenFxFilesystem, OpenOptions},
             fsck::{
                 errors::{FsckError, FsckFatal, FsckWarning},
                 fsck_with_options, FsckOptions,
             },
             object_record::ObjectDescriptor,
+            object_record::{ObjectKey, ObjectValue},
             transaction::{self, Options, TransactionHandler},
             volume::create_root_volume,
             HandleOptions, ObjectStore,
         },
     },
     anyhow::{Context, Error},
+    bincode::serialize_into,
     fuchsia_async as fasync,
     matches::assert_matches,
     std::{
@@ -70,6 +76,7 @@ impl FsckTest {
     async fn run(&self, halt_on_warning: bool) -> Result<(), Error> {
         let options = FsckOptions {
             halt_on_warning,
+            do_slow_passes: true,
             on_error: |err| {
                 self.errors.lock().unwrap().push(err.clone());
             },
@@ -355,4 +362,192 @@ async fn test_missing_object_store_handle() {
     test.remount().await.expect("Remount failed");
     test.run(false).await.expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MissingStoreInfo(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_misordered_layer_file() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let device = fs.device();
+        let root_store = fs.root_store();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let volume = root_volume.new_volume("vol").await.unwrap();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let layer_handle = ObjectStore::create_object(
+            &root_store,
+            &mut transaction,
+            HandleOptions::default(),
+            Some(0),
+        )
+        .await
+        .expect("create_object failed");
+        transaction.commit().await.expect("commit failed");
+
+        {
+            let mut writer =
+                SimplePersistentLayerWriter::new(Writer::new(&layer_handle), fs.block_size());
+            let item1 = Item::new(ExtentKey::new(5, 0, 10..20), ExtentValue::None);
+            let item2 = Item::new(ExtentKey::new(0, 0, 0..5), ExtentValue::None);
+            writer.write(item1.as_item_ref()).await.expect("write failed");
+            writer.write(item2.as_item_ref()).await.expect("write failed");
+            writer.flush().await.expect("flush failed");
+        }
+        let mut store_info = volume.store_info();
+        store_info.extent_tree_layers = vec![layer_handle.object_id()];
+        let mut store_info_vec = vec![];
+        serialize_into(&mut store_info_vec, &store_info).expect("serialize failed");
+        let mut buf = device.allocate_buffer(store_info_vec.len());
+        buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
+
+        let store_info_handle = ObjectStore::open_object(
+            &root_store,
+            volume.store_info_handle_object_id().unwrap(),
+            HandleOptions::default(),
+        )
+        .await
+        .expect("open store info handle failed");
+        let mut transaction =
+            store_info_handle.new_transaction().await.expect("new_transaction failed");
+        store_info_handle
+            .txn_write(&mut transaction, 0, buf.as_ref())
+            .await
+            .expect("txn_write failed");
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MisOrderedLayerFile(..))]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_overlapping_keys_in_layer_file() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let device = fs.device();
+        let root_store = fs.root_store();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let volume = root_volume.new_volume("vol").await.unwrap();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let layer_handle = ObjectStore::create_object(
+            &root_store,
+            &mut transaction,
+            HandleOptions::default(),
+            Some(0),
+        )
+        .await
+        .expect("create_object failed");
+        transaction.commit().await.expect("commit failed");
+
+        {
+            let mut writer =
+                SimplePersistentLayerWriter::new(Writer::new(&layer_handle), fs.block_size());
+            let item1 = Item::new(ExtentKey::new(0, 0, 0..20), ExtentValue::None);
+            let item2 = Item::new(ExtentKey::new(0, 0, 10..30), ExtentValue::None);
+            writer.write(item1.as_item_ref()).await.expect("write failed");
+            writer.write(item2.as_item_ref()).await.expect("write failed");
+            writer.flush().await.expect("flush failed");
+        }
+        let mut store_info = volume.store_info();
+        store_info.extent_tree_layers = vec![layer_handle.object_id()];
+        let mut store_info_vec = vec![];
+        serialize_into(&mut store_info_vec, &store_info).expect("serialize failed");
+        let mut buf = device.allocate_buffer(store_info_vec.len());
+        buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
+
+        let store_info_handle = ObjectStore::open_object(
+            &root_store,
+            volume.store_info_handle_object_id().unwrap(),
+            HandleOptions::default(),
+        )
+        .await
+        .expect("open store info handle failed");
+        let mut transaction =
+            store_info_handle.new_transaction().await.expect("new_transaction failed");
+        store_info_handle
+            .txn_write(&mut transaction, 0, buf.as_ref())
+            .await
+            .expect("txn_write failed");
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckError::Fatal(FsckFatal::OverlappingKeysInLayerFile(..))]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_unexpected_record_in_layer_file() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let device = fs.device();
+        let root_store = fs.root_store();
+        let root_volume = create_root_volume(&fs).await.unwrap();
+        let volume = root_volume.new_volume("vol").await.unwrap();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let layer_handle = ObjectStore::create_object(
+            &root_store,
+            &mut transaction,
+            HandleOptions::default(),
+            Some(0),
+        )
+        .await
+        .expect("create_object failed");
+        transaction.commit().await.expect("commit failed");
+
+        {
+            // Write an ObjectKey/ObjectValue into a tree that expects an ExtentKey/ExtentValue.
+            let mut writer =
+                SimplePersistentLayerWriter::new(Writer::new(&layer_handle), fs.block_size());
+            let item = Item::new(ObjectKey::object(0), ObjectValue::None);
+            writer.write(item.as_item_ref()).await.expect("write failed");
+            writer.flush().await.expect("flush failed");
+        }
+        let mut store_info = volume.store_info();
+        store_info.extent_tree_layers = vec![layer_handle.object_id()];
+        let mut store_info_vec = vec![];
+        serialize_into(&mut store_info_vec, &store_info).expect("serialize failed");
+        let mut buf = device.allocate_buffer(store_info_vec.len());
+        buf.as_mut_slice().copy_from_slice(&store_info_vec[..]);
+
+        let store_info_handle = ObjectStore::open_object(
+            &root_store,
+            volume.store_info_handle_object_id().unwrap(),
+            HandleOptions::default(),
+        )
+        .await
+        .expect("open store info handle failed");
+        let mut transaction =
+            store_info_handle.new_transaction().await.expect("new_transaction failed");
+        store_info_handle
+            .txn_write(&mut transaction, 0, buf.as_ref())
+            .await
+            .expect("txn_write failed");
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(false).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckError::Fatal(FsckFatal::MalformedLayerFile(..))]);
 }

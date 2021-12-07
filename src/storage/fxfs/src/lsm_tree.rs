@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 pub mod merge;
-mod simple_persistent_layer;
+pub mod simple_persistent_layer;
 pub mod skip_list_layer;
 pub mod types;
 
@@ -33,9 +33,8 @@ pub async fn layers_from_handles<K: Key, V: Value>(
 ) -> Result<Vec<Arc<dyn Layer<K, V>>>, Error> {
     let mut layers = Vec::new();
     for handle in Vec::from(handles) {
-        let block_size = handle.block_size();
         layers.push(
-            simple_persistent_layer::SimplePersistentLayer::open(handle, block_size).await?
+            simple_persistent_layer::SimplePersistentLayer::open(handle).await?
                 as Arc<dyn Layer<K, V>>,
         );
     }

@@ -105,11 +105,12 @@ impl SimplePersistentLayer {
     /// Opens an existing layer that is accessible via |object_handle| (which provides a read
     /// interface to the object).  The layer should have been written prior using
     /// SimplePersistentLayerWriter.
-    pub async fn open(
-        object_handle: impl ReadObjectHandle + 'static,
-        block_size: u64,
-    ) -> Result<Arc<Self>, Error> {
+    pub async fn open(object_handle: impl ReadObjectHandle + 'static) -> Result<Arc<Self>, Error> {
         let size = object_handle.get_size();
+        // TODO(ripper): Eventually we should be storing a chunk size in a header of some sort for
+        // the layer file.  For now we assume the chunk size is the same as the filesystem block
+        // size, although it need not be so.
+        let block_size = object_handle.block_size();
         Ok(Arc::new(SimplePersistentLayer {
             object_handle: Arc::new(object_handle),
             block_size,
@@ -300,7 +301,7 @@ mod tests {
             }
             writer.flush().await.expect("flush failed");
         }
-        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
+        let layer = SimplePersistentLayer::open(handle).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 0..ITEM_COUNT {
             let ItemRef { key, value, .. } = iterator.get().expect("missing item");
@@ -323,7 +324,7 @@ mod tests {
             }
             writer.flush().await.expect("flush failed");
         }
-        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
+        let layer = SimplePersistentLayer::open(handle).await.expect("new failed");
         for i in 0..ITEM_COUNT {
             let mut iterator = layer.seek(Bound::Included(&i)).await.expect("failed to seek");
             let ItemRef { key, value, .. } = iterator.get().expect("missing item");
@@ -354,7 +355,7 @@ mod tests {
             }
             writer.flush().await.expect("flush failed");
         }
-        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
+        let layer = SimplePersistentLayer::open(handle).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("failed to seek");
         let ItemRef { key, value, .. } = iterator.get().expect("missing item");
         assert_eq!((key, value), (&0, &0));
@@ -375,7 +376,7 @@ mod tests {
             writer.flush().await.expect("flush failed");
         }
 
-        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
+        let layer = SimplePersistentLayer::open(handle).await.expect("new failed");
         let iterator = (layer.as_ref() as &dyn Layer<i32, i32>)
             .seek(Bound::Unbounded)
             .await
@@ -389,7 +390,8 @@ mod tests {
         const BLOCK_SIZE: u64 = 2097152;
         const ITEM_COUNT: i32 = 70000;
 
-        let handle = FakeObjectHandle::new(Arc::new(FakeObject::new()));
+        let handle =
+            FakeObjectHandle::new_with_block_size(Arc::new(FakeObject::new()), BLOCK_SIZE as usize);
         {
             let mut writer = SimplePersistentLayerWriter::new(Writer::new(&handle), BLOCK_SIZE);
             for i in 0..ITEM_COUNT {
@@ -398,7 +400,7 @@ mod tests {
             writer.flush().await.expect("flush failed");
         }
 
-        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
+        let layer = SimplePersistentLayer::open(handle).await.expect("new failed");
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 0..ITEM_COUNT {
             let ItemRef { key, value, .. } = iterator.get().expect("missing item");
@@ -421,7 +423,7 @@ mod tests {
             }
             writer.flush().await.expect("flush failed");
         }
-        let layer = SimplePersistentLayer::open(handle, BLOCK_SIZE).await.expect("new failed");
+        let layer = SimplePersistentLayer::open(handle).await.expect("new failed");
 
         for i in 0..ITEM_COUNT {
             let mut iterator = layer.seek(Bound::Excluded(&i)).await.expect("failed to seek");
