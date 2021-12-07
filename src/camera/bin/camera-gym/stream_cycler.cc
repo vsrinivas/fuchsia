@@ -176,6 +176,7 @@ void StreamCycler::ConnectToStream(uint32_t config_index, uint32_t stream_index)
                                  &stream](fuchsia::sysmem::BufferCollectionTokenHandle token_back) {
     ZX_ASSERT(image_format.coded_width > 0);  // image_format must be reasonable.
     ZX_ASSERT(image_format.coded_height > 0);
+    ZX_ASSERT(image_format.bytes_per_row > 0);
 
     auto& stream_info = stream_infos_[stream_index];
     if (add_collection_handler_) {

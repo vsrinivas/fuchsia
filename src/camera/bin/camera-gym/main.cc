@@ -21,6 +21,7 @@
 
 #include "src/camera/bin/camera-gym/buffer_collage.h"
 #include "src/camera/bin/camera-gym/controller_receiver.h"
+#include "src/camera/bin/camera-gym/frame_capture.h"
 #include "src/camera/bin/camera-gym/lifecycle_impl.h"
 #include "src/camera/bin/camera-gym/stream_cycler.h"
 #include "src/lib/fxl/command_line.h"
@@ -67,6 +68,13 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
   auto collage = collage_result.take_value();
+
+  // Support frame capture.
+  if (manual_mode) {
+    auto frame_capture = std::make_unique<camera::FrameCapture>();
+    frame_capture->Initialize();
+    collage->SetFrameCapture(std::move(frame_capture));
+  }
 
   // Connect to required services for the cycler.
   fuchsia::camera3::DeviceWatcherHandle watcher;
@@ -162,10 +170,14 @@ int main(int argc, char* argv[]) {
     camera::ControllerReceiver::CommandHandler command_handler =
         [&cycler, &collage](fuchsia::camera::gym::Command command,
                             camera::ControllerReceiver::SendCommandCallback callback) {
-          if (command.Which() == Command::Tag::kSetDescription) {
-            collage->ExecuteCommand(std::move(command), std::move(callback));
-          } else {
-            cycler->ExecuteCommand(std::move(command), std::move(callback));
+          switch (command.Which()) {
+            case Command::Tag::kSetDescription:
+            case Command::Tag::kCaptureFrame:
+              collage->ExecuteCommand(std::move(command), std::move(callback));
+              break;
+            default:
+              cycler->ExecuteCommand(std::move(command), std::move(callback));
+              break;
           }
         };
     controller_receiver->SetHandlers(std::move(command_handler));

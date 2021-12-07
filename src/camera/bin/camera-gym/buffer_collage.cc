@@ -25,6 +25,7 @@
 #include <cmath>
 #include <optional>
 
+#include "src/camera/bin/camera-gym/frame_capture.h"
 #include "src/lib/fsl/vmo/file.h"
 
 namespace camera {
@@ -32,6 +33,7 @@ namespace camera {
 using Command = fuchsia::camera::gym::Command;
 
 using SetDescriptionCommand = fuchsia::camera::gym::SetDescriptionCommand;
+using CaptureFrameCommand = fuchsia::camera::gym::CaptureFrameCommand;
 
 constexpr uint32_t kViewRequestTimeoutMs = 5000;
 
@@ -153,6 +155,7 @@ fpromise::promise<uint32_t> BufferCollage::AddCollection(
   TRACE_DURATION("camera", "BufferCollage::AddCollection");
   ZX_ASSERT(image_format.coded_width > 0);
   ZX_ASSERT(image_format.coded_height > 0);
+  ZX_ASSERT(image_format.bytes_per_row > 0);
 
   fpromise::bridge<uint32_t> task_bridge;
 
@@ -198,21 +201,53 @@ fpromise::promise<uint32_t> BufferCollage::AddCollection(
       view.image_pipe->AddBufferCollection(1, std::move(token));
       UpdateLayout();
 
-      // Set minimal constraints then wait for buffer allocation.
-      view.collection->SetConstraints(true, {.usage{.none = fuchsia::sysmem::noneUsage}});
+      if (frame_capture_) {
+        // Frame capture: Set constraints to support frame capture.
+        view.collection->SetConstraints(true, {.usage{
+                                                   .cpu = fuchsia::sysmem::cpuUsageRead,
+                                               },
+                                               .min_buffer_count_for_camping = 1,
+                                               .has_buffer_memory_constraints = true,
+                                               .buffer_memory_constraints{
+                                                   .ram_domain_supported = true,
+                                                   .cpu_domain_supported = true,
+                                               }});
+      } else {
+        // Set minimal constraints then wait for buffer allocation.
+        view.collection->SetConstraints(true, {.usage{.none = fuchsia::sysmem::noneUsage}});
+      }
+
+      // Wait for buffer allocation.
       view.collection->WaitForBuffersAllocated(
           [this, collection_id, result = std::move(result)](
               zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) mutable {
+            auto& view = collection_views_[collection_id];
             if (status != ZX_OK) {
               FX_PLOGS(ERROR, status) << "Failed to allocate buffers.";
               Stop();
               result.complete_error();
               return;
             }
+
+            // Frame capture: Map all VMO's.
+            if (frame_capture_) {
+              for (uint32_t buffer_index = 0; buffer_index < buffers.buffer_count; buffer_index++) {
+                // TODO(b/204456599) - Use VmoMapper helper class instead.
+                const zx::vmo& vmo = buffers.buffers[buffer_index].vmo;
+                auto vmo_size = buffers.settings.buffer_settings.size_bytes;
+                uintptr_t vmo_virt_addr = 0;
+                auto status =
+                    zx::vmar::root_self()->map(ZX_VM_PERM_READ, 0 /* vmar_offset */, vmo,
+                                               0 /* vmo_offset */, vmo_size, &vmo_virt_addr);
+                ZX_ASSERT(status == ZX_OK);
+                collection_views_[collection_id].buffer_id_to_virt_addr[buffer_index] =
+                    vmo_virt_addr;
+              }
+            }
+
             collection_views_[collection_id].buffers = std::move(buffers);
 
             // Add the negotiated images to the image pipe.
-            auto& view = collection_views_[collection_id];
             for (uint32_t i = 0; i < view.buffers.buffer_count; ++i) {
               view.image_pipe->AddImage(i + 1, 1, i, view.image_format);
             }
@@ -247,6 +282,22 @@ void BufferCollage::RemoveCollection(uint32_t id) {
     view_->DetachChild(collection_view.description_node->node);
     session_->ReleaseResource(image_pipe_id);  // De-allocate ImagePipe2 scenic side
     collection_view.collection->Close();
+
+    // Frame capture: Unmap all buffers.
+    if (frame_capture_) {
+      for (uint32_t buffer_index = 0; buffer_index < collection_view.buffers.buffer_count;
+           buffer_index++) {
+        auto vmo_size = collection_view.buffers.settings.buffer_settings.size_bytes;
+
+        // TODO(b/204456599) - Use VmoMapper helper class instead.
+        auto it = collection_view.buffer_id_to_virt_addr.find(buffer_index);
+        ZX_ASSERT(it != collection_view.buffer_id_to_virt_addr.end());
+        auto vmo_virt_addr = collection_view.buffer_id_to_virt_addr[buffer_index];
+        auto status = zx::vmar::root_self()->unmap(vmo_virt_addr, vmo_size);
+        ZX_ASSERT(status == ZX_OK);
+      }
+    }
+
     collection_views_.erase(it);
     UpdateLayout();
   });
@@ -339,6 +390,23 @@ void BufferCollage::ShowBuffer(uint32_t collection_id, uint32_t buffer_index,
     FX_LOGS(ERROR) << "Invalid buffer index " << buffer_index << ".";
     Stop();
     return;
+  }
+
+  // Frame capture: Perform the capture if trigger is pending (> 0).
+  // TODO(b/200839146): Support multiple stream use case by choosing desired stream ID.
+  if (CaptureRequestPending() /* && (stream_id == ???) */) {
+    // Frame capture: Make sure capture parameters are reasonable.
+    uint32_t coded_width = view.image_format.coded_width;
+    uint32_t coded_height = view.image_format.coded_height;
+    uint32_t coded_stride = view.image_format.bytes_per_row;
+    uint32_t coded_image_size = coded_stride * coded_height * 3 / 2;  // NV12 ONLY!
+    ZX_ASSERT(coded_width > 0);
+    ZX_ASSERT(coded_height > 0);
+    ZX_ASSERT(coded_image_size >= 4096);
+    ZX_ASSERT(frame_capture_);
+    frame_capture_->Capture(view.buffers.buffers[buffer_index].vmo, coded_width, coded_height,
+                            coded_stride, coded_image_size);
+    CompletedOneCaptureRequest();
   }
 
   if (subregion) {
@@ -830,6 +898,9 @@ void BufferCollage::PostedExecuteCommand(Command command,
     case Command::Tag::kSetDescription:
       ExecuteSetDescriptionCommand(command.set_description());
       break;
+    case Command::Tag::kCaptureFrame:
+      ExecuteCaptureFrameCommand(command.capture_frame());
+      break;
     default:
       ZX_ASSERT(false);
   }
@@ -839,6 +910,12 @@ void BufferCollage::ExecuteSetDescriptionCommand(
     fuchsia::camera::gym::SetDescriptionCommand& command) {
   set_show_description(command.enable);
   UpdateLayout();
+  CommandSuccessNotify();
+}
+
+void BufferCollage::ExecuteCaptureFrameCommand(fuchsia::camera::gym::CaptureFrameCommand& command) {
+  // TODO(b/200839146): Support multiple stream use case by passing in desired stream ID.
+  AddOneCaptureRequest();
   CommandSuccessNotify();
 }
 

@@ -672,6 +672,7 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     configurations[0].streams.push_back({});
     configurations[0].streams[0].image_format.coded_width = 2345;
     configurations[0].streams[0].image_format.coded_height = 789;
+    configurations[0].streams[0].image_format.bytes_per_row = 2345;
 
     device_impl()->SetupConfigurations(std::move(configurations));
   }
@@ -689,16 +690,19 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     configurations[0].streams.push_back({});
     configurations[0].streams[0].image_format.coded_width = 1234;
     configurations[0].streams[0].image_format.coded_height = 678;
+    configurations[0].streams[0].image_format.bytes_per_row = 1234;
 
     // Config 0 stream 1
     configurations[0].streams.push_back({});
     configurations[0].streams[1].image_format.coded_width = 864;
     configurations[0].streams[1].image_format.coded_height = 468;
+    configurations[0].streams[1].image_format.bytes_per_row = 864;
 
     // Config 0 stream 2
     configurations[0].streams.push_back({});
     configurations[0].streams[2].image_format.coded_width = 654;
     configurations[0].streams[2].image_format.coded_height = 432;
+    configurations[0].streams[2].image_format.bytes_per_row = 654;
 
     // Config 1
     configurations.push_back({});
@@ -707,11 +711,13 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     configurations[1].streams.push_back({});
     configurations[1].streams[0].image_format.coded_width = 876;
     configurations[1].streams[0].image_format.coded_height = 456;
+    configurations[1].streams[0].image_format.bytes_per_row = 876;
 
     // Config 1 stream 1
     configurations[1].streams.push_back({});
     configurations[1].streams[1].image_format.coded_width = 576;
     configurations[1].streams[1].image_format.coded_height = 392;
+    configurations[1].streams[1].image_format.bytes_per_row = 576;
 
     // Config 2
     configurations.push_back({});
@@ -720,11 +726,13 @@ class StreamCyclerTest : public gtest::TestLoopFixture {
     configurations[2].streams.push_back({});
     configurations[2].streams[0].image_format.coded_width = 744;
     configurations[2].streams[0].image_format.coded_height = 588;
+    configurations[2].streams[0].image_format.bytes_per_row = 744;
 
     // Config 2 stream 1
     configurations[2].streams.push_back({});
     configurations[2].streams[1].image_format.coded_width = 468;
     configurations[2].streams[1].image_format.coded_height = 345;
+    configurations[2].streams[1].image_format.bytes_per_row = 468;
 
     device_impl()->SetupConfigurations(std::move(configurations));
   }

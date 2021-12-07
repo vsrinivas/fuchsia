@@ -21,6 +21,7 @@
 #include <map>
 
 #include "fuchsia/camera/gym/cpp/fidl.h"
+#include "src/camera/bin/camera-gym/frame_capture.h"
 
 namespace camera {
 
@@ -52,6 +53,11 @@ struct CollectionView {
   bool has_content = false;
   bool darkened = true;
   std::unique_ptr<BitmapImageNode> description_node;
+
+  // Frame capture support:
+  // "buffer_id_to_virt_addr" converts buffer ID to mapped virtual address for the associated VMO.
+  // TODO(b/204456599) - Use VmoMapper helper class instead.
+  std::map<uint32_t, uintptr_t> buffer_id_to_virt_addr;
 };
 
 // This class takes ownership of the display and presents the contents of buffer collections in a
@@ -64,7 +70,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
 
   static constexpr uint32_t kShowStateCycleMask = 0x00000003;  // All bits used
 
-  static constexpr uint32_t kDefaultShowState   = kShowDescription;  // Backward compatible start
+  static constexpr uint32_t kDefaultShowState = kShowDescription;  // Backward compatible start
 
   using CommandStatusHandler =
       fit::function<void(fuchsia::camera::gym::Controller_SendCommand_Result)>;
@@ -104,15 +110,16 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   // Updates the view to show or hide a mute icon.
   void PostSetMuteIconVisibility(bool visible);
 
-  // Returns the current magnify boxes mode. (Global to all streams)
-  bool show_magnify_boxes() {
-    return (show_state_ & kShowMagnifyBoxes) != 0;
+  // Enable the frame capture utility.
+  void SetFrameCapture(std::unique_ptr<FrameCapture> frame_capture) {
+    frame_capture_ = std::move(frame_capture);
   }
 
+  // Returns the current magnify boxes mode. (Global to all streams)
+  bool show_magnify_boxes() const { return (show_state_ & kShowMagnifyBoxes) != 0; }
+
   // Returns the current description mode. (Global to all streams)
-  bool show_description() {
-    return (show_state_ & kShowDescription) != 0;
-  }
+  bool show_description() const { return (show_state_ & kShowDescription) != 0; }
 
   // Updates the magnify boxes mode. (Global to all streams)
   void set_show_magnify_boxes(bool enable) {
@@ -141,6 +148,7 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
   void ExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
   void PostedExecuteCommand(fuchsia::camera::gym::Command command, CommandStatusHandler handler);
   void ExecuteSetDescriptionCommand(fuchsia::camera::gym::SetDescriptionCommand& command);
+  void ExecuteCaptureFrameCommand(fuchsia::camera::gym::CaptureFrameCommand& command);
 
  private:
   BufferCollage();
@@ -181,6 +189,25 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
                              fuchsia::ui::views::ViewRefControl view_ref_control,
                              fuchsia::ui::views::ViewRef view_ref) override;
 
+  // Are there any requests pending to capture frames?
+  bool CaptureRequestPending() {
+    std::lock_guard<std::mutex> lock(frame_capture_trigger_lock_);
+    return (frame_capture_trigger_ > 0);
+  }
+
+  // Enqueue one request to capture frame.
+  void AddOneCaptureRequest() {
+    std::lock_guard<std::mutex> lock(frame_capture_trigger_lock_);
+    ++frame_capture_trigger_;
+  }
+
+  // Completed one request to capture frame.
+  void CompletedOneCaptureRequest() {
+    std::lock_guard<std::mutex> lock(frame_capture_trigger_lock_);
+    ZX_ASSERT(frame_capture_trigger_ > 0);
+    --frame_capture_trigger_;
+  }
+
   async::Loop loop_;
   async_dispatcher_t* controller_dispatcher_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
@@ -205,6 +232,12 @@ class BufferCollage : public fuchsia::ui::app::ViewProvider {
 
   // TODO(?????) - Is this really the ideal way to communicate status back?
   CommandStatusHandler command_status_handler_;
+
+  // Support frame capture.
+  // Increment "frame_capture_trigger_" for every capture requested.
+  std::unique_ptr<FrameCapture> frame_capture_;
+  uint32_t frame_capture_trigger_ = 0;
+  std::mutex frame_capture_trigger_lock_;
 };
 
 }  // namespace camera
