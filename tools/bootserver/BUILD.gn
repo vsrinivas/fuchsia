@@ -21,6 +21,7 @@ go_library("bootserver_lib") {
     "//third_party/golibs:golang.org/x/sync",
     "//tools/botanist:constants",
     "//tools/build",
+    "//tools/lib/color",
     "//tools/lib/iomisc",
     "//tools/lib/jsonutil",
     "//tools/lib/logger",

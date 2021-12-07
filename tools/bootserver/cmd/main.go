@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
+	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/netboot"
@@ -433,7 +434,10 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 func main() {
 	flag.Parse()
 
-	ctx := context.Background()
+	log := logger.NewLogger(logger.InfoLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "bootserver ")
+	log.SetFlags(logger.Ltime | logger.Lmicroseconds | logger.Lshortfile)
+
+	ctx := logger.WithLogger(context.Background(), log)
 	if err := execute(ctx, flag.Args()); err != nil {
 		logger.Fatalf(ctx, "%v", err)
 	}
