@@ -267,6 +267,13 @@ class SymbolInfo {
     return {};
   }
 
+  constexpr std::string_view soname() const {
+    if (soname_ != 0) {
+      return string(soname_);
+    }
+    return {};
+  }
+
   // Install data for the various tables.  These return *this so they can be
   // called in fluent style, e.g. in a constexpr initializer.
 
@@ -291,6 +298,11 @@ class SymbolInfo {
 
   constexpr SymbolInfo& set_gnu_hash(cpp20::span<const Addr> table) {
     gnu_hash_ = table;
+    return *this;
+  }
+
+  constexpr SymbolInfo& set_soname(typename Elf::size_type soname) {
+    soname_ = soname;
     return *this;
   }
 
@@ -331,6 +343,7 @@ class SymbolInfo {
   cpp20::span<const Sym> symtab_;
   cpp20::span<const Word> compat_hash_;
   cpp20::span<const Addr> gnu_hash_;
+  typename Elf::size_type soname_ = 0;
 };
 
 }  // namespace elfldltl
