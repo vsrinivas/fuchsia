@@ -18,13 +18,12 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fuiapp,
     fuchsia_async::{self as fasync, DurationExt},
-    fuchsia_component, fuchsia_scenic as scenic,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_zircon as zx,
+    fuchsia_component, fuchsia_scenic as scenic, fuchsia_zircon as zx,
     futures::{lock::Mutex, select, FutureExt, StreamExt, TryStreamExt},
     rand::{distributions::Alphanumeric, thread_rng, Rng},
     realm_management,
     std::sync::Arc,
+    tracing::{error, info},
 };
 
 // Timeout duration for a ViewControllerProxy to close, in seconds.
@@ -331,12 +330,13 @@ impl ElementManager {
         child_name: &str,
         child_url: &str,
     ) -> Result<Element, ElementManagerError> {
-        fx_log_info!(
-            "launch_v2_element(name={}, url={}, collection={})",
+        info!(
             child_name,
             child_url,
-            self.collection
+            collection = %self.collection,
+            "launch_v2_element"
         );
+
         realm_management::create_child_component(
             &child_name,
             &child_url,
@@ -452,7 +452,7 @@ impl ElementManager {
         element_controller: Option<ServerEnd<felement::ControllerMarker>>,
     ) -> Result<(), felement::ProposeElementError> {
         let component_url = spec.component_url.ok_or_else(|| {
-            fx_log_err!("ProposeElement() failed to launch element: spec.component_url is missing");
+            error!("ProposeElement() failed to launch element: spec.component_url is missing");
             felement::ProposeElementError::InvalidArgs
         })?;
 
@@ -475,8 +475,8 @@ impl ElementManager {
 
         // Create AnnotationHolder and populate the initial annotations from the Spec.
         let mut annotation_holder = AnnotationHolder::new();
-        annotation_holder.update_annotations(initial_annotations, vec![]).map_err(|e| {
-            fx_log_err!("ProposeElement() failed to set initial annotations: {:?}", e);
+        annotation_holder.update_annotations(initial_annotations, vec![]).map_err(|err| {
+            error!(?err, "ProposeElement() failed to set initial annotations");
             felement::ProposeElementError::InvalidArgs
         })?;
 
@@ -489,7 +489,7 @@ impl ElementManager {
             .map_err(|err| match err {
                 ElementManagerError::NotCreated { .. } => felement::ProposeElementError::NotFound,
                 err => {
-                    fx_log_err!("ProposeElement() failed to launch element: {:?}", err);
+                    error!(?err, "ProposeElement() failed to launch element");
                     felement::ProposeElementError::InvalidArgs
                 }
             })?;
@@ -507,7 +507,7 @@ impl ElementManager {
             .await
             .map_err(|err| {
                 // TODO(fxbug.dev/82894): ProposeElement should propagate GraphicalPresenter errors back to caller
-                fx_log_err!("ProposeElement() failed to present element: {:?}", err);
+                error!(?err, "ProposeElement() failed to present element");
                 felement::ProposeElementError::InvalidArgs
             })?;
 
