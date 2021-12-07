@@ -12,10 +12,15 @@
 //! If a client closes its connection to `Manager`, any running elements that it
 //! has proposed without an associated `fuchsia.element.Controller` will continue to run.
 
+mod annotation;
+mod element;
+mod element_manager;
+
 use {
+    crate::element_manager::ElementManager,
     anyhow::Error,
-    element_management::ElementManager,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
+    fidl_fuchsia_sys as fsys,
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
@@ -43,6 +48,8 @@ async fn main() -> Result<(), Error> {
         .expect("Failed to connect to Realm service");
     let graphical_presenter = connect_to_protocol::<felement::GraphicalPresenterMarker>()
         .expect("Failed to connect to GraphicalPresenter service");
+    let sys_launcher = connect_to_protocol::<fsys::LauncherMarker>()
+        .expect("Failed to connect to fuchsia.sys.Launcher service");
 
     // TODO(fxbug.dev/64206): Remove after Flatland migration is completed.
     let scenic_uses_flatland = fuchsia_component::client::connect_to_protocol::<ScenicMarker>()
@@ -54,6 +61,7 @@ async fn main() -> Result<(), Error> {
     let element_manager = Rc::new(ElementManager::new(
         realm,
         Some(graphical_presenter),
+        sys_launcher,
         ELEMENT_COLLECTION_NAME,
         scenic_uses_flatland,
     ));
@@ -82,7 +90,7 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use {
         super::ELEMENT_COLLECTION_NAME,
-        element_management::ElementManager,
+        crate::element_manager::ElementManager,
         fidl::endpoints::ProtocolMarker,
         fidl::endpoints::{create_proxy_and_stream, spawn_stream_handler},
         fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
@@ -176,11 +184,12 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager = Box::new(ElementManager::new_with_sys_launcher(
+        let element_manager = Box::new(ElementManager::new(
             realm,
             Some(graphical_presenter),
-            ELEMENT_COLLECTION_NAME,
             launcher,
+            ELEMENT_COLLECTION_NAME,
+            false,
         ));
         let manager_proxy = spawn_manager_server(element_manager);
 

@@ -4,7 +4,6 @@
 
 group("all") {
   deps = [
-    "//src/session/lib/element_management",
     "//src/session/lib/realm_management",
     "//src/session/lib/scene_management",
   ]
@@ -14,7 +13,6 @@ group("tests") {
   testonly = true
 
   deps = [
-    "//src/session/lib/element_management:element_management_tests",
     "//src/session/lib/realm_management:realm_management_tests",
     "//src/session/lib/scene_management:scene_management_tests",
   ]

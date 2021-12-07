@@ -8,11 +8,8 @@
 //! Elements are instantiated as dynamic component instances in a component collection of the
 //! calling component.
 
-mod annotation;
-mod element;
-
 use {
-    crate::annotation::{AnnotationError, AnnotationHolder},
+    crate::annotation::{handle_annotation_controller_stream, AnnotationError, AnnotationHolder},
     crate::element::Element,
     anyhow::{format_err, Error},
     fidl,
@@ -173,6 +170,9 @@ pub struct ElementManager {
     /// This is typically provided by the system shell, or other similar configurable component.
     graphical_presenter: Option<felement::GraphicalPresenterProxy>,
 
+    /// A proxy to the `fuchsia::sys::Launcher` protocol used to create CFv1 components.
+    sys_launcher: fsys::LauncherProxy,
+
     /// The collection in which elements will be launched.
     ///
     /// This is only used for elements that have a CFv2 (*.cm) component URL, and has no meaning
@@ -181,12 +181,6 @@ pub struct ElementManager {
     /// The component that is running the `ElementManager` must have a collection
     /// with the same name in its CML file.
     collection: String,
-
-    /// A proxy to the `fuchsia::sys::Launcher` protocol used to create CFv1 components, or an error
-    /// that represents a failure to connect to the protocol.
-    ///
-    /// If a launcher is not provided during initialization, it is requested from the environment.
-    sys_launcher: Result<fsys::LauncherProxy, Error>,
 
     /// Returns whether the client should use Flatland to interact with Scenic.
     /// TODO(fxbug.dev/64206): Remove after Flatland migration is completed.
@@ -197,32 +191,16 @@ impl ElementManager {
     pub fn new(
         realm: fcomponent::RealmProxy,
         graphical_presenter: Option<felement::GraphicalPresenterProxy>,
+        sys_launcher: fsys::LauncherProxy,
         collection: &str,
         scenic_uses_flatland: bool,
     ) -> ElementManager {
         ElementManager {
             realm,
             graphical_presenter,
+            sys_launcher,
             collection: collection.to_string(),
-            sys_launcher: fuchsia_component::client::connect_to_protocol::<fsys::LauncherMarker>(),
             scenic_uses_flatland,
-        }
-    }
-
-    /// Initializer used by tests, to override the default fuchsia::sys::Launcher with a mock
-    /// launcher.
-    pub fn new_with_sys_launcher(
-        realm: fcomponent::RealmProxy,
-        graphical_presenter: Option<felement::GraphicalPresenterProxy>,
-        collection: &str,
-        sys_launcher: fsys::LauncherProxy,
-    ) -> Self {
-        ElementManager {
-            realm,
-            graphical_presenter,
-            collection: collection.to_string(),
-            sys_launcher: Ok(sys_launcher),
-            scenic_uses_flatland: false,
         }
     }
 
@@ -301,6 +279,8 @@ impl ElementManager {
 
     /// Launches a CFv1 component as an element.
     ///
+    /// `sys_launcher` must not be None.
+    ///
     /// # Parameters
     /// - `child_url`: The component url of the child added to the session. This function launches
     ///                components using a fuchsia::sys::Launcher. It supports all CFv1 component
@@ -311,26 +291,19 @@ impl ElementManager {
     ///                          in addition to those coming from the environment.
     ///
     /// # Returns
-    /// An Element backed by the CFv1 component.
+    /// An Element backed by the CFv1 component, or an error if the element could not be launched.
     async fn launch_v1_element(
         &self,
         child_url: &str,
         additional_services: Option<AdditionalServices>,
     ) -> Result<Element, ElementManagerError> {
-        let sys_launcher = (&self.sys_launcher).as_ref().map_err(|err: &Error| {
-            ElementManagerError::not_launched(
-                child_url.clone(),
-                format!("Error connecting to fuchsia::sys::Launcher: {}", err.to_string()),
-            )
-        })?;
-
         let mut launch_options = fuchsia_component::client::LaunchOptions::new();
         if let Some(services) = additional_services {
             launch_options.set_additional_services(services.names, services.host_directory);
         }
 
         let app = fuchsia_component::client::launch_with_options(
-            &sys_launcher,
+            &self.sys_launcher,
             child_url.to_string(),
             None,
             launch_options,
@@ -581,7 +554,7 @@ async fn run_element_until_closed(
     let annotation_holder = Arc::new(Mutex::new(annotation_holder));
 
     // This task will fall out of scope when the select!() below returns.
-    let _annotation_task = fasync::Task::spawn(annotation::handle_annotation_controller_stream(
+    let _annotation_task = fasync::Task::spawn(handle_annotation_controller_stream(
         annotation_holder.clone(),
         annotation_controller_stream,
     ));
@@ -777,8 +750,7 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager =
-            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, child_collection, false);
         let result =
             element_manager.launch_element(component_url.to_string(), None, child_name).await;
         let element = result.unwrap();
@@ -840,8 +812,7 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager =
-            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, child_collection, false);
         assert!(element_manager
             .launch_element(a_component_url.to_string(), None, a_child_name,)
             .await
@@ -937,8 +908,7 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager =
-            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, child_collection, false);
         let result = element_manager
             .launch_element(component_url.to_string(), Some(additional_services), child_name)
             .await;
@@ -1007,8 +977,7 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager =
-            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, child_collection, false);
 
         let result =
             element_manager.launch_element(component_url.to_string(), None, child_name).await;
@@ -1053,8 +1022,7 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager =
-            ElementManager::new_with_sys_launcher(realm, None, child_collection, launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, child_collection, false);
 
         assert!(element_manager
             .launch_element(component_url.to_string(), None, child_name,)
@@ -1088,7 +1056,7 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, "", false);
 
         let result = element_manager
             .launch_element(component_url.to_string(), Some(additional_services), "")
@@ -1120,7 +1088,7 @@ mod tests {
             panic!("Realm should not receive any requests since the child won't be created")
         })
         .unwrap();
-        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, "", false);
 
         let result = element_manager
             .launch_element(component_url.to_string(), Some(additional_services), "")
@@ -1159,7 +1127,7 @@ mod tests {
             }
         })
         .unwrap();
-        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, "", false);
 
         let result = element_manager.launch_element(component_url.to_string(), None, "").await;
         assert!(result.is_err());
@@ -1196,7 +1164,7 @@ mod tests {
             }
         })
         .unwrap();
-        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, "", false);
 
         let result = element_manager.launch_element(component_url.to_string(), None, "").await;
         assert!(result.is_err());
@@ -1244,7 +1212,7 @@ mod tests {
         })
         .unwrap();
 
-        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, "", false);
 
         let result = element_manager.launch_element(component_url.to_string(), None, "").await;
         assert!(result.is_err());
@@ -1294,7 +1262,7 @@ mod tests {
             }
         })
         .unwrap();
-        let element_manager = ElementManager::new_with_sys_launcher(realm, None, "", launcher);
+        let element_manager = ElementManager::new(realm, None, launcher, "", false);
 
         let result = element_manager.launch_element(component_url.to_string(), None, "").await;
         assert!(result.is_err());

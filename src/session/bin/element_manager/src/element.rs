@@ -141,6 +141,7 @@ impl Element {
     /// - A service `Proxy` matching the `Marker`, or an error if the service is not available from
     /// the `Element`.
     #[inline]
+    #[allow(unused)]
     pub fn connect_to_service<US: ServiceMarker>(&self) -> Result<US::Proxy, Error> {
         fuchsia_component::client::connect_to_service_at_channel::<US>(&self.directory_channel())
     }
