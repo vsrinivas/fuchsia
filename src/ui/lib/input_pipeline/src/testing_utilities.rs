@@ -10,11 +10,10 @@ use {
         consumer_controls_binding, input_device, input_handler, keyboard_binding, mouse_binding,
         touch_binding,
     },
-    core::task::Context,
     fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input3 as fidl_ui_input3, fidl_fuchsia_ui_pointerinjector as pointerinjector,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
-    futures::Future,
+    fuchsia_zircon as zx,
+    futures::FutureExt as _,
     maplit::hashmap,
     matches::assert_matches,
     std::collections::HashMap,
@@ -634,9 +633,5 @@ pub async fn assert_handler_ignores_input_event_sequence(
     }
 
     // The request stream should not receive any events.
-    let request_stream_fut = request_stream.next();
-    fasync::pin_mut!(request_stream_fut);
-    assert!(request_stream_fut
-        .poll(&mut Context::from_waker(futures::task::noop_waker_ref()))
-        .is_pending());
+    assert!(request_stream.next().now_or_never().is_none());
 }
