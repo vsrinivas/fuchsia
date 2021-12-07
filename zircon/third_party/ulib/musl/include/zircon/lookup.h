@@ -18,10 +18,11 @@ struct address {
   int sortkey;
 };
 
-/* The limit of 48 results is a non-sharp bound on the number of addresses
- * that can fit in one 512-byte DNS packet full of v4 results and a second
- * packet full of v6 results. Due to headers, the actual limit is lower. */
-#define MAXADDRS 48
+// TODO(https://fxbug.dev/89912): this bound is arbitrarily large to allow for
+// handling large DNS responses returned from the DNS resolver. We should
+// revisit this bound when we can configure the DNS resolver to truncate results
+// server side.
+#define MAXADDRS 1024
 
 // This function is used by musl to perform an actual DNS lookup - it takes
 // a name and address family, sends a DNS query, and fills out the addresses

@@ -10,7 +10,11 @@ executable("getaddrinfo_test_client") {
 
   sources = [ "getaddrinfo_test_client.cc" ]
 
-  deps = [ "//src/lib/fxl/test:gtest_main" ]
+  deps = [
+    "//sdk/lib/fit",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/system/ulib/zxc",
+  ]
 }
 
 rustc_test("getaddrinfo_test") {

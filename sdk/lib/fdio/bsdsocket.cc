@@ -457,8 +457,11 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   const fnet_name::wire::LookupLookupIpResult& wire_result = fidl_result.value().result;
   switch (wire_result.which()) {
     case fnet_name::wire::LookupLookupIpResult::Tag::kResponse: {
-      int count = 0;
       const fnet_name::wire::LookupResult& result = wire_result.response().result;
+      ZX_ASSERT_MSG(result.addresses().count() <= MAXADDRS,
+                    "%lu addresses in DNS response, maximum is %d", result.addresses().count(),
+                    MAXADDRS);
+      int count = 0;
       if (result.has_addresses()) {
         for (const fnet::wire::IpAddress& addr : result.addresses()) {
           switch (addr.which()) {
