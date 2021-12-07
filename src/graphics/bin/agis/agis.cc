@@ -13,27 +13,39 @@
 #include <zircon/system/ulib/fbl/include/fbl/unique_fd.h>
 
 #include <unordered_map>
+#include <unordered_set>
 
 #include <sdk/lib/fdio/include/lib/fdio/fd.h>
 #include <zx/cpp/fidl.h>
 
-namespace {}
+namespace {
+std::unordered_map<std::string, uint16_t> url_to_port;
+}
 
-class SessionImpl : public fuchsia::gpu::agis::Session {
+class SessionImpl final : public fuchsia::gpu::agis::Session {
  public:
+  SessionImpl() : this_str_(std::to_string(reinterpret_cast<uintptr_t>(this))) {}
+
+  ~SessionImpl() override {
+    for (const auto &key : keys_) {
+      url_to_port.erase(key);
+    }
+  }
+
   // Add entries to the url_to_socket_ map.
   void Register(std::string component_url, RegisterCallback callback) override {
     fuchsia::gpu::agis::Session_Register_Result result;
 
-    auto matched_iter = url_to_port_.find(component_url);
-    if (matched_iter != url_to_port_.end()) {
+    std::string key = KeyFromUrl(component_url);
+    auto matched_iter = url_to_port.find(key);
+    if (matched_iter != url_to_port.end()) {
       result.set_err(fuchsia::gpu::agis::Status::ALREADY_REGISTERED);
       callback(std::move(result));
       return;
     }
 
     // Test if the connection map is full.
-    if (url_to_port_.size() == fuchsia::gpu::agis::MAX_CONNECTIONS) {
+    if (url_to_port.size() == fuchsia::gpu::agis::MAX_CONNECTIONS) {
       result.set_err(fuchsia::gpu::agis::Status::CONNECTIONS_EXCEEDED);
       callback(std::move(result));
       return;
@@ -87,18 +99,20 @@ class SessionImpl : public fuchsia::gpu::agis::Session {
     }
 
     server_fd.release();
-    url_to_port_.insert(std::make_pair(component_url, port));
+    keys_.insert(key);
+    url_to_port.insert(std::make_pair(key, port));
     fuchsia::gpu::agis::Session_Register_Response response(std::move(socket_handle));
     result.set_response(std::move(response));
-
     callback(std::move(result));
   }
 
   void Unregister(std::string component_url, UnregisterCallback callback) override {
     fuchsia::gpu::agis::Session_Unregister_Result result;
-    const auto &element_iter = url_to_port_.find(component_url);
-    if (element_iter != url_to_port_.end()) {
-      url_to_port_.erase(element_iter);
+    const std::string key = KeyFromUrl(component_url);
+    const auto &element_iter = url_to_port.find(key);
+    if (element_iter != url_to_port.end()) {
+      url_to_port.erase(element_iter);
+      keys_.erase(key);
       result.set_response(fuchsia::gpu::agis::Session_Unregister_Response());
     } else {
       result.set_err(fuchsia::gpu::agis::Status::NOT_FOUND);
@@ -109,9 +123,9 @@ class SessionImpl : public fuchsia::gpu::agis::Session {
   void Connections(ConnectionsCallback callback) override {
     fuchsia::gpu::agis::Session_Connections_Result result;
     std::vector<fuchsia::gpu::agis::Connection> connections;
-    for (const auto &element : url_to_port_) {
+    for (const auto &element : url_to_port) {
       auto connection = ::fuchsia::gpu::agis::Connection::New();
-      connection->component_url = element.first;
+      connection->component_url = UrlFromKey(element.first);
       connection->port = element.second;
       connections.emplace_back(*connection);
     }
@@ -120,17 +134,34 @@ class SessionImpl : public fuchsia::gpu::agis::Session {
     callback(std::move(result));
   }
 
+  std::string KeyFromUrl(const std::string &url) const { return std::string(this_str_ + url); }
+
+  std::string UrlFromKey(const std::string &key) const {
+    std::string url(key);
+    return url.erase(0, this_str_.length());
+  }
+
+  void AddBinding(std::unique_ptr<SessionImpl> session,
+                  fidl::InterfaceRequest<fuchsia::gpu::agis::Session> &&request) {
+    bindings_.AddBinding(std::move(session), std::move(request));
+  }
+
  private:
-  std::unordered_map<std::string, uint16_t> url_to_port_;
+  fidl::BindingSet<fuchsia::gpu::agis::Session, std::unique_ptr<fuchsia::gpu::agis::Session>>
+      bindings_;
+  std::unordered_set<std::string> keys_;
+  const std::string this_str_;
 };
 
 int main(int argc, const char **argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-  SessionImpl impl;
-  fidl::BindingSet<fuchsia::gpu::agis::Session> bindings;
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  context->outgoing()->AddPublicService(bindings.GetHandler(&impl));
+  context->outgoing()->AddPublicService(fidl::InterfaceRequestHandler<fuchsia::gpu::agis::Session>(
+      [](fidl::InterfaceRequest<fuchsia::gpu::agis::Session> request) {
+        auto session = std::make_unique<SessionImpl>();
+        session->AddBinding(std::move(session), std::move(request));
+      }));
 
   return loop.Run();
 }

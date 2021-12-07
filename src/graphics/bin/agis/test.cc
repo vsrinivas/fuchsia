@@ -232,6 +232,90 @@ TEST_F(AgisTest, UsableSocket) {
   server.join();
 }
 
+TEST(AgisDisconnect, Main) {
+  const std::string url("fuchsia.gpu.agis.test-disconnect");
+  bool disconnect_outstanding = false;
+  auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
+  auto loop_wait = [&disconnect_outstanding, &loop]() {
+    while (disconnect_outstanding) {
+      EXPECT_EQ(loop->RunUntilIdle(), ZX_OK);
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+  };
+
+  // Create a Session, register |url| and verify its presence.
+  {
+    fuchsia::gpu::agis::SessionPtr session;
+    context->svc()->Connect(session.NewRequest(loop->dispatcher()));
+    session.set_error_handler([&loop](zx_status_t status) {
+      FX_LOGF(ERROR, "agis-test", "Register Disconnect ErrHandler - status %d", status);
+      if (loop) {
+        loop->Quit();
+      }
+    });
+
+    disconnect_outstanding = true;
+    session->Register(url, [&](fuchsia::gpu::agis::Session_Register_Result result) {
+      EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
+      disconnect_outstanding = false;
+    });
+    loop_wait();
+
+    disconnect_outstanding = true;
+    session->Connections([&](fuchsia::gpu::agis::Session_Connections_Result result) {
+      fuchsia::gpu::agis::Session_Connections_Response response(std::move(result.response()));
+      EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
+      std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
+      EXPECT_EQ(connections.size(), 1ul);
+      bool found = false;
+      for (const auto &connection : connections) {
+        if (connection.component_url == url) {
+          found = true;
+          break;
+        }
+      }
+      EXPECT_TRUE(found);
+      disconnect_outstanding = false;
+    });
+    loop_wait();
+  }
+
+  // Create a new Session and verify that |url| is no longer registered.
+  fuchsia::gpu::agis::SessionPtr session;
+  context->svc()->Connect(session.NewRequest(loop->dispatcher()));
+  session.set_error_handler([&loop](zx_status_t status) {
+    FX_LOGF(ERROR, "agis-test", "Verify Disconnect ErrHandler - status %d", status);
+    if (loop) {
+      loop->Quit();
+    }
+  });
+
+  bool found = true;
+  while (found) {
+    disconnect_outstanding = true;
+    session->Connections([&](fuchsia::gpu::agis::Session_Connections_Result result) {
+      EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
+      auto connections(result.response().ResultValue_());
+      bool component_found = false;
+      for (const auto &connection : connections) {
+        if (connection.component_url == url) {
+          component_found = true;
+          break;
+        }
+      }
+      found = component_found;
+      disconnect_outstanding = false;
+    });
+    loop_wait();
+  }
+
+  // Self-documenting no-op.
+  EXPECT_FALSE(found);
+
+  loop->Quit();
+}
+
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
