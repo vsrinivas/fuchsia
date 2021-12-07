@@ -74,10 +74,16 @@ zx_status_t CopyItem(const zx::vmo& vmo, const bootsvc::ItemValue& item, zx::vmo
 zx_status_t ItemsGet(void* ctx, uint32_t type, uint32_t extra, fidl_txn_t* txn) {
   auto data = static_cast<const ItemsData*>(ctx);
   auto it = data->map.find(bootsvc::ItemKey{type, extra});
-  if (it == data->map.end()) {
+  if (it == data->map.end() || it->second.empty()) {
     return fuchsia_boot_ItemsGet_reply(txn, ZX_HANDLE_INVALID, 0);
   }
-  auto& item = it->second;
+
+  // TODO(fxbug.dev/34597): As detailed in this bug, fuchisa.boot.Items makes
+  // invalid assumptions about the ZBI spec: in particular, that (type, extra)
+  // is a unique key among items. Until that is sorted out, just return the
+  // last of possibly many items with the given key (last conventionally wins
+  // with ZBI items).
+  auto& item = it->second.back();
 
   zx::vmo payload;
   zx_status_t status = CopyItem(data->vmo, item, &payload);

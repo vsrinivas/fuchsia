@@ -219,8 +219,10 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
         }
 
       } else {
-        map.emplace(CreateItemKey(header.type, header.extra),
-                    CreateItemValue(header.type, off, header.length));
+        const ItemKey key = CreateItemKey(header.type, header.extra);
+        const ItemValue val = CreateItemValue(header.type, off, header.length);
+        auto [it, _] = map.emplace(key, std::vector<ItemValue>{});
+        it->second.push_back(val);
       }
       DiscardItem(&vmo, discard_begin, discard_end);
       discard_begin = next_off;

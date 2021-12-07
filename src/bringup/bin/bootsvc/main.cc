@@ -101,21 +101,21 @@ zx_status_t ExtractBootArgsFromImage(std::vector<char>* buf, const zx::vmo& imag
     return ZX_ERR_NOT_FOUND;
   }
 
-  auto cfg = std::make_unique<char[]>(it->second.length);
+  for (const bootsvc::ItemValue& value : it->second) {
+    auto [offset, length] = value;
 
-  // read cfg data
-  zx_status_t status = image_vmo.read(cfg.get(), it->second.offset, it->second.length);
-  if (status != ZX_OK) {
-    return status;
+    auto payload = std::make_unique<char[]>(length);
+    zx_status_t status = image_vmo.read(payload.get(), offset, length);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    std::string_view str(payload.get(), length);
+    status = bootsvc::ParseBootArgs(str, buf);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
-
-  // Parse boot arguments file from bootdata.
-  std::string_view str(cfg.get(), it->second.length);
-  status = bootsvc::ParseBootArgs(std::move(str), buf);
-  if (status != ZX_OK) {
-    return status;
-  }
-
   item_map->erase(it);
   return ZX_OK;
 }

@@ -43,7 +43,7 @@ struct FactoryItemValue {
 
 // Map for boot items.
 using FactoryItemMap = std::map<uint32_t, FactoryItemValue>;
-using ItemMap = std::map<ItemKey, ItemValue>;
+using ItemMap = std::map<ItemKey, std::vector<ItemValue>>;
 using BootloaderFileMap = std::map<std::string, ItemValue>;
 
 // Retrieve boot image |vmo| from the startup handle table, and add boot items
