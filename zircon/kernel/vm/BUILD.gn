@@ -12,6 +12,7 @@ zx_library("vm") {
     "bootreserve.cc",
     "evictor.cc",
     "kstack.cc",
+    "loan_sweeper.cc",
     "page.cc",
     "page_queues.cc",
     "page_source.cc",
