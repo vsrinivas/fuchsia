@@ -500,7 +500,7 @@ mod tests {
         Ok(())
     }
 
-    #[fuchsia_async::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn test_handle_annotation_controller_request() -> Result<(), anyhow::Error> {
         let holder = Arc::new(Mutex::new(AnnotationHolder::new()));
 

@@ -695,7 +695,7 @@ mod tests {
 
     /// Tests that launching a component with a cmx file successfully returns an Element
     /// with outgoing directory routing appropriate for v1 components.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_v1_element_success() {
         lazy_static! {
             static ref CREATE_COMPONENT_CALL_COUNT: Counter = Counter::new(0);
@@ -772,7 +772,7 @@ mod tests {
     }
 
     /// Tests that launching multiple v1 components (without "*.cm") successfully returns [`Ok`].
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_multiple_v1_element_success() {
         lazy_static! {
             static ref CREATE_COMPONENT_CALL_COUNT: Counter = Counter::new(0);
@@ -829,7 +829,7 @@ mod tests {
 
     /// Tests that launching an element with a *.cmx URL and `additional_services` ServiceList
     /// passes the services to the component Launcher.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_v1_element_with_additional_services() {
         lazy_static! {
             static ref CREATE_COMPONENT_CALL_COUNT: Counter = Counter::new(0);
@@ -927,7 +927,7 @@ mod tests {
 
     /// Tests that launching a *.cm element successfully returns an Element with
     /// outgoing directory routing appropriate for v2 components.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_v2_element_success() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
         let child_name = "child";
@@ -992,7 +992,7 @@ mod tests {
     }
 
     /// Tests that adding a .cm element does not use fuchsia.sys.Launcher.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_element_success_not_use_launcher() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
         let child_name = "child";
@@ -1032,7 +1032,7 @@ mod tests {
 
     /// Tests that launching a CFv1 element with a ServiceList that specifies a `provider`
     /// returns `ElementManagerError::InvalidServiceList`.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_v1_element_with_service_list_provider() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cmx";
 
@@ -1067,7 +1067,7 @@ mod tests {
 
     /// Tests that launching a *.cm element with a spec that contains `additional_services`
     /// returns `ProposeElementError::AdditionalServicesNotSupported`
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_v2_element_with_additional_services() {
         // This is a CFv2 component URL. `additional_services` is only supported for v1 components.
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
@@ -1102,7 +1102,7 @@ mod tests {
 
     /// Tests that launching an element which is not successfully created in the realm returns an
     /// appropriate error.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_element_create_error_internal() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
@@ -1139,7 +1139,7 @@ mod tests {
 
     /// Tests that adding an element which is not successfully created in the realm returns an
     /// appropriate error.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_element_create_error_no_space() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
@@ -1181,7 +1181,7 @@ mod tests {
 
     /// Tests that adding an element which can't have its exposed directory opened
     /// returns an appropriate error.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn open_exposed_dir_error() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
@@ -1229,7 +1229,7 @@ mod tests {
 
     /// Tests that adding an element which is not successfully bound in the realm returns an
     /// appropriate error.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn launch_element_bind_error() {
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 

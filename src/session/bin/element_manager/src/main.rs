@@ -22,7 +22,6 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_sys as fsys,
     fidl_fuchsia_ui_scenic::ScenicMarker,
-    fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::StreamExt,
     std::rc::Rc,
@@ -40,10 +39,8 @@ const ELEMENT_COLLECTION_NAME: &str = "elements";
 /// The maximum number of concurrent requests.
 const NUM_CONCURRENT_REQUESTS: usize = 5;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["element_manager"]).expect("Failed to initialize logger");
-
     let realm = connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("Failed to connect to Realm service");
     let graphical_presenter = connect_to_protocol::<felement::GraphicalPresenterMarker>()
@@ -123,7 +120,7 @@ mod tests {
     }
 
     /// Tests that ProposeElement launches the element as a child in a realm.
-    #[fasync::run_until_stalled(test)]
+    #[fuchsia::test]
     async fn propose_element_launches_element() {
         lazy_static! {
             static ref CREATE_CHILD_CALL_COUNT: Counter = Counter::new(0);
