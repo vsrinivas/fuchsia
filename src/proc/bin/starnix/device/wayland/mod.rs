@@ -7,6 +7,7 @@ mod buffer_collection_file;
 mod dma_buf_file;
 mod file_creation;
 mod image_file;
+mod vulkan;
 mod wayland;
 
 pub mod drm;
