@@ -85,8 +85,6 @@ source_set("hermetic_pipeline_test") {
     "hermetic_fidelity_frequencies.cc",
     "hermetic_fidelity_test.cc",
     "hermetic_fidelity_test.h",
-    "hermetic_golden_test.cc",
-    "hermetic_golden_test.h",
     "hermetic_impulse_test.cc",
     "hermetic_impulse_test.h",
     "hermetic_pipeline_test.cc",

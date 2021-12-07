@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/media/audio/lib/test/hermetic_pipeline_test.h"
+
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -12,7 +14,6 @@
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/comparators.h"
-#include "src/media/audio/lib/test/hermetic_golden_test.h"
 #include "src/media/audio/lib/test/renderer_shim.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
 
@@ -27,7 +28,7 @@ bool HermeticPipelineTest::save_input_and_output_files_ = false;
 //
 
 // --save-inputs-and-outputs
-// When enabled, save input and output as WAV files for comparison to the golden outputs.
+// When enabled, save input and output as WAV files for debugging
 // The saved files are:
 //
 //    <testname>_input.wav           - the input audio buffer
@@ -35,7 +36,15 @@ bool HermeticPipelineTest::save_input_and_output_files_ = false;
 //    <testname>_output.wav          - portion of the output ring buffer expected to be non-silent
 //    <testname>_expected_output.wav - expected contents of <testname>_output.wav
 //
-// See ./hermetic_golden_test_update_goldens.sh for a semi-automated process.
+// This flag can be used as follows:
+//
+//  PKG=<fuchsia_test_package to run>
+//  REALM=audio-pipeline-tests
+//  DEVICE_DIR=/data/cache/r/sys/r/$REALM/fuchsia.com:$PKG:0#meta:$PKG-component.cmx/
+//
+//  fx test "--realm=$REALM" $PKG -- --save-inputs-and-outputs
+//  fx cp --to-host $DEVICE_DIR/<file> <path-on-host>
+//
 void set_save_pipeline_test_inputs_and_outputs(bool save_input_and_output_files) {
   HermeticPipelineTest::save_input_and_output_files_ = save_input_and_output_files;
 }

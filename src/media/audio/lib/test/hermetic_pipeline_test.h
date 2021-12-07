@@ -14,8 +14,7 @@ namespace media::audio::test {
 
 // This class defines a framework for standard tests of an output pipeline. After feeding an
 // arbitrary input signal through the pipeline and capturing the output, this framework can ensure
-// that the output (for example) approximately matches an expected "golden" signal, or contains
-// timing-oriented impulses at expected locations, or meets an expected frequency profile.
+// that the output meets specific criteria -- for example, meets an expected frequency profile.
 class HermeticPipelineTest : public HermeticAudioTest {
  public:
   void TearDown() override {
