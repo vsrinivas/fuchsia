@@ -180,7 +180,6 @@ is_ios = false
 is_linux = false
 is_mac = false
 is_win = false
-is_clang = true
 is_component_build = false
 is_official_build = false
 
@@ -228,6 +227,7 @@ if (toolchain_variant.base == host_x64_toolchain ||
 # Whether we are in the context of the GCC toolchain.
 is_gcc =
     toolchain_variant.tags + [ "gcc" ] - [ "gcc" ] != toolchain_variant.tags
+is_clang = !is_gcc
 
 # Whether we are in the context of a kernel toolchain.
 is_kernel = toolchain_variant.tags + [ "kernel" ] - [ "kernel" ] !=
