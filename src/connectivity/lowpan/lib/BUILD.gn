@@ -5,6 +5,7 @@
 group("lib") {
   deps = [
     "lowpan_driver_common",
+    "openthread_sys",
     "spinel_pack",
   ]
 }
