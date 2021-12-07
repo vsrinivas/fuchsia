@@ -509,8 +509,8 @@ pub mod fake {
                 let ops = operations.try_lock().unwrap();
                 if !ops.is_empty() {
                     panic!(
-                        "FakeConnection has {:?} expected operations that were not performed",
-                        ops.len()
+                        "FakeConnection has expected operations that were not performed: {:?}",
+                        ops
                     );
                 }
             }

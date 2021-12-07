@@ -423,22 +423,22 @@ mod tests {
     use crate::hid::connection::fake::{FakeConnection, REPORT_LENGTH};
     use bytes::BufMut;
     use fuchsia_async as fasync;
-    use rand::{rngs::StdRng, SeedableRng};
+    use rand::rngs::mock::StepRng;
 
     const TEST_PATH: &str = "/dev/test-device";
     const BAD_REPORT_DESCRIPTOR: [u8; 3] = [0xba, 0xdb, 0xad];
     const TEST_CHANNEL: u32 = 0x88776655;
     const BAD_CHANNEL: u32 = 0xffeeffee;
-    /// The first two nonces that a StdRng seeded with zero should generate.
-    const FIRST_NONCE: [u8; 8] = [0xe2, 0xcf, 0x59, 0x54, 0x7a, 0x32, 0xae, 0xef];
-    const SECOND_NONCE: [u8; 8] = [0xfa, 0x5c, 0x4d, 0xed, 0x87, 0x82, 0xb9, 0xad];
+    /// The first two nonces that `FIXED_SEED_RNG` should generate.
+    const FIRST_NONCE: [u8; 8] = [0xad, 0x9c, 0x8b, 0x7a, 0x69, 0x58, 0x47, 0x36];
+    const SECOND_NONCE: [u8; 8] = [0x25, 0x14, 0x03, 0xf2, 0xe1, 0xd0, 0xbf, 0xae];
     const DIFFERENT_NONCE: [u8; 8] = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08];
 
     /// A small payload we use in test errors.
     const ERROR_PAYLOAD: [u8; 1] = [0xcc];
 
     lazy_static! {
-        static ref FIXED_SEED_RNG: StdRng = StdRng::seed_from_u64(0);
+        static ref FIXED_SEED_RNG: StepRng = StepRng::new(0xdead, 0xbeef);
         static ref TRANSACTION_REQUEST: Message =
             Message::new(TEST_CHANNEL, Command::Msg, &[0x11, 100], REPORT_LENGTH).unwrap();
         static ref TRANSACTION_RESPONSE: Message =
