@@ -2486,13 +2486,6 @@ From //build/images/fvm.gni:77
 
 From //build/images/fvm.gni:64
 
-### minfs_resize_excluded_paths
-List of files and directories that don't need to be preserved when resizing minfs.
-
-**Current value (from the default):** `[]`
-
-From //src/storage/fshost/generated_fshost_config.gni:44
-
 ### mini_chromium_is_chromeos_ash
 
 **Current value (from the default):** `false`
