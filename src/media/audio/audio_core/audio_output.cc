@@ -68,7 +68,7 @@ void AudioOutput::Process() {
     auto ref_now = reference_clock().ReferenceTimeFromMonotonicTime(mono_now);
 
     ReadableStream::ReadLockContext ctx;
-    StageMetricsTimer timer("AudioOutputProcess");
+    StageMetricsTimer timer("AudioOutput::Process");
     timer.Start();
 
     uint32_t frames_remaining;
@@ -133,7 +133,8 @@ void AudioOutput::Process() {
           << "PIPELINE UNDERFLOW: Mixer ran for " << std::setprecision(4)
           << static_cast<double>(dt.to_nsecs()) / ZX_MSEC(1) << " ms, overran goal of "
           << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1)
-          << " ms. Detailed metrics:\n";
+          << " ms. Detailed metrics:\n"
+          << os.str();
 
       reporter().PipelineUnderflow(mono_now + MixDeadline(), mono_end);
     }
