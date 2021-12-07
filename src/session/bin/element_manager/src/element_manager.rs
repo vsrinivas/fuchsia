@@ -740,8 +740,8 @@ mod tests {
                             directory_request_handler,
                         );
                         fasync::Task::spawn(async move {
-                            let _ = result_sender.send(()).await;
                             CREATE_COMPONENT_CALL_COUNT.inc();
+                            let _ = result_sender.send(()).await;
                         })
                         .detach()
                     }
@@ -803,8 +803,8 @@ mod tests {
                         launch_info: fsys::LaunchInfo { .. },
                         ..
                     } => fasync::Task::spawn(async move {
-                        let _ = result_sender.send(()).await.expect("Could not create component.");
                         CREATE_COMPONENT_CALL_COUNT.inc();
+                        let _ = result_sender.send(()).await.expect("Could not create component.");
                     })
                     .detach(),
                 }
@@ -898,8 +898,8 @@ mod tests {
                             .expect("could not connect to service");
 
                         fasync::Task::spawn(async move {
-                            let _ = result_sender.send(()).await;
                             CREATE_COMPONENT_CALL_COUNT.inc();
+                            let _ = result_sender.send(()).await;
                         })
                         .detach()
                     }
