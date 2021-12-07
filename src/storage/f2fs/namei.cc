@@ -136,11 +136,8 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> new_child) {
   if (target->IsDir())
     return ZX_ERR_NOT_FILE;
 
-  auto old_entry = FindEntry(name);
-  if (!old_entry.is_error()) {
-    nid_t old_ino = LeToCpu((*old_entry).ino);
-    if (old_ino == target->Ino())
-      return ZX_ERR_ALREADY_EXISTS;
+  if (auto old_entry = FindEntry(name); !old_entry.is_error()) {
+    return ZX_ERR_ALREADY_EXISTS;
   }
 
   timespec cur_time;

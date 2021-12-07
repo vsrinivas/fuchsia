@@ -278,6 +278,20 @@ TEST_P(HardLinkTest, Errors) {
   ASSERT_EQ(link(old_path.c_str(), old_path.c_str()), -1);
   ASSERT_EQ(errno, EEXIST);
 
+  // We should not be able to link a file over an existing file
+  fd = open(new_path.c_str(), O_RDWR | O_CREAT | O_EXCL, 0644);
+  ASSERT_GT(fd, 0);
+  ASSERT_EQ(close(fd), 0);
+  ASSERT_EQ(link(old_path.c_str(), new_path.c_str()), -1);
+  ASSERT_EQ(errno, EEXIST);
+  ASSERT_EQ(unlink(new_path.c_str()), 0);
+
+  // We should not be able to link a file over an existing directory
+  ASSERT_EQ(mkdir(new_path.c_str(), 0755), 0);
+  ASSERT_EQ(link(old_path.c_str(), new_path.c_str()), -1);
+  ASSERT_EQ(errno, EEXIST);
+  ASSERT_EQ(unlink(new_path.c_str()), 0);
+
   // We should not be able to link a file to a path that implies it must be a directory
   ASSERT_EQ(link(old_path.c_str(), new_path_dir.c_str()), -1);
 
