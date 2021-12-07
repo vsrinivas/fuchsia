@@ -23,6 +23,13 @@ SECTIONS {
   PROVIDE_HIDDEN(__code_start = .);
 
   /*
+   * This overrides the definition from //src/lib/elfldltl/self-base.ld
+   * to make elfldltl::Self<>:LoadBias() work (on non-x86) when __ehdr_start
+   * is not available.
+   */
+  HIDDEN(elfldltl.kBase = PHYS_LOAD_ADDRESS);
+
+  /*
    * The contents of this section differ for different kinds of "phys" target
    * environments, but it's always the thing that has to appear first in the
    * load image (in place of where e.g. ELF headers would be found in a normal

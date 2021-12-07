@@ -34,6 +34,8 @@ zx_library("elfldltl") {
   sources = []
   if (is_elf) {
     sources += [ "self.cc" ]
+    configs += [ "//build/config:no_sanitizers" ]
+    libs = [ "./self-base.ld" ]
   }
 
   public_deps = [ "//sdk/lib/stdcompat" ]

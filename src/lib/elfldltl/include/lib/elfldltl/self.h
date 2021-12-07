@@ -36,24 +36,32 @@ class SelfBase {
     // defined.  But it's a compile-time assumption throughout the generated
     // code that the load bias is zero, so we can assume it here too.
     return 0;
-#endif
-    // The linker stores the link-time address of _DYNAMIC in GOT[0] and there
-    // is no relocation to fix it up.  So we can compare that to our runtime
-    // PC-relative address for _DYNAMIC to see the difference in runtime and
-    // link-time addresses, i.e. the load bias.  Unlike just taking the address
-    // of __ehdr_start or the like and calling that the "load address", this
-    // still works both if there is no ready symbol for the beginning of the
-    // load image (__ehdr_start is canonical in that it's supported by the
-    // linker, but only in certain layouts, and there's no such canonical
-    // symbol for all layouts) and if the link-time base address is nonzero.
-#if defined(__aarch64__) && defined(__clang__)
-    // TODO(https://bugs.llvm.org/show_bug.cgi?id=49672): lld fails to observe
-    // the _GLOBAL_OFFSET_TABLE_[0] protocol on aarch64 but it always defines
-    // __dso_handle at the "base address" even when there are no ELF headers
-    // and we never link at nonzero on aarch64 so this suffices in practice.
+#elif defined(__i386__) || defined(__x86_64__)
+    // On x86, the _GLOBAL_OFFSET_TABLE_ symbol is magic in the assembler.  It
+    // always gets a special relocation type that tells the linker to follow
+    // the traditional protocol where _GLOBAL_OFFSET_TABLE_[0] contains the
+    // unrelocated link-time address of _DYNAMIC.  The difference between the
+    // runtime and link-time addresses of that symbol is the load bias.
+    return reinterpret_cast<uintptr_t>(kDynamic) - kGot[0];
+#else
+    // The _GLOBAL_OFFSET_TABLE_ trick doesn't work reliably on other machines
+    // any more, though past linkers held to this invariant on all machines.
+    // However, x86 is the only machine where Fuchsia has any historical cases
+    // using fixed load addresses with nonzero link-time base addresses.  On
+    // other machines, in practice the link-time base address is always zero so
+    // the runtime base address is the load bias.
+    //
+    // **NOTE**: This assumption breaks prelink cases, which were historically
+    // common on Linux but are no longer in common use and have never been used
+    // on Fuchsia.  A more robust approach here would be to synthesize our own
+    // link-time constant datum containing the link-time address of some known
+    // thing (such as itself).  That can be done in a linker script, but that's
+    // the only means that won't generate a dynamic relocation for that datum.
+    // Unfortunately, it can't be done in an input linker script, only in a
+    // SECTIONS command in a -T script, which is difficult to arrange for in
+    // the build system.
     return reinterpret_cast<uintptr_t>(kBase);
 #endif
-    return reinterpret_cast<uintptr_t>(kDynamic) - kGot[0];
   }
 
   // This returns a memory-access object for referring to the program's own ELF
@@ -76,10 +84,11 @@ class SelfBase {
   [[gnu::visibility("hidden")]] static std::byte kImageEnd[] __asm__("_end");
   [[gnu::visibility("hidden")]] static const std::byte kDynamic[] __asm__("_DYNAMIC");
   [[gnu::visibility("hidden")]] static const uintptr_t kGot[] __asm__("_GLOBAL_OFFSET_TABLE_");
-#if defined(__aarch64__) && defined(__clang__)
-  // TODO(https://bugs.llvm.org/show_bug.cgi?id=49672): see above
-  [[gnu::visibility("hidden")]] static const std::byte kBase[] __asm__("__dso_handle");
-#endif
+
+  // This is defined in //src/lib/elfldltl/self-base.ld, which is included as
+  // an input linker script in the link when the library is used, or with a
+  // special-case definition in a linker script for a non-ELF layout.
+  [[gnu::visibility("hidden")]] static const std::byte kBase[] __asm__("elfldltl.kBase");
 };
 
 template <ElfClass Class = ElfClass::kNative>
