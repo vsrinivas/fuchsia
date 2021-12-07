@@ -100,7 +100,7 @@ example `parent.cml` manifest:
 
 <aside class="key-point">
 <b>Tip:</b> Strings prefixed with <code>#</code> in the manifest are
-<a href="/docs/concepts/components/v2/component_manifests.md#references">references</a>
+<a href="https://fuchsia.dev/reference/cml#references">references</a>
 to a child component instance.
 </aside>
 

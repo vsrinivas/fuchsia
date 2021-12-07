@@ -582,8 +582,8 @@ Components in the test realm may play various roles in the test, as follows:
 [fx-test]: https://fuchsia.dev/reference/tools/fx/cmd/test
 [inclusive]: /docs/concepts/principles/inclusive.md
 [integration-testing]: /docs/development/testing/components/integration_testing.md
-[manifests-offer]: /docs/concepts/components/v2/component_manifests.md#offer
-[manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
+[manifests-offer]: https://fuchsia.dev/reference/cml#offer
+[manifests-use]: https://fuchsia.dev/reference/cml#use
 [runners]: /docs/concepts/components/v2/capabilities/runners.md
 [test-suite-protocol]: /docs/concepts/components/v2/realms.md
 [unit-tests]: /docs/development/components/build.md#unit_tests_with_generated_manifests

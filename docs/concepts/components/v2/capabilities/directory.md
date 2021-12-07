@@ -268,9 +268,9 @@ Fuchsia supports the following framework directories:
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [doc-hub]: /docs/concepts/components/v2/hub.md
 [fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
-[manifest-capabilities]: /docs/concepts/components/v2/component_manifests.md#capabilities
-[manifest-expose]: /docs/concepts/components/v2/component_manifests.md#expose
-[manifest-offer]: /docs/concepts/components/v2/component_manifests.md#offer
-[manifest-use]: /docs/concepts/components/v2/component_manifests.md#use
+[manifest-capabilities]: https://fuchsia.dev/reference/cml#capabilities
+[manifest-expose]: https://fuchsia.dev/reference/cml#expose
+[manifest-offer]: https://fuchsia.dev/reference/cml#offer
+[manifest-use]: https://fuchsia.dev/reference/cml#use
 [routing-example]: /examples/components/routing
 [storage-capabilities]: /docs/concepts/components/v2/capabilities/storage.md

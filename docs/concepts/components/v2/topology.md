@@ -123,7 +123,7 @@ information.
 [glossary.component instance tree]: /docs/glossary/README.md#component-instance-tree
 [doc-collections]: /docs/concepts/components/v2/realms.md#collections
 [doc-environments]: /docs/concepts/components/v2/environments.md
-[doc-expose]: /docs/concepts/components/v2/component_manifests.md#expose
+[doc-expose]: https://fuchsia.dev/reference/cml#expose
 [doc-realms]: /docs/concepts/components/v2/realms.md
 [doc-realm-framework-protocol]: /docs/concepts/components/v2/realms.md#realm-framework-protocol
 [doc-monikers]: /docs/concepts/components/v2/monikers.md

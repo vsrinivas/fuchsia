@@ -121,7 +121,7 @@ production components in a test-specific package.
 
 [glossary.components v2]: /docs/glossary/README.md#components-v2
 [doc-manifests]: v2/component_manifests.md
-[doc-manifests-children]: v2/component_manifests.md#children
+[doc-manifests-children]: https://fuchsia.dev/reference/cml#children
 [doc-manifests-declaration]: v2/component_manifests.md#component-declaration
 [doc-monikers]: v2/monikers.md
 [doc-resolvers]: v2/capabilities/resolvers.md

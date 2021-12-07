@@ -190,19 +190,18 @@ binding to children and creating dynamic children. See the linked FIDL
 definitions for full documentation.
 
 [glossary.storage capability]: /docs/glossary/README.md#storage-capability
-[children]: ./component_manifests.md#children
-[collections]: ./component_manifests.md#collections
+[children]: https://fuchsia.dev/reference/cml#children
+[collections]: https://fuchsia.dev/reference/cml#collections
 [component-manifest-examples]: ./component_manifests.md#examples
 [component-manifests]: ./component_manifests.md
 [component-urls]: /docs/concepts/components/component_urls.md
 [environments]: ./environments.md
-[expose]: ./component_manifests.md#expose
-[offer]: ./component_manifests.md#offer
+[expose]: https://fuchsia.dev/reference/cml#expose
+[offer]: https://fuchsia.dev/reference/cml#offer
 [framework-protocols]: ./capabilities/protocol.md#framework
 [monikers]: ./monikers.md
-[offer]: ./component_manifests.md#offer
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm
 [runners]: ./capabilities/runners.md
 [topology-instance-tree]: ./topology.md#component-instance-tree
-[use]: ./component_manifests.md#use
+[use]: https://fuchsia.dev/reference/cml#use
 [lifecycle]: /docs/concepts/components/v2/lifecycle.md

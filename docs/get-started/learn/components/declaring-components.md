@@ -46,7 +46,7 @@ CML manifest file for a simple component running an ELF binary that prints a
 
 This file declares two main sections of information about the component:
 
-Note: For more details on component manifests and CML syntax, see
+Note: For more details on component manifests, see
 [component manifests](/docs/concepts/components/v2/component_manifests.md).
 
 * `program`: Describes the executable information such as the binary file,

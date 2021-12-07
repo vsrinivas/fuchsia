@@ -4,8 +4,7 @@
 
 A [component manifest](#component-manifest) is a file that defines a component
 by encoding a [component declaration](#component-declaration). This document
-gives an overview of the concepts used by component declarations, and presents
-the syntax for writing [component manifest source](#component-manifest-source).
+gives an overview of the concepts used by component declarations.
 Component declarations contain:
 
 -   Information about [how to run the component](#runtime).
@@ -13,8 +12,11 @@ Component declarations contain:
     [component collections][doc-collections].
 -   [Routing rules](#capability-routing) that describe how capabilities are
     used, exposed, and offered between components.
--   [Freeform data ("facets")](#facet-metadata), which is ignored by the
+-   [Freeform data ("facets")][manifest-facet], which is ignored by the
     component framework but can be interpreted by third parties.
+
+Note: For complete details on component manifest attributes and syntax, see the
+[CML reference](https://fuchsia.dev/reference/cml).
 
 ## Manifests and declarations {#manifests-and-declarations}
 
@@ -27,8 +29,7 @@ A [component manifest source][glossary.component manifest source] is a file that
 encodes part of a component manifest. Component manifest sources are written in
 component manifest language (CML), which is the developer-facing source format
 for component manifests. CML files are JSON5 files that end with a `.cml`
-extension. Descriptions and examples of the CML syntax are contained in this
-document: see [Syntax](#syntax).
+extension.
 
 Component manifest sources are compiled to
 [component manifests](#component-manifest) by the [`cmc`][src-cmc] tool.
@@ -49,83 +50,77 @@ identifies a component in a package.
 A [component declaration][glossary.component declaration] describes what a
 component can do, the capabilities it uses and exposes, its children, and other
 information needed to run the component. Component declarations are represented
-using the [`ComponentDecl`][fidl-component-decl] FIDL table.
+using the [`Component`][fidl-component-decl] FIDL table.
 
-A component [resolver][doc-resolvers] retrieves the component declaration and
+A component [resolver][capability-resolver] retrieves the component declaration and
 provides it to the component framework.
 
-## Concepts {#concepts}
-
-### Runtime {#runtime}
+## Runtime {#runtime}
 
 The component framework doesn't dictate a particular format for programs, but
 instead requires components to specify which runtime they need by specifying a
-[runner][doc-runners]. The component framework provides a built-in
+[runner][capability-runner]. The component framework provides a built-in
 [ELF runner](elf_runner.md), while other runtimes are implemented as components
 within the framework. A component can specify any runner available in its
 [environment][doc-environments].
 
-The [`program`](#program) section of a component manifest designates a runner
-and declares to the runner how the component is run, such as the program
+The [`program`][manifest-program] section of a component manifest designates a
+runner and declares to the runner how the component is run, such as the program
 location and any arguments. Components using the ELF runner should specify the
 binary name and arguments, see [ELF Runner](elf_runner.md).
-[Other runners][doc-runners] may have other runner-specific details, documented
+[Other runners][capability-runner] may have other runner-specific details, documented
 by that runner.
 
 A component may also have no runtime at all by omitting the `program` section.
 In this case, the component may still route capabilities and host children, but
 no code will be executed for the component.
 
-See also: [ELF Runner](elf_runner.md), [Component Runners][doc-runners]
+See also: [ELF Runner](elf_runner.md), [Component Runners][capability-runner]
 
-### Capability routing {#capability-routing}
+## Capability routing {#capability-routing}
 
 Component manifests provide a syntax for routing capabilities between
 components. For a detailed walkthrough about what happens during capability
 routing, see the [Capabilities overview][doc-capabilities] and
 [Life of a protocol open][doc-protocol-open].
 
-#### Capability names {#capability-names}
+### Capability names {#capability-names}
 
 Every capability in a `.cml` has a name so that it can be referred to in routing
 declarations. A capability name consists of a string containing the characters
 `a` to `z`, `A` to `Z`, `0` to `9`, underscore (`_`), hyphen (`-`), or the full
 stop character (`.`).
 
-#### Capability types {#capability-types}
+### Capability types {#capability-types}
 
 The following capabilities can be routed:
 
-| type                    | description                   | routed to       |
-| ----------------------- | ----------------------------- | --------------- |
-| [`protocol`]            | A filesystem node that is     | components      |
-: (#capability-protocol)  : used to open a channel backed :                 :
-:                         : by a FIDL protocol.           :                 :
-| [`service`]             | A filesystem directory that   | components      |
-: (#capability-service)   : is used to open a channel to  :                 :
-:                         : one of several                :                 :
-:                         : [service][doc-service]        :                 :
-:                         : instances.                    :                 :
-| [`directory`]           | A filesystem directory.       | components      |
-: (#capability-directory) :                               :                 :
-| [`storage`]             | A writable filesystem         | components      |
-: (#capability-storage)   : directory that is isolated to :                 :
-:                         : the component using it.       :                 :
-| [`resolver`]            | A capability that, when       | [environments]  |
-: (#capability-resolver)  : registered in an              : (#environments) :
-:                         : [environment](#environments), :                 :
-:                         : causes a component with a     :                 :
-:                         : particular URL scheme to be   :                 :
-:                         : resolved with that            :                 :
-:                         : [resolver][doc-resolvers].    :                 :
-| [`runner`]              | A capability that, when       | [environments]  |
-: (#capability-runner)    : registered in an              : (#environments) :
-:                         : [environment](#environments), :                 :
-:                         : allows the framework to use   :                 :
-:                         : that [runner][doc-runners]    :                 :
-:                         : when starting components.     :                 :
+| type                   | description                   | routed to          |
+| ---------------------- | ----------------------------- | ------------------ |
+| [`protocol`]           | A filesystem node that is     | components         |
+: [capability-protocol]  : used to open a channel backed :                    :
+:                        : by a FIDL protocol.           :                    :
+| [`service`]            | A filesystem directory that   | components         |
+: [capability-service]   : is used to open a channel to  :                    :
+:                        : one of several service        :                    :
+:                        : instances.                    :                    :
+| [`directory`]          | A filesystem directory.       | components         |
+: [capability-directory] :                               :                    :
+| [`storage`]            | A writable filesystem         | components         |
+: [capability-storage]   : directory that is isolated to :                    :
+:                        : the component using it.       :                    :
+| [`resolver`]           | A capability that, when       | [environments]     |
+: [capability-resolver]  : registered in an environment, : [doc-environments] :
+:                        : causes a component with a     :                    :
+:                        : particular URL scheme to be   :                    :
+:                        : resolved with that resolver.  :                    :
+| [`runner`]             | A capability that, when       | [environments]     |
+: [capability-runner]    : registered in an environment, : [doc-environments] :
+:                        : allows the framework to use   :                    :
+:                        : that runner when starting     :                    :
+:                        : components.                   :                    :
 
-#### Routing terminology {#routing-terminology}
+### Routing terminology {#routing-terminology}
 
 Routing terminology divides into the following categories:
 
@@ -147,7 +142,7 @@ Routing terminology divides into the following categories:
         These capabilities often map to a node in the
         [outgoing directory][glossary.outgoing directory].
 
-#### Examples {#examples}
+### Examples {#examples}
 
 For an example of how these keywords interact, consider the following component
 instance tree:
@@ -176,558 +171,26 @@ The routing sequence is:
 A working example of capability routing can be found at
 [//examples/components/routing][examples-routing].
 
-### Facet metadata {#facet-metadata}
-
-*Facets* are metadata that is ignored by the component framework itself, but may
-be interpreted by interested components.
-
-## Syntax {#syntax}
-
-This section describes the syntax for each section of the component manifest, in
-CML format.
-
-### References {#references}
-
-A *reference* is a string of the form `#<reference-name>`, where
-`<reference-name>` is a string of one or more of the following characters:
-`a-z`, `0-9`, `_`, `.`, `-`.
-
-A reference may refer to:
-
--   A [static child instance][doc-static-children] whose name is
-    `<reference-name>`.
--   A [collection][doc-collections] whose name is `<reference-name>`.
-
-### include {#include}
-
-The optional `include` property describes zero or more other component manifest
-files to be merged into this component manifest. For example:
-
-```json5
-include: [ "syslog/client.shard.cml" ]
-```
-
-In the example given above, the component manifest is including contents from a
-manifest shard provided by the `syslog` library, thus ensuring that the
-component functions correctly at runtime if it attempts to write to syslog. By
-convention such files are called "manifest shards" and end with `.shard.cml`.
-
-If working in fuchsia.git, include paths are relative to the source root of the
-Fuchsia tree.
-
-You can review the outcome of merging any and all includes into a component
-manifest file by invoking the following command:
-
-```sh
-fx cmc include {{ "<var>" }}cmx_file{{ "</var>" }} --includeroot $FUCHSIA_DIR --includepath $FUCHSIA_DIR/sdk/lib
-```
-
-Includes can be recursive, meaning that shards can have their own includes.
-
-### program {#program}
-
-Components that are executable include a `program` section. The `program`
-section must set the `runner` property to select a [runner][doc-runners] to run
-the component. The format of the rest of the `program` section is determined by
-that particular runner.
-
-#### ELF runners {#elf-runners}
-
-If the component uses the ELF runner, `program` must include the following
-properties, at a minimum:
-
--   `runner`: must be set to `"elf"`
--   `binary`: Package-relative path to the executable binary
--   `args` _(optional)_: List of arguments
-
-Example:
-
-```json5
-program: {
-    runner: "elf",
-    binary: "bin/hippo",
-    args: [ "Hello", "hippos!" ],
-},
-```
-
-For a complete list of properties, see: [ELF Runner](elf_runner.md)
-
-#### Other runners {#other-runners}
-
-If a component uses a custom runner, values inside the `program` stanza other
-than `runner` are specific to the runner. The runner receives the arguments as a
-dictionary of key and value pairs. Refer to the specific runner being used to
-determine what keys it expects to receive, and how it interprets them.
-
-### children {#children}
-
-The `children` section declares child component instances as described in
-[Child component instances][doc-children].
-
-`children` is an array of objects where each object has the following
-properties:
-
--   `name`: The name of the child component instance, which is a string of one
-    or more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
-    identifies this component when used in a [reference](#references).
--   `url`: The [component URL][component-url] for the child component instance.
--   `startup` _(optional)_: The component instance's startup mode.
-    -   `lazy` _(default)_: Start the component instance only if another
-        component instance binds to it.
-    -   [`eager`][doc-eager]: Start the component instance as soon as its parent
-        starts.
--   `environment` _(optional)_: If present, the name of the environment to be
-    assigned to the child component instance, one of
-    [`environments`](#environments). If omitted, the child will inherit the same
-    environment assigned to this component.
--   `on_terminate` _(optional)_: Determines the fault recovery policy to apply
-    if this component terminates.
-    -   `none` _(default)_: Do nothing.
-    -   `reboot`: Gracefully reboot the system if the component terminates for
-        any reason. This is a special feature for use only by a narrow set of
-        components; see [Termination policies][doc-reboot-on-terminate] for more
-        information.
-
-Example:
-
-```json5
-children: [
-    {
-        name: "logger",
-        url: "fuchsia-pkg://fuchsia.com/logger#logger.cm",
-    },
-    {
-        name: "pkg_cache",
-        url: "fuchsia-pkg://fuchsia.com/pkg_cache#meta/pkg_cache.cm",
-        startup: "eager",
-    },
-    {
-        name: "child",
-        url: "#meta/child.cm",
-    }
-],
-```
-
-### collections {#collections}
-
-The `collections` section declares collections as described in
-[Component collections][doc-collections].
-
-`collections` is an array of objects where each object has the following
-properties:
-
--   `name`: The name of the component collection, which is a string of one or
-    more of the following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name
-    identifies this collection when used in a [reference](#references).
--   `durability`: The duration of child component instances in the collection.
-    -   `transient`: The instance exists until its parent is stopped or it is
-        explicitly destroyed.
-    -   `single_run`: The instance is started when it is created, and destroyed
-        when it is stopped.
--   `environment` _(optional)_: If present, the environment that will be
-    assigned to instances in this collection, one of
-    [`environments`](#environments). If omitted, instances in this collection
-    will inherit the same environment assigned to this component.
-
-Example:
-
-```json5
-collections: [
-    {
-        name: "tests",
-        durability: "transient",
-    },
-],
-```
-
-### environments {#environments}
-
-The `environments` section declares environments as described in
-[Environments][doc-environments].
-
-`environments` is an array of objects where each object has the following
-properties:
-
--   `name`: The name of the environment, which is a string of one or more of the
-    following characters: `a-z`, `0-9`, `_`, `.`, `-`. The name identifies this
-    environment when used in a [reference](#references).
--   `extend`: How the environment should extend this realm's environment.
-    -   `realm`: Inherit all properties from this compenent's environment.
-    -   `none`: Start with an empty environment, do not inherit anything.
--   `runners`: The runners registered in the environment. An array of objects
-    with the following properties:
-    -   `runner`: The [name](#capability-names) of a runner capability, whose
-        source is specified in `from`.
-    -   `from`: The source of the runner capability, one of:
-        -   `parent`: The component's parent.
-        -   `self`: This component.
-        -   `#<child-name>`: A [reference](#references) to a child component
-            instance.
-    -   `as` _(option)_: An explicit name for the runner as it will be known in
-        this environment. If omitted, defaults to `runner`.
--   `resolvers`: The resolvers registered in the environment. An array of
-    objects with the following properties:
-    -   `resolver`: The [name](#capability-names) of a resolver capability,
-        whose source is specified in `from`.
-    -   `from`: The source of the resolver capability, one of:
-        -   `parent`: The component's parent.
-        -   `self`: This component.
-        -   `#<child-name>`: A [reference](#references) to a child component
-            instance.
-    -   `scheme`: The URL scheme for which the resolver should handle
-        resolution.
-
-Example:
-
-```json5
-environments: [
-    {
-        name: "test-env",
-        extend: "realm",
-        runners: [
-            {
-                runner: "gtest-runner",
-                from: "#gtest",
-            },
-        ],
-        resolvers: [
-            {
-                resolver: "full-resolver",
-                from: "parent",
-                scheme: "fuchsia-pkg",
-            },
-        ],
-    },
-],
-```
-
-### capabilities {#capabilities}
-
-The `capabilities` section defines capabilities that are provided by this
-component. Capabilities that are offered or exposed from `self` must be declared
-here.
-
-`capabilities` is an array of objects of any of the following types:
-
--   [`protocol`](#capability-protocol)
--   [`service`](#capability-service)
--   [`directory`](#capability-directory)
--   [`storage`](#capability-storage)
--   [`runner`](#capability-runner)
--   [`resolver`](#capability-resolver)
-
-#### protocol {#capability-protocol}
-
-A definition of a [protocol capability][doc-protocol].
-
--   `protocol`: The [name](#capability-names) for this protocol capability, or
-    an array of names to define multiple protocols.
--   `path` _(optional)_: The path in the component's outgoing directory from
-    which this protocol is served. Only supported when `protocol` is a single
-    name. Defaults to `/svc/${protocol}`.
-
-#### service {#capability-service}
-
-A definition of a [service capability][doc-service].
-
--   `service`: The [name](#capability-names) for this service capability, or
-    an array of names to define multiple services.
--   `path` _(optional)_: The path in the component's outgoing directory from
-    which this service is served. Only supported when `service` is a single
-    name. Defaults to `/svc/${service}`.
-
-#### directory {#capability-directory}
-
-A definition of a [directory capability][doc-directory].
-
--   `directory`: The [name](#capability-names) for this directory capability.
--   `subdir` _(optional)_: A subdirectory within the source component's
-    directory capability. This will expose only the given subdirectory as the
-    root of the target directory capability. If absent, the source directory's
-    root will be exposed.
--   `path`: The path in the component's outgoing directory from which this
-    directory is served.
--   `rights`: The maximum [directory rights][doc-directory-rights] that may be set
-    when using this directory.
-
-#### storage {#capability-storage}
-
-A definition of a [storage capability][doc-storage].
-
--   `storage`: The [name](#capability-names) for this storage capability.
--   `from`: The source of the existing directory capability backing this storage
-    capability, one of:
-    -   `parent`: The component's parent.
-    -   `self`: This component.
-    -   `#<child-name>`: A [reference](#references) to a child component
-        instance.
--   `backing_dir`: The [name](#capability-names) of the directory backing the
-    storage.
--   `subdir`: The subdirectory within `backing_dir` where per-component isolated
-    storage directories are created.
--   `storage_id`: The identifier used to isolated storage for a component, one
-    of:
-    -   `static_instance_id`: The instance ID in the component ID index is used
-        as the key for a component's storage. Components which are not listed in
-        the component ID index will not be able to use this storage capability.
-    -   `static_instance_id_or_moniker`: If the component is listed in the
-        component ID index, the instance ID is used as the key for a component's
-        storage. Otherwise, the component's relative moniker from the storage
-        capability is used.
-
-#### runner {#capability-runner}
-
-A definition of a [runner capability][doc-runners].
-
--   `runner`: The [name](#capability-names) for this runner capability.
--   `path`: The path in the component's outgoing directory from which the
-    `fuchsia.component.runner.ComponentRunner` protocol is served.
-
-#### resolver {#capability-resolver}
-
-A definition of a [resolver capability][doc-resolvers].
-
--   `resolver`: The [name](#capability-names) for this resolver capability.
--   `path`: The path in the component's outgoing directory from which the
-    `fuchsia.sys2.ComponentResolver` protocol is served.
-
-### use {#use}
-
-The `use` section declares the capabilities that the component can use at
-runtime, as explained in [Routing terminology](#routing-terminology).
-
-`use` is an array of objects with the following properties:
-
--   A capability declaration, one of:
-    -   `protocol`: The [name](#capability-names) of a protocol capability, or
-        an array of names of protocol capabilities.
-    -   `directory`: The [name](#capability-names) of a directory capability.
-    -   `storage`: The [name](#capability-names) of a storage capability.
--   `from` _(optional)_: The source of the capability. Defaults to `parent`. One
-    of:
-    -   `parent`: The component's parent.
-    -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
-        environment assigned to this component.
-    -   `framework`: The Component Framework runtime.
-    -   `#<capability-name>`: The name of another capability from which the
-        requested capability is derived.
-    -   `#<child-name>`: A [reference](#references) to a child component
-        instance.
--   `path` _(optional)_: The path at which to install the capability in the
-    component's namespace. For protocols, defaults to `/svc/${protocol}`.
-    Required for `directory` and `storage`. This property is disallowed for
-    declarations with capability arrays.
-
-Example:
-
-```json5
-use: [
-    {
-        protocol: [
-            "fuchsia.ui.scenic.Scenic",
-            "fuchsia.accessibility.Manager",
-        ]
-    },
-    {
-        directory: "themes",
-        path: "/data/themes",
-        rights: [ "r*" ],
-    },
-    {
-        storage: "persistent",
-        path: "/data",
-    },
-],
-```
-
-### expose {#expose}
-
-The `expose` section declares the capabilities exposed by this component, as
-explained in [Routing terminology](#routing-terminology).
-
-`expose` is an array of objects with the following properties:
-
--   A [capability name](#capability-names) or array of names, keyed to one of
-    the following typenames:
-    -   `protocol`
-    -   `directory`
-    -   `runner`
-    -   `resolver`
--   `from`: The source of the capability, one of:
-    -   `self`: This component. Requires a corresponding
-        [`capability`](#capabilities) declaration.
-    -   `framework`: The Component Framework runtime.
-    -   `#<capability-name>`: The name of another capability from which the
-        exposed capability is derived.
-    -   `#<child-name>`: A [reference](#references) to a child component
-        instance.
--   `to` _(optional)_: The capability target. Either `parent` or `framework`.
-    Defaults to `parent`.
--   `as` _(optional)_: The [name](#capability-names) for the capability as it
-    will be known by the target. If omitted, defaults to the original name. This
-    property cannot be used when `protocol` is an array of multiple items. `as`
-    cannot be used when an array of multiple names is provided.
-
-Example:
-
-```json5
-expose: [
-    {
-        directory: "themes",
-        from: "self",
-    },
-    {
-        protocol: "pkg.Cache",
-        from: "#pkg_cache",
-        as: "fuchsia.pkg.PackageCache",
-    },
-    {
-        protocol: [
-            "fuchsia.ui.app.ViewProvider",
-            "fuchsia.fonts.Provider",
-        ],
-        from: "self",
-    },
-    {
-        runner: "web-chromium",
-        from: "#web_runner",
-        as: "web",
-    },
-    {
-        resolver: "full-resolver",
-        from: "#universe_resolver",
-    },
-],
-```
-
-### offer {#offer}
-
-The `offer` section declares the capabilities offered by this component, as
-explained in [Routing terminology](#routing-terminology).
-
-`offer` is an array of objects with the following properties:
-
--   A [capability name](#capability-names) or array of names, keyed to one of
-    the following typenames:
-    -   `protocol`
-    -   `directory`
-    -   `storage`
-    -   `runner`
-    -   `resolver`
--   `from`: The source of the capability, one of:
-    -   `parent`: The component's parent. This source can be used for all
-        capability types.
-    -   `self`: This component. Requires a corresponding
-        [`capability`](#capabilities) declaration.
-    -   `framework`: The Component Framework runtime.
-    -   `#<capability-name>`: The name of another capability from which the
-        offered capability is derived.
-    -   `#<child-name>`: A [reference](#references) to a child component
-        instance. This source can only be used when offering protocol,
-        directory, or runner capabilities.
--   `to`: A capability target or array of targets, each of which is a
-    [reference](#references) to the child or collection to which the capability
-    is being offered, of the form `#<target-name>`.
--   `as` _(optional)_: An explicit [name](#capability-names) for the capability
-    as it will be known by the target. If omitted, defaults to the original
-    name. `as` cannot be used when an array of multiple names is provided.
--   `dependency` _(optional)_: The type of dependency between the source and
-    targets, one of:
-    -   `strong`: a strong dependency, which is used to determine shutdown
-        ordering. Component manager is guaranteed to stop the target before the
-        source. This is the default.
-    -   `weak_for_migration`: a weak dependency, which is ignored during
-        shutdown. When component manager stops the parent realm, the source may
-        stop before the clients. Clients of weak dependencies must be able to
-        handle these dependencies becoming unavailable. This type exists to keep
-        track of weak dependencies that resulted from migrations into v2
-        components.
-
-Example:
-
-```json5
-offer: [
-    {
-        protocol: "fuchsia.logger.LogSink",
-        from: "#logger",
-        to: [ "#fshost", "#pkg_cache" ],
-        dependency: "weak_for_migration",
-    },
-    {
-        protocol: [
-            "fuchsia.ui.app.ViewProvider",
-            "fuchsia.fonts.Provider",
-        ],
-        from: "#session",
-        to: [ "#ui_shell" ],
-        dependency: "strong",
-    },
-    {
-        directory: "blobfs",
-        from: "self",
-        to: [ "#pkg_cache" ],
-    },
-    {
-        directory: "fshost-config",
-        from: "parent",
-        to: [ "#fshost" ],
-        as: "config",
-    },
-    {
-        storage: "cache",
-        from: "parent",
-        to: [ "#logger" ],
-    },
-    {
-        runner: "web",
-        from: "parent",
-        to: [ "#user-shell" ],
-    },
-    {
-        resolver: "full-resolver",
-        from: "parent",
-        to: [ "#user-shell" ],
-    },
-],
-```
-
-### facets {#facets}
-
-The `facets` section is a JSON object containing [facets](#facet-metadata),
-chunks of metadata that components may interpret for their own purposes. The
-component framework enforces no schema for this section, but third parties may
-expect their facets to adhere to a particular schema.
-
-This section may be omitted.
-
-[component-url]: /docs/concepts/components/component_urls.md
+[capability-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
+[capability-service]: /docs/concepts/components/v2/capabilities/service.md
+[capability-directory]: /docs/concepts/components/v2/capabilities/directory.md
+[capability-storage]: /docs/concepts/components/v2/capabilities/storage.md
+[capability-resolver]: /docs/concepts/components/v2/capabilities/resolvers.md
+[capability-runner]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-capabilities]: /docs/concepts/components/v2/capabilities/README.md
-[doc-children]: realms.md#child-component-instances
-[doc-collections]: realms.md#collections
-[doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
-[doc-directory-rights]: /docs/concepts/components/v2/capabilities/directory.md#directory-capability-rights
-[doc-eager]: lifecycle.md#eager_binding
-[doc-environments]: environments.md
-[doc-module-facets]: /docs/concepts/modular/module_facet.md
+[doc-children]: /docs/concepts/components/v2/realms.md#child-component-instances
+[doc-collections]: /docs/concepts/components/v2/realms.md#collections
+[doc-environments]: /docs/concepts/components/v2/environments.md
 [doc-package-url]: /docs/concepts/packages/package_url.md
-[doc-packages]: /docs/concepts/packages/package.md
-[doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
 [doc-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
-[doc-realm-definitions]: realms.md#definitions
-[doc-reboot-on-terminate]: termination_policies.md#reboot-on-terminate
-[doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
-[doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
-[doc-static-children]: realms.md#static-children
-[doc-service]: /docs/concepts/components/v2/capabilities/service.md
-[doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
 [examples-routing]: /examples/components/routing
-[fidl-component-decl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
-[fidl-environment-decl]: /sdk/fidl/fuchsia.sys2/decls/environment_decl.fidl
+[fidl-component-decl]: https://fuchsia.dev/reference/fidl/fuchsia.component.decl#Component
 [glossary.component declaration]: /docs/glossary/README.md#component-declaration
 [glossary.component manifest]: /docs/glossary/README.md#component-manifest
 [glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source
-[glossary.hub]: /docs/glossary/README.md#hub
 [glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.package]: /docs/glossary/README.md#package
+[manifest-program]: https://fuchsia.dev/reference/cml#program
+[manifest-facet]: https://fuchsia.dev/reference/cml#facets
 [src-cmc]: /tools/cmc

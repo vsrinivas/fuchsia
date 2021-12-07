@@ -417,12 +417,12 @@ offer: [
 [doc-trf]: /docs/development/testing/components/test_runner_framework.md
 [doc-intro]: /docs/concepts/components/v2/introduction.md
 [doc-logs]: /docs/concepts/diagnostics/logs/README.md
-[doc-manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
+[doc-manifests-program]: https://fuchsia.dev/reference/cml#program
 [doc-manifests]: /docs/concepts/components/v2/component_manifests.md
 [doc-monikers]: /docs/concepts/components/v2/monikers.md
 [doc-packages]: /docs/concepts/packages/package.md
 [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
-[doc-routing]: /docs/concepts/components/v2/component_manifests.md#routing
+[doc-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-service]: /docs/concepts/components/v2/capabilities/service.md
 [example-routing-failed]: /examples/components/routing_failed/README.md

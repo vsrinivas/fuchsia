@@ -496,17 +496,17 @@ controller, see [offering external capabilities](#routes-from-outside).
 
 
 [cap-routes]: /docs/concepts/components/v2/component_manifests.md#capability-routing
-[children]: /docs/concepts/components/v2/component_manifests.md#children
-[collection]: /docs/concepts/components/v2/component_manifests.md#collections
+[children]: https://fuchsia.dev/reference/cml#children
+[collection]: https://fuchsia.dev/reference/cml#collections
 [component-urls]: /docs/concepts/components/component_urls.md
-[environment]: /docs/concepts/components/v2/component_manifests.md#environments
-[expose]: /docs/concepts/components/v2/component_manifests.md#expose
+[environment]: https://fuchsia.dev/reference/cml#environments
+[expose]: https://fuchsia.dev/reference/cml#expose
 [namespaces]: /docs/concepts/process/namespaces.md
-[offer]: /docs/concepts/components/v2/component_manifests.md#offer
+[offer]: https://fuchsia.dev/reference/cml#offer
 [realm-builder-shard]: /src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml
 [realms]: /docs/concepts/components/v2/realms.md
 [resolver]: /docs/concepts/components/v2/capabilities/resolvers.md
 [runner]: /docs/concepts/components/v2/capabilities/runners.md
-[shard-includes]: /docs/concepts/components/v2/component_manifests.md#include
+[shard-includes]: https://fuchsia.dev/reference/cml#include
 [test-runner]: /docs/development/testing/components/test_runner_framework.md#test-runners
-[use]: /docs/concepts/components/v2/component_manifests.md#use
+[use]: https://fuchsia.dev/reference/cml#use

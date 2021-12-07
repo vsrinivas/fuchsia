@@ -2039,7 +2039,7 @@ described in the [Vulkan documentation][vulkan].
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [emulatortest]: /tools/emulator/emulatortest
 [eager-lifecycle]: /docs/concepts/components/v2/lifecycle.md#eager
-[eager-manifest]: /docs/concepts/components/v2/component_manifests.md#children
+[eager-manifest]: https://fuchsia.dev/reference/cml#children
 [elf-runner-docs]: /docs/concepts/components/v2/elf_runner.md#lifecycle
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
@@ -2061,12 +2061,12 @@ described in the [Vulkan documentation][vulkan].
 [hub-v2]: /docs/concepts/components/v2/hub.md
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [logs]: /docs/development/diagnostics/logs/README.md
-[manifests-capabilities]: /docs/concepts/components/v2/component_manifests.md#capabilities
-[manifests-expose]: /docs/concepts/components/v2/component_manifests.md#expose
-[manifests-include]: /docs/concepts/components/v2/component_manifests.md#include
-[manifests-program]: /docs/concepts/components/v2/component_manifests.md#program
+[manifests-capabilities]: https://fuchsia.dev/reference/cml#capabilities
+[manifests-expose]: https://fuchsia.dev/reference/cml#expose
+[manifests-include]: https://fuchsia.dev/reference/cml#include
+[manifests-program]: https://fuchsia.dev/reference/cml#program
 [manifests-shard]: /docs/development/components/build.md#component-manifest-shards
-[manifests-use]: /docs/concepts/components/v2/component_manifests.md#use
+[manifests-use]: https://fuchsia.dev/reference/cml#use
 [moniker]: /docs/concepts/components/v2/monikers.md
 [protocol-capabilities]: /docs/concepts/components/v2/capabilities/protocol.md
 [resource-data]: /docs/development/components/data.md#hermetic_data_files_with_resource

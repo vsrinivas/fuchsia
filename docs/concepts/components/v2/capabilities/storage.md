@@ -177,6 +177,6 @@ For more details on implementing directories, see
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [glossary.storage-capability]: /docs/glossary/README.md#storage-capability
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
-[component-reference]: /docs/concepts/components/v2/component_manifests.md#references
+[component-reference]: https://fuchsia.dev/reference/cml#references
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [storage-index]: /docs/development/components/component_id_index.md

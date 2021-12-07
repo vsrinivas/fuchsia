@@ -143,9 +143,9 @@ fx list-packages --base
 [doc-framework-protocol]: capabilities/protocol.md#framework
 [doc-collections]: realms.md#collections
 [doc-lifecycle]: lifecycle.md
-[doc-manifests-children]: component_manifests.md#children
-[doc-manifests-expose]: component_manifests.md#expose
-[doc-manifests-offer]: component_manifests.md#offer
+[doc-manifests-children]: https://fuchsia.dev/reference/cml#children
+[doc-manifests-expose]: https://fuchsia.dev/reference/cml#expose
+[doc-manifests-offer]: https://fuchsia.dev/reference/cml#offer
 [doc-manifests]: component_manifests.md
 [doc-monikers]: monikers.md
 [doc-package-set]: /docs/concepts/packages/package.md#types_of_packages

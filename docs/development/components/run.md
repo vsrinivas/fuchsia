@@ -298,8 +298,8 @@ Binding to component instance...
 [glossary.component-url]: /docs/glossary/README.md#component-url
 [glossary.moniker]: /docs/glossary/README.md#moniker
 [lifecycle-doc]: /docs/concepts/components/v2/lifecycle.md
-[manifest-children]: /docs/concepts/components/v2/component_manifests.md#children
-[manifest-collections]: /docs/concepts/components/v2/component_manifests.md#collections
+[manifest-children]: https://fuchsia.dev/reference/cml#children
+[manifest-collections]: https://fuchsia.dev/reference/cml#collections
 [package-server]: /docs/concepts/packages/package_update.md#connecting_host_and_target
 [package-updates]: /docs/concepts/packages/package_update.md#triggering_package_updates
 [run-session]: /docs/development/sessions/building-and-running-a-session.md
