@@ -84,21 +84,29 @@ impl Entries {
 
     /// Add metadata from json text to the store of FMS entries.
     ///
-    /// If the an entry exists with a given name already exists, the entry will
+    /// If an entry exists with a given name, the entry will
     /// be overwritten with the new metadata.
     pub fn add_json<R: Read>(&mut self, reader: &mut R) -> Result<()> {
         let metadata = from_reader(reader)?;
         match metadata {
             Metadata::ProductBundleContainerV1(container) => {
                 for entry in container.bundles {
-                    self.data
-                        .insert(entry.data.name.to_string(), Metadata::ProductBundleV1(entry.data));
+                    self.add_metadata(Metadata::ProductBundleV1(entry.data))?
                 }
             }
             _ => {
-                self.data.insert(metadata.name().to_string(), metadata);
+                self.add_metadata(metadata)?;
             }
         };
+        Ok(())
+    }
+
+    /// Add metadata
+    ///
+    /// If the an entry exists with a given name, the entry will
+    /// be overwritten with the new metadata.
+    pub fn add_metadata(&mut self, metadata: Metadata) -> Result<()> {
+        self.data.insert(metadata.name().to_string(), metadata);
         Ok(())
     }
 

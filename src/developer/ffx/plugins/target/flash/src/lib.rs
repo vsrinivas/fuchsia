@@ -8,7 +8,7 @@ use {
         common::{file::EmptyResolver, prepare},
         info::flash_info,
         lock::flash_lock,
-        manifest::{from_path, from_sdk},
+        manifest::{from_in_tree, from_path, from_sdk},
         unlock::flash_unlock,
     },
     anyhow::Result,
@@ -145,20 +145,16 @@ pub async fn flash_plugin_impl<W: Write>(
         }
         None => {
             let sdk = ffx_config::get_sdk().await?;
-            if !matches!(sdk.get_version(), SdkVersion::InTree) {
-                // Currently SDK flashing only works for InTree.
-                // TODO(fxb/82166) - Make SDK flashing work for out of tree use case.
-                ffx_bail!("No manifest path was given, and no manifest was found in the configured SDK root ({})", 
-                          sdk.get_path_prefix().display());
-            }
             let mut path = sdk.get_path_prefix().to_path_buf();
+            writeln!(writer, "No manifest path was given, using SDK from {}.", path.display())?;
             path.push("flash.json"); // Not actually used, placeholder value needed.
-            writeln!(
-                writer,
-                "No manifest path was given, using SDK from {}.",
-                sdk.get_path_prefix().display()
-            )?;
-            from_sdk(writer, path, fastboot_proxy, cmd).await
+            match sdk.get_version() {
+                SdkVersion::InTree => from_in_tree(writer, path, fastboot_proxy, cmd).await,
+                SdkVersion::Version(version) => {
+                    from_sdk(writer, version.to_string(), fastboot_proxy, cmd).await
+                }
+                _ => ffx_bail!("Unknown SDK type"),
+            }
         }
     }
 }
@@ -170,6 +166,7 @@ pub async fn flash_plugin_impl<W: Write>(
 mod test {
     use super::*;
     use crate::common::file::FileResolver;
+    use async_trait::async_trait;
     use ffx_flash_args::LockCommand;
     use fidl_fuchsia_developer_bridge::FastbootRequest;
     use std::default::Default;
@@ -198,12 +195,13 @@ mod test {
         }
     }
 
+    #[async_trait(?Send)]
     impl FileResolver for TestResolver {
         fn manifest(&self) -> &Path {
             self.manifest.as_path()
         }
 
-        fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+        async fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
             Ok(file.to_owned())
         }
     }

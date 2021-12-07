@@ -61,6 +61,9 @@ pub struct FlashCommand {
     )]
     pub product: String,
 
+    #[argh(option, short = 'b', description = "optional product bundle name")]
+    pub product_bundle: Option<String>,
+
     #[argh(option, description = "oem staged file - can be supplied multiple times")]
     pub oem_stage: Vec<OemFile>,
 

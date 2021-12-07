@@ -173,7 +173,7 @@ pub(crate) async fn unlock_device<W: Write, F: FileResolver + Sync>(
     writer.flush()?;
     let challenge = get_unlock_challenge(&fastboot_proxy).await?;
     for cred in creds {
-        let cred_file = file_resolver.get_file(writer, cred)?;
+        let cred_file = file_resolver.get_file(writer, cred).await?;
         let unlock_creds = UnlockCredentials::new(&cred_file).await?;
         if challenge.product_id_hash[..] == *unlock_creds.get_atx_certificate_subject() {
             let d = Utc::now().signed_duration_since(search);

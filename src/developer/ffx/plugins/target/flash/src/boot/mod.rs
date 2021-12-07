@@ -31,7 +31,7 @@ fn copy<R: Read, W: Write>(mut reader: BufReader<R>, writer: &mut BufWriter<W>) 
     }
 }
 
-fn get_boot_image<W: Write, F: FileResolver + Sync>(
+async fn get_boot_image<W: Write, F: FileResolver + Sync>(
     writer: &mut W,
     file_resolver: &mut F,
     zbi: &String,
@@ -41,13 +41,13 @@ fn get_boot_image<W: Write, F: FileResolver + Sync>(
     match vbmeta {
         None => {
             let mut path = PathBuf::new();
-            path.push(file_resolver.get_file(writer, &zbi)?);
+            path.push(file_resolver.get_file(writer, &zbi).await?);
             Ok(path)
         }
         Some(v) => {
             // if vbmeta exists, concat the two into a single boot image file
-            let zbi_path = file_resolver.get_file(writer, &zbi)?;
-            let v_path = file_resolver.get_file(writer, &v)?;
+            let zbi_path = file_resolver.get_file(writer, &zbi).await?;
+            let v_path = file_resolver.get_file(writer, &v).await?;
             let mut path = PathBuf::new();
             path.push(temp_dir.path());
             path.push("boot_image.bin");
@@ -72,7 +72,7 @@ pub(crate) async fn flash_boot<W: Write, F: FileResolver + Sync>(
 ) -> Result<()> {
     writeln!(writer, "Creating boot image...")?;
     let temp_dir = tempdir()?;
-    let boot_image = get_boot_image(writer, file_resolver, &zbi, &vbmeta, &temp_dir)?;
+    let boot_image = get_boot_image(writer, file_resolver, &zbi, &vbmeta, &temp_dir).await?;
 
     let page_mask: u32 = PAGE_SIZE - 1;
     let kernal_size: u32 = metadata(&boot_image)?.len().try_into()?;

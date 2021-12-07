@@ -29,6 +29,7 @@ pub(crate) const MISSING_CREDENTIALS: &str =
 
 pub(crate) mod crypto;
 pub(crate) mod file;
+pub(crate) mod gcs;
 
 pub(crate) trait Partition {
     fn name(&self) -> &str;
@@ -215,7 +216,7 @@ pub(crate) async fn stage_file<W: Write, F: FileResolver + Sync>(
 ) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
     let file_to_upload = if resolve {
-        file_resolver.get_file(writer, file).context("reconciling file for upload")?
+        file_resolver.get_file(writer, file).await.context("reconciling file for upload")?
     } else {
         file.to_string()
     };
@@ -238,7 +239,7 @@ pub(crate) async fn flash_partition<W: Write, F: FileResolver + Sync>(
 ) -> Result<()> {
     let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
     let file_to_upload =
-        file_resolver.get_file(writer, file).context("reconciling file for upload")?;
+        file_resolver.get_file(writer, file).await.context("reconciling file for upload")?;
     writeln!(writer, "Preparing to upload {}", file_to_upload)?;
     try_join!(
         fastboot_proxy.flash(name, &file_to_upload, prog_client).map_err(map_fidl_error),

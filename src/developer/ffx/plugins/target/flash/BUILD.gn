@@ -11,10 +11,13 @@ ffx_plugin("ffx_flash") {
   args_with_unit_tests = true
   args_deps = [ "//third_party/rust_crates:serde" ]
 
+  config_data = [ "data/config.json" ]
+
   deps = [
     "//build/sdk/meta:rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fms:lib",
+    "//src/lib/gcs:lib",
     "//third_party/rust_crates:async-fs",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:base64",
@@ -29,6 +32,7 @@ ffx_plugin("ffx_flash") {
     "//third_party/rust_crates:tar",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:termion",
+    "//third_party/rust_crates:url",
     "//third_party/rust_crates:walkdir",
     "//third_party/rust_crates:zip",
   ]
@@ -42,6 +46,7 @@ ffx_plugin("ffx_flash") {
     "src/boot/mod.rs",
     "src/common/crypto.rs",
     "src/common/file.rs",
+    "src/common/gcs.rs",
     "src/common/mod.rs",
     "src/info/mod.rs",
     "src/lib.rs",

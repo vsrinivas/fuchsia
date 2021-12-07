@@ -6,6 +6,7 @@ use {
     crate::{
         common::{
             file::{ArchiveResolver, FileResolver, Resolver, TarResolver},
+            gcs::GcsResolver,
             prepare, Boot, Flash, Unlock,
         },
         manifest::{
@@ -23,6 +24,7 @@ use {
     },
     fidl_fuchsia_developer_bridge::FastbootProxy,
     fms::Entries,
+    sdk_metadata::{Metadata, ProductBundleV1},
     serde::{Deserialize, Serialize},
     serde_json::{from_value, Value},
     std::fs::File,
@@ -79,7 +81,7 @@ impl FlashManifestVersion {
         }
     }
 
-    pub(crate) fn from_sdk(path: PathBuf) -> Result<Self> {
+    pub(crate) fn from_in_tree(path: PathBuf) -> Result<Self> {
         let mut entries = Entries::new();
         let mut path = match path.parent() {
             Some(p) => p.to_path_buf(),
@@ -100,6 +102,12 @@ impl FlashManifestVersion {
         }
         let file = File::open(path)?;
         entries.add_json(&mut BufReader::new(file))?;
+        Ok(Self::Sdk(SdkEntries::new(entries)))
+    }
+
+    pub(crate) fn from_product_bundle(product_bundle: ProductBundleV1) -> Result<Self> {
+        let mut entries = Entries::new();
+        entries.add_metadata(Metadata::ProductBundleV1(product_bundle))?;
         Ok(Self::Sdk(SdkEntries::new(entries)))
     }
 }
@@ -211,13 +219,36 @@ impl Boot for FlashManifestVersion {
 
 pub(crate) async fn from_sdk<W: Write>(
     writer: &mut W,
+    version: String,
+    fastboot_proxy: FastbootProxy,
+    cmd: FlashCommand,
+) -> Result<()> {
+    match cmd.product_bundle.as_ref() {
+        Some(b) => {
+            let resolver = GcsResolver::new(version.clone(), b.to_string()).await?;
+            let product_bundle = resolver.product_bundle().clone();
+            FlashManifest {
+                resolver,
+                version: FlashManifestVersion::from_product_bundle(product_bundle)?,
+            }
+            .flash(writer, fastboot_proxy, cmd)
+            .await
+        }
+        None => ffx_bail!(
+            "Please supply the `--bundle` option to identify which product bundle to flash"
+        ),
+    }
+}
+
+pub(crate) async fn from_in_tree<W: Write>(
+    writer: &mut W,
     path: PathBuf,
     fastboot_proxy: FastbootProxy,
     cmd: FlashCommand,
 ) -> Result<()> {
     FlashManifest {
         resolver: Resolver::new(path.clone())?,
-        version: FlashManifestVersion::from_sdk(path.clone())?,
+        version: FlashManifestVersion::from_in_tree(path.clone())?,
     }
     .flash(writer, fastboot_proxy, cmd)
     .await

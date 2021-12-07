@@ -5,6 +5,7 @@
 use {
     crate::common::done_time,
     anyhow::{anyhow, bail, Context, Result},
+    async_trait::async_trait,
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
     flate2::read::GzDecoder,
@@ -17,9 +18,10 @@ use {
     zip::read::ZipArchive,
 };
 
+#[async_trait(?Send)]
 pub(crate) trait FileResolver {
     fn manifest(&self) -> &Path;
-    fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String>;
+    async fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String>;
 }
 
 pub(crate) struct EmptyResolver {
@@ -34,12 +36,13 @@ impl EmptyResolver {
     }
 }
 
+#[async_trait(?Send)]
 impl FileResolver for EmptyResolver {
     fn manifest(&self) -> &Path {
         self.fake.as_path() //should never get used
     }
 
-    fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+    async fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
         if PathBuf::from(file).is_absolute() {
             Ok(file.to_string())
         } else {
@@ -68,12 +71,13 @@ impl Resolver {
     }
 }
 
+#[async_trait(?Send)]
 impl FileResolver for Resolver {
     fn manifest(&self) -> &Path {
         self.manifest_path.as_path()
     }
 
-    fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+    async fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
         if PathBuf::from(file).is_absolute() {
             Ok(file.to_string())
         } else if let Some(p) = self.manifest().parent() {
@@ -150,12 +154,13 @@ impl ArchiveResolver {
     }
 }
 
+#[async_trait(?Send)]
 impl FileResolver for ArchiveResolver {
     fn manifest(&self) -> &Path {
         self.manifest_path.as_path()
     }
 
-    fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String> {
+    async fn get_file<W: Write>(&mut self, writer: &mut W, file: &str) -> Result<String> {
         let mut file = match self.internal_manifest_path.parent() {
             Some(p) => {
                 let mut path = PathBuf::new();
@@ -237,12 +242,13 @@ impl TarResolver {
     }
 }
 
+#[async_trait(?Send)]
 impl FileResolver for TarResolver {
     fn manifest(&self) -> &Path {
         self.manifest_path.as_path()
     }
 
-    fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
+    async fn get_file<W: Write>(&mut self, _writer: &mut W, file: &str) -> Result<String> {
         if let Some(p) = self.manifest().parent() {
             let mut parent = p.to_path_buf();
             parent.push(file);
