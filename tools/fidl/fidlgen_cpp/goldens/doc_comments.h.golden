@@ -135,4 +135,8 @@ struct CodingTraits<::fidl_test_doccomments::Struct> {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 }  // namespace fidl

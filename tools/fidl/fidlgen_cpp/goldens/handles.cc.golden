@@ -44,3 +44,7 @@
                ::fidl::InterfaceRequest<::fidl::test::handles::SomeProtocol>>(
                &decoder, 128)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

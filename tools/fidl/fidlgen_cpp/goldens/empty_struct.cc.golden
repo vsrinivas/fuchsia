@@ -39,3 +39,7 @@
     : storage_(
           {::fidl::DecodeAs<::fidl_test_emptystruct::Empty>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

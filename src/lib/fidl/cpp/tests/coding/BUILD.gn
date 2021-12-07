@@ -13,7 +13,10 @@ group("coding") {
 
 test("fidl_cpp_natural_coding_tests_bin") {
   output_name = "fidl_cpp_natural_coding_tests"
-  sources = [ "natural_struct_decoding_test.cc" ]
+  sources = [
+    "natural_response_decoding_test.cc",
+    "natural_struct_decoding_test.cc",
+  ]
   deps = [
     "//sdk/lib/stdcompat",
     "//src/lib/fidl/cpp",

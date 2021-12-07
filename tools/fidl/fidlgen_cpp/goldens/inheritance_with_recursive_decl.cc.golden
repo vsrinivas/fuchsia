@@ -17,3 +17,11 @@
     : storage_({::fidl::DecodeAs<::fidl::InterfaceRequest<
           ::fidl::test::inheritancewithrecursivedecl::Parent>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

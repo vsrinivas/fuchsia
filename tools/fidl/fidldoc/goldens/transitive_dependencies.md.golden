@@ -11,7 +11,7 @@
 ## **STRUCTS**
 
 ### Baz  {#Baz data-text="Baz"}
-*Defined in [fidl.test.transitivedependencies/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl;l=5)*
+*Defined in [fidl.test.transitivedependencies/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl;l=8)*
 
 
 

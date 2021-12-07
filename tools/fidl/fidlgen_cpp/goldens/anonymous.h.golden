@@ -469,4 +469,41 @@ struct CodingTraits<::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse> {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse* operator->()
+      const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
 }  // namespace fidl

@@ -3750,4 +3750,594 @@ struct CodingTraits<::fidl_test_protocols::ChannelProtocolEventARequest> {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse
+               payload)
+      : payload_(std::move(payload)) {}
+  Response(const Response&) noexcept = delete;
+  Response& operator=(const Response&) noexcept = delete;
+  ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse*
+  operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload =
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           NoRequestEmptyResponse>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                    NoRequestEmptyResponse>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+
+ private:
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         NoRequestEmptyResponse>>
+    final {
+ public:
+  static constexpr bool kHasPayload = false;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                    NoRequestWithResponse>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseNoRequestWithResponseTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_protocols::
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse*
+      operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse*
+      operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         NoRequestWithResponse>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocols::
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           WithRequestEmptyResponse>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                    WithRequestEmptyResponse>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+
+ private:
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         WithRequestEmptyResponse>>
+    final {
+ public:
+  static constexpr bool kHasPayload = false;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           WithRequestWithResponse>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                    WithRequestWithResponse>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_protocols::
+               WithAndWithoutRequestResponseWithRequestWithResponseTopResponse
+                   payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_protocols::
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse*
+      operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse*
+      operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                         WithRequestWithResponse>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocols::
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::Transitional::Request> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_protocols::Transitional::Request>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_protocols::TransitionalRequestTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_protocols::TransitionalRequestTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::TransitionalRequestTopResponse* operator->()
+      const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::TransitionalRequestTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::Transitional::Request>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocols::TransitionalRequestTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithProtocolEnds::ClientEnds>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse payload)
+      : payload_(std::move(payload)) {}
+  Response(const Response&) noexcept = delete;
+  Response& operator=(const Response&) noexcept = delete;
+  ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithProtocolEnds::ServerEnds>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse payload)
+      : payload_(std::move(payload)) {}
+  Response(const Response&) noexcept = delete;
+  Response& operator=(const Response&) noexcept = delete;
+  ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
+    final
+    : public ::fidl::internal::MessageBase<::fidl::Response<
+          ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse
+          payload)
+      : payload_(std::move(payload)) {}
+  Response(const Response&) noexcept = delete;
+  Response& operator=(const Response&) noexcept = delete;
+  ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse*
+  operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse
+      payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload =
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse*
+  operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload =
+      ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse*
+  operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload =
+      ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::HandleInResult>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::WithErrorSyntax::HandleInResult>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse payload)
+      : payload_(std::move(payload)) {}
+  Response(const Response&) noexcept = delete;
+  Response& operator=(const Response&) noexcept = delete;
+  ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse*
+  operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::HandleInResult>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload =
+      ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MethodB> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MethodB>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_protocols::ChannelProtocolMethodBTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_protocols::ChannelProtocolMethodBTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::ChannelProtocolMethodBTopResponse* operator->()
+      const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::ChannelProtocolMethodBTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MethodB>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocols::ChannelProtocolMethodBTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::ChannelProtocol::TakeHandle> final
+    : public ::fidl::internal::MessageBase<::fidl::Response<
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+
+ private:
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::ChannelProtocol::TakeHandle>>
+    final {
+ public:
+  static constexpr bool kHasPayload = false;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MutateSocket>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocols::ChannelProtocol::MutateSocket>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse payload)
+      : payload_(std::move(payload)) {}
+  Response(const Response&) noexcept = delete;
+  Response& operator=(const Response&) noexcept = delete;
+  ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MutateSocket>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
 }  // namespace fidl

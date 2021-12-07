@@ -13,4 +13,10 @@ namespace fidl_test_bindingsdenylist {
 constexpr uint32_t AllBindings = ::fidl::test::bindingsdenylist::AllBindings;
 
 }  // namespace fidl_test_bindingsdenylist
-namespace fidl {}  // namespace fidl
+namespace fidl {
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+}  // namespace fidl

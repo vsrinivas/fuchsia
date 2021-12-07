@@ -83,22 +83,17 @@ type protocolWithHlMessaging struct {
 func (p Protocol) WithHlMessaging() protocolWithHlMessaging {
 	return protocolWithHlMessaging{
 		Protocol:           p,
-		hlMessagingDetails: p.hlMessaging,
+		hlMessagingDetails: p.HlMessaging,
 	}
 }
 
-// TODO(fxbug.dev/60240): Start implementing unified bindings messaging layer
-// based on this skeleton.
-type unifiedMessagingDetails struct {
-	ClientImpl      name
-	EventHandlers   name
-	Interface       name
-	EventSender     name
-	RequestEncoder  name
-	RequestDecoder  name
-	ResponseEncoder name
-	ResponseDecoder name
-}
+// These correspond to templated classes and functions forward-declared in
+// /src/lib/fidl/cpp/include/lib/fidl/cpp/unified_messaging.h
+var (
+	NaturalResponse = fidlNs.member(("Response"))
+	MessageTraits   = internalNs.member("MessageTraits")
+	MessageBase     = internalNs.member("MessageBase")
+)
 
 // These correspond to templated classes forward-declared in
 // //zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
@@ -182,7 +177,7 @@ type protocolInner struct {
 	// TODO(fxbug.dev/8035): Remove.
 	DiscoverableName string
 
-	hlMessaging hlMessagingDetails
+	HlMessaging hlMessagingDetails
 	wireTypeNames
 
 	// ClientAllocation is the allocation behavior of the client when receiving
@@ -356,12 +351,28 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 	}
 }
 
+type unifiedMethod struct {
+	NaturalResponse       name
+	ResponseMessageTraits name
+	ResponseMessageBase   name
+}
+
+func newUnifiedMethod(methodMarker name) unifiedMethod {
+	naturalResponse := NaturalResponse.template(methodMarker)
+	return unifiedMethod{
+		NaturalResponse:       naturalResponse,
+		ResponseMessageTraits: MessageTraits.template(naturalResponse),
+		ResponseMessageBase:   MessageBase.template(naturalResponse),
+	}
+}
+
 // methodInner contains information about a Method that should be filled out by
 // the compiler.
 type methodInner struct {
 	protocolName nameVariants
 	Marker       nameVariants
 	wireMethod
+	unifiedMethod
 	baseCodingTableName string
 	requestTypeShapeV1  TypeShape
 	requestTypeShapeV2  TypeShape
@@ -377,9 +388,13 @@ type methodInner struct {
 	nameVariants
 	Ordinal                   uint64
 	HasRequest                bool
+	HasRequestPayload         bool
+	RequestPayload            nameVariants
 	RequestArgs               []Parameter
 	RequestAnonymousChildren  []ScopedLayout
 	HasResponse               bool
+	HasResponsePayload        bool
+	ResponsePayload           nameVariants
 	ResponseArgs              []Parameter
 	ResponseAnonymousChildren []ScopedLayout
 	Transitional              bool
@@ -447,7 +462,7 @@ func (d messageDirection) queryBoundedness(c methodContext, hasFlexibleEnvelope 
 	panic(fmt.Sprintf("unexpected message direction: %v", d))
 }
 
-func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Method {
+func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames, p fidlgen.Protocol) Method {
 	hlCodingTableBase := hl.ProtocolMarker.Namespace().append("_internal").member(inner.baseCodingTableName)
 	wireCodingTableBase := wire.WireProtocolMarker.Namespace().member(inner.baseCodingTableName)
 
@@ -471,8 +486,9 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames) Met
 	m := Method{
 		methodInner: inner,
 		OrdinalName: nameVariants{
-			HLCPP: inner.protocolName.HLCPP.Namespace().append("internal").member(ordinalName),
-			Wire:  inner.protocolName.Wire.Namespace().member(ordinalName),
+			HLCPP:   inner.protocolName.HLCPP.Namespace().append("internal").member(ordinalName),
+			Wire:    inner.protocolName.Wire.Namespace().member(ordinalName),
+			Unified: inner.protocolName.Wire.Namespace().member(ordinalName),
 		},
 		Request: newMessage(messageInner{
 			TypeShapeV1:     inner.requestTypeShapeV1,
@@ -532,6 +548,8 @@ type Parameter struct {
 func (p Parameter) NameAndType() (string, Type) {
 	return p.Name(), p.Type
 }
+
+var _ Member = (*Parameter)(nil)
 
 func anyEventHasFlexibleEnvelope(methods []Method) bool {
 	for _, m := range methods {
@@ -596,6 +614,16 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			responseTypeShapeV2.InlineSize += kMessageHeaderSize
 		}
 
+		var maybeRequestPayload nameVariants
+		if v.HasRequestPayload() {
+			maybeRequestPayload = c.compileNameVariants(v.RequestPayload.Identifier)
+		}
+
+		var maybeResponsePayload nameVariants
+		if v.HasResponsePayload() {
+			maybeResponsePayload = c.compileNameVariants(v.ResponsePayload.Identifier)
+		}
+
 		method := newMethod(methodInner{
 			nameVariants: name,
 			protocolName: protocolName,
@@ -608,19 +636,24 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 			responseTypeShapeV1: TypeShape{responseTypeShapeV1},
 			responseTypeShapeV2: TypeShape{responseTypeShapeV2},
 			wireMethod:          newWireMethod(name.Wire.Name(), wireTypeNames, protocolName.Wire, methodMarker.Wire),
+			unifiedMethod:       newUnifiedMethod(methodMarker.Wire),
 			Attributes:          Attributes{v.Attributes},
 			// TODO(fxbug.dev/84834): Use the functionality in //tools/fidl/lib/fidlgen/identifiers.go
 			FullyQualifiedName:        fmt.Sprintf("%s.%s", p.Name, v.Name),
 			Ordinal:                   v.Ordinal,
 			HasRequest:                v.HasRequest,
+			HasRequestPayload:         v.HasRequestPayload(),
+			RequestPayload:            maybeRequestPayload,
 			RequestArgs:               c.compileParameterArray(requestPayloadStruct),
 			RequestAnonymousChildren:  requestChildren,
 			HasResponse:               v.HasResponse,
+			HasResponsePayload:        v.HasResponsePayload(),
+			ResponsePayload:           maybeResponsePayload,
 			ResponseArgs:              c.compileParameterArray(responsePayloadStruct),
 			ResponseAnonymousChildren: responseChildren,
 			Transitional:              v.IsTransitional(),
 			Result:                    result,
-		}, hlMessaging, wireTypeNames)
+		}, hlMessaging, wireTypeNames, p)
 		methods = append(methods, method)
 	}
 
@@ -639,7 +672,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 	r := newProtocol(protocolInner{
 		Attributes:       Attributes{p.Attributes},
 		nameVariants:     protocolName,
-		hlMessaging:      hlMessaging,
+		HlMessaging:      hlMessaging,
 		wireTypeNames:    wireTypeNames,
 		DiscoverableName: p.GetServiceName(),
 		SyncEventAllocationV1: computeAllocation(

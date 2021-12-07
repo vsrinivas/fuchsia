@@ -200,6 +200,8 @@ func (s ScopedLayout) FlattenedName() string {
 	return s.flattenedName.NoLeading()
 }
 
+// A Member is a named member of a container (e.g.
+// request/response/regular domain object).
 type Member interface {
 	NameAndType() (string, Type)
 }

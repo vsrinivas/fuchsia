@@ -407,4 +407,44 @@ struct CodingTraits<::fidl_test_emptystruct::EmptyProtocolReceiveRequest> {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse*
+  operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload =
+      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
 }  // namespace fidl

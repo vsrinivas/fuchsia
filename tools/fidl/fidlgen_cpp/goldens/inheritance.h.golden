@@ -160,4 +160,76 @@ struct CodingTraits<::fidl_test_inheritance::SuperFooRequest> {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_inheritance::Super::Foo> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_inheritance::Super::Foo>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_inheritance::SuperFooTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_inheritance::SuperFooTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_inheritance::SuperFooTopResponse* operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_inheritance::SuperFooTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_inheritance::Super::Foo>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_inheritance::SuperFooTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_inheritance::Sub::Foo> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_inheritance::Sub::Foo>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_inheritance::SuperFooTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_inheritance::SuperFooTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_inheritance::SuperFooTopResponse* operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_inheritance::SuperFooTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_inheritance::Sub::Foo>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_inheritance::SuperFooTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
 }  // namespace fidl

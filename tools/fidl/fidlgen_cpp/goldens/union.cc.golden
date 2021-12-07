@@ -65,3 +65,7 @@
 ::fidl_test_union::Empty::Empty(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint8_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

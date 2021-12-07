@@ -237,4 +237,38 @@ struct CodingTraits<::fidl_test_error::ExampleFooRequest> {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_error::Example::Foo> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_error::Example::Foo>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_error::ExampleFooTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_error::ExampleFooTopResponse* operator->() { return &payload_; }
+  const ::fidl_test_error::ExampleFooTopResponse* operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_error::ExampleFooTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_error::Example::Foo>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_error::ExampleFooTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
 }  // namespace fidl

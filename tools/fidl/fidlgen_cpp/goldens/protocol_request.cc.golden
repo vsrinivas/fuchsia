@@ -37,3 +37,11 @@
           ::fidl::InterfaceRequest<::fidl::test::protocolrequest::Child>>(
           &decoder, 0)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

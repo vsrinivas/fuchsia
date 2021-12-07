@@ -26,11 +26,44 @@
       ],
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
-        "line": 5,
+        "line": 8,
         "column": 6,
         "length": 3
       },
       "is_request_or_response": false,
+      "maybe_attributes": [
+        {
+          "name": "bindings_denylist",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "literal",
+                "value": "cpp",
+                "expression": "\"cpp\"",
+                "literal": {
+                  "kind": "string",
+                  "value": "cpp",
+                  "expression": "\"cpp\""
+                }
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
+                "line": 7,
+                "column": 20,
+                "length": 5
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
+            "line": 7,
+            "column": 1,
+            "length": 25
+          }
+        }
+      ],
       "members": [
         {
           "type": {
@@ -59,7 +92,7 @@
           "name": "g",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
-            "line": 6,
+            "line": 9,
             "column": 5,
             "length": 1
           },

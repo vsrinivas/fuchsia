@@ -380,4 +380,83 @@ struct CodingTraits<
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild> final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_protocolrequest::ParentGetChildTopResponse payload)
+      : payload_(std::move(payload)) {}
+  Response(const Response&) noexcept = delete;
+  Response& operator=(const Response&) noexcept = delete;
+  ::fidl_test_protocolrequest::ParentGetChildTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocolrequest::ParentGetChildTopResponse* operator->()
+      const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocolrequest::ParentGetChildTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocolrequest::ParentGetChildTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChildRequest>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_protocolrequest::Parent::GetChildRequest>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse payload)
+      : payload_(std::move(payload)) {}
+  Response(const Response&) noexcept = delete;
+  Response& operator=(const Response&) noexcept = delete;
+  ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse* operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse*
+  operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChildRequest>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
 }  // namespace fidl

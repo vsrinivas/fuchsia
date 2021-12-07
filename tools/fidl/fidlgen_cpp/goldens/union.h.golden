@@ -714,4 +714,99 @@ struct CodingTraits<::fidl_test_union::Empty> {
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>
+    final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_union::TestProtocol::
+                               StrictXUnionHenceResponseMayBeStackAllocated>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_union::
+          TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
+              payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_union::
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+      operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_union::
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse*
+      operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_union::
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse
+          payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_union::TestProtocol::
+                         StrictXUnionHenceResponseMayBeStackAllocated>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_union::
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>
+    final : public ::fidl::internal::MessageBase<::fidl::Response<
+                ::fidl_test_union::TestProtocol::
+                    FlexibleXUnionHenceResponseMustBeHeapAllocated>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(
+      ::fidl_test_union::
+          TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
+              payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_union::
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+      operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_union::
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
+      operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_union::
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
+          payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<
+    ::fidl::Response<::fidl_test_union::TestProtocol::
+                         FlexibleXUnionHenceResponseMustBeHeapAllocated>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_union::
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
 }  // namespace fidl

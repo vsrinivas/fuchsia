@@ -46,3 +46,7 @@
           ::fidl_test_anonymous::SomeProtocol_SomeMethod_Result>(&decoder,
                                                                  0)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

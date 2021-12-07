@@ -892,6 +892,14 @@ func (m *Method) IsTransitional() bool {
 	return m.HasAttribute("transitional")
 }
 
+func (m *Method) HasRequestPayload() bool {
+	return m.RequestPayload != nil
+}
+
+func (m *Method) HasResponsePayload() bool {
+	return m.ResponsePayload != nil
+}
+
 // Enum represents a FIDL declaration of an enum.
 type Enum struct {
 	Layout

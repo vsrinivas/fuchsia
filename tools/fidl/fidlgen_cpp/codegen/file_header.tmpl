@@ -65,8 +65,20 @@ do not support them in the bindings. */}}
 {{- end }}
 {{ "" }}
 
+{{- /* Declare natural extensions to the wire messaging layer. */}}
+{{- range .Decls }}
+{{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
+{{- range $transport, $_ := .Transports }}
+{{- if eq $transport "Channel" -}}
+  {{- template "ClientDeclaration" $protocol }}
+{{ "" }}
+  {{- /* TODO(fxbug.dev/60240): Add more */}}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+
 {{- end }}{{/* if not SingleComponentLibraryName */}}
 
 {{ EndOfFile }}
 {{ end }}
-

@@ -1,11 +1,20 @@
 library bottom;
 
+// TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
+// single component library names.
+@bindings_denylist("cpp")
 type Foo = struct {
     a int32;
 };
 
+// TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
+// single component library names.
+@bindings_denylist("cpp")
 protocol Bottom {
-    GetFoo() -> (struct {
+    GetFoo() -> (
+            // TODO(fxbug.dev/60240): Unified bindings namespace collies with HLCPP for
+            // single component library names.
+            @bindings_denylist("cpp") struct {
         foo Foo;
     });
 };

@@ -7,3 +7,11 @@
 ::fidl_test_versions::Struct::Struct(::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<uint32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

@@ -397,6 +397,8 @@ class IncomingMessage : public ::fidl::Result {
     return fit::nullable<fidl_epitaph_t*>{};
   }
 
+  bool is_transactional() const { return is_transactional_; }
+
   uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message_.bytes); }
   uint32_t byte_actual() const { return message_.num_bytes; }
 
@@ -471,6 +473,7 @@ class IncomingMessage : public ::fidl::Result {
   void MoveImpl(IncomingMessage&& other) noexcept {
     transport_vtable_ = other.transport_vtable_;
     message_ = other.message_;
+    is_transactional_ = other.is_transactional_;
     other.ReleaseHandles();
   }
 

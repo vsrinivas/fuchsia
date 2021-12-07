@@ -23,3 +23,7 @@
     ::fidl::Decoder& decoder)
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

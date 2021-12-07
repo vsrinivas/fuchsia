@@ -43,3 +43,7 @@
           {::fidl::DecodeAs<::fidl_test_requestflexibleenvelope::FlexibleFoo>(
               &decoder, 0)}) {}
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+#endif  // __Fuchsia__

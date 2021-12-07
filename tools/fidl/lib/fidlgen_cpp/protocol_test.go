@@ -248,7 +248,7 @@ protocol P {};
 `
 	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl))
 
-	messaging := root.Decls[0].(*Protocol).hlMessaging
+	messaging := root.Decls[0].(*Protocol).HlMessaging
 	assertEqual(t, messaging.ProtocolMarker.String(), "::fuchsia::foobar::P")
 	assertEqual(t, messaging.InterfaceAliasForStub.String(), "::fuchsia::foobar::P_Stub::P_clazz")
 	assertEqual(t, messaging.Proxy.String(), "::fuchsia::foobar::P_Proxy")

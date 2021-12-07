@@ -12,6 +12,11 @@
 namespace fidl {
 namespace internal {
 
+// Given a transactional message, extracts the parts following the transaction
+// header, and re-package that as another |fidl::IncomingMessage|. This is
+// useful for decoding the request/response payload of a method.
+::fidl::IncomingMessage SkipTransactionHeader(::fidl::IncomingMessage message);
+
 // Converts an |IncomingMessage| into the HLCPP equivalent.
 // The message must use the Zircon channel transport.
 // |handle_storage| is a caller-allocated array for storing handle metadata.

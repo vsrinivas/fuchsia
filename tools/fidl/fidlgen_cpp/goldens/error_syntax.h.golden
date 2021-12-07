@@ -290,4 +290,90 @@ struct CodingTraits<
 };
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+}  // namespace fidl
+
+template <>
+class ::fidl::Response<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+    final
+    : public ::fidl::internal::MessageBase<
+          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                               ComposedCallWhichMayFail>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_errorsyntax_parent::
+               ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse*
+      operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse*
+      operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
+};
+namespace fidl {}  // namespace fidl
+
+template <>
+class ::fidl::Response<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+    final
+    : public ::fidl::internal::MessageBase<::fidl::Response<
+          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
+ public:
+  Response() = default;
+  ~Response() = default;
+  Response(Response&&) noexcept = default;
+  Response& operator=(Response&&) noexcept = default;
+  Response(::fidl_test_errorsyntax::
+               ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse payload)
+      : payload_(std::move(payload)) {}
+  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
+  operator->() {
+    return &payload_;
+  }
+  const ::fidl_test_errorsyntax::
+      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
+      operator->() const {
+    return &payload_;
+  }
+
+ private:
+  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse
+      payload_;
+};
+
+template <>
+struct ::fidl::internal::MessageTraits<::fidl::Response<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>>
+    final {
+ public:
+  static constexpr bool kHasPayload = true;
+  using Payload = ::fidl_test_errorsyntax::
+      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+};
+namespace fidl {
+#endif  // __Fuchsia__
+
 }  // namespace fidl
