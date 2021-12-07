@@ -18,11 +18,10 @@ Fuchsia software packaging, or the [long term SWD goals][goals].
 
 ### Major Binaries
 
-Updated: March 2021
+Updated: June 2021
 
 | Subsystem                 | Purpose                                                                                            | Location                                     | Language |
 |-----------------------    |----------------------------------------------------------------------------------------------------|----------------------------------------------|----------|
-| amberctl                  | Deprecated CLI for various components. Scheduled to be replaced by `pkgctl`.                       | `//src/sys/pkg/bin/amber/amberctl`           | Go       |
 | pkg-cache                 | Caches downloaded packages in case they are needed again.                                          | `//src/sys/pkg/bin/pkg-cache`                | Rust     |
 | pkg-resolver              | Main entry point for software delivery stack. Coordinates retrieval and  installation of packages. | `//src/sys/pkg/bin/pkg-resolver`             | Rust     |
 | omaha-client              | Checks for system updates using the Omaha server infrastructure                                    | `//src/sys/pkg/bin/omaha-client`             | Rust     |

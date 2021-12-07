@@ -9,7 +9,10 @@ import("//build/packages/package_metadata.gni")
 amber_repository_dir = "$root_out_dir/amber-files"
 
 # Directory containing developer signing keys.
-amber_keys_dir = "//src/sys/pkg/bin/amber/keys"
+amber_keys_dir = "//src/sys/pkg/repositories/devhost/keys"
+
+# Directory containing developer root metadata.
+amber_metadata_dir = "//src/sys/pkg/repositories/devhost/metadata"
 
 # Directory containing files named by their merkleroot content IDs in
 # ASCII hex.  The //build/image:pm_publish_blobs target populates
@@ -241,7 +244,7 @@ template("pm_prepare_publish") {
   # should be computed so we don't forget to copy the file when we rotate the
   # root metadata.
   copy("${target_name}__root_manifest") {
-    sources = [ "$amber_keys_dir/metadata/7.root.json" ]
+    sources = [ "$amber_metadata_dir/7.root.json" ]
 
     outputs = [ "$amber_repository_dir/repository/root.json" ]
   }
@@ -249,13 +252,13 @@ template("pm_prepare_publish") {
   # TODO(fxbug.dev/38262) See the comment on `root_manifest`.
   copy("${target_name}__versioned_root_manifest") {
     sources = [
-      "$amber_keys_dir/metadata/1.root.json",
-      "$amber_keys_dir/metadata/2.root.json",
-      "$amber_keys_dir/metadata/3.root.json",
-      "$amber_keys_dir/metadata/4.root.json",
-      "$amber_keys_dir/metadata/5.root.json",
-      "$amber_keys_dir/metadata/6.root.json",
-      "$amber_keys_dir/metadata/7.root.json",
+      "$amber_metadata_dir/1.root.json",
+      "$amber_metadata_dir/2.root.json",
+      "$amber_metadata_dir/3.root.json",
+      "$amber_metadata_dir/4.root.json",
+      "$amber_metadata_dir/5.root.json",
+      "$amber_metadata_dir/6.root.json",
+      "$amber_metadata_dir/7.root.json",
     ]
 
     outputs = [ "$amber_repository_dir/repository/{{source_file_part}}" ]

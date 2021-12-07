@@ -1,5 +1,4 @@
 fuchsia-pkg://fuchsia.com/pkgctl#meta/pkgctl.cmx
-fuchsia-pkg://fuchsia.com/amberctl-tests#meta/pkg-resolver-isolated.cmx
 fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/package_cache_allowed.cmx
 fuchsia-pkg://fuchsia.com/isolated-swd-components#meta/pkg-resolver-isolated.cmx

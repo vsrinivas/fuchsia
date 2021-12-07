@@ -5,7 +5,6 @@
 group("tests") {
   testonly = true
   public_deps = [
-    "amberctl:tests",
     "far:tests",
     "isolated-ota:tests",
     "omaha-client:tests",

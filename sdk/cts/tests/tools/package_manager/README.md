@@ -3,7 +3,7 @@
 ### What is this test about?
 
 This is a set of tests for the package management workflow. It covers
-commands done using `pm`, `amberctl`, and `pkgctl`.
+commands done using `pm` and `pkgctl`.
 
 In all, the tests cover the flow spanning from `*.far` and repo
 creation to running binaries on-device from the served `*.far`.
@@ -18,7 +18,6 @@ The individual tests can be found in `test/package_manager_test.dart`.
 Relevant code paths with unit and integration tests:
 
 ```
-//src/sys/pkg/tests/amberctl
 //src/sys/pkg/tests/pkgctl
 //src/testing/host-target-testing/packages
 ```

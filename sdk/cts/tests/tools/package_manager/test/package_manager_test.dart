@@ -15,7 +15,6 @@ import 'package:logging/logging.dart';
 import 'package:path/path.dart' as path;
 import 'package:pkg/pkg.dart';
 import 'package:pm/pm.dart';
-import 'package:quiver/core.dart' show Optional;
 import 'package:retry/retry.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
@@ -27,6 +26,13 @@ void printErrorHelp() {
   print('If this test fails, see '
       'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/sdk/cts/tools/package_manager/README.md'
       ' for details!');
+}
+
+// validRepoName replaces invalid characters in the input sequence to ensure
+// the returned string complies to
+// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
+String validRepoName(String originalName) {
+  return originalName.replaceAll(RegExp(r'(?![a-z0-9-]).'), '-');
 }
 
 Future<String> formattedHostAddress(sl4f.Sl4f sl4fDriver) async {
@@ -81,22 +87,18 @@ void main() {
     printErrorHelp();
   });
   group('Package Manager', () {
-    Optional<String> originalRewriteRule;
     String originalRewriteRuleJson;
     Set<String> originalRepos;
     PackageManagerRepo repoServer;
     String testPackageName = 'cts-package-manager-sample-component';
+    String testRepoRewriteRule =
+        '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"%%NAME%%","path_prefix_match":"/","path_prefix_replacement":"/"}]}';
 
     setUp(() async {
       repoServer = await PackageManagerRepo.initRepo(sl4fDriver, pmPath, log);
 
       // Gather the original package management settings before test begins.
       originalRepos = await getCurrentRepos(sl4fDriver);
-      originalRewriteRule = getCurrentRewriteRule(
-          (await repoServer.pkgctlRuleList(
-                  'Save original rewrite rules from `pkgctl rule list`', 0))
-              .stdout
-              .toString());
       originalRewriteRuleJson = (await repoServer.pkgctlRuleDumpdynamic(
               'Save original rewrite rules from `pkgctl rule dump-dynamic`', 0))
           .stdout
@@ -114,109 +116,6 @@ void main() {
       }
     });
     test(
-        'Test that creates a repository, deploys a package, and '
-        'validates that the deployed package is visible from the server',
-        () async {
-      // Covers these commands (success cases only):
-      //
-      // Newly covered:
-      // amberctl add_src -n <path> -f http://<host>:<port>/config.json
-      // amberctl enable_src -n devhost
-      // amberctl rm_src -n <name>
-      // pkgctl repo
-      // pm serve -repo=<path> -l :<port>
-      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
-      final optionalPort = repoServer.getServePort();
-      expect(optionalPort.isPresent, isTrue);
-      final port = optionalPort.value;
-
-      log.info('Getting the available packages');
-      final curlResponse = await Process.run(
-          'curl', ['http://localhost:$port/targets.json', '-i']);
-
-      log.info('curl response: ${curlResponse.stdout.toString()}');
-      expect(curlResponse.exitCode, 0);
-      final curlOutput = curlResponse.stdout.toString();
-      expect(curlOutput.contains('$testPackageName/0'), isTrue);
-
-      // Typically, there is a pre-existing rule pointing to `devhost`, but it isn't
-      // guaranteed. Record what the rule list is before we begin, and confirm that is
-      // the rule list when we are finished.
-      final originalRuleList = (await repoServer.pkgctlRuleList(
-              'Recording the current rule list', 0))
-          .stdout
-          .toString();
-
-      await repoServer.amberctlAddSrcNF(
-          'Adding the new repository ${repoServer.getRepoPath()} as an update source with http://$hostAddress:$port/config.json',
-          repoServer.getRepoPath(),
-          'http://$hostAddress:$port/config.json',
-          0);
-
-      // Check that our new repo source is listed.
-      var listSrcsOutput = (await repoServer.pkgctlRepo(
-              'Running pkgctl repo to list sources', 0))
-          .stdout
-          .toString();
-      String repoName = repoServer.getRepoPath().replaceAll('/', '_');
-      // ^^^^^^^^^^^^^^^^^^^^^^^^^ WARNING ^^^^^^^^^^^^^^^^^^^^^^^^^^
-      // This is using deprecated legacy behavior which is going away in the future.
-      // Do not use this as an example or take it as inspiration for production code.
-      // Please refer to the allowed characters as defined here:
-      // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
-      // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-      String repoUrl = 'fuchsia-pkg://$repoName';
-      expect(listSrcsOutput.contains(repoUrl), isTrue);
-
-      var ruleListOutput = (await repoServer.pkgctlRuleList(
-              'Confirm rule list points to $repoName', 0))
-          .stdout
-          .toString();
-      expect(
-          hasExclusivelyOneItem(ruleListOutput, 'host_replacement', repoName),
-          isTrue);
-
-      await repoServer.amberctlRmsrcN('Cleaning up temp repo', repoName, 0);
-
-      log.info('Checking that $repoUrl is gone');
-      listSrcsOutput = (await repoServer.pkgctlRepo(
-              'Running pkgctl repo to list sources', 0))
-          .stdout
-          .toString();
-      expect(listSrcsOutput.contains(repoUrl), isFalse);
-
-      if (originalRewriteRule.isPresent) {
-        await repoServer.amberctlEnablesrcN(
-            'Re-enabling original repo source', originalRewriteRule.value, 0);
-      }
-
-      listSrcsOutput = (await repoServer.pkgctlRuleList(
-              'Confirm rule list is back to its original set.', 0))
-          .stdout
-          .toString();
-      expect(listSrcsOutput, originalRuleList);
-
-      log.info(
-          'Killing serve process and ensuring the output contains `[pm serve]`.');
-      final killStatus = repoServer.kill();
-      expect(killStatus, isTrue);
-
-      var serveOutputBuilder = StringBuffer();
-      var serveProcess = repoServer.getServeProcess();
-      expect(serveProcess.isPresent, isTrue);
-      await repoServer
-          .getServeStdoutSplitStream()
-          .transform(utf8.decoder)
-          .listen((data) {
-        serveOutputBuilder.write(data);
-      }).asFuture();
-      final serveOutput = serveOutputBuilder.toString();
-      // Ensuring that `[pm serve]` appears in the output because the `-q` flag
-      // wasn't used in the serve command.
-      expect(serveOutput.contains('[pm serve]'), isTrue);
-    });
-    test(
         'Test that creates a repository, registers it using pkgctl, and validates that the '
         'package in the repository is visible.', () async {
       // Covers these commands (success cases only):
@@ -226,6 +125,8 @@ void main() {
       // pkgctl rule dump-dynamic
       // pkgctl repo add url <repo URL> -f 1
       // pkgctl repo rm fuchsia-pkg://<repo URL>
+      // pkgctl repo
+      // pm serve -repo=<path> -l :<port>
       await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
       final optionalPort = repoServer.getServePort();
       expect(optionalPort.isPresent, isTrue);
@@ -340,7 +241,7 @@ void main() {
       // pm serve -repo=<path> -l :<port> -q
       //
       // Previously covered:
-      // amberctl add_src -n <path> -f http://<host>:<port>/config.json
+      // pkgctl repo add url http://<host>:<port>/config.json -n testhost -f 1
       await repoServer
           .setupServe('$testPackageName-0.far', manifestPath, ['-q']);
       final optionalPort = repoServer.getServePort();
@@ -356,10 +257,11 @@ void main() {
       final curlOutput = curlResponse.stdout.toString();
       expect(curlOutput.contains('$testPackageName/0'), isTrue);
 
-      await repoServer.amberctlAddSrcNF(
+      await repoServer.pkgctlRepoAddUrlNF(
           'Adding the new repository as an update source with http://$hostAddress:$port',
-          repoServer.getRepoPath(),
           'http://$hostAddress:$port/config.json',
+          'testhost',
+          '1',
           0);
 
       log.info(
@@ -380,12 +282,11 @@ void main() {
       // The `-q` flag was given to `pm serve`, so there should be no serve output.
       expect(serveOutput.contains('[pm serve]'), isFalse);
     });
-    test('Test amberctl default name behavior when no name is given.',
-        () async {
+    test('Test pkgctl default name behavior when no name is given.', () async {
       // Covers these commands (success cases only):
       //
       // Newly covered:
-      // amberctl add_src -f http://<host>:<port>/config.json
+      // pkgctl repo add url http://<host>:<port>/config.json -f 1
       //
       // Previously covered:
       // pm serve -repo=<path> -l :<port>
@@ -395,9 +296,10 @@ void main() {
       expect(optionalPort.isPresent, isTrue);
       final port = optionalPort.value;
 
-      await repoServer.amberctlAddSrcF(
+      await repoServer.pkgctlRepoAddUrlF(
           'Adding the new repository as an update source with http://$hostAddress:$port',
           'http://$hostAddress:$port/config.json',
+          '1',
           0);
 
       var listSrcsOutput = (await repoServer.pkgctlRepo(
@@ -407,25 +309,9 @@ void main() {
 
       log.info('Running pkgctl repo to list sources');
       String repoName = 'http://$hostAddress:$port';
-      // Remove the `%25ethp0003` from
-      // http://[fe80::9813:f1ff:fe9b:c411%25ethp0003]:38729
-      // (for example)
-      RegExp(r'(%\w+)]').allMatches(repoName).forEach((match) {
-        String str = match.group(1);
-        repoName = repoName.replaceAll(str, '');
-      });
-      // Clean up name to match what amberctl will do.
-      repoName = repoName
-          .replaceAll('/', '_')
-          .replaceAll(':', '_')
-          .replaceAll('[', '_')
-          .replaceAll(']', '_');
-      // ^^^^^^^^^^^^^^^^^^^^^^^^^ WARNING ^^^^^^^^^^^^^^^^^^^^^^^^^^
-      // This is using deprecated legacy behavior which is going away in the future.
-      // Do not use this as an example or take it as inspiration for production code.
-      // Please refer to the allowed characters as defined here:
+      // Ensure the repo name complies to
       // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
-      // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+      repoName = validRepoName(repoName);
 
       log.info('Checking repo name is $repoName');
       expect(listSrcsOutput.contains(repoName), isTrue);
@@ -473,55 +359,6 @@ void main() {
       final curlOutput = curlResponse.stdout.toString();
       expect(curlOutput.contains('$testPackageName/0'), isTrue);
     });
-    test(
-        'Test `amberctl add_repo_cfg` does not set a rewrite rule to use the '
-        'added repo.', () async {
-      // Covers these commands (success cases only):
-      //
-      // Newly covered:
-      // amberctl add_repo_cfg -n <path> -f http://<host>:<port>/config.json
-      //
-      // Previously covered:
-      // pkgctl repo
-      // pm serve -repo=<path> -l :<port>
-      await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
-      final optionalPort = repoServer.getServePort();
-      expect(optionalPort.isPresent, isTrue);
-      final port = optionalPort.value;
-
-      final originalRuleList = (await repoServer.pkgctlRuleList(
-              'Recording the current rule list', 0))
-          .stdout
-          .toString();
-
-      await repoServer.amberctlAddrepocfgNF(
-          'Adding the new repository as an update source with http://$hostAddress:$port',
-          'http://$hostAddress:$port/config.json',
-          0);
-      String repoName = repoServer.getRepoPath().replaceAll('/', '_');
-      // ^^^^^^^^^^^^^^^^^^^^^^^^^ WARNING ^^^^^^^^^^^^^^^^^^^^^^^^^^
-      // This is using deprecated legacy behavior which is going away in the future.
-      // Do not use this as an example or take it as inspiration for production code.
-      // Please refer to the allowed characters as defined here:
-      // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
-      // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-      String repoUrl = 'fuchsia-pkg://$repoName';
-
-      var listSrcsOutput = (await repoServer.pkgctlRepo(
-              'Running pkgctl repo to list sources', 0))
-          .stdout
-          .toString();
-      log.info('list sources: $listSrcsOutput, expect: $repoUrl');
-      expect(listSrcsOutput.contains(repoUrl), isTrue);
-
-      var listRulesOutput = (await repoServer.pkgctlRuleList(
-              'Confirm rule list is NOT updated to point to $repoName', 0))
-          .stdout
-          .toString();
-      expect(listRulesOutput.contains(repoName), isFalse);
-      expect(listRulesOutput, originalRuleList);
-    });
     test('Test `pkgctl resolve` base case.', () async {
       // Covers these commands (success cases only):
       //
@@ -540,11 +377,24 @@ void main() {
       expect(optionalPort.isPresent, isTrue);
       final port = optionalPort.value;
 
-      await repoServer.amberctlAddSrcNF(
-          'Adding the new repository as an update source with http://$hostAddress:$port',
-          repoServer.getRepoPath(),
+      // The repo path usually contains disallowed characters like '/' and
+      // uppercase characters. pkgctl will return an error in this case.
+      // Ensure we have a repoNameFixed that is known to comply with
+      // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url?hl=en#repository
+      var repoNameFixed = validRepoName(repoServer.getRepoPath());
+
+      await repoServer.pkgctlRepoAddUrlNF(
+          'Adding the new repository with http://$hostAddress:$port',
           'http://$hostAddress:$port/config.json',
+          repoNameFixed,
+          '1',
           0);
+
+      var localRewriteRule = testRepoRewriteRule;
+      localRewriteRule =
+          localRewriteRule.replaceAll('%%NAME%%', '$repoNameFixed');
+      await repoServer.pkgctlRuleReplace(
+          'Setting rewriting rule for new repository', localRewriteRule, 0);
 
       resolveOutput = (await repoServer.pkgctlResolve(
               'Confirm that `$testPackageName` now exists.',
@@ -553,10 +403,15 @@ void main() {
           .stdout
           .toString();
       expect(resolveOutput.contains('package contents:'), isTrue);
+
+      await repoServer.pkgctlRuleReplace(
+          'Restoring rewriting rule to original state',
+          originalRewriteRuleJson,
+          0);
     });
     test(
         'Test the flow from repo creation, to archive generation, '
-        'to using amberctl and running the component on the device.', () async {
+        'to using pkgctl and running the component on the device.', () async {
       // Covers several key steps:
       // 0. Sanity check. The given component is not already available in the repo.
       // 1. The given component is archived into a valid `.far`.
@@ -578,11 +433,20 @@ void main() {
       expect(optionalPort.isPresent, isTrue);
       final port = optionalPort.value;
 
-      await repoServer.amberctlAddSrcNF(
-          'Adding the new repository as an update source with http://$hostAddress:$port',
-          repoServer.getRepoPath(),
+      var repoNameFixed = validRepoName(repoServer.getRepoPath());
+
+      await repoServer.pkgctlRepoAddUrlNF(
+          'Adding the new repository with http://$hostAddress:$port',
           'http://$hostAddress:$port/config.json',
+          repoNameFixed,
+          '1',
           0);
+
+      var localRewriteRule = testRepoRewriteRule;
+      localRewriteRule =
+          localRewriteRule.replaceAll('%%NAME%%', '$repoNameFixed');
+      await repoServer.pkgctlRuleReplace(
+          'Setting rewriting rule for new repository', localRewriteRule, 0);
 
       var response = await sl4fDriver.ssh.run(
           'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/cts-package-manager-sample.cmx');
@@ -592,6 +456,11 @@ void main() {
           'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/cts-package-manager-sample2.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World2!\n');
+
+      await repoServer.pkgctlRuleReplace(
+          'Restoring rewriting rule to original state',
+          originalRewriteRuleJson,
+          0);
     });
     test(
         'Test the flow from repo creation, to archive generation, '
@@ -617,6 +486,11 @@ void main() {
           '1',
           0);
 
+      var localRewriteRule = testRepoRewriteRule;
+      localRewriteRule = localRewriteRule.replaceAll('%%NAME%%', '$repoName');
+      await repoServer.pkgctlRuleReplace(
+          'Setting rewriting rule for new repository', localRewriteRule, 0);
+
       var response = await sl4fDriver.ssh.run(
           'run $repoUrl/$testPackageName#meta/cts-package-manager-sample.cmx');
       expect(response.exitCode, 0);
@@ -625,6 +499,11 @@ void main() {
           'run $repoUrl/$testPackageName#meta/cts-package-manager-sample2.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World2!\n');
+
+      await repoServer.pkgctlRuleReplace(
+          'Restoring rewriting rule to original state',
+          originalRewriteRuleJson,
+          0);
     });
   }, timeout: _timeout);
 }

@@ -261,57 +261,6 @@ class PackageManagerRepo {
     expect(_servePort.isPresent, isTrue);
   }
 
-  /// Add repo source using `amberctl add_src`.
-  ///
-  /// Uses this command:
-  /// `amberctl add_src -n <name> -f <config>`
-  Future<ProcessResult> amberctlAddSrcNF(
-      String msg, String name, String config, int retCode) async {
-    return _sl4fRun(
-        msg, 'amberctl add_src', ['-n $name', '-f $config'], retCode,
-        randomize: true);
-  }
-
-  /// Add repo source using `amberctl add_src`.
-  ///
-  /// Uses this command:
-  /// `amberctl add_src -f <config>`
-  Future<ProcessResult> amberctlAddSrcF(
-      String msg, String config, int retCode) async {
-    return _sl4fRun(msg, 'amberctl add_src', ['-f $config'], retCode);
-  }
-
-  /// Remove a repo source using `amberctl rm_src`.
-  ///
-  /// Uses this command:
-  /// `amberctl rm_src -n <repo name>`
-  Future<ProcessResult> amberctlRmsrcN(
-      String msg, String repoName, int retCode) async {
-    return _sl4fRun(msg, 'amberctl rm_src', ['-n $repoName'], retCode);
-  }
-
-  /// Enable a named repo source using `amberctl enable_src`.
-  ///
-  /// Uses this command:
-  /// `amberctl enable_src -n <source>`
-  Future<ProcessResult> amberctlEnablesrcN(
-      String msg, String source, int retCode) async {
-    return _sl4fRun(msg, 'amberctl enable_src', ['-n $source'], retCode);
-  }
-
-  /// Add repo source using `amberctl add_repo_cfg`.
-  ///
-  /// This does not set a rewrite rule to use the new config.
-  ///
-  /// Uses this command:
-  /// `amberctl add_repo_cfg -n <repo path> -f <config>`
-  Future<ProcessResult> amberctlAddrepocfgNF(
-      String msg, String config, int retCode) async {
-    return _sl4fRun(
-        msg, 'amberctl add_repo_cfg', ['-n $_repoPath', '-f $config'], retCode,
-        randomize: true);
-  }
-
   /// Get the named component from the repo using `pkgctl resolve`.
   ///
   /// Uses this command:

@@ -18,7 +18,6 @@ import (
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/amber/amberctl"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pkgfs/pkgsvr"
 )
 
@@ -32,8 +31,6 @@ func main() {
 	switch name {
 	case "pkgsvr":
 		pkgsvr.Main()
-	case "amberctl", "amber_ctl":
-		amberctl.Main()
 	case "netstack":
 		netstack.Main()
 	default:

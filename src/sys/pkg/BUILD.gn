@@ -62,7 +62,6 @@ group("recovery") {
 # Shell control commands
 group("tools") {
   public_deps = [
-    "bin/amber:amberctl",
     "bin/pkgctl:pkgctl-bin",
     "bin/update:update-bin",
   ]

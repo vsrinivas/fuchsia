@@ -11,9 +11,9 @@
 ##   -c version         configuration format version for the served config.json
 ##                      that "pm" will serve. Valid choices: 1 or 2.
 ##                      Choosing `1` will serve a file which can be processed by
-##                      `amberctl` and `pkgctl repo add ... -f 1`.
-##                      Choosing `2` will serve a file which cannot be processed by
-##                      `amberctl` but by `pkgctl repo ...` without the `-f 1` switch.
+##                      `pkgctl repo add ... -f 1`.
+##                      Choosing `2` will serve a file which can be processed by
+##                      `pkgctl repo ...` without the `-f 1` switch.
 ##   --no-auto-config   do not configure this host as a package server on the device
 ##   --name NAME        Name the generated update source config NAME.
 ##   --[no-]persist     enable or disable persistence of repository metadata. Disabled

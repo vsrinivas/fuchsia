@@ -27,8 +27,6 @@ _METRICS_ALLOWS_CUSTOM_REPORTING=( "test" )
 # their args.
 _METRICS_TRACK_COMMAND_OPS=(
     "shell activity"
-    "shell amber_ctl"
-    "shell amberctl"
     "shell basemgr_launcher"
     "shell basename"
     "shell bssl"

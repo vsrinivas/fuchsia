@@ -17,7 +17,6 @@ cat
 uname
 rm
 pkgctl
-amberctl
 
 # Needed to load trace specs for tests
 benchmark
