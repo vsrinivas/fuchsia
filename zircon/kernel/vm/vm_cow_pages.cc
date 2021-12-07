@@ -2383,6 +2383,9 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     RangeChangeUpdateLocked(page_start_base, page_end_base - page_start_base, RangeChangeOp::Unmap);
   }
 
+  // We stack-own loaned pages from when they're removed until they're freed.
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
   list_node_t freed_list;
   list_initialize(&freed_list);
 
@@ -3034,6 +3037,9 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(s));
   DEBUG_ASSERT(!is_slice_locked());
+
+  // We stack-own loaned pages from removal until freed.
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   list_node_t freed_list;
   list_initialize(&freed_list);
