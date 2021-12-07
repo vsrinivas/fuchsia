@@ -7,12 +7,10 @@ mod buffer_collection_file;
 mod dma_buf_file;
 mod file_creation;
 mod image_file;
-mod vulkan;
 mod wayland;
-
-pub mod drm;
-pub mod sysmem;
 
 pub use buffer_collection_file::*;
 pub use dma_buf_file::*;
 pub use wayland::*;
+
+pub mod vulkan;

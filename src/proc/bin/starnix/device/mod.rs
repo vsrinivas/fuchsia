@@ -8,5 +8,6 @@ mod registry;
 pub use features::*;
 pub use registry::*;
 
+pub mod magma;
 pub mod mem;
 pub mod wayland;

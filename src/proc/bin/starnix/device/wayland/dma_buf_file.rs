@@ -6,14 +6,13 @@ use fidl_fuchsia_sysmem as fsysmem;
 use fidl_fuchsia_sysmem::BufferCollectionTokenSynchronousProxy;
 use fidl_fuchsia_ui_composition as fuicomp;
 use fuchsia_component::client::connect_channel_to_protocol;
+use fuchsia_image_format::*;
 use fuchsia_scenic;
 use fuchsia_zircon as zx;
 use zerocopy::{AsBytes, FromBytes};
 
 use std::sync::Arc;
 
-use super::drm::{drm_format_to_sysmem_format, min_bytes_per_row};
-use super::sysmem::*;
 use super::BufferCollectionFile;
 use crate::errno;
 use crate::error;
@@ -303,7 +302,8 @@ pub fn buffer_collection_constraints(buffer: &DmaBuf) -> fsysmem::BufferCollecti
     };
 
     let pixel_format = fsysmem::PixelFormat {
-        type_: drm_format_to_sysmem_format(buffer.format),
+        type_: drm_format_to_sysmem_format(buffer.format)
+            .unwrap_or(fsysmem::PixelFormatType::Invalid),
         has_format_modifier: true,
         format_modifier: fsysmem::FormatModifier { value: fsysmem::FORMAT_MODIFIER_LINEAR },
     };
@@ -313,7 +313,7 @@ pub fn buffer_collection_constraints(buffer: &DmaBuf) -> fsysmem::BufferCollecti
         min_coded_height: buffer.height,
         max_coded_width: buffer.width,
         max_coded_height: buffer.height,
-        min_bytes_per_row: min_bytes_per_row(buffer.format, buffer.width),
+        min_bytes_per_row: min_bytes_per_row(buffer.format, buffer.width).unwrap_or(0),
         color_spaces_count: 1,
         pixel_format,
         ..IMAGE_FORMAT_CONSTRAINTS_DEFAULT
