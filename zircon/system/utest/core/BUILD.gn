@@ -64,6 +64,7 @@ unified_only = [
   "debuglog:unified-only",
   "interrupt",
   "next-vdso",
+  "pager-writeback",
   "profile",
   "resource",
   "system-event",

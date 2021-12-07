@@ -15,7 +15,7 @@ namespace pager_tests {
 
 // Tests that a VMO created with TRAP_DIRTY can be supplied, and generates VMO_DIRTY requests when
 // written to.
-VMO_VMAR_TEST(SimpleTrapDirty) {
+VMO_VMAR_TEST(PagerWriteback, SimpleTrapDirty) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -59,7 +59,7 @@ VMO_VMAR_TEST(SimpleTrapDirty) {
 }
 
 // Tests that writing to the VMO with zx_vmo_write generates DIRTY requests as expected.
-TEST(Pager, DirtyRequestsOnVmoWrite) {
+TEST(PagerWriteback, DirtyRequestsOnVmoWrite) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -110,7 +110,7 @@ TEST(Pager, DirtyRequestsOnVmoWrite) {
 }
 
 // Tests that writing to the VMO through a VM mapping generates DIRTY requests as expected.
-TEST(Pager, DirtyRequestsViaMapping) {
+TEST(PagerWriteback, DirtyRequestsViaMapping) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -175,7 +175,7 @@ TEST(Pager, DirtyRequestsViaMapping) {
 }
 
 // Tests that no DIRTY requests are generated on a read.
-TEST(Pager, NoDirtyRequestsOnRead) {
+TEST(PagerWriteback, NoDirtyRequestsOnRead) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -229,7 +229,7 @@ TEST(Pager, NoDirtyRequestsOnRead) {
 }
 
 // Tests that DIRTY requests are generated only on the first write.
-TEST(Pager, DirtyRequestsRepeatedWrites) {
+TEST(PagerWriteback, DirtyRequestsRepeatedWrites) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -280,7 +280,7 @@ TEST(Pager, DirtyRequestsRepeatedWrites) {
 }
 
 // Tests that DIRTY requests are generated on a write to a page that was previously read from.
-TEST(Pager, DirtyRequestsOnWriteAfterRead) {
+TEST(PagerWriteback, DirtyRequestsOnWriteAfterRead) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -337,7 +337,7 @@ TEST(Pager, DirtyRequestsOnWriteAfterRead) {
 }
 
 // Tests that no DIRTY requests are generated for clones of pager-backed VMOs.
-TEST(Pager, NoDirtyRequestsForClones) {
+TEST(PagerWriteback, NoDirtyRequestsForClones) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -383,7 +383,7 @@ TEST(Pager, NoDirtyRequestsForClones) {
 }
 
 // Tests that writes for overlapping ranges generate the expected DIRTY requests.
-TEST(Pager, DirtyRequestsOverlap) {
+TEST(PagerWriteback, DirtyRequestsOverlap) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -462,7 +462,7 @@ TEST(Pager, DirtyRequestsOverlap) {
 
 // Tests that DIRTY requests are generated as expected for a VMO that has random offsets in various
 // page states: {Empty, Clean, Dirty}.
-TEST(Pager, DirtyRequestsRandomOffsets) {
+TEST(PagerWriteback, DirtyRequestsRandomOffsets) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -548,7 +548,7 @@ TEST(Pager, DirtyRequestsRandomOffsets) {
 }
 
 // Tests that ZX_PAGER_OP_FAIL can fail DIRTY page requests and propagate the failure up.
-TEST(Pager, FailDirtyRequests) {
+TEST(PagerWriteback, FailDirtyRequests) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -600,7 +600,7 @@ TEST(Pager, FailDirtyRequests) {
 }
 
 // Tests that no DIRTY requests are generated on a commit.
-TEST(Pager, NoDirtyRequestsOnCommit) {
+TEST(PagerWriteback, NoDirtyRequestsOnCommit) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -634,7 +634,7 @@ TEST(Pager, NoDirtyRequestsOnCommit) {
 }
 
 // Tests that no DIRTY requests are generated when a mapping is created with MAP_RANGE.
-TEST(Pager, NoDirtyRequestsOnMapRange) {
+TEST(PagerWriteback, NoDirtyRequestsOnMapRange) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -712,7 +712,7 @@ TEST(Pager, NoDirtyRequestsOnMapRange) {
 }
 
 // Tests that no DIRTY requests are generated when previously dirty pages are mapped and written to.
-TEST(Pager, NoDirtyRequestsMapExistingDirty) {
+TEST(PagerWriteback, NoDirtyRequestsMapExistingDirty) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 

@@ -174,10 +174,10 @@ inline bool check_buffer(Vmo* vmo, uint64_t offset, uint64_t len, bool check_vma
   return check_vmar ? vmo->CheckVmar(offset, len) : vmo->CheckVmo(offset, len);
 }
 
-#define VMO_VMAR_TEST(fn_name)                  \
-  void fn_name(bool);                           \
-  TEST(Pager, fn_name##Vmar) { fn_name(true); } \
-  TEST(Pager, fn_name##Vmo) { fn_name(false); } \
+#define VMO_VMAR_TEST(test_name, fn_name)           \
+  void fn_name(bool);                               \
+  TEST(test_name, fn_name##Vmar) { fn_name(true); } \
+  TEST(test_name, fn_name##Vmo) { fn_name(false); } \
   void fn_name(bool check_vmar)
 
 }  // namespace pager_tests

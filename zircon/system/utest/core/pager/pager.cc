@@ -30,7 +30,7 @@ __END_CDECLS
 namespace pager_tests {
 
 // Simple test that checks that a single thread can access a single page.
-VMO_VMAR_TEST(SinglePageTest) {
+VMO_VMAR_TEST(Pager, SinglePageTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -50,7 +50,7 @@ VMO_VMAR_TEST(SinglePageTest) {
 }
 
 // Test that a fault can be fulfilled with an uncommitted page.
-VMO_VMAR_TEST(UncommittedSinglePageTest) {
+VMO_VMAR_TEST(Pager, UncommittedSinglePageTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -76,7 +76,7 @@ VMO_VMAR_TEST(UncommittedSinglePageTest) {
 }
 
 // Tests that pre-supplied pages don't result in requests.
-VMO_VMAR_TEST(PresupplyTest) {
+VMO_VMAR_TEST(Pager, PresupplyTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -97,7 +97,7 @@ VMO_VMAR_TEST(PresupplyTest) {
 
 // Tests that supplies between the request and reading the port
 // causes the request to be aborted.
-VMO_VMAR_TEST(EarlySupplyTest) {
+VMO_VMAR_TEST(Pager, EarlySupplyTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -124,7 +124,7 @@ VMO_VMAR_TEST(EarlySupplyTest) {
 }
 
 // Checks that a single thread can sequentially access multiple pages.
-VMO_VMAR_TEST(SequentialMultipageTest) {
+VMO_VMAR_TEST(Pager, SequentialMultipageTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -146,7 +146,7 @@ VMO_VMAR_TEST(SequentialMultipageTest) {
 }
 
 // Tests that multiple threads can concurrently access different pages.
-VMO_VMAR_TEST(ConcurrentMultipageAccessTest) {
+VMO_VMAR_TEST(Pager, ConcurrentMultipageAccessTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -169,7 +169,7 @@ VMO_VMAR_TEST(ConcurrentMultipageAccessTest) {
 }
 
 // Tests that multiple threads can concurrently access a single page.
-VMO_VMAR_TEST(ConcurrentOverlappingAccessTest) {
+VMO_VMAR_TEST(Pager, ConcurrentOverlappingAccessTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -199,7 +199,7 @@ VMO_VMAR_TEST(ConcurrentOverlappingAccessTest) {
 
 // Tests that multiple threads can concurrently access multiple pages and
 // be satisfied by a single supply operation.
-VMO_VMAR_TEST(BulkSingleSupplyTest) {
+VMO_VMAR_TEST(Pager, BulkSingleSupplyTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -266,14 +266,14 @@ void BulkOddSupplyTestInner(bool check_vmar, bool use_src_offset) {
 }
 
 // Test that exercises supply logic by supplying data in chunks of unusual length.
-VMO_VMAR_TEST(BulkOddLengthSupplyTest) { return BulkOddSupplyTestInner(check_vmar, false); }
+VMO_VMAR_TEST(Pager, BulkOddLengthSupplyTest) { return BulkOddSupplyTestInner(check_vmar, false); }
 
 // Test that exercises supply logic by supplying data in chunks of
 // unusual lengths and offsets.
-VMO_VMAR_TEST(BulkOddOffsetSupplyTest) { return BulkOddSupplyTestInner(check_vmar, true); }
+VMO_VMAR_TEST(Pager, BulkOddOffsetSupplyTest) { return BulkOddSupplyTestInner(check_vmar, true); }
 
 // Tests that supply doesn't overwrite existing content.
-VMO_VMAR_TEST(OverlapSupplyTest) {
+VMO_VMAR_TEST(Pager, OverlapSupplyTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -303,7 +303,7 @@ VMO_VMAR_TEST(OverlapSupplyTest) {
 }
 
 // Tests that a pager can handle lots of pending page requests.
-VMO_VMAR_TEST(ManyRequestTest) {
+VMO_VMAR_TEST(Pager, ManyRequestTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -490,7 +490,7 @@ TEST(Pager, VmarMapRangeTest) {
 }
 
 // Tests that reads don't block forever if a vmo is resized out from under a read.
-VMO_VMAR_TEST(ReadResizeTest) {
+VMO_VMAR_TEST(Pager, ReadResizeTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -514,7 +514,7 @@ VMO_VMAR_TEST(ReadResizeTest) {
 }
 
 // Test that suspending and resuming a thread in the middle of a read works.
-VMO_VMAR_TEST(SuspendReadTest) {
+VMO_VMAR_TEST(Pager, SuspendReadTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -577,7 +577,7 @@ TEST(Pager, DetachPageCompleteTest) {
 
 // Tests that pages are decommitted on a detach, and accessing pages (via the parent VMO or the
 // clone) after the detach results in failures.
-VMO_VMAR_TEST(DecommitOnDetachTest) {
+VMO_VMAR_TEST(Pager, DecommitOnDetachTest) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
@@ -731,9 +731,9 @@ void ReadInterruptLateTest(bool check_vmar, bool detach) {
   }
 }
 
-VMO_VMAR_TEST(ReadCloseInterruptLateTest) { ReadInterruptLateTest(check_vmar, false); }
+VMO_VMAR_TEST(Pager, ReadCloseInterruptLateTest) { ReadInterruptLateTest(check_vmar, false); }
 
-VMO_VMAR_TEST(ReadDetachInterruptLateTest) { ReadInterruptLateTest(check_vmar, true); }
+VMO_VMAR_TEST(Pager, ReadDetachInterruptLateTest) { ReadInterruptLateTest(check_vmar, true); }
 
 // Tests that interrupt a read before receiving requests doesn't result in hanging threads.
 void ReadInterruptEarlyTest(bool check_vmar, bool detach) {
@@ -766,9 +766,9 @@ void ReadInterruptEarlyTest(bool check_vmar, bool detach) {
   }
 }
 
-VMO_VMAR_TEST(ReadCloseInterruptEarlyTest) { ReadInterruptEarlyTest(check_vmar, false); }
+VMO_VMAR_TEST(Pager, ReadCloseInterruptEarlyTest) { ReadInterruptEarlyTest(check_vmar, false); }
 
-VMO_VMAR_TEST(ReadDetachInterruptEarlyTest) { ReadInterruptEarlyTest(check_vmar, true); }
+VMO_VMAR_TEST(Pager, ReadDetachInterruptEarlyTest) { ReadInterruptEarlyTest(check_vmar, true); }
 
 // Tests that closing a pager while a thread is accessing it doesn't cause
 // problems (other than a page fault in the accessing thread).
@@ -831,7 +831,7 @@ TEST(Pager, ClosePortTest) {
 }
 
 // Tests that reading from a clone populates the vmo.
-VMO_VMAR_TEST(CloneReadFromCloneTest) {
+VMO_VMAR_TEST(Pager, CloneReadFromCloneTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -856,7 +856,7 @@ VMO_VMAR_TEST(CloneReadFromCloneTest) {
 }
 
 // Tests that reading from the parent populates the clone.
-VMO_VMAR_TEST(CloneReadFromParentTest) {
+VMO_VMAR_TEST(Pager, CloneReadFromParentTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -888,7 +888,7 @@ VMO_VMAR_TEST(CloneReadFromParentTest) {
 }
 
 // Tests that overlapping reads on clone and parent work.
-VMO_VMAR_TEST(CloneSimultaneousReadTest) {
+VMO_VMAR_TEST(Pager, CloneSimultaneousReadTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -921,7 +921,7 @@ VMO_VMAR_TEST(CloneSimultaneousReadTest) {
 }
 
 // Tests that overlapping reads from two clones work.
-VMO_VMAR_TEST(CloneSimultaneousChildReadTest) {
+VMO_VMAR_TEST(Pager, CloneSimultaneousChildReadTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -958,7 +958,7 @@ VMO_VMAR_TEST(CloneSimultaneousChildReadTest) {
 }
 
 // Tests that writes don't propagate to the parent.
-VMO_VMAR_TEST(CloneWriteToCloneTest) {
+VMO_VMAR_TEST(Pager, CloneWriteToCloneTest) {
   UserPager pager;
 
   ASSERT_TRUE(pager.Init());
@@ -1953,7 +1953,7 @@ TEST(Pager, InvalidPagerOpRange) {
 // Simple test for a ZX_PAGER_OP_FAIL on a single page, accessed from a single thread.
 // Tests both cases, where the client accesses the vmo directly, and where the client has the vmo
 // mapped in a vmar.
-VMO_VMAR_TEST(FailSinglePage) {
+VMO_VMAR_TEST(Pager, FailSinglePage) {
   UserPager pager;
   ASSERT_TRUE(pager.Init());
 
