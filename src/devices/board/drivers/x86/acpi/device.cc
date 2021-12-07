@@ -111,7 +111,7 @@ zx_status_t Device::ReportCurrentResources() {
   // call _CRS to fill in resources
   ACPI_STATUS acpi_status = AcpiWalkResources(
       acpi_handle_, (char*)"_CRS",
-      [](ACPI_RESOURCE* res, void* ctx) {
+      [](ACPI_RESOURCE* res, void* ctx) __TA_REQUIRES(reinterpret_cast<Device*>(ctx)->lock_) {
         return reinterpret_cast<Device*>(ctx)->AddResource(res);
       },
       this);

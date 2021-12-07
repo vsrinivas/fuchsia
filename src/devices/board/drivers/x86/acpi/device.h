@@ -148,9 +148,9 @@ class Device : public DeviceType,
   bool got_resources_ = false;
 
   // Port, memory, and interrupt resources from _CRS respectively
-  std::vector<DevicePioResource> pio_resources_;
-  std::vector<DeviceMmioResource> mmio_resources_;
-  std::vector<DeviceIrqResource> irqs_;
+  std::vector<DevicePioResource> pio_resources_ __TA_GUARDED(lock_);
+  std::vector<DeviceMmioResource> mmio_resources_ __TA_GUARDED(lock_);
+  std::vector<DeviceIrqResource> irqs_ __TA_GUARDED(lock_);
 
   // FIDL-encoded child metadata.
   std::vector<uint8_t> metadata_;
@@ -159,8 +159,8 @@ class Device : public DeviceType,
 
   // TODO(fxbug.dev/32978): remove once kernel PCI is no longer used.
   std::vector<pci_bdf_t> pci_bdfs_;
-  zx_status_t ReportCurrentResources();
-  ACPI_STATUS AddResource(ACPI_RESOURCE*);
+  zx_status_t ReportCurrentResources() __TA_REQUIRES(lock_);
+  ACPI_STATUS AddResource(ACPI_RESOURCE*) __TA_REQUIRES(lock_);
 
   // ACPI events.
   std::optional<fidl::WireSharedClient<fuchsia_hardware_acpi::NotifyHandler>> notify_handler_;
