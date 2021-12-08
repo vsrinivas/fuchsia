@@ -4,11 +4,13 @@
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/ddk/device.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 
 #include <bind/fuchsia/test/cpp/fidl.h>
 
+#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/logger.h"
 #include "src/devices/lib/driver2/namespace.h"
 #include "src/devices/lib/driver2/promise.h"
@@ -61,6 +63,10 @@ class RootDriver {
   promise<void, fdf::wire::NodeError> AddChild() {
     fidl::Arena arena;
 
+    // Set the symbols of the node that a driver will have access to.
+    fdf::wire::NodeSymbol symbol(arena);
+    symbol.set_name(arena, compat::kOps).set_address(arena, reinterpret_cast<uint64_t>(&ops_));
+
     // Set the properties of the node that a driver will bind to.
     fdf::wire::NodeProperty property(arena);
     property.set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(1 /* BIND_PROTOCOL */))
@@ -69,6 +75,7 @@ class RootDriver {
 
     fdf::wire::NodeAddArgs args(arena);
     args.set_name(arena, "v1")
+        .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(&symbol, 1))
         .set_properties(arena,
                         fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(&property, 1));
 
@@ -97,6 +104,10 @@ class RootDriver {
   fidl::WireSharedClient<fdf::NodeController> controller_;
   driver::Namespace ns_;
   driver::Logger logger_;
+
+  zx_protocol_device_t ops_ = {
+      .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
+  };
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

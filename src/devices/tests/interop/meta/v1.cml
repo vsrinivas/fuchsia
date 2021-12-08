@@ -11,5 +11,6 @@
         binary: "driver/compat.so",
         compat: "driver/interop_v1.so",
         bind: "meta/bind/v1.bindbc",
+        colocate: "true",
     },
 }

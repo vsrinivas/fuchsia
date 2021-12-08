@@ -14,6 +14,11 @@ namespace {
 
 zx_status_t v1_bind(void* ctx, zx_device_t* dev) {
   zxlogf(INFO, "v1_bind");
+  zx_status_t status = device_get_protocol(dev, 0, nullptr);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   zx_device_prop_t prop{
       .id = BIND_PROTOCOL,
       .value = bind::fuchsia::test::BIND_PROTOCOL_DEVICE,
