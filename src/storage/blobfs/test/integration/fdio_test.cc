@@ -33,7 +33,7 @@ void FdioTest::SetUp() {
                              }),
             ZX_OK);
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [export_root_client, export_root_server] = *std::move(endpoints);
 
@@ -41,16 +41,19 @@ void FdioTest::SetUp() {
       Runner::Create(loop_.get(), std::move(device), mount_options_, std::move(vmex_resource_));
   ASSERT_TRUE(runner_or.is_ok());
   runner_ = std::move(runner_or.value());
-  ASSERT_EQ(runner_->ServeRoot(std::move(export_root_server), ServeLayout::kExportDirectory),
-            ZX_OK);
+  ASSERT_EQ(
+      runner_->ServeRoot(fidl::ServerEnd<fuchsia_io::Directory>(export_root_server.TakeChannel()),
+                         ServeLayout::kExportDirectory),
+      ZX_OK);
   ASSERT_EQ(loop_->StartThread("blobfs test dispatcher"), ZX_OK);
 
-  zx::channel root_client;
-  ASSERT_EQ(fs_root_handle(export_root_client.channel().get(), root_client.reset_and_get_address()),
-            ZX_OK);
+  auto root_client_or = fs_management::FsRootHandle(export_root_client);
+  ASSERT_EQ(root_client_or.status_value(), ZX_OK);
 
   // FDIO serving the root directory.
-  ASSERT_EQ(fdio_fd_create(root_client.release(), root_fd_.reset_and_get_address()), ZX_OK);
+  ASSERT_EQ(
+      fdio_fd_create(root_client_or->TakeChannel().release(), root_fd_.reset_and_get_address()),
+      ZX_OK);
   ASSERT_TRUE(root_fd_.is_valid());
   ASSERT_EQ(fdio_fd_create(export_root_client.TakeChannel().release(),
                            export_root_fd_.reset_and_get_address()),

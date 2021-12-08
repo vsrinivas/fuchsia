@@ -45,23 +45,28 @@ class FilesystemMounter {
 
   // Attempts to mount a block device to "/data".
   // Fails if already mounted.
-  zx_status_t MountData(zx::channel block_device_client, const MountOptions& options);
+  zx_status_t MountData(zx::channel block_device_client,
+                        const fs_management::MountOptions& options);
 
   // Attempts to mount a block device to "/durable".
   // Fails if already mounted.
-  zx_status_t MountDurable(zx::channel block_device_client, const MountOptions& options);
+  zx_status_t MountDurable(zx::channel block_device_client,
+                           const fs_management::MountOptions& options);
 
   // Attempts to mount a block device to "/install".
   // Fails if already mounted.
-  zx_status_t MountInstall(zx::channel block_device_client, const MountOptions& options);
+  zx_status_t MountInstall(zx::channel block_device_client,
+                           const fs_management::MountOptions& options);
 
   // Attempts to mount a block device to "/blob".
   // Fails if already mounted.
-  zx_status_t MountBlob(zx::channel block_device_client, const MountOptions& options);
+  zx_status_t MountBlob(zx::channel block_device_client,
+                        const fs_management::MountOptions& options);
 
   // Attempts to mount a block device to "/factory".
   // Fails if already mounted.
-  zx_status_t MountFactoryFs(zx::channel block_device_client, const MountOptions& options);
+  zx_status_t MountFactoryFs(zx::channel block_device_client,
+                             const fs_management::MountOptions& options);
 
   // Attempts to mount pkgfs if all preconditions have been met:
   // - Pkgfs has not previously been mounted
@@ -90,7 +95,7 @@ class FilesystemMounter {
   // validating the type of filesystem being mounted.
   // Returns a channel to the filesystem's root export directory.
   zx::status<zx::channel> MountFilesystem(FsManager::MountPoint point, const char* binary,
-                                          const MountOptions& options,
+                                          const fs_management::MountOptions& options,
                                           zx::channel block_device_client, uint32_t fs_flags,
                                           fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {});
 

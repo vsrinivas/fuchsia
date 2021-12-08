@@ -1682,7 +1682,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   ASSERT_TRUE(result->result.response().volume);
 
   EXPECT_EQ(kBufferSize, pread(fvm_.get(), buffer, kBufferSize, 0));
-  EXPECT_BYTES_EQ(fvm_magic, buffer, sizeof(fvm_magic));
+  EXPECT_BYTES_EQ(fs_management::kFvmMagic, buffer, sizeof(fs_management::kFvmMagic));
 
   fidl::ClientEnd<fuchsia_hardware_block_volume::VolumeManager> volume_client =
       std::move(result->result.mutable_response().volume);

@@ -299,8 +299,8 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
     *format_result = FormatResult::kUnknown;
   }
   if (option == BindOption::TryBind) {
-    disk_format_t df = detect_disk_format(partition_fd.get());
-    if (df == DISK_FORMAT_FVM) {
+    fs_management::DiskFormat df = fs_management::DetectDiskFormat(partition_fd.get());
+    if (df == fs_management::kDiskFormatFvm) {
       fvm_fd = TryBindToFvmDriver(devfs_root, partition_fd, zx::sec(3));
       if (fvm_fd) {
         LOG("Found already formatted FVM.\n");
@@ -329,7 +329,8 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
           ERROR("Could not query FVM for info. Reinitializing FVM.\n");
         }
       } else {
-        ERROR("Saw DISK_FORMAT_FVM, but could not bind driver. Reinitializing FVM.\n");
+        ERROR(
+            "Saw fs_management::kDiskFormatFvm, but could not bind driver. Reinitializing FVM.\n");
       }
     }
   }

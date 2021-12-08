@@ -37,7 +37,7 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
 }
 
 zx::status<zx::channel> FilesystemMounter::MountFilesystem(
-    FsManager::MountPoint point, const char* binary, const MountOptions& options,
+    FsManager::MountPoint point, const char* binary, const fs_management::MountOptions& options,
     zx::channel block_device_client, uint32_t fs_flags,
     fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
   zx::status create_endpoints = fidl::CreateEndpoints<fio::Node>();
@@ -109,12 +109,13 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(
   return zx::ok(export_root.TakeChannel());
 }
 
-zx_status_t FilesystemMounter::MountData(zx::channel block_device, const MountOptions& options) {
+zx_status_t FilesystemMounter::MountData(zx::channel block_device,
+                                         const fs_management::MountOptions& options) {
   if (data_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  MountOptions data_options = options;
+  fs_management::MountOptions data_options = options;
   if (config_.is_set(Config::kDataFilesystemNoDirectoryAdmin)) {
     data_options.admin = false;
   }
@@ -138,7 +139,8 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, const MountOp
   return ZX_OK;
 }
 
-zx_status_t FilesystemMounter::MountInstall(zx::channel block_device, const MountOptions& options) {
+zx_status_t FilesystemMounter::MountInstall(zx::channel block_device,
+                                            const fs_management::MountOptions& options) {
   if (install_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
   }
@@ -154,7 +156,7 @@ zx_status_t FilesystemMounter::MountInstall(zx::channel block_device, const Moun
 }
 
 zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
-                                              const MountOptions& options) {
+                                              const fs_management::MountOptions& options) {
   if (factory_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
   }
@@ -169,7 +171,8 @@ zx_status_t FilesystemMounter::MountFactoryFs(zx::channel block_device,
   return ZX_OK;
 }
 
-zx_status_t FilesystemMounter::MountDurable(zx::channel block_device, const MountOptions& options) {
+zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
+                                            const fs_management::MountOptions& options) {
   if (durable_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
   }
@@ -184,7 +187,8 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device, const Moun
   return ZX_OK;
 }
 
-zx_status_t FilesystemMounter::MountBlob(zx::channel block_device, const MountOptions& options) {
+zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
+                                         const fs_management::MountOptions& options) {
   if (blob_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
   }

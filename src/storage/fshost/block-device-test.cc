@@ -130,7 +130,7 @@ TEST_F(BlockDeviceTest, TestBadHandleDevice) {
   FilesystemMounter mounter(manager_, &config_);
   fbl::unique_fd fd;
   BlockDevice device(&mounter, {}, &config_);
-  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
+  EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatUnknown);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_EQ(device.GetInfo(&info), ZX_ERR_BAD_HANDLE);
   fuchsia_hardware_block_partition::wire::Guid null_guid{};
@@ -155,7 +155,7 @@ TEST_F(BlockDeviceTest, TestEmptyDevice) {
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(/*use_guid=*/true));
 
   BlockDevice device(&mounter, GetRamdiskFd(), &config_);
-  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
+  EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatUnknown);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_EQ(device.GetInfo(&info), ZX_OK);
   EXPECT_EQ(info.block_count, kBlockCount);
@@ -184,8 +184,8 @@ TEST_F(BlockDeviceTest, TestMinfsBadGUID) {
   // We started with an empty block device, but let's lie and say it
   // should have been a minfs device.
   BlockDevice device(&mounter, GetRamdiskFd(), &config_);
-  device.SetFormat(DISK_FORMAT_MINFS);
-  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
+  device.SetFormat(fs_management::kDiskFormatMinfs);
+  EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatMinfs);
   EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 
   // Unlike earlier, where we received "ERR_NOT_SUPPORTED", we get "ERR_WRONG_TYPE"
@@ -200,8 +200,8 @@ TEST_F(BlockDeviceTest, TestMinfsGoodGUID) {
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd(), &config_);
-  device.SetFormat(DISK_FORMAT_MINFS);
-  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
+  device.SetFormat(fs_management::kDiskFormatMinfs);
+  EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatMinfs);
   EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 
   EXPECT_EQ(device.MountFilesystem(), ZX_OK);
@@ -216,8 +216,8 @@ TEST_F(BlockDeviceTest, TestMinfsReformat) {
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd(), &config);
-  device.SetFormat(DISK_FORMAT_MINFS);
-  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
+  device.SetFormat(fs_management::kDiskFormatMinfs);
+  EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatMinfs);
 
   // Before formatting the device, this isn't a valid minfs partition.
   EXPECT_NE(device.CheckFilesystem(), ZX_OK);
@@ -238,8 +238,8 @@ TEST_F(BlockDeviceTest, TestBlobfs) {
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd(), &config);
-  device.SetFormat(DISK_FORMAT_BLOBFS);
-  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_BLOBFS);
+  device.SetFormat(fs_management::kDiskFormatBlobfs);
+  EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatBlobfs);
 
   // Before formatting the device, this isn't a valid blobfs partition.
   // However, as implemented, we always validate the consistency of the filesystem.
@@ -260,8 +260,8 @@ TEST_F(BlockDeviceTest, TestCorruptionEventLogged) {
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd(), &config);
-  device.SetFormat(DISK_FORMAT_MINFS);
-  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
+  device.SetFormat(fs_management::kDiskFormatMinfs);
+  EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatMinfs);
   // Format minfs.
   EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 
@@ -327,8 +327,8 @@ TEST_F(BlockDeviceTest, ExtractMinfsOnCorruptionToLog) {
   ASSERT_NO_FATAL_FAILURE(CreateRamdisk(true));
 
   BlockDevice device(&mounter, GetRamdiskFd(), &config);
-  device.SetFormat(DISK_FORMAT_MINFS);
-  EXPECT_EQ(device.GetFormat(), DISK_FORMAT_MINFS);
+  device.SetFormat(fs_management::kDiskFormatMinfs);
+  EXPECT_EQ(device.GetFormat(), fs_management::kDiskFormatMinfs);
   // Format minfs.
   EXPECT_EQ(device.FormatFilesystem(), ZX_OK);
 

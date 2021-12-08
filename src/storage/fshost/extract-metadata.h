@@ -28,7 +28,7 @@ struct DumpMetadataOptions {
   std::string tag = "EIL";
 
   // Format of the disk to be extracted.
-  disk_format_t disk_format = DISK_FORMAT_UNKNOWN;
+  fs_management::DiskFormat disk_format = fs_management::kDiskFormatUnknown;
 
   // How long to wait before and after dumping for logs to settle.
   zx::duration log_settle_time = zx::sec(10);

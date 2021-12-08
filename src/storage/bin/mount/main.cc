@@ -28,10 +28,11 @@ int usage(void) {
           " -m|--metrics   : Collect filesystem metrics\n"
           " -v|--verbose   : Verbose mode\n"
           " -h|--help      : Display this message\n");
-  return -1;
+  return EXIT_FAILURE;
 }
 
-int parse_args(int argc, char** argv, MountOptions* options, char** devicepath, char** mountpath) {
+int parse_args(int argc, char** argv, fs_management::MountOptions* options, char** devicepath,
+               char** mountpath) {
   while (1) {
     static struct option opts[] = {
         {"readonly", no_argument, NULL, 'r'}, {"metrics", no_argument, NULL, 'm'},
@@ -73,12 +74,12 @@ int parse_args(int argc, char** argv, MountOptions* options, char** devicepath, 
   return 0;
 }
 
-bool should_use_admin_protocol(disk_format_t df) {
+bool should_use_admin_protocol(fs_management::DiskFormat df) {
   // Newer filesystems (esp. written in rust) don't support the admin protocol, so we won't open it
   // with O_ADMIN.
   switch (df) {
-    case DISK_FORMAT_FXFS:
-    case DISK_FORMAT_FAT:
+    case fs_management::kDiskFormatFxfs:
+    case fs_management::kDiskFormatFat:
       return false;
     default:
       return true;
@@ -88,7 +89,7 @@ bool should_use_admin_protocol(disk_format_t df) {
 int main(int argc, char** argv) {
   char* devicepath;
   char* mountpath;
-  MountOptions options;
+  fs_management::MountOptions options;
   if (int r = parse_args(argc, argv, &options, &devicepath, &mountpath)) {
     return r;
   }
@@ -97,16 +98,16 @@ int main(int argc, char** argv) {
     printf("fs_mount: Mounting device [%s] on path [%s]\n", devicepath, mountpath);
   }
 
-  int fd;
-  if ((fd = open(devicepath, O_RDWR)) < 0) {
+  fbl::unique_fd fd(open(devicepath, O_RDWR));
+  if (!fd) {
     fprintf(stderr, "Error opening block device\n");
-    return -1;
+    return EXIT_FAILURE;
   }
-  disk_format_t df = detect_disk_format(fd);
+  fs_management::DiskFormat df = fs_management::DetectDiskFormat(fd.get());
   options.admin = should_use_admin_protocol(df);
-  zx_status_t status = mount(fd, mountpath, df, options, launch_logs_async);
-  if (status != ZX_OK) {
-    fprintf(stderr, "fs_mount: Error while mounting: %d\n", status);
+  auto result = fs_management::Mount(std::move(fd), mountpath, df, options, launch_logs_async);
+  if (result.is_error()) {
+    fprintf(stderr, "fs_mount: Error while mounting: %s\n", result.status_string());
   }
-  return status;
+  return EXIT_FAILURE;
 }

@@ -36,7 +36,7 @@ class BlockDeviceInterface {
 
   // Returns the format that the content appears to be.  Avoid using this unless
   // there is no other way to determine the format of the device.
-  virtual disk_format_t content_format() const = 0;
+  virtual fs_management::DiskFormat content_format() const = 0;
 
   // The topological path for the device.
   virtual const std::string& topological_path() const = 0;
@@ -46,14 +46,14 @@ class BlockDeviceInterface {
 
   // Returns the expected on-disk format of the underlying device.
   //
-  // If unknown or unreadable, DISK_FORMAT_UNKNOWN should be returned.
-  virtual disk_format_t GetFormat() = 0;
+  // If unknown or unreadable, fs_management::kDiskFormatUnknown should be returned.
+  virtual fs_management::DiskFormat GetFormat() = 0;
 
   // Modifies the expected on-disk format of the underlying device.
   //
   // This may be useful if the block device data was corrupted, and we want
   // to force a new format based on external information.
-  virtual void SetFormat(disk_format_t format) = 0;
+  virtual void SetFormat(fs_management::DiskFormat format) = 0;
 
   // Queries (using the block interface) for info about the underlying device.
   virtual zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;

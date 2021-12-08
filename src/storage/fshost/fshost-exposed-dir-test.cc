@@ -53,9 +53,11 @@ TEST_F(FshostExposedDirTest, ExposesDiagnosticsAndServicesForBlobfs) {
     ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
 
     // Format the blobfs partition.
-    ASSERT_EQ(mkfs(fvm_partition_or->c_str(), DISK_FORMAT_BLOBFS, launch_stdio_sync, MkfsOptions()),
+    ASSERT_EQ(fs_management::Mkfs(fvm_partition_or->c_str(), fs_management::kDiskFormatBlobfs,
+                                  launch_stdio_sync, fs_management::MkfsOptions()),
               ZX_OK);
-    ASSERT_EQ(fsck(fvm_partition_or->c_str(), DISK_FORMAT_BLOBFS, FsckOptions(), launch_stdio_sync),
+    ASSERT_EQ(fs_management::Fsck(fvm_partition_or->c_str(), fs_management::kDiskFormatBlobfs,
+                                  fs_management::FsckOptions(), launch_stdio_sync),
               ZX_OK);
   }
 

@@ -97,7 +97,8 @@ class FilesystemInstance {
   virtual ~FilesystemInstance() = default;
 
   virtual zx::status<> Format(const TestFilesystemOptions&) = 0;
-  virtual zx::status<> Mount(const std::string& mount_path, const MountOptions& options) = 0;
+  virtual zx::status<> Mount(const std::string& mount_path,
+                             const fs_management::MountOptions& options) = 0;
   virtual zx::status<> Unmount(const std::string& mount_path);
   virtual zx::status<> Fsck() = 0;
 
@@ -176,11 +177,12 @@ class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
 
 // -- Default implementations that use fs-management --
 
-zx::status<> FsFormat(const std::string& device_path, disk_format_t format,
-                      const MkfsOptions& options);
+zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
+                      const fs_management::MkfsOptions& options);
 
 zx::status<> FsMount(const std::string& device_path, const std::string& mount_path,
-                     disk_format_t format, const MountOptions& mount_options,
+                     fs_management::DiskFormat format,
+                     const fs_management::MountOptions& mount_options,
                      zx::channel* outgoing_directory = nullptr);
 
 // Unmounts using fs/Admin.Shutdown.

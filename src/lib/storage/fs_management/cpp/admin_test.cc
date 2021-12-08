@@ -5,6 +5,7 @@
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 
 #include <vector>
 
@@ -13,7 +14,11 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
+namespace fs_management {
+namespace {
+
 namespace fio = fuchsia_io;
+using fuchsia_io_admin::DirectoryAdmin;
 
 enum State {
   kEmpty,
@@ -23,13 +28,13 @@ enum State {
 
 class OutgoingDirectoryTest : public testing::Test {
  public:
-  explicit OutgoingDirectoryTest(disk_format_t format) : format_(format) {}
+  explicit OutgoingDirectoryTest(DiskFormat format) : format_(format) {}
 
   void SetUp() final {
     ASSERT_EQ(ramdisk_create(512, 1 << 16, &ramdisk_), ZX_OK);
     const char* ramdisk_path = ramdisk_get_path(ramdisk_);
 
-    ASSERT_EQ(mkfs(ramdisk_path, format_, launch_stdio_sync, MkfsOptions()), ZX_OK);
+    ASSERT_EQ(Mkfs(ramdisk_path, format_, launch_stdio_sync, MkfsOptions()), ZX_OK);
     state_ = kFormatted;
   }
 
@@ -41,27 +46,31 @@ class OutgoingDirectoryTest : public testing::Test {
   }
 
  protected:
-  void GetExportRoot(zx::unowned_channel* root) {
+  void GetExportRoot(fidl::UnownedClientEnd<DirectoryAdmin>* root) {
     ASSERT_EQ(state_, kStarted);
-    *root = zx::unowned(export_root_);
+    *root = export_root_;
   }
 
-  void GetDataRoot(zx::channel* root) {
+  void GetDataRoot(fidl::ClientEnd<DirectoryAdmin>* root) {
     ASSERT_EQ(state_, kStarted);
-    ASSERT_EQ(fs_root_handle(export_root_.get(), root->reset_and_get_address()), ZX_OK);
+    auto root_or = FsRootHandle(export_root_);
+    ASSERT_EQ(root_or.status_value(), ZX_OK);
+    *root = *std::move(root_or);
   }
 
   void CheckDataRoot() {
-    const char* format_str = disk_format_string(format_);
-    zx::channel data_root;
+    std::string_view format_str = DiskFormatString(format_);
+    fidl::ClientEnd<DirectoryAdmin> data_root;
     GetDataRoot(&data_root);
-    fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> data_client(std::move(data_root));
+    fidl::WireSyncClient<DirectoryAdmin> data_client(std::move(data_root));
     auto resp = data_client->QueryFilesystem();
     ASSERT_TRUE(resp.ok());
     ASSERT_EQ(resp.value().s, ZX_OK);
-    ASSERT_EQ(strncmp(format_str, reinterpret_cast<char*>(resp.value().info->name.data()),
-                      strlen(format_str)),
-              0);
+    const auto& raw_name = resp.value().info->name;
+    std::string_view name(
+        reinterpret_cast<const char*>(raw_name.begin()),
+        std::distance(raw_name.begin(), std::find(raw_name.begin(), raw_name.end(), 0)));
+    ASSERT_EQ(format_str, name);
   }
 
   void StartFilesystem(const InitOptions& options) {
@@ -72,17 +81,18 @@ class OutgoingDirectoryTest : public testing::Test {
     ASSERT_EQ(zx::channel::create(0, &device, &device_server), ZX_OK);
     ASSERT_EQ(fdio_service_connect(ramdisk_path, device_server.release()), ZX_OK);
 
-    ASSERT_EQ(fs_init(device.release(), format_, options, export_root_.reset_and_get_address()),
-              ZX_OK);
+    auto export_root_or = FsInit(std::move(device), format_, options);
+    ASSERT_EQ(export_root_or.status_value(), ZX_OK);
+    export_root_ = *std::move(export_root_or);
     state_ = kStarted;
   }
 
   void StopFilesystem() {
     ASSERT_EQ(state_, kStarted);
-    zx::channel data_root;
+    fidl::ClientEnd<DirectoryAdmin> data_root;
     GetDataRoot(&data_root);
 
-    fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> data_client(std::move(data_root));
+    fidl::WireSyncClient<DirectoryAdmin> data_client(std::move(data_root));
     auto resp = data_client->Unmount();
     ASSERT_TRUE(resp.ok());
     ASSERT_EQ(resp.value().s, ZX_OK);
@@ -92,9 +102,9 @@ class OutgoingDirectoryTest : public testing::Test {
 
   void WriteTestFile() {
     ASSERT_EQ(state_, kStarted);
-    zx::channel data_root;
+    fidl::ClientEnd<DirectoryAdmin> data_root;
     GetDataRoot(&data_root);
-    fidl::WireSyncClient<fio::Directory> data_client(std::move(data_root));
+    fidl::WireSyncClient<DirectoryAdmin> data_client(std::move(data_root));
 
     zx::channel test_file, test_file_server;
     ASSERT_EQ(zx::channel::create(0, &test_file, &test_file_server), ZX_OK);
@@ -118,8 +128,8 @@ class OutgoingDirectoryTest : public testing::Test {
  private:
   State state_ = kEmpty;
   ramdisk_client_t* ramdisk_ = nullptr;
-  zx::channel export_root_;
-  disk_format_t format_;
+  fidl::ClientEnd<DirectoryAdmin> export_root_;
+  DiskFormat format_;
 };
 
 static constexpr InitOptions kReadonlyOptions = {
@@ -134,12 +144,12 @@ static constexpr InitOptions kReadonlyOptions = {
 
 class OutgoingDirectoryBlobfs : public OutgoingDirectoryTest {
  public:
-  OutgoingDirectoryBlobfs() : OutgoingDirectoryTest(DISK_FORMAT_BLOBFS) {}
+  OutgoingDirectoryBlobfs() : OutgoingDirectoryTest(kDiskFormatBlobfs) {}
 };
 
 class OutgoingDirectoryMinfs : public OutgoingDirectoryTest {
  public:
-  OutgoingDirectoryMinfs() : OutgoingDirectoryTest(DISK_FORMAT_MINFS) {}
+  OutgoingDirectoryMinfs() : OutgoingDirectoryTest(kDiskFormatMinfs) {}
 };
 
 TEST_F(OutgoingDirectoryBlobfs, OutgoingDirectoryReadWriteDataRootIsValidBlobfs) {
@@ -175,9 +185,9 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
 
   // start the filesystem in read-only mode
   StartFilesystem(kReadonlyOptions);
-  zx::channel data_root;
+  fidl::ClientEnd<DirectoryAdmin> data_root;
   GetDataRoot(&data_root);
-  fidl::WireSyncClient<fio::Directory> data_client(std::move(data_root));
+  fidl::WireSyncClient<DirectoryAdmin> data_client(std::move(data_root));
 
   zx::channel fail_test_file, fail_test_file_server;
   ASSERT_EQ(zx::channel::create(0, &fail_test_file, &fail_test_file_server), ZX_OK);
@@ -212,7 +222,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToReadOnlyMinfsDataRoot) {
 
 TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   StartFilesystem(InitOptions());
-  zx::unowned_channel export_root;
+  fidl::UnownedClientEnd<DirectoryAdmin> export_root(FIDL_HANDLE_INVALID);
   GetExportRoot(&export_root);
 
   auto test_file_name = std::string("test_file");
@@ -220,7 +230,7 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   ASSERT_EQ(zx::channel::create(0, &test_file, &test_file_server), ZX_OK);
   uint32_t file_flags =
       fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagCreate;
-  ASSERT_EQ(fidl::WireCall<fio::Directory>(std::move(export_root))
+  ASSERT_EQ(fidl::WireCall<DirectoryAdmin>(std::move(export_root))
                 ->Open(file_flags, 0, fidl::StringView::FromExternal(test_file_name),
                        std::move(test_file_server))
                 .status(),
@@ -231,3 +241,6 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   auto resp = file_client->Write(fidl::VectorView<uint8_t>::FromExternal(content));
   ASSERT_EQ(resp.status(), ZX_ERR_PEER_CLOSED);
 }
+
+}  // namespace
+}  // namespace fs_management

@@ -101,9 +101,9 @@ TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
     std::string zxcrypt_device_path = std::move(zxcrypt_device_path_or.value());
 
     {
-      ASSERT_EQ(
-          mkfs(zxcrypt_device_path.c_str(), DISK_FORMAT_MINFS, launch_stdio_sync, MkfsOptions()),
-          ZX_OK);
+      ASSERT_EQ(fs_management::Mkfs(zxcrypt_device_path.c_str(), fs_management::kDiskFormatMinfs,
+                                    launch_stdio_sync, fs_management::MkfsOptions()),
+                ZX_OK);
 
       fbl::unique_fd minfs_fd(open(zxcrypt_device_path.c_str(), O_RDWR));
       ASSERT_TRUE(minfs_fd);
@@ -119,9 +119,9 @@ TEST_F(FsRecoveryTest, CorruptMinfsRecoveryTest) {
     }
 
     // Confirm we messed it up enough to trigger an fsck failure.
-    ASSERT_NE(
-        fsck(zxcrypt_device_path.c_str(), DISK_FORMAT_MINFS, FsckOptions(), launch_stdio_sync),
-        ZX_OK);
+    ASSERT_NE(fs_management::Fsck(zxcrypt_device_path.c_str(), fs_management::kDiskFormatMinfs,
+                                  fs_management::FsckOptions(), launch_stdio_sync),
+              ZX_OK);
   }
 
   ResumeWatcher();

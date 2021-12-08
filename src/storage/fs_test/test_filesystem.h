@@ -29,7 +29,8 @@ class TestFilesystem {
   bool is_mounted() const { return mounted_; }
 
   // Mounts the file system (only necessary after calling Unmount).
-  zx::status<> Mount(const MountOptions& mount_options = MountOptions());
+  zx::status<> Mount(
+      const fs_management::MountOptions& mount_options = fs_management::MountOptions());
 
   // Unmounts a mounted file system.
   zx::status<> Unmount();

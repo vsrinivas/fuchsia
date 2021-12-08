@@ -66,9 +66,10 @@ TEST(FactoryFs, ExportedFilesystemIsMountable) {
   fd.reset(open(ram_disk_path.c_str(), O_RDONLY));
   ASSERT_TRUE(fd) << errno;
 
-  status = mount(fd.release(), factoryfs_c_str, DISK_FORMAT_FACTORYFS, MountOptions(),
-                 launch_stdio_async);
-  EXPECT_EQ(status, ZX_OK);
+  auto result =
+      fs_management::Mount(std::move(fd), factoryfs_c_str, fs_management::kDiskFormatFactoryfs,
+                           fs_management::MountOptions(), launch_stdio_async);
+  EXPECT_EQ(result.status_value(), ZX_OK);
 
   // And check contents of factoryfs.
   fd.reset(open(hello.c_str(), O_RDONLY));

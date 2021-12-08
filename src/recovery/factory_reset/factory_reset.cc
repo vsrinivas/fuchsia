@@ -76,7 +76,8 @@ zx_status_t FactoryReset::Shred() const {
   // Attempts to shred every zxcrypt volume found.
   while ((de = readdir(dir)) != nullptr) {
     fbl::unique_fd block_fd(openat(dirfd(dir), de->d_name, O_RDWR));
-    if (!block_fd || detect_disk_format(block_fd.get()) != DISK_FORMAT_ZXCRYPT) {
+    if (!block_fd ||
+        fs_management::DetectDiskFormat(block_fd.get()) != fs_management::kDiskFormatZxcrypt) {
       continue;
     }
 

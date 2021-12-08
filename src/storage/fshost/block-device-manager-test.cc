@@ -67,7 +67,7 @@ TEST(BlockDeviceManager, MinfsLimit) {
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
 
   MockBlockDevice::Options device_options = MockZxcryptDevice::ZxcryptOptions();
-  device_options.content_format = DISK_FORMAT_UNKNOWN;
+  device_options.content_format = fs_management::kDiskFormatUnknown;
   MockZxcryptDevice zxcrypt_device(device_options);
   EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
 

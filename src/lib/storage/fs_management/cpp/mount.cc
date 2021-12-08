@@ -32,16 +32,17 @@
 #include <fs-management/mount.h>
 #include <pretty/hexdump.h>
 
-#include "admin.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
-
-namespace fblock = fuchsia_hardware_block;
-namespace fio = fuchsia_io;
 
 namespace fs_management {
 namespace {
 
-zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
+namespace fblock = fuchsia_hardware_block;
+namespace fio = fuchsia_io;
+
+using fuchsia_io_admin::DirectoryAdmin;
+
+zx_status_t MakeDirAndRemoteMount(const char* path, fidl::ClientEnd<DirectoryAdmin> root) {
   // Open the parent path as O_ADMIN, and sent the mkdir+mount command
   // to that directory.
   char parent_path[PATH_MAX];
@@ -69,24 +70,24 @@ zx_status_t MakeDirAndRemoteMount(const char* path, zx::channel root) {
   if ((status = fdio_open(parent_path, flags, parent_server.release())) != ZX_OK) {
     return status;
   }
-  fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> parent_client(std::move(parent));
+  fidl::WireSyncClient<DirectoryAdmin> parent_client(std::move(parent));
   auto resp =
-      parent_client->MountAndCreate(std::move(root), fidl::StringView::FromExternal(name), 0);
+      parent_client->MountAndCreate(root.TakeChannel(), fidl::StringView::FromExternal(name), 0);
   if (!resp.ok()) {
     return resp.status();
   }
   return resp.value().s;
 }
 
-zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df, const MountOptions& options,
-                            LaunchCallback cb, OutgoingDirectory outgoing_directory,
-                            zx::channel* out_data_root, zx::channel crypt_client) {
+zx::status<std::pair<fidl::ClientEnd<DirectoryAdmin>, fidl::ClientEnd<DirectoryAdmin>>>
+StartFilesystem(fbl::unique_fd device_fd, DiskFormat df, const MountOptions& options,
+                LaunchCallback cb, zx::channel crypt_client) {
   // get the device handle from the device_fd
   zx_status_t status;
   zx::channel device;
   status = fdio_get_service_handle(device_fd.release(), device.reset_and_get_address());
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   // convert mount options to init options
@@ -106,12 +107,9 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df, const Mo
   };
 
   // launch the filesystem process
-  zx::unowned_channel export_root(outgoing_directory.client);
-  status = FsInit(std::move(device), df, init_options, std::move(outgoing_directory),
-                  std::move(crypt_client))
-               .status_value();
-  if (status != ZX_OK) {
-    return status;
+  auto export_root_or = FsInit(std::move(device), df, init_options, std::move(crypt_client));
+  if (export_root_or.is_error()) {
+    return export_root_or.take_error();
   }
 
   // Extract the handle to the root of the filesystem from the export root. The POSIX flags will
@@ -120,178 +118,42 @@ zx_status_t StartFilesystem(fbl::unique_fd device_fd, disk_format_t df, const Mo
                    fio::wire::kOpenFlagPosixExecutable;
   if (options.admin)
     flags |= fio::wire::kOpenRightAdmin;
-  auto handle_or = GetFsRootHandle(zx::unowned_channel(export_root), flags);
-  if (handle_or.is_error()) {
-    return handle_or.status_value();
-  }
-  *out_data_root = std::move(handle_or).value();
-  return ZX_OK;
+  auto root_or = FsRootHandle(fidl::UnownedClientEnd<DirectoryAdmin>(*export_root_or), flags);
+  if (root_or.is_error())
+    return root_or.take_error();
+  return zx::ok(std::make_pair(*std::move(export_root_or), *std::move(root_or)));
 }
 
 }  // namespace
-}  // namespace fs_management
-
-enum DiskFormatLogVerbosity {
-  Silent,
-  Verbose,
-};
-
-disk_format_t detect_disk_format_impl(int fd, DiskFormatLogVerbosity verbosity) {
-  if (lseek(fd, 0, SEEK_SET) != 0) {
-    fprintf(stderr, "detect_disk_format: Cannot seek to start of device.\n");
-    return DISK_FORMAT_UNKNOWN;
-  }
-
-  fdio_cpp::UnownedFdioCaller caller(fd);
-  auto resp = fidl::WireCall<fblock::Block>(caller.channel())->GetInfo();
-  if (!resp.ok() || resp.value().status != ZX_OK) {
-    fprintf(stderr, "detect_disk_format: Could not acquire block device info\n");
-    return DISK_FORMAT_UNKNOWN;
-  }
-
-  if (!resp.value().info->block_size) {
-    fprintf(stderr, "detect_disk_format: Expected a block size of > 0\n");
-    return DISK_FORMAT_UNKNOWN;
-  }
-
-  // We need to read at least two blocks, because the GPT magic is located inside the second block
-  // of the disk.
-  size_t header_size =
-      (HEADER_SIZE > (2 * resp->info->block_size)) ? HEADER_SIZE : (2 * resp->info->block_size);
-  // check if the partition is big enough to hold the header in the first place
-  if (header_size > resp.value().info->block_size * resp.value().info->block_count) {
-    return DISK_FORMAT_UNKNOWN;
-  }
-
-  // We expect to read HEADER_SIZE bytes, but we may need to read
-  // extra to read a multiple of the underlying block size.
-  const size_t buffer_size =
-      fbl::round_up(header_size, static_cast<size_t>(resp.value().info->block_size));
-
-  ZX_DEBUG_ASSERT_MSG(buffer_size > 0, "Expected buffer_size to be greater than 0\n");
-
-  uint8_t data[buffer_size];
-  if (read(fd, data, buffer_size) != static_cast<ssize_t>(buffer_size)) {
-    fprintf(stderr, "detect_disk_format: Error reading block device.\n");
-    return DISK_FORMAT_UNKNOWN;
-  }
-
-  if (!memcmp(data, fvm_magic, sizeof(fvm_magic))) {
-    return DISK_FORMAT_FVM;
-  }
-
-  if (!memcmp(data, zxcrypt_magic, sizeof(zxcrypt_magic))) {
-    return DISK_FORMAT_ZXCRYPT;
-  }
-
-  if (!memcmp(data, block_verity_magic, sizeof(block_verity_magic))) {
-    return DISK_FORMAT_BLOCK_VERITY;
-  }
-
-  if (!memcmp(data + resp->info->block_size, gpt_magic, sizeof(gpt_magic))) {
-    return DISK_FORMAT_GPT;
-  }
-
-  if (!memcmp(data, minfs_magic, sizeof(minfs_magic))) {
-    return DISK_FORMAT_MINFS;
-  }
-
-  if (!memcmp(data, blobfs_magic, sizeof(blobfs_magic))) {
-    return DISK_FORMAT_BLOBFS;
-  }
-
-  if (!memcmp(data, factoryfs_magic, sizeof(factoryfs_magic))) {
-    return DISK_FORMAT_FACTORYFS;
-  }
-
-  if (!memcmp(data, vbmeta_magic, sizeof(vbmeta_magic))) {
-    return DISK_FORMAT_VBMETA;
-  }
-
-  if ((data[510] == 0x55 && data[511] == 0xAA)) {
-    if ((data[38] == 0x29 || data[66] == 0x29)) {
-      // 0x55AA are always placed at offset 510 and 511 for FAT filesystems.
-      // 0x29 is the Boot Signature, but it is placed at either offset 38 or
-      // 66 (depending on FAT type).
-      return DISK_FORMAT_FAT;
-    }
-    return DISK_FORMAT_MBR;
-  }
-
-  if (!memcmp(&data[1024], f2fs_magic, sizeof(f2fs_magic))) {
-    return DISK_FORMAT_F2FS;
-  }
-
-  if (!memcmp(data, fxfs_magic, sizeof(fxfs_magic))) {
-    return DISK_FORMAT_FXFS;
-  }
-
-  if (verbosity == DiskFormatLogVerbosity::Verbose) {
-    // Log a hexdump of the bytes we looked at and didn't find any magic in.
-    fprintf(stderr, "detect_disk_format: did not recognize format.  Looked at:\n");
-    // fvm, zxcrypt, minfs, and blobfs have their magic bytes at the start
-    // of the block.
-    hexdump_very_ex(data, 16, 0, hexdump_stdio_printf, stderr);
-    // MBR is two bytes at offset 0x1fe, but print 16 just for consistency
-    hexdump_very_ex(data + 0x1f0, 16, 0x1f0, hexdump_stdio_printf, stderr);
-    // GPT magic is stored one block in, so it can coexist with MBR.
-    hexdump_very_ex(data + resp->info->block_size, 16, resp->info->block_size, hexdump_stdio_printf,
-                    stderr);
-  }
-
-  return DISK_FORMAT_UNKNOWN;
-}
 
 __EXPORT
-disk_format_t detect_disk_format(int fd) {
-  return detect_disk_format_impl(fd, DiskFormatLogVerbosity::Silent);
-}
-
-__EXPORT
-disk_format_t detect_disk_format_log_unknown(int fd) {
-  return detect_disk_format_impl(fd, DiskFormatLogVerbosity::Verbose);
-}
-
-__EXPORT
-zx_status_t fmount(int dev_fd, int mount_fd, disk_format_t df, const MountOptions& options,
-                   LaunchCallback cb) {
+zx::status<fidl::ClientEnd<DirectoryAdmin>> Mount(fbl::unique_fd device_fd, int mount_fd,
+                                                  DiskFormat df, const MountOptions& options,
+                                                  LaunchCallback cb) {
   zx::channel crypt_client(options.crypt_client);
   if (options.bind_to_namespace) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  zx_status_t status;
-  zx::channel data_root;
-  fbl::unique_fd device_fd(dev_fd);
-
-  fs_management::OutgoingDirectory handles{zx::unowned_channel(options.outgoing_directory.client),
-                                           zx::channel(options.outgoing_directory.server)};
-  zx::channel client;
-  if (!*handles.client) {
-    zx_status_t status = zx::channel::create(0, &client, &handles.server);
-    if (status != ZX_OK)
-      return status;
-    handles.client = zx::unowned_channel(client);
-  }
-
-  if ((status =
-           fs_management::StartFilesystem(std::move(device_fd), df, options, cb, std::move(handles),
-                                          &data_root, std::move(crypt_client))) != ZX_OK) {
-    return status;
-  }
+  auto result = StartFilesystem(std::move(device_fd), df, options, cb, std::move(crypt_client));
+  if (result.is_error())
+    return result.take_error();
+  auto [export_root, data_root] = *std::move(result);
 
   fdio_cpp::FdioCaller caller{fbl::unique_fd(mount_fd)};
-  auto resp = fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel())
-                  ->Mount(std::move(data_root));
+  auto resp = fidl::WireCall<DirectoryAdmin>(caller.channel())
+                  ->Mount(fidl::ClientEnd<fio::Directory>(data_root.TakeChannel()));
   caller.release().release();
-  if (!resp.ok()) {
-    return resp.status();
-  }
-  return resp.value().s;
+  if (!resp.ok())
+    return zx::error(resp.status());
+  if (resp.value().s != ZX_OK)
+    return zx::error(resp.value().s);
+
+  return zx::ok(std::move(export_root));
 }
 
 __EXPORT
-zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
+zx_status_t MountRootHandle(fidl::ClientEnd<DirectoryAdmin> root, const char* mount_path) {
   zx_status_t status;
   zx::channel mount_point, mount_point_server;
   if ((status = zx::channel::create(0, &mount_point, &mount_point_server)) != ZX_OK) {
@@ -301,8 +163,8 @@ zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
                           mount_point_server.release())) != ZX_OK) {
     return status;
   }
-  fidl::WireSyncClient<fuchsia_io_admin::DirectoryAdmin> mount_client(std::move(mount_point));
-  auto resp = mount_client->Mount(zx::channel(root_handle));
+  fidl::WireSyncClient<DirectoryAdmin> mount_client(std::move(mount_point));
+  auto resp = mount_client->Mount(root.TakeChannel());
   if (!resp.ok()) {
     return resp.status();
   }
@@ -310,54 +172,49 @@ zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path) {
 }
 
 __EXPORT
-zx_status_t mount(int dev_fd, const char* mount_path, disk_format_t df, const MountOptions& options,
-                  LaunchCallback cb) {
+zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> Mount(fbl::unique_fd device_fd,
+                                                                    const char* mount_path,
+                                                                    DiskFormat df,
+                                                                    const MountOptions& options,
+                                                                    LaunchCallback cb) {
   zx::channel crypt_client(options.crypt_client);
-  zx_status_t status;
-  zx::channel data_root;
-  fbl::unique_fd device_fd(dev_fd);
 
-  fs_management::OutgoingDirectory handles{zx::unowned_channel(options.outgoing_directory.client),
-                                           zx::channel(options.outgoing_directory.server)};
-  zx::channel client;
-  if (!*handles.client) {
-    zx_status_t status = zx::channel::create(0, &client, &handles.server);
-    if (status != ZX_OK)
-      return status;
-    handles.client = zx::unowned_channel(client);
-  }
-
-  if ((status =
-           fs_management::StartFilesystem(std::move(device_fd), df, options, cb, std::move(handles),
-                                          &data_root, std::move(crypt_client))) != ZX_OK) {
-    return status;
-  }
+  auto result = StartFilesystem(std::move(device_fd), df, options, cb, std::move(crypt_client));
+  if (result.is_error())
+    return result.take_error();
+  auto [export_root, data_root] = *std::move(result);
 
   // If no mount point is provided, just return success; the caller can get whatever they want from
   // the export root.
-  if (mount_path == nullptr)
-    return ZX_OK;
-
-  if (options.bind_to_namespace) {
-    fdio_ns_t* ns;
-    if ((status = fdio_ns_get_installed(&ns)) != ZX_OK) {
-      return status;
+  if (mount_path) {
+    if (options.bind_to_namespace) {
+      fdio_ns_t* ns;
+      if (zx_status_t status = fdio_ns_get_installed(&ns); status != ZX_OK)
+        return zx::error(status);
+      if (zx_status_t status = fdio_ns_bind(ns, mount_path, data_root.TakeChannel().release());
+          status != ZX_OK)
+        return zx::error(status);
+    } else {
+      // mount the channel in the requested location
+      if (options.create_mountpoint) {
+        if (zx_status_t status = MakeDirAndRemoteMount(mount_path, std::move(data_root));
+            status != ZX_OK) {
+          return zx::error(status);
+        }
+      } else {
+        if (zx_status_t status = MountRootHandle(std::move(data_root), mount_path); status != ZX_OK)
+          return zx::error(status);
+      }
     }
-    return fdio_ns_bind(ns, mount_path, data_root.release());
-  } else {
-    // mount the channel in the requested location
-    if (options.create_mountpoint) {
-      return fs_management::MakeDirAndRemoteMount(mount_path, std::move(data_root));
-    }
-    return mount_root_handle(data_root.release(), mount_path);
   }
+
+  return zx::ok(std::move(export_root));
 }
 
 __EXPORT
-zx_status_t fumount(int mount_fd) {
-  fdio_cpp::FdioCaller caller{fbl::unique_fd(mount_fd)};
-  auto resp = fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel())->UnmountNode();
-  caller.release().release();
+zx_status_t Unmount(int mount_fd) {
+  fdio_cpp::UnownedFdioCaller caller(mount_fd);
+  auto resp = fidl::WireCall<DirectoryAdmin>(caller.channel())->UnmountNode();
   if (!resp.ok()) {
     return resp.status();
   }
@@ -369,19 +226,20 @@ zx_status_t fumount(int mount_fd) {
   // |fuchsia.io/DirectoryAdmin| protocol.
   // This method will only work if |mount_fd| is backed by a connection
   // that actually speaks the |DirectoryAdmin| protocol.
-  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> directory_admin_client(
-      std::move(resp.value().remote.channel()));
+  fidl::ClientEnd<DirectoryAdmin> directory_admin_client(std::move(resp.value().remote.channel()));
   return fs::FuchsiaVfs::UnmountHandle(std::move(directory_admin_client), zx::time::infinite());
 }
 
 __EXPORT
-zx_status_t umount(const char* mount_path) {
+zx_status_t Unmount(const char* mount_path) {
   fprintf(stderr, "Unmounting %s\n", mount_path);
   fbl::unique_fd fd(open(mount_path, O_DIRECTORY | O_NOREMOTE | O_ADMIN));
   if (!fd) {
     fprintf(stderr, "Could not open directory: %s\n", strerror(errno));
     return ZX_ERR_BAD_STATE;
   }
-  zx_status_t status = fumount(fd.get());
+  zx_status_t status = Unmount(fd.get());
   return status;
 }
+
+}  // namespace fs_management

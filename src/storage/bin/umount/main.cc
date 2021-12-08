@@ -46,5 +46,5 @@ int main(int argc, char** argv) {
   char* path = argv[1];
 
   xprintf("Unmount path: %s\n", path);
-  return umount(path);
+  return fs_management::Unmount(path);
 }

@@ -284,16 +284,18 @@ void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
       continue;
     }
 
-    FsckOptions fsck_options{
+    fs_management::FsckOptions fsck_options{
         .verbose = true,
         .never_modify = true,
         .always_modify = false,
         .force = true,
     };
-    EXPECT_EQ(fsck(partition_path.data(),
-                   partition.volume().name == "blobfs" ? DISK_FORMAT_BLOBFS : DISK_FORMAT_MINFS,
-                   fsck_options, &launch_stdio_sync),
-              ZX_OK);
+    EXPECT_EQ(
+        fs_management::Fsck(partition_path.data(),
+                            partition.volume().name == "blobfs" ? fs_management::kDiskFormatBlobfs
+                                                                : fs_management::kDiskFormatMinfs,
+                            fsck_options, &launch_stdio_sync),
+        ZX_OK);
   }
 }
 

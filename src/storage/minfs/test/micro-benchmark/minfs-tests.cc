@@ -246,12 +246,13 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
 constexpr BlockDeviceSizes kDefaultBlockDeviceSizes = {8192, 1 << 13};
 
 constexpr const minfs::Superblock kMinfsZeroedSuperblock = {};
-constexpr const MkfsOptions kMinfsDefaultMkfsOptions = {
+constexpr const fs_management::MkfsOptions kMinfsDefaultMkfsOptions = {
     .fvm_data_slices = 1,
     .verbose = false,
 };
 
-constexpr MinfsProperties kDefaultMinfsProperties(kDefaultBlockDeviceSizes, DISK_FORMAT_MINFS,
+constexpr MinfsProperties kDefaultMinfsProperties(kDefaultBlockDeviceSizes,
+                                                  fs_management::kDiskFormatMinfs,
                                                   kMinfsDefaultMkfsOptions, kMinfsZeroedSuperblock);
 
 using MinfsMicroBenchmark = MinfsMicroBenchmarkFixture<kDefaultMinfsProperties>;

@@ -28,9 +28,9 @@ class BlockDeviceManager {
     Matcher& operator=(const Matcher&) = delete;
     virtual ~Matcher() = default;
 
-    // Returns the disk format that this device should be, or DISK_FORMAT_UNKNOWN if this matcher
-    // does not recognize it.
-    virtual disk_format_t Match(const BlockDeviceInterface& device) = 0;
+    // Returns the disk format that this device should be, or fs_management::kDiskFormatUnknown if
+    // this matcher does not recognize it.
+    virtual fs_management::DiskFormat Match(const BlockDeviceInterface& device) = 0;
 
     // By default, attempts to add the given device whose format should be known at this point.
     virtual zx_status_t Add(BlockDeviceInterface& device) { return device.Add(); }

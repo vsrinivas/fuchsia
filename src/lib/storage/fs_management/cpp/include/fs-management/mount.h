@@ -5,10 +5,15 @@
 #ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_MOUNT_H_
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_MOUNT_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <zircon/compiler.h>
 
+#include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/launch.h>
+
+namespace fs_management {
 
 struct MountOptions {
   bool readonly = false;
@@ -37,14 +42,6 @@ struct MountOptions {
   // protocol.
   bool admin = true;
 
-  // If set, provides the handle pair for the filesystem processes's outgoing directory. If
-  // unspecified, it is assumed the caller doesn't need it. The server handle is *always* consumed,
-  // even on error; the client handle is unowned.
-  struct {
-    zx_handle_t client = ZX_HANDLE_INVALID;
-    zx_handle_t server = ZX_HANDLE_INVALID;
-  } outgoing_directory;
-
   // If true, bind to the namespace rather than using a remote-mount.
   bool bind_to_namespace = false;
 
@@ -67,25 +64,33 @@ struct MountOptions {
 //
 // device_fd is always consumed. If the callback is reached, then the 'device_fd'
 // is transferred via handles to the callback arguments.
-zx_status_t mount(int device_fd, const char* mount_path, disk_format_t df,
-                  const MountOptions& options, LaunchCallback cb);
+zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> Mount(fbl::unique_fd device_fd,
+                                                                    const char* mount_path,
+                                                                    DiskFormat df,
+                                                                    const MountOptions& options,
+                                                                    LaunchCallback cb);
 
 // 'mount_fd' is used in lieu of the mount_path. It is not consumed (i.e.,
 // it will still be open after this function completes, regardless of
 // success or failure).
-zx_status_t fmount(int device_fd, int mount_fd, disk_format_t df, const MountOptions& options,
-                   LaunchCallback cb);
+zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> Mount(fbl::unique_fd device_fd,
+                                                                    int mount_fd, DiskFormat df,
+                                                                    const MountOptions& options,
+                                                                    LaunchCallback cb);
 
-// Mounts the filesystem being served via root_handle (which is consumed) at mount_path.
-zx_status_t mount_root_handle(zx_handle_t root_handle, const char* mount_path);
+// Mounts the filesystem being served via root_handle.
+zx_status_t MountRootHandle(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root,
+                            const char* mount_path);
 
 // Umount the filesystem process.
 //
 // Returns ZX_ERR_BAD_STATE if mount_path could not be opened.
 // Returns ZX_ERR_NOT_FOUND if there is no mounted filesystem on mount_path.
 // Other errors may also be returned if problems occur while unmounting.
-zx_status_t umount(const char* mount_path);
+zx_status_t Unmount(const char* mount_path);
 // 'mount_fd' is used in lieu of the mount_path. It is not consumed.
-zx_status_t fumount(int mount_fd);
+zx_status_t Unmount(int mount_fd);
+
+}  // namespace fs_management
 
 #endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_MOUNT_H_

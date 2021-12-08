@@ -82,9 +82,9 @@ class FactoryResetTest : public Test {
 
   void TearDown() override { ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK); }
 
-  bool PartitionHasFormat(disk_format_t format) {
+  bool PartitionHasFormat(fs_management::DiskFormat format) {
     fbl::unique_fd fd(openat(devmgr_->devfs_root().get(), fvm_block_path_.c_str(), O_RDONLY));
-    return detect_disk_format(fd.get()) == format;
+    return fs_management::DetectDiskFormat(fd.get()) == format;
   }
 
   void CreateZxcrypt() {
@@ -121,7 +121,7 @@ class FactoryResetTest : public Test {
     GetBlockSize(fd, &block_size);
     std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
     memset(block.get(), 0, block_size);
-    memcpy(block.get(), zxcrypt_magic, sizeof(zxcrypt_magic));
+    memcpy(block.get(), fs_management::kZxcryptMagic, sizeof(fs_management::kZxcryptMagic));
 
     ssize_t res = write(fd.get(), block.get(), block_size);
     ASSERT_EQ(res, block_size);
@@ -141,7 +141,7 @@ class FactoryResetTest : public Test {
     GetBlockSize(fd, &block_size);
     std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
     memset(block.get(), 0, block_size);
-    memcpy(block.get(), blobfs_magic, sizeof(blobfs_magic));
+    memcpy(block.get(), fs_management::kBlobfsMagic, sizeof(fs_management::kBlobfsMagic));
 
     ssize_t res = write(fd.get(), block.get(), block_size);
     ASSERT_EQ(res, block_size);
@@ -270,13 +270,13 @@ TEST_F(FactoryResetTest, CanShredVolume) {
       binding.AddBinding(&mock_admin).Bind();
 
   factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
-  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_ZXCRYPT));
+  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
   loop.RunUntilIdle();
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(mock_admin.suspend_called());
-  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_UNKNOWN));
+  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatUnknown));
 }
 
 TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
@@ -296,13 +296,13 @@ TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
 
   // Verify that we re-shred that superblock anyway when we run factory reset.
   factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
-  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_ZXCRYPT));
+  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
   loop.RunUntilIdle();
   EXPECT_EQ(status, ZX_OK);
   EXPECT_TRUE(mock_admin.suspend_called());
-  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_UNKNOWN));
+  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatUnknown));
 }
 
 TEST_F(FactoryResetTest, DoesntShredVolumeIfNotZxcryptFormat) {
@@ -317,7 +317,7 @@ TEST_F(FactoryResetTest, DoesntShredVolumeIfNotZxcryptFormat) {
       binding.AddBinding(&mock_admin).Bind();
 
   factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
-  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_BLOBFS));
+  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatBlobfs));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
   loop.RunUntilIdle();
@@ -327,7 +327,7 @@ TEST_F(FactoryResetTest, DoesntShredVolumeIfNotZxcryptFormat) {
   // In a world where fshost knew more about expected topology, we'd want to
   // shred this block device anyway, but that won't happen until we have a
   // clearer block device topology story.
-  EXPECT_TRUE(PartitionHasFormat(DISK_FORMAT_BLOBFS));
+  EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatBlobfs));
 }
 
 }  // namespace

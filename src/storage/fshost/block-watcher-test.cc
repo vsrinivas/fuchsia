@@ -116,7 +116,7 @@ TEST(AddDeviceTestCase, AddMBRDevice) {
   Config config(options);
   BlockDeviceManager manager(&config);
   MockBlockDevice device(MockBlockDevice::Options{
-      .content_format = DISK_FORMAT_MBR,
+      .content_format = fs_management::kDiskFormatMbr,
       .driver_path = kMBRDriverPath,
   });
   EXPECT_EQ(manager.AddDevice(device), ZX_OK);
@@ -351,7 +351,7 @@ TEST(AddDeviceTestCase, FormatZxcryptDevice) {
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   MockBlockDevice::Options options = MockZxcryptDevice::ZxcryptOptions();
-  options.content_format = DISK_FORMAT_UNKNOWN;
+  options.content_format = fs_management::kDiskFormatUnknown;
   MockZxcryptDevice zxcrypt_device(options);
   EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
   MockMinfsDevice device;
@@ -369,7 +369,7 @@ TEST(AddDeviceTestCase, FormatMinfsDeviceWithZxcrypt) {
   MockBlockDevice fvm_device(MockBlockDevice::FvmOptions());
   EXPECT_EQ(manager.AddDevice(fvm_device), ZX_OK);
   MockBlockDevice::Options options = MockZxcryptDevice::ZxcryptOptions();
-  options.content_format = DISK_FORMAT_MINFS;
+  options.content_format = fs_management::kDiskFormatMinfs;
   MockZxcryptDevice zxcrypt_device(options);
   EXPECT_EQ(manager.AddDevice(zxcrypt_device), ZX_OK);
   MockMinfsDevice device;
@@ -475,7 +475,7 @@ TEST(AddDeviceTestCase, AddValidDurableDevice) {
    public:
     DurableZxcryptDevice()
         : MockZxcryptDevice(Options{
-              .content_format = DISK_FORMAT_ZXCRYPT,
+              .content_format = fs_management::kDiskFormatZxcrypt,
               .driver_path = kZxcryptDriverPath,
               .topological_path =
                   MockBlockDevice::BaseTopologicalPath() + "/" GPT_DURABLE_NAME "-004/block",

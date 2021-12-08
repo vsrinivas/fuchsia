@@ -11,5 +11,6 @@ executable("mount") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/storage/fs_management",
+    "//zircon/system/ulib/zxc",
   ]
 }

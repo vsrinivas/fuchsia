@@ -48,11 +48,11 @@ bool IsRamdisk(const BlockDeviceInterface& device) {
 // Matches all NAND devices.
 class NandMatcher : public BlockDeviceManager::Matcher {
  public:
-  disk_format_t Match(const BlockDeviceInterface& device) override {
+  fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     if (device.IsNand()) {
-      return DISK_FORMAT_NAND_BROKER;
+      return fs_management::kDiskFormatNandBroker;
     }
-    return DISK_FORMAT_UNKNOWN;
+    return fs_management::kDiskFormatUnknown;
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
@@ -78,18 +78,18 @@ class ContentMatcher : public BlockDeviceManager::Matcher {
  public:
   // If |allow_multiple| is true, multiple devices will be matched.  Otherwise, only the first
   // device that appears will match.
-  ContentMatcher(disk_format_t format, bool allow_multiple)
+  ContentMatcher(fs_management::DiskFormat format, bool allow_multiple)
       : format_(format), allow_multiple_(allow_multiple) {}
 
-  disk_format_t Match(const BlockDeviceInterface& device) override {
+  fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     if (!allow_multiple_ && !path_.empty()) {
       // Only match the first occurrence.
-      return DISK_FORMAT_UNKNOWN;
+      return fs_management::kDiskFormatUnknown;
     }
     if (device.content_format() == format_) {
       return format_;
     } else {
-      return DISK_FORMAT_UNKNOWN;
+      return fs_management::kDiskFormatUnknown;
     }
   }
 
@@ -107,7 +107,7 @@ class ContentMatcher : public BlockDeviceManager::Matcher {
   const std::string& path() const { return path_; }
 
  private:
-  const disk_format_t format_;
+  const fs_management::DiskFormat format_;
   const bool allow_multiple_;
   std::string path_;
 };
@@ -118,17 +118,17 @@ class PartitionMapMatcher : public ContentMatcher {
   // |suffix| is a device that is expected to appear when the driver is bound. For example, FVM,
   // will add a "/fvm" device before adding children whilst GPT won't add anything.  If
   // |ramdisk_required| is set, this matcher will only match against a ram-disk.
-  PartitionMapMatcher(disk_format_t format, bool allow_multiple, std::string_view suffix,
-                      bool ramdisk_required)
+  PartitionMapMatcher(fs_management::DiskFormat format, bool allow_multiple,
+                      std::string_view suffix, bool ramdisk_required)
       : ContentMatcher(format, allow_multiple),
         suffix_(suffix),
         ramdisk_required_(ramdisk_required) {}
 
   bool ramdisk_required() const { return ramdisk_required_; }
 
-  disk_format_t Match(const BlockDeviceInterface& device) override {
+  fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     if (ramdisk_required_ && !IsRamdisk(device)) {
-      return DISK_FORMAT_UNKNOWN;
+      return fs_management::kDiskFormatUnknown;
     }
     return ContentMatcher::Match(device);
   }
@@ -164,20 +164,20 @@ std::string GetFvmPathForPartitionMap(const PartitionMapMatcher& matcher) {
 class SimpleMatcher : public BlockDeviceManager::Matcher {
  public:
   SimpleMatcher(PartitionMapMatcher& map, std::string partition_name,
-                const fuchsia_hardware_block_partition::wire::Guid& type_guid, disk_format_t format,
-                PartitionLimit limit)
+                const fuchsia_hardware_block_partition::wire::Guid& type_guid,
+                fs_management::DiskFormat format, PartitionLimit limit)
       : map_(map),
         partition_name_(partition_name),
         type_guid_(type_guid),
         format_(format),
         limit_(limit) {}
 
-  disk_format_t Match(const BlockDeviceInterface& device) override {
+  fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     if (map_.IsChild(device) && device.partition_name() == partition_name_ &&
         !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
       return format_;
     } else {
-      return DISK_FORMAT_UNKNOWN;
+      return fs_management::kDiskFormatUnknown;
     }
   }
 
@@ -197,7 +197,7 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
   const PartitionMapMatcher& map_;
   const std::string partition_name_;
   const fuchsia_hardware_block_partition::wire::Guid type_guid_;
-  const disk_format_t format_;
+  const fs_management::DiskFormat format_;
   const PartitionLimit limit_;
 };
 
@@ -244,26 +244,27 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
     return variant;
   }
 
-  disk_format_t Match(const BlockDeviceInterface& device) override {
+  fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     if (expected_inner_path_.empty()) {
       if (map_.IsChild(device) &&
           partition_names_.find(device.partition_name()) != partition_names_.end() &&
           !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
         switch (variant_.zxcrypt) {
           case ZxcryptVariant::kNormal:
-            return map_.ramdisk_required() ? DISK_FORMAT_MINFS : DISK_FORMAT_ZXCRYPT;
+            return map_.ramdisk_required() ? fs_management::kDiskFormatMinfs
+                                           : fs_management::kDiskFormatZxcrypt;
           case ZxcryptVariant::kNoZxcrypt:
-            return DISK_FORMAT_MINFS;
+            return fs_management::kDiskFormatMinfs;
           case ZxcryptVariant::kZxcryptOnly:
-            return DISK_FORMAT_ZXCRYPT;
+            return fs_management::kDiskFormatZxcrypt;
         }
       }
     } else if (variant_.zxcrypt == ZxcryptVariant::kNormal &&
                device.topological_path() == expected_inner_path_ &&
                !memcmp(&device.GetTypeGuid(), &type_guid_, sizeof(type_guid_))) {
-      return DISK_FORMAT_MINFS;
+      return fs_management::kDiskFormatMinfs;
     }
-    return DISK_FORMAT_UNKNOWN;
+    return fs_management::kDiskFormatUnknown;
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
@@ -294,8 +295,8 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
     // as such, or the keys have been shredded, so skip straight to reformatting.  Strictly
     // speaking, it's not necessary, because attempting to unseal should trigger the same
     // behaviour, but the log messages in that case are scary.
-    if (device.GetFormat() == DISK_FORMAT_ZXCRYPT) {
-      if (device.content_format() != DISK_FORMAT_ZXCRYPT) {
+    if (device.GetFormat() == fs_management::kDiskFormatZxcrypt) {
+      if (device.content_format() != fs_management::kDiskFormatZxcrypt) {
         FX_LOGS(INFO) << "Formatting as zxcrypt partition";
         zx_status_t status = device.FormatZxcrypt();
         if (status != ZX_OK) {
@@ -319,7 +320,7 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
     if (status != ZX_OK) {
       return status;
     }
-    if (device.GetFormat() == DISK_FORMAT_ZXCRYPT) {
+    if (device.GetFormat() == fs_management::kDiskFormatZxcrypt) {
       expected_inner_path_ = device.topological_path();
       expected_inner_path_.append(kZxcryptSuffix);
     }
@@ -348,22 +349,22 @@ class FactoryfsMatcher : public BlockDeviceManager::Matcher {
 
   FactoryfsMatcher(const PartitionMapMatcher& map) : map_(map) {}
 
-  disk_format_t Match(const BlockDeviceInterface& device) override {
+  fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     static constexpr fuchsia_hardware_block_partition::wire::Guid factory_type_guid =
         GPT_FACTORY_TYPE_GUID;
     if (base_path_.empty()) {
       if (map_.IsChild(device) &&
           !memcmp(&device.GetTypeGuid(), &factory_type_guid, sizeof(factory_type_guid)) &&
           device.partition_name() == "factory") {
-        return DISK_FORMAT_BLOCK_VERITY;
+        return fs_management::kDiskFormatBlockVerity;
       }
     } else if (!memcmp(&device.GetTypeGuid(), &factory_type_guid, sizeof(factory_type_guid)) &&
                (device.topological_path() == std::string(base_path_).append(kVerityMutableSuffix) ||
                 device.topological_path() ==
                     std::string(base_path_).append(kVerityVerifiedSuffix))) {
-      return DISK_FORMAT_FACTORYFS;
+      return fs_management::kDiskFormatFactoryfs;
     }
-    return DISK_FORMAT_UNKNOWN;
+    return fs_management::kDiskFormatUnknown;
   }
 
   zx_status_t Add(BlockDeviceInterface& device) override {
@@ -383,13 +384,14 @@ class FactoryfsMatcher : public BlockDeviceManager::Matcher {
 // Matches devices that report flags with BLOCK_FLAG_BOOTPART set.
 class BootpartMatcher : public BlockDeviceManager::Matcher {
  public:
-  disk_format_t Match(const BlockDeviceInterface& device) override {
+  fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
     fuchsia_hardware_block_BlockInfo info;
     zx_status_t status = device.GetInfo(&info);
     if (status != ZX_OK) {
-      return DISK_FORMAT_UNKNOWN;
+      return fs_management::kDiskFormatUnknown;
     }
-    return info.flags & BLOCK_FLAG_BOOTPART ? DISK_FORMAT_BOOTPART : DISK_FORMAT_UNKNOWN;
+    return info.flags & BLOCK_FLAG_BOOTPART ? fs_management::kDiskFormatBootpart
+                                            : fs_management::kDiskFormatUnknown;
   }
 };
 
@@ -413,10 +415,12 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
     matchers_.push_back(std::make_unique<NandMatcher>());
   }
 
-  auto gpt = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_GPT, config_.is_set(Config::kGptAll),
-                                                   "", /*ramdisk_required=*/false);
-  auto fvm = std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, /*allow_multiple=*/false,
-                                                   "/fvm", config_.is_set(Config::kFvmRamdisk));
+  auto gpt = std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatGpt,
+                                                   config_.is_set(Config::kGptAll), "",
+                                                   /*ramdisk_required=*/false);
+  auto fvm =
+      std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatFvm, /*allow_multiple=*/false,
+                                            "/fvm", config_.is_set(Config::kFvmRamdisk));
 
   bool gpt_required = config_.is_set(Config::kGpt) || config_.is_set(Config::kGptAll);
   bool fvm_required = config_.is_set(Config::kFvm);
@@ -448,9 +452,9 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
     if (config_.is_set(Config::kBlobfs)) {
       static constexpr fuchsia_hardware_block_partition::wire::Guid blobfs_type_guid =
           GUID_BLOB_VALUE;
-      matchers_.push_back(std::make_unique<SimpleMatcher>(*fvm, std::string(kBlobfsPartitionLabel),
-                                                          blobfs_type_guid, DISK_FORMAT_BLOBFS,
-                                                          blobfs_limit));
+      matchers_.push_back(std::make_unique<SimpleMatcher>(
+          *fvm, std::string(kBlobfsPartitionLabel), blobfs_type_guid,
+          fs_management::kDiskFormatBlobfs, blobfs_limit));
       fvm_required = true;
     }
     if (config_.is_set(Config::kMinfs)) {
@@ -467,9 +471,9 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
     std::unique_ptr<PartitionMapMatcher> non_ramdisk_fvm;
     if (config_.is_set(Config::kFvmRamdisk)) {
       // Add another matcher for the non-ramdisk version of FVM.
-      non_ramdisk_fvm =
-          std::make_unique<PartitionMapMatcher>(DISK_FORMAT_FVM, /*allow_multiple=*/false, "/fvm",
-                                                /*ramdisk_required=*/false);
+      non_ramdisk_fvm = std::make_unique<PartitionMapMatcher>(fs_management::kDiskFormatFvm,
+                                                              /*allow_multiple=*/false, "/fvm",
+                                                              /*ramdisk_required=*/false);
 
       if (config_.is_set(Config::kAttachZxcryptToNonRamdisk)) {
         matchers_.push_back(std::make_unique<MinfsMatcher>(
@@ -493,7 +497,7 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
     // enabled, it's likely required for removable devices and so supporting multiple devices is
     // probably appropriate.
     matchers_.push_back(std::make_unique<PartitionMapMatcher>(
-        DISK_FORMAT_MBR, /*allow_multiple=*/true, "", /*ramdisk_required=*/false));
+        fs_management::kDiskFormatMbr, /*allow_multiple=*/true, "", /*ramdisk_required=*/false));
   }
 }
 
@@ -503,8 +507,8 @@ zx_status_t BlockDeviceManager::AddDevice(BlockDeviceInterface& device) {
   }
 
   for (auto& matcher : matchers_) {
-    disk_format_t format = matcher->Match(device);
-    if (format != DISK_FORMAT_UNKNOWN) {
+    fs_management::DiskFormat format = matcher->Match(device);
+    if (format != fs_management::kDiskFormatUnknown) {
       device.SetFormat(format);
       return matcher->Add(device);
     }

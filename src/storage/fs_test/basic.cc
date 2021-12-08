@@ -95,7 +95,7 @@ using FsckAfterEveryTransactionTest = FilesystemTest;
 
 TEST_P(FsckAfterEveryTransactionTest, SimpleOperationsSucceeds) {
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
-  MountOptions mount_options;
+  fs_management::MountOptions mount_options;
   mount_options.fsck_after_every_transaction = true;
   EXPECT_EQ(fs().Mount(mount_options).status_value(), ZX_OK);
 
@@ -129,7 +129,7 @@ TEST_P(FsckAfterEveryTransactionTest, PurgeOnRemountSucceeds) {
 
   // Now remount and the two files we deleted earlier should get purged and fsck will run after each
   // one is purged.
-  MountOptions mount_options;
+  fs_management::MountOptions mount_options;
   mount_options.fsck_after_every_transaction = true;
   EXPECT_EQ(fs().Mount(mount_options).status_value(), ZX_OK);
 }

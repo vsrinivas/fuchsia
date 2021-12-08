@@ -185,7 +185,7 @@ TEST_F(MounterTest, DurableMount) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountDurable(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountDurable(zx::channel(), fs_management::MountOptions()));
   ASSERT_TRUE(mounter.DurableMounted());
 }
 
@@ -193,7 +193,7 @@ TEST_F(MounterTest, FactoryMount) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kFactoryfs);
-  ASSERT_OK(mounter.MountFactoryFs(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountFactoryFs(zx::channel(), fs_management::MountOptions()));
 
   ASSERT_TRUE(mounter.FactoryMounted());
 }
@@ -203,7 +203,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -215,7 +215,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -228,7 +228,7 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
 
   ASSERT_FALSE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());
@@ -241,9 +241,9 @@ TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
   TestMounter mounter(manager(), &config_);
 
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());
@@ -257,12 +257,12 @@ TEST_F(MounterTest, OpenAllWithDirectoryAdmin) {
 
   mounter.ResetSeenAdminFlag();
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
   ASSERT_TRUE(mounter.SeenAdminFlag());
 
   mounter.ResetSeenAdminFlag();
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
   ASSERT_TRUE(mounter.SeenAdminFlag());
 
   ASSERT_TRUE(mounter.BlobMounted());
@@ -276,12 +276,12 @@ TEST_F(MounterTest, OpenDataRootWithoutDirectoryAdmin) {
 
   mounter.ResetSeenAdminFlag();
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_OK(mounter.MountData(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions()));
   ASSERT_FALSE(mounter.SeenAdminFlag());
 
   mounter.ResetSeenAdminFlag();
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), MountOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
   ASSERT_TRUE(mounter.SeenAdminFlag());
 
   ASSERT_TRUE(mounter.BlobMounted());

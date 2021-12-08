@@ -5,19 +5,24 @@
 #ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_
 
+#include <fidl/fuchsia.io.admin/cpp/wire.h>
+#include <lib/fidl/llcpp/client_end.h>
+#include <lib/zx/channel.h>
 #include <zircon/types.h>
 
 #include <fs-management/format.h>
 #include <fs-management/launch.h>
 
-#define PATH_DATA "/data"
-#define PATH_INSTALL "/install"
-#define PATH_DURABLE "/durable"
-#define PATH_SYSTEM "/system"
-#define PATH_BLOB "/blob"
-#define PATH_FACTORY "/factory"
-#define PATH_VOLUME "/volume"
-#define PATH_DEV_BLOCK "/dev/class/block"
+namespace fs_management {
+
+inline constexpr std::string_view kPathData = "/data";
+inline constexpr std::string_view kPathInstall = "/install";
+inline constexpr std::string_view kPathDurable = "/durable";
+inline constexpr std::string_view kPathSystem = "/system";
+inline constexpr std::string_view kPathBlob = "/blob";
+inline constexpr std::string_view kPathFactory = "/factory";
+inline constexpr std::string_view kPathVolume = "/volume";
+inline constexpr std::string_view kPathDevBlock = "/dev/class/block";
 
 struct InitOptions {
   bool readonly = false;
@@ -85,11 +90,11 @@ struct FsckOptions {
 };
 
 // Format the provided device with a requested disk format.
-zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
+zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
                  const MkfsOptions& options);
 
 // Check and repair a device with a requested disk format.
-zx_status_t fsck(const char* device_path, disk_format_t df, const FsckOptions& options,
+zx_status_t Fsck(const char* device_path, DiskFormat df, const FsckOptions& options,
                  LaunchCallback cb);
 
 // Initialize the filesystem present on |device_handle|, returning a connection to the outgoing
@@ -103,12 +108,19 @@ zx_status_t fsck(const char* device_path, disk_format_t df, const FsckOptions& o
 // filesystem-specific operations.
 //
 // |device_handle| is always consumed.
-zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const InitOptions& options,
-                    zx_handle_t* out_export_root);
+zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> FsInit(zx::channel device_handle,
+                                                                     DiskFormat df,
+                                                                     const InitOptions& options,
+                                                                     zx::channel crypt_client = {});
 
 // Get a connection to the root of the filesystem, given a filesystem outgoing directory.
-//
-// |export_root| is never consumed.
-zx_status_t fs_root_handle(zx_handle_t export_root, zx_handle_t* out_root);
+zx::status<fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>> FsRootHandle(
+    fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+    uint32_t flags = fuchsia_io::wire::kOpenRightReadable |
+                     fuchsia_io::wire::kOpenFlagPosixWritable |
+                     fuchsia_io::wire::kOpenFlagPosixExecutable |
+                     fuchsia_io::wire::kOpenRightAdmin);
+
+}  // namespace fs_management
 
 #endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_INCLUDE_FS_MANAGEMENT_ADMIN_H_

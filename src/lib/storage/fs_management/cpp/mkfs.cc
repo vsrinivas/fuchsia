@@ -28,6 +28,7 @@
 
 #include "path.h"
 
+namespace fs_management {
 namespace {
 
 zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCallback cb,
@@ -84,7 +85,7 @@ zx_status_t MkfsNativeFs(const char* binary, const char* device_path, LaunchCall
 }
 
 zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOptions& options) {
-  const std::string tool_path = fs_management::GetBinaryPath("mkfs-msdosfs");
+  const std::string tool_path = GetBinaryPath("mkfs-msdosfs");
   std::string sectors_per_cluster;
   std::vector<const char*> argv = {tool_path.c_str()};
   if (options.sectors_per_cluster != 0) {
@@ -100,29 +101,24 @@ zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOption
 }  // namespace
 
 __EXPORT
-zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
+zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
                  const MkfsOptions& options) {
   // N.B. Make sure to release crypt_client in any new error paths here.
   switch (df) {
-    case DISK_FORMAT_FACTORYFS:
-      return MkfsNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), device_path, cb,
-                          options, false);
-    case DISK_FORMAT_MINFS:
-      return MkfsNativeFs(fs_management::GetBinaryPath("minfs").c_str(), device_path, cb, options,
-                          true);
-    case DISK_FORMAT_FXFS:
-      return MkfsNativeFs(fs_management::GetBinaryPath("fxfs").c_str(), device_path, cb, options,
-                          true);
-    case DISK_FORMAT_FAT:
+    case kDiskFormatFactoryfs:
+      return MkfsNativeFs(GetBinaryPath("factoryfs").c_str(), device_path, cb, options, false);
+    case kDiskFormatMinfs:
+      return MkfsNativeFs(GetBinaryPath("minfs").c_str(), device_path, cb, options, true);
+    case kDiskFormatFxfs:
+      return MkfsNativeFs(GetBinaryPath("fxfs").c_str(), device_path, cb, options, true);
+    case kDiskFormatFat:
       return MkfsFat(device_path, cb, options);
-    case DISK_FORMAT_BLOBFS:
-      return MkfsNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), device_path, cb, options,
-                          true);
-    case DISK_FORMAT_F2FS:
-      return MkfsNativeFs(fs_management::GetBinaryPath("f2fs").c_str(), device_path, cb, options,
-                          true);
+    case kDiskFormatBlobfs:
+      return MkfsNativeFs(GetBinaryPath("blobfs").c_str(), device_path, cb, options, true);
+    case kDiskFormatF2fs:
+      return MkfsNativeFs(GetBinaryPath("f2fs").c_str(), device_path, cb, options, true);
     default:
-      auto* format = fs_management::CustomDiskFormat::Get(df);
+      auto* format = CustomDiskFormat::Get(df);
       if (format == nullptr) {
         if (options.crypt_client != ZX_HANDLE_INVALID)
           zx_handle_close(options.crypt_client);
@@ -131,3 +127,5 @@ zx_status_t mkfs(const char* device_path, disk_format_t df, LaunchCallback cb,
       return MkfsNativeFs(format->binary_path().c_str(), device_path, cb, options, true);
   }
 }
+
+}  // namespace fs_management

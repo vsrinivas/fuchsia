@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "admin.h"
-
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/vfs.h>
@@ -21,22 +19,20 @@
 #include "path.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 
-namespace fio = fuchsia_io;
-
 namespace fs_management {
 namespace {
 
-void UnmountHandle(zx_handle_t export_root, bool wait_until_ready) {
-  zx::channel root;
-  fs_root_handle(export_root, root.reset_and_get_address());
-  fs::FuchsiaVfs::UnmountHandle(std::move(root),
-                                wait_until_ready ? zx::time::infinite() : zx::time(0));
-}
+using fuchsia_io_admin::DirectoryAdmin;
 
-zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOptions& options,
-                          OutgoingDirectory outgoing_directory, zx::channel crypt_client) {
+zx::status<fidl::ClientEnd<DirectoryAdmin>> InitNativeFs(const char* binary, zx::channel device,
+                                                         const InitOptions& options,
+                                                         zx::channel crypt_client) {
   zx_status_t status;
-  std::array<zx_handle_t, 3> handles = {device.release(), outgoing_directory.server.release(),
+  auto outgoing_directory_or = fidl::CreateEndpoints<DirectoryAdmin>();
+  if (outgoing_directory_or.is_error())
+    return outgoing_directory_or.take_error();
+  std::array<zx_handle_t, 3> handles = {device.release(),
+                                        outgoing_directory_or->server.TakeChannel().release(),
                                         crypt_client.release()};
   std::array<uint32_t, 3> ids = {FS_HANDLE_BLOCK_DEVICE_ID, PA_DIRECTORY_REQUEST,
                                  PA_HND(PA_USER0, 2)};
@@ -77,8 +73,14 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOpti
   argv.push_back(nullptr);
   int argc = static_cast<int>(argv.size() - 1);
 
-  auto cleanup = fit::defer([&outgoing_directory, &options]() {
-    UnmountHandle(outgoing_directory.client->get(), options.wait_until_ready);
+  auto cleanup = fit::defer([&outgoing_directory_or, &options]() {
+    auto root_or = FsRootHandle(outgoing_directory_or->client);
+    if (root_or.is_error()) {
+      // Ignore errors.
+      return;
+    }
+    fs::FuchsiaVfs::UnmountHandle(*std::move(root_or),
+                                  options.wait_until_ready ? zx::time::infinite() : zx::time(0));
   });
 
   if ((status = options.callback(argc, argv.data(), handles.data(), ids.data(),
@@ -88,7 +90,7 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOpti
 
   if (options.wait_until_ready) {
     // Wait until the filesystem is ready to take incoming requests
-    auto result = fidl::WireCall<fio::Node>(outgoing_directory.client)->Describe();
+    auto result = fidl::WireCall(outgoing_directory_or->client)->Describe();
     switch (result.status()) {
       case ZX_OK:
         break;
@@ -99,88 +101,61 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOpti
     }
   }
   cleanup.cancel();
-  return zx::ok();
+  return zx::ok(std::move(outgoing_directory_or->client));
 }
 
 }  // namespace
 
-zx::status<zx::channel> GetFsRootHandle(zx::unowned_channel export_root, uint32_t flags) {
+__EXPORT
+zx::status<fidl::ClientEnd<DirectoryAdmin>> FsRootHandle(
+    fidl::UnownedClientEnd<DirectoryAdmin> export_root, uint32_t flags) {
   zx::channel root_client, root_server;
   auto status = zx::make_status(zx::channel::create(0, &root_client, &root_server));
   if (status.is_error()) {
     return status.take_error();
   }
 
-  auto resp = fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root))
+  auto resp = fidl::WireCall<DirectoryAdmin>(export_root)
                   ->Open(flags, 0, fidl::StringView("root"), std::move(root_server));
   if (!resp.ok()) {
     return zx::error(resp.status());
   }
 
-  return zx::ok(std::move(root_client));
+  return zx::ok(fidl::ClientEnd<DirectoryAdmin>(std::move(root_client)));
 }
 
-zx::status<> FsInit(zx::channel device, disk_format_t df, const InitOptions& options,
-                    OutgoingDirectory outgoing_directory, zx::channel crypt_client) {
+__EXPORT
+zx::status<fidl::ClientEnd<DirectoryAdmin>> FsInit(zx::channel device, DiskFormat df,
+                                                   const InitOptions& options,
+                                                   zx::channel crypt_client) {
   switch (df) {
-    case DISK_FORMAT_MINFS:
-      return InitNativeFs(fs_management::GetBinaryPath("minfs").c_str(), std::move(device), options,
-                          std::move(outgoing_directory), std::move(crypt_client));
-    case DISK_FORMAT_FXFS:
-      return InitNativeFs(fs_management::GetBinaryPath("fxfs").c_str(), std::move(device), options,
-                          std::move(outgoing_directory), std::move(crypt_client));
-    case DISK_FORMAT_BLOBFS:
-      return InitNativeFs(fs_management::GetBinaryPath("blobfs").c_str(), std::move(device),
-                          options, std::move(outgoing_directory), std::move(crypt_client));
-    case DISK_FORMAT_FAT:
+    case kDiskFormatMinfs:
+      return InitNativeFs(GetBinaryPath("minfs").c_str(), std::move(device), options,
+                          std::move(crypt_client));
+    case kDiskFormatFxfs:
+      return InitNativeFs(GetBinaryPath("fxfs").c_str(), std::move(device), options,
+                          std::move(crypt_client));
+    case kDiskFormatBlobfs:
+      return InitNativeFs(GetBinaryPath("blobfs").c_str(), std::move(device), options,
+                          std::move(crypt_client));
+    case kDiskFormatFat:
       // For now, fatfs will only ever be in a package and never in /boot/bin, so we can hard-code
       // the path.
-      return InitNativeFs("/pkg/bin/fatfs", std::move(device), options,
-                          std::move(outgoing_directory), std::move(crypt_client));
-    case DISK_FORMAT_FACTORYFS:
-      return InitNativeFs(fs_management::GetBinaryPath("factoryfs").c_str(), std::move(device),
-                          options, std::move(outgoing_directory), std::move(crypt_client));
-    case DISK_FORMAT_F2FS:
-      return InitNativeFs(fs_management::GetBinaryPath("f2fs").c_str(), std::move(device), options,
-                          std::move(outgoing_directory), std::move(crypt_client));
+      return InitNativeFs("/pkg/bin/fatfs", std::move(device), options, std::move(crypt_client));
+    case kDiskFormatFactoryfs:
+      return InitNativeFs(GetBinaryPath("factoryfs").c_str(), std::move(device), options,
+                          std::move(crypt_client));
+    case kDiskFormatF2fs:
+      return InitNativeFs(GetBinaryPath("f2fs").c_str(), std::move(device), options,
+                          std::move(crypt_client));
     default:
       auto* format = CustomDiskFormat::Get(df);
       if (format == nullptr) {
         return zx::error(ZX_ERR_NOT_SUPPORTED);
       }
       return InitNativeFs(format->binary_path().c_str(), std::move(device), options,
-                          std::move(outgoing_directory), std::move(crypt_client));
+                          std::move(crypt_client));
   }
 }
 
 }  // namespace fs_management
-
-__EXPORT
-zx_status_t fs_init(zx_handle_t device_handle, disk_format_t df, const InitOptions& options,
-                    zx_handle_t* out_export_root) {
-  fs_management::OutgoingDirectory handles;
-  zx::channel client;
-  zx_status_t status = zx::channel::create(0, &client, &handles.server);
-  if (status != ZX_OK)
-    return status;
-  handles.client = zx::unowned_channel(client);
-  status = FsInit(zx::channel(device_handle), df, options, std::move(handles), {}).status_value();
-  if (status != ZX_OK)
-    return status;
-  *out_export_root = client.release();
-  return ZX_OK;
-}
-
-__EXPORT
-zx_status_t fs_root_handle(zx_handle_t export_root, zx_handle_t* out_root) {
-  // The POSIX flags here requests that the parent export root write/execute rights are inherited by
-  // the new connection.
-  auto handle_or = fs_management::GetFsRootHandle(
-      zx::unowned_channel(export_root),
-      fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosixWritable |
-          fio::wire::kOpenFlagPosixExecutable | fio::wire::kOpenRightAdmin);
-  if (handle_or.is_error())
-    return handle_or.status_value();
-  *out_root = handle_or.value().release();
-  return ZX_OK;
-}

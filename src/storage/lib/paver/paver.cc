@@ -663,19 +663,19 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  auto disk_format = detect_disk_format(part_fd.get());
+  auto disk_format = fs_management::DetectDiskFormat(part_fd.get());
   fbl::unique_fd mountpoint_dev_fd;
   // By the end of this switch statement, mountpoint_dev_fd needs to be an
   // open handle to the block device that we want to mount at mount_path.
   switch (disk_format) {
-    case DISK_FORMAT_MINFS:
+    case fs_management::kDiskFormatMinfs:
       // If the disk we found is actually minfs, we can just use the block
       // device path we were given by open_partition.
       strncpy(minfs_path, path, PATH_MAX);
       mountpoint_dev_fd.reset(open(minfs_path, O_RDWR));
       break;
 
-    case DISK_FORMAT_ZXCRYPT: {
+    case fs_management::kDiskFormatZxcrypt: {
       zxcrypt::VolumeManager zxc_volume(std::move(part_fd), devfs_root_.duplicate());
 
       // Most of the time we'll expect the volume to actually already be
@@ -717,13 +717,13 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
       return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  MountOptions opts;
+  fs_management::MountOptions opts;
   opts.create_mountpoint = true;
-  if (status = zx::make_status(
-          mount(mountpoint_dev_fd.get(), mount_path, DISK_FORMAT_MINFS, opts, launch_logs_async));
-      status.is_error()) {
-    ERROR("mount error: %s\n", status.status_string());
-    return status.take_error();
+  if (auto result = fs_management::Mount(std::move(mountpoint_dev_fd), mount_path,
+                                         fs_management::kDiskFormatMinfs, opts, launch_logs_async);
+      result.is_error()) {
+    ERROR("mount error: %s\n", result.status_string());
+    return result.take_error();
   }
 
   int filename_size = static_cast<int>(filename.size());
@@ -751,7 +751,7 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
     uint8_t buf[8192];
     fbl::unique_fd kfd(open(path, O_CREAT | O_WRONLY | O_APPEND, 0600));
     if (!kfd) {
-      umount(mount_path);
+      fs_management::Unmount(mount_path);
       ERROR("open %.*s error: %s\n", filename_size, filename.data(), strerror(errno));
       return zx::error(ZX_ERR_IO);
     }
@@ -760,7 +760,7 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
     while (status.is_ok() && status.value() > 0) {
       size_t actual = status.value();
       if (write(kfd.get(), buf, actual) != static_cast<ssize_t>(actual)) {
-        umount(mount_path);
+        fs_management::Unmount(mount_path);
         ERROR("write %.*s error: %s\n", filename_size, filename.data(), strerror(errno));
         return zx::error(ZX_ERR_IO);
       }
@@ -769,7 +769,7 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
     fsync(kfd.get());
   }
 
-  if (status = zx::make_status(umount(mount_path)); status.is_error()) {
+  if (status = zx::make_status(fs_management::Unmount(mount_path)); status.is_error()) {
     ERROR("unmount %s failed: %s\n", mount_path, status.status_string());
     return status.take_error();
   }

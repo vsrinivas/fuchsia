@@ -26,10 +26,13 @@ namespace {
 
 struct {
   const char* name;
-  disk_format_t df;
-} FILESYSTEMS[] = {{"blobfs", DISK_FORMAT_BLOBFS}, {"minfs", DISK_FORMAT_MINFS},
-                   {"fat", DISK_FORMAT_FAT},       {"factoryfs", DISK_FORMAT_FACTORYFS},
-                   {"f2fs", DISK_FORMAT_F2FS},     {"fxfs", DISK_FORMAT_FXFS}};
+  fs_management::DiskFormat df;
+} FILESYSTEMS[] = {{"blobfs", fs_management::kDiskFormatBlobfs},
+                   {"minfs", fs_management::kDiskFormatMinfs},
+                   {"fat", fs_management::kDiskFormatFat},
+                   {"factoryfs", fs_management::kDiskFormatFactoryfs},
+                   {"f2fs", fs_management::kDiskFormatF2fs},
+                   {"fxfs", fs_management::kDiskFormatFxfs}};
 
 int usage(void) {
   fprintf(stderr, "usage: mkfs [ <option>* ] devicepath filesystem\n");
@@ -46,7 +49,8 @@ int usage(void) {
   return -1;
 }
 
-int parse_args(int argc, char** argv, MkfsOptions* options, disk_format_t* df, char** devicepath) {
+int parse_args(int argc, char** argv, fs_management::MkfsOptions* options,
+               fs_management::DiskFormat* df, char** devicepath) {
   static const struct option cmds[] = {
       {"help", no_argument, NULL, 'h'},
       {"verbose", no_argument, NULL, 'v'},
@@ -93,7 +97,7 @@ int parse_args(int argc, char** argv, MkfsOptions* options, disk_format_t* df, c
     }
   }
 
-  if (*df == DISK_FORMAT_UNKNOWN) {
+  if (*df == fs_management::kDiskFormatUnknown) {
     fprintf(stderr, "fs_mkfs: Cannot format a device with filesystem '%s'\n", argv[2]);
     return usage();
   }
@@ -106,9 +110,9 @@ int parse_args(int argc, char** argv, MkfsOptions* options, disk_format_t* df, c
 
 }  // namespace
 int main(int argc, char** argv) {
-  MkfsOptions options;
+  fs_management::MkfsOptions options;
   char* devicepath;
-  disk_format_t df;
+  fs_management::DiskFormat df;
   int r;
   if ((r = parse_args(argc, argv, &options, &df, &devicepath))) {
     return r;
@@ -116,7 +120,7 @@ int main(int argc, char** argv) {
   if (options.verbose) {
     printf("fs_mkfs: Formatting device [%s]\n", devicepath);
   }
-  if ((r = mkfs(devicepath, df, launch_stdio_sync, options)) < 0) {
+  if ((r = fs_management::Mkfs(devicepath, df, launch_stdio_sync, options)) < 0) {
     fprintf(stderr, "fs_mkfs: Failed to format device: %d\n", r);
   }
   return r;

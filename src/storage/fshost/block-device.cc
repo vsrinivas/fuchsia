@@ -108,7 +108,7 @@ int OpenVerityDeviceThread(void* arg) {
 // binary to terminate and returns the status.
 zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
                       fidl::ClientEnd<fuchsia_io::Node> device,
-                      fidl::ServerEnd<fuchsia_io::Directory> export_root = {},
+                      fidl::ServerEnd<fuchsia_io_admin::DirectoryAdmin> export_root = {},
                       fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {}) {
   FX_CHECK(argv[argv.size() - 1] == nullptr);
   FshostFsProvider fs_provider;
@@ -162,7 +162,7 @@ zx_status_t RunBinary(const fbl::Vector<const char*>& argv,
 }
 
 // Unmounts the filesystem using fuchsia.fs (rather than DirectoryAdmin).
-void Unmount(const fidl::ClientEnd<fuchsia_io::Directory>& export_root) {
+void Unmount(const fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin>& export_root) {
   auto admin_or = fidl::CreateEndpoints<fuchsia_fs::Admin>();
   if (admin_or.is_error()) {
     FX_LOGS(ERROR) << "Unable to create fs.Admin endpoints";
@@ -185,32 +185,33 @@ void Unmount(const fidl::ClientEnd<fuchsia_io::Directory>& export_root) {
 // Tries to mount Minfs and reads all data found on the minfs partition.  Errors are ignored.
 Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   fbl::Vector<const char*> argv = {"/pkg/bin/minfs", "mount", nullptr};
-  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  auto export_root_or = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
   if (export_root_or.is_error())
     return {};
   if (RunBinary(argv, std::move(device), std::move(export_root_or->server)) != ZX_OK)
     return {};
 
-  zx_handle_t root_dir_handle;
-  if (zx_status_t status = fs_root_handle(export_root_or->client.channel().get(), &root_dir_handle);
-      status != ZX_OK) {
+  auto root_dir_or = fs_management::FsRootHandle(export_root_or->client);
+  if (root_dir_or.is_error())
     return {};
-  }
 
   fbl::unique_fd fd;
-  if (zx_status_t status = fdio_fd_create(root_dir_handle, fd.reset_and_get_address());
+  if (zx_status_t status =
+          fdio_fd_create(root_dir_or->TakeChannel().release(), fd.reset_and_get_address());
       status != ZX_OK) {
     FX_LOGS(ERROR) << "fdio_fd_create failed";
     return {};
   }
 
   // Clone the handle so that we can unmount.
-  if (zx_status_t status = fdio_fd_clone(fd.get(), &root_dir_handle); status != ZX_OK) {
+  zx::channel root_dir_handle;
+  if (zx_status_t status = fdio_fd_clone(fd.get(), root_dir_handle.reset_and_get_address());
+      status != ZX_OK) {
     FX_LOGS(ERROR) << "fdio_fd_clone failed";
     return {};
   }
 
-  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root_dir_client((zx::channel(root_dir_handle)));
+  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root_dir_client(std::move(root_dir_handle));
   auto unmount = fit::defer([&root_dir_client] { fidl::WireCall(root_dir_client)->Unmount(); });
 
   if (auto copier_or = Copier::Read(std::move(fd)); copier_or.is_error()) {
@@ -248,17 +249,17 @@ BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Co
       device_config_(device_config),
       topological_path_(GetTopologicalPath(fd_.get())) {}
 
-disk_format_t BlockDevice::content_format() const {
+fs_management::DiskFormat BlockDevice::content_format() const {
   if (content_format_) {
     return *content_format_;
   }
-  content_format_ = detect_disk_format(fd_.get());
+  content_format_ = fs_management::DetectDiskFormat(fd_.get());
   return *content_format_;
 }
 
-disk_format_t BlockDevice::GetFormat() { return format_; }
+fs_management::DiskFormat BlockDevice::GetFormat() { return format_; }
 
-void BlockDevice::SetFormat(disk_format_t format) { format_ = format; }
+void BlockDevice::SetFormat(fs_management::DiskFormat format) { format_ = format; }
 
 const std::string& BlockDevice::partition_name() const {
   if (!partition_name_.empty()) {
@@ -510,17 +511,17 @@ zx_status_t BlockDevice::CheckFilesystem() {
   }
 
   switch (format_) {
-    case DISK_FORMAT_BLOBFS: {
+    case fs_management::kDiskFormatBlobfs: {
       FX_LOGS(INFO) << "Skipping blobfs consistency checker.";
       return ZX_OK;
     }
 
-    case DISK_FORMAT_FACTORYFS: {
+    case fs_management::kDiskFormatFactoryfs: {
       FX_LOGS(INFO) << "Skipping factory consistency checker.";
       return ZX_OK;
     }
 
-    case DISK_FORMAT_MINFS: {
+    case fs_management::kDiskFormatMinfs: {
       zx::ticks before = zx::ticks::now();
       auto timer = fit::defer([before]() {
         auto after = zx::ticks::now();
@@ -557,7 +558,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
                           "|\n"
                           "|   WARNING: fshost fsck failure!\n"
                           "|   Corrupt "
-                       << disk_format_string(format_)
+                       << fs_management::DiskFormatString(format_)
                        << " filesystem\n"
                           "|\n"
                           "|   If your system was shutdown cleanly (via 'dm poweroff'\n"
@@ -565,10 +566,10 @@ zx_status_t BlockDevice::CheckFilesystem() {
                           "|   team. Please file bugs with logs before and after reboot.\n"
                           "|\n"
                           "--------------------------------------------------------------";
-        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
+        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = fs_management::kDiskFormatMinfs});
         mounter_->ReportMinfsCorruption();
       } else {
-        FX_LOGS(INFO) << "fsck of " << disk_format_string(format_) << " completed OK";
+        FX_LOGS(INFO) << "fsck of " << fs_management::DiskFormatString(format_) << " completed OK";
       }
       return status;
     }
@@ -586,15 +587,15 @@ zx_status_t BlockDevice::FormatFilesystem() {
   }
 
   switch (format_) {
-    case DISK_FORMAT_BLOBFS: {
+    case fs_management::kDiskFormatBlobfs: {
       FX_LOGS(ERROR) << "Not formatting blobfs.";
       return ZX_ERR_NOT_SUPPORTED;
     }
-    case DISK_FORMAT_FACTORYFS: {
+    case fs_management::kDiskFormatFactoryfs: {
       FX_LOGS(ERROR) << "Not formatting factoryfs.";
       return ZX_ERR_NOT_SUPPORTED;
     }
-    case DISK_FORMAT_MINFS: {
+    case fs_management::kDiskFormatMinfs: {
       const auto binary_path =
           device_config_->ReadStringOptionValue(Config::kDataFilesystemBinaryPath);
       if (!binary_path.empty()) {
@@ -645,9 +646,9 @@ zx_status_t BlockDevice::MountFilesystem() {
     block_device.reset(fdio_service_clone(channel->get()));
   }
   switch (format_) {
-    case DISK_FORMAT_FACTORYFS: {
+    case fs_management::kDiskFormatFactoryfs: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(factoryfs)";
-      MountOptions options;
+      fs_management::MountOptions options;
       options.collect_metrics = false;
       options.readonly = true;
 
@@ -658,9 +659,9 @@ zx_status_t BlockDevice::MountFilesystem() {
       }
       return status;
     }
-    case DISK_FORMAT_BLOBFS: {
+    case fs_management::kDiskFormatBlobfs: {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
-      MountOptions options;
+      fs_management::MountOptions options;
       options.collect_metrics = true;
       std::optional<std::string> algorithm = std::nullopt;
       std::optional<std::string> eviction_policy = std::nullopt;
@@ -687,13 +688,13 @@ zx_status_t BlockDevice::MountFilesystem() {
       mounter_->TryMountPkgfs();
       return ZX_OK;
     }
-    case DISK_FORMAT_MINFS: {
-      MountOptions options;
+    case fs_management::kDiskFormatMinfs: {
+      fs_management::MountOptions options;
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
       zx_status_t status = MountData(&options, std::move(block_device));
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount data partition: " << zx_status_get_string(status) << ".";
-        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
+        MaybeDumpMetadata(fd_.duplicate(), {.disk_format = fs_management::kDiskFormatMinfs});
         return status;
       }
       mounter_->TryMountPkgfs();
@@ -712,7 +713,7 @@ zx_status_t BlockDevice::MountFilesystem() {
 // GUID of the device does not match a known valid one. Returns
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
-zx_status_t BlockDevice::MountData(MountOptions* options, zx::channel block_device) {
+zx_status_t BlockDevice::MountData(fs_management::MountOptions* options, zx::channel block_device) {
   const uint8_t* guid = GetTypeGuid().value.data();
 
   if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
@@ -731,22 +732,22 @@ zx_status_t BlockDevice::MountData(MountOptions* options, zx::channel block_devi
 
 zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
   switch (GetFormat()) {
-    case DISK_FORMAT_NAND_BROKER: {
+    case fs_management::kDiskFormatNandBroker: {
       return AttachDriver(kNandBrokerDriverPath);
     }
-    case DISK_FORMAT_BOOTPART: {
+    case fs_management::kDiskFormatBootpart: {
       return AttachDriver(kBootpartDriverPath);
     }
-    case DISK_FORMAT_GPT: {
+    case fs_management::kDiskFormatGpt: {
       return AttachDriver(kGPTDriverPath);
     }
-    case DISK_FORMAT_FVM: {
+    case fs_management::kDiskFormatFvm: {
       return AttachDriver(kFVMDriverPath);
     }
-    case DISK_FORMAT_MBR: {
+    case fs_management::kDiskFormatMbr: {
       return AttachDriver(kMBRDriverPath);
     }
-    case DISK_FORMAT_BLOCK_VERITY: {
+    case fs_management::kDiskFormatBlockVerity: {
       if (zx_status_t status = AttachDriver(kBlockVerityDriverPath); status != ZX_OK) {
         return status;
       }
@@ -763,23 +764,23 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
 
       return ZX_OK;
     }
-    case DISK_FORMAT_FACTORYFS: {
+    case fs_management::kDiskFormatFactoryfs: {
       if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
         return status;
       }
 
       return MountFilesystem();
     }
-    case DISK_FORMAT_ZXCRYPT: {
+    case fs_management::kDiskFormatZxcrypt: {
       return UnsealZxcrypt();
     }
-    case DISK_FORMAT_BLOBFS: {
+    case fs_management::kDiskFormatBlobfs: {
       if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
         return status;
       }
       return MountFilesystem();
     }
-    case DISK_FORMAT_MINFS: {
+    case fs_management::kDiskFormatMinfs: {
       FX_LOGS(INFO) << "mounting data partition: format on corruption is "
                     << (format_on_corruption ? "enabled" : "disabled");
       if (zx_status_t status = CheckFilesystem(); status != ZX_OK) {
@@ -804,12 +805,12 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       }
       return ZX_OK;
     }
-    case DISK_FORMAT_FAT:
-    case DISK_FORMAT_VBMETA:
-    case DISK_FORMAT_UNKNOWN:
-    case DISK_FORMAT_FXFS:
-    case DISK_FORMAT_F2FS:
-    case DISK_FORMAT_COUNT_:
+    case fs_management::kDiskFormatFat:
+    case fs_management::kDiskFormatVbmeta:
+    case fs_management::kDiskFormatUnknown:
+    case fs_management::kDiskFormatFxfs:
+    case fs_management::kDiskFormatF2fs:
+    case fs_management::kDiskFormatCount:
       return ZX_ERR_NOT_SUPPORTED;
   }
   return ZX_ERR_NOT_SUPPORTED;
@@ -980,7 +981,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   if (zx_status_t status = fdio_fd_create(handle, fd.reset_and_get_address()); status != ZX_OK)
     return status;
 
-  auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  auto export_root_or = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
   if (export_root_or.is_error())
     return export_root_or.error_value();
 

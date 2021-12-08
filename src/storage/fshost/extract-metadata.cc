@@ -83,7 +83,7 @@ bool ExtractMetadataEnabled() { return true; }
 
 void MaybeDumpMetadata(fbl::unique_fd device_fd, DumpMetadataOptions options) {
   // At the moment, extraction is supported only for minfs.
-  ZX_ASSERT(options.disk_format == DISK_FORMAT_MINFS);
+  ZX_ASSERT(options.disk_format == fs_management::kDiskFormatMinfs);
   if (options.bytes_per_line <= 0) {
     FX_LOGS(ERROR) << "Invalid bytes_per_line:" << options.bytes_per_line << std::endl;
     return;

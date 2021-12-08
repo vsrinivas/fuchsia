@@ -1121,7 +1121,7 @@ TEST_P(BlobfsIntegrationTest, ReadOnly) {
   blob_fd.reset();
 
   EXPECT_EQ(fs().Unmount().status_value(), ZX_OK);
-  ::MountOptions options;
+  fs_management::MountOptions options;
   options.readonly = true;
   EXPECT_EQ(fs().Mount(options).status_value(), ZX_OK);
 
@@ -1266,8 +1266,10 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
   fbl::unique_fd fd(open(fs().DevicePath().value().c_str(), O_RDWR));
   ASSERT_TRUE(fd);
 
-  ASSERT_NE(mount(fd.release(), fs().mount_path().c_str(), DISK_FORMAT_BLOBFS, ::MountOptions(),
-                  launch_stdio_async),
+  ASSERT_NE(fs_management::Mount(std::move(fd), fs().mount_path().c_str(),
+                                 fs_management::kDiskFormatBlobfs, fs_management::MountOptions(),
+                                 launch_stdio_async)
+                .status_value(),
             ZX_OK);
 
   // Grow slice count with one extra slice.

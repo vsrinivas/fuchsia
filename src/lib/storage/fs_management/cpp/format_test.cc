@@ -11,6 +11,7 @@
 
 #include "src/storage/testing/ram_disk.h"
 
+namespace fs_management {
 namespace {
 
 constexpr uint32_t kBlockSize = ZX_PAGE_SIZE;
@@ -24,7 +25,7 @@ TEST(FormatDetectionTest, TestInvalidGptIgnored) {
   vmo.write(kGptMagic, 0x200, sizeof(kGptMagic));
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  ASSERT_EQ(detect_disk_format(ramdisk_get_block_fd(ramdisk_or->client())), DISK_FORMAT_UNKNOWN);
+  ASSERT_EQ(DetectDiskFormat(ramdisk_get_block_fd(ramdisk_or->client())), kDiskFormatUnknown);
 }
 
 TEST(FormatDetectionTest, TestGptWithUnusualBlockSize) {
@@ -33,7 +34,7 @@ TEST(FormatDetectionTest, TestGptWithUnusualBlockSize) {
   vmo.write(kGptMagic, ZX_PAGE_SIZE, sizeof(kGptMagic));
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  ASSERT_EQ(detect_disk_format(ramdisk_get_block_fd(ramdisk_or->client())), DISK_FORMAT_GPT);
+  ASSERT_EQ(DetectDiskFormat(ramdisk_get_block_fd(ramdisk_or->client())), kDiskFormatGpt);
 }
 
 TEST(FormatDetectionTest, TestVbmetaRecognised) {
@@ -53,7 +54,8 @@ TEST(FormatDetectionTest, TestVbmetaRecognised) {
 
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-  ASSERT_EQ(detect_disk_format(ramdisk_get_block_fd(ramdisk_or->client())), DISK_FORMAT_VBMETA);
+  ASSERT_EQ(DetectDiskFormat(ramdisk_get_block_fd(ramdisk_or->client())), kDiskFormatVbmeta);
 }
 
 }  // namespace
+}  // namespace fs_management

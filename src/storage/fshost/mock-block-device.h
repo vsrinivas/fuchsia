@@ -26,7 +26,7 @@ class MockBlockDevice : public BlockDeviceInterface {
   struct Options {
     static Options Default() { return {}; }
 
-    disk_format_t content_format = DISK_FORMAT_UNKNOWN;
+    fs_management::DiskFormat content_format = fs_management::kDiskFormatUnknown;
     std::string_view driver_path;
     std::string topological_path = MockBlockDevice::BaseTopologicalPath();
     std::string partition_name;
@@ -34,11 +34,11 @@ class MockBlockDevice : public BlockDeviceInterface {
   };
 
   static Options GptOptions() {
-    return {.content_format = DISK_FORMAT_GPT, .driver_path = kGPTDriverPath};
+    return {.content_format = fs_management::kDiskFormatGpt, .driver_path = kGPTDriverPath};
   }
 
   static Options FvmOptions() {
-    return {.content_format = DISK_FORMAT_FVM, .driver_path = kFVMDriverPath};
+    return {.content_format = fs_management::kDiskFormatFvm, .driver_path = kFVMDriverPath};
   }
 
   static Options DurableOptions() {
@@ -60,11 +60,11 @@ class MockBlockDevice : public BlockDeviceInterface {
   // Returns the value SetPartitionMaxSize() was called with. Will be a nullopt if uncalled.
   const std::optional<uint64_t>& max_size() const { return max_size_; }
 
-  disk_format_t content_format() const override { return options_.content_format; }
+  fs_management::DiskFormat content_format() const override { return options_.content_format; }
   const std::string& topological_path() const override { return options_.topological_path; }
   const std::string& partition_name() const override { return partition_name_; }
-  disk_format_t GetFormat() final { return format_; }
-  void SetFormat(disk_format_t format) final { format_ = format; }
+  fs_management::DiskFormat GetFormat() final { return format_; }
+  void SetFormat(fs_management::DiskFormat format) final { format_ = format; }
   zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
     fuchsia_hardware_block_BlockInfo info = {};
     info.flags = 0;
@@ -140,7 +140,7 @@ class MockBlockDevice : public BlockDeviceInterface {
 
  private:
   const Options options_;
-  disk_format_t format_ = DISK_FORMAT_UNKNOWN;
+  fs_management::DiskFormat format_ = fs_management::kDiskFormatUnknown;
   bool attached_ = false;
 
   std::optional<uint64_t> max_size_;
@@ -263,7 +263,7 @@ class MockZxcryptDevice : public MockBlockDevice {
  public:
   static Options ZxcryptOptions() {
     return {
-        .content_format = DISK_FORMAT_ZXCRYPT,
+        .content_format = fs_management::kDiskFormatZxcrypt,
         .driver_path = kZxcryptDriverPath,
         .topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/minfs-p-2/block",
         .partition_name = std::string(kDataPartitionLabel),

@@ -11,9 +11,9 @@ zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
   auto name = config["name"].GetString();
 
   auto iter = config.FindMember("binary_path");
-  disk_format_t format;
+  fs_management::DiskFormat format;
   if (iter == config.MemberEnd()) {
-    format = static_cast<disk_format_t>(config["disk_format"].GetInt64());
+    format = static_cast<fs_management::DiskFormat>(config["disk_format"].GetInt64());
   } else {
     format = fs_management::CustomDiskFormat::Register(
         std::make_unique<fs_management::CustomDiskFormat>(name, config["binary_path"].GetString()));
@@ -56,13 +56,14 @@ class JsonInstance : public FilesystemInstance {
         device_path_(std::move(device_path)) {}
 
   virtual zx::status<> Format(const TestFilesystemOptions& options) override {
-    MkfsOptions mkfs_options;
+    fs_management::MkfsOptions mkfs_options;
     mkfs_options.sectors_per_cluster = filesystem_.sectors_per_cluster();
     return FsFormat(device_path_, filesystem_.format(), mkfs_options);
   }
 
-  zx::status<> Mount(const std::string& mount_path, const MountOptions& options) override {
-    MountOptions new_options = options;
+  zx::status<> Mount(const std::string& mount_path,
+                     const fs_management::MountOptions& options) override {
+    fs_management::MountOptions new_options = options;
     new_options.admin = filesystem_.use_directory_admin_to_unmount();
     return FsMount(device_path_, mount_path, filesystem_.format(), new_options,
                    &outgoing_directory_);
@@ -82,14 +83,14 @@ class JsonInstance : public FilesystemInstance {
   }
 
   zx::status<> Fsck() override {
-    FsckOptions options{
+    fs_management::FsckOptions options{
         .verbose = false,
         .never_modify = true,
         .always_modify = false,
         .force = true,
     };
-    return zx::make_status(
-        fsck(device_path_.c_str(), filesystem_.format(), options, launch_stdio_sync));
+    return zx::make_status(fs_management::Fsck(device_path_.c_str(), filesystem_.format(), options,
+                                               launch_stdio_sync));
   }
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
