@@ -171,6 +171,15 @@ const char* GetBridgePackage(sys::ComponentContext* context) {
   return scenic_uses_flatland ? kWaylandBridgePackage : kLegacyWaylandBridgePackage;
 }
 
+// Return the given IPv4 address as a packed uint32_t in network byte
+// order (i.e., big endian).
+//
+// `Ipv4Addr(127, 0, 0, 1)` will generate the loopback address "127.0.0.1".
+constexpr uint32_t Ipv4Addr(uint8_t a, uint8_t b, uint8_t c, uint8_t d) {
+  return htonl((static_cast<uint32_t>(a) << 24) | (static_cast<uint32_t>(b) << 16) |
+               (static_cast<uint32_t>(c) << 8) | (static_cast<uint32_t>(d) << 0));
+}
+
 // Run the given command in the guest as a daemon (i.e., in the background and
 // automatically restarted on failure).
 void MaitredStartDaemon(vm_tools::Maitred::Stub& maitred, std::vector<std::string> args,
@@ -216,6 +225,23 @@ void MaitredRunCommandSync(vm_tools::Maitred::Stub& maitred, std::vector<std::st
   TRACE_DURATION("linux_runner", "LaunchProcessRPC");
   grpc::Status status = maitred.LaunchProcess(&context, request, &response);
   FX_CHECK(status.ok()) << "Guest command failed: " << status.error_message();
+}
+
+// Ask maitre'd to enable the network in the guest.
+void MaitredBringUpNetwork(vm_tools::Maitred::Stub& maitred, uint32_t address, uint32_t gateway,
+                           uint32_t netmask) {
+  grpc::ClientContext context;
+  vm_tools::NetworkConfigRequest request;
+  vm_tools::EmptyMessage response;
+
+  vm_tools::IPv4Config* config = request.mutable_ipv4_config();
+  config->set_address(Ipv4Addr(100, 64, 1, 1));       // 100.64.1.1, RFC-6598 address
+  config->set_gateway(Ipv4Addr(100, 64, 1, 2));       // 100.64.1.2, RFC-6598 address
+  config->set_netmask(Ipv4Addr(255, 255, 255, 252));  // 30-bit netmask
+
+  TRACE_DURATION("linux_runner", "ConfigureNetworkRPC");
+  grpc::Status status = maitred.ConfigureNetwork(&context, request, &response);
+  FX_CHECK(status.ok()) << "Failed to configure guest network: " << status.error_message();
 }
 
 }  // namespace
@@ -373,39 +399,44 @@ void Guest::MountExtrasPartition() {
 void Guest::ConfigureNetwork() {
   TRACE_DURATION("linux_runner", "Guest::ConfigureNetwork");
   FX_CHECK(maitred_) << "Called ConfigureNetwork without a maitre'd connection";
-  struct in_addr addr;
 
-  uint32_t ip_addr = 0;
-  FX_LOGS(INFO) << "Using ip: " << LINUX_RUNNER_IP_DEFAULT;
-  FX_CHECK(inet_aton(LINUX_RUNNER_IP_DEFAULT, &addr) != 0) << "Failed to parse address string";
-  ip_addr = addr.s_addr;
-
-  uint32_t netmask = 0;
-  FX_LOGS(INFO) << "Using netmask: " << LINUX_RUNNER_NETMASK_DEFAULT;
-  FX_CHECK(inet_aton(LINUX_RUNNER_NETMASK_DEFAULT, &addr) != 0) << "Failed to parse address string";
-  netmask = addr.s_addr;
-
-  uint32_t gateway = 0;
-  FX_LOGS(INFO) << "Using gateway: " << LINUX_RUNNER_GATEWAY_DEFAULT;
-  FX_CHECK(inet_aton(LINUX_RUNNER_GATEWAY_DEFAULT, &addr) != 0) << "Failed to parse address string";
-  gateway = addr.s_addr;
   FX_LOGS(INFO) << "Configuring Guest Network...";
 
-  grpc::ClientContext context;
-  vm_tools::NetworkConfigRequest request;
-  vm_tools::EmptyMessage response;
+  // Perform basic network bring up.
+  //
+  // To bring up the network, maitre'd requires an IPv4 address to use for the
+  // guest's external NIC (even though we are going to replace it with
+  // a DHCP-acquired address in just a moment).
+  //
+  // We use an RFC-6598 (carrier-grade NAT) IP address distinct from the LXD
+  // subnet, but expect it to be overridden by DHCP later.
+  MaitredBringUpNetwork(*maitred_,
+                        /*address=*/Ipv4Addr(100, 64, 1, 1),      // 100.64.1.1, RFC-6598 address
+                        /*gateway=*/Ipv4Addr(100, 64, 1, 2),      // 100.64.1.2, RFC-6598 address
+                        /*netmask=*/Ipv4Addr(255, 255, 255, 252)  // 30-bit netmask
+  );
 
-  vm_tools::IPv4Config* config = request.mutable_ipv4_config();
-  config->set_address(ip_addr);
-  config->set_gateway(gateway);
-  config->set_netmask(netmask);
+  // Remove the configured IPv4 address from eth0.
+  MaitredRunCommandSync(*maitred_, /*args=*/{"/bin/ip", "address", "flush", "eth0"}, /*env=*/{});
 
-  {
-    TRACE_DURATION("linux_runner", "ConfigureNetworkRPC");
-    auto grpc_status = maitred_->ConfigureNetwork(&context, request, &response);
-    FX_CHECK(grpc_status.ok()) << "Failed to configure guest network: "
-                               << grpc_status.error_message();
-  }
+  // Run dhclient.
+  MaitredStartDaemon(*maitred_,
+                     /*args=*/
+                     {
+                         "/sbin/dhclient",
+                         // Lease file
+                         "-lf",
+                         "/run/dhclient.leases",
+                         // PID file
+                         "-pf",
+                         "/run/dhclient.pid",
+                         // Do not detach, but remain in foreground so maitre'd can monitor.
+                         "-d",
+                         // Interface
+                         "eth0",
+                     },
+                     /*env=*/{{"HOME", "/tmp"}, {"PATH", "/sbin:/bin"}});
+
   FX_LOGS(INFO) << "Network configured.";
 }
 

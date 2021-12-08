@@ -7,16 +7,6 @@ import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
 declare_args() {
-  # Default values for the guest network configuration.
-  #
-  # These are currently hard-coded to match what is setup in the virtio-net
-  # device.
-  #
-  # See //src/virtualization/bin/vmm/device/virtio_net.cc for more details.
-  linux_runner_ip = "10.0.0.2"
-  linux_runner_gateway = "10.0.0.1"
-  linux_runner_netmask = "255.255.255.0"
-
   # If `true`, adds additional testonly content to extras.img, which will be
   # built and mounted inside the container at /mnt/chromeos.
   linux_runner_extras_tests = true
@@ -50,14 +40,6 @@ if (linux_runner_stateful_image_path != "") {
   }
 }
 
-config("linux_runner_net_config") {
-  defines = [
-    "LINUX_RUNNER_IP_DEFAULT=\"" + linux_runner_ip + "\"",
-    "LINUX_RUNNER_GATEWAY_DEFAULT=\"" + linux_runner_gateway + "\"",
-    "LINUX_RUNNER_NETMASK_DEFAULT=\"" + linux_runner_netmask + "\"",
-  ]
-}
-
 source_set("lib") {
   sources = [
     "crash_listener.h",
@@ -71,7 +53,6 @@ source_set("lib") {
     "log_collector.h",
     "ports.h",
   ]
-  public_configs = [ ":linux_runner_net_config" ]
   public_deps = [
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
