@@ -6,10 +6,12 @@ import("//build/components.gni")
 import("//build/test.gni")
 
 source_set("common") {
-  visibility = [ "../*" ]
+  visibility = [ "//src/sys/*" ]
   testonly = true
   sources = [
     "binding.h",
+    "controller-provider.cc",
+    "controller-provider.h",
     "controller.cc",
     "controller.h",
     "dispatcher.cc",
@@ -86,6 +88,7 @@ test("unittests_bin") {
   visibility = [ ":*" ]
   testonly = true
   sources = [
+    "controller-provider-unittest.cc",
     "controller-unittest.cc",
     "input-unittest.cc",
     "monitors-unittest.cc",

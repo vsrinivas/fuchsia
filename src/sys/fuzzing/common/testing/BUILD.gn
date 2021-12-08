@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 source_set("testing") {
-  visibility = [ "//src/sys/fuzzing/*" ]
+  visibility = [ "//src/sys/*" ]
   testonly = true
   sources = [
     "corpus-reader.cc",
@@ -12,6 +12,8 @@ source_set("testing") {
     "module.h",
     "monitor.cc",
     "monitor.h",
+    "registrar.cc",
+    "registrar.h",
     "runner.cc",
     "runner.h",
     "signal-coordinator.cc",

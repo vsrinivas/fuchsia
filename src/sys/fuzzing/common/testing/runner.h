@@ -27,6 +27,11 @@ class FakeRunner final : public Runner {
   void set_error(zx_status_t error) { error_ = error; }
   void set_status(Status status) { status_ = std::move(status); }
 
+  const std::vector<Input>& seed_corpus() const { return seed_corpus_; }
+  const std::vector<Input>& live_corpus() const { return live_corpus_; }
+  void set_seed_corpus(std::vector<Input>&& seed_corpus) { seed_corpus_ = std::move(seed_corpus); }
+  void set_live_corpus(std::vector<Input>&& live_corpus) { live_corpus_ = std::move(live_corpus); }
+
   // These overrides forward to the base class, but also stash a copy of their parameters locally in
   // this class. This lets |Run| reapply them after the base class calls |ClearErrors|.
   void set_result(Result result) override;
@@ -42,7 +47,6 @@ class FakeRunner final : public Runner {
 
   using Runner::UpdateMonitors;
 
- protected:
   void ConfigureImpl(const std::shared_ptr<Options>& options) override;
   zx_status_t SyncExecute(const Input& input) override { return Run(); }
   zx_status_t SyncMinimize(const Input& input) override { return Run(); }
