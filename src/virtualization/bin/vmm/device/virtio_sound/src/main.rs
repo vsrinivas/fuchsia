@@ -174,10 +174,7 @@ async fn run_virtio_sound(
     // Make sure each queue has been initialized.
     let controlq_stream = device.take_stream(wire::CONTROLQ)?;
     let txq_stream = device.take_stream(wire::TXQ)?;
-    // TODO(fxbug.dev/87645): use this when implementing AudioInput
-    // If we don't initialize this queue via device.take_stream (even though it's unused),
-    // we'll crash when the guest sends us messages on this queue.
-    let _rxq_stream = device.take_stream(wire::RXQ)?;
+    let rxq_stream = device.take_stream(wire::RXQ)?;
     ready_responder.send()?;
 
     // Create a VirtSoundService to handle all virtq requests.
@@ -191,6 +188,7 @@ async fn run_virtio_sound(
 
     // Process everything to completion.
     let mut txq_sequencer = sequencer::Sequencer::new();
+    let mut rxq_sequencer = sequencer::Sequencer::new();
     futures::try_join!(
         device.run_device_notify(con).map_err(|e| anyhow!("run_device_notify: {}", e)),
         controlq_stream
@@ -211,6 +209,17 @@ async fn run_virtio_sound(
                 move |(chain, ticket, vss)| async move {
                     let lock = ticket.wait_turn().await;
                     vss.dispatch_txq(ReadableChain::new(chain, guest_mem), lock).await
+                }
+            }),
+        rxq_stream
+            // Attach a sequencer ticket to each message so we can order outgoing FIDL messages.
+            // Process asynchronously so we can wait for FIDL replies concurrently.
+            .map(|chain| Ok((chain, rxq_sequencer.next(), vss.clone())))
+            .try_for_each_concurrent(None /* unlimited concurrency */, {
+                let guest_mem = &guest_mem;
+                move |(chain, ticket, vss)| async move {
+                    let lock = ticket.wait_turn().await;
+                    vss.dispatch_rxq(ReadableChain::new(chain, guest_mem), lock).await
                 }
             }),
         vss.do_background_work(),

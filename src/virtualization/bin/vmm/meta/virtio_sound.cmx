@@ -8,7 +8,7 @@
     "sandbox": {
         "services": [
             "fuchsia.media.Audio",
-            "fuchsia.scheduling.ProfileProvider",
+            "fuchsia.scheduler.ProfileProvider",
             "fuchsia.tracing.provider.Registry"
         ]
     }
