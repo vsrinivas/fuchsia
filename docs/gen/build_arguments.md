@@ -752,6 +752,25 @@ and compare the outputs' contents for reproducibility.
 
 From //build/tracer/tracer.gni:13
 
+### check_rustc_determinism
+Check of determinism of rustc targets by running locally twice
+and comparing outputs, failing if any differences are found.
+Even though this check doesn't involve RBE, it uses the same
+wrapper script, which knows what output files to expect and compare.
+
+Requires GN args:
+  `enable_rbe = true`
+    to use the remote wrapper script, even without RBE
+
+Ignores:
+  `rbe_exec_strategy`
+    because RBE is not used
+
+
+**Current value (from the default):** `false`
+
+From //build/toolchain/rbe.gni:52
+
 ### check_vtables_in_rodata
 Check that all vtables in fuchsia binaries listed in binaries.json are in
 readonly data sections. This check will be run at the end of a full build.
@@ -2220,45 +2239,21 @@ built and mounted inside the container at /mnt/chromeos.
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:22
-
-### linux_runner_gateway
-
-**Current value (from the default):** `"10.0.0.1"`
-
-From //src/virtualization/bin/linux_runner/BUILD.gn:17
-
-### linux_runner_ip
-Default values for the guest network configuration.
-
-These are currently hard-coded to match what is setup in the virtio-net
-device.
-
-See //src/virtualization/bin/vmm/device/virtio_net.cc for more details.
-
-**Current value (from the default):** `"10.0.0.2"`
-
-From //src/virtualization/bin/linux_runner/BUILD.gn:16
-
-### linux_runner_netmask
-
-**Current value (from the default):** `"255.255.255.0"`
-
-From //src/virtualization/bin/linux_runner/BUILD.gn:18
+From //src/virtualization/bin/linux_runner/BUILD.gn:12
 
 ### linux_runner_stateful_image_path
 Point this to the location of a prebuilt stateful image in QCOW2 format
 
 **Current value (from the default):** `""`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:33
+From //src/virtualization/bin/linux_runner/BUILD.gn:23
 
 ### linux_runner_user_extras
 Point this to the location of external files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:30
+From //src/virtualization/bin/linux_runner/BUILD.gn:20
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -2267,7 +2262,7 @@ the linux kernel as crashes and panics can sometimes corrupt the images.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:27
+From //src/virtualization/bin/linux_runner/BUILD.gn:17
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
