@@ -79,26 +79,12 @@ impl CapabilityProvider for HubCapabilityProvider {
 
 /// Hub state on an instance of a component.
 struct Instance {
-    // TODO(fxbug.dev/77068): Remove this attribute.
-    #[allow(dead_code)]
-    pub abs_moniker: AbsoluteMoniker,
-    // TODO(fxbug.dev/77068): Remove this attribute.
-    #[allow(dead_code)]
-    pub component_url: String,
-    pub execution: Option<Execution>,
-    pub has_resolved_directory: bool, // the existence of the resolved directory.
+    /// Whether the `directory` has a subdirectory named `exec`
+    pub has_execution_directory: bool,
+    /// Whether the `directory` has a subdirectory named `resolved`
+    pub has_resolved_directory: bool,
     pub directory: Directory,
     pub children_directory: Directory,
-}
-
-/// The execution state for a component that has started running.
-struct Execution {
-    // TODO(fxbug.dev/77068): Remove this attribute.
-    #[allow(dead_code)]
-    pub resolved_url: String,
-    // TODO(fxbug.dev/77068): Remove this attribute.
-    #[allow(dead_code)]
-    pub directory: Directory,
 }
 
 /// The Hub is a directory tree representing the component topology. Through the Hub,
@@ -234,9 +220,7 @@ impl Hub {
         instance_map.insert(
             abs_moniker.clone(),
             Instance {
-                abs_moniker: abs_moniker.clone(),
-                component_url,
-                execution: None,
+                has_execution_directory: false,
                 has_resolved_directory: false,
                 directory: instance.clone(),
                 children_directory: children.clone(),
@@ -446,7 +430,6 @@ impl Hub {
         // If the resolved directory already exists, report error.
         assert!(!instance.has_resolved_directory);
         let resolved_directory = pfs::simple();
-        instance.has_resolved_directory = true;
 
         Self::add_resolved_url_file(
             resolved_directory.clone(),
@@ -472,6 +455,7 @@ impl Hub {
         Self::add_config(resolved_directory.clone(), &component_decl, target_moniker)?;
 
         instance.directory.add_node("resolved", resolved_directory, &target_moniker)?;
+        instance.has_resolved_directory = true;
 
         Ok(())
     }
@@ -491,53 +475,50 @@ impl Hub {
             .get_mut(target_moniker)
             .expect(&format!("Unable to find instance {} in map.", target_moniker));
 
-        // If we haven't already created an execution directory, create one now.
-        if instance.execution.is_none() {
-            trace::duration!("component_manager", "hub:create_execution");
-
-            let execution_directory = pfs::simple();
-
-            let exec = Execution {
-                resolved_url: runtime.resolved_url.clone(),
-                directory: execution_directory.clone(),
-            };
-            instance.execution = Some(exec);
-
-            Self::add_resolved_url_file(
-                execution_directory.clone(),
-                runtime.resolved_url.clone(),
-                target_moniker,
-            )?;
-
-            Self::add_in_directory(
-                execution_directory.clone(),
-                component_decl.clone(),
-                Self::clone_dir(runtime.package_dir.as_ref()),
-                target_moniker,
-                target.clone(),
-            )?;
-
-            Self::add_expose_directory(
-                execution_directory.clone(),
-                component_decl.clone(),
-                target_moniker,
-                target.clone(),
-            )?;
-
-            Self::add_out_directory(
-                execution_directory.clone(),
-                Self::clone_dir(runtime.outgoing_dir.as_ref()),
-                target_moniker,
-            )?;
-
-            Self::add_runtime_directory(
-                execution_directory.clone(),
-                Self::clone_dir(runtime.runtime_dir.as_ref()),
-                &target_moniker,
-            )?;
-
-            instance.directory.add_node("exec", execution_directory, &target_moniker)?;
+        // Don't create an execution directory if it already exists
+        if instance.has_execution_directory {
+            return Ok(());
         }
+
+        trace::duration!("component_manager", "hub:create_execution");
+
+        let execution_directory = pfs::simple();
+
+        Self::add_resolved_url_file(
+            execution_directory.clone(),
+            runtime.resolved_url.clone(),
+            target_moniker,
+        )?;
+
+        Self::add_in_directory(
+            execution_directory.clone(),
+            component_decl.clone(),
+            Self::clone_dir(runtime.package_dir.as_ref()),
+            target_moniker,
+            target.clone(),
+        )?;
+
+        Self::add_expose_directory(
+            execution_directory.clone(),
+            component_decl.clone(),
+            target_moniker,
+            target.clone(),
+        )?;
+
+        Self::add_out_directory(
+            execution_directory.clone(),
+            Self::clone_dir(runtime.outgoing_dir.as_ref()),
+            target_moniker,
+        )?;
+
+        Self::add_runtime_directory(
+            execution_directory.clone(),
+            Self::clone_dir(runtime.runtime_dir.as_ref()),
+            &target_moniker,
+        )?;
+
+        instance.directory.add_node("exec", execution_directory, &target_moniker)?;
+        instance.has_execution_directory = true;
 
         Ok(())
     }
@@ -577,7 +558,10 @@ impl Hub {
         trace::duration!("component_manager", "hub:on_stopped_async");
         let mut instance_map = self.instances.lock().await;
         instance_map[target_moniker].directory.remove_node("exec")?;
-        instance_map.get_mut(target_moniker).expect("instance must exist").execution = None;
+        instance_map
+            .get_mut(target_moniker)
+            .expect("instance must exist")
+            .has_execution_directory = false;
         Ok(())
     }
 
