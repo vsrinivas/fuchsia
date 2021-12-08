@@ -327,64 +327,13 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                 // NB: Waiting for addresses on the bridge cannot use the
                 // methods on `TestInterface` because the bridge interface
                 // was created manually.
-                let addresses = {
-                    let (watcher, server_end) = fidl::endpoints::create_proxy::<
-                        fidl_fuchsia_net_interfaces::WatcherMarker,
-                    >()
-                    .expect("failed to create fuchsia.net.interfaces/Watcher proxy");
-                    let () = switch_interfaces_state
-                        .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server_end)
-                        .expect("FIDL error getting interface property watcher on switch");
-                    let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(
-                        u64::from(bridge_id),
-                    );
-                    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-                        fidl_fuchsia_net_interfaces_ext::event_stream(watcher),
-                        &mut state,
-                        |fidl_fuchsia_net_interfaces_ext::Properties {
-                             addresses,
-                             id: _,
-                             name: _,
-                             device_class: _,
-                             online: _,
-                             has_default_ipv4_route: _,
-                             has_default_ipv6_route: _,
-                         }| {
-                            let (v4, v6) = addresses.into_iter().fold(
-                                (None, None),
-                                |(v4, v6),
-                                 &fidl_fuchsia_net_interfaces_ext::Address {
-                                     addr: fidl_fuchsia_net::Subnet { addr, prefix_len: _ },
-                                     valid_until: _,
-                                 }| {
-                                    match addr {
-                                        fidl_fuchsia_net::IpAddress::Ipv4(
-                                            fidl_fuchsia_net::Ipv4Address { addr },
-                                        ) => (Some(std::net::IpAddr::from(addr)), v6),
-                                        fidl_fuchsia_net::IpAddress::Ipv6(
-                                            fidl_fuchsia_net::Ipv6Address { addr },
-                                        ) => {
-                                            if net_types::ip::Ipv6Addr::from_bytes(addr)
-                                                .is_unicast_linklocal()
-                                            {
-                                                (v4, Some(std::net::IpAddr::from(addr)))
-                                            } else {
-                                                (v4, v6)
-                                            }
-                                        }
-                                    }
-                                },
-                            );
-                            match (v4, v6) {
-                                (Some(v4), Some(v6)) => Some(vec![v4, v6]),
-                                _ => None,
-                            }
-                        },
-                    )
-                    .await
-                    .expect("failed to wait for addresses")
-                };
-                ping_helper::Node::new(&switch_realm, u64::from(bridge_id), addresses)
+                let (v4, v6) = interfaces::wait_for_v4_and_v6_ll(
+                    &switch_interfaces_state,
+                    u64::from(bridge_id),
+                )
+                .await
+                .expect("failed to wait for IPv4 and IPv6 link-local addresses");
+                ping_helper::Node::new(&switch_realm, u64::from(bridge_id), vec![v4], vec![v6])
             }
         })
         .chain(futures::stream::iter(ports.values()).then(

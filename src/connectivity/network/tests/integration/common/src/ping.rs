@@ -15,11 +15,13 @@ use futures::{FutureExt as _, StreamExt as _};
 pub struct Node<'a> {
     /// The test realm of this node.
     realm: &'a netemul::TestRealm<'a>,
-    /// The local interface ID to be used to as the IPv6 scope ID if pinging
-    /// a link-local IPv6 address.
+    /// Local interface ID (used as scope ID when the destination IPv6 address
+    /// is link-local).
     local_interface_id: u64,
-    /// Local addresses that should be reachable via ping messages.
-    local_addresses: Vec<std::net::IpAddr>,
+    /// Local IPv4 addresses.
+    v4_addrs: Vec<net_types::ip::Ipv4Addr>,
+    /// Local IPv6 addresses.
+    v6_addrs: Vec<net_types::ip::Ipv6Addr>,
 }
 
 impl<'a> Node<'a> {
@@ -27,9 +29,15 @@ impl<'a> Node<'a> {
     pub fn new(
         realm: &'a netemul::TestRealm<'_>,
         local_interface_id: u64,
-        local_addresses: Vec<std::net::IpAddr>,
+        v4_addrs: Vec<net_types::ip::Ipv4Addr>,
+        v6_addrs: Vec<net_types::ip::Ipv6Addr>,
     ) -> Self {
-        Self { realm, local_interface_id, local_addresses }
+        Self { realm, local_interface_id, v4_addrs, v6_addrs }
+    }
+
+    /// Returns the local interface ID.
+    pub fn id(&self) -> u64 {
+        self.local_interface_id
     }
 
     /// Create a new [`Node`], waiting for addresses to satisfy the provided
@@ -40,14 +48,16 @@ impl<'a> Node<'a> {
     /// value is `Some`, and the vector of addresses will be used as the local
     /// addresses for this `Node`.
     pub async fn new_with_wait_addr<
-        F: FnMut(&[fidl_fuchsia_net_interfaces_ext::Address]) -> Option<Vec<std::net::IpAddr>>,
+        F: FnMut(
+            &[fidl_fuchsia_net_interfaces_ext::Address],
+        ) -> Option<(Vec<net_types::ip::Ipv4Addr>, Vec<net_types::ip::Ipv6Addr>)>,
     >(
         realm: &'a netemul::TestRealm<'_>,
         interface: &'a netemul::TestInterface<'_>,
         mut addr_predicate: F,
     ) -> Result<Node<'a>> {
         let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(interface.id());
-        let local_addresses = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
+        let (v4_addrs, v6_addrs) = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream(
                 interface
                     .get_interfaces_watcher()
@@ -66,7 +76,7 @@ impl<'a> Node<'a> {
         )
         .await
         .context("failed to wait for addresses")?;
-        Ok(Self::new(realm, interface.id(), local_addresses))
+        Ok(Self::new(realm, interface.id(), v4_addrs, v6_addrs))
     }
 
     /// Create a new [`Node`] with one IPv4 address and one IPv6 link-local
@@ -92,12 +102,13 @@ impl<'a> Node<'a> {
                     match addr {
                         fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
                             addr,
-                        }) => (Some(std::net::IpAddr::from(addr)), v6),
+                        }) => (Some(net_types::ip::Ipv4Addr::from(addr)), v6),
                         fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
                             addr,
                         }) => {
-                            if net_types::ip::Ipv6Addr::from_bytes(addr).is_unicast_linklocal() {
-                                (v4, Some(std::net::IpAddr::from(addr)))
+                            let v6_candidate = net_types::ip::Ipv6Addr::from_bytes(addr);
+                            if v6_candidate.is_unicast_linklocal() {
+                                (v4, Some(v6_candidate))
                             } else {
                                 (v4, v6)
                             }
@@ -106,7 +117,7 @@ impl<'a> Node<'a> {
                 },
             );
             match (v4, v6) {
-                (Some(v4), Some(v6)) => Some(vec![v4, v6]),
+                (Some(v4), Some(v6)) => Some((vec![v4], vec![v6])),
                 _ => None,
             }
         })
@@ -126,39 +137,51 @@ impl<'a> Node<'a> {
         )
         .map(
             |(
-                &Node { realm, local_interface_id, local_addresses: _ },
-                Node { realm: _, local_interface_id: _, local_addresses },
+                Node {
+                    realm,
+                    local_interface_id: src_id,
+                    v4_addrs: src_v4_addrs,
+                    v6_addrs: src_v6_addrs,
+                },
+                Node {
+                    realm: _,
+                    local_interface_id: _,
+                    v4_addrs: dst_v4_addrs,
+                    v6_addrs: dst_v6_addrs,
+                },
             )| {
                 const UNSPECIFIED_PORT: u16 = 0;
-                local_addresses.iter().map(move |&addr| match addr {
-                    std::net::IpAddr::V4(addr_v4) => realm
-                        .ping::<::ping::Ipv4>(std::net::SocketAddrV4::new(
-                            addr_v4,
-                            UNSPECIFIED_PORT,
-                        ))
-                        .left_future(),
-                    std::net::IpAddr::V6(addr_v6) => {
-                        let scope_id = if net_types::ip::Ipv6Addr::from_bytes(addr_v6.octets())
-                            .is_unicast_linklocal()
-                        {
-                            u32::try_from(local_interface_id).expect("ID doesn't fit into u32")
-                        } else {
-                            0
-                        };
+                let v4_futs = (!src_v4_addrs.is_empty()).then(|| {
+                    dst_v4_addrs.iter().map(move |&addr| {
                         realm
-                            .ping::<::ping::Ipv6>(std::net::SocketAddrV6::new(
-                                addr_v6,
+                            .ping::<::ping::Ipv4>(std::net::SocketAddrV4::new(
+                                std::net::Ipv4Addr::from(addr.ipv4_bytes()),
                                 UNSPECIFIED_PORT,
-                                0,
-                                scope_id,
                             ))
-                            .right_future()
-                    }
-                })
+                            .left_future()
+                    })
+                });
+                let v6_futs = (!src_v6_addrs.is_empty()).then(|| {
+                    dst_v6_addrs.iter().map(move |&addr| {
+                        let dst_sockaddr = std::net::SocketAddrV6::new(
+                            std::net::Ipv6Addr::from(addr.ipv6_bytes()),
+                            UNSPECIFIED_PORT,
+                            0,
+                            if addr.is_unicast_linklocal() {
+                                u32::try_from(*src_id).expect("interface ID does not fit into u32")
+                            } else {
+                                0
+                            },
+                        );
+                        realm.ping::<::ping::Ipv6>(dst_sockaddr).right_future()
+                    })
+                });
+                v4_futs.into_iter().flatten().chain(v6_futs.into_iter().flatten())
             },
         )
         .flatten()
         .collect::<futures::stream::FuturesUnordered<_>>();
+
         let errors = futs
             .filter_map(|r| {
                 futures::future::ready(match r {
