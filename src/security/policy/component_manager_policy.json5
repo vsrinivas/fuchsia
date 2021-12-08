@@ -160,6 +160,16 @@
             {
                 source_moniker: "<component_manager>",
                 source: "component",
+                source_name: "fuchsia.kernel.PowerResource",
+                capability: "protocol",
+                target_monikers: [
+                    "/bootstrap",
+                    "/core",
+                ],
+            },
+            {
+                source_moniker: "<component_manager>",
+                source: "component",
                 source_name: "fuchsia.kernel.SmcResource",
                 capability: "protocol",
                 target_monikers: [

@@ -10,6 +10,7 @@
                 "fuchsia.kernel.IoportResource",
                 "fuchsia.kernel.IrqResource",
                 "fuchsia.kernel.MmioResource",
+                "fuchsia.kernel.PowerResource",
                 "fuchsia.kernel.RootJob",
                 "fuchsia.kernel.SmcResource",
                 "fuchsia.kernel.VmexResource"
@@ -40,6 +41,7 @@
             "fuchsia.kernel.IoportResource",
             "fuchsia.kernel.IrqResource",
             "fuchsia.kernel.MmioResource",
+            "fuchsia.kernel.PowerResource",
             "fuchsia.kernel.RootJob",
             "fuchsia.kernel.SmcResource",
             "fuchsia.kernel.VmexResource",

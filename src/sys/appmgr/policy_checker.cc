@@ -28,6 +28,7 @@ constexpr char kMmioResourceAllowList[] = "allowlist/mmio_resource.txt";
 constexpr char kPackageResolverAllowList[] = "allowlist/package_resolver.txt";
 constexpr char kPackageCacheAllowList[] = "allowlist/package_cache.txt";
 constexpr char kPkgFsVersionsAllowList[] = "allowlist/pkgfs_versions.txt";
+constexpr char kPowerResourceAllowList[] = "allowlist/power_resource.txt";
 constexpr char kRootJobAllowList[] = "allowlist/root_job.txt";
 constexpr char kRootResourceAllowList[] = "allowlist/root_resource.txt";
 constexpr char kSmcResourceAllowList[] = "allowlist/smc_resource.txt";
@@ -112,6 +113,11 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
   if (sandbox.HasService("fuchsia.kernel.MmioResource") && !CheckMmioResource(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.kernel.MmioResource";
+    return std::nullopt;
+  }
+  if (sandbox.HasService("fuchsia.kernel.PowerResource") && !CheckPowerResource(pkg_url)) {
+    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
+                   << "fuchsia.kernel.PowerResource";
     return std::nullopt;
   }
   if (sandbox.HasService("fuchsia.kernel.RootJob") && !CheckRootJob(pkg_url)) {
@@ -241,6 +247,11 @@ bool PolicyChecker::CheckPackageCache(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckPkgFsVersions(const FuchsiaPkgUrl& pkg_url) {
   AllowList pkgfs_versions_allowlist(config_, kPkgFsVersionsAllowList);
   return pkgfs_versions_allowlist.IsAllowed(pkg_url);
+}
+
+bool PolicyChecker::CheckPowerResource(const FuchsiaPkgUrl& pkg_url) {
+  AllowList power_resource_allowlist(config_, kPowerResourceAllowList);
+  return power_resource_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckRootJob(const FuchsiaPkgUrl& pkg_url) {

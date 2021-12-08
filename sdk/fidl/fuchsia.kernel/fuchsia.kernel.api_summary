@@ -63,6 +63,8 @@ table/member fuchsia.kernel/PerCpuStats.timer_ints uint64
 table/member fuchsia.kernel/PerCpuStats.timers uint64
 table/member fuchsia.kernel/PerCpuStats.yields uint64
 table fuchsia.kernel/PerCpuStats
+protocol/member fuchsia.kernel/PowerResource.Get() -> (zx/handle:RESOURCE power_resource)
+protocol fuchsia.kernel/PowerResource
 protocol/member fuchsia.kernel/RootJob.Get() -> (zx/handle:JOB job)
 protocol fuchsia.kernel/RootJob
 protocol/member fuchsia.kernel/RootJobForInspect.Get() -> (zx/handle:JOB job)

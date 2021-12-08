@@ -108,6 +108,7 @@ template("component_manager") {
     "src/builtin/log.rs",
     "src/builtin/mmio_resource.rs",
     "src/builtin/mod.rs",
+    "src/builtin/power_resource.rs",
     "src/builtin/process_launcher.rs",
     "src/builtin/realm_builder.rs",
     "src/builtin/relative_resolver.rs",

@@ -19,6 +19,7 @@ use {
             kernel_stats::KernelStats,
             log::{ReadOnlyLog, WriteOnlyLog},
             mmio_resource::MmioResource,
+            power_resource::PowerResource,
             process_launcher::ProcessLauncher,
             realm_builder::{
                 RealmBuilderResolver, RealmBuilderRunner, RUNNER_NAME as REALM_BUILDER_RUNNER_NAME,
@@ -327,6 +328,7 @@ pub struct BuiltinEnvironment {
     pub read_only_log: Option<Arc<ReadOnlyLog>>,
     pub write_only_log: Option<Arc<WriteOnlyLog>>,
     pub mmio_resource: Option<Arc<MmioResource>>,
+    pub power_resource: Option<Arc<PowerResource>>,
     pub root_resource: Option<Arc<RootResource>>,
     #[cfg(target_arch = "aarch64")]
     pub smc_resource: Option<Arc<SmcResource>>,
@@ -608,6 +610,27 @@ impl BuiltinEnvironment {
             model.root().hooks.install(info_resource.hooks()).await;
         }
 
+        // Set up the PowerResource service.
+        let power_resource_handle = system_resource_handle
+            .as_ref()
+            .map(|handle| {
+                match handle.create_child(
+                    zx::ResourceKind::SYSTEM,
+                    None,
+                    zx::sys::ZX_RSRC_SYSTEM_POWER_BASE,
+                    1,
+                    b"power",
+                ) {
+                    Ok(resource) => Some(resource),
+                    Err(_) => None,
+                }
+            })
+            .flatten();
+        let power_resource = power_resource_handle.map(PowerResource::new);
+        if let Some(power_resource) = power_resource.as_ref() {
+            model.root().hooks.install(power_resource.hooks()).await;
+        }
+
         // Set up the VmexResource service.
         let vmex_resource_handle = system_resource_handle
             .as_ref()
@@ -736,6 +759,7 @@ impl BuiltinEnvironment {
             hypervisor_resource,
             info_resource,
             irq_resource,
+            power_resource,
             #[cfg(target_arch = "x86_64")]
             ioport_resource: _ioport_resource,
             #[cfg(target_arch = "aarch64")]
