@@ -2249,4 +2249,43 @@ TEST(Vmar, RangeOpCommitVmoPages2) {
             ZX_OK);
 }
 
+TEST(Vmar, ProtectCowWritable) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size() * 2, 0, &vmo));
+
+  uint64_t val = 42;
+  EXPECT_OK(vmo.write(&val, 0, sizeof(uint64_t)));
+
+  zx::vmo clone;
+  ASSERT_OK(vmo.create_child(ZX_VMO_CHILD_SNAPSHOT, 0, zx_system_get_page_size() * 2, &clone));
+
+  // Map the clone in read/write.
+  zx_vaddr_t addr;
+  ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, clone, 0,
+                                       zx_system_get_page_size() * 2, &addr));
+
+  // Protect it read-only.
+  EXPECT_OK(zx::vmar::root_self()->protect(ZX_VM_PERM_READ, addr, zx_system_get_page_size() * 2));
+
+  // Perform some reads to ensure there are mappings.
+  uint64_t val2 = *reinterpret_cast<uint64_t*>(addr);
+  EXPECT_OK(clone.read(&val, 0, sizeof(uint64_t)));
+  EXPECT_EQ(val2, val);
+
+  // Now protect the first page back to write.
+  EXPECT_OK(zx::vmar::root_self()->protect(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, addr,
+                                           zx_system_get_page_size()));
+
+  // Write to the page.
+  *reinterpret_cast<volatile uint64_t*>(addr) = 77;
+
+  // Original vmo should be unchanged.
+  EXPECT_OK(vmo.read(&val, 0, sizeof(uint64_t)));
+  EXPECT_EQ(42, val);
+
+  // Clone should have been modified.
+  EXPECT_OK(clone.read(&val, 0, sizeof(uint64_t)));
+  EXPECT_EQ(77, val);
+}
+
 }  // namespace

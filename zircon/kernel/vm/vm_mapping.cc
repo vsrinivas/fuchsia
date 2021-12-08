@@ -34,6 +34,7 @@ KCOUNTER(vm_mapping_attribution_queries, "vm.attributed_pages.mapping.queries")
 KCOUNTER(vm_mapping_attribution_cache_hits, "vm.attributed_pages.mapping.cache_hits")
 KCOUNTER(vm_mapping_attribution_cache_misses, "vm.attributed_pages.mapping.cache_misses")
 KCOUNTER(vm_mappings_merged, "vm.aspace.mapping.merged_neighbors")
+KCOUNTER(vm_mappings_protect_no_write, "vm.aspace.mapping.protect_without_write")
 
 }  // namespace
 
@@ -146,6 +147,23 @@ namespace {
 // Implementation helper for ProtectLocked
 zx_status_t ProtectOrUnmap(const fbl::RefPtr<VmAspace>& aspace, vaddr_t base, size_t size,
                            uint new_arch_mmu_flags) {
+  // If the desired arch mmu flags contain the WRITE permissions then we cannot go and change any
+  // existing mappings to be writeable. This is because the backing VMO might be wanting to do
+  // copy-on-write, and changing the permissions will prevent that and potentially allow writing to
+  // what was supposed to be a read-only page provided by the VMO. We cannot do nothing though
+  // since we might be removing permissions. For now we simply set the permissions to what was
+  // requested, just without write. This is not optimal since there could be legitimate existing
+  // writable mappings that we will now go and needlessly remove write from, however it is at least
+  // correct. Unfortunately it is not correct if this is a kernel aspace, since we cannot use faults
+  // to bring back in the correct mappings. For now we require, via an assert, that this is not a
+  // kernel aspace.
+  // TODO(fxb/90014): Make this more optimal and find a solution for the kernel path.
+  if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
+    ASSERT(aspace->is_user());
+    vm_mappings_protect_no_write.Add(1);
+    new_arch_mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
+  }
+
   if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) {
     return aspace->arch_aspace().Protect(base, size / PAGE_SIZE, new_arch_mmu_flags);
   } else {
