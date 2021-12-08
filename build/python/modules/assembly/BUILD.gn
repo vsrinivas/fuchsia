@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_library.gni")
+
+# The assembly python library, for use with `python_binary()` and
+# `python_host_test()` templates.
+python_library("assembly") {
+  sources = [
+    "__init__.py",
+    "assembly_input_bundle.py",
+    "common.py",
+    "image_assembly_config.py",
+    "utils.py",
+  ]
+}

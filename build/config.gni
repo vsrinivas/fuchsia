@@ -110,7 +110,10 @@ template("config_package") {
                              "deps",
                              "testonly",
                            ])
-    visibility = [ ":*" ]
+    visibility = [
+      ":*",
+      "//build/assembly/*",
+    ]
     data_keys = [ "config_package_entries" ]
     walk_keys = [ "config_package_barrier" ]
     outputs = [ config_package_entries ]

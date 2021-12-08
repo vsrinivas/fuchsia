@@ -1,0 +1,89 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_action.gni")
+import("//build/python/python_binary.gni")
+
+# Create an OOT-usable Image Assembly configuration, with all supporting
+# artifacts, based on the currently configured product configuration.
+#
+# This takes the image assembly config from the following label, and creates
+# a package from it that contains all the base, cache, bootfs, and config data
+# files, the kernel, and a new version of the image assembly config whose paths
+# are all relative to the file (in the same package as those artifacts.)
+legacy_assembly_label = "//build/images/fuchsia"
+
+# Extract the assembly label's dir and name components:
+legacy_label_name = get_label_info(legacy_assembly_label, "name")
+legacy_label_dir = get_label_info(legacy_assembly_label, "dir")
+
+# Compute the assembly config and config_data labels that are generated within
+# assemble_system()
+legacy_assembly_config_label =
+    "${legacy_label_dir}:${legacy_label_name}_product_config"
+legacy_config_data_label = "${legacy_label_dir}:${legacy_label_name}_config-data_config_package_entries"
+
+# Locate the output files from the above labels, in their out dir:
+legacy_assembly_config_dir =
+    get_label_info(legacy_assembly_config_label, "target_out_dir")
+legacy_assembly_config =
+    "${legacy_assembly_config_dir}/${legacy_label_name}_product_config.json"
+legacy_config_data_dir =
+    get_label_info(legacy_config_data_label, "target_out_dir")
+legacy_config_data_entries = "${legacy_config_data_dir}/${legacy_label_name}_config-data_config_package_entries"
+
+python_binary("make_legacy_config.py") {
+  main_source = "make_legacy_config.py"
+  deps = [
+    "//build/python/modules/assembly",
+    "//build/python/modules/depfile",
+  ]
+}
+
+# Run the script that creates the out-of-tree-usable Assembly Input Bundle from
+# an Image Assembly product configuration and the config_data package entries
+# that go with it.
+action("legacy") {
+  testonly = true
+
+  _binary_outputs = get_target_outputs(":make_legacy_config.py")
+  script = _binary_outputs[0]
+  outputs = [ "${target_out_dir}/${target_name}/assembly_config.json" ]
+  depfile = "${target_out_dir}/legacy.d"
+  args = [
+    "--image-assembly-config",
+    rebase_path(legacy_assembly_config, root_build_dir),
+    "--config-data-entries",
+    rebase_path(legacy_config_data_entries, root_build_dir),
+    "--outdir",
+    rebase_path("${target_out_dir}/${target_name}", root_build_dir),
+    "--depfile",
+    rebase_path(depfile, root_build_dir),
+  ]
+  inputs = [
+    legacy_assembly_config,
+    legacy_config_data_entries,
+  ]
+  deps = [
+    ":make_legacy_config.py",
+    legacy_assembly_config_label,
+    legacy_config_data_label,
+  ]
+
+  metadata = {
+    assembly_inputs = [
+      {
+        name = target_name
+        label = get_label_info(target_name, "label_with_toolchain")
+        path = rebase_path(outputs[0], root_build_dir)
+        type = "file"
+      },
+    ]
+  }
+}
+
+group("assembly") {
+  testonly = true
+  public_deps = [ ":legacy" ]
+}
