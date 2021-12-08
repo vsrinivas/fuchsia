@@ -265,6 +265,56 @@
                     },
                 },
                 {
+                    "using_node": "/bootstrap/console-launcher",
+                    "capability": "fuchsia.pkg.PackageResolver",
+                    "error": {
+                        "error": {
+                            "analyzer_model_error": {
+                                "routing_error": {
+                                    "policy_error": {
+                                        "capability_use_disallowed": {
+                                            "cap": "fuchsia.pkg.PackageResolver",
+                                            "source_moniker": {
+                                                "component_instance": {
+                                                    "path": [
+                                                    {
+                                                        "name": "core",
+                                                        "collection": null,
+                                                        "instance": 0,
+                                                        "rep": "core:0"
+                                                    },
+                                                    {
+                                                        "name": "pkg-resolver",
+                                                        "collection": null,
+                                                        "instance": 0,
+                                                        "rep": "pkg-resolver:0"
+                                                    }
+                                                    ]
+                                                }
+                                            },
+                                            "target_moniker": {
+                                                "path": [
+                                                {
+                                                    "name": "bootstrap",
+                                                    "collection": null,
+                                                    "rep": "bootstrap"
+                                                },
+                                                {
+                                                    "name": "console-launcher",
+                                                    "collection": null,
+                                                    "rep": "console-launcher"
+                                                }
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/bootstrap/console-launcher\""
+                    }
+                },
+                {
                     using_node: "/bootstrap/driver_manager",
                     capability: "fuchsia.pkg.PackageResolver",
                     error: {
@@ -313,6 +363,56 @@
                         },
                         message: "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/bootstrap/driver_manager\"",
                     },
+                },
+                {
+                    "using_node": "/bootstrap/netsvc",
+                    "capability": "fuchsia.pkg.PackageResolver",
+                    "error": {
+                        "error": {
+                            "analyzer_model_error": {
+                                "routing_error": {
+                                    "policy_error": {
+                                        "capability_use_disallowed": {
+                                            "cap": "fuchsia.pkg.PackageResolver",
+                                            "source_moniker": {
+                                                "component_instance": {
+                                                    "path": [
+                                                    {
+                                                        "name": "core",
+                                                        "collection": null,
+                                                        "instance": 0,
+                                                        "rep": "core:0"
+                                                    },
+                                                    {
+                                                        "name": "pkg-resolver",
+                                                        "collection": null,
+                                                        "instance": 0,
+                                                        "rep": "pkg-resolver:0"
+                                                    }
+                                                    ]
+                                                }
+                                            },
+                                            "target_moniker": {
+                                                "path": [
+                                                {
+                                                    "name": "bootstrap",
+                                                    "collection": null,
+                                                    "rep": "bootstrap"
+                                                },
+                                                {
+                                                    "name": "netsvc",
+                                                    "collection": null,
+                                                    "rep": "netsvc"
+                                                }
+                                                ]
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        "message": "security policy disallows \"fuchsia.pkg.PackageResolver\" from \"/core:0/pkg-resolver:0\" being used at \"/bootstrap/netsvc\""
+                    }
                 },
                 {
                     capability: "fuchsia.pkg.PackageResolver",
