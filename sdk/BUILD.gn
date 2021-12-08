@@ -9,7 +9,7 @@ import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
-import("//build/sdk/version_history.gni")
+import("//build/sdk/version_history_sdk_element.gni")
 import("//sdk/cts/build/cts_sdk.gni")
 import("config.gni")
 
@@ -95,9 +95,13 @@ group("tests") {
   ]
 }
 
-version_history("version_history") {
-  category = "partner"
+version_history_sdk_element("version_history_sdk_element") {
+  schema = "//build/sdk/meta/version_history-038fa854.json"
   data = "version_history.json"
+}
+
+sdk_element_adapter("version_history") {
+  sdk_element = ":version_history_sdk_element"
 }
 
 # License/rights related information for the SDK.

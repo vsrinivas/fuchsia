@@ -1,0 +1,22 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("sdk_element.gni")
+
+# Publishes the version history file as an SDK element.
+#
+# Parameters
+#
+#   data (required)
+#     The version history data file.
+template("version_history_sdk_element") {
+  assert(defined(invoker.data), "Must define the version history")
+  version_history = invoker.data
+
+  sdk_element(target_name) {
+    forward_variables_from(invoker, [ "schema" ])
+    meta_src = version_history
+    meta_dst = "version_history.json"
+  }
+}

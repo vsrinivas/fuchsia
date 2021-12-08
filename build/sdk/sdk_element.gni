@@ -21,21 +21,31 @@ import("//build/json/validate_json.gni")
 #
 # Parameters
 #
-#   type (required)
-#     Type of the element. For example, "host_tool".
-#     * Supported types are listed in //build/sdk/meta.
-#
-#   schema_version (required)
-#     Version of the schema for this element type.
+#   schema (required)
+#     JSON schema file for this element type.
 #     * Metadata schema files are hosted under //build/sdk/meta and have
 #       filenames of the form "{type}-{version}.json".
 #
-#   meta (required)
+#   schema_refs (optional)
+#     List of JSON schemas referenced by the schema file.
+#     * Defaults to [ "//build/sdk/meta/common.json" ]
+#
+#   meta (required if `meta_src` is not set)
 #     Scope describing the element's metadata file.
 #     * This parameter's contents are determined by the schema defined by `type`
 #       and `schema_version`.
 #
-#   files (required)
+#  meta_src (required if `meta` is not set)
+#     Path to the element's metadata file.
+#     * This parameter's contents are determined by the schema defined by `type`
+#       and `schema_version`.
+#
+#  meta_dst (optional)
+#    Destination path of the metadata file in the SDK element, relative to the
+#    element root.
+#    * By default, this is "${target_name}_sdk_metadata.json"
+#
+#   files (optional)
 #     List of scopes describing the contents of this element.
 #     * A file scope has the following attributes:
 #       src (required)
@@ -76,22 +86,29 @@ import("//build/json/validate_json.gni")
 #   non_sdk_deps (optional)
 #     List of GN labels which this target needs built, but are not SDK elements.
 template("sdk_element") {
-  assert(defined(invoker.files) && invoker.files != [],
-         "Must define files with at least one file")
-  files = invoker.files
+  if (defined(invoker.files)) {
+    files = invoker.files
+  } else {
+    files = []
+  }
   foreach(file, files) {
     assert(defined(file.src), "File $file does not specify a source.")
     assert(defined(file.dst), "File $file does not specify a destination.")
   }
 
-  assert(defined(invoker.type), "Must define element type")
-  type = invoker.type
+  assert(defined(invoker.schema), "Must define element metadata schema")
+  schema = invoker.schema
 
-  assert(defined(invoker.schema_version), "Must define schema version")
-  schema_version = invoker.schema_version
+  if (defined(invoker.schema_refs)) {
+    schema_refs = invoker.schema_refs
+  } else {
+    schema_refs = [ "//build/sdk/meta/common.json" ]
+  }
 
-  assert(defined(invoker.meta), "Must define meta")
-  meta_content = invoker.meta
+  assert(defined(invoker.meta) || defined(invoker.meta_src),
+         "Must define meta or meta_src")
+  assert(!(defined(invoker.meta) && defined(invoker.meta_src)),
+         "meta and meta_src are mutually exclusive")
 
   gn_deps = []
   if (defined(invoker.non_sdk_deps)) {
@@ -104,6 +121,49 @@ template("sdk_element") {
     gn_deps += invoker.sdk_soft_deps
   }
 
+  # The meta file contains the metadata describing the element, according to the
+  # type-specific schema (see //build/sdk/meta).
+  meta_target_name = "${target_name}_sdk_metadata"
+  meta_file = "${target_gen_dir}/${meta_target_name}.json"
+  meta_dst = "${meta_target_name}.json"
+  if (defined(invoker.meta_dst)) {
+    meta_dst = invoker.meta_dst
+  }
+  if (defined(invoker.meta_src)) {
+    copy(meta_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      sources = [ invoker.meta_src ]
+      outputs = [ meta_file ]
+    }
+  } else {
+    meta_content = invoker.meta
+    generated_file(meta_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      visibility = [ ":*" ]
+      outputs = [ meta_file ]
+      contents = meta_content
+      output_conversion = "json"
+    }
+  }
+
+  validate_target_name = "validate_${meta_target_name}"
+  validate_json(validate_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    use_valico = true
+    data = meta_file
+    schema = schema
+    sources = schema_refs
+    public_deps = [ ":${meta_target_name}" ]
+  }
+
+  files += [
+    {
+      src = rebase_path(meta_file, root_out_dir)
+      dst = meta_dst
+    },
+  ]
+
   # The manifest file contains the file mappings needed to package the element.
   manifest_target_name = "${target_name}_packaging_manifest"
   manifest_file = "${target_gen_dir}/${manifest_target_name}.json"
@@ -113,28 +173,6 @@ template("sdk_element") {
     outputs = [ manifest_file ]
     contents = files
     output_conversion = "json"
-  }
-
-  # The meta file contains the metadata describing the element, according to the
-  # type-specific schema (see //build/sdk/meta).
-  meta_target_name = "${target_name}_sdk_metadata"
-  meta_file = "${target_gen_dir}/${meta_target_name}.json"
-  generated_file(meta_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    outputs = [ meta_file ]
-    contents = meta_content
-    output_conversion = "json"
-  }
-
-  validate_target_name = "validate_${meta_target_name}"
-  validate_json(validate_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-    visibility = [ ":*" ]
-    data = meta_file
-    schema = "//build/sdk/meta/${type}-${schema_version}.json"
-    sources = [ "//sdk/schema/common-00000000.json" ]
-    public_deps = [ ":${meta_target_name}" ]
   }
 
   # TODO(b/204903307): .api generation/validation
@@ -149,5 +187,68 @@ template("sdk_element") {
                     ":${manifest_target_name}",
                     ":${validate_target_name}",
                   ] + gn_deps
+  }
+}
+
+# Produces sdk_molecule-compatible metadata from an sdk_element.
+#
+# This template converts SDK element metadata into SDK atom metadata, to allow
+# SDK atoms to be gradually migrated to sdk_element without breaking the
+# monolithic SDK build.
+#
+# Outputs
+#
+#   $target_gen_dir/${target_name}.sdk
+#     A manifest describing which files are included in the element.
+#
+#   $target_gen_dir/${target_name}_adapter.meta.json
+#     A metadata file describing the element.
+#
+# Parameters
+#
+#   sdk_element (required)
+#     Label of the SDK element to adapt.
+template("sdk_element_adapter") {
+  assert(defined(invoker.sdk_element), "Must define sdk_element")
+  element_label = get_label_info(invoker.sdk_element, "label_no_toolchain")
+  element_name = get_label_info(invoker.sdk_element, "name")
+  gen_dir = get_label_info(invoker.sdk_element, "target_gen_dir")
+
+  # .sdk manifest file based on _packaging_manifest.json
+  manifest_in = "${gen_dir}/${element_name}_packaging_manifest.json"
+  manifest_out = "${target_gen_dir}/${target_name}.sdk"
+
+  # .meta.json file based on _sdk_metadata.json
+  meta_in = "${gen_dir}/${element_name}_sdk_metadata.json"
+  meta_out = "${target_gen_dir}/${target_name}_adapter.meta.json"
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    public_deps = [ element_label ]
+    outputs = [
+      manifest_out,
+      meta_out,
+    ]
+    script = "//build/sdk/sdk_element_adapter.py"
+    sources = [
+      manifest_in,
+      meta_in,
+    ]
+    args = [
+      "--manifest-in",
+      rebase_path(manifest_in, root_build_dir),
+      "--meta-in",
+      rebase_path(meta_in, root_build_dir),
+      "--manifest-out",
+      rebase_path(manifest_out, root_build_dir),
+      "--meta-out",
+      rebase_path(meta_out, root_build_dir),
+      "--gn-label",
+      get_label_info(":${target_name}", "label_with_toolchain"),
+    ]
   }
 }
