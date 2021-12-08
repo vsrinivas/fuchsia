@@ -12,5 +12,14 @@ ffx_plugin("ffx_sdk") {
 
   args_sources = [ "src/args.rs" ]
 
+  deps = [
+    "//build/sdk/meta:rust",
+    "//src/developer/ffx/lib/fms:lib",
+    "//src/lib/gcs:lib",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
+  ]
+
   sources = [ "src/lib.rs" ]
 }
