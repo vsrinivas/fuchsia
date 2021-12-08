@@ -171,6 +171,53 @@ const char* GetBridgePackage(sys::ComponentContext* context) {
   return scenic_uses_flatland ? kWaylandBridgePackage : kLegacyWaylandBridgePackage;
 }
 
+// Run the given command in the guest as a daemon (i.e., in the background and
+// automatically restarted on failure).
+void MaitredStartDaemon(vm_tools::Maitred::Stub& maitred, std::vector<std::string> args,
+                        std::vector<std::pair<std::string, std::string>> env) {
+  grpc::ClientContext context;
+  vm_tools::LaunchProcessRequest request;
+  vm_tools::LaunchProcessResponse response;
+
+  // Set up args / environment.
+  request.mutable_argv()->Assign(args.begin(), args.end());
+  request.mutable_env()->insert(env.begin(), env.end());
+
+  // Set up as a daemon.
+  request.set_use_console(true);
+  request.set_respawn(true);
+  request.set_wait_for_exit(false);
+
+  TRACE_DURATION("linux_runner", "LaunchProcessRPC");
+  grpc::Status status = maitred.LaunchProcess(&context, request, &response);
+  FX_CHECK(status.ok()) << "Failed to start daemon in guest: " << status.error_message() << "\n"
+                        << "Command run: " << request.DebugString();
+  FX_CHECK(response.status() == vm_tools::ProcessStatus::LAUNCHED)
+      << "Process failed to launch, with launch status: "
+      << vm_tools::ProcessStatus_Name(response.status());
+}
+
+// Run the given command in the guest, blocking until finished.
+void MaitredRunCommandSync(vm_tools::Maitred::Stub& maitred, std::vector<std::string> args,
+                           std::vector<std::pair<std::string, std::string>> env) {
+  grpc::ClientContext context;
+  vm_tools::LaunchProcessRequest request;
+  vm_tools::LaunchProcessResponse response;
+
+  // Set up args / environment.
+  request.mutable_argv()->Assign(args.begin(), args.end());
+  request.mutable_env()->insert(env.begin(), env.end());
+
+  // Set the command as synchronous.
+  request.set_use_console(true);
+  request.set_respawn(false);
+  request.set_wait_for_exit(true);
+
+  TRACE_DURATION("linux_runner", "LaunchProcessRPC");
+  grpc::Status status = maitred.LaunchProcess(&context, request, &response);
+  FX_CHECK(status.ok()) << "Guest command failed: " << status.error_message();
+}
+
 }  // namespace
 
 namespace linux_runner {
@@ -386,69 +433,27 @@ void Guest::StartTermina() {
 void Guest::LaunchContainerShell() {
   FX_CHECK(maitred_) << "Called LaunchShell without a maitre'd connection";
   FX_LOGS(INFO) << "Launching container shell...";
-
-  grpc::ClientContext context;
-  vm_tools::LaunchProcessRequest request;
-  vm_tools::LaunchProcessResponse response;
-
-  request.add_argv()->assign("/usr/bin/lxc");
-  request.add_argv()->assign("exec");
-  request.add_argv()->assign(kContainerName);
-  request.add_argv()->assign("--");
-  request.add_argv()->assign("/bin/login");
-  request.add_argv()->assign("-f");
-  request.add_argv()->assign(kDefaultContainerUser);
-
-  request.set_respawn(true);
-  request.set_use_console(true);
-  request.set_wait_for_exit(false);
-  {
-    auto env = request.mutable_env();
-    env->insert({"LXD_DIR", "/mnt/stateful/lxd"});
-    env->insert({"LXD_CONF", "/mnt/stateful/lxd_conf"});
-    env->insert({"LXD_UNPRIVILEGED_ONLY", "true"});
-  }
-
-  {
-    TRACE_DURATION("linux_runner", "LaunchProcessRPC");
-    auto status = maitred_->LaunchProcess(&context, request, &response);
-    FX_CHECK(status.ok()) << "Failed to launch container shell: " << status.error_message();
-  }
+  MaitredStartDaemon(
+      *maitred_,
+      {"/usr/bin/lxc", "exec", kContainerName, "--", "/bin/login", "-f", kDefaultContainerUser},
+      {
+          {"LXD_DIR", "/mnt/stateful/lxd"},
+          {"LXD_CONF", "/mnt/stateful/lxd_conf"},
+          {"LXD_UNPRIVILEGED_ONLY", "true"},
+      });
 }
 
 void Guest::AddMagmaDeviceToContainer() {
   FX_CHECK(maitred_) << "Called AddMagma without a maitre'd connection";
   FX_LOGS(INFO) << "Adding magma device to container...";
-
-  grpc::ClientContext context;
-  vm_tools::LaunchProcessRequest request;
-  vm_tools::LaunchProcessResponse response;
-
-  request.add_argv()->assign("/usr/bin/lxc");
-  request.add_argv()->assign("config");
-  request.add_argv()->assign("device");
-  request.add_argv()->assign("add");
-  request.add_argv()->assign(kContainerName);
-  request.add_argv()->assign("magma0");
-  request.add_argv()->assign("unix-char");
-  request.add_argv()->assign("source=/dev/magma0");
-  request.add_argv()->assign("mode=0666");
-
-  request.set_respawn(false);
-  request.set_use_console(false);
-  request.set_wait_for_exit(true);
-  {
-    auto env = request.mutable_env();
-    env->insert({"LXD_DIR", "/mnt/stateful/lxd"});
-    env->insert({"LXD_CONF", "/mnt/stateful/lxd_conf"});
-    env->insert({"LXD_UNPRIVILEGED_ONLY", "true"});
-  }
-
-  {
-    TRACE_DURATION("linux_runner", "LaunchProcessRPC");
-    auto status = maitred_->LaunchProcess(&context, request, &response);
-    FX_CHECK(status.ok()) << "Failed to add magma device to container: " << status.error_message();
-  }
+  MaitredRunCommandSync(*maitred_,
+                        {"/usr/bin/lxc", "config", "device", "add", kContainerName, "magma0",
+                         "unix-char", "source=/dev/magma0", "mode=0666"},
+                        {
+                            {"LXD_DIR", "/mnt/stateful/lxd"},
+                            {"LXD_CONF", "/mnt/stateful/lxd_conf"},
+                            {"LXD_UNPRIVILEGED_ONLY", "true"},
+                        });
 }
 
 void Guest::CreateContainer() {
