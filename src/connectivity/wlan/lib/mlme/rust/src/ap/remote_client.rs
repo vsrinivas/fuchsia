@@ -12,7 +12,7 @@ use {
         error::Error,
     },
     banjo_ddk_hw_wlan_ieee80211::*,
-    banjo_fuchsia_hardware_wlan_info::*,
+    banjo_fuchsia_hardware_wlanassocinfo::*,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::{MacAddr, Ssid},

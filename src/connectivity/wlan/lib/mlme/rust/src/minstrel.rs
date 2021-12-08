@@ -4,9 +4,10 @@
 
 use {
     crate::probe_sequence::{ProbeEntry, ProbeSequence},
-    banjo_fuchsia_hardware_wlan_info as hw_wlan_info,
-    banjo_fuchsia_hardware_wlan_mac as hw_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
-    fidl_fuchsia_wlan_minstrel as fidl_minstrel, fuchsia_zircon as zx,
+    banjo_fuchsia_hardware_wlan_mac as hw_wlan_mac,
+    banjo_fuchsia_hardware_wlanassocinfo as hw_wlan_info,
+    banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_minstrel as fidl_minstrel,
+    fuchsia_zircon as zx,
     log::{debug, error},
     std::collections::{hash_map, HashMap, HashSet},
     std::time::Duration,

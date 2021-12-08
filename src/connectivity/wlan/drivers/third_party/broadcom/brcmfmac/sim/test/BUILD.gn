@@ -41,7 +41,7 @@ executable("active_scan_test") {
   sources = [ "active_scan_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_c",
@@ -214,7 +214,7 @@ executable("channel_switch_test") {
   sources = [ "channel_switch_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/lib/common/cpp:common",
@@ -253,7 +253,7 @@ executable("create_softap_test") {
   sources = [ "create_softap_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
@@ -279,7 +279,7 @@ executable("data_frame_test") {
   sources = [ "data_frame_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
@@ -301,7 +301,7 @@ executable("disassoc_test") {
   deps = [
     ":sim_test",
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
@@ -321,7 +321,7 @@ executable("dynamic_if_test") {
   sources = [ "dynamic_if_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
@@ -380,7 +380,7 @@ executable("firmware_config_test") {
   sources = [ "firmware_config_test.cc" ]
   deps = [
     ":sim_test",
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_cpp",
     "//src/connectivity/wlan/drivers/testing/lib/sim-device",
@@ -488,7 +488,7 @@ executable("mfg_test") {
     "//zircon/system/public",
   ]
   deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
   ]
@@ -653,7 +653,7 @@ executable("timeout_test") {
   deps = [
     ":sim_test",
     "//sdk/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",

@@ -17,7 +17,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_fw.h"
 
 #include <arpa/inet.h>
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>

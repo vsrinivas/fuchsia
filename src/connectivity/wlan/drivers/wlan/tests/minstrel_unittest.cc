@@ -4,7 +4,7 @@
 
 #include "../minstrel.h"
 
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
 #include <test_timer.h>
 
 #include <iterator>

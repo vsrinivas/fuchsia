@@ -6,7 +6,7 @@ library fuchsia.hardware.wlanif;
 using ddk.hw.wlan.ieee80211;
 using fuchsia.hardware.wlanphyinfo;
 using fuchsia.hardware.ethernet;
-using fuchsia.hardware.wlan.info;
+using fuchsia.hardware.wlanassocinfo;
 using fuchsia.wlan.internal;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
@@ -136,7 +136,7 @@ type WlanifStopReq = struct {
 type SetKeyDescriptor = struct {
     key vector<uint8>:MAX;
     key_id uint16;
-    key_type fuchsia.hardware.wlan.info.WlanKeyType;
+    key_type fuchsia.hardware.wlanassocinfo.WlanKeyType;
     address ieee80211.MacAddr;
     rsc uint64;
     cipher_suite_oui array<uint8, 3>;
@@ -152,7 +152,7 @@ type WlanifSetKeysReq = struct {
 
 type DeleteKeyDescriptor = struct {
     key_id uint16;
-    key_type fuchsia.hardware.wlan.info.WlanKeyType;
+    key_type fuchsia.hardware.wlanassocinfo.WlanKeyType;
     address ieee80211.MacAddr;
 };
 
@@ -714,7 +714,7 @@ protocol WlanifImplIfc {
     }) -> ();
     OnWmmStatusResp(struct {
         s zx.status;
-        wmm_params fuchsia.hardware.wlan.info.WlanWmmParams;
+        wmm_params fuchsia.hardware.wlanassocinfo.WlanWmmParams;
     }) -> ();
 
     // Data operations

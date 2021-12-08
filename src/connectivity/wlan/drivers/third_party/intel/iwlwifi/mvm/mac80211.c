@@ -34,7 +34,7 @@
  *
  *****************************************************************************/
 
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <string.h>
 #include <zircon/status.h>

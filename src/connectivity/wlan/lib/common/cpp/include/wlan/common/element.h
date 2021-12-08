@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_H_
 
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>

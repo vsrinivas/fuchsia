@@ -414,7 +414,7 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
 #[cfg(test)]
 mod test_utils {
     use {
-        super::*, banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+        super::*, banjo_fuchsia_hardware_wlanassocinfo as banjo_wlanassocinfo,
         banjo_fuchsia_wlan_common as banjo_common, fidl::endpoints::RequestStream,
         std::default::Default,
     };
@@ -434,9 +434,9 @@ mod test_utils {
     impl Default for MockWlanRxInfo {
         fn default() -> Self {
             Self {
-                valid_fields: banjo_wlan_info::WlanRxInfoValid::CHAN_WIDTH.0
-                    | banjo_wlan_info::WlanRxInfoValid::RSSI.0
-                    | banjo_wlan_info::WlanRxInfoValid::SNR.0,
+                valid_fields: banjo_wlanassocinfo::WlanRxInfoValid::CHAN_WIDTH.0
+                    | banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0
+                    | banjo_wlanassocinfo::WlanRxInfoValid::SNR.0,
                 channel: banjo_common::WlanChannel {
                     primary: 1,
                     cbw: banjo_common::ChannelBandwidth::CBW20,

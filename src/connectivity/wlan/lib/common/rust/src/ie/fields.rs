@@ -8,7 +8,7 @@ use {
         unaligned_view::UnalignedView,
     },
     banjo_ddk_hw_wlan_ieee80211 as banjo_80211,
-    banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
+    banjo_fuchsia_hardware_wlanassocinfo as banjo_wlanassocinfo,
     ieee80211::MacAddr,
     std::mem::size_of,
     wlan_bitfield::bitfield,
@@ -514,7 +514,7 @@ pub struct HtOperation {
     pub basic_ht_mcs_set: SupportedMcsSet, // u128
 }
 
-impl From<HtOperation> for banjo_wlan_info::WlanHtOp {
+impl From<HtOperation> for banjo_wlanassocinfo::WlanHtOp {
     fn from(op: HtOperation) -> Self {
         let mcs = banjo_80211::Ieee80211HtCapabilitiesSupportedMcsSet::from(op.basic_ht_mcs_set);
         Self {
@@ -1152,7 +1152,7 @@ pub struct VhtOperation {
     pub basic_mcs_nss: VhtMcsNssMap, // u16
 }
 
-impl From<VhtOperation> for banjo_wlan_info::WlanVhtOp {
+impl From<VhtOperation> for banjo_wlanassocinfo::WlanVhtOp {
     fn from(op: VhtOperation) -> Self {
         Self {
             // vht_cbw is a NewType for u8 instead of a bitfield, thus does not have raw() defined.
@@ -1359,14 +1359,14 @@ mod tests {
     #[test]
     fn ddk_conversion_ht_operation() {
         let ht_op = crate::ie::fake_ies::fake_ht_operation();
-        let ddk: banjo_wlan_info::WlanHtOp = ht_op.into();
+        let ddk: banjo_wlanassocinfo::WlanHtOp = ht_op.into();
         assert_eq!(ht_op.as_bytes(), unsafe { as_bytes(&ddk) });
     }
 
     #[test]
     fn ddk_conversion_vht_operation() {
         let vht_op = crate::ie::fake_ies::fake_vht_operation();
-        let ddk: banjo_wlan_info::WlanVhtOp = vht_op.into();
+        let ddk: banjo_wlanassocinfo::WlanVhtOp = vht_op.into();
         assert_eq!(vht_op.as_bytes(), unsafe { as_bytes(&ddk) });
     }
 }

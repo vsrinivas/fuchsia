@@ -5,8 +5,8 @@
 #include "utils.h"
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 

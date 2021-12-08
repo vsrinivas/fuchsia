@@ -37,7 +37,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_STA_H_
 
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
 #include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/fidl.h>
 #include <threads.h>

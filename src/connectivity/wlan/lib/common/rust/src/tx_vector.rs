@@ -5,8 +5,9 @@
 use {
     crate::ie::SupportedRate,
     anyhow::{bail, Error},
-    banjo_fuchsia_hardware_wlan_info as hw_wlan_info,
-    banjo_fuchsia_hardware_wlan_mac as hw_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
+    banjo_fuchsia_hardware_wlan_mac as hw_wlan_mac,
+    banjo_fuchsia_hardware_wlanassocinfo as hw_wlan_info,
+    banjo_fuchsia_wlan_common as banjo_common,
 };
 
 pub const HT_NUM_MCS: u8 = 32; // Only support MCS 0-31

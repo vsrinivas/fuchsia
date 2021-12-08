@@ -4,7 +4,7 @@
 library fuchsia.hardware.wlan.mac;
 
 using fuchsia.hardware.wlanphyinfo;
-using fuchsia.hardware.wlan.info;
+using fuchsia.hardware.wlanassocinfo;
 using fuchsia.wlan.common;
 using fuchsia.wlan.internal;
 using fuchsia.wlan.ieee80211 as ieee80211;
@@ -150,7 +150,7 @@ type WlanKeyConfig = struct {
     cipher_oui array<uint8, 3>;
     cipher_type uint8;
     /// Whether this key is a pairwise, group or peer key.
-    key_type fuchsia.hardware.wlan.info.WlanKeyType;
+    key_type fuchsia.hardware.wlanassocinfo.WlanKeyType;
     /// The peer MAC address for pairwise and peer keys.
     /// For group keys this value is always the broadcast address.
     peer_addr ieee80211.MacAddr;
@@ -406,7 +406,7 @@ protocol Wlanmac {
     /// Notifies MAC and PHY parameters negotiated through a successful association
     ConfigureAssoc(struct {
         options uint32;
-        assoc_ctx fuchsia.hardware.wlan.info.WlanAssocCtx;
+        assoc_ctx fuchsia.hardware.wlanassocinfo.WlanAssocCtx;
     }) -> (struct {
         st zx.status;
     });
@@ -446,8 +446,8 @@ protocol Wlanmac {
 
     /// Notifies change of WMM parameters for specified AC
     UpdateWmmParams(struct {
-        ac fuchsia.hardware.wlan.info.WlanAc;
-        params fuchsia.hardware.wlan.info.WlanWmmParams;
+        ac fuchsia.hardware.wlanassocinfo.WlanAc;
+        params fuchsia.hardware.wlanassocinfo.WlanWmmParams;
     }) -> (struct {
         st zx.status;
     });

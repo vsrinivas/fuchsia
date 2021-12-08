@@ -4,8 +4,8 @@
 
 use {
     anyhow::{bail, Error},
-    banjo_fuchsia_hardware_wlan_info as banjo_wlan_info,
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlanassocinfo as banjo_wlanassocinfo,
     banjo_fuchsia_hardware_wlanphyinfo as banjo_ddk_wlanphyinfo,
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
@@ -39,17 +39,17 @@ pub fn build_ddk_assoc_ctx(
     negotiated_capabilities: fidl_mlme::NegotiatedCapabilities,
     ht_op: Option<[u8; fidl_internal::HT_OP_LEN as usize]>,
     vht_op: Option<[u8; fidl_internal::VHT_OP_LEN as usize]>,
-) -> banjo_wlan_info::WlanAssocCtx {
-    let mut rates = [0; banjo_wlan_info::WLAN_MAC_MAX_RATES as usize];
+) -> banjo_wlanassocinfo::WlanAssocCtx {
+    let mut rates = [0; banjo_wlanassocinfo::WLAN_MAC_MAX_RATES as usize];
     rates[..negotiated_capabilities.rates.len()].clone_from_slice(&negotiated_capabilities.rates);
     let has_ht_cap = negotiated_capabilities.ht_cap.is_some();
     let has_vht_cap = negotiated_capabilities.vht_cap.is_some();
     let phy = match (has_ht_cap, has_vht_cap) {
-        (true, true) => banjo_wlan_info::WlanPhyType::VHT,
-        (true, false) => banjo_wlan_info::WlanPhyType::HT,
+        (true, true) => banjo_wlanassocinfo::WlanPhyType::VHT,
+        (true, false) => banjo_wlanassocinfo::WlanPhyType::HT,
         // It is invalid to have VHT without HT and SME would guarantee it does not happen.
         // But default to ERP nonetheless just to be safe.
-        _ => banjo_wlan_info::WlanPhyType::ERP,
+        _ => banjo_wlanassocinfo::WlanPhyType::ERP,
     };
     let ht_cap_bytes =
         negotiated_capabilities.ht_cap.map_or([0; fidl_internal::HT_CAP_LEN as usize], |h| h.bytes);
@@ -58,7 +58,7 @@ pub fn build_ddk_assoc_ctx(
         .map_or([0; fidl_internal::VHT_CAP_LEN as usize], |v| v.bytes);
     let ht_op_bytes = ht_op.unwrap_or([0; fidl_internal::HT_OP_LEN as usize]);
     let vht_op_bytes = vht_op.unwrap_or([0; fidl_internal::VHT_OP_LEN as usize]);
-    banjo_wlan_info::WlanAssocCtx {
+    banjo_wlanassocinfo::WlanAssocCtx {
         bssid: bssid.0,
         aid,
         // In the association request we sent out earlier, listen_interval is always set to 0,
@@ -90,7 +90,7 @@ pub fn build_ddk_assoc_ctx(
 }
 
 pub fn get_rssi_dbm(rx_info: banjo_wlan_mac::WlanRxInfo) -> Option<i8> {
-    match rx_info.valid_fields & banjo_wlan_info::WlanRxInfoValid::RSSI.0 != 0
+    match rx_info.valid_fields & banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0 != 0
         && rx_info.rssi_dbm != 0
     {
         true => Some(rx_info.rssi_dbm),
@@ -98,8 +98,8 @@ pub fn get_rssi_dbm(rx_info: banjo_wlan_mac::WlanRxInfo) -> Option<i8> {
     }
 }
 
-pub fn blank_wmm_params() -> banjo_wlan_info::WlanWmmParams {
-    banjo_wlan_info::WlanWmmParams {
+pub fn blank_wmm_params() -> banjo_wlanassocinfo::WlanWmmParams {
+    banjo_wlanassocinfo::WlanWmmParams {
         apsd: false,
         ac_be_params: blank_wmm_ac_params(),
         ac_bk_params: blank_wmm_ac_params(),
@@ -108,8 +108,14 @@ pub fn blank_wmm_params() -> banjo_wlan_info::WlanWmmParams {
     }
 }
 
-fn blank_wmm_ac_params() -> banjo_wlan_info::WlanWmmAcParams {
-    banjo_wlan_info::WlanWmmAcParams { ecw_min: 0, ecw_max: 0, aifsn: 0, txop_limit: 0, acm: false }
+fn blank_wmm_ac_params() -> banjo_wlanassocinfo::WlanWmmAcParams {
+    banjo_wlanassocinfo::WlanWmmAcParams {
+        ecw_min: 0,
+        ecw_max: 0,
+        aifsn: 0,
+        txop_limit: 0,
+        acm: false,
+    }
 }
 
 pub fn device_info_from_wlanmac_info(
@@ -260,7 +266,7 @@ mod tests {
         assert_eq!([1, 2, 3, 4, 5, 6], ddk.bssid);
         assert_eq!(42, ddk.aid);
         assert_eq!(0, ddk.listen_interval);
-        assert_eq!(banjo_wlan_info::WlanPhyType::VHT, ddk.phy);
+        assert_eq!(banjo_wlanassocinfo::WlanPhyType::VHT, ddk.phy);
         assert_eq!(
             banjo_common::WlanChannel {
                 primary: 149,
@@ -300,7 +306,7 @@ mod tests {
         assert_eq!(expected_ht_cap.asel_capabilities, ddk.ht_cap.asel_capabilities);
 
         assert_eq!(true, ddk.has_ht_op);
-        let expected_ht_op: banjo_wlan_info::WlanHtOp = ie::fake_ht_operation().into();
+        let expected_ht_op: banjo_wlanassocinfo::WlanHtOp = ie::fake_ht_operation().into();
         assert_eq!(expected_ht_op, ddk.ht_op);
 
         assert_eq!(true, ddk.has_vht_cap);
@@ -309,7 +315,7 @@ mod tests {
         assert_eq!(expected_vht_cap, ddk.vht_cap);
 
         assert_eq!(true, ddk.has_vht_op);
-        let expected_vht_op: banjo_wlan_info::WlanVhtOp = ie::fake_vht_operation().into();
+        let expected_vht_op: banjo_wlanassocinfo::WlanVhtOp = ie::fake_vht_operation().into();
         assert_eq!(expected_vht_op, ddk.vht_op);
     }
 
@@ -340,7 +346,7 @@ mod tests {
     #[test]
     fn test_get_rssi_dbm_zero_dbm() {
         let rx_info = banjo_wlan_mac::WlanRxInfo {
-            valid_fields: banjo_wlan_info::WlanRxInfoValid::RSSI.0,
+            valid_fields: banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0,
             rssi_dbm: 0,
             ..empty_rx_info()
         };
@@ -350,7 +356,7 @@ mod tests {
     #[test]
     fn test_get_rssi_dbm_all_good() {
         let rx_info = banjo_wlan_mac::WlanRxInfo {
-            valid_fields: banjo_wlan_info::WlanRxInfoValid::RSSI.0,
+            valid_fields: banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0,
             rssi_dbm: 20,
             ..empty_rx_info()
         };

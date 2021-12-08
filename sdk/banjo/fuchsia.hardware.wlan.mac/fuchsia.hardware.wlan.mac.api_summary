@@ -17,7 +17,7 @@ strict enum fuchsia.hardware.wlan.mac/WlanHwScan uint8
 struct/member fuchsia.hardware.wlan.mac/WlanHwScanConfig.channels array<uint8,64>
 struct/member fuchsia.hardware.wlan.mac/WlanHwScanConfig.num_channels uint8
 struct/member fuchsia.hardware.wlan.mac/WlanHwScanConfig.scan_type fuchsia.hardware.wlan.mac/WlanHwScanType
-struct/member fuchsia.hardware.wlan.mac/WlanHwScanConfig.ssid fuchsia.hardware.wlan.info/WlanSsid
+struct/member fuchsia.hardware.wlan.mac/WlanHwScanConfig.ssid fuchsia.hardware.wlanassocinfo/WlanSsid
 struct fuchsia.hardware.wlan.mac/WlanHwScanConfig
 struct/member fuchsia.hardware.wlan.mac/WlanHwScanResult.code fuchsia.hardware.wlan.mac/WlanHwScan
 struct fuchsia.hardware.wlan.mac/WlanHwScanResult
@@ -35,7 +35,7 @@ struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.cipher_type uint8
 struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.key array<uint8,32>
 struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.key_idx uint8
 struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.key_len uint8
-struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.key_type fuchsia.hardware.wlan.info/WlanKeyType
+struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.key_type fuchsia.hardware.wlanassocinfo/WlanKeyType
 struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.peer_addr array<uint8,6>
 struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.protection fuchsia.hardware.wlan.mac/WlanProtection
 struct/member fuchsia.hardware.wlan.mac/WlanKeyConfig.rsc uint64
@@ -45,7 +45,7 @@ enum/member fuchsia.hardware.wlan.mac/WlanProtection.RX 1
 enum/member fuchsia.hardware.wlan.mac/WlanProtection.RX_TX 3
 enum/member fuchsia.hardware.wlan.mac/WlanProtection.TX 2
 strict enum fuchsia.hardware.wlan.mac/WlanProtection uint8
-struct/member fuchsia.hardware.wlan.mac/WlanRxInfo.chan fuchsia.hardware.wlan.info/WlanChannel
+struct/member fuchsia.hardware.wlan.mac/WlanRxInfo.chan fuchsia.hardware.wlanassocinfo/WlanChannel
 struct/member fuchsia.hardware.wlan.mac/WlanRxInfo.data_rate uint32
 struct/member fuchsia.hardware.wlan.mac/WlanRxInfo.mcs uint8
 struct/member fuchsia.hardware.wlan.mac/WlanRxInfo.phy uint16
@@ -57,7 +57,7 @@ struct fuchsia.hardware.wlan.mac/WlanRxInfo
 enum/member fuchsia.hardware.wlan.mac/WlanRxInfoFlags.FCS_INVALID 1
 enum/member fuchsia.hardware.wlan.mac/WlanRxInfoFlags.FRAME_BODY_PADDING_4 2
 strict enum fuchsia.hardware.wlan.mac/WlanRxInfoFlags uint32
-struct/member fuchsia.hardware.wlan.mac/WlanTxInfo.cbw fuchsia.hardware.wlan.info/WlanChannelBandwidth
+struct/member fuchsia.hardware.wlan.mac/WlanTxInfo.cbw fuchsia.hardware.wlanassocinfo/WlanChannelBandwidth
 struct/member fuchsia.hardware.wlan.mac/WlanTxInfo.mcs uint8
 struct/member fuchsia.hardware.wlan.mac/WlanTxInfo.phy uint16
 struct/member fuchsia.hardware.wlan.mac/WlanTxInfo.tx_flags uint32
@@ -86,18 +86,18 @@ struct/member fuchsia.hardware.wlan.mac/WlanTxStatusEntry.attempts uint8
 struct/member fuchsia.hardware.wlan.mac/WlanTxStatusEntry.tx_vector_idx uint16
 struct fuchsia.hardware.wlan.mac/WlanTxStatusEntry
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.ClearAssoc(uint32 options,vector<uint8> peer_addr) -> (int32 st)
-protocol/member fuchsia.hardware.wlan.mac/Wlanmac.ConfigureAssoc(uint32 options,fuchsia.hardware.wlan.info/WlanAssocCtx assoc_ctx) -> (int32 st)
+protocol/member fuchsia.hardware.wlan.mac/Wlanmac.ConfigureAssoc(uint32 options,fuchsia.hardware.wlanassocinfo/WlanAssocCtx assoc_ctx) -> (int32 st)
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.ConfigureBeacon(uint32 options,fuchsia.hardware.wlan.mac/WlanTxPacket pkt) -> (int32 st)
-protocol/member fuchsia.hardware.wlan.mac/Wlanmac.ConfigureBss(uint32 options,fuchsia.hardware.wlan.info/WlanBssConfig config) -> (int32 st)
+protocol/member fuchsia.hardware.wlan.mac/Wlanmac.ConfigureBss(uint32 options,fuchsia.hardware.wlanassocinfo/WlanBssConfig config) -> (int32 st)
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.EnableBeaconing(uint32 options,fuchsia.hardware.wlan.mac/WlanBcnConfig bcn_cfg) -> (int32 st)
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.Query(uint32 options) -> (int32 status,fuchsia.hardware.wlan.mac/WlanmacInfo info)
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.QueueTx(uint32 options,fuchsia.hardware.wlan.mac/WlanTxPacket pkt) -> (int32 status)
-protocol/member fuchsia.hardware.wlan.mac/Wlanmac.SetChannel(uint32 options,fuchsia.hardware.wlan.info/WlanChannel chan) -> (int32 status)
+protocol/member fuchsia.hardware.wlan.mac/Wlanmac.SetChannel(uint32 options,fuchsia.hardware.wlanassocinfo/WlanChannel chan) -> (int32 status)
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.SetKey(uint32 options,fuchsia.hardware.wlan.mac/WlanKeyConfig key_config) -> (int32 st)
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.Start(client_end:fuchsia.hardware.wlan.mac/WlanmacIfc ifc) -> (int32 status,zx/handle:CHANNEL sme_channel)
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.StartHwScan(fuchsia.hardware.wlan.mac/WlanHwScanConfig scan_config) -> (int32 st)
 protocol/member fuchsia.hardware.wlan.mac/Wlanmac.Stop() -> ()
-protocol/member fuchsia.hardware.wlan.mac/Wlanmac.UpdateWmmParams(fuchsia.hardware.wlan.info/WlanAc ac,fuchsia.hardware.wlan.info/WlanWmmParams params) -> (int32 st)
+protocol/member fuchsia.hardware.wlan.mac/Wlanmac.UpdateWmmParams(fuchsia.hardware.wlanassocinfo/WlanAc ac,fuchsia.hardware.wlanassocinfo/WlanWmmParams params) -> (int32 st)
 protocol fuchsia.hardware.wlan.mac/Wlanmac
 protocol/member fuchsia.hardware.wlan.mac/WlanmacIfc.CompleteTx(fuchsia.hardware.wlan.mac/WlanTxPacket packet,int32 status) -> ()
 protocol/member fuchsia.hardware.wlan.mac/WlanmacIfc.HwScanComplete(fuchsia.hardware.wlan.mac/WlanHwScanResult result)

@@ -4,10 +4,10 @@
 
 use {
     crate::{buffer::OutBuf, key},
-    banjo_fuchsia_hardware_wlan_info::*,
     banjo_fuchsia_hardware_wlan_mac::{
         self as banjo_wlan_mac, WlanRxPacket, WlanTxPacket, WlanTxStatus, WlanmacInfo,
     },
+    banjo_fuchsia_hardware_wlanassocinfo::*,
     banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_internal::BssConfig,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,

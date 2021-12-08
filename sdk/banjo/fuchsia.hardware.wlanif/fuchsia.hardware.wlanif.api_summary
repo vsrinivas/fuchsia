@@ -1,13 +1,13 @@
 struct/member fuchsia.hardware.wlanif/DeleteKeyDescriptor.address array<uint8,6>
 struct/member fuchsia.hardware.wlanif/DeleteKeyDescriptor.key_id uint16
-struct/member fuchsia.hardware.wlanif/DeleteKeyDescriptor.key_type fuchsia.hardware.wlan.info/WlanKeyType
+struct/member fuchsia.hardware.wlanif/DeleteKeyDescriptor.key_type fuchsia.hardware.wlanassocinfo/WlanKeyType
 struct fuchsia.hardware.wlanif/DeleteKeyDescriptor
 struct/member fuchsia.hardware.wlanif/SetKeyDescriptor.address array<uint8,6>
 struct/member fuchsia.hardware.wlanif/SetKeyDescriptor.cipher_suite_oui array<uint8,3>
 struct/member fuchsia.hardware.wlanif/SetKeyDescriptor.cipher_suite_type uint8
 struct/member fuchsia.hardware.wlanif/SetKeyDescriptor.key vector<uint8>
 struct/member fuchsia.hardware.wlanif/SetKeyDescriptor.key_id uint16
-struct/member fuchsia.hardware.wlanif/SetKeyDescriptor.key_type fuchsia.hardware.wlan.info/WlanKeyType
+struct/member fuchsia.hardware.wlanif/SetKeyDescriptor.key_type fuchsia.hardware.wlanassocinfo/WlanKeyType
 struct/member fuchsia.hardware.wlanif/SetKeyDescriptor.rsc uint64
 struct fuchsia.hardware.wlanif/SetKeyDescriptor
 union/member fuchsia.hardware.wlanif/StatsUnion.ap_mlme_stats fuchsia.hardware.wlanif/WlanifApMlmeStats
@@ -150,10 +150,10 @@ struct/member fuchsia.hardware.wlanif/WlanifBandCapabilities.vht_caps ddk.hw.wla
 struct/member fuchsia.hardware.wlanif/WlanifBandCapabilities.vht_supported bool
 struct fuchsia.hardware.wlanif/WlanifBandCapabilities
 struct/member fuchsia.hardware.wlanif/WlanifBssDescription.beacon_period uint32
-struct/member fuchsia.hardware.wlanif/WlanifBssDescription.bss_type fuchsia.hardware.wlan.info/WlanBssType
+struct/member fuchsia.hardware.wlanif/WlanifBssDescription.bss_type fuchsia.hardware.wlanassocinfo/WlanBssType
 struct/member fuchsia.hardware.wlanif/WlanifBssDescription.bssid array<uint8,6>
 struct/member fuchsia.hardware.wlanif/WlanifBssDescription.cap uint16
-struct/member fuchsia.hardware.wlanif/WlanifBssDescription.chan fuchsia.hardware.wlan.info/WlanChannel
+struct/member fuchsia.hardware.wlanif/WlanifBssDescription.chan fuchsia.hardware.wlanassocinfo/WlanChannel
 struct/member fuchsia.hardware.wlanif/WlanifBssDescription.ies_bytes vector<uint8>
 struct/member fuchsia.hardware.wlanif/WlanifBssDescription.local_time uint64
 struct/member fuchsia.hardware.wlanif/WlanifBssDescription.rssi_dbm int8
@@ -267,7 +267,7 @@ protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.OnChannelSwitch(fuchsia.ha
 protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.OnPmkAvailable(fuchsia.hardware.wlanif/WlanifPmkInfo info) -> ()
 protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.OnScanEnd(fuchsia.hardware.wlanif/WlanifScanEnd end) -> ()
 protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.OnScanResult(fuchsia.hardware.wlanif/WlanifScanResult result) -> ()
-protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.OnWmmStatusResp(int32 s,fuchsia.hardware.wlan.info/WlanWmmParams wmm_params) -> ()
+protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.OnWmmStatusResp(int32 s,fuchsia.hardware.wlanassocinfo/WlanWmmParams wmm_params) -> ()
 protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.RelayCapturedFrame(fuchsia.hardware.wlanif/WlanifCapturedFrameResult result) -> ()
 protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.SaeFrameRx(fuchsia.hardware.wlanif/WlanifSaeFrame frame) -> ()
 protocol/member fuchsia.hardware.wlanif/WlanifImplIfc.SaeHandshakeInd(fuchsia.hardware.wlanif/WlanifSaeHandshakeInd ind) -> ()
@@ -340,7 +340,7 @@ struct fuchsia.hardware.wlanif/WlanifSaeHandshakeResp
 struct/member fuchsia.hardware.wlanif/WlanifScanEnd.code fuchsia.hardware.wlanif/WlanScanResult
 struct/member fuchsia.hardware.wlanif/WlanifScanEnd.txn_id uint64
 struct fuchsia.hardware.wlanif/WlanifScanEnd
-struct/member fuchsia.hardware.wlanif/WlanifScanReq.bss_type fuchsia.hardware.wlan.info/WlanBssType
+struct/member fuchsia.hardware.wlanif/WlanifScanReq.bss_type fuchsia.hardware.wlanassocinfo/WlanBssType
 struct/member fuchsia.hardware.wlanif/WlanifScanReq.bssid array<uint8,6>
 struct/member fuchsia.hardware.wlanif/WlanifScanReq.channel_list array<uint8,64>
 struct/member fuchsia.hardware.wlanif/WlanifScanReq.max_channel_time uint32
@@ -378,7 +378,7 @@ struct fuchsia.hardware.wlanif/WlanifStartCaptureFramesResp
 struct/member fuchsia.hardware.wlanif/WlanifStartConfirm.result_code fuchsia.hardware.wlanif/WlanStartResult
 struct fuchsia.hardware.wlanif/WlanifStartConfirm
 struct/member fuchsia.hardware.wlanif/WlanifStartReq.beacon_period uint32
-struct/member fuchsia.hardware.wlanif/WlanifStartReq.bss_type fuchsia.hardware.wlan.info/WlanBssType
+struct/member fuchsia.hardware.wlanif/WlanifStartReq.bss_type fuchsia.hardware.wlanassocinfo/WlanBssType
 struct/member fuchsia.hardware.wlanif/WlanifStartReq.channel uint8
 struct/member fuchsia.hardware.wlanif/WlanifStartReq.dtim_period uint32
 struct/member fuchsia.hardware.wlanif/WlanifStartReq.rsne array<uint8,255>

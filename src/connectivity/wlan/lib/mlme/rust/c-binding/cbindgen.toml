@@ -14,9 +14,9 @@ language = "C"
 
 sys_includes = [
     # Banjo types.
-    "fuchsia/hardware/wlan/info/c/banjo.h",  # wlan_channel_t
-    "fuchsia/hardware/wlan/mac/c/banjo.h",   # wlanmac_info_t, wlanmac_active_scan_args_t,
+    "fuchsia/hardware/wlan/mac/c/banjo.h",   # wlanmac_info_t, wlan_hw_scan_config_t,
                                              # wlanmac_passive_scan_args_t, wlan_rx_info_t
+    "fuchsia/wlan/common/c/banjo.h",   # wlan_channel_t
     "fuchsia/wlan/internal/c/banjo.h",   # bss_config_t
     "fuchsia/wlan/ieee80211/c/banjo.h",   # cssid_t
 ]

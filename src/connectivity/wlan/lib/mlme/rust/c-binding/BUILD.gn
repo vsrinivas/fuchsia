@@ -12,8 +12,8 @@ rustc_staticlib("wlan-mlme-c") {
   edition = "2018"
 
   deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_rust",
     "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_rust",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_rust",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_rust",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",

@@ -14,7 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <fuchsia/hardware/wlan/info/c/banjo.h>
+#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
 #include <fuchsia/hardware/wlanif/c/banjo.h>
 #include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <lib/ddk/device.h>

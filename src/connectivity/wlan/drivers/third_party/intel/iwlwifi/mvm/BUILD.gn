@@ -40,7 +40,7 @@ source_set("mvm") {
     "tof.h",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.info:fuchsia.hardware.wlan.info_banjo_c",
+    "//sdk/banjo/fuchsia.hardware.wlanassocinfo:fuchsia.hardware.wlanassocinfo_banjo_c",
     "//sdk/banjo/fuchsia.hardware.wlanphyinfo:fuchsia.hardware.wlanphyinfo_banjo_c",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_c",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
