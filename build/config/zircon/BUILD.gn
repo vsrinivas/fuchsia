@@ -577,7 +577,6 @@ config("standalone") {
 # configs list.
 variant("static-pie-compile") {
   cflags = [ "-fPIE" ]
-  defines = [ "ZX_STATIC_PIE=1" ]
 }
 
 variant("static-pie-link") {

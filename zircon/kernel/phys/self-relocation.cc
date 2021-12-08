@@ -10,7 +10,10 @@
 #include <phys/main.h>
 
 void ApplyRelocations() {
-#ifdef ZX_STATIC_PIE
+  // There is never anything to do when compiled as fixed-position, which is
+  // used only for x86-32.  When compiled as PIC, the phys program may still be
+  // linked as fixed-position, observed at runtime as Self::LoadBias() == 0.
+#ifdef __PIC__
   auto diag = elfldltl::TrapDiagnostics();
   elfldltl::LinkStaticPie(elfldltl::Self<>(), diag, PHYS_LOAD_ADDRESS, _end);
 #endif
