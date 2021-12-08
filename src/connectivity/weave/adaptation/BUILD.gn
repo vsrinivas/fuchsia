@@ -67,7 +67,6 @@ openweave_adaptation_layer("adaptation") {
     "//src/lib/json_parser",
     "//third_party/modp_b64",
     "//third_party/openweave-core",
-    "//zircon/system/ulib/inet6",
   ]
 }
 

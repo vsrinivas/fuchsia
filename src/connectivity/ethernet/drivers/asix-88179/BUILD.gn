@@ -84,7 +84,6 @@ fuchsia_driver("fake-asix-88179-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/inet6",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
   ]

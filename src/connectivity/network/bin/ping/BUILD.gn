@@ -7,7 +7,6 @@ executable("ping") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/inet6",
     "//zircon/system/ulib/pretty",
   ]
 }
