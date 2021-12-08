@@ -127,6 +127,11 @@ acpi::status<acpi::UniquePtr<ACPI_OBJECT>> Device::EvaluateObject(
     value->Integer.Type = ACPI_TYPE_INTEGER;
     value->Integer.Value = sta_.value();
     return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(value));
+  } else if (pathname == "_GLK" && glk_.has_value()) {
+    ACPI_OBJECT* value = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*value)));
+    value->Integer.Type = ACPI_TYPE_INTEGER;
+    value->Integer.Value = glk_.value();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(value));
   }
   return acpi::error(AE_NOT_FOUND);
 }

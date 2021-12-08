@@ -31,6 +31,7 @@ class Device {
   void AddDsd(const acpi::Uuid& uuid, ACPI_OBJECT value) {
     dsd_.emplace(uuid, std::vector<ACPI_OBJECT>{}).first->second.emplace_back(value);
   }
+  void SetGlk(bool val) { glk_ = val; }
 
   // Add a child to this device.
   void AddChild(std::unique_ptr<Device> c) {
@@ -113,6 +114,7 @@ class Device {
   std::optional<std::string> hid_;
   std::vector<std::string> cids_;
   std::optional<uint64_t> sta_;
+  std::optional<bool> glk_ = false;
 
   // _DSD, map of uuid to values.
   std::unordered_map<acpi::Uuid, std::vector<ACPI_OBJECT>> dsd_;

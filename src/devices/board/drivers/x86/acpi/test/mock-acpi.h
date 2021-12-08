@@ -54,6 +54,16 @@ class MockAcpi : public Acpi {
   acpi::status<> RemoveNotifyHandler(ACPI_HANDLE object, uint32_t mode,
                                      NotifyHandlerCallable callable) override;
 
+  acpi::status<uint32_t> AcquireGlobalLock(uint16_t timeout) override __TA_ACQUIRE(global_lock_) {
+    global_lock_.lock();
+    return acpi::ok(0xd00dfeed);
+  }
+  acpi::status<> ReleaseGlobalLock(uint32_t handle) override __TA_RELEASE(global_lock_) {
+    ZX_ASSERT_MSG(handle == 0xd00dfeed, "global lock did not match handle");
+    global_lock_.unlock();
+    return acpi::ok();
+  }
+
  private:
   Device* ToDevice(ACPI_HANDLE hnd) {
     // NOLINTNEXTLINE - ACPI_ROOT_OBJECT makes clang-tidy complain.
@@ -68,6 +78,7 @@ class MockAcpi : public Acpi {
                                        NamespaceCallable& cbk);
   std::unique_ptr<Device> root_;
   acpi::UniquePtr<ACPI_RESOURCE> resource_;
+  std::mutex global_lock_;
 };
 
 }  // namespace acpi::test

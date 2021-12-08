@@ -134,4 +134,19 @@ acpi::status<> AcpiImpl::RemoveNotifyHandler(ACPI_HANDLE object, uint32_t mode,
   ACPI_STATUS status = AcpiRemoveNotifyHandler(object, mode, callable);
   return acpi::make_status(status);
 }
+
+acpi::status<uint32_t> AcpiImpl::AcquireGlobalLock(uint16_t timeout) {
+  uint32_t handle;
+  ACPI_STATUS status = AcpiAcquireGlobalLock(timeout, &handle);
+  if (status != AE_OK) {
+    return acpi::error(status);
+  }
+
+  return acpi::ok(handle);
+}
+
+acpi::status<> AcpiImpl::ReleaseGlobalLock(uint32_t handle) {
+  ACPI_STATUS status = AcpiReleaseGlobalLock(handle);
+  return acpi::make_status(status);
+}
 }  // namespace acpi

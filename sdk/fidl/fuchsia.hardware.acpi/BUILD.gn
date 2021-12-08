@@ -8,6 +8,7 @@ fidl("fuchsia.hardware.acpi") {
   sources = [
     "acpi.fidl",
     "device.fidl",
+    "global_lock.fidl",
     "notification.fidl",
   ]
   public_deps = [

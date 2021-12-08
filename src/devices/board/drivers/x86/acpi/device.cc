@@ -18,6 +18,7 @@
 
 #include "src/devices/board/drivers/x86/acpi/event.h"
 #include "src/devices/board/drivers/x86/acpi/fidl.h"
+#include "src/devices/board/drivers/x86/acpi/global-lock.h"
 #include "src/devices/board/drivers/x86/acpi/manager.h"
 #include "src/devices/board/drivers/x86/include/errors.h"
 #include "src/devices/board/drivers/x86/include/sysmem.h"
@@ -174,6 +175,13 @@ zx_status_t Device::ReportCurrentResources() {
 }
 
 void Device::DdkInit(ddk::InitTxn txn) {
+  auto use_global_lock = acpi_->EvaluateObject(acpi_handle_, "_GLK", std::nullopt);
+  if (use_global_lock.is_ok()) {
+    if (use_global_lock->Type == ACPI_TYPE_INTEGER && use_global_lock->Integer.Value == 1) {
+      can_use_global_lock_ = true;
+    }
+  }
+
   if (metadata_.empty()) {
     txn.Reply(ZX_OK);
     return;
@@ -505,5 +513,15 @@ void Device::RemoveNotifyHandler() {
     return;
   }
   notify_handler_->AsyncTeardown();
+}
+
+void Device::AcquireGlobalLock(AcquireGlobalLockRequestView request,
+                               AcquireGlobalLockCompleter::Sync& completer) {
+  if (!can_use_global_lock_) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kAccess);
+    return;
+  }
+
+  GlobalLockHandle::Create(acpi_, manager_->fidl_dispatcher(), completer.ToAsync());
 }
 }  // namespace acpi

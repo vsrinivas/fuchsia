@@ -42,6 +42,7 @@ source_set("acpi") {
     "device.cc",
     "event.cc",
     "fidl.cc",
+    "global-lock.cc",
     "manager.cc",
     "resources.cc",
   ]
@@ -58,6 +59,7 @@ test("acpi-test") {
     "event.cc",
     "fidl-test.cc",
     "fidl.cc",
+    "global-lock.cc",
     "manager-test.cc",
     "manager.cc",
     "resources.cc",

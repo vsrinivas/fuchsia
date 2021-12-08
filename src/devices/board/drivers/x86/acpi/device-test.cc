@@ -67,6 +67,8 @@ class AcpiDeviceTest : public zxtest::Test {
 
     // Give mock_ddk ownership of the device.
     zx_device_t* dev = device.release()->zxdev();
+    dev->InitOp();
+    dev->WaitUntilInitReplyCalled(zx::time::infinite());
 
     ddk::AcpiProtocolClient acpi(dev);
     ASSERT_TRUE(acpi.is_valid());
@@ -136,6 +138,73 @@ TEST_F(AcpiDeviceTest, TestGetBusId) {
   ASSERT_OK(result.status());
   ASSERT_TRUE(result.value().result.is_response());
   ASSERT_EQ(result.value().result.response().bus_id, 37);
+}
+
+TEST_F(AcpiDeviceTest, TestAcquireGlobalLockAccessDenied) {
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+
+  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd, mock_root_.get());
+
+  SetUpFidlServer(std::move(device));
+
+  auto result = fidl_client_->AcquireGlobalLock();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->result.is_err());
+  ASSERT_EQ(result->result.err(), fuchsia_hardware_acpi::wire::Status::kAccess);
+}
+
+// _GLK method exists, but returns zero.
+TEST_F(AcpiDeviceTest, TestAcquireGlobalLockAccessDeniedButMethodExists) {
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+  test_dev->SetGlk(false);
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+
+  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd, mock_root_.get());
+
+  SetUpFidlServer(std::move(device));
+
+  auto result = fidl_client_->AcquireGlobalLock();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->result.is_err());
+  ASSERT_EQ(result->result.err(), fuchsia_hardware_acpi::wire::Status::kAccess);
+}
+
+TEST_F(AcpiDeviceTest, TestAcquireGlobalLockImplicitRelease) {
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+  test_dev->SetGlk(true);
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+
+  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd, mock_root_.get());
+
+  SetUpFidlServer(std::move(device));
+
+  sync_completion_t acquired;
+  sync_completion_t running;
+  {
+    auto result = fidl_client_->AcquireGlobalLock();
+    ASSERT_TRUE(result.ok());
+    ASSERT_TRUE(result->result.is_response(), "ACPI error %d", int(result->result.err()));
+
+    std::thread thread([&acquired, &running, this]() {
+      sync_completion_signal(&running);
+      ASSERT_TRUE(fidl_client_->AcquireGlobalLock().ok());
+      sync_completion_signal(&acquired);
+    });
+    // Make sure thread keeps running when it goes out of scope.
+    thread.detach();
+
+    ASSERT_OK(sync_completion_wait(&running, ZX_TIME_INFINITE));
+    ASSERT_STATUS(sync_completion_wait(&acquired, ZX_MSEC(50)), ZX_ERR_TIMED_OUT);
+
+    // result, which holds the GlobalLock ClientEnd, will go out of scope here
+    // and close the channel, which should release the global lock.
+  }
+
+  ASSERT_OK(sync_completion_wait(&acquired, ZX_TIME_INFINITE));
 }
 
 TEST_F(AcpiDeviceTest, TestInstallNotifyHandler) {

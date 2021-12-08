@@ -1,0 +1,8 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.acpi;
+
+/// This is a handle to the global lock. So long as the channel is open,
+/// the lock is held. When the channel is closed, the lock is released.
+protocol GlobalLock {};

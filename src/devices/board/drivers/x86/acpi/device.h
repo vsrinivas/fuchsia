@@ -131,6 +131,8 @@ class Device : public DeviceType,
   void GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& completer) override;
   void InstallNotifyHandler(InstallNotifyHandlerRequestView request,
                             InstallNotifyHandlerCompleter::Sync& completer) override;
+  void AcquireGlobalLock(AcquireGlobalLockRequestView request,
+                         AcquireGlobalLockCompleter::Sync& completer) override;
 
   std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
 
@@ -155,6 +157,8 @@ class Device : public DeviceType,
   std::vector<DevicePioResource> pio_resources_ __TA_GUARDED(lock_);
   std::vector<DeviceMmioResource> mmio_resources_ __TA_GUARDED(lock_);
   std::vector<DeviceIrqResource> irqs_ __TA_GUARDED(lock_);
+
+  bool can_use_global_lock_ = false;
 
   // FIDL-encoded child metadata.
   std::vector<uint8_t> metadata_;

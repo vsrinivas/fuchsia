@@ -335,4 +335,14 @@ protocol Device {
         mode NotificationMode;
         handler client_end:NotifyHandler;
     }) -> (struct {}) error Status;
+
+    /// Acquire the ACPI global lock. This is only permitted for devices which
+    /// have a _GLK entry in their namespace. See ACPI v6.4, Section 6.5.7 "_GLK
+    /// (Global Lock)".
+    /// This method will not return until the global lock has been acquired.
+    /// Errors:
+    /// ACCESS - if "_GLK" is not present, or if "_GLK" does not evaluate to 1.
+    AcquireGlobalLock() -> (resource struct {
+        handle client_end:GlobalLock;
+    }) error Status;
 };

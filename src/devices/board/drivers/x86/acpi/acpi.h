@@ -73,6 +73,10 @@ class Acpi {
 
   acpi::status<uint8_t> CallBbn(ACPI_HANDLE obj);
   acpi::status<uint16_t> CallSeg(ACPI_HANDLE obj);
+
+  // Returns a handle which can be passed to ReleaseGlobalLock.
+  virtual acpi::status<uint32_t> AcquireGlobalLock(uint16_t timeout) = 0;
+  virtual acpi::status<> ReleaseGlobalLock(uint32_t handle) = 0;
 };
 
 }  // namespace acpi

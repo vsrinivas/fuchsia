@@ -42,6 +42,8 @@ class AcpiImpl : public Acpi {
                                       NotifyHandlerCallable callable, void* context) override;
   acpi::status<> RemoveNotifyHandler(ACPI_HANDLE object, uint32_t mode,
                                      NotifyHandlerCallable callable) override;
+  acpi::status<uint32_t> AcquireGlobalLock(uint16_t timeout) override;
+  acpi::status<> ReleaseGlobalLock(uint32_t handle) override;
 };
 }  // namespace acpi
 
