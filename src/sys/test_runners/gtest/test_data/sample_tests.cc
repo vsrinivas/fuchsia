@@ -31,14 +31,17 @@ TEST_P(SampleParameterizedTestFixture, Test) {}
 INSTANTIATE_TEST_SUITE_P(Tests, SampleParameterizedTestFixture,
                          ::testing::Values(1, 711, 1989, 2013));
 
-TEST(WriteToStdout, TestPass) {
+TEST(WriteToStd, TestPass) {
   printf("first msg\n");
-  printf("second msg\n\n\n");
+  fprintf(stderr, "second msg\n\n\n");
   printf("third msg\n\n");
+  fprintf(stderr, "fourth msg\n\n");
 }
 
-TEST(WriteToStdout, TestFail) {
+TEST(WriteToStd, TestFail) {
   printf("first msg\n");
+  fprintf(stderr, "second msg\n");
   EXPECT_FALSE(true);
-  printf("second msg\n");
+  printf("third msg\n");
+  fprintf(stderr, "fourth msg\n");
 }

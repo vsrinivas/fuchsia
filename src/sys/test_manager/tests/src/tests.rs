@@ -86,6 +86,18 @@ async fn collect_suite_events(
                     events.push(RunEvent::case_stdout(name.clone(), log.to_string()));
                 }
             }
+            test_manager_test_lib::SuiteEventPayload::RunEvent(RunEvent::CaseStderr {
+                name,
+                mut stderr_message,
+            }) => {
+                if stderr_message.ends_with("\n") {
+                    stderr_message.truncate(stderr_message.len() - 1)
+                }
+                let logs = stderr_message.split("\n");
+                for log in logs {
+                    events.push(RunEvent::case_stderr(name.clone(), log.to_string()));
+                }
+            }
             test_manager_test_lib::SuiteEventPayload::RunEvent(e) => events.push(e),
             test_manager_test_lib::SuiteEventPayload::SuiteLog { log_stream } => {
                 let t = fasync::Task::spawn(log_stream.collect::<Vec<_>>());
@@ -390,7 +402,7 @@ async fn negative_filter_test() {
         "-SampleTest1.*".into(),
         "-Tests/SampleParameterizedTestFixture.*".into(),
         "-SampleDisabled.*".into(),
-        "-WriteToStdout.*".into(),
+        "-WriteToStd.*".into(),
     ]);
     let (events, logs) = run_single_test(test_url, options).await.unwrap();
     let events = events.into_iter().group_by_test_case_unordered();

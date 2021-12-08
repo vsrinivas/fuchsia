@@ -15,7 +15,7 @@ use {
     },
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
-        future::{abortable, AbortHandle, Future, FutureExt as _},
+        future::{abortable, join, AbortHandle, Future, FutureExt as _},
         lock::Mutex,
         prelude::*,
         TryStreamExt,
@@ -377,6 +377,8 @@ impl TestServer {
 
         let (test_stdout, stdout_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
+        let (test_stderr, stderr_client) =
+            zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
 
         let (case_listener_proxy, listener) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
@@ -386,18 +388,25 @@ impl TestServer {
         run_listener
             .on_test_case_started(
                 invocation,
-                ftest::StdHandles { out: Some(stdout_client), ..ftest::StdHandles::EMPTY },
+                ftest::StdHandles {
+                    out: Some(stdout_client),
+                    err: Some(stderr_client),
+                    ..ftest::StdHandles::EMPTY
+                },
                 listener,
             )
             .map_err(RunTestError::SendStart)?;
         let test_stdout =
             fasync::Socket::from_socket(test_stdout).map_err(KernelError::SocketToAsync).unwrap();
         let mut test_stdout = SocketLogWriter::new(test_stdout);
+        let test_stderr =
+            fasync::Socket::from_socket(test_stderr).map_err(KernelError::SocketToAsync).unwrap();
+        let mut test_stderr = SocketLogWriter::new(test_stderr);
 
         args.extend(component.args.clone());
         if let Some(user_args) = &run_options.arguments {
             if let Err(e) = TestServer::validate_args(user_args) {
-                test_stdout.write_str(&format!("{}", e)).await?;
+                test_stderr.write_str(&format!("{}", e)).await?;
                 case_listener_proxy
                     .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
                     .map_err(RunTestError::SendFinish)?;
@@ -407,12 +416,16 @@ impl TestServer {
         }
         // run test.
         // Load bearing to hold job guard.
-        let (process, _job, stdlogger) =
-            match launch_component_process::<RunTestError>(&component, names, args).await {
+        let (process, _job, stdout_logger, stderr_logger) =
+            match launch_component_process_separate_std_handles::<RunTestError>(
+                &component, names, args,
+            )
+            .await
+            {
                 Ok(s) => s,
                 Err(e) => {
                     warn!("failed to launch component process for {}: {}", component.url, e);
-                    test_stdout
+                    test_stderr
                         .write_str(&format!("failed to launch component process: {}", e))
                         .await?;
                     case_listener_proxy
@@ -422,35 +435,43 @@ impl TestServer {
                 }
             };
 
-        let mut last_line_excluded = false;
-        let mut socket_buf = vec![0u8; SOCKET_BUFFER_SIZE];
-        let mut socket = stdlogger.take_socket();
-        while let Some(bytes_read) =
-            NonZeroUsize::new(socket.read(&mut socket_buf[..]).await.map_err(LogError::Read)?)
-        {
-            let mut bytes = &socket_buf[..bytes_read.get()];
+        let stderr_logger_task = stderr_logger.buffer_and_drain(&mut test_stderr);
+        let stdout_logger_task = async {
+            let mut last_line_excluded = false;
+            let mut socket_buf = vec![0u8; SOCKET_BUFFER_SIZE];
+            let mut socket = stdout_logger.take_socket();
+            while let Some(bytes_read) =
+                NonZeroUsize::new(socket.read(&mut socket_buf[..]).await.map_err(LogError::Read)?)
+            {
+                let mut bytes = &socket_buf[..bytes_read.get()];
 
-            // Avoid printing trailing empty line
-            if *bytes.last().unwrap() == NEWLINE {
-                bytes = &bytes[..bytes.len() - 1];
-            }
-
-            let mut iter = bytes.split(|&x| x == NEWLINE);
-
-            while let Some(line) = iter.next() {
-                if line.len() == 0 && last_line_excluded {
-                    // sometimes excluded lines print two newlines, we don't want to print blank
-                    // output to user's screen.
-                    continue;
+                // Avoid printing trailing empty line
+                if *bytes.last().unwrap() == NEWLINE {
+                    bytes = &bytes[..bytes.len() - 1];
                 }
-                last_line_excluded = PREFIXES_TO_EXCLUDE.iter().any(|p| line.starts_with(p));
 
-                if !last_line_excluded {
-                    let line = [line, &[NEWLINE]].concat();
-                    test_stdout.write(&line).await?;
+                let mut iter = bytes.split(|&x| x == NEWLINE);
+
+                while let Some(line) = iter.next() {
+                    if line.len() == 0 && last_line_excluded {
+                        // sometimes excluded lines print two newlines, we don't want to print blank
+                        // output to user's screen.
+                        continue;
+                    }
+                    last_line_excluded = PREFIXES_TO_EXCLUDE.iter().any(|p| line.starts_with(p));
+
+                    if !last_line_excluded {
+                        let line = [line, &[NEWLINE]].concat();
+                        test_stdout.write(&line).await?;
+                    }
                 }
             }
-        }
+            Ok::<(), LogError>(())
+        };
+
+        let (out_result, err_result) = join(stdout_logger_task, stderr_logger_task).await;
+        out_result?;
+        err_result?;
 
         debug!("Waiting for test to finish: {}", test);
 
@@ -464,7 +485,7 @@ impl TestServer {
 
         // gtest returns 0 is test succeeds and 1 if test fails. This will test if test ended abnormally.
         if process_info.return_code != 0 && process_info.return_code != 1 {
-            test_stdout.write_str("Test exited abnormally\n").await?;
+            test_stderr.write_str("Test exited abnormally\n").await?;
 
             case_listener_proxy
                 .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
@@ -478,7 +499,7 @@ impl TestServer {
             Ok(b) => b,
             Err(e) => {
                 // TODO(fxbug.dev/45857): Introduce Status::InternalError.
-                test_stdout
+                test_stderr
                     .write_str(&format!("Error reading test result:{:?}\n", IoError::File(e)))
                     .await?;
 
@@ -497,7 +518,7 @@ impl TestServer {
         // parse test results.
         if test_list.testsuites.len() != 1 || test_list.testsuites[0].testsuite.len() != 1 {
             // TODO(fxbug.dev/45857): Introduce Status::InternalError.
-            test_stdout
+            test_stderr
                 .write_str("unexpected output, should have received exactly one test result.\n")
                 .await?;
 
@@ -517,7 +538,7 @@ impl TestServer {
                         // TODO(fxbug.dev/53955): re-enable. currently we are getting these logs from test's
                         // stdout which we are printing above.
                         //for f in failures {
-                        //   test_stdout.write_str(format!("failure: {}\n", f.failure)).await?;
+                        //   test_stderr.write_str(format!("failure: {}\n", f.failure)).await?;
                         // }
 
                         Status::Failed
@@ -625,6 +646,35 @@ async fn get_tests(
 /// https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md#temporarily-disabling-tests
 fn is_test_case_enabled(case_name: &str) -> bool {
     !case_name.contains("DISABLED_")
+}
+
+/// Convenience wrapper around [`launch::launch_process`].
+async fn launch_component_process_separate_std_handles<E>(
+    component: &Component,
+    names: Vec<fproc::NameInfo>,
+    args: Vec<String>,
+) -> Result<(zx::Process, launch::ScopedJob, LoggerStream, LoggerStream), E>
+where
+    E: From<NamespaceError> + From<launch::LaunchError> + From<ComponentError>,
+{
+    let (client, loader) =
+        fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
+    component.loader_service(loader);
+    let executable_vmo = Some(component.executable_vmo()?);
+
+    Ok(launch::launch_process_with_separate_std_handles(launch::LaunchProcessArgs {
+        bin_path: &component.binary,
+        process_name: &component.name,
+        job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
+        ns: component.ns.clone(),
+        args: Some(args),
+        name_infos: Some(names),
+        environs: component.environ.clone(),
+        handle_infos: None,
+        loader_proxy_chan: Some(client.into_channel()),
+        executable_vmo,
+    })
+    .await?)
 }
 
 /// Convenience wrapper around [`launch::launch_process`].
@@ -762,8 +812,8 @@ mod tests {
                     enabled: false
                 },
                 TestCaseInfo { name: "SampleDisabled.DynamicSkip".to_owned(), enabled: true },
-                TestCaseInfo { name: "WriteToStdout.TestPass".to_owned(), enabled: true },
-                TestCaseInfo { name: "WriteToStdout.TestFail".to_owned(), enabled: true },
+                TestCaseInfo { name: "WriteToStd.TestPass".to_owned(), enabled: true },
+                TestCaseInfo { name: "WriteToStd.TestFail".to_owned(), enabled: true },
                 TestCaseInfo {
                     name: "Tests/SampleParameterizedTestFixture.Test/0".to_owned(),
                     enabled: true,
