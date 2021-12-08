@@ -67,25 +67,23 @@ zx_status_t InitStdinSocket() {
 }  // namespace
 
 int main(int argc, char** argv) {
-  // Appmgr can't connect to the logging service just yet. Fall back to stderr to not lose any logs
-  // in the meantime.
-  fx_logger_activate_fallback(fx_log_get_logger(), -1);
-
-  // Wire up standard streams. This sends all stdout and stderr to the debuglog.
-  // This is necessary, instead of using fuchsia.logger.LogSink, because we need
-  // to get appmgr logs before v1 components are running.
-  zx_status_t status = StdoutToDebuglog::Init();
+  zx_status_t status = InitStdinSocket();
   if (status != ZX_OK) {
     return status;
   }
 
-  status = InitStdinSocket();
+  // Wire up standard streams. This sends all stdout and stderr to the debuglog.
+  status = StdoutToDebuglog::Init();
   if (status != ZX_OK) {
     return status;
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto pa_directory_request = zx_take_startup_handle(PA_DIRECTORY_REQUEST);
+  // NOTE: This is now load-bearing as of
+  // https://fuchsia-review.googlesource.com/c/fuchsia/+/615184.
+  // We needed a way to test that we were properly connecting to LogSink.
+  FX_LOGS(INFO) << "Starting appmgr.";
 
   zx::channel svc_for_sys_server, svc_for_sys_client;
   status = zx::channel::create(0, &svc_for_sys_server, &svc_for_sys_client);

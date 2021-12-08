@@ -13,56 +13,6 @@
 
 namespace component {
 
-namespace {
-
-void SetUpSyslogOnce(const fuchsia::sys::internal::LogConnectionListenerPtr& listener) {
-  // No other component runs until Archivist is launched so the first time we have a listener it
-  // must be Archivist.
-  static bool syslog_configured = false;
-  if (syslog_configured)
-    return;
-  syslog_configured = true;
-
-  fuchsia::logger::LogSinkPtr log_sink;
-  fidl::InterfaceRequest<fuchsia::logger::LogSink> request = log_sink.NewRequest();
-  if (!request) {
-    FX_LOGS(WARNING) << "Failed to create a LogSink channel. Appmgr can't use syslog.";
-    return;
-  }
-
-  fuchsia::sys::internal::SourceIdentity identity;
-  identity.set_component_url("fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm");
-  identity.set_component_name("appmgr");
-  identity.set_realm_path({});
-  identity.set_instance_id(std::to_string(fsl::GetCurrentProcessKoid()));
-
-  listener->OnNewConnection({
-      .log_request = std::move(request),
-      .source_identity = std::move(identity),
-  });
-
-  zx::socket local, remote;
-  if (zx::socket::create(ZX_SOCKET_DATAGRAM, &local, &remote) != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to create a socket. Appmgr can't use syslog.";
-    return;
-  }
-  log_sink->Connect(std::move(remote));
-
-  const char* tag = "appmgr";
-  fx_logger_config_t config = {.min_severity = FX_LOG_INFO,
-                               .console_fd = -1,
-                               .log_service_channel = local.release(),
-                               .tags = &tag,
-                               .num_tags = 1};
-  if (fx_log_reconfigure(&config) != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to reconfigure syslog";
-    return;
-  }
-
-  FX_LOGS(INFO) << "Successfully set up syslog";
-}
-}  // namespace
-
 LogConnectorImpl::LogConnectorImpl(fxl::WeakPtr<LogConnectorImpl> parent, std::string realm_label)
     : parent_(std::move(parent)),
       realm_label_(realm_label),
@@ -86,7 +36,6 @@ void LogConnectorImpl::TakeLogConnectionListener(TakeLogConnectionListenerCallba
     (*on_ready_)();
     on_ready_.reset();
   }
-  SetUpSyslogOnce(consumer_);
 }
 
 void LogConnectorImpl::OnReady(fit::function<void()> on_ready) { on_ready_ = std::move(on_ready); }

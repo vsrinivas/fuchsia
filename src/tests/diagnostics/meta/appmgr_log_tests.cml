@@ -1,0 +1,11 @@
+{
+    include: [ "//src/sys/test_runners/inspect/default.shard.cml" ],
+    program: {
+        accessor: "ALL",
+        timeout_seconds: "60",
+        cases: [
+            // Appmgr has at least one INFO log attributed to it
+            "bootstrap/archivist:root/sources/core\\/appmgr/logs/info:number WHERE [a] a > 0",
+        ],
+    },
+}

@@ -29,6 +29,7 @@ group("tests") {
   #  if (!is_asan && !is_debug && !is_coverage) {
   deps = [
     ":appmgr-cpu-stats-tests",
+    ":appmgr-log-tests",
     ":archivist-feedback-health-tests",
     ":archivist-pipeline-metrics-tests",
     ":archivist-sampler-metrics-tests",
@@ -43,6 +44,21 @@ group("tests") {
   ]
 
   #  }
+}
+
+fuchsia_unittest_package("appmgr-log-tests") {
+  manifest = "meta/appmgr_log_tests.cml"
+
+  test_specs = {
+    environments = [
+      emu_env,
+      {
+        dimensions = {
+          device_type = "Astro"
+        }
+      },
+    ]
+  }
 }
 
 fuchsia_unittest_package("appmgr-cpu-stats-tests") {
