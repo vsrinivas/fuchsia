@@ -13,7 +13,7 @@ use {
     },
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
-    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    futures::{AsyncReadExt, StreamExt, TryFutureExt, TryStreamExt},
     std::{
         fs::{read_to_string, File},
         io::{Read, Write},
@@ -181,5 +181,27 @@ async fn app_builder_stdio_handle_as_socket() {
     assert_eq!(s, "going to stdout\n");
     s.clear();
     stderr.read_to_string(&mut s).unwrap();
+    assert_eq!(s, "going to stderr\n");
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn app_wait_with_output_stdio_taken() {
+    let stdio_writer =
+        AppBuilder::new(STDIO_WRITER_CMX).stdout(Stdio::MakePipe).stderr(Stdio::MakePipe);
+
+    let launcher = launcher().expect("get launcher");
+    let mut app = stdio_writer.spawn(&launcher).unwrap();
+    let mut stdout = app.take_stdout().unwrap();
+    let mut stderr = app.take_stderr().unwrap();
+    let output = app.wait_with_output().await.unwrap();
+    assert_eq!(output.stdout, vec![]);
+    assert_eq!(output.stderr, vec![]);
+    assert!(output.exit_status.success(), "status: {:?}", output.exit_status);
+
+    let mut s = String::new();
+    stdout.read_to_string(&mut s).await.unwrap();
+    assert_eq!(s, "going to stdout\n");
+    s.clear();
+    stderr.read_to_string(&mut s).await.unwrap();
     assert_eq!(s, "going to stderr\n");
 }

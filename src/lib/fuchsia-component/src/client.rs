@@ -503,7 +503,6 @@ pub struct App {
     // Keeps the component alive until `App` is dropped.
     controller: ComponentControllerProxy,
 
-    //TODO pub accessors to take stdout/stderr in wrapper types that implement AsyncRead.
     stdout: Option<fasync::Socket>,
     stderr: Option<fasync::Socket>,
 }
@@ -583,6 +582,7 @@ impl App {
     }
 
     /// Wait for the component to terminate and return its exit status, stdout, and stderr.
+    /// If stdout/stderr was taken out or set to `Stdio::Inherit`, its output will be empty.
     pub fn wait_with_output(mut self) -> impl Future<Output = Result<Output, Error>> {
         let drain = |pipe: Option<fasync::Socket>| match pipe {
             None => future::ready(Ok(vec![])).left_future(),
@@ -591,6 +591,16 @@ impl App {
 
         future::try_join3(self.wait(), drain(self.stdout), drain(self.stderr))
             .map_ok(|(exit_status, stdout, stderr)| Output { exit_status, stdout, stderr })
+    }
+
+    /// Takes the stdout socket.
+    pub fn take_stdout(&mut self) -> Option<fasync::Socket> {
+        self.stdout.take()
+    }
+
+    /// Takes the stderr socket.
+    pub fn take_stderr(&mut self) -> Option<fasync::Socket> {
+        self.stderr.take()
     }
 }
 
