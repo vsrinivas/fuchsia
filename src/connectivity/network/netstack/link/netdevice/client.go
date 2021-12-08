@@ -34,7 +34,6 @@ import (
 // #include <zircon/device/network.h>
 import "C"
 
-const descriptorLength uint64 = C.sizeof_buffer_descriptor_t
 const tag = "netdevice"
 const emptyLinkAddress tcpip.LinkAddress = ""
 
@@ -48,6 +47,9 @@ const (
 	PortModeEthernet
 	PortModeIp
 )
+
+const DescriptorVersion uint8 = C.NETWORK_DEVICE_DESCRIPTOR_VERSION
+const DescriptorLength uint64 = C.sizeof_buffer_descriptor_t
 
 // Client is a client for a network device that implements the
 // fuchsia.hardware.network.Device protocol.
@@ -763,7 +765,7 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 	var sessionInfo network.SessionInfo
 	sessionInfo.SetDescriptors(descVmo)
 	sessionInfo.SetData(dataVmo)
-	sessionInfo.SetDescriptorVersion(C.NETWORK_DEVICE_DESCRIPTOR_VERSION)
+	sessionInfo.SetDescriptorVersion(DescriptorVersion)
 	sessionInfo.SetDescriptorLength(uint8(config.DescriptorLength / 8))
 	sessionInfo.SetDescriptorCount(config.RxDescriptorCount + config.TxDescriptorCount)
 	sessionInfo.SetOptions(config.Options)

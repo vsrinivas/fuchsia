@@ -142,6 +142,7 @@ go_library("lib") {
     "fuchsia_net_dhcp.go",
     "fuchsia_net_interfaces.go",
     "fuchsia_net_interfaces_admin.go",
+    "fuchsia_net_interfaces_admin_test.go",
     "fuchsia_net_interfaces_test.go",
     "fuchsia_net_name_dns_server_watcher.go",
     "fuchsia_net_name_dns_server_watcher_test.go",

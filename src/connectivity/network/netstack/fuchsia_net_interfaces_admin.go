@@ -628,14 +628,16 @@ func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device netw
 	impl := &interfacesAdminDeviceControlImpl{
 		ns:           i.ns,
 		deviceClient: client,
-		cancelServe:  cancel,
 	}
 
 	// Running the device client and serving the FIDL are tied to the same
 	// context because their lifecycles are linked.
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		impl.deviceClient.Run(ctx)
-		impl.cancelServe()
+		cancel()
 	}()
 
 	go func() {
@@ -644,12 +646,13 @@ func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device netw
 				_ = syslog.WarnTf(deviceControlName, "%s", err)
 			},
 		})
-
 		if !impl.detached {
-			// Device lifecycle is tied to channel lifetime.
-			if err := impl.deviceClient.Close(); err != nil {
-				_ = syslog.ErrorTf(deviceControlName, "deviceClient.Close() = %s", err)
-			}
+			cancel()
+		}
+		// Wait for device goroutine to finish before closing the device.
+		wg.Wait()
+		if err := impl.deviceClient.Close(); err != nil {
+			_ = syslog.ErrorTf(deviceControlName, "deviceClient.Close() = %s", err)
 		}
 	}()
 
@@ -661,7 +664,6 @@ var _ admin.DeviceControlWithCtx = (*interfacesAdminDeviceControlImpl)(nil)
 type interfacesAdminDeviceControlImpl struct {
 	ns           *Netstack
 	deviceClient *netdevice.Client
-	cancelServe  context.CancelFunc
 	detached     bool
 }
 

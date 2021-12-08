@@ -40,7 +40,7 @@ func TestMakeSessionConfig(t *testing.T) {
 			expectedConfig: SessionConfig{
 				BufferLength:      DefaultBufferLength,
 				BufferStride:      DefaultBufferLength,
-				DescriptorLength:  descriptorLength,
+				DescriptorLength:  DescriptorLength,
 				TxHeaderLength:    baseInfo.MinTxBufferHead,
 				TxTailLength:      baseInfo.MinTxBufferTail,
 				RxDescriptorCount: baseInfo.TxDepth,
@@ -56,7 +56,7 @@ func TestMakeSessionConfig(t *testing.T) {
 			expectedConfig: SessionConfig{
 				BufferLength:      DefaultBufferLength / 4,
 				BufferStride:      DefaultBufferLength / 4,
-				DescriptorLength:  descriptorLength,
+				DescriptorLength:  DescriptorLength,
 				TxHeaderLength:    baseInfo.MinTxBufferHead,
 				TxTailLength:      baseInfo.MinTxBufferTail,
 				RxDescriptorCount: baseInfo.TxDepth,
@@ -72,7 +72,7 @@ func TestMakeSessionConfig(t *testing.T) {
 			expectedConfig: SessionConfig{
 				BufferLength:      DefaultBufferLength * 2,
 				BufferStride:      DefaultBufferLength * 2,
-				DescriptorLength:  descriptorLength,
+				DescriptorLength:  DescriptorLength,
 				TxHeaderLength:    baseInfo.MinTxBufferHead,
 				TxTailLength:      baseInfo.MinTxBufferTail,
 				RxDescriptorCount: baseInfo.TxDepth,
@@ -89,7 +89,7 @@ func TestMakeSessionConfig(t *testing.T) {
 			expectedConfig: SessionConfig{
 				BufferLength:      DefaultBufferLength + 112,
 				BufferStride:      DefaultBufferLength + 128,
-				DescriptorLength:  descriptorLength,
+				DescriptorLength:  DescriptorLength,
 				TxHeaderLength:    baseInfo.MinTxBufferHead,
 				TxTailLength:      baseInfo.MinTxBufferTail,
 				RxDescriptorCount: baseInfo.TxDepth,
@@ -107,7 +107,7 @@ func TestMakeSessionConfig(t *testing.T) {
 			expectedConfig: SessionConfig{
 				BufferLength:      1500,
 				BufferStride:      1504,
-				DescriptorLength:  descriptorLength,
+				DescriptorLength:  DescriptorLength,
 				TxHeaderLength:    baseInfo.MinTxBufferHead,
 				TxTailLength:      baseInfo.MinTxBufferTail,
 				RxDescriptorCount: baseInfo.TxDepth,

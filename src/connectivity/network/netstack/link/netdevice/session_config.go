@@ -58,7 +58,7 @@ func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo network.Device
 	config := SessionConfig{
 		BufferLength:      bufferLength,
 		BufferStride:      bufferLength,
-		DescriptorLength:  descriptorLength,
+		DescriptorLength:  DescriptorLength,
 		TxHeaderLength:    deviceInfo.MinTxBufferHead,
 		TxTailLength:      deviceInfo.MinTxBufferTail,
 		RxDescriptorCount: deviceInfo.RxDepth,
