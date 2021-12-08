@@ -13,41 +13,14 @@ use net_declare::{
 };
 use net_types::ip::IpAddress as _;
 use netemul::RealmUdpSocket as _;
-use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
+use netstack_testing_common::{
+    interfaces,
+    realms::{Netstack2, TestSandboxExt as _},
+};
 use netstack_testing_macros::variants_test;
 use std::collections::{HashMap, HashSet};
 use std::convert::TryInto as _;
 use test_case::test_case;
-
-async fn add_address(
-    control: &fidl_fuchsia_net_interfaces_ext::admin::Control,
-    mut address: fidl_fuchsia_net::InterfaceAddress,
-    address_parameters: fidl_fuchsia_net_interfaces_admin::AddressParameters,
-) -> std::result::Result<
-    fidl_fuchsia_net_interfaces_admin::AddressStateProviderProxy,
-    fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError,
-> {
-    let (address_state_provider, server) = fidl::endpoints::create_proxy::<
-        fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
-    >()
-    .expect("create proxy");
-    let () = control
-        .add_address(&mut address, address_parameters, server)
-        .expect("Control.AddAddress FIDL error");
-
-    {
-        let state_stream = fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
-            address_state_provider.clone(),
-        );
-        futures::pin_mut!(state_stream);
-        let () = fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
-            &mut state_stream,
-            fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
-        )
-        .await?;
-    }
-    Ok(address_state_provider)
-}
 
 async fn add_subnet_route(
     realm: &netemul::TestRealm<'_>,
@@ -183,7 +156,7 @@ async fn add_address_errors() {
         };
         async move {
             matches::assert_matches!(
-                add_address(&control, addr.clone(), VALID_ADDRESS_PARAMETERS).await,
+                interfaces::add_address_wait_assigned(&control, addr.clone(), VALID_ADDRESS_PARAMETERS).await,
                 Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
                     fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::AlreadyAssigned
                 )));
@@ -202,7 +175,12 @@ async fn add_address_errors() {
                 prefix_len: 33,
             });
         matches::assert_matches!(
-            add_address(&control, invalid_address, VALID_ADDRESS_PARAMETERS).await,
+            interfaces::add_address_wait_assigned(
+                &control,
+                invalid_address,
+                VALID_ADDRESS_PARAMETERS
+            )
+            .await,
             Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
                 fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::Invalid
             ))
@@ -228,7 +206,8 @@ async fn add_address_errors() {
             ..fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY
         };
         matches::assert_matches!(
-            add_address(&control, fidl_if_addr!("fe80::1"), parameters,).await,
+            interfaces::add_address_wait_assigned(&control, fidl_if_addr!("fe80::1"), parameters,)
+                .await,
             Err(fidl_fuchsia_net_interfaces_ext::admin::AddressStateProviderError::AddressRemoved(
                 fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::Invalid
             ))
@@ -240,10 +219,13 @@ async fn add_address_errors() {
     // tests that actually test the effects of updating an address' properties
     // once properly supported.
     {
-        let address_state_provider =
-            add_address(&control, fidl_if_addr!("fe80::1"), VALID_ADDRESS_PARAMETERS)
-                .await
-                .expect("add address");
+        let address_state_provider = interfaces::add_address_wait_assigned(
+            &control,
+            fidl_if_addr!("fe80::1"),
+            VALID_ADDRESS_PARAMETERS,
+        )
+        .await
+        .expect("add address");
         matches::assert_matches!(
             address_state_provider
                 .update_address_properties(fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY)
@@ -290,9 +272,10 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
     {
         let mut address = fidl_if_addr!("3.3.3.3/32");
 
-        let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
-            .await
-            .expect("add address failed unexpectedly");
+        let address_state_provider =
+            interfaces::add_address_wait_assigned(&control, address, VALID_ADDRESS_PARAMETERS)
+                .await
+                .expect("add address failed unexpectedly");
 
         let did_remove = control
             .remove_address(&mut address)
@@ -316,9 +299,10 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
     {
         let address = fidl_if_addr!("4.4.4.4/32");
 
-        let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
-            .await
-            .expect("add address failed unexpectedly");
+        let address_state_provider =
+            interfaces::add_address_wait_assigned(&control, address, VALID_ADDRESS_PARAMETERS)
+                .await
+                .expect("add address failed unexpectedly");
 
         let () = stack
             .del_ethernet_interface(id)
@@ -451,9 +435,10 @@ async fn add_address_success() {
         };
         let address = fidl_fuchsia_net::InterfaceAddress::Ipv4(v4_with_prefix);
 
-        let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
-            .await
-            .expect("add address failed unexpectedly");
+        let address_state_provider =
+            interfaces::add_address_wait_assigned(&control, address, VALID_ADDRESS_PARAMETERS)
+                .await
+                .expect("add address failed unexpectedly");
 
         // Ensure that no route to the subnet was added as a result of adding the address.
         assert!(netstack
@@ -534,10 +519,13 @@ async fn add_address_success() {
 
         // Must hold onto AddressStateProvider since dropping the channel
         // removes the address.
-        let _address_state_provider =
-            add_address(&control, interface_addr, VALID_ADDRESS_PARAMETERS)
-                .await
-                .expect("add address failed unexpectedly");
+        let _address_state_provider = interfaces::add_address_wait_assigned(
+            &control,
+            interface_addr,
+            VALID_ADDRESS_PARAMETERS,
+        )
+        .await
+        .expect("add address failed unexpectedly");
 
         let mut properties = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(*id);
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
@@ -574,9 +562,10 @@ async fn add_address_success() {
             prefix_len: addr.prefix_len,
         };
 
-        let address_state_provider = add_address(&control, address, VALID_ADDRESS_PARAMETERS)
-            .await
-            .expect("add address failed unexpectedly");
+        let address_state_provider =
+            interfaces::add_address_wait_assigned(&control, address, VALID_ADDRESS_PARAMETERS)
+                .await
+                .expect("add address failed unexpectedly");
 
         let () = address_state_provider
             .detach()
@@ -1229,7 +1218,7 @@ async fn installer_creates_datapath() {
                         .expect("failed to enable interface");
                 }
 
-                let address_state_provider = add_address(
+                let address_state_provider = interfaces::add_address_wait_assigned(
                     &control,
                     fidl_fuchsia_net::InterfaceAddress::Ipv4(ip),
                     fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,

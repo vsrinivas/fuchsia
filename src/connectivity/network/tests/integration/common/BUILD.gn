@@ -54,6 +54,7 @@ rustc_library("netstack_testing_common") {
   ]
   sources = [
     "src/constants.rs",
+    "src/interfaces.rs",
     "src/lib.rs",
     "src/ping.rs",
     "src/realms.rs",

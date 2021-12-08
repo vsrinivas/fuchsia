@@ -14,12 +14,10 @@ use fuchsia_zircon as zx;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
-use netstack_testing_common::realms::{
-    constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt as _,
-};
 use netstack_testing_common::{
-    get_component_moniker, wait_for_interface_up_and_address, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
-    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    get_component_moniker, interfaces,
+    realms::{constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt as _},
+    ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 use packet::serialize::Serializer as _;
@@ -689,8 +687,8 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
         .expect("connect to protocol");
 
     let ((), ()) = futures::future::join(
-        wait_for_interface_up_and_address(&interface_state, iface1.id(), &iface1_addr),
-        wait_for_interface_up_and_address(&interface_state, iface2.id(), &iface2_addr),
+        interfaces::wait_for_interface_up_and_address(&interface_state, iface1.id(), &iface1_addr),
+        interfaces::wait_for_interface_up_and_address(&interface_state, iface2.id(), &iface2_addr),
     )
     .await;
 

@@ -13,7 +13,7 @@ use futures::{SinkExt as _, StreamExt as _, TryFutureExt as _};
 use matches::assert_matches;
 use net_declare::{fidl_subnet, std_socket_addr_v4};
 use netstack_testing_common::{
-    ping as ping_helper,
+    interfaces, ping as ping_helper,
     realms::{Netstack2, TestSandboxExt as _},
     ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
 };
@@ -259,40 +259,28 @@ async fn test<E: netemul::Endpoint>(name: &str, sub_name: &str, steps: &[Step]) 
                 let () = switch_debug
                     .get_admin(u64::from(bridge_id), server_end)
                     .expect("FIDL error initializing bridge interface control");
-                let (address_state_provider, server_end) = fidl::endpoints::create_proxy::<
-                    fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
-                >()
-                .expect("failed to create fuchsia.net.interfaces.admin/AddressStateProvider proxy");
-                let () = switch_interface_control
-                    .add_address(
-                        &mut fidl_fuchsia_net::InterfaceAddress::Ipv4(
-                            fidl_fuchsia_net::Ipv4AddressWithPrefix {
-                                addr: fidl_fuchsia_net::Ipv4Address {
-                                    addr: [
-                                        192,
-                                        168,
-                                        254,
-                                        u8::try_from(bridge_id)
-                                            .expect("bridge interface ID does not fit into u8"),
-                                    ],
-                                },
-                                prefix_len: 16,
+                let switch_interface_control =
+                    fidl_fuchsia_net_interfaces_ext::admin::Control::new(switch_interface_control);
+                let address_state_provider = interfaces::add_address_wait_assigned(
+                    &switch_interface_control,
+                    fidl_fuchsia_net::InterfaceAddress::Ipv4(
+                        fidl_fuchsia_net::Ipv4AddressWithPrefix {
+                            addr: fidl_fuchsia_net::Ipv4Address {
+                                addr: [
+                                    192,
+                                    168,
+                                    254,
+                                    u8::try_from(bridge_id)
+                                        .expect("bridge interface ID does not fit into u8"),
+                                ],
                             },
-                        ),
-                        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
-                        server_end,
-                    )
-                    .expect("FIDL error adding address to bridge interface");
-                let state_stream = fidl_fuchsia_net_interfaces_ext::admin::assignment_state_stream(
-                    address_state_provider.clone(),
-                );
-                futures::pin_mut!(state_stream);
-                let () = fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
-                    &mut state_stream,
-                    fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
+                            prefix_len: 16,
+                        },
+                    ),
+                    fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY,
                 )
                 .await
-                .expect("failed to wait for bridge interface address to be assigned");
+                .expect("add IPv4 address to bridge failed");
                 let () = address_state_provider
                     .detach()
                     .expect("failed to detach from bridge interface address state provider");

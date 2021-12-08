@@ -24,6 +24,7 @@ use net_types::{ethernet::Mac, ip as net_types_ip, Witness as _};
 use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
 use netstack_testing_common::{
     constants::{eth as eth_consts, ipv6 as ipv6_consts},
+    interfaces,
     realms::{KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _},
     wait_for_component_stopped, write_ndp_message, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
@@ -296,7 +297,7 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
     let wait_for_netmgr =
         wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
     futures::pin_mut!(wait_for_netmgr);
-    let _: (u64, String) = netstack_testing_common::wait_for_non_loopback_interface_up(
+    let _: (u64, String) = interfaces::wait_for_non_loopback_interface_up(
         &interface_state,
         &mut wait_for_netmgr,
         None,

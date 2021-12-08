@@ -7,24 +7,21 @@
 //! Provides utilities for Netstack integration tests.
 
 pub mod constants;
+pub mod interfaces;
 pub mod ping;
 #[macro_use]
 pub mod realms;
 
-use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
-use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netstack as fnetstack;
 use fidl_fuchsia_sys2 as fsys2;
-use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
+use fuchsia_async::{self as fasync, DurationExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
-use futures::future::{FusedFuture, Future, FutureExt as _};
 use futures::stream::{Stream, StreamExt as _, TryStreamExt as _};
-use futures::TryFutureExt as _;
 use net_types::ethernet::Mac;
 use net_types::ip as net_types_ip;
 use net_types::Witness as _;
@@ -144,88 +141,6 @@ pub async fn get_child_component_event_matcher(
     let moniker_for_match =
         format!("{}/{}/{}", NETEMUL_SANDBOX_MONIKER, realm_moniker, component_moniker);
     Ok(component_events::matcher::EventMatcher::ok().moniker_regex(moniker_for_match))
-}
-
-/// Waits for a non-loopback interface to come up with an ID not in `exclude_ids`.
-///
-/// Useful when waiting for an interface to be discovered and brought up by a
-/// network manager.
-///
-/// Returns the interface's ID and name.
-pub async fn wait_for_non_loopback_interface_up<
-    F: Unpin + FusedFuture + Future<Output = Result<component_events::events::Stopped>>,
->(
-    interface_state: &fnet_interfaces::StateProxy,
-    mut wait_for_netmgr: &mut F,
-    exclude_ids: Option<&HashSet<u64>>,
-    timeout: zx::Duration,
-) -> Result<(u64, String)> {
-    let mut if_map = HashMap::new();
-    let wait_for_interface = fidl_fuchsia_net_interfaces_ext::wait_interface(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(interface_state)?,
-        &mut if_map,
-        |if_map| {
-            if_map.iter().find_map(
-                |(
-                    id,
-                    fidl_fuchsia_net_interfaces_ext::Properties {
-                        name, device_class, online, ..
-                    },
-                )| {
-                    (*device_class
-                        != fnet_interfaces::DeviceClass::Loopback(fnet_interfaces::Empty {})
-                        && *online
-                        && exclude_ids.map_or(true, |ids| !ids.contains(id)))
-                    .then(|| (*id, name.clone()))
-                },
-            )
-        },
-    )
-    .map_err(anyhow::Error::from)
-    .on_timeout(timeout.after_now(), || Err(anyhow::anyhow!("timed out")))
-    .map(|r| r.context("failed to wait for non-loopback interface up"))
-    .fuse();
-    fuchsia_async::pin_mut!(wait_for_interface);
-    futures::select! {
-        wait_for_interface_res = wait_for_interface => {
-            wait_for_interface_res
-        }
-        stopped_event = wait_for_netmgr => {
-            Err(anyhow::anyhow!("the network manager unexpectedly stopped with event = {:?}", stopped_event))
-        }
-    }
-}
-
-/// Waits for an interface to come up with the specified address.
-pub async fn wait_for_interface_up_and_address(
-    state: &fidl_fuchsia_net_interfaces::StateProxy,
-    id: u64,
-    want_addr: &fidl_fuchsia_net::Subnet,
-) {
-    fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&state)
-            .expect("failed to get interfaces event stream"),
-        &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
-        |fidl_fuchsia_net_interfaces_ext::Properties { online, addresses, .. }| {
-            if !online {
-                return None;
-            }
-
-            // If configuring static addresses, make sure the addresses are
-            // present (this ensures that DAD has resolved for IPv6 addresses).
-            if !addresses.iter().any(
-                |fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
-                    addr == want_addr
-                },
-            ) {
-                return None;
-            }
-
-            Some(())
-        },
-    )
-    .await
-    .expect("failed waiting for interface to be up and configured")
 }
 
 /// The name of the netemul sandbox component, which is the parent component of

@@ -24,8 +24,7 @@ use netstack_testing_common::realms::{
     KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _,
 };
 use netstack_testing_common::{
-    try_all, try_any, wait_for_component_stopped, wait_for_non_loopback_interface_up,
-    ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    interfaces, try_all, try_any, wait_for_component_stopped, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 
@@ -63,7 +62,7 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
     let wait_for_netmgr =
         wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
     futures::pin_mut!(wait_for_netmgr);
-    let _: (u64, String) = wait_for_non_loopback_interface_up(
+    let _: (u64, String) = interfaces::wait_for_non_loopback_interface_up(
         &interface_state,
         &mut wait_for_netmgr,
         None,
