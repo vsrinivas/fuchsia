@@ -405,10 +405,18 @@ pub fn variants_test(attrs: TokenStream, input: TokenStream) -> TokenStream {
             },
             Variant {
                 trait_bound: str_to_syn_path("Manager"),
-                implementations: &[Implementation {
-                    type_name: str_to_syn_path("netstack_testing_common::realms::NetCfg"),
-                    suffix: "netcfg",
-                }],
+                implementations: &[
+                    Implementation {
+                        type_name: str_to_syn_path("netstack_testing_common::realms::NetCfgBasic"),
+                        suffix: "netcfg_basic",
+                    },
+                    Implementation {
+                        type_name: str_to_syn_path(
+                            "netstack_testing_common::realms::NetCfgAdvanced",
+                        ),
+                        suffix: "netcfg_advanced",
+                    },
+                ],
             },
         ],
     )

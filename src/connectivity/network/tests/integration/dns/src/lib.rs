@@ -24,7 +24,7 @@ use net_types::{ethernet::Mac, ip as net_types_ip, Witness as _};
 use netemul::{RealmTcpListener as _, RealmUdpSocket as _};
 use netstack_testing_common::{
     constants::{eth as eth_consts, ipv6 as ipv6_consts},
-    realms::{constants, KnownServiceProvider, Manager, NetCfg, Netstack2, TestSandboxExt as _},
+    realms::{KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _},
     wait_for_component_stopped, write_ndp_message, Result, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
@@ -236,7 +236,8 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
         .connect_to_protocol::<net_name::LookupAdminMarker>()
         .expect("failed to connect to LookupAdmin");
     let wait_for_netmgr =
-        wait_for_component_stopped(&client_realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+        wait_for_component_stopped(&client_realm, M::MANAGEMENT_AGENT.get_component_name(), None)
+            .fuse();
     futures::pin_mut!(wait_for_netmgr);
     poll_lookup_admin(&lookup_admin, &expect, &mut wait_for_netmgr, POLL_WAIT, RETRY_COUNT).await
 }
@@ -244,7 +245,7 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
 /// Tests that DHCPv6 exposes DNS servers discovered dynamically and the network manager
 /// configures the Lookup service.
 #[variants_test]
-async fn discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) {
+async fn discovered_dhcpv6_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
     /// DHCPv6 server IP.
     const DHCPV6_SERVER: net_types_ip::Ipv6Addr =
         net_types_ip::Ipv6Addr::from_bytes(std_ip_v6!("fe80::1").octets());
@@ -270,7 +271,7 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) {
                 //
                 // The network manager should listen for DNS server events from the DHCPv6 client
                 // and configure the DNS resolver accordingly.
-                KnownServiceProvider::Manager(NetCfg::MANAGEMENT_AGENT),
+                KnownServiceProvider::Manager(M::MANAGEMENT_AGENT),
                 KnownServiceProvider::DhcpServer { persistent: false },
                 KnownServiceProvider::Dhcpv6Client,
                 KnownServiceProvider::DnsResolver,
@@ -293,7 +294,7 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint>(name: &str) {
         .connect_to_protocol::<net_interfaces::StateMarker>()
         .expect("connect to fuchsia.net.interfaces/State service");
     let wait_for_netmgr =
-        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+        wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
     futures::pin_mut!(wait_for_netmgr);
     let _: (u64, String) = netstack_testing_common::wait_for_non_loopback_interface_up(
         &interface_state,

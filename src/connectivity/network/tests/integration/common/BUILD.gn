@@ -22,6 +22,7 @@ rustc_library("netstack_testing_common") {
     "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
     "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
     "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet-rustc",

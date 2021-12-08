@@ -18,6 +18,7 @@ use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_net_routes as fnet_routes;
 use fidl_fuchsia_net_stack as fnet_stack;
 use fidl_fuchsia_net_test_realm as fntr;
+use fidl_fuchsia_net_virtualization as fnet_virtualization;
 use fidl_fuchsia_netemul as fnetemul;
 use fidl_fuchsia_netstack as fnetstack;
 use fidl_fuchsia_posix_socket as fposix_socket;
@@ -71,31 +72,61 @@ impl NetstackVersion {
     }
 }
 
+/// The NetCfg version.
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub enum NetCfgVersion {
+    /// The basic NetCfg version.
+    Basic,
+    /// The advanced NetCfg version.
+    Advanced,
+}
+
 /// The network manager to use in a [`KnownServiceProvider::Manager`].
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
-#[allow(missing_docs)]
 pub enum ManagementAgent {
-    NetCfg,
+    /// A version of netcfg.
+    NetCfg(NetCfgVersion),
 }
 
 impl ManagementAgent {
+    /// Gets the component name for this management agent.
+    pub fn get_component_name(&self) -> &'static str {
+        match self {
+            Self::NetCfg(NetCfgVersion::Basic) => constants::netcfg::basic::COMPONENT_NAME,
+            Self::NetCfg(NetCfgVersion::Advanced) => constants::netcfg::advanced::COMPONENT_NAME,
+        }
+    }
+
     /// Gets the URL for this network manager component.
     pub fn get_url(&self) -> &'static str {
         match self {
-            ManagementAgent::NetCfg => "#meta/netcfg-basic.cm",
+            Self::NetCfg(NetCfgVersion::Basic) => constants::netcfg::basic::COMPONENT_URL,
+            Self::NetCfg(NetCfgVersion::Advanced) => constants::netcfg::advanced::COMPONENT_URL,
         }
     }
 
     /// Default arguments that should be passed to the component when run in a
     /// test realm.
     pub fn get_program_args(&self) -> &[&'static str] {
-        &[
-            "--min-severity",
-            "DEBUG",
-            "--allow-virtual-devices",
-            "--config-data",
-            "/pkg/netcfg/empty.json",
-        ]
+        match self {
+            Self::NetCfg(NetCfgVersion::Basic) | Self::NetCfg(NetCfgVersion::Advanced) => &[
+                "--min-severity",
+                "DEBUG",
+                "--allow-virtual-devices",
+                "--config-data",
+                "/pkg/netcfg/empty.json",
+            ],
+        }
+    }
+
+    /// Gets the services exposed by this management agent.
+    pub fn get_services(&self) -> &[&'static str] {
+        match self {
+            Self::NetCfg(NetCfgVersion::Basic) => &[],
+            Self::NetCfg(NetCfgVersion::Advanced) => {
+                &[fnet_virtualization::ControlMarker::PROTOCOL_NAME]
+            }
+        }
     }
 }
 
@@ -121,7 +152,14 @@ pub mod constants {
         pub const COMPONENT_NAME: &str = "netstack";
     }
     pub mod netcfg {
-        pub const COMPONENT_NAME: &str = "netcfg";
+        pub mod basic {
+            pub const COMPONENT_NAME: &str = "netcfg";
+            pub const COMPONENT_URL: &str = "#meta/netcfg-basic.cm";
+        }
+        pub mod advanced {
+            pub const COMPONENT_NAME: &str = "netcfg-advanced";
+            pub const COMPONENT_URL: &str = "#meta/netcfg-advanced.cm";
+        }
         // These capability names and filepaths should match the devfs capabilities used by netcfg
         // in its component manifest, i.e. netcfg.cml.
         pub const DEV_CLASS_ETHERNET: &str = "dev-class-ethernet";
@@ -184,10 +222,17 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                 ..fnetemul::ChildDef::EMPTY
             },
             KnownServiceProvider::Manager(management_agent) => fnetemul::ChildDef {
-                name: Some(constants::netcfg::COMPONENT_NAME.to_string()),
+                name: Some(management_agent.get_component_name().to_string()),
                 url: Some(management_agent.get_url().to_string()),
                 program_args: Some(
                     management_agent.get_program_args().iter().cloned().map(Into::into).collect(),
+                ),
+                exposes: Some(
+                    management_agent
+                        .get_services()
+                        .iter()
+                        .map(|service| service.to_string())
+                        .collect(),
                 ),
                 uses: Some(fnetemul::ChildUses::Capabilities(vec![
                     fnetemul::Capability::LogSink(fnetemul::Empty {}),
@@ -395,12 +440,21 @@ pub trait Manager: Copy + Clone {
     const MANAGEMENT_AGENT: ManagementAgent;
 }
 
-/// Uninstantiable type that represents NetCfg's implementation of a network manager.
+/// Uninstantiable type that represents netcfg_basic's implementation of a network manager.
 #[derive(Copy, Clone)]
-pub enum NetCfg {}
+pub enum NetCfgBasic {}
 
-impl Manager for NetCfg {
-    const MANAGEMENT_AGENT: ManagementAgent = ManagementAgent::NetCfg;
+impl Manager for NetCfgBasic {
+    const MANAGEMENT_AGENT: ManagementAgent = ManagementAgent::NetCfg(NetCfgVersion::Basic);
+}
+
+/// Uninstantiable type that represents netcfg_advanced's implementation of a
+/// network manager.
+#[derive(Copy, Clone)]
+pub enum NetCfgAdvanced {}
+
+impl Manager for NetCfgAdvanced {
+    const MANAGEMENT_AGENT: ManagementAgent = ManagementAgent::NetCfg(NetCfgVersion::Advanced);
 }
 
 /// Extensions to `netemul::TestSandbox`.

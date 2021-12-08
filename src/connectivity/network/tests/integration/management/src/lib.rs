@@ -21,7 +21,7 @@ use futures::stream::{self, StreamExt as _};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
 use netstack_testing_common::realms::{
-    constants, KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _,
+    KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _,
 };
 use netstack_testing_common::{
     try_all, try_any, wait_for_component_stopped, wait_for_non_loopback_interface_up,
@@ -61,7 +61,7 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
         .connect_to_protocol::<net_interfaces::StateMarker>()
         .expect("connect to fuchsia.net.interfaces/State service");
     let wait_for_netmgr =
-        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+        wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
     futures::pin_mut!(wait_for_netmgr);
     let _: (u64, String) = wait_for_non_loopback_interface_up(
         &interface_state,
@@ -95,7 +95,7 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         .expect("create netstack realm");
 
     let wait_for_netmgr =
-        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None);
+        wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None);
 
     let netstack = realm
         .connect_to_protocol::<netstack::NetstackMarker>()
@@ -471,7 +471,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         )
         .expect("create netstack realm");
     let wait_for_netmgr =
-        wait_for_component_stopped(&realm, constants::netcfg::COMPONENT_NAME, None).fuse();
+        wait_for_component_stopped(&realm, M::MANAGEMENT_AGENT.get_component_name(), None).fuse();
     futures::pin_mut!(wait_for_netmgr);
 
     // Add a WLAN AP, make sure the DHCP server gets configured and starts or stops when the
@@ -524,7 +524,7 @@ async fn observes_stop_events<M: Manager>(name: &str) {
 
     let event_matcher = netstack_testing_common::get_child_component_event_matcher(
         &realm,
-        constants::netcfg::COMPONENT_NAME,
+        M::MANAGEMENT_AGENT.get_component_name(),
     )
     .await
     .expect("get child moniker");
