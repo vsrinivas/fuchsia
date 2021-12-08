@@ -26,4 +26,7 @@ pub struct DriverListCommand {
     /// only list loaded drivers
     #[argh(switch, long = "loaded")]
     pub loaded: bool,
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
 }

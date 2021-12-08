@@ -7,16 +7,17 @@ use {
     ffx_core::ffx_plugin,
     ffx_driver::{get_device_info, get_driver_info},
     ffx_driver_list_args::DriverListCommand,
-    fidl_fuchsia_driver_development::{BindRulesBytecode, DriverDevelopmentProxy},
+    fidl_fuchsia_driver_development::BindRulesBytecode,
     futures::join,
     std::collections::HashSet,
 };
 
-#[ffx_plugin(
-    "driver_enabled",
-    DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
-)]
-pub async fn list(service: DriverDevelopmentProxy, cmd: DriverListCommand) -> Result<()> {
+#[ffx_plugin()]
+pub async fn list(
+    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
+    cmd: DriverListCommand,
+) -> Result<()> {
+    let service = ffx_driver::get_development_proxy(remote_control, cmd.select).await?;
     let empty: [String; 0] = [];
     let driver_info = get_driver_info(&service, &empty);
 
