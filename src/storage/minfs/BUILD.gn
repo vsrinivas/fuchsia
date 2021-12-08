@@ -54,8 +54,6 @@ static_library("minfs") {
     "resizeable_array_buffer.h",
     "resizeable_buffer.h",
     "resizeable_vmo_buffer.h",
-    "space_dumper.cc",
-    "space_dumper.h",
     "superblock.h",
     "transaction_limits.cc",
     "unowned_vmo_buffer.h",

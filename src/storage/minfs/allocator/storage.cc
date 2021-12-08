@@ -12,7 +12,6 @@
 #include "src/lib/storage/vfs/cpp/trace.h"
 #include "src/storage/minfs/allocator/allocator.h"
 #include "src/storage/minfs/format.h"
-#include "src/storage/minfs/space_dumper.h"
 
 namespace minfs {
 
@@ -70,14 +69,8 @@ zx_status_t PersistentStorage::Extend(PendingWork* write_transaction, WriteData 
 
   zx_status_t status = device_->VolumeExtend(request.offset, request.length);
   if (status != ZX_OK) {
-    if (status != ZX_ERR_NO_SPACE) {
-      FX_LOGS(ERROR) << "PersistentStorage::Extend failed to grow (on disk): " << status;
-    } else {
-      FX_LOGS(WARNING) << "The volume has no space to extend from " << data_slices << " slices to "
-                       << data_slices_new << " slices";
-      // TODO(b/198638128) REMOVE THIS TEST CODE WHEN ISSUE IS FOUND.
-      SpaceDumper::DumpFilesystem();
-    }
+    FX_LOGS(WARNING) << "Failed to extend volume from " << data_slices << " slices to "
+                     << data_slices_new << " slices, error " << status;
     return status;
   }
 
