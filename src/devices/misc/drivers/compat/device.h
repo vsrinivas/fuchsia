@@ -17,15 +17,6 @@
 
 namespace compat {
 
-// Name of the DFv1 device.
-constexpr char kName[] = "compat-name";
-// Context for the DFv1 device.
-constexpr char kContext[] = "compat-context";
-// Ops of the DFv1 device.
-constexpr char kOps[] = "compat-ops";
-// Address of the parent of the DFv1 device.
-constexpr char kParent[] = "compat-parent";
-
 // Device is an implementation of a DFv1 device.
 class Device {
  public:

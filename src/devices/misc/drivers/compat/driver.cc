@@ -10,6 +10,7 @@
 #include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
 
+#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/lib/driver2/promise.h"
 #include "src/devices/lib/driver2/record_cpp.h"
 #include "src/devices/lib/driver2/start_args.h"

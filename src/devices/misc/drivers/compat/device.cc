@@ -8,6 +8,8 @@
 #include <lib/ddk/binding_priv.h>
 #include <lib/stdcompat/span.h>
 
+#include "src/devices/lib/compat/symbols.h"
+
 namespace fdf = fuchsia_driver_framework;
 
 namespace {

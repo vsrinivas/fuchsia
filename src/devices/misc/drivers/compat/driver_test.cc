@@ -16,6 +16,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/v1_test.h"
 
 namespace fboot = fuchsia_boot;

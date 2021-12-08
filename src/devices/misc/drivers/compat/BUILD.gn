@@ -28,6 +28,7 @@ source_set("lib") {
     "loader.cc",
     "loader.h",
   ]
+  deps = [ "//src/devices/lib/compat" ]
   public_deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/stdcompat",
@@ -107,6 +108,7 @@ executable("unittests") {
   ]
   deps = [
     ":lib",
+    "//src/devices/lib/compat",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
   ]
