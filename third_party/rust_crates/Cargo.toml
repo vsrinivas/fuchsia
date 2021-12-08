@@ -42,6 +42,23 @@ blocking = "1.0.2"
 bumpalo = "3.2.1"
 byteorder = { version = "1", features = ["i128"] }
 bytes = "0.5.4"
+# NB: morally we'd like to default-features = false here, but we have
+# transitive dependencies on this crate that *do* enable default features.
+# Cargo does something called "feature unification"
+# (https://doc.rust-lang.org/cargo/reference/features.html#feature-unification)
+# which causes a particular crate to be compiled with the superset of all
+# features requested of it by any of its dependents. In this case, that means
+# we get chrono with its default dependencies regardless of what we write here
+# so long as any of our dependencies themselves depend on chrono with its
+# default dependencies. In particular, an old version of the time crate is an
+# optional dependency of chrono that is enabled by default; we don't want to
+# write default-features = false here lest we prevent some unrelated crate
+# upgrade by causing it to unexpectedly remove features we ourselves rely on.
+#
+# The sanity of this behavior is debated in
+# https://github.com/rust-lang/cargo/issues/4463. Until there's an escape
+# hatch, all we can do is document and shed a silent tear while we wait for the
+# ecosystem to migrate away from time 0.1.
 chrono = "0.4.11"
 chrono-english = "0.1.4"
 clap = "2.33"
