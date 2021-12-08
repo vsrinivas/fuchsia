@@ -16,8 +16,7 @@ pub mod schema {
     pub const EMU_MANIFEST: &str = include_str!("../emu_manifest.json");
     pub const FLASH_MANIFEST_V1: &str = include_str!("../flash_manifest-835e8f26.json");
     pub const HARDWARE_V1: &str = include_str!("../hardware-f6f47515.json");
-    pub const PRODUCT_BUNDLE_COMMON_V1: &str =
-        include_str!("../product_bundle_common-ab8943fd.json");
+    pub const PRODUCT_BUNDLE_V1: &str = include_str!("../product_bundle-6320eef1.json");
 }
 
 /// The various types of errors raised by this module.

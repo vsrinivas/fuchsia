@@ -58,7 +58,7 @@ impl JsonObject for Envelope<ProductBundleContainerV1> {
             schema::HARDWARE_V1,
             schema::EMU_MANIFEST,
             schema::FLASH_MANIFEST_V1,
-            schema::PRODUCT_BUNDLE_COMMON_V1,
+            schema::PRODUCT_BUNDLE_V1,
         ]
     }
 }
@@ -91,7 +91,7 @@ mod tests {
                                 "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
                             }]
                         },
-                        "schema_id": "product_bundle_common-ab8943fd.json#/definitions/product_bundle"
+                        "schema_id": "product_bundle-6320eef1.json#/definitions/product_bundle"
                     }
                 ]
             }

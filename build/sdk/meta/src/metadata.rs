@@ -9,7 +9,7 @@
 use crate::common::{ElementType, Envelope};
 use crate::json::JsonObject;
 use crate::physical_device::PhysicalDeviceV1;
-use crate::product_bundle_common::ProductBundleV1;
+use crate::product_bundle::ProductBundleV1;
 use crate::product_bundle_container::ProductBundleContainerV1;
 use crate::virtual_device::VirtualDeviceV1;
 use anyhow::{anyhow, Result};
@@ -245,7 +245,7 @@ mod tests {
                                 "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
                             }]
                         },
-                        "schema_id": "product_bundle_common-ab8943fd.json#/definitions/product_bundle"
+                        "schema_id": "product_bundle-6320eef1.json#/definitions/product_bundle"
                     }
                 ]
             }
