@@ -5,6 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "arm_gicv2m_pcie.h"
+
 #if WITH_KERNEL_PCIE
 #include <inttypes.h>
 #include <lib/lazy_init/lazy_init.h>
@@ -18,8 +20,6 @@
 #include <dev/pcie_root.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
-#include <lk/init.h>
-#include <pdev/driver.h>
 #include <pdev/interrupt.h>
 
 class ArmGicV2PciePlatformSupport : public PciePlatformInterface {
@@ -49,19 +49,13 @@ static lazy_init::LazyInit<ArmGicV2PciePlatformSupport, lazy_init::CheckType::No
                            lazy_init::Destructor::Disabled>
     g_platform_pcie_support;
 
-static void arm_gicv2_pcie_init(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
-  const dcfg_arm_gicv2_driver_t* driver =
-      reinterpret_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
-
+void arm_gicv2_pcie_init(bool use_msi) {
   // based on whether or not ZBI says we support MSI, initialize the v2m allocator
-  zx_status_t res;
-  bool use_msi;
-  if (driver->use_msi) {
+  if (use_msi) {
     dprintf(SPEW, "GICv2 MSI init\n");
 
     // Initialize the MSI allocator
-    res = arm_gicv2m_msi_init();
+    zx_status_t res = arm_gicv2m_msi_init();
     if (res != ZX_OK) {
       TRACEF(
           "Failed to initialize MSI allocator (res = %d).  PCI will be "
@@ -76,7 +70,7 @@ static void arm_gicv2_pcie_init(const void* driver_data, uint32_t length) {
   // Initialize the PCI platform supported based on whether or not we support MSI
   g_platform_pcie_support.Initialize(use_msi);
 
-  res = PcieBusDriver::InitializeDriver(g_platform_pcie_support.Get());
+  zx_status_t res = PcieBusDriver::InitializeDriver(g_platform_pcie_support.Get());
   if (res != ZX_OK) {
     TRACEF(
         "Failed to initialize PCI bus driver (res %d).  "
@@ -85,6 +79,8 @@ static void arm_gicv2_pcie_init(const void* driver_data, uint32_t length) {
   }
 }
 
-LK_PDEV_INIT(arm_gicv2_pcie_init, KDRV_ARM_GIC_V2, arm_gicv2_pcie_init, LK_INIT_LEVEL_PLATFORM)
+#else
+
+void arm_gicv2_pcie_init(bool use_msi) {}
 
 #endif  // if WITH_KERNEL_PCIE

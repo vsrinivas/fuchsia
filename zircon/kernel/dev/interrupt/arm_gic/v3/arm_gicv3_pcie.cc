@@ -5,6 +5,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "arm_gicv3_pcie.h"
+
 #if WITH_KERNEL_PCIE
 #include <inttypes.h>
 #include <lib/lazy_init/lazy_init.h>
@@ -16,18 +18,13 @@
 #include <dev/pcie_platform.h>
 #include <dev/pcie_root.h>
 #include <lk/init.h>
-#include <pdev/driver.h>
 #include <pdev/interrupt.h>
 
 static lazy_init::LazyInit<NoMsiPciePlatformInterface, lazy_init::CheckType::None,
                            lazy_init::Destructor::Disabled>
     g_platform_pcie_support;
 
-static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
-  __UNUSED const dcfg_arm_gicv3_driver_t* driver =
-      reinterpret_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
-
+void arm_gicv3_pcie_init() {
   // When GICv3 MSI support is added, add a handler to register the deny
   // regions. Add all MMIO regions which contain GIC registers to the
   // system-wide deny list using root_resource_filter_add_deny_region.
@@ -44,6 +41,8 @@ static void arm_gicv3_pcie_init(const void* driver_data, uint32_t length) {
   }
 }
 
-LK_PDEV_INIT(arm_gicv3_pcie_init, KDRV_ARM_GIC_V3, arm_gicv3_pcie_init, LK_INIT_LEVEL_PLATFORM)
+#else
+
+void arm_gicv3_pcie_init() {}
 
 #endif  // if WITH_KERNEL_PCIE

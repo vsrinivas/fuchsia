@@ -37,6 +37,8 @@
 #include <lk/init.h>
 #include <pdev/interrupt.h>
 
+#include "arm_gicv2m_pcie.h"
+
 #define LOCAL_TRACE 0
 
 #include <arch/arm64.h>
@@ -53,6 +55,7 @@ uint64_t arm_gicv2_gicc_offset = 0;
 uint64_t arm_gicv2_gich_offset = 0;
 uint64_t arm_gicv2_gicv_offset = 0;
 static uint32_t ipi_base = 0;
+static bool use_msi = false;
 
 static uint max_irqs = 0;
 
@@ -465,6 +468,7 @@ void ArmGicInitEarly(const dcfg_arm_gicv2_driver_t& config) {
   arm_gicv2_gich_offset = config.gich_offset;
   arm_gicv2_gicv_offset = config.gicv_offset;
   ipi_base = config.ipi_base;
+  use_msi = config.use_msi;
 
   if (arm_gic_init() != ZX_OK) {
     if (config.optional) {
@@ -505,6 +509,8 @@ void ArmGicInitEarly(const dcfg_arm_gicv2_driver_t& config) {
 
 void ArmGicInitLate(const dcfg_arm_gicv2_driver_t& config) {
   ASSERT(mmio_phys);
+
+  arm_gicv2_pcie_init(use_msi);
 
   // Place the physical address of the GICv2 registers on the MMIO deny list.
   // Users will not be able to create MMIO resources which permit mapping of the
