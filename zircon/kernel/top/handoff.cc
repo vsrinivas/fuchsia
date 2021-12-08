@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/ticks.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <lib/zbitl/view.h>
 #include <platform.h>
@@ -16,27 +17,12 @@
 
 PhysHandoff* gPhysHandoff;
 
-void HandoffFromPhys(paddr_t handoff_paddr) {
-  gPhysHandoff = static_cast<PhysHandoff*>(paddr_to_physmap(handoff_paddr));
-
-  if (gPhysHandoff->reboot_reason) {
-    platform_set_hw_reboot_reason(gPhysHandoff->reboot_reason.value());
-  }
-}
-
-ktl::span<ktl::byte> ZbiInPhysmap(bool own) {
-  ZX_ASSERT(gPhysHandoff->zbi != 0);
-  void* data = paddr_to_physmap(gPhysHandoff->zbi);
-  if (own) {
-    gPhysHandoff->zbi = 0;
-  }
-
-  zbitl::ByteView zbi = zbitl::StorageFromRawHeader(static_cast<zbi_header_t*>(data));
-  ZX_ASSERT(!zbi.empty());
-  return {const_cast<ktl::byte*>(zbi.data()), zbi.size()};
-}
-
 namespace {
+
+// TODO(fxbug.dev/84107): Eventually physboot will hand off a permanent pointer
+// we can store in gBootOptions.  For now, handoff only provides temporary
+// pointers that we must copy out of.
+BootOptions gBootOptionsInstance;
 
 // Samples taken at the first instruction in the kernel
 // and at the entry to normal virtual-space kernel code.
@@ -109,3 +95,31 @@ void TimelineCounters(unsigned int level) {
 LK_INIT_HOOK(TimelineCounters, TimelineCounters, LK_INIT_LEVEL_PLATFORM)
 
 }  // namespace
+
+template <>
+void* PhysHandoffPtrImportPhysAddr<PhysHandoffPtrEncoding::PhysAddr>(uintptr_t ptr) {
+  return paddr_to_physmap(ptr);
+}
+
+void HandoffFromPhys(paddr_t handoff_paddr) {
+  gPhysHandoff = static_cast<PhysHandoff*>(paddr_to_physmap(handoff_paddr));
+
+  gBootOptionsInstance = *gPhysHandoff->boot_options;
+  gBootOptions = &gBootOptionsInstance;
+
+  if (gPhysHandoff->reboot_reason) {
+    platform_set_hw_reboot_reason(gPhysHandoff->reboot_reason.value());
+  }
+}
+
+ktl::span<ktl::byte> ZbiInPhysmap(bool own) {
+  ZX_ASSERT(gPhysHandoff->zbi != 0);
+  void* data = paddr_to_physmap(gPhysHandoff->zbi);
+  if (own) {
+    gPhysHandoff->zbi = 0;
+  }
+
+  zbitl::ByteView zbi = zbitl::StorageFromRawHeader(static_cast<zbi_header_t*>(data));
+  ZX_ASSERT(!zbi.empty());
+  return {const_cast<ktl::byte*>(zbi.data()), zbi.size()};
+}

@@ -26,27 +26,6 @@
 
 namespace {
 
-// TODO(fxbug.dev/53593): BootOptions already parsed and redacted, so put it
-// back.
-void UnredactEntropyMixin(ktl::span<ktl::byte> payload) {
-  constexpr ktl::string_view kPrefix = "kernel.entropy-mixin=";
-  if (gBootOptions->entropy_mixin.len > 0) {
-    ktl::string_view cmdline{
-        reinterpret_cast<const char*>(payload.data()),
-        payload.size(),
-    };
-    for (ktl::string_view word : WordView(cmdline)) {
-      if (ktl::starts_with(word, kPrefix)) {
-        word.remove_prefix(kPrefix.size());
-        memcpy(const_cast<char*>(word.data()), gBootOptions->entropy_mixin.hex.data(),
-               ktl::min(gBootOptions->entropy_mixin.len, word.size()));
-        const_cast<BootOptions*>(gBootOptions)->entropy_mixin = {};
-        break;
-      }
-    }
-  }
-}
-
 [[noreturn]] void BadZbi(KernelStorage::Zbi zbi, size_t count,
                          ktl::optional<KernelStorage::Zbi::Error> error) {
   printf("%s: Invalid ZBI of %zu bytes, %zu items: ", Symbolize::kProgramName_, zbi.size_bytes(),
@@ -84,14 +63,9 @@ void KernelStorage::Init(Zbi zbi) {
   size_t count = 0;
   for (auto it = zbi_.begin(); it != zbi_.end(); ++it) {
     ++count;
-    auto [header, payload] = *it;
-    switch (header->type) {
-      case ZBI_TYPE_STORAGE_KERNEL:
-        item_ = it;
-        break;
-      case ZBI_TYPE_CMDLINE:  // TODO(fxbug.dev/53593): see above
-        UnredactEntropyMixin(payload);
-        break;
+    if (it->header->type == ZBI_TYPE_STORAGE_KERNEL) {
+      item_ = it;
+      break;
     }
   }
 

@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/boot-options/boot-options.h>
 #include <lib/crashlog.h>
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
@@ -74,7 +75,7 @@ void ConstructMexecDataZbi(uint level) {
     }
   };
 
-  ktl::visit(append_uart_item, gPhysHandoff->serial);
+  ktl::visit(append_uart_item, gBootOptions->serial);
 
   if (gPhysHandoff->nvram) {
     auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_NVRAM},

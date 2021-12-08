@@ -33,6 +33,7 @@
 #include <dev/pcie_bus_driver.h>
 #endif
 #include <lib/cksum.h>
+#include <lib/cmdline.h>
 #include <lib/debuglog.h>
 #include <lib/lazy_init/lazy_init.h>
 #include <lib/system-topology.h>
@@ -137,15 +138,12 @@ static void platform_save_bootloader_data(void) {
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
-      case ZBI_TYPE_CMDLINE: {
-        if (payload.empty()) {
-          break;
+      case ZBI_TYPE_CMDLINE:
+        if (!payload.empty()) {
+          payload.back() = ktl::byte{'\0'};
+          gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
         }
-        payload.back() = ktl::byte{'\0'};
-        ParseBootOptions(
-            ktl::string_view{reinterpret_cast<const char*>(payload.data()), payload.size()});
         break;
-      }
       case ZBI_TYPE_CRASHLOG: {
         crashlog_impls::efi.SetLastCrashlogLocation(
             {reinterpret_cast<char*>(payload.data()), payload.size()});
@@ -392,7 +390,6 @@ void platform_early_init(void) {
   /* extract bootloader data while still accessible */
   /* this includes debug uart config, etc. */
   platform_save_bootloader_data();
-  FinishBootOptions();
 
   /* is the cmdline option to bypass dlog set ? */
   dlog_bypass_init();

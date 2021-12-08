@@ -8,7 +8,6 @@ import("//build/zircon/zircon_cpu.gni")
 
 source_set("platform") {
   sources = [
-    "boot-options.cc",
     "halt_helper.cc",
     "hw_reboot_reason.cc",
     "mexec.cc",
@@ -18,7 +17,6 @@ source_set("platform") {
   deps = [
     "//zircon/kernel/dev/pdev/hw_watchdog",
     "//zircon/kernel/lib/boot-options",
-    "//zircon/kernel/lib/cmdline",
     "//zircon/kernel/lib/code-patching:headers",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",

@@ -82,16 +82,6 @@ enum class RootJobBehavior {
   kShutdown,
 };
 
-// Describes the source of a boot option.
-enum class OptionSource {
-  // The option was never set, and its default value is being used.
-  kDefault,
-  // The option was set from a ZBI item.
-  kZbi,
-  // The option was explicitly set through a command line option.
-  kCmdLine,
-};
-
 // Wallclock options.
 enum class WallclockType {
   kAutoDetect,

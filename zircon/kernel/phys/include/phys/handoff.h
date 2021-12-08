@@ -19,6 +19,10 @@
 #include <ktl/type_traits.h>
 #include <phys/arch/arch-handoff.h>
 
+#include "handoff-ptr.h"
+
+struct BootOptions;
+
 // This holds arch::EarlyTicks timestamps collected by physboot before the
 // kernel proper is cognizant.  Once the platform timer hardware is set up for
 // real, platform_convert_early_ticks translates these values into zx_ticks_t
@@ -63,21 +67,18 @@ struct PhysHandoff {
 
   const uint64_t magic = kMagic;
 
-  // Architecture-specific content.
-  ArchPhysHandoff arch_handoff;
-  static_assert(ktl::is_default_constructible_v<ArchPhysHandoff>);
+  // TODO(fxbug.dev/84107): This will eventually be made a permanent pointer.
+  PhysHandoffTemporaryPtr<const BootOptions> boot_options;
 
   PhysBootTimes times;
   static_assert(ktl::is_default_constructible_v<PhysBootTimes>);
 
-  // TODO(fxbug.dev/89183): Once BootOptions is encoded within the hand-off,
-  // this field will be redundant and its contents will be accessible as
-  // `BootOptions::serial`.
-  uart::all::Driver serial;
-  static_assert(ktl::is_default_constructible_v<uart::all::Driver>);
-
   // Physical address of the data ZBI.
   uint64_t zbi = 0;
+
+  // Architecture-specific content.
+  ArchPhysHandoff arch_handoff;
+  static_assert(ktl::is_default_constructible_v<ArchPhysHandoff>);
 
   // ZBI_TYPE_HW_REBOOT_REASON payload.
   ktl::optional<zbi_hw_reboot_reason_t> reboot_reason;

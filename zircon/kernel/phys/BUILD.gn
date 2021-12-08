@@ -438,6 +438,7 @@ zbi_executable("physboot") {
 source_set("handoff") {
   public = [
     "//zircon/kernel/arch/${zircon_cpu}/phys/include/phys/arch/arch-handoff.h",
+    "include/phys/handoff-ptr.h",
     "include/phys/handoff.h",
   ]
   public_deps = [

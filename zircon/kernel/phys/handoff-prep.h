@@ -8,11 +8,15 @@
 #define ZIRCON_KERNEL_PHYS_HANDOFF_PREP_H_
 
 #include <lib/trivial-allocator/basic-leaky-allocator.h>
+#include <lib/trivial-allocator/new.h>
 #include <lib/trivial-allocator/single-heap-allocator.h>
 #include <zircon/boot/image.h>
 
+#include <fbl/alloc_checker.h>
 #include <ktl/byte.h>
+#include <ktl/move.h>
 #include <ktl/span.h>
+#include <phys/handoff-ptr.h>
 
 struct PhysHandoff;
 class PhysBootTimes;
@@ -29,6 +33,18 @@ class HandoffPrep {
   // This is the main structure.  After Init has been called the pointer is
   // valid but the data is in default-constructed state.
   PhysHandoff* handoff() { return handoff_; }
+
+  // This returns new T(args...) using the temporary handoff allocator and
+  // fills in the handoff_ptr to point to it.
+  template <typename T, typename... Args>
+  T* New(PhysHandoffTemporaryPtr<const T>& handoff_ptr, fbl::AllocChecker& ac, Args&&... args) {
+    T* ptr = new (allocator(), ac) T(ktl::forward<Args>(args)...);
+    if (ptr) {
+      void* generic_ptr = static_cast<void*>(ptr);
+      handoff_ptr.ptr_ = reinterpret_cast<uintptr_t>(generic_ptr);
+    }
+    return ptr;
+  }
 
   // Summarizes the provided data ZBI's miscellaneous simple items for the
   // kernel, filling in corresponding handoff()->item fields.

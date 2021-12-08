@@ -9,7 +9,7 @@
 #include <debug.h>
 #include <lib/arch/intrin.h>
 #include <lib/boot-options/boot-options.h>
-#include <lib/boot-options/types.h>
+#include <lib/cmdline.h>
 #include <lib/console.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
@@ -49,6 +49,7 @@
 #include <ktl/atomic.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
+#include <ktl/variant.h>
 #include <lk/init.h>
 #include <object/resource_dispatcher.h>
 #include <phys/handoff.h>
@@ -395,16 +396,13 @@ void ProcessZbiEarly() {
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
-      case ZBI_TYPE_CMDLINE: {
-        if (payload.empty()) {
-          break;
+      case ZBI_TYPE_CMDLINE:
+        if (!payload.empty()) {
+          payload.back() = ktl::byte{'\0'};
+          gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
         }
-        payload.back() = ktl::byte{'\0'};
-
-        ParseBootOptions(
-            ktl::string_view{reinterpret_cast<const char*>(payload.data()), payload.size()});
         break;
-      }
+
       case ZBI_TYPE_MEM_CONFIG: {
         zbi_mem_range_t* mem_range = reinterpret_cast<zbi_mem_range_t*>(payload.data());
         size_t count = payload.size() / sizeof(zbi_mem_range_t);
@@ -483,20 +481,14 @@ void platform_early_init(void) {
 
   // walk the zbi structure and process all the items
   ProcessZbiEarly();
-  FinishBootOptions();
 
   // is the cmdline option to bypass dlog set ?
   dlog_bypass_init();
 
   // Serial port should be active now
 
-  // Check if serial should be enabled
-  if (gBootOptions->serial_source == OptionSource::kCmdLine) {
-    SmallString serial_mode = {};
-    StringFile string_file(serial_mode);
-    BootOptions::PrintValue(gBootOptions->serial, &string_file);
-    uart_disabled = (strcmp(ktl::move(string_file).take().data(), "none") == 0);
-  }
+  // Check if serial should be enabled (i.e., not using the null driver).
+  ktl::visit([](const auto& uart) { uart_disabled = uart.extra() == 0; }, gBootOptions->serial);
 
   // Initialize the PmmChecker now that the cmdline has been parsed.
   pmm_checker_init_from_cmdline();

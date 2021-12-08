@@ -152,9 +152,6 @@ struct BootOptions {
 #endif
 #undef DEFINE_OPTION
 
-  // Describes the source of the serial option.
-  OptionSource serial_source = OptionSource::kDefault;
-
   uint32_t smp_max_cpus = 0;
 };
 
