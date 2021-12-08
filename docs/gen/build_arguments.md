@@ -54,7 +54,7 @@ Set to true to enable legacy data partition names.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/generated_fshost_config.gni:38
+From //src/storage/fshost/generated_fshost_config.gni:40
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -996,6 +996,15 @@ stripped down version of the VM running in AOT mode.
 
 From //build/dart/config.gni:10
 
+### data_filesystem_format
+Set to one of "minfs", "fxfs", "f2fs" (unstable).
+If set to anything other than "minfs", any existing minfs partition will be
+migrated in-place to the specified format when fshost mounts it.
+
+**Current value (from the default):** `"minfs"`
+
+From //src/storage/fshost/generated_fshost_config.gni:34
+
 ### debian_guest_earlycon
 
 **Current value (from the default):** `false`
@@ -1453,7 +1462,7 @@ Make fshost watch for NAND devices.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:41
+From //src/storage/fshost/generated_fshost_config.gni:43
 
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
@@ -1722,6 +1731,7 @@ Typically useful for initially flashing a device from zero-state.
 From //build/images/args.gni:64
 
 ### graphics_compute_generate_debug_shaders
+
 Set to true in your args.gn file to generate pre-processed and
 auto-formatted shaders under the "debug" sub-directory of HotSort
 and Spinel target generation output directories.
@@ -1743,7 +1753,7 @@ Example results:
 
 **Current value (from the default):** `true`
 
-From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:28
+From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:29
 
 ### graphics_compute_skip_spirv_opt
 At times we may want to compare the performance of unoptimized
@@ -1755,9 +1765,9 @@ Disabling the spirv-opt pass may also be useful in identifying and
 attributing code generation bugs.
 
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
-From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:38
+From //src/graphics/lib/compute/gn/glsl_shader_rules.gni:39
 
 ### grpc_use_static_linking
 TODO(169395837): Somehow gRPC symbols cannot be found on Android.
@@ -3321,7 +3331,7 @@ From //build/toolchain/restat.gni:13
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/5bbf112e40f2e6f9965df44c70038554e86e76c8/BUILD.gn#14)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/366fa29f0287e5064bf5d264162b3c7dca9b68a1/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -3910,20 +3920,12 @@ From //out/not-default/args.gn:12
 
 From //BUILD.gn:55
 
-### unstable_feature_use_f2fs
-
-**Current value (from the default):** `false`
-
-From //src/storage/fshost/generated_fshost_config.gni:35
-
 ### unstable_feature_use_fxfs
-This flag isn't stable yet, don't use it.
-Set to true to enable fxfs/f2fs instead of minfs.  If set, any existing minfs partition will be
-migrated in-place to fxfs/f2fs when fshost mounts it.
+Soft migration: Do not use
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:34
+From //src/storage/fshost/generated_fshost_config.gni:37
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
