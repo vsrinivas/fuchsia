@@ -63,36 +63,25 @@ pub(super) type EventStream = Pin<Box<dyn futures::stream::Stream<Item = Event>>
 // type to encode this invariant in the type system.
 enum BridgeState {
     Init,
-    WaitingForGuests { upstream: u64 },
-    WaitingForUpstream { guests: HashSet<u64> },
-    Bridged { id: u64, upstream: u64, guests: HashSet<u64> },
-}
-
-impl BridgeState {
-    fn bridge_id(&self) -> Option<u64> {
-        match self {
-            BridgeState::Init
-            | BridgeState::WaitingForUpstream { guests: _ }
-            | BridgeState::WaitingForGuests { upstream: _ } => None,
-            BridgeState::Bridged { id, guests: _, upstream: _ } => Some(*id),
-        }
-    }
-
-    fn upstream(&self) -> Option<u64> {
-        match self {
-            BridgeState::Init | BridgeState::WaitingForUpstream { guests: _ } => None,
-            BridgeState::WaitingForGuests { upstream }
-            | BridgeState::Bridged { id: _, guests: _, upstream } => Some(*upstream),
-        }
-    }
-
-    fn contains_guest(&self, id: u64) -> bool {
-        match self {
-            BridgeState::Init | BridgeState::WaitingForGuests { upstream: _ } => false,
-            BridgeState::WaitingForUpstream { guests }
-            | BridgeState::Bridged { id: _, upstream: _, guests } => guests.contains(&id),
-        }
-    }
+    WaitingForGuests {
+        // Invariants: `upstream` is not present in `upstream_candidates`, and
+        // must be online.
+        upstream: u64,
+        upstream_candidates: HashSet<u64>,
+    },
+    WaitingForUpstream {
+        guests: HashSet<u64>,
+    },
+    Bridged {
+        bridge_id: u64,
+        // Invariant: `upstream` is not present in `upstream_candidates`.
+        //
+        // Note that `upstream` going offline does not cause a state transition unlike
+        // `WaitingForGuests`, and thus `upstream` may be offline.
+        upstream: u64,
+        upstream_candidates: HashSet<u64>,
+        guests: HashSet<u64>,
+    },
 }
 
 impl Default for BridgeState {
@@ -115,12 +104,23 @@ pub(super) trait Handler {
     ) -> Result<(), errors::Error>;
 }
 
+// TODO(https://github.com/rust-lang/rust/issues/59618): Implement using
+// `drain_filter` to avoid the Copy trait bound.
+// Takes a single element from `set` if `set` is non-empty.
+fn take_any<T: std::marker::Copy + std::cmp::Eq + std::hash::Hash>(
+    set: &mut HashSet<T>,
+) -> Option<T> {
+    set.iter().copied().next().map(|elem| {
+        assert!(set.remove(&elem));
+        elem
+    })
+}
+
 pub(super) struct Virtualization<B: BridgeHandler> {
     installer: fnet_interfaces_admin::InstallerProxy,
     allowed_upstream_device_classes: HashSet<DeviceClass>,
     bridge_handler: B,
     bridge_state: BridgeState,
-    candidate_upstream_interfaces: HashSet<u64>,
 }
 
 impl<B: BridgeHandler> Virtualization<B> {
@@ -134,7 +134,6 @@ impl<B: BridgeHandler> Virtualization<B> {
             allowed_upstream_device_classes,
             bridge_handler,
             bridge_state: Default::default(),
-            candidate_upstream_interfaces: Default::default(),
         }
     }
 
@@ -272,9 +271,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                         }
 
                         // Add this interface to the existing bridge, or create one if none exists.
-                        self.add_interface_to_bridge(id)
-                            .await
-                            .context("adding interface to bridge")?;
+                        self.add_guest_to_bridge(id).await.context("adding interface to bridge")?;
 
                         // Wait for a signal that this interface should be removed from the bridge
                         // and the virtual network.
@@ -348,54 +345,54 @@ impl<B: BridgeHandler> Virtualization<B> {
         Ok(())
     }
 
-    async fn add_interface_to_bridge(&mut self, id: u64) -> Result<(), errors::Error> {
+    async fn add_guest_to_bridge(&mut self, id: u64) -> Result<(), errors::Error> {
         info!("got a request to add interface {} to bridge", id);
         let Self { bridge_state, bridge_handler, .. } = self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init => BridgeState::WaitingForUpstream { guests: HashSet::from([id]) },
             // If a bridge doesn't exist, but we have an interface with upstream connectivity,
             // create the bridge.
-            BridgeState::WaitingForGuests { upstream } => {
+            BridgeState::WaitingForGuests { upstream, upstream_candidates } => {
                 let guests = HashSet::from([id]);
                 let bridge_id = bridge_handler
-                    .build_bridge(guests.iter().cloned(), upstream)
+                    .build_bridge(guests.iter().copied(), upstream)
                     .await
                     .context("building bridge")?;
-                BridgeState::Bridged { id: bridge_id, upstream, guests }
+                BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
             }
             // If a bridge doesn't exist, and we don't yet have an interface with upstream
             // connectivity, just keep track of the interface to be bridged, so we can eventually
             // include it in the bridge.
             BridgeState::WaitingForUpstream { mut guests } => {
-                assert_eq!(guests.insert(id), true);
+                assert!(guests.insert(id));
                 // No change to bridge state.
                 BridgeState::WaitingForUpstream { guests }
             }
             // If a bridge already exists, tear it down and create a new one, re-using the interface
             // that has upstream connectivity and including all the interfaces that were bridged
             // previously.
-            BridgeState::Bridged { id: bridge_id, upstream, mut guests } => {
+            BridgeState::Bridged { bridge_id, upstream, upstream_candidates, mut guests } => {
                 bridge_handler.destroy_bridge(bridge_id).await.context("destroying bridge")?;
-                assert_eq!(guests.insert(id), true);
+                assert!(guests.insert(id));
                 let bridge_id = bridge_handler
-                    .build_bridge(guests.iter().cloned(), upstream)
+                    .build_bridge(guests.iter().copied(), upstream)
                     .await
                     .context("building bridge")?;
-                BridgeState::Bridged { id: bridge_id, upstream, guests }
+                BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
             }
         };
         Ok(())
     }
 
-    async fn remove_interface_from_bridge(&mut self, id: u64) -> Result<(), errors::Error> {
+    async fn remove_guest_from_bridge(&mut self, id: u64) -> Result<(), errors::Error> {
         info!("got a request to remove interface {} from bridge", id);
         let Self { bridge_state, bridge_handler, .. } = self;
         *bridge_state = match std::mem::take(bridge_state) {
             BridgeState::Init | BridgeState::WaitingForGuests { .. } => {
-                panic!("cannot remove guest interface since it was not previously added")
+                panic!("cannot remove guest interface {} since it was not previously added", id)
             }
             BridgeState::WaitingForUpstream { mut guests } => {
-                assert_eq!(guests.remove(&id), true);
+                assert!(guests.remove(&id));
                 if guests.is_empty() {
                     BridgeState::Init
                 } else {
@@ -403,83 +400,214 @@ impl<B: BridgeHandler> Virtualization<B> {
                     BridgeState::WaitingForUpstream { guests }
                 }
             }
-            BridgeState::Bridged { id: bridge_id, upstream, mut guests } => {
+            BridgeState::Bridged { bridge_id, upstream, upstream_candidates, mut guests } => {
                 bridge_handler.destroy_bridge(bridge_id).await.context("destroying bridge")?;
-                assert_eq!(guests.remove(&id), true);
+                assert!(guests.remove(&id));
                 if guests.is_empty() {
-                    BridgeState::WaitingForGuests { upstream }
+                    BridgeState::WaitingForGuests { upstream, upstream_candidates }
                 } else {
                     let bridge_id = self
                         .bridge_handler
-                        .build_bridge(guests.iter().cloned(), upstream)
+                        .build_bridge(guests.iter().copied(), upstream)
                         .await
                         .context("building bridge")?;
-                    BridgeState::Bridged { id: bridge_id, upstream, guests }
+                    BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
                 }
             }
         };
         Ok(())
     }
 
-    async fn set_bridge_upstream_interface(&mut self, upstream: u64) -> Result<(), errors::Error> {
-        info!("found an interface that provides upstream connectivity: {}", upstream);
+    async fn handle_interface_online(
+        &mut self,
+        id: u64,
+        allowed_for_upstream: bool,
+    ) -> Result<(), errors::Error> {
+        info!("interface {} (allowed for upstream: {}) is online", id, allowed_for_upstream);
         let Self { bridge_state, bridge_handler, .. } = self;
         *bridge_state = match std::mem::take(bridge_state) {
-            BridgeState::Init | BridgeState::WaitingForGuests { upstream: _ } => {
-                BridgeState::WaitingForGuests { upstream }
+            BridgeState::Init => {
+                if allowed_for_upstream {
+                    BridgeState::WaitingForGuests {
+                        upstream: id,
+                        upstream_candidates: Default::default(),
+                    }
+                } else {
+                    BridgeState::Init
+                }
+            }
+            BridgeState::WaitingForGuests { upstream, mut upstream_candidates } => {
+                if allowed_for_upstream {
+                    assert_ne!(
+                        upstream, id,
+                        "interface {} expected to provide upstream but was offline and came online",
+                        id
+                    );
+                    assert!(
+                        upstream_candidates.insert(id),
+                        "upstream candidate {} already present",
+                        id
+                    );
+                }
+                BridgeState::WaitingForGuests { upstream, upstream_candidates }
             }
             BridgeState::WaitingForUpstream { guests } => {
-                let bridge_id = self
-                    .bridge_handler
-                    .build_bridge(guests.iter().cloned(), upstream)
-                    .await
-                    .context("building bridge")?;
-                BridgeState::Bridged { id: bridge_id, upstream, guests }
+                if allowed_for_upstream && !guests.contains(&id) {
+                    // We don't already have an upstream interface that provides connectivity. Build
+                    // a bridge with this one.
+                    let bridge_id = bridge_handler
+                        .build_bridge(guests.iter().copied(), id)
+                        .await
+                        .context("building bridge")?;
+                    BridgeState::Bridged {
+                        bridge_id,
+                        upstream: id,
+                        upstream_candidates: Default::default(),
+                        guests,
+                    }
+                } else {
+                    BridgeState::WaitingForUpstream { guests }
+                }
             }
             // If a bridge already exists, tear it down and create a new one, using this new
             // interface to provide upstream connectivity, and including all the interfaces that
             // were bridged previously.
-            BridgeState::Bridged { id: bridge_id, upstream: _, guests } => {
-                bridge_handler.destroy_bridge(bridge_id).await.context("destroying bridge")?;
-                let bridge_id = self
-                    .bridge_handler
-                    .build_bridge(guests.iter().cloned(), upstream)
-                    .await
-                    .context("building bridge")?;
-                BridgeState::Bridged { id: bridge_id, upstream, guests }
+            BridgeState::Bridged { bridge_id, upstream, mut upstream_candidates, guests } => {
+                if id == upstream {
+                    info!("upstream-providing interface {} went online", id);
+                } else if id == bridge_id {
+                    info!("bridge interface {} went online", bridge_id);
+                } else if !guests.contains(&id) && allowed_for_upstream {
+                    assert!(
+                        upstream_candidates.insert(id),
+                        "upstream candidate {} already present",
+                        id
+                    );
+                }
+                BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
             }
         };
         Ok(())
     }
 
-    async fn remove_bridge_upstream_interface(&mut self) -> Result<(), errors::Error> {
-        let Self { bridge_state, bridge_handler, .. } = self;
+    async fn handle_interface_offline(
+        &mut self,
+        id: u64,
+        allowed_for_upstream: bool,
+    ) -> Result<(), errors::Error> {
+        info!("interface {} (allowed for upstream: {}) is offline", id, allowed_for_upstream);
+        let Self { bridge_state, .. } = self;
         *bridge_state = match std::mem::take(bridge_state) {
-            BridgeState::Init | BridgeState::WaitingForUpstream { guests: _ } => {
-                panic!("cannot remove upstream interface since it doesn't exist")
-            }
-            BridgeState::WaitingForGuests { upstream: _ } => BridgeState::Init,
-            BridgeState::Bridged { id, upstream: _, guests } => {
-                bridge_handler.destroy_bridge(id).await.context("destroying bridge")?;
+            BridgeState::Init => BridgeState::Init,
+            BridgeState::WaitingForUpstream { guests } => {
                 BridgeState::WaitingForUpstream { guests }
             }
+            BridgeState::Bridged { bridge_id, upstream, mut upstream_candidates, guests } => {
+                if id == bridge_id {
+                    warn!("bridge interface {} went offline", id);
+                } else if id == upstream {
+                    // We currently ignore the situation where an interface that is providing
+                    // upstream connectivity changes from online to offline. The only signal
+                    // that causes us to destroy an existing bridge is if the interface providing
+                    // upstream connectivity is removed entirely.
+                    warn!("upstream interface {} went offline", id);
+                } else if !guests.contains(&id) && allowed_for_upstream {
+                    assert!(
+                        upstream_candidates.remove(&id),
+                        "upstream candidate {} not found",
+                        id
+                    );
+                }
+                BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
+            }
+            BridgeState::WaitingForGuests { upstream, mut upstream_candidates } => {
+                if id == upstream {
+                    match take_any(&mut upstream_candidates) {
+                        Some(id) => {
+                            BridgeState::WaitingForGuests { upstream: id, upstream_candidates }
+                        }
+                        None => BridgeState::Init,
+                    }
+                } else {
+                    if allowed_for_upstream {
+                        assert!(
+                            upstream_candidates.remove(&id),
+                            "upstream candidate {} not found",
+                            id
+                        );
+                    }
+                    BridgeState::WaitingForGuests { upstream, upstream_candidates }
+                }
+            }
         };
         Ok(())
     }
 
-    async fn add_candidate_upstream_interface(&mut self, id: u64) -> Result<(), errors::Error> {
-        match self.bridge_state {
-            BridgeState::Bridged { .. } | BridgeState::WaitingForGuests { .. } => {
-                // We already have an upstream interface that provides connectivity; add the
-                // interface to the list of candidates for upstream.
-                assert_eq!(self.candidate_upstream_interfaces.insert(id), true);
+    async fn handle_interface_removed(&mut self, removed_id: u64) -> Result<(), errors::Error> {
+        info!("interface {} removed", removed_id);
+        let Self { bridge_state, bridge_handler, .. } = self;
+        *bridge_state = match std::mem::take(bridge_state) {
+            BridgeState::Init => BridgeState::Init,
+            BridgeState::WaitingForUpstream { guests } => {
+                if guests.contains(&removed_id) {
+                    // Removal from the `guests` map will occur when the guest removal is
+                    // actually handled in `remove_guest_from_bridge`.
+                    info!("guest interface {} removed", removed_id);
+                }
+                BridgeState::WaitingForUpstream { guests }
             }
-            BridgeState::WaitingForUpstream { .. } | BridgeState::Init => {
-                // We don't already have an upstream interface that provides connectivity. Build a
-                // bridge with this one.
-                self.set_bridge_upstream_interface(id)
-                    .await
-                    .context("set upstream interface on bridge")?;
+            BridgeState::WaitingForGuests { upstream, mut upstream_candidates } => {
+                if upstream == removed_id {
+                    match take_any(&mut upstream_candidates) {
+                        Some(new_upstream_id) => BridgeState::WaitingForGuests {
+                            upstream: new_upstream_id,
+                            upstream_candidates,
+                        },
+                        None => BridgeState::Init,
+                    }
+                } else {
+                    let _: bool = upstream_candidates.remove(&removed_id);
+                    BridgeState::WaitingForGuests { upstream, upstream_candidates }
+                }
+            }
+            BridgeState::Bridged { bridge_id, upstream, mut upstream_candidates, guests } => {
+                if guests.contains(&removed_id) {
+                    // Removal from the `guests` map will occur when the guest removal is
+                    // actually handled in `remove_guest_from_bridge`.
+                    info!("guest interface {} removed", removed_id);
+                }
+                if bridge_id == removed_id {
+                    // The bridge interface installed by netcfg should not be removed by any other
+                    // entity.
+                    error!("bridge interface {} removed; rebuilding", bridge_id);
+                    let bridge_id = self
+                        .bridge_handler
+                        .build_bridge(guests.iter().copied(), upstream)
+                        .await
+                        .context("building bridge")?;
+                    BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
+                } else if upstream == removed_id {
+                    bridge_handler.destroy_bridge(bridge_id).await.context("destroying bridge")?;
+                    match take_any(&mut upstream_candidates) {
+                        Some(new_upstream_id) => {
+                            let bridge_id = self
+                                .bridge_handler
+                                .build_bridge(guests.iter().copied(), new_upstream_id)
+                                .await
+                                .context("building bridge")?;
+                            BridgeState::Bridged {
+                                bridge_id,
+                                upstream: new_upstream_id,
+                                upstream_candidates,
+                                guests,
+                            }
+                        }
+                        None => BridgeState::WaitingForUpstream { guests },
+                    }
+                } else {
+                    let _: bool = upstream_candidates.remove(&removed_id);
+                    BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
+                }
             }
         };
         Ok(())
@@ -519,7 +647,7 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
                 .context("handle network request")?,
             Event::InterfaceClose(id) => {
                 // Remove this interface from the existing bridge.
-                self.remove_interface_from_bridge(id)
+                self.remove_guest_from_bridge(id)
                     .await
                     .context("removing interface from bridge")?;
             }
@@ -535,19 +663,13 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
             fnet_interfaces_ext::UpdateResult::Added(properties)
             | fnet_interfaces_ext::UpdateResult::Existing(properties) => {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } = **properties;
-                // If this interface is one that was added as part of a virtual network netcfg is
-                // managing, it's not a candidate to provide upstream connectivity.
-                if self.bridge_state.contains_guest(id)
-                    || self.bridge_state.bridge_id() == Some(id)
-                    || !online
-                    || !self.is_device_class_allowed_for_upstream(device_class)
-                {
-                    return Ok(());
+                let allowed_for_upstream = self.is_device_class_allowed_for_upstream(device_class);
+
+                if online {
+                    self.handle_interface_online(id, allowed_for_upstream)
+                        .await
+                        .context("handle new interface online")?;
                 }
-                // This interface is the device class we are looking for and is online.
-                self.add_candidate_upstream_interface(id)
-                    .await
-                    .context("add candidate interface")?;
             }
             fnet_interfaces_ext::UpdateResult::Changed {
                 previous: fnet_interfaces::Properties { online: previously_online, .. },
@@ -555,55 +677,32 @@ impl<B: BridgeHandler> Handler for Virtualization<B> {
             } => {
                 let fnet_interfaces_ext::Properties { id, online, device_class, .. } =
                     **current_properties;
-                // We currently ignore the situation where an interface that is providing upstream
-                // connectivity changes from online to offline. The only signal that causes us to
-                // destroy an existing bridge is if the interface providing upstream connectivity is
-                // removed entirely.
+                let allowed_for_upstream = self.is_device_class_allowed_for_upstream(device_class);
 
-                // If this interface is one that was added as part of a virtual network netcfg is
-                // managing, it's not a candidate to provide upstream connectivity.
-                if self.bridge_state.contains_guest(id)
-                    || self.bridge_state.bridge_id() == Some(id)
-                    || *previously_online != Some(false)
-                    || !online
-                    || !self.is_device_class_allowed_for_upstream(device_class)
-                {
-                    return Ok(());
+                match (*previously_online, online) {
+                    (Some(false), true) => {
+                        self.handle_interface_online(id, allowed_for_upstream)
+                            .await
+                            .context("handle interface online")?;
+                    }
+                    (Some(true), false) => {
+                        self.handle_interface_offline(id, allowed_for_upstream)
+                            .await
+                            .context("handle interface offline")?;
+                    }
+                    (Some(true), true) | (Some(false), false) => {
+                        error!("interface {} changed event indicates no actual change to online ({} before and after)", id, online);
+                    }
+                    // Online did not change; do nothing.
+                    (None, true) => {}
+                    (None, false) => {}
                 }
-                // This interface is the device class we are looking for and just went
-                // online.
-                self.add_candidate_upstream_interface(id)
-                    .await
-                    .context("add candidate interface")?;
             }
             fnet_interfaces_ext::UpdateResult::Removed(fnet_interfaces_ext::Properties {
                 id,
                 ..
             }) => {
-                // The removed interface was either a candidate for providing upstream connectivity
-                // but was not currently being used, or it did not provide connectivity at all, so
-                // ignore its removal.
-                if self.candidate_upstream_interfaces.remove(&id)
-                    || self.bridge_state.upstream() != Some(*id)
-                {
-                    return Ok(());
-                }
-                debug!("interface providing upstream connectivity was removed");
-                // This interface was the one providing upstream connectivity. Tear down
-                // the bridge, and try to find a replacement.
-                match self.candidate_upstream_interfaces.iter().cloned().next() {
-                    Some(id) => {
-                        assert_eq!(self.candidate_upstream_interfaces.remove(&id), true);
-                        self.set_bridge_upstream_interface(id)
-                            .await
-                            .context("set upstream interface on bridge")?;
-                    }
-                    None => {
-                        self.remove_bridge_upstream_interface()
-                            .await
-                            .context("removing upstream interface from bridge")?;
-                    }
-                }
+                self.handle_interface_removed(*id).await.context("handle interface removed")?;
             }
             fnet_interfaces_ext::UpdateResult::NoChange => {}
         }
@@ -745,6 +844,36 @@ mod tests {
 
     use super::*;
 
+    #[derive(Copy, Clone, Debug, PartialEq)]
+    enum Guest {
+        A,
+        B,
+    }
+
+    impl Guest {
+        fn id(&self) -> u64 {
+            match self {
+                Self::A => 1,
+                Self::B => 2,
+            }
+        }
+    }
+
+    #[derive(Copy, Clone, Debug, PartialEq)]
+    enum Upstream {
+        A,
+        B,
+    }
+
+    impl Upstream {
+        fn id(&self) -> u64 {
+            match self {
+                Self::A => 11,
+                Self::B => 12,
+            }
+        }
+    }
+
     #[derive(Debug, PartialEq)]
     enum BridgeEvent {
         Destroyed,
@@ -752,8 +881,11 @@ mod tests {
     }
 
     impl BridgeEvent {
-        fn created(interfaces: HashSet<u64>, upstream_interface: u64) -> Self {
-            Self::Created { interfaces, upstream_interface }
+        fn created(interfaces: Vec<Guest>, upstream_interface: Upstream) -> Self {
+            Self::Created {
+                interfaces: interfaces.iter().map(Guest::id).collect(),
+                upstream_interface: upstream_interface.id(),
+            }
         }
 
         fn destroyed() -> Self {
@@ -808,26 +940,22 @@ mod tests {
         }
     }
 
-    const GUEST_IF: u64 = 1;
-    const GUEST_IF2: u64 = 2;
-    const UPSTREAM_IF: u64 = 11;
-    const UPSTREAM_IF2: u64 = 12;
-
     enum Action {
-        AddInterface(u64),
-        RemoveInterface(u64),
-        SetUpstream(u64),
-        RemoveUpstream,
+        AddGuest(Guest),
+        RemoveGuest(Guest),
+        UpstreamOnline(Upstream),
+        UpstreamOffline(Upstream),
+        RemoveUpstream(Upstream),
     }
 
     #[test_case(
         // Verify that we wait to create a bridge until an interface is added to a virtual bridged
         // network.
         [
-            (Action::SetUpstream(UPSTREAM_IF), vec![]),
+            (Action::UpstreamOnline(Upstream::A), vec![]),
             (
-                Action::AddInterface(GUEST_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF)],
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
             ),
         ];
         "wait for guest"
@@ -836,10 +964,10 @@ mod tests {
         // Verify that we wait to create a bridge until there is an interface that provides upstream
         // connectivity.
         [
-            (Action::AddInterface(GUEST_IF), vec![]),
+            (Action::AddGuest(Guest::A), vec![]),
             (
-                Action::SetUpstream(UPSTREAM_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF)],
+                Action::UpstreamOnline(Upstream::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
             ),
         ];
         "wait for upstream"
@@ -848,12 +976,12 @@ mod tests {
         // Verify that the bridge is destroyed when the upstream interface is removed and there are
         // no more candidates to provide upstream connectivity.
         [
-            (Action::SetUpstream(UPSTREAM_IF), vec![]),
+            (Action::UpstreamOnline(Upstream::A), vec![]),
             (
-                Action::AddInterface(GUEST_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF)],
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
             ),
-            (Action::RemoveUpstream, vec![BridgeEvent::destroyed()]),
+            (Action::RemoveUpstream(Upstream::A), vec![BridgeEvent::destroyed()]),
         ];
         "destroy bridge when no upstream"
     )]
@@ -862,27 +990,27 @@ mod tests {
         // bridge one by one, which is implemented by tearing down the bridge and rebuilding it
         // every time an interface is added or removed.
         [
-            (Action::SetUpstream(UPSTREAM_IF), vec![]),
+            (Action::UpstreamOnline(Upstream::A), vec![]),
             (
-                Action::AddInterface(GUEST_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF)],
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
             ),
             (
-                Action::AddInterface(GUEST_IF2),
+                Action::AddGuest(Guest::B),
                 vec![
                     BridgeEvent::destroyed(),
-                    BridgeEvent::created([GUEST_IF, GUEST_IF2].into(), UPSTREAM_IF),
+                    BridgeEvent::created([Guest::A, Guest::B].into(), Upstream::A),
                 ],
             ),
             (
-                Action::RemoveInterface(GUEST_IF2),
+                Action::RemoveGuest(Guest::B),
                 vec![
                     BridgeEvent::destroyed(),
-                    BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF),
+                    BridgeEvent::created([Guest::A].into(), Upstream::A),
                 ],
             ),
             (
-                Action::RemoveInterface(GUEST_IF),
+                Action::RemoveGuest(Guest::A),
                 vec![BridgeEvent::destroyed()],
             ),
         ];
@@ -893,15 +1021,15 @@ mod tests {
         // destroyed, if an interface is added again, the bridge is re-created with the same
         // upstream.
         [
-            (Action::SetUpstream(UPSTREAM_IF), vec![]),
+            (Action::UpstreamOnline(Upstream::A), vec![]),
             (
-                Action::AddInterface(GUEST_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF)],
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
             ),
-            (Action::RemoveInterface(GUEST_IF), vec![BridgeEvent::destroyed()]),
+            (Action::RemoveGuest(Guest::A), vec![BridgeEvent::destroyed()]),
             (
-                Action::AddInterface(GUEST_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF)],
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
             ),
         ];
         "remember upstream"
@@ -911,49 +1039,90 @@ mod tests {
         // bridged network even when there is no existing bridge due to a lack of upstream
         // connectivity.
         [
-            (Action::SetUpstream(UPSTREAM_IF), vec![]),
+            (Action::UpstreamOnline(Upstream::A), vec![]),
             (
-                Action::AddInterface(GUEST_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF)],
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
             ),
-            (Action::RemoveUpstream, vec![BridgeEvent::destroyed()]),
-            (Action::AddInterface(GUEST_IF2), vec![]),
-            (Action::RemoveInterface(GUEST_IF), vec![]),
+            (Action::RemoveUpstream(Upstream::A), vec![BridgeEvent::destroyed()]),
+            (Action::AddGuest(Guest::B), vec![]),
+            (Action::RemoveGuest(Guest::A), vec![]),
             (
-                Action::SetUpstream(UPSTREAM_IF),
-                vec![BridgeEvent::created([GUEST_IF2].into(), UPSTREAM_IF)],
+                Action::UpstreamOnline(Upstream::A),
+                vec![BridgeEvent::created([Guest::B].into(), Upstream::A)],
             ),
         ];
         "remember guest interfaces"
     )]
     #[test_case(
-        // Verify that when we replace the interface providing upstream connectivity with another
-        // interface, we observe the same behavior as if it were removed and then added.
+        // Verify that the bridge is destroyed when upstream is removed.
         [
-            (Action::SetUpstream(UPSTREAM_IF), vec![]),
+            (Action::UpstreamOnline(Upstream::A), vec![]),
             (
-                Action::AddInterface(GUEST_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF)],
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
             ),
+            (Action::RemoveUpstream(Upstream::A), vec![BridgeEvent::destroyed()]),
+        ];
+        "remove upstream"
+    )]
+    #[test_case(
+        // Verify that the upstream-providing interface going offline while a
+        // bridge is present does not cause the bridge to be destroyed.
+        [
+            (Action::UpstreamOnline(Upstream::A), vec![]),
             (
-                Action::SetUpstream(UPSTREAM_IF2),
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
+            ),
+            (Action::UpstreamOffline(Upstream::A), vec![]),
+        ];
+        "upstream offline not removed"
+    )]
+    #[test_case(
+        // Verify that an otherwise eligible but offline upstream interface is
+        // not used to create a bridge.
+        [
+            (Action::UpstreamOnline(Upstream::A), vec![]),
+            (Action::UpstreamOffline(Upstream::A), vec![]),
+            (Action::AddGuest(Guest::A), vec![]),
+            (
+                Action::UpstreamOnline(Upstream::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
+            ),
+        ];
+        "do not bridge with offline upstream"
+    )]
+    #[test_case(
+        // Verify that when we replace the interface providing upstream connectivity with another
+        // interface, the bridge is correctly destroyed and recreated with the new upstream.
+        [
+            (Action::UpstreamOnline(Upstream::A), vec![]),
+            (
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::A)],
+            ),
+            (Action::UpstreamOnline(Upstream::B), vec![]),
+            (
+                Action::RemoveUpstream(Upstream::A),
                 vec![
                     BridgeEvent::destroyed(),
-                    BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF2),
+                    BridgeEvent::created([Guest::A].into(), Upstream::B),
                 ],
             ),
         ];
         "replace upstream"
     )]
     #[test_case(
-        // Verify that when we replace the interface providing upstream connectivity with another
-        // interface, we observe the same behavior as if it were removed and then added.
+        // Verify that upstream-providing interface changes are tracked even when there are no
+        // guests yet.
         [
-            (Action::SetUpstream(UPSTREAM_IF), vec![]),
-            (Action::SetUpstream(UPSTREAM_IF2), vec![]),
+            (Action::UpstreamOnline(Upstream::A), vec![]),
+            (Action::UpstreamOnline(Upstream::B), vec![]),
+            (Action::UpstreamOffline(Upstream::A), vec![]),
             (
-                Action::AddInterface(GUEST_IF),
-                vec![BridgeEvent::created([GUEST_IF].into(), UPSTREAM_IF2)],
+                Action::AddGuest(Guest::A),
+                vec![BridgeEvent::created([Guest::A].into(), Upstream::B)],
             ),
         ];
         "replace upstream with no guests"
@@ -971,26 +1140,32 @@ mod tests {
 
         for (action, expected_events) in steps {
             match action {
-                Action::AddInterface(id) => {
-                    handler.add_interface_to_bridge(id).await.expect("add interface to bridge");
+                Action::AddGuest(guest) => {
+                    handler.add_guest_to_bridge(guest.id()).await.expect("add guest to bridge");
                 }
-                Action::RemoveInterface(id) => {
+                Action::RemoveGuest(guest) => {
                     handler
-                        .remove_interface_from_bridge(id)
+                        .remove_guest_from_bridge(guest.id())
                         .await
-                        .expect("remove interface from bridge");
+                        .expect("remove guest from bridge");
                 }
-                Action::SetUpstream(id) => {
+                Action::UpstreamOnline(upstream) => {
                     handler
-                        .set_bridge_upstream_interface(id)
+                        .handle_interface_online(upstream.id(), true)
                         .await
-                        .expect("set upstream interface");
+                        .expect("upstream interface online");
                 }
-                Action::RemoveUpstream => {
+                Action::UpstreamOffline(upstream) => {
                     handler
-                        .remove_bridge_upstream_interface()
+                        .handle_interface_offline(upstream.id(), true)
                         .await
-                        .expect("remove upstream interface");
+                        .expect("upstream interface offline");
+                }
+                Action::RemoveUpstream(upstream) => {
+                    handler
+                        .handle_interface_removed(upstream.id())
+                        .await
+                        .expect("upstream interface removed");
                 }
             }
             for event in expected_events {
