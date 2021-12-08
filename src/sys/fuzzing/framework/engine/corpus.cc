@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/syscalls.h>
 
+#include <algorithm>
+
 namespace fuzzing {
 
 // Public methods
@@ -22,7 +24,6 @@ Corpus& Corpus::operator=(Corpus&& other) noexcept {
     std::lock_guard<std::mutex> lock(mutex_);
     std::lock_guard<std::mutex> other_lock(other.mutex_);
     inputs_ = std::move(other.inputs_);
-    other.inputs_.emplace_back();
     total_size_ = other.total_size_;
     other.total_size_ = 0;
   }
@@ -55,16 +56,16 @@ void Corpus::Configure(const std::shared_ptr<Options>& options) {
 
 zx_status_t Corpus::Add(Input input) {
   std::lock_guard<std::mutex> lock(mutex_);
-  if (input.size() == 0) {
-    // Empty input is already implicitly included.
-    return ZX_OK;
-  }
   FX_DCHECK(options_);
   if (input.size() > options_->max_input_size()) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
-  total_size_ += input.size();
-  inputs_.push_back(std::move(input));
+  // Keep the inputs sorted and deduplicated.
+  auto iter = std::lower_bound(inputs_.begin(), inputs_.end(), input);
+  if (iter == inputs_.end() || *iter != input) {
+    total_size_ += input.size();
+    inputs_.insert(iter, std::move(input));
+  }
   return ZX_OK;
 }
 

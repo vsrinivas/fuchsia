@@ -70,6 +70,12 @@ TEST(CorpusTest, AddInputs) {
   EXPECT_EQ(corpus.Add(std::move(large_input)), ZX_ERR_BUFFER_TOO_SMALL);
   EXPECT_EQ(corpus.num_inputs(), 3U);
   EXPECT_EQ(corpus.total_size(), expected);
+
+  // Adding an existing input doesn't change the  number of inputs or total size.
+  EXPECT_EQ(corpus.Add(input1()), ZX_OK);
+  EXPECT_EQ(corpus.Add(input2()), ZX_OK);
+  EXPECT_EQ(corpus.num_inputs(), 3U);
+  EXPECT_EQ(corpus.total_size(), expected);
 }
 
 TEST(CorpusTest, At) {
@@ -84,21 +90,21 @@ TEST(CorpusTest, At) {
   // Add some elements.
   AddAllToCorpus(&corpus);
 
-  // Access them in a different order.
+  // Corpus should been in sorted order: shortest to longest.
   EXPECT_TRUE(corpus.At(0, &input));
   EXPECT_EQ(input.ToHex(), input0().ToHex());
+
+  EXPECT_TRUE(corpus.At(1, &input));
+  EXPECT_EQ(input.ToHex(), input2().ToHex());
+
+  EXPECT_TRUE(corpus.At(2, &input));
+  EXPECT_EQ(input.ToHex(), input4().ToHex());
 
   EXPECT_TRUE(corpus.At(3, &input));
   EXPECT_EQ(input.ToHex(), input3().ToHex());
 
-  EXPECT_TRUE(corpus.At(1, &input));
-  EXPECT_EQ(input.ToHex(), input1().ToHex());
-
-  EXPECT_TRUE(corpus.At(2, &input));
-  EXPECT_EQ(input.ToHex(), input2().ToHex());
-
   EXPECT_TRUE(corpus.At(4, &input));
-  EXPECT_EQ(input.ToHex(), input4().ToHex());
+  EXPECT_EQ(input.ToHex(), input1().ToHex());
 
   // Out-of-bounds returns empty input.
   EXPECT_FALSE(corpus.At(5, &input));

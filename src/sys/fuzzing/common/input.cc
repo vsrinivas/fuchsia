@@ -45,8 +45,27 @@ Input& Input::operator=(Input&& other) noexcept {
   return *this;
 }
 
-bool Input::operator==(const Input& other) const {
-  return size_ == other.size_ && memcmp(data_.get(), other.data_.get(), size_) == 0;
+int Input::Compare(const Input& other) const {
+  // Sort by size first: smaller before larger.
+  if (size_ < other.size_) {
+    return -1;
+  }
+  if (other.size_ < size_) {
+    return 1;
+  }
+  // All empty inputs are the same.
+  if (size_ == 0) {
+    return 0;
+  }
+  // Sort by features next: more before fewer.
+  if (other.num_features_ < num_features_) {
+    return -1;
+  }
+  if (num_features_ < other.num_features_) {
+    return 1;
+  }
+  // Sort by bytes last.
+  return memcmp(data_.get(), other.data_.get(), size_);
 }
 
 std::string Input::ToHex() const {

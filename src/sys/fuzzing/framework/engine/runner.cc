@@ -18,15 +18,6 @@ namespace {
 
 using ::fuchsia::fuzzer::MAX_PROCESS_STATS;
 
-// This struct can be used with |std::sort| to sort inputs according to smallest first, then most
-// features.
-struct InputComparator {
-  inline bool operator()(const Input& input1, const Input& input2) {
-    return (input1.size() < input2.size()) ||
-           (input1.size() == input2.size() && (input1.num_features() > input2.num_features()));
-  }
-};
-
 const uintptr_t kTimeout = std::numeric_limits<uintptr_t>::max();
 
 }  // namespace
@@ -300,7 +291,7 @@ zx_status_t RunnerImpl::SyncMerge() {
         }
       },
       /* ignore_errors */ true);
-  std::sort(inputs.begin(), inputs.end(), InputComparator());
+  std::sort(inputs.begin(), inputs.end());
 
   // Keep files that add coverage.
   live_corpus_ = std::make_shared<Corpus>();

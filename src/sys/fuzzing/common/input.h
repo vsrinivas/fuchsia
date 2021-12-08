@@ -34,8 +34,12 @@ class Input final {
   ~Input() = default;
 
   Input& operator=(Input&& other) noexcept;
-  bool operator==(const Input& other) const;
-  bool operator!=(const Input& other) const { return !(*this == other); }
+  inline bool operator==(const Input& other) const { return Compare(other) == 0; }
+  inline bool operator!=(const Input& other) const { return Compare(other) != 0; }
+  inline bool operator<(const Input& other) const { return Compare(other) < 0; }
+  inline bool operator>(const Input& other) const { return Compare(other) > 0; }
+  inline bool operator<=(const Input& other) const { return Compare(other) <= 0; }
+  inline bool operator>=(const Input& other) const { return Compare(other) >= 0; }
 
   const uint8_t* data() const { return data_.get(); }
   uint8_t* data() { return data_.get(); }
@@ -85,6 +89,21 @@ class Input final {
 
   void StartExport(zx::socket* sender, FidlInput* receiver) const;
   void FinishExport(const zx::socket& sender) const;
+
+  // Compares this input to some |other| input, and returns negative, zero, or positive depending on
+  // whether this input should be considered less than, equal to, or greater than the other input
+  // when sorting. The defined sort order is "smaller size, then more features, then byte-by-byte".
+  //
+  // Returns negative if this input is shorter than |other|, or the same length but with more
+  // features than |other|, or the same length with the same number of features but the first
+  // non-matching byte is less than the corresponding byte in |other|.
+  //
+  // Returns postive if this input is longer than |other|, or the same length but with fewer
+  // features than |other|, or the same length with the same number of features but the first
+  // non-matching byte is greater than the corresponding byte in |other|.
+  //
+  // Returns zero if this input has the same bytes as |other|.
+  int Compare(const Input& other) const;
 
   std::unique_ptr<uint8_t[]> data_;
   size_t capacity_ = 0;

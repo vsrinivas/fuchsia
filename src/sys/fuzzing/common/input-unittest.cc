@@ -25,16 +25,38 @@ TEST(InputTest, VectorConstructor) {
   EXPECT_EQ(memcmp(input.data(), bytes.data(), bytes.size()), 0);
 }
 
-TEST(InputTest, Equality) {
+TEST(InputTest, Compare) {
   Input input({0xde, 0xad, 0xbe, 0xef});
+  input.set_num_features(3);
+
+  // First compare using length, with shorter first.
   Input input1({0xde, 0xad, 0xbe});
+  EXPECT_GT(input, input1);
+
   Input input2({0xde, 0xad, 0xbe, 0xef, 0x00});
-  Input input3({0xde, 0xad, 0xbe, 0xfe});
+  EXPECT_LT(input, input2);
+
+  // Next compare using features, with more features first.
+  Input input3({0xde, 0xad, 0xbe, 0xef});
+  input3.set_num_features(2);
+  EXPECT_LT(input, input3);
+
   Input input4({0xde, 0xad, 0xbe, 0xef});
-  EXPECT_NE(input, input1);
-  EXPECT_NE(input, input2);
-  EXPECT_NE(input, input3);
-  EXPECT_EQ(input, input4);
+  input4.set_num_features(4);
+  EXPECT_GT(input, input4);
+
+  // Finally, compare lexicographically.
+  Input input5({0xde, 0xad, 0xbe, 0xee});
+  input5.set_num_features(3);
+  EXPECT_GT(input, input5);
+
+  Input input6({0xde, 0xad, 0xbe, 0xf0});
+  input6.set_num_features(3);
+  EXPECT_LT(input, input6);
+
+  Input input7({0xde, 0xad, 0xbe, 0xef});
+  input7.set_num_features(3);
+  EXPECT_EQ(input, input7);
 }
 
 TEST(InputTest, ToHex) {
