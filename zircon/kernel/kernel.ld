@@ -167,15 +167,6 @@ SECTIONS
                ".data.rel.ro.lk_init overalignment -> padding gaps");
     }
 
-    .data.rel.ro.lk_pdev_init : {
-        PROVIDE_HIDDEN(__start_lk_pdev_init = .);
-        KEEP(*(.data.rel.ro.lk_pdev_init))
-        PROVIDE_HIDDEN(__stop_lk_pdev_init = .);
-        ASSERT(ALIGNOF(.data.rel.ro.lk_pdev_init) == 8 ||
-               SIZEOF(.data.rel.ro.lk_pdev_init) == 0,
-               ".data.rel.ro.lk_pdev_init overalignment -> padding gaps");
-    }
-
     .data.rel.ro.unittest_testcases : {
         PROVIDE_HIDDEN(__start_unittest_testcases = .);
         KEEP(*(.data.rel.ro.unittest_testcases))

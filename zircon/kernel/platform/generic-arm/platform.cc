@@ -73,7 +73,6 @@
 #include <zircon/syscalls/smc.h>
 #include <zircon/types.h>
 
-#include <pdev/pdev.h>
 #include <platform/ram_mappable_crashlog.h>
 
 // Defined in start.S.
@@ -488,9 +487,6 @@ void platform_early_init(void) {
 
   // is the cmdline option to bypass dlog set ?
   dlog_bypass_init();
-
-  // bring up kernel drivers after we have mapped our peripheral ranges
-  pdev_init();
 
   // Serial port should be active now
 

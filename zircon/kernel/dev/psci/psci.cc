@@ -11,7 +11,6 @@
 
 #include <arch/arm64/smccc.h>
 #include <dev/psci.h>
-#include <pdev/driver.h>
 
 #define LOCAL_TRACE 0
 

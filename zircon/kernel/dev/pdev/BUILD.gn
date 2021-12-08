@@ -4,23 +4,22 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//build/zircon/migrated_targets.gni")
+config("includes") {
+  include_dirs = [ "include" ]
+}
 
-zx_library("pdev") {
-  sources = [ "pdev.cc" ]
-  deps = [
-    "//zircon/kernel/lib/init",
-    "//zircon/kernel/phys:handoff",
-    "//zircon/system/ulib/zbitl",
+source_set("pdev") {
+  public = [
+    "include/pdev/interrupt.h",
+    "include/pdev/power.h",
+    "include/pdev/uart.h",
+    "include/pdev/watchdog.h",
   ]
+
   public_deps = [
-    # <pdev/driver.h> has #include <lib/special-sections/special-sections.h>.
-    "//zircon/kernel/lib/special-sections:headers",
-
-    # <pdev/driver.h> has #include <lk/init.h>.
-    "//zircon/kernel/lib/init",
-
     # <pdev/interrupt.h> has #include <dev/interrupt.h>.
     "//zircon/kernel/dev/interrupt:headers",
   ]
+
+  public_configs = [ ":includes" ]
 }
