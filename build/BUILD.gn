@@ -303,7 +303,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/simplehid/*",
     "//zircon/system/ulib/smbios/*",
     "//zircon/system/ulib/spi/*",
-    "//zircon/system/ulib/static-pie/*",
     "//zircon/system/ulib/statusor/*",
     "//zircon/system/ulib/storage-metrics/*",
     "//zircon/system/ulib/storage/buffer/*",

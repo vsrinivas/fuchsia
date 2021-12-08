@@ -66,7 +66,6 @@ group("tests") {
     "runtests-utils:tests",
     "simplehid:tests",
     "smbios:tests",
-    "static-pie:tests",
     "storage-metrics:tests",
     "storage/buffer:tests",
     "storage/operation:tests",
