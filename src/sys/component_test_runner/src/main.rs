@@ -11,10 +11,10 @@ use fidl_fuchsia_io::{DirectoryProxy, FileMarker, NodeMarker};
 use fidl_fuchsia_sys::{FlatNamespace, RunnerRequest, RunnerRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::fx_log_info;
 use fuchsia_url::pkg_url::PkgUrl;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
+use tracing::info;
 
 use std::mem;
 
@@ -100,24 +100,24 @@ async fn run_runner_server(mut stream: RunnerRequestStream) -> Result<(), Error>
         control_handle,
     }) = stream.try_next().await.context("error running server")?
     {
-        fx_log_info!("Received runner request for component {}", package.resolved_url);
+        info!(component = %package.resolved_url, "Received runner request for component");
 
         let manifest_path = manifest_path_from_url(&package.resolved_url)?;
 
-        fx_log_info!("Component manifest path {}", manifest_path);
+        info!(%manifest_path, "Component manifest path");
 
         let pkg_directory_channel =
             extract_directory_with_name(&mut startup_info.flat_namespace, "/pkg")?;
 
-        fx_log_info!("Found package directory handle");
+        info!("Found package directory handle");
 
         let meta_contents = file_contents_at_path(pkg_directory_channel, &manifest_path).await?;
 
-        fx_log_info!("Meta contents: {:#?}", std::str::from_utf8(&meta_contents)?);
+        info!("Meta contents: {:#?}", std::str::from_utf8(&meta_contents)?);
 
         let meta = serde_json::from_slice::<serde_json::Value>(&meta_contents)?;
 
-        fx_log_info!("Found metadata: {:#?}", meta);
+        info!("Found metadata: {:#?}", meta);
 
         let _f = test_facet(&meta)?;
 
@@ -134,10 +134,8 @@ enum IncomingServices {
     // ... more services here
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["component_test_runner"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["component_test_runner"])?;
-
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingServices::Runner);
 
