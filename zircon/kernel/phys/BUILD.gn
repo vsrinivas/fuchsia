@@ -193,29 +193,22 @@ if (toolchain_environment == "kernel.phys" ||
   }
 
   # Transitive dependencies for the <phys/main.h> header.
-  source_set("main") {
+  static_library("main") {
     public = [
       "include/phys/exception.h",
       "include/phys/main.h",
       "include/phys/stack.h",
     ]
 
-    public_configs = [ ":includes" ]
-
     public_deps = [
       # "main.h" has #include <lib/arch/ticks.h>.
       "//zircon/kernel/lib/arch",
     ]
 
-    # If the toolchain is compiling a PIE executable, include required
-    # libraries.
-    if (toolchain_variant.tags + [ "static-pie" ] - [ "static-pie" ] !=
-        toolchain_variant.tags) {
-      public_deps += [
-        # "main.h" has #include <lib/static-pie/static-pie.h>
-        "//zircon/system/ulib/static-pie",
-      ]
-    }
+    public_configs = [ ":includes" ]
+
+    sources = [ "self-relocation.cc" ]
+    deps = [ "//src/lib/elfldltl" ]
   }
 
   # Transitive dependencies for the <phys/page-table.h> header.

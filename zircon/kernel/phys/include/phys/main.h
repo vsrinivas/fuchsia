@@ -11,11 +11,8 @@
 #include <zircon/boot/image.h>
 #include <zircon/compiler.h>
 
+#include <ktl/byte.h>
 #include <ktl/span.h>
-
-#if defined(ZX_STATIC_PIE)
-#include <lib/static-pie/static-pie.h>
-#endif
 
 // There's never any such object but the static analysis API requires some
 // C++ object to refer to.  The PHYS_SINGLETHREAD marker on any function
@@ -46,24 +43,16 @@ extern "C" [[noreturn]] void PhysMain(void*, arch::EarlyTicks) PHYS_SINGLETHREAD
 // executable defines.  It can use printf (and stdout generally) freely.
 [[noreturn]] void ZbiMain(void* zbi, arch::EarlyTicks) PHYS_SINGLETHREAD;
 
-// These are defined by the linker script.
-extern "C" __LOCAL const char PHYS_LOAD_ADDRESS[];  // Address this file was loaded into memory.
-extern "C" const uint64_t kLinkTimeLoadAddress;     // Address this file was linked at.
-extern "C" __LOCAL const char _end[];               // End of the image, including ".bss"
+// These are defined by the linker script and give the bounds of the memory
+// image, i.e. the load image plus the reserve_memory_size (bss).
+extern "C" __LOCAL ktl::byte PHYS_LOAD_ADDRESS[], _end[];
 
 // Apply any relocations to our binary.
 //
 // This is a no-op on binaries linked to a fixed location, but is required for
 // binaries compiled as position-independent to ensure pointers in data sections,
 // vtables, etc, are updated to their correct locations.
-inline void ApplyRelocations() {
-#if defined(ZX_STATIC_PIE)
-  // If we are position-independent, apply any simple fixups required.
-  static_pie::ApplyDynamicRelocationsToSelf(
-      /*link_address=*/kLinkTimeLoadAddress,
-      /*load_address=*/reinterpret_cast<uintptr_t>(PHYS_LOAD_ADDRESS));
-#endif
-}
+void ApplyRelocations();
 
 // Read the boot loader data to initialize memory for "allocation.h" APIs.
 // The argument is the pointer to the ZBI, Multiboot info, Device Tree, etc.

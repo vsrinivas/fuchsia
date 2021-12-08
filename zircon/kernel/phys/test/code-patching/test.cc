@@ -41,12 +41,8 @@ constexpr size_t kExpectedNumPatches = 2;
 // Returns the address range within this executable associated with a given
 // link-time, virtual range.
 ktl::span<ktl::byte> GetInstructionRange(uint64_t range_start, size_t range_size) {
-  ZX_ASSERT(range_start > kLinkTimeLoadAddress);
-  range_start -= kLinkTimeLoadAddress;
-
-  auto* loaded_start = reinterpret_cast<ktl::byte*>(const_cast<char*>(PHYS_LOAD_ADDRESS));
   const size_t loaded_size = static_cast<size_t>(_end - PHYS_LOAD_ADDRESS);
-  ktl::span<ktl::byte> loaded_range{loaded_start, loaded_size};
+  ktl::span<ktl::byte> loaded_range{PHYS_LOAD_ADDRESS, loaded_size};
   ZX_ASSERT(range_size <= loaded_range.size());
   ZX_ASSERT(range_start <= loaded_range.size() - range_size);
   return loaded_range.subspan(range_start, range_size);

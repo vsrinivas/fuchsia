@@ -47,7 +47,6 @@ if (toolchain_environment == "kernel.phys") {
       "//zircon/kernel/phys:main",
       "//zircon/kernel/phys:stdio",
       "//zircon/kernel/phys:symbolize",
-      "//zircon/system/ulib/static-pie",
       "//zircon/system/ulib/zbitl",
     ]
   }
