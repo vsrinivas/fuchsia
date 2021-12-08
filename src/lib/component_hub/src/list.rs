@@ -12,9 +12,6 @@ use {
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-static SPACER: &str = "  ";
-static WIDTH_CS_TREE: usize = 19;
-
 /// Filters that can be applied when listing components
 #[derive(Debug, PartialEq)]
 pub enum ListFilter {
@@ -174,7 +171,7 @@ impl Component {
         Ok(dirs)
     }
 
-    fn should_print(&self, list_filter: &ListFilter) -> bool {
+    pub fn should_include(&self, list_filter: &ListFilter) -> bool {
         if list_filter == &ListFilter::CML && self.is_cmx {
             return false;
         } else if list_filter == &ListFilter::CMX && !self.is_cmx {
@@ -188,34 +185,6 @@ impl Component {
         }
 
         return true;
-    }
-
-    pub fn print(&self, list_filter: &ListFilter, verbose: bool, indent: usize) {
-        let space = SPACER.repeat(indent);
-
-        if self.should_print(&list_filter) {
-            if verbose {
-                let component_type = if self.is_cmx { "CMX" } else { "CML" };
-
-                let state = if self.is_running { "Running" } else { "Stopped" };
-
-                println!(
-                    "{:<width_type$}{:<width_state$}{}{}",
-                    component_type,
-                    state,
-                    space,
-                    self.name,
-                    width_type = WIDTH_CS_TREE,
-                    width_state = WIDTH_CS_TREE
-                );
-            } else {
-                println!("{}{}", space, self.name);
-            }
-        }
-
-        for child in &self.children {
-            child.print(list_filter, verbose, indent + 1);
-        }
     }
 }
 
