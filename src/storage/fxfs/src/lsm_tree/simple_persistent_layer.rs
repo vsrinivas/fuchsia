@@ -17,10 +17,12 @@ use {
     serde::Serialize,
     std::{
         cmp::Ordering,
+        io::Read,
         ops::{Bound, Drop},
         sync::{Arc, Mutex},
         vec::Vec,
     },
+    storage_device::buffer::Buffer,
 };
 
 /// Implements a very primitive persistent layer where items are packed into blocks and searching
@@ -33,14 +35,31 @@ pub struct SimplePersistentLayer {
     close_event: Mutex<Option<Event>>,
 }
 
+struct BufferCursor<'a> {
+    buffer: Buffer<'a>,
+    pos: usize,
+    len: usize,
+}
+
+impl std::io::Read for BufferCursor<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let to_read = std::cmp::min(buf.len(), self.len.saturating_sub(self.pos));
+        if to_read > 0 {
+            buf[..to_read].copy_from_slice(&self.buffer.as_slice()[self.pos..self.pos + to_read]);
+            self.pos += to_read;
+        }
+        Ok(to_read)
+    }
+}
+
 pub struct Iterator<'iter, K, V> {
+    // Allocated out of |layer|.
+    buffer: BufferCursor<'iter>,
+
     layer: &'iter SimplePersistentLayer,
 
     // The position of the _next_ block to be read.
     pos: u64,
-
-    // A cursor contiaining the most recently read block.
-    reader: Option<std::io::Cursor<Box<[u8]>>>,
 
     // The item index in the current block.
     item_index: u16,
@@ -54,7 +73,18 @@ pub struct Iterator<'iter, K, V> {
 
 impl<K, V> Iterator<'_, K, V> {
     fn new<'iter>(layer: &'iter SimplePersistentLayer, pos: u64) -> Iterator<'iter, K, V> {
-        Iterator { layer, pos, reader: None, item_index: 0, item_count: 0, item: None }
+        Iterator {
+            layer,
+            buffer: BufferCursor {
+                buffer: layer.object_handle.allocate_buffer(layer.block_size as usize),
+                pos: 0,
+                len: 0,
+            },
+            pos,
+            item_index: 0,
+            item_count: 0,
+            item: None,
+        }
     }
 }
 
@@ -66,18 +96,16 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
                 self.item = None;
                 return Ok(());
             }
-            // TODO(jfsulliv): Reuse this transfer buffer.
-            let bs = self.layer.block_size as usize;
-            let mut buf = self.layer.object_handle.allocate_buffer(bs);
-            let len = self.layer.object_handle.read(self.pos, buf.as_mut()).await?;
+            let len = self.layer.object_handle.read(self.pos, self.buffer.buffer.as_mut()).await?;
+            self.buffer.pos = 0;
+            self.buffer.len = len;
             log::debug!(
                 "pos={}, object size={}, object id={}",
                 self.pos,
                 self.layer.size,
                 self.layer.object_handle.object_id()
             );
-            let mut reader = std::io::Cursor::new(buf.as_slice()[..len].to_vec().into());
-            self.item_count = reader.read_u16::<LittleEndian>()?;
+            self.item_count = self.buffer.read_u16::<LittleEndian>()?;
             if self.item_count == 0 {
                 bail!(
                     "Read block with zero item count (object: {}, offset: {})",
@@ -85,13 +113,10 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
                     self.pos
                 );
             }
-            self.reader = Some(reader);
             self.pos += self.layer.block_size;
             self.item_index = 0;
         }
-        self.item = Some(
-            bincode::deserialize_from(self.reader.as_mut().unwrap()).context("Corrupt layer")?,
-        );
+        self.item = Some(bincode::deserialize_from(self.buffer.by_ref()).context("Corrupt layer")?);
         self.item_index += 1;
         Ok(())
     }
@@ -244,7 +269,6 @@ impl<W: WriteBytes + Send> LayerWriter for SimplePersistentLayerWriter<W> {
         &mut self,
         item: ItemRef<'_, K, V>,
     ) -> Result<(), Error> {
-        // TODO(jfsulliv): Simplify all of this by implementing std::io::Writer for WriteBytes.
         // Note the length before we write this item.
         let len = self.buf.len();
         bincode::serialize_into(&mut self.buf, &item)?;
