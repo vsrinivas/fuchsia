@@ -125,9 +125,9 @@ class SessionImpl final : public fuchsia::gpu::agis::Session {
     std::vector<fuchsia::gpu::agis::Connection> connections;
     for (const auto &element : url_to_port) {
       auto connection = ::fuchsia::gpu::agis::Connection::New();
-      connection->component_url = UrlFromKey(element.first);
-      connection->port = element.second;
-      connections.emplace_back(*connection);
+      connection->set_component_url(UrlFromKey(element.first));
+      connection->set_port(element.second);
+      connections.emplace_back(std::move(*connection));
     }
     fuchsia::gpu::agis::Session_Connections_Response response(std::move(connections));
     result.set_response(std::move(response));

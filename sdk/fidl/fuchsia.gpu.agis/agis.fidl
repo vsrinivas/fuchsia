@@ -15,9 +15,9 @@ using zx;
 /// through this interface.
 ///
 /// A Connection is a pairing of a component and its port assignment.
-type Connection = resource struct {
-    component_url fuchsia.url.Url;
-    port uint16;
+type Connection = resource table {
+    1: component_url fuchsia.url.Url;
+    2: port uint16;
 };
 
 /// Max component connections that may be registered.

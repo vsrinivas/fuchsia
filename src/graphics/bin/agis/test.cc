@@ -83,7 +83,7 @@ class AgisTest : public testing::Test {
           std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
           for (auto &connection : connections) {
             FX_LOGF(INFO, "agis-test", "AgisTest::Connection \"%s\"",
-                    connection.component_url.c_str());
+                    connection.component_url().c_str());
           }
           num_connections_ = connections.size();
           break;
@@ -179,7 +179,7 @@ TEST_F(AgisTest, UsableSocket) {
     EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
     std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
     EXPECT_EQ(connections.size(), 1ul);
-    port = connections.front().port;
+    port = connections.front().port();
     outstanding--;
   });
   LoopWait();
@@ -270,7 +270,7 @@ TEST(AgisDisconnect, Main) {
       EXPECT_EQ(connections.size(), 1ul);
       bool found = false;
       for (const auto &connection : connections) {
-        if (connection.component_url == url) {
+        if (connection.component_url() == url) {
           found = true;
           break;
         }
@@ -299,7 +299,7 @@ TEST(AgisDisconnect, Main) {
       auto connections(result.response().ResultValue_());
       bool component_found = false;
       for (const auto &connection : connections) {
-        if (connection.component_url == url) {
+        if (connection.component_url() == url) {
           component_found = true;
           break;
         }
