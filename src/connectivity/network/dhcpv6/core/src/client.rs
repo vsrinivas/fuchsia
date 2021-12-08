@@ -2262,36 +2262,43 @@ pub(crate) mod testutil {
     ///    - the actions are correct
     ///    - the Solicit message is correct
     ///
-    /// Returns the client in ServerDiscovery state and the actions associated
-    /// with transitioning to this state.
-    pub(crate) fn start_server_discovery<R: Rng>(
+    /// Returns the client in ServerDiscovery state.
+    pub(crate) fn start_and_assert_server_discovery<R: Rng + std::fmt::Debug>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
         configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
         options_to_request: Vec<v6::OptionCode>,
         rng: R,
-    ) -> (ClientStateMachine<R>, Actions) {
+    ) -> ClientStateMachine<R> {
         let (client, actions) = ClientStateMachine::start_stateful(
-            transaction_id,
+            transaction_id.clone(),
             client_id.clone(),
             configured_addresses.clone(),
             options_to_request.clone(),
             rng,
         );
 
-        assert_matches!(&client.state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
-                client_id: got_client_id,
-                configured_addresses: got_configured_addresses,
-                first_solicit_time: Some(_),
-                retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
-                solicit_max_rt: SOLICIT_MAX_RT,
-                collected_advertise,
-                collected_sol_max_rt,
-            })) if collected_advertise.is_empty() &&
-                   collected_sol_max_rt.is_empty() &&
-                   *got_client_id == client_id &&
-                   *got_configured_addresses == configured_addresses
+        assert_matches!(
+            &client,
+            ClientStateMachine {
+                transaction_id: got_transaction_id,
+                options_to_request: got_options_to_request,
+                state: Some(ClientState::ServerDiscovery(ServerDiscovery {
+                    client_id: got_client_id,
+                    configured_addresses: got_configured_addresses,
+                    first_solicit_time: Some(_),
+                    retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
+                    solicit_max_rt: SOLICIT_MAX_RT,
+                    collected_advertise,
+                    collected_sol_max_rt,
+                })),
+                rng: _,
+            } if *got_transaction_id == transaction_id &&
+                 *got_options_to_request == options_to_request &&
+                 *got_client_id == client_id &&
+                 *got_configured_addresses == configured_addresses &&
+                 collected_advertise.is_empty() &&
+                 collected_sol_max_rt.is_empty()
         );
 
         // Start of server discovery should send a solicit and schedule a
@@ -2359,7 +2366,7 @@ pub(crate) mod testutil {
         assert_eq!(solicited_addresses, configured_addresses);
         assert_eq!(&other, &[]);
 
-        (client, actions)
+        client
     }
 
     impl IdentityAssociation {
@@ -2562,8 +2569,8 @@ mod tests {
         preferred_addresses: Vec<Ipv6Addr>,
         options_to_request: Vec<v6::OptionCode>,
     ) {
-        // The client and actions are checked inside `start_server_discovery`
-        let (_client, _actions) = testutil::start_server_discovery(
+        // The client is checked inside `start_and_assert_server_discovery`.
+        let _client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             v6::duid_uuid(),
             testutil::to_configured_addresses(address_count, preferred_addresses),
@@ -2734,7 +2741,7 @@ mod tests {
     #[test]
     fn receive_complete_advertise_with_max_preference() {
         let client_id = v6::duid_uuid();
-        let (mut client, _actions) = testutil::start_server_discovery(
+        let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
@@ -2826,7 +2833,7 @@ mod tests {
     fn receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
-        let (mut client, _actions) = testutil::start_server_discovery(
+        let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
@@ -2905,7 +2912,7 @@ mod tests {
     #[test]
     fn select_first_server_while_retransmitting() {
         let client_id = v6::duid_uuid();
-        let (mut client, _actions) = testutil::start_server_discovery(
+        let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
@@ -3541,7 +3548,7 @@ mod tests {
     fn requesting_retransmit_max_retrans_count() {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
-        let (mut client, _actions) = testutil::start_server_discovery(
+        let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
@@ -3719,7 +3726,7 @@ mod tests {
     fn assign_addresses() {
         let client_id = v6::duid_uuid();
         let transaction_id = [0, 1, 2];
-        let (mut client, _actions) = testutil::start_server_discovery(
+        let mut client = testutil::start_and_assert_server_discovery(
             transaction_id.clone(),
             client_id.clone(),
             testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
