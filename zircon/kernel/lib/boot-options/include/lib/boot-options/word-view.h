@@ -9,6 +9,7 @@
 
 #include <zircon/assert.h>
 
+#include <iterator>
 #include <string_view>
 
 // This provides a container-like view of string_view for each
@@ -17,6 +18,12 @@ class WordView {
  public:
   class iterator {
    public:
+    using iterator_category = std::forward_iterator_tag;
+    using value_type = std::string_view;
+    using pointer = value_type;
+    using reference = value_type;
+    using difference_type = ptrdiff_t;
+
     iterator() = default;
     iterator(const iterator&) = default;
     iterator& operator=(const iterator&) = default;

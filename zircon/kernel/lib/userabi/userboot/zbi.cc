@@ -9,13 +9,17 @@
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/view.h>
 #include <lib/zbitl/vmo.h>
+#include <lib/zircon-internal/align.h>
 #include <stdarg.h>
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
+#include "option.h"
 #include "util.h"
 
 namespace {
+
+using namespace std::string_view_literals;
 
 using ZbiView = zbitl::View<zbitl::MapUnownedVmo>;
 using ZbiError = ZbiView::Error;
@@ -163,4 +167,43 @@ zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
 
   fail(log, "no '/boot' bootfs in bootstrap message\n");
   __UNREACHABLE;
+}
+
+Options GetOptionsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self, const zx::vmo& zbi) {
+  ZbiView view(zbitl::MapUnownedVmo{
+      zx::unowned_vmo{zbi},
+      /*writable=*/false,
+      zx::unowned_vmar{vmar_self},
+  });
+  Options opts;
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    auto [header, payload] = *it;
+    if (header->type != ZBI_TYPE_CMDLINE) {
+      continue;
+    }
+
+    // Map in and parse the CMDLINE payload. The strings referenced by `opts`
+    // will be owned by the mapped pages and will be valid within `vmar_self`'s
+    // lifetime (i.e., for the entirety of userboot's runtime).
+    const uint64_t previous_page_boundary = payload & -ZX_PAGE_SIZE;
+    const uint64_t next_page_boundary = ZX_PAGE_ALIGN(payload + header->length);
+    const size_t size = next_page_boundary - previous_page_boundary;
+    uintptr_t mapping;
+    if (zx_status_t status =
+            vmar_self.map(ZX_VM_PERM_READ, 0, zbi, previous_page_boundary, size, &mapping);
+        status != ZX_OK) {
+      fail(log, "failed to map CMDLINE item: %s", zx_status_get_string(status));
+    }
+
+    const uintptr_t mapped_payload = mapping + (payload % ZX_PAGE_SIZE);
+    std::string_view cmdline{reinterpret_cast<const char*>(mapped_payload), header->length};
+    ParseCmdline(cmdline, opts);
+  }
+
+  if (auto result = view.take_error(); result.is_error()) {
+    printl(log, "invalid ZBI: ");
+    FailFromZbiError(result.error_value(), log);
+  }
+
+  return opts;
 }

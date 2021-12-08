@@ -54,16 +54,14 @@ using namespace userboot;
     __builtin_trap();
 }
 
-void load_child_process(const zx::debuglog& log, const struct options* o, Bootfs& bootfs,
-                        std::string_view root, const zx::vmo& vdso_vmo, const zx::process& proc,
-                        const zx::vmar& vmar, const zx::thread& thread, const zx::channel& to_child,
-                        zx_vaddr_t* entry, zx_vaddr_t* vdso_base, size_t* stack_size,
-                        zx::channel* loader_svc) {
+void load_child_process(const zx::debuglog& log, const Options& opts, Bootfs& bootfs,
+                        const zx::vmo& vdso_vmo, const zx::process& proc, const zx::vmar& vmar,
+                        const zx::thread& thread, const zx::channel& to_child, zx_vaddr_t* entry,
+                        zx_vaddr_t* vdso_base, size_t* stack_size, zx::channel* loader_svc) {
   // Examine the bootfs image and find the requested file in it.
   // This will handle a PT_INTERP by doing a second lookup in bootfs.
-  *entry = elf_load_bootfs(log, bootfs, root, proc, vmar, thread, o->value[OPTION_FILENAME],
-                           to_child, stack_size, loader_svc);
-
+  *entry = elf_load_bootfs(log, bootfs, opts.root, proc, vmar, thread, opts.next, to_child,
+                           stack_size, loader_svc);
   // Now load the vDSO into the child, so it has access to system calls.
   *vdso_base = elf_load_vdso(log, vmar, vdso_vmo);
 }
@@ -154,14 +152,17 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
 
   // Process the kernel command line, which gives us options and also
   // becomes the environment strings for our child.
-  options o;
-  child_message.pargs.environ_num = parse_options(log, child_message.cmdline, cmdline_len, &o);
+  //
+  // TODO(fxbug.dev/89834): Migrate child processes away from consuming this
+  // information from the environment.
+  child_message.pargs.environ_num =
+      CountOptions(std::string_view{child_message.cmdline, cmdline_len});
+  child_message.pargs.environ_off = offsetof(child_message_layout, cmdline);
 
   // Fill in the child message header.
   child_message.pargs.protocol = ZX_PROCARGS_PROTOCOL;
   child_message.pargs.version = ZX_PROCARGS_VERSION;
   child_message.pargs.handle_info_off = offsetof(child_message_layout, info);
-  child_message.pargs.environ_off = offsetof(child_message_layout, cmdline);
 
   // Fill in the handle info table.
   child_message.info[kBootfsVmo] = PA_HND(PA_VMO_BOOTFS, 0);
@@ -198,7 +199,11 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
   // Locate the ZBI_TYPE_STORAGE_BOOTFS item and decompress it.
   // We need it to load bootsvc and libc from.
   // Later bootfs sections will be processed by devmgr.
-  zx::vmo bootfs_vmo = GetBootfsFromZbi(log, vmar_self, *zx::unowned_vmo{handles[kZbi]});
+  const zx::unowned_vmo zbi{handles[kZbi]};
+  zx::vmo bootfs_vmo = GetBootfsFromZbi(log, vmar_self, *zbi);
+
+  // Parse CMDLINE items to determine the set of runtime options.
+  Options opts = GetOptionsFromZbi(log, vmar_self, *zbi);
 
   zx::process proc;
   {
@@ -220,16 +225,9 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     // Pass the decompressed bootfs VMO on.
     handles[kBootfsVmo] = bootfs_vmo.release();
 
-    std::string_view root{o.value[OPTION_ROOT]};
-    if (!root.empty()) {
-      if (root.front() == '/') {
-        fail(log, "`userboot.root` (\"%.*s\" must not begin with a \'/\'",
-             static_cast<int>(root.size()), root.data());
-      }
-      // Normalize away a trailing '/', if present.
-      if (root.back() == '/') {
-        root.remove_prefix(1);
-      }
+    if (!opts.root.empty() && opts.root.front() == '/') {
+      fail(log, "`userboot.root` (\"%.*s\" must not begin with a \'/\'",
+           static_cast<int>(opts.root.size()), opts.root.data());
     }
 
     // Make the channel for the bootstrap message.
@@ -239,9 +237,8 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
 
     // Create the process itself.
     zx::vmar vmar;
-    const char* filename = o.value[OPTION_FILENAME];
-    status = zx::process::create(*zx::unowned_job{handles[kRootJob]}, filename,
-                                 static_cast<uint32_t>(strlen(filename)), 0, &proc, &vmar);
+    status = zx::process::create(*zx::unowned_job{handles[kRootJob]}, opts.next.data(),
+                                 static_cast<uint32_t>(opts.next.size()), 0, &proc, &vmar);
     check(log, status, "zx_process_create");
 
     // Squat on some address space before we start loading it up.
@@ -249,16 +246,16 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
 
     // Create the initial thread in the new process
     zx::thread thread;
-    status =
-        zx::thread::create(proc, filename, static_cast<uint32_t>(strlen(filename)), 0, &thread);
+    status = zx::thread::create(proc, opts.next.data(), static_cast<uint32_t>(opts.next.size()), 0,
+                                &thread);
     check(log, status, "zx_thread_create");
 
     // Map in the code.
     zx_vaddr_t entry, vdso_base;
     size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
     zx::channel loader_service_channel;
-    load_child_process(log, &o, bootfs, root, *zx::unowned_vmo{handles[kFirstVdso]}, proc, vmar,
-                       thread, to_child, &entry, &vdso_base, &stack_size, &loader_service_channel);
+    load_child_process(log, opts, bootfs, *zx::unowned_vmo{handles[kFirstVdso]}, proc, vmar, thread,
+                       to_child, &entry, &vdso_base, &stack_size, &loader_service_channel);
 
     // Allocate the stack for the child.
     uintptr_t sp;
@@ -311,7 +308,7 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     check(log, status, "zx_process_start failed");
     thread.reset();
 
-    printl(log, "process %s started.", o.value[OPTION_FILENAME]);
+    printl(log, "process %.*s started.", static_cast<int>(opts.next.size()), opts.next.data());
 
     // Now become the loader service for as long as that's needed.
     if (loader_service_channel) {
@@ -319,16 +316,17 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
       status = log.duplicate(ZX_RIGHT_SAME_RIGHTS, &log_dup);
       check(log, status, "zx_handle_duplicate failed on debuglog handle");
 
-      LoaderService ldsvc(std::move(log_dup), &bootfs, root);
+      LoaderService ldsvc(std::move(log_dup), &bootfs, opts.root);
       ldsvc.Serve(std::move(loader_service_channel));
     }
 
     // All done with bootfs! Let it go out of scope.
   }
 
-  if (o.value[OPTION_SHUTDOWN] || o.value[OPTION_REBOOT]) {
-    printl(log, "Waiting for %s to exit...", o.value[OPTION_FILENAME]);
-    status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+  auto wait_till_child_exits = [child_name = opts.next, &log, &proc]() {
+    printl(log, "Waiting for %.*s to exit...", static_cast<int>(child_name.size()),
+           child_name.data());
+    zx_status_t status = proc.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
     check(log, status, "zx_object_wait_one on process failed");
     zx_info_process_t info;
     status = proc.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
@@ -340,19 +338,24 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
       // machine down doesn't return a value to anyone for us.
       printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
     }
-    if (o.value[OPTION_REBOOT]) {
-      do_powerctl(log, root_resource, ZX_SYSTEM_POWERCTL_REBOOT);
-    } else if (o.value[OPTION_SHUTDOWN]) {
-      do_powerctl(log, root_resource, ZX_SYSTEM_POWERCTL_SHUTDOWN);
-    }
-  }
+  };
 
   // Now we've accomplished our purpose in life, and we can die happy.
-  proc.reset();
+  switch (opts.epilogue) {
+    case Epilogue::kExitAfterChildLaunch:
+      proc.reset();
+      printl(log, "finished!");
+      zx_process_exit(0);
+    case Epilogue::kRebootAfterChildExit:
+      wait_till_child_exits();
+      do_powerctl(log, root_resource, ZX_SYSTEM_POWERCTL_REBOOT);
+    case Epilogue::kPowerOffAfterChildExit:
+      wait_till_child_exits();
+      do_powerctl(log, root_resource, ZX_SYSTEM_POWERCTL_SHUTDOWN);
+  }
 
-  printl(log, "finished!");
-  zx_process_exit(0);
-}  // namespace
+  __UNREACHABLE;
+}
 
 }  // anonymous namespace
 

@@ -11,7 +11,11 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 
+#include "option.h"
+
 zx::vmo GetBootfsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self,
                          const zx::vmo& zbi_vmo);
+
+Options GetOptionsFromZbi(const zx::debuglog& log, const zx::vmar& vmar_self, const zx::vmo& zbi);
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_ZBI_H_
