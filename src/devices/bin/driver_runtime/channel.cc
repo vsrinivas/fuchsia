@@ -10,6 +10,7 @@
 
 #include "src/devices/bin/driver_runtime/arena.h"
 #include "src/devices/bin/driver_runtime/dispatcher.h"
+#include "src/devices/bin/driver_runtime/driver_context.h"
 #include "src/devices/bin/driver_runtime/handle.h"
 
 namespace {
@@ -127,6 +128,22 @@ fdf_status_t Channel::Write(uint32_t options, fdf_arena_t* arena, void* data, ui
 }
 
 std::unique_ptr<CallbackRequest> Channel::WriteSelfLocked(MessagePacketOwner msg) {
+  if (!waiters_.is_empty()) {
+    // If the far side is waiting for replies to messages sent via "call",
+    // see if this message has a matching txid to one of the waiters, and if so, deliver it.
+    fdf_txid_t txid = msg->get_txid();
+    for (auto& waiter : waiters_) {
+      // Deliver message to waiter.
+      // Remove waiter from list.
+      auto waiter_txid = waiter.get_txid();
+      ZX_ASSERT(waiter_txid.has_value());
+      if (waiter_txid.value() == txid) {
+        waiters_.erase(waiter);
+        waiter.DeliverLocked(std::move(msg));
+        return nullptr;
+      }
+    }
+  }
   msg_queue_.push_back(std::move(msg));
   // No dispatcher has been registered yet to handle callback requests.
   if (!dispatcher_) {
@@ -203,6 +220,117 @@ fdf_status_t Channel::WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_r
   return ZX_OK;
 }
 
+fdf_txid_t Channel::AllocateTxidLocked() {
+  fdf_txid_t txid;
+  do {
+    txid = kMinTxid + next_id_;
+    ZX_ASSERT(txid >= kMinTxid);
+    // Bitwise AND with |kNumTxids - 1| to handle wrap-around.
+    next_id_ = (next_id_ + 1) & (kNumTxids - 1);
+
+    // If there are waiting messages, ensure we have not allocated a txid
+    // that's already in use. This is unlikely. It's atypical for multiple
+    // threads to be invoking channel_call() on the same channel at once, so
+    // the waiter list is most commonly empty.
+  } while (IsTxidInUseLocked(txid));
+  return txid;
+}
+
+bool Channel::IsTxidInUseLocked(fdf_txid_t txid) {
+  for (Channel::MessageWaiter& w : waiters_) {
+    auto waiter_txid = w.get_txid();
+    ZX_ASSERT(waiter_txid.has_value());
+    if (waiter_txid.value() == txid) {
+      return true;
+    }
+  }
+  return false;
+}
+
+fdf_status_t Channel::Call(uint32_t options, zx_time_t deadline,
+                           const fdf_channel_call_args_t* args) {
+  if (!args) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  fdf_status_t status = CheckWriteArgs(options, args->wr_arena, args->wr_data, args->wr_num_bytes,
+                                       args->wr_handles, args->wr_num_handles);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = CheckReadArgs(options, args->rd_arena, args->rd_data, args->rd_num_bytes,
+                         args->rd_handles, args->rd_num_handles);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (args->wr_num_bytes < sizeof(fdf_txid_t)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Check if the thread is allowing synchronous calls.
+  auto dispatcher = driver_context::GetCurrentDispatcher();
+  if (dispatcher && !dispatcher->allow_sync_calls()) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  fbl::RefPtr<fdf_arena> arena_ref(args->wr_arena);
+  auto msg = MessagePacket::Create(std::move(arena_ref), args->wr_data, args->wr_num_bytes,
+                                   args->wr_handles, args->wr_num_handles);
+  if (!msg) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  MessageWaiter waiter(fbl::RefPtr(this));
+  std::unique_ptr<CallbackRequest> callback_request;
+  {
+    fbl::AutoLock lock(get_lock());
+    if (!peer_) {
+      // Make sure the channel is cleared from the waiter before it destructs.
+      auto reply = waiter.TakeLocked();
+      ZX_ASSERT(!reply.is_ok());  // No reply is expected.
+      return ZX_ERR_PEER_CLOSED;
+    }
+
+    fdf_txid_t txid = AllocateTxidLocked();
+    // Install our txid in the waiter and the outbound message.
+    waiter.set_txid(txid);
+    msg->set_txid(txid);
+
+    // Before writing the outbound message and waiting, add our waiter to the list.
+    waiters_.push_back(&waiter);
+
+    // Write outbound message to opposing endpoint.
+    callback_request = peer_->WriteSelfLocked(std::move(msg));
+  }
+
+  // Queue any callback outside of the lock.
+  if (callback_request) {
+    CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
+  }
+
+  // Wait until a message with the same txid is received, or the deadline is reached.
+  waiter.Wait(deadline);
+  // Rather than using the status of the wait, we should check the status recorded by the waiter.
+  // This is as |Wait| is not called under lock, and the waiter could have been updated
+  // (and removed from the |waiters_| list) while we were trying to acquire the waiter's lock.
+
+  {
+    fbl::AutoLock lock(get_lock());
+
+    auto reply = waiter.TakeLocked();
+    // If the wait timed out, the waiter would not have been removed from the list.
+    // In the case of ZX_OK, or other error statuses (such as ZX_ERR_PEER_CLOSED),
+    // the waiter would already be removed.
+    if (reply.status_value() == ZX_ERR_TIMED_OUT) {
+      waiters_.erase(waiter);
+    }
+    if (reply.is_ok()) {
+      reply->CopyOut(args->rd_arena, args->rd_data, args->rd_num_bytes, args->rd_handles,
+                     args->rd_num_handles);
+    }
+    return reply.status_value();
+  }
+}
+
 // We disable lock analysis here as it doesn't realize the lock is shared
 // when trying to access the peer's internals.
 // Make sure to acquire the lock before accessing class members or calling
@@ -233,6 +361,13 @@ void Channel::Close() __TA_NO_THREAD_SAFETY_ANALYSIS {
         }
       }
     }
+    // Abort any waiting Call operations because we've been canceled by reason
+    // of the opposing endpoint going away.
+    // Remove waiter from list.
+    while (!waiters_.is_empty()) {
+      auto waiter = waiters_.pop_front();
+      waiter->CancelLocked(ZX_ERR_PEER_CLOSED);
+    }
   }
   if (callback_request) {
     CallbackRequest::QueueOntoDispatcher(std::move(callback_request));
@@ -252,6 +387,14 @@ void Channel::OnPeerClosed() {
   std::unique_ptr<driver_runtime::CallbackRequest> callback_request;
   {
     fbl::AutoLock lock(get_lock());
+    // Abort any waiting Call operations because we've been canceled by reason
+    // of the opposing endpoint going away.
+    // Remove waiter from list.
+    while (!waiters_.is_empty()) {
+      auto waiter = waiters_.pop_front();
+      waiter->CancelLocked(ZX_ERR_PEER_CLOSED);
+    }
+
     // If there are no messages queued, but we are waiting for a callback,
     // we should send the peer closed message now.
     if (msg_queue_.is_empty() && !IsCallbackRequestQueuedLocked() &&
@@ -309,6 +452,49 @@ void Channel::DispatcherCallback(std::unique_ptr<driver_runtime::CallbackRequest
     ZX_ASSERT(num_pending_callbacks_ > 0);
     num_pending_callbacks_--;
   }
+}
+
+Channel::MessageWaiter::~MessageWaiter() {
+  ZX_ASSERT(!channel_);
+  ZX_ASSERT(!InContainer());
+}
+
+void Channel::MessageWaiter::DeliverLocked(MessagePacketOwner msg) {
+  ZX_ASSERT(channel_);
+
+  msg_ = std::move(msg);
+  status_ = ZX_OK;
+  completion_.Signal();
+}
+
+void Channel::MessageWaiter::CancelLocked(zx_status_t status) {
+  ZX_ASSERT(!InContainer());
+  ZX_ASSERT(channel_);
+  status_ = status;
+  completion_.Signal();
+}
+
+void Channel::MessageWaiter::Wait(zx_time_t deadline) {
+  ZX_ASSERT(channel_);
+
+  zx_duration_t duration = zx_time_sub_time(deadline, zx_clock_get_monotonic());
+  // We do not use the status of the wait. Either the channel updates the status
+  // once it delivers the message or cancels the wait, or ZX_ERR_TIMED_OUT is assumed.
+  __UNUSED zx_status_t status = completion_.Wait(zx::duration(duration));
+}
+
+zx::status<MessagePacketOwner> Channel::MessageWaiter::TakeLocked() {
+  ZX_ASSERT(channel_);
+
+  channel_ = nullptr;
+  if (!status_.has_value()) {
+    // We did not receive any response for the channel call.
+    return zx::error(ZX_ERR_TIMED_OUT);
+  }
+  if (status_.value() != ZX_OK) {
+    return zx::error(status_.value());
+  }
+  return zx::ok(std::move(msg_));
 }
 
 }  // namespace driver_runtime

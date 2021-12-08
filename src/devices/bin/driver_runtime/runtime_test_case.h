@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_DEVICES_BIN_DRIVER_RUNTIME_RUNTIME_TEST_CASE_H_
+#define SRC_DEVICES_BIN_DRIVER_RUNTIME_RUNTIME_TEST_CASE_H_
+
 #include <lib/fdf/arena.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/dispatcher.h>
@@ -12,7 +15,7 @@
 #include <zxtest/zxtest.h>
 
 class RuntimeTestCase : public zxtest::Test {
- protected:
+ public:
   // Registers a wait_async request on |ch| and signals |completion| once it
   // is ready for reading.
   static void SignalOnChannelReadable(fdf_handle_t ch, fdf_dispatcher_t* dispatcher,
@@ -39,3 +42,5 @@ class RuntimeTestCase : public zxtest::Test {
  private:
   int next_driver_ = 1;
 };
+
+#endif  // SRC_DEVICES_BIN_DRIVER_RUNTIME_RUNTIME_TEST_CASE_H_

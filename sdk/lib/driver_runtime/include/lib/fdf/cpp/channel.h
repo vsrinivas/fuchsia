@@ -79,7 +79,7 @@ class Channel {
   // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
   //
   // This operation is thread-safe.
-  zx::status<> Write(uint32_t options, Arena& arena, void* data, uint32_t num_bytes,
+  zx::status<> Write(uint32_t options, const Arena& arena, void* data, uint32_t num_bytes,
                      cpp20::span<zx_handle_t> handles) const {
     uint32_t handles_size = static_cast<uint32_t>(handles.size());
     return zx::make_status(fdf_channel_write(channel_, options, arena.get(), data, num_bytes,
@@ -153,9 +153,11 @@ class Channel {
   // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
   // Returns |ZX_ERR_TIMED_OUT| if |deadline| passed before a reply matching
   // the correct txid was received.
+  // Returns |ZX_ERR_BAD_STATE| if this is called from a driver runtime managed thread
+  // that does not allow sync calls.
   //
   // This operation is thread-safe.
-  zx::status<ReadReturn> Call(uint32_t options, zx::time deadline, Arena& arena, void* data,
+  zx::status<ReadReturn> Call(uint32_t options, zx::time deadline, const Arena& arena, void* data,
                               uint32_t num_bytes, cpp20::span<zx_handle_t> handles) const {
     fdf_arena_t* rd_arena;
     void* rd_data;
@@ -183,7 +185,7 @@ class Channel {
     return zx::ok(ReadReturn{Arena(rd_arena), rd_data, rd_num_bytes, out_handles});
   }
 
-  fdf_handle_t get() { return channel_; }
+  fdf_handle_t get() const { return channel_; }
 
   void reset(fdf_handle_t channel = FDF_HANDLE_INVALID) {
     close();

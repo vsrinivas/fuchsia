@@ -1,6 +1,6 @@
 {
   "pkg/driver_runtime/include/lib/fdf/arena.h": "48ac10cd1a52652d09505c0287c6d9f7",
-  "pkg/driver_runtime/include/lib/fdf/channel.h": "f514ed8a557437542ce6b67784dfd9ad",
+  "pkg/driver_runtime/include/lib/fdf/channel.h": "0259beb809560332b8403375c16f342e",
   "pkg/driver_runtime/include/lib/fdf/channel_read.h": "6276220099cdab194257113c103d0e6e",
   "pkg/driver_runtime/include/lib/fdf/dispatcher.h": "3b8eb13fc5950ca15f3c09de124708ff",
   "pkg/driver_runtime/include/lib/fdf/types.h": "18bcabb17bb55cf4f5787f52195e3af2"

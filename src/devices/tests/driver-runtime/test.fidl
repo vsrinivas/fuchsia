@@ -21,7 +21,11 @@ protocol TestDevice {
 
 protocol TestDeviceChild {
     /// Returns the test data stored in the parent device using the runtime channel.
-    GetParentDataOverRuntimeChannel() -> (struct {
+    /// If `sync` is true, the child device will make a synchronous channel call,
+    /// otherwise it will do a write and asynchronous read.
+    GetParentDataOverRuntimeChannel(struct {
+        sync bool;
+    }) -> (struct {
         out vector<uint8>:MAX_TRANSFER_SIZE;
     }) error zx.status;
 };

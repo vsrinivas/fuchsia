@@ -35,6 +35,20 @@ class MessagePacket : public fbl::DoublyLinkedListable<MessagePacketOwner> {
   void CopyOut(fdf_arena_t** out_arena, void** out_data, uint32_t* out_num_bytes,
                zx_handle_t** out_handles, uint32_t* out_num_handles);
 
+  // fdf_channel_call treats the leading bytes of the payload as a transaction id of type
+  // fdf_txid_t.
+  zx_txid_t get_txid() const {
+    if (num_bytes_ < sizeof(fdf_txid_t)) {
+      return 0;
+    }
+    return *static_cast<fdf_txid_t*>(data_);
+  }
+
+  void set_txid(fdf_txid_t txid) {
+    ZX_ASSERT(num_bytes_ >= sizeof(txid));
+    *(static_cast<fdf_txid_t*>(data_)) = txid;
+  }
+
   // Returns a reference to the arena.
   // The message packet retains a reference to correctly destruct itself.
   fbl::RefPtr<fdf_arena_t> arena() { return arena_; }

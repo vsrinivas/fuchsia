@@ -65,7 +65,7 @@ class Dispatcher {
 
   ~Dispatcher() { close(); }
 
-  fdf_dispatcher_t* get() { return dispatcher_; }
+  fdf_dispatcher_t* get() const { return dispatcher_; }
 
   void reset(fdf_dispatcher_t* dispatcher = nullptr) {
     close();

@@ -7,10 +7,14 @@
 
 #include <lib/fdf/internal.h>
 
+namespace driver_runtime {
+class Dispatcher;
+}  // namespace driver_runtime
+
 namespace driver_context {
 
 // Adds |driver| to the thread's current call stack.
-void PushDriver(const void* driver);
+void PushDriver(const void* driver, driver_runtime::Dispatcher* dispatcher = nullptr);
 
 // Removes the driver at the top of the thread's current call stack.
 // The stack must not be empty.
@@ -19,6 +23,10 @@ void PopDriver();
 // Returns the driver at the top of the thread's current call stack,
 // or null if the stack is empty.
 const void* GetCurrentDriver();
+
+// Returns the dispatcher at the top of the thread's current call stack,
+// or null if the stack is empty.
+driver_runtime::Dispatcher* GetCurrentDispatcher();
 
 // Returns whether |driver| is in the thread's current call stack.
 bool IsDriverInCallStack(const void* driver);

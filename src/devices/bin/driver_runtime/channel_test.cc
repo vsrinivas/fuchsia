@@ -551,6 +551,421 @@ TEST_F(ChannelTest, NestingIsOk) {
 }
 
 //
+// Channel::Call() test helpers.
+//
+
+// Describes a message to transfer for a channel call transaction.
+// This is passed from the test to the server thread for verifying received messages.
+class Message {
+ public:
+  static constexpr uint32_t kMaxDataSize = 64;
+
+  // |data_size| specifies the size of the data to transfer, not including the txid.
+  // |num_handles| specifies the number of handles to create and transfer.
+  Message(uint32_t data_size, uint32_t num_handles)
+      : data_size_(data_size), num_handles_(num_handles) {}
+
+  // |handles| specifies the handles that should be transferred, rather than creating new ones.
+  Message(uint32_t data_size, cpp20::span<zx_handle_t> handles)
+      : handles_(handles),
+        data_size_(data_size),
+        num_handles_(static_cast<uint32_t>(handles.size())) {}
+
+  // Writes a message to |channel|, with the data and handle buffers allocated using |arena|.
+  fdf_status_t Write(const fdf::Channel& channel, const fdf::Arena& arena, fdf_txid_t txid) const;
+
+  // Synchronously calls to |channel|, with the data and handle buffers allocated using |arena|.
+  zx::status<fdf::Channel::ReadReturn> Call(const fdf::Channel& channel, const fdf::Arena& arena,
+                                            zx::time deadline = zx::time::infinite()) const;
+
+  // Returns whether |read| contains the expected data and number of handles.
+  bool IsEquivalent(fdf::Channel::ReadReturn& read) const;
+
+ private:
+  // Allocates the fake data and handle buffers using |arena|.
+  // This can be used to create the expected arguments for Channel::Call() / Channel::Write().
+  // The returned data buffer will contain |txid| and |data|,
+  // and the returned handles buffer will either contain newly constructed event objects,
+  // or the |handles_| set by the Message constructor.
+  fdf_status_t AllocateBuffers(const fdf::Arena& arena, fdf_txid_t txid, void** out_data,
+                               uint32_t* out_num_bytes,
+                               cpp20::span<zx_handle_t>* out_handles) const;
+
+  uint32_t data_[kMaxDataSize] = {0};
+  cpp20::span<zx_handle_t> handles_;
+  uint32_t data_size_;
+  uint32_t num_handles_;
+};
+
+fdf_status_t Message::Write(const fdf::Channel& channel, const fdf::Arena& arena,
+                            fdf_txid_t txid) const {
+  void* data = nullptr;
+  uint32_t num_bytes = 0;
+  cpp20::span<zx_handle_t> handles;
+  fdf_status_t status = AllocateBuffers(arena, txid, &data, &num_bytes, &handles);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto write_status = channel.Write(0, arena, data, num_bytes, std::move(handles));
+  return write_status.status_value();
+}
+
+// Synchronously calls to |channel|, with the data and handle buffers allocated using |arena|.
+zx::status<fdf::Channel::ReadReturn> Message::Call(const fdf::Channel& channel,
+                                                   const fdf::Arena& arena,
+                                                   zx::time deadline) const {
+  void* data = nullptr;
+  uint32_t num_bytes = 0;
+  cpp20::span<zx_handle_t> handles;
+  fdf_status_t status = AllocateBuffers(arena, 0, &data, &num_bytes, &handles);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return channel.Call(0, deadline, arena, data, num_bytes, std::move(handles));
+}
+
+// Allocates the fake data and handle buffers using |arena|.
+// This can be used to create the expected arguments for Channel::Call() / Channel::Write().
+// The returned data buffer will contain |txid| and |data|,
+// and the returned handles buffer will either contain newly constructed event objects,
+// or the |handles_| set by the Message constructor.
+fdf_status_t Message::AllocateBuffers(const fdf::Arena& arena, fdf_txid_t txid, void** out_data,
+                                      uint32_t* out_num_bytes,
+                                      cpp20::span<zx_handle_t>* out_handles) const {
+  uint32_t total_size = sizeof(fdf_txid_t) + data_size_;
+
+  void* bytes = arena.Allocate(total_size);
+  if (!bytes) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  memcpy(bytes, &txid, sizeof(txid));
+  memcpy(static_cast<uint8_t*>(bytes) + sizeof(txid), data_, data_size_);
+
+  void* handles_bytes = arena.Allocate(num_handles_ * sizeof(fdf_handle_t));
+  if (!handles_bytes) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  fdf_handle_t* handles = static_cast<fdf_handle_t*>(handles_bytes);
+
+  uint32_t i = 0;
+  auto cleanup = fit::defer([&i, handles]() {
+    for (uint32_t j = 0; j < i; j++) {
+      zx_handle_close(handles[j]);
+    }
+  });
+  for (i = 0; i < num_handles_; i++) {
+    if (handles_.size() > i) {
+      handles[i] = handles_[i];
+    } else {
+      zx::event event;
+      zx_status_t status = zx::event::create(0, &event);
+      if (status != ZX_OK) {
+        return status;
+      }
+      handles[i] = event.release();
+    }
+  }
+  cleanup.cancel();
+
+  cpp20::span<zx_handle_t> handles_span{handles, num_handles_};
+  *out_data = bytes;
+  *out_num_bytes = total_size;
+  *out_handles = std::move(handles_span);
+  return ZX_OK;
+}
+
+// Returns whether |read| contains the expected data and number of handles.
+bool Message::IsEquivalent(fdf::Channel::ReadReturn& read) const {
+  if ((data_size_ + sizeof(fdf_txid_t)) != read.num_bytes) {
+    return false;
+  }
+  uint8_t* read_data_start = static_cast<uint8_t*>(read.data) + sizeof(fdf_txid_t);
+  if (memcmp(data_, read_data_start, data_size_) != 0) {
+    return false;
+  }
+  if (num_handles_ != read.handles.size()) {
+    return false;
+  }
+  return true;
+}
+
+void CloseHandles(const fdf::Channel::ReadReturn& read) {
+  for (const auto& h : read.handles) {
+    if (driver_runtime::Handle::IsFdfHandle(h)) {
+      fdf_handle_close(h);
+    } else {
+      zx_handle_close(h);
+    }
+  }
+}
+
+// Server implementation for channel call tests.
+// Waits for |message_count| messages, and replies to the messages if |accumulated_messages|
+// mnumber of messages has been received.
+// If |wait_for_event| is provided, waits for the event to be signaled before returning.
+template <uint32_t reply_data_size, uint32_t reply_handle_count, uint32_t accumulated_messages>
+void ReplyAndWait(const Message& request, uint32_t message_count, fdf::Channel svc,
+                  async::Loop* process_loop, std::atomic<const char*>* error,
+                  zx::event* wait_for_event) {
+  // Make a separate dispatcher for the server.
+  int fake_driver;  // For creating a fake pointer to the driver.
+  std::unique_ptr<driver_runtime::Dispatcher> dispatcher;
+  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(0, "scheduler_role", 0,
+                                                              reinterpret_cast<void*>(&fake_driver),
+                                                              process_loop, &dispatcher));
+  auto fdf_dispatcher = static_cast<fdf_dispatcher_t*>(dispatcher.get());
+
+  process_loop->StartThread();
+
+  std::set<fdf_txid_t> live_ids;
+  std::vector<fdf::Channel::ReadReturn> live_requests;
+
+  for (uint32_t i = 0; i < message_count; ++i) {
+    ASSERT_NO_FATAL_FAILURES(RuntimeTestCase::WaitUntilReadReady(svc.get(), fdf_dispatcher));
+    auto read_return = svc.Read(0);
+    if (read_return.is_error()) {
+      *error = "Failed to read request.";
+      return;
+    }
+    if (!request.IsEquivalent(*read_return)) {
+      *error = "Failed to validate request.";
+      return;
+    }
+
+    CloseHandles(*read_return);
+
+    fdf_txid_t txid = *static_cast<fdf_txid_t*>(read_return->data);
+    if (live_ids.find(txid) != live_ids.end()) {
+      *error = "Repeated id used for live transaction.";
+      return;
+    }
+    live_ids.insert(txid);
+    live_requests.push_back(std::move(*read_return));
+    if (live_requests.size() < accumulated_messages) {
+      continue;
+    }
+
+    // We've collected |accumulated_messages|, so we reply to all pending messages.
+    for (const auto& req : live_requests) {
+      fdf_txid_t txid = *static_cast<fdf_txid_t*>(req.data);
+
+      Message reply = Message(reply_data_size, reply_handle_count);
+      fdf_status_t status = reply.Write(svc, req.arena, txid);
+      if (status != ZX_OK) {
+        *error = "Failed to write reply.";
+        return;
+      }
+    }
+    live_requests.clear();
+  }
+
+  if (wait_for_event != nullptr) {
+    if (wait_for_event->wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr) != ZX_OK) {
+      *error = "Failed to wait for signal event.";
+      return;
+    }
+  }
+}
+
+template <uint32_t reply_data_size, uint32_t reply_handle_count, uint32_t accumulated_messages = 0>
+void Reply(const Message& request, uint32_t message_count, fdf::Channel svc,
+           async::Loop* process_loop, std::atomic<const char*>* error) {
+  ReplyAndWait<reply_data_size, reply_handle_count, accumulated_messages>(
+      request, message_count, std::move(svc), process_loop, error, nullptr);
+}
+
+template <uint32_t reply_data_size, uint32_t reply_handle_count>
+void SuccessfulChannelCall(fdf::Channel local, fdf::Channel remote, async::Loop* process_loop,
+                           const fdf::Arena& arena, const Message& request) {
+  std::atomic<const char*> error = nullptr;
+
+  {
+    test_utils::AutoJoinThread service_thread(Reply<reply_data_size, reply_handle_count>, request,
+                                              1, std::move(remote), process_loop, &error);
+    auto read = request.Call(local, arena);
+    ASSERT_OK(read.status_value());
+    ASSERT_EQ(read->num_bytes, sizeof(fdf_txid_t) + reply_data_size);
+    ASSERT_EQ(read->handles.size(), reply_handle_count);
+    CloseHandles(*read);
+  }
+  if (error != nullptr) {
+    FAIL("Service Thread reported error: %s\n", error.load());
+  }
+}
+
+//
+// Tests for fdf_channel_call
+//
+
+TEST_F(ChannelTest, CallBytesFitIsOk) {
+  constexpr uint32_t kReplyDataSize = 5;
+  constexpr uint32_t kReplyHandleCount = 0;
+
+  Message request(4, 0);
+
+  ASSERT_NO_FATAL_FAILURES((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
+      std::move(local_), std::move(remote_), &loop_, arena_, request)));
+}
+
+TEST_F(ChannelTest, CallHandlesFitIsOk) {
+  constexpr uint32_t kReplyDataSize = 0;
+  constexpr uint32_t kReplyHandleCount = 2;
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  zx_handle_t handles[1] = {event.release()};
+
+  Message request = Message(0, handles);
+
+  ASSERT_NO_FATAL_FAILURES((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
+      std::move(local_), std::move(remote_), &loop_, arena_, request)));
+}
+
+TEST_F(ChannelTest, CallHandleAndBytesFitsIsOk) {
+  constexpr uint32_t kReplyDataSize = 2;
+  constexpr uint32_t kReplyHandleCount = 2;
+
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  zx_handle_t handles[1] = {event.release()};
+
+  Message request = Message(2, handles);
+
+  ASSERT_NO_FATAL_FAILURES((SuccessfulChannelCall<kReplyDataSize, kReplyHandleCount>(
+      std::move(local_), std::move(remote_), &loop_, arena_, request)));
+}
+
+TEST_F(ChannelTest, CallManagedThreadAllowsSyncCalls) {
+  static constexpr uint32_t kNumBytes = 4;
+  void* data = arena_.Allocate(kNumBytes);
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, kNumBytes, NULL, 0));
+
+  // Create a dispatcher that allows sync calls.
+  auto driver = CreateFakeDriver();
+  std::unique_ptr<driver_runtime::Dispatcher> allow_sync_calls_dispatcher;
+  ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
+                       FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "", 0, driver, &loop_,
+                       &allow_sync_calls_dispatcher));
+
+  // Signaled once the Channel::Call completes.
+  sync_completion_t call_complete;
+
+  auto sync_channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        // This is now running on a managed thread that allows sync calls.
+        fdf::UnownedChannel unowned(channel_read->channel());
+
+        auto read = unowned->Read(0);
+        ASSERT_OK(read.status_value());
+
+        auto call = unowned->Call(0, zx::time::infinite(), arena_, data, kNumBytes,
+                                  cpp20::span<zx_handle_t>());
+        ASSERT_OK(call.status_value());
+        sync_completion_signal(&call_complete);
+      });
+  {
+    // Make the call non-reentrant.
+    // This will still run the callback on an async thread, as the dispatcher allows sync calls.
+    driver_context::PushDriver(driver);
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+    ASSERT_OK(
+        sync_channel_read->Begin(static_cast<fdf_dispatcher*>(allow_sync_calls_dispatcher.get())));
+  }
+
+  // Wait for the call request and reply.
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      local_.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        fdf::UnownedChannel unowned(channel_read->channel());
+
+        auto read = unowned->Read(0);
+        ASSERT_OK(read.status_value());
+
+        ASSERT_EQ(read->num_bytes, kNumBytes);
+        fdf_txid_t* txid = static_cast<fdf_txid_t*>(read->data);
+
+        // Write a reply with the same txid.
+        void* reply = read->arena.Allocate(sizeof(fdf_txid_t));
+        memcpy(reply, txid, sizeof(fdf_txid_t));
+        auto write =
+            unowned->Write(0, read->arena, reply, sizeof(fdf_txid_t), cpp20::span<zx_handle_t>());
+        ASSERT_OK(write.status_value());
+      });
+  ASSERT_OK(channel_read->Begin(fdf_dispatcher_));
+
+  sync_completion_wait(&call_complete, ZX_TIME_INFINITE);
+}
+
+TEST_F(ChannelTest, CallPendingTransactionsUseDifferentIds) {
+  constexpr uint32_t kReplyDataSize = 0;
+  constexpr uint32_t kReplyHandleCount = 0;
+  // The service thread will wait until |kAcummulatedMessages| have been read from the channel
+  // before replying in the same order they came through.
+  constexpr uint32_t kAccumulatedMessages = 20;
+
+  std::atomic<const char*> error = nullptr;
+  std::vector<zx_status_t> call_result(kAccumulatedMessages, ZX_OK);
+
+  Message request(2, 0);
+
+  fdf::Channel local = std::move(local_);
+
+  {
+    test_utils::AutoJoinThread service_thread(
+        Reply<kReplyDataSize, kReplyHandleCount, kAccumulatedMessages>, request,
+        kAccumulatedMessages, std::move(remote_), &loop_, &error);
+
+    std::vector<test_utils::AutoJoinThread> calling_threads;
+    calling_threads.reserve(kAccumulatedMessages);
+    for (uint32_t i = 0; i < kAccumulatedMessages; ++i) {
+      calling_threads.push_back(
+          test_utils::AutoJoinThread([i, &call_result, &local, &request, this]() {
+            auto read_return = request.Call(local, arena_);
+            call_result[i] = read_return.status_value();
+          }));
+    }
+  }
+
+  for (auto call_status : call_result) {
+    EXPECT_OK(call_status, "channel::call failed in client thread.");
+  }
+
+  if (error != nullptr) {
+    FAIL("Service Thread reported error: %s\n", error.load());
+  }
+}
+
+TEST_F(ChannelTest, CallDeadlineExceededReturnsTimedOut) {
+  constexpr uint32_t kReplyDataSize = 0;
+  constexpr uint32_t kReplyHandleCount = 0;
+  constexpr uint32_t kAccumulatedMessages = 2;
+
+  std::atomic<const char*> error = nullptr;
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  Message request = Message(2, 0);
+  {
+    // We pass in accumulated_messages > message_count, so the server will read
+    // the message without replying.
+    test_utils::AutoJoinThread service_thread(
+        ReplyAndWait<kReplyDataSize, kReplyHandleCount, kAccumulatedMessages>, request,
+        kAccumulatedMessages - 1 /* message_count */, std::move(remote_), &loop_, &error, &event);
+    auto read_return = request.Call(local_, arena_, zx::time::infinite_past());
+    ASSERT_EQ(ZX_ERR_TIMED_OUT, read_return.status_value());
+    // Signal the server to quit.
+    event.signal(0, ZX_USER_SIGNAL_0);
+  }
+
+  if (error != nullptr) {
+    FAIL("Service Thread reported error: %s\n", error.load());
+  }
+}
+
+//
 // Tests for fdf_channel_write error conditions
 //
 
@@ -744,6 +1159,206 @@ TEST_F(ChannelTest, WaitAsyncAlreadyWaiting) {
   EXPECT_OK(fdf_channel_write(remote_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
 
   ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(local_.get()));
+}
+
+//
+// Tests for fdf_channel_call error conditions
+//
+
+TEST_F(ChannelTest, CallWrittenBytesSmallerThanFdfTxIdReturnsInvalidArgs) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t) - 1;
+
+  void* data = arena_.Allocate(kDataSize);
+  auto read =
+      local_.Call(0, zx::time::infinite(), arena_, data, kDataSize, cpp20::span<zx_handle_t>());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, read.status_value());
+}
+
+TEST_F(ChannelTest, CallToClosedHandle) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  void* data = arena_.Allocate(kDataSize);
+
+  local_.reset();
+
+  ASSERT_DEATH([&] {
+    auto read =
+        local_.Call(0, zx::time::infinite(), arena_, data, kDataSize, cpp20::span<zx_handle_t>());
+    ASSERT_EQ(ZX_ERR_BAD_HANDLE, read.status_value());
+  });
+}
+
+// Tests providing a closed handle as part of a channel message.
+TEST_F(ChannelTest, CallTransferClosedHandle) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  void* data = arena_.Allocate(kDataSize);
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+
+  void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
+  ASSERT_NOT_NULL(handles_buf);
+
+  fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
+  handles[0] = channels->end0.get();
+
+  channels->end0.reset();
+
+  auto read = local_.Call(0, zx::time::infinite(), arena_, data, kDataSize,
+                          cpp20::span<zx_handle_t>(handles, 1));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, read.status_value());
+}
+
+// Tests providing non arena-managed data in a channel message.
+TEST_F(ChannelTest, CallTransferNonManagedData) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  uint8_t data[kDataSize];
+  auto read =
+      local_.Call(0, zx::time::infinite(), arena_, data, kDataSize, cpp20::span<zx_handle_t>());
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, read.status_value());
+}
+
+// Tests providing a non arena-managed handles array in a channel message.
+TEST_F(ChannelTest, CallTransferNonManagedHandles) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  void* data = arena_.Allocate(kDataSize);
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+
+  fdf_handle_t handle = channels->end0.get();
+
+  auto read = local_.Call(0, zx::time::infinite(), arena_, data, kDataSize,
+                          cpp20::span<zx_handle_t>(&handle, 1));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, read.status_value());
+}
+
+// Tests writing to the channel after the peer has closed their end.
+TEST_F(ChannelTest, CallClosedPeer) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  void* data = arena_.Allocate(kDataSize);
+
+  fdf_handle_close(remote_.release());
+
+  auto read =
+      local_.Call(0, zx::time::infinite(), arena_, data, kDataSize, cpp20::span<zx_handle_t>());
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED, read.status_value());
+}
+
+TEST_F(ChannelTest, CallTransferSelfHandleReturnsNotSupported) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  void* data = arena_.Allocate(kDataSize);
+
+  void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
+  ASSERT_NOT_NULL(handles_buf);
+
+  fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
+  handles[0] = local_.get();
+
+  auto read = local_.Call(0, zx::time::infinite(), arena_, data, kDataSize,
+                          cpp20::span<zx_handle_t>(handles, 1));
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, read.status_value());
+}
+
+TEST_F(ChannelTest, CallTransferWaitedHandle) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  void* data = arena_.Allocate(kDataSize);
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+
+  auto channel_read_ = std::make_unique<fdf::ChannelRead>(
+      channels->end0.get(), 0 /* options */,
+      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        ASSERT_EQ(status, ZX_ERR_PEER_CLOSED);
+        delete channel_read;
+      });
+  ASSERT_OK(channel_read_->Begin(fdf_dispatcher_));
+  channel_read_.release();  // Deleted on callback.
+
+  void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
+  ASSERT_NOT_NULL(handles_buf);
+
+  fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
+  handles[0] = channels->end0.get();
+
+  auto read = local_.Call(0, zx::time::infinite(), arena_, data, kDataSize,
+                          cpp20::span<zx_handle_t>(handles, 1));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, read.status_value());
+}
+
+TEST_F(ChannelTest, CallConsumesHandlesOnError) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  void* data = arena_.Allocate(kDataSize);
+
+  constexpr uint32_t kNumHandles = 2;
+
+  // Create some handles to transfer.
+  zx::event event;
+  ASSERT_OK(zx::event::create(0, &event));
+
+  zx::event event2;
+  ASSERT_OK(zx::event::create(0, &event2));
+
+  void* handles_buf = arena_.Allocate(kNumHandles * sizeof(fdf_handle_t));
+  ASSERT_NOT_NULL(handles_buf);
+
+  fdf_handle_t* handles = reinterpret_cast<fdf_handle_t*>(handles_buf);
+  handles[0] = event.release();
+  handles[1] = event2.release();
+
+  // Close the remote end of the channel so the call will fail.
+  remote_.reset();
+
+  auto read = local_.Call(0, zx::time::infinite(), arena_, data, kDataSize,
+                          cpp20::span<zx_handle_t>(handles, kNumHandles));
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, read.status_value());
+
+  for (uint32_t i = 0; i < kNumHandles; i++) {
+    ASSERT_EQ(ZX_ERR_BAD_HANDLE, zx_handle_close(handles[i]));
+  }
+}
+
+TEST_F(ChannelTest, CallNotifiedOnPeerClosed) {
+  constexpr uint32_t kDataSize = sizeof(fdf_txid_t);
+  void* data = arena_.Allocate(kDataSize);
+
+  {
+    test_utils::AutoJoinThread service_thread(
+        [&](fdf::Channel svc) {
+          // Make the call non-reentrant.
+          driver_context::PushDriver(CreateFakeDriver());
+
+          // Wait until call message is received.
+          ASSERT_NO_FATAL_FAILURES(WaitUntilReadReady(svc.get()));
+          // Close the peer.
+          svc.reset();
+        },
+        std::move(remote_));
+
+    auto read =
+        local_.Call(0, zx::time::infinite(), arena_, data, kDataSize, cpp20::span<zx_handle_t>());
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, read.status_value());
+  }
+}
+
+TEST_F(ChannelTest, CallManagedThreadDisallowsSyncCalls) {
+  static constexpr uint32_t kNumBytes = 4;
+  void* data = arena_.Allocate(kNumBytes);
+  ASSERT_EQ(ZX_OK, fdf_channel_write(local_.get(), 0, arena_.get(), data, kNumBytes, NULL, 0));
+
+  auto channel_read = std::make_unique<fdf::ChannelRead>(
+      remote_.get(), 0,
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        fdf::UnownedChannel unowned(channel_read->channel());
+
+        auto read = unowned->Read(0);
+        ASSERT_OK(read.status_value());
+
+        auto call = unowned->Call(0, zx::time::infinite(), arena_, data, kNumBytes,
+                                  cpp20::span<zx_handle_t>());
+        ASSERT_EQ(ZX_ERR_BAD_STATE, call.status_value());
+      });
+  ASSERT_OK(channel_read->Begin(fdf_dispatcher_));
 }
 
 //

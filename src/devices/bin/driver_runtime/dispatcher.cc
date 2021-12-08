@@ -233,7 +233,7 @@ std::unique_ptr<CallbackRequest> Dispatcher::CancelCallback(CallbackRequest& cal
 
 void Dispatcher::DispatchCallback(
     std::unique_ptr<driver_runtime::CallbackRequest> callback_request) {
-  driver_context::PushDriver(owner_);
+  driver_context::PushDriver(owner_, this);
   auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
   callback_request->Call(std::move(callback_request), ZX_OK);

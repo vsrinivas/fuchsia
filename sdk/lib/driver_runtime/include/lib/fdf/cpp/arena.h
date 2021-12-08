@@ -55,13 +55,13 @@ class Arena {
 
   ~Arena() { close(); }
 
-  void* Allocate(size_t bytes) { return fdf_arena_allocate(arena_, bytes); }
+  void* Allocate(size_t bytes) const { return fdf_arena_allocate(arena_, bytes); }
   void Free(void* ptr) { fdf_arena_free(arena_, ptr); }
 
   // Returns true if the memory region of |ptr| resides entirely within memory
   // managed by the |arena|.
   template <typename T>
-  bool Contains(const T* ptr) {
+  bool Contains(const T* ptr) const {
     return fdf_arena_contains(arena_, ptr, sizeof(T));
   }
 
@@ -83,7 +83,7 @@ class Arena {
     return ret;
   }
 
-  fdf_arena_t* get() { return arena_; }
+  fdf_arena_t* get() const { return arena_; }
 
  private:
   fdf_arena_t* arena_;

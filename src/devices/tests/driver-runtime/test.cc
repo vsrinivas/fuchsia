@@ -60,7 +60,7 @@ class RuntimeTest : public gtest::TestLoopFixture {
   // Sends a FIDL request to the child device to retrieve data from the parent device
   // using its runtime channel.
   // Asserts that the data matches |want_data| and |want_size|.
-  void GetParentDataOverRuntimeChannel(const void* want_data, size_t want_size);
+  void GetParentDataOverRuntimeChannel(bool sync, const void* want_data, size_t want_size);
 
   fidl::ClientEnd<TestDeviceChild> child_chan;
   fidl::ClientEnd<TestDevice> parent_chan;
@@ -84,8 +84,10 @@ void RuntimeTest::ParentSetTestData(const void* data_to_send, size_t size) {
   ASSERT_EQ(call_status, ZX_OK);
 }
 
-void RuntimeTest::GetParentDataOverRuntimeChannel(const void* want_data, size_t want_size) {
-  auto response = fidl::WireCall<TestDeviceChild>(child_chan)->GetParentDataOverRuntimeChannel();
+void RuntimeTest::GetParentDataOverRuntimeChannel(bool sync, const void* want_data,
+                                                  size_t want_size) {
+  auto response =
+      fidl::WireCall<TestDeviceChild>(child_chan)->GetParentDataOverRuntimeChannel(sync);
   ASSERT_EQ(ZX_OK, response.status());
 
   zx_status_t call_status = ZX_OK;
@@ -103,10 +105,17 @@ TEST_F(RuntimeTest, TransferOverRuntimeChannel) {
   const std::string kTestString = "some test string";
   ASSERT_NO_FATAL_FAILURE(ParentSetTestData(kTestString.c_str(), kTestString.length()));
   ASSERT_NO_FATAL_FAILURE(
-      GetParentDataOverRuntimeChannel(kTestString.c_str(), kTestString.length()));
+      GetParentDataOverRuntimeChannel(false, kTestString.c_str(), kTestString.length()));
 
   const std::string kTestString2 = "another test string";
   ASSERT_NO_FATAL_FAILURE(ParentSetTestData(kTestString2.c_str(), kTestString.length()));
   ASSERT_NO_FATAL_FAILURE(
-      GetParentDataOverRuntimeChannel(kTestString2.c_str(), kTestString.length()));
+      GetParentDataOverRuntimeChannel(false, kTestString2.c_str(), kTestString.length()));
+}
+
+TEST_F(RuntimeTest, TransferOverRuntimeChannelSync) {
+  const std::string kTestString = "sync call";
+  ASSERT_NO_FATAL_FAILURE(ParentSetTestData(kTestString.c_str(), kTestString.length()));
+  ASSERT_NO_FATAL_FAILURE(
+      GetParentDataOverRuntimeChannel(true, kTestString.c_str(), kTestString.length()));
 }

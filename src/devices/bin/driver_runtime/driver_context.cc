@@ -12,19 +12,24 @@
 
 namespace {
 
-static thread_local std::vector<const void*> g_driver_call_stack;
+struct Entry {
+  const void* driver;
+  driver_runtime::Dispatcher* dispatcher;
+};
+
+static thread_local std::vector<Entry> g_driver_call_stack;
 
 }  // namespace
 
 namespace driver_context {
 
-void PushDriver(const void* driver) {
+void PushDriver(const void* driver, driver_runtime::Dispatcher* dispatcher) {
   // TODO(fxbug.dev/88520): re-enable this once driver host v1 is deprecated.
   // ZX_DEBUG_ASSERT(IsDriverInCallStack(driver) == false);
   if (IsDriverInCallStack(driver)) {
     LOGF(TRACE, "DriverContext: tried to push driver %p that was already in stack\n", driver);
   }
-  g_driver_call_stack.push_back(driver);
+  g_driver_call_stack.push_back({driver, dispatcher});
 }
 
 void PopDriver() {
@@ -33,12 +38,16 @@ void PopDriver() {
 }
 
 const void* GetCurrentDriver() {
-  return g_driver_call_stack.empty() ? nullptr : g_driver_call_stack.back();
+  return g_driver_call_stack.empty() ? nullptr : g_driver_call_stack.back().driver;
+}
+
+driver_runtime::Dispatcher* GetCurrentDispatcher() {
+  return g_driver_call_stack.empty() ? nullptr : g_driver_call_stack.back().dispatcher;
 }
 
 bool IsDriverInCallStack(const void* driver) {
   for (int64_t i = g_driver_call_stack.size() - 1; i >= 0; i--) {
-    if (g_driver_call_stack[i] == driver) {
+    if (g_driver_call_stack[i].driver == driver) {
       return true;
     }
   }

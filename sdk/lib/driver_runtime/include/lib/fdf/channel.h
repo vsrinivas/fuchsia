@@ -167,6 +167,8 @@ fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
 // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
 // Returns |ZX_ERR_TIMED_OUT| if |deadline| passed before a reply matching
 // the correct txid was received.
+// Returns |ZX_ERR_BAD_STATE| if this is called from a driver runtime managed thread
+// that does not allow sync calls.
 //
 // This operation is thread-safe.
 fdf_status_t fdf_channel_call(fdf_handle_t handle, uint32_t options, zx_time_t deadline,

@@ -43,7 +43,7 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST> {
   // Replies to the request in |channel_read|.
   void HandleRuntimeRequest(fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
                             zx_status_t status);
-  void HandleGetDataRequest(fdf_dispatcher_t* dispatcher, fdf::Arena arena);
+  void HandleGetDataRequest(fdf_dispatcher_t* dispatcher, fdf::Arena arena, fdf_txid_t txid);
 
   fdf::Channel client_;
   fdf::Dispatcher dispatcher_;
@@ -92,11 +92,15 @@ void Device::HandleRuntimeRequest(fdf_dispatcher_t* dispatcher, fdf::ChannelRead
   }
 
   fuchsia_device_runtime_test::wire::RuntimeRequest req_type;
-  memcpy(&req_type, read_return->data, sizeof(req_type));
+  ZX_ASSERT(read_return->num_bytes >= sizeof(fdf_txid_t) + sizeof(req_type));
+
+  fdf_txid_t txid = *reinterpret_cast<fdf_txid_t*>(read_return->data);
+  void* data_start = static_cast<uint8_t*>(read_return->data) + sizeof(fdf_txid_t);
+  memcpy(&req_type, data_start, sizeof(req_type));
 
   switch (req_type) {
     case fuchsia_device_runtime_test::wire::RuntimeRequest::kGetData:
-      HandleGetDataRequest(dispatcher, std::move(read_return->arena));
+      HandleGetDataRequest(dispatcher, std::move(read_return->arena), txid);
       return;
     default:
       zxlogf(ERROR, "HandleRuntimeRequest got unknown type: %u\n", req_type);
@@ -104,16 +108,19 @@ void Device::HandleRuntimeRequest(fdf_dispatcher_t* dispatcher, fdf::ChannelRead
   }
 }
 
-void Device::HandleGetDataRequest(fdf_dispatcher_t* dispatcher, fdf::Arena arena) {
+void Device::HandleGetDataRequest(fdf_dispatcher_t* dispatcher, fdf::Arena arena, fdf_txid_t txid) {
   if (!arena.get()) {
     zxlogf(ERROR, "HandleGetDataRequest was not provided an arena\n");
     return;
   }
-  void* ptr = arena.Allocate(data_size_);
-  memcpy(ptr, &data_, data_size_);
+  // The reply must start with |txid|.
+  void* ptr = arena.Allocate(sizeof(txid) + data_size_);
+  memcpy(ptr, &txid, sizeof(txid));
+  memcpy(static_cast<uint8_t*>(ptr) + sizeof(fdf_txid_t), data_, data_size_);
 
-  auto write_status =
-      client_.Write(0, arena, ptr, static_cast<uint32_t>(data_size_), cpp20::span<zx_handle_t>());
+  uint32_t total_size = sizeof(txid) + static_cast<uint32_t>(data_size_);
+
+  auto write_status = client_.Write(0, arena, ptr, total_size, cpp20::span<zx_handle_t>());
   if (write_status.is_error()) {
     zxlogf(ERROR, "HandleGetDataRequest got write err: %d", write_status.status_value());
     return;
