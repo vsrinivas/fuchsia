@@ -88,6 +88,20 @@ uint32_t BufferCollectionPixelFormatToImageType(fuchsia::sysmem::PixelFormat& pi
   return fuchsia::hardware::display::TYPE_SIMPLE;
 }
 
+fuchsia::hardware::display::AlphaMode GetAlphaMode(
+    const fuchsia::ui::composition::BlendMode& blend_mode) {
+  fuchsia::hardware::display::AlphaMode alpha_mode;
+  switch (blend_mode) {
+    case fuchsia::ui::composition::BlendMode::SRC:
+      alpha_mode = fuchsia::hardware::display::AlphaMode::DISABLE;
+      break;
+    case fuchsia::ui::composition::BlendMode::SRC_OVER:
+      alpha_mode = fuchsia::hardware::display::AlphaMode::PREMULTIPLIED;
+      break;
+  }
+  return alpha_mode;
+}
+
 }  // anonymous namespace
 
 DisplayCompositor::DisplayCompositor(
@@ -403,9 +417,7 @@ void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, escher::Rectangle2D r
   (*display_controller_.get())->SetLayerColorConfig(layer_id, ZX_PIXEL_FORMAT_ARGB_8888, col);
   (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
 
-  auto alpha_mode = image.is_opaque ? fuchsia::hardware::display::AlphaMode::DISABLE
-                                    : fuchsia::hardware::display::AlphaMode::PREMULTIPLIED;
-
+  auto alpha_mode = GetAlphaMode(image.blend_mode);
   (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
 }
 
@@ -444,9 +456,7 @@ void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D r
 
   (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
 
-  auto alpha_mode = image.is_opaque ? fuchsia::hardware::display::AlphaMode::DISABLE
-                                    : fuchsia::hardware::display::AlphaMode::PREMULTIPLIED;
-
+  auto alpha_mode = GetAlphaMode(image.blend_mode);
   (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
 
   // Set the imported image on the layer.

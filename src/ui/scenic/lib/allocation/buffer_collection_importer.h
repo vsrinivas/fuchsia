@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_ALLOCATION_BUFFER_COLLECTION_IMPORTER_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 
 #include "src/ui/scenic/lib/allocation/id.h"
 
@@ -36,22 +37,19 @@ struct ImageMetadata {
   // Linear-space RGBA values to multiply with the pixel values of the image.
   std::array<float, 4> multiply_color = {1.f, 1.f, 1.f, 1.f};
 
-  // If false, the image will be rendered with translucency, taking into account both
-  // the individual pixel alpha and the alpha of the |multiply_color| field multiplied
-  // together.
-  bool is_opaque = true;
+  // The blend mode to use when compositing this image.
+  fuchsia::ui::composition::BlendMode blend_mode = fuchsia::ui::composition::BlendMode::SRC;
 
   bool operator==(const ImageMetadata& meta) const {
     return (collection_id == meta.collection_id && vmo_index == meta.vmo_index &&
-            width == meta.width && height == meta.height && is_opaque == meta.is_opaque &&
+            width == meta.width && height == meta.height && blend_mode == meta.blend_mode &&
             multiply_color == meta.multiply_color);
   }
 };
 
 inline std::ostream& operator<<(std::ostream& str, const ImageMetadata& m) {
-  str << "size=" << m.width << "x" << m.height << "  is_opaque=" << m.is_opaque
-      << "  multiply_color=(" << m.multiply_color[0] << "," << m.multiply_color[1] << ","
-      << m.multiply_color[2] << "," << m.multiply_color[3] << ")";
+  str << "size=" << m.width << "x" << m.height << "  multiply_color=(" << m.multiply_color[0] << ","
+      << m.multiply_color[1] << "," << m.multiply_color[2] << "," << m.multiply_color[3] << ")";
   return str;
 }
 

@@ -4,6 +4,9 @@ struct fuchsia.ui.composition/Allocator_RegisterBufferCollection_Response
 union/member fuchsia.ui.composition/Allocator_RegisterBufferCollection_Result.err fuchsia.ui.composition/RegisterBufferCollectionError
 union/member fuchsia.ui.composition/Allocator_RegisterBufferCollection_Result.response fuchsia.ui.composition/Allocator_RegisterBufferCollection_Response
 strict union fuchsia.ui.composition/Allocator_RegisterBufferCollection_Result
+enum/member fuchsia.ui.composition/BlendMode.SRC 1
+enum/member fuchsia.ui.composition/BlendMode.SRC_OVER 2
+strict enum fuchsia.ui.composition/BlendMode uint32
 struct/member fuchsia.ui.composition/BufferCollectionExportToken.value zx/handle:EVENTPAIR
 resource struct fuchsia.ui.composition/BufferCollectionExportToken
 struct/member fuchsia.ui.composition/BufferCollectionImportToken.value zx/handle:EVENTPAIR
@@ -47,6 +50,7 @@ protocol/member fuchsia.ui.composition/Flatland.SetClipBounds(fuchsia.ui.composi
 protocol/member fuchsia.ui.composition/Flatland.SetContent(fuchsia.ui.composition/TransformId transform_id,fuchsia.ui.composition/ContentId content_id)
 protocol/member fuchsia.ui.composition/Flatland.SetDebugName(string:64 name)
 protocol/member fuchsia.ui.composition/Flatland.SetHitRegions(fuchsia.ui.composition/TransformId transform_id,vector<fuchsia.ui.composition/HitRegion>:64 regions)
+protocol/member fuchsia.ui.composition/Flatland.SetImageBlendingFunction(fuchsia.ui.composition/ContentId image_id,fuchsia.ui.composition/BlendMode blend_mode)
 protocol/member fuchsia.ui.composition/Flatland.SetImageDestinationSize(fuchsia.ui.composition/ContentId image_id,fuchsia.math/SizeU size)
 protocol/member fuchsia.ui.composition/Flatland.SetImageOpacity(fuchsia.ui.composition/ContentId image_id,float32 val)
 protocol/member fuchsia.ui.composition/Flatland.SetImageSampleRegion(fuchsia.ui.composition/ContentId image_id,fuchsia.math/RectF rect)

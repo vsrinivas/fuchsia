@@ -779,7 +779,7 @@ void Flatland::CreateImage(ContentId image_id,
   metadata.vmo_index = vmo_index;
   metadata.width = properties.size().width;
   metadata.height = properties.size().height;
-  metadata.is_opaque = false;
+  metadata.blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER;
 
   for (uint32_t i = 0; i < buffer_collection_importers_.size(); i++) {
     auto& importer = buffer_collection_importers_[i];
@@ -874,6 +874,32 @@ void Flatland::SetImageDestinationSize(ContentId image_id, SizeU size) {
   matrices_[content_kv->second].SetScale(size);
 }
 
+void Flatland::SetImageBlendingFunction(ContentId image_id,
+                                        fuchsia::ui::composition::BlendMode blend_mode) {
+  if (image_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetImageBlendingFunction called with content id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto content_kv = content_handles_.find(image_id.value);
+  if (content_kv == content_handles_.end()) {
+    error_reporter_->ERROR() << "SetImageBlendingFunction called with non-existent image_id "
+                             << image_id.value;
+    ReportBadOperationError();
+    return;
+  }
+
+  auto image_kv = image_metadatas_.find(content_kv->second);
+  if (image_kv == image_metadatas_.end()) {
+    error_reporter_->ERROR() << "SetImageBlendingFunction called on non-image content.";
+    ReportBadOperationError();
+    return;
+  }
+
+  image_kv->second.blend_mode = blend_mode;
+}
+
 void Flatland::CreateFilledRect(ContentId rect_id) {
   if (rect_id.value == kInvalidId) {
     error_reporter_->ERROR() << "CreateFilledRect called with rect_id 0";
@@ -892,7 +918,7 @@ void Flatland::CreateFilledRect(ContentId rect_id) {
   // allocation::kInvalidImageId is overloaded in the renderer to signal that a
   // default 1x1 white texture should be applied to this rectangle.
   metadata.identifier = allocation::kInvalidImageId;
-  metadata.is_opaque = false;
+  metadata.blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER;
 
   // Now that we've successfully been able to import the image into the importers,
   // we can now create a handle for it in the transform graph, and add the metadata

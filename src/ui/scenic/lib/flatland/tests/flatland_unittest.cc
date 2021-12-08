@@ -1296,7 +1296,104 @@ TEST_F(FlatlandTest, SetImageDestinationSizeErrorCases) {
   }
 }
 
-TEST_F(FlatlandTest, SetImageDestinationSizeTest) {}
+TEST_F(FlatlandTest, SetImageBlendFunctionErrorCases) {
+  const ContentId kIdNotCreated = {1};
+
+  // Zero is not a valid content ID.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetImageBlendingFunction({0}, fuchsia::ui::composition::BlendMode::SRC);
+    PRESENT(flatland, false);
+  }
+
+  // Content does not exist.
+  {
+    std::shared_ptr<Flatland> flatland = CreateFlatland();
+    flatland->SetImageBlendingFunction(kIdNotCreated, fuchsia::ui::composition::BlendMode::SRC);
+    PRESENT(flatland, false);
+  }
+}
+
+// Make sure that the data for setting the blend mode gets passed to
+// the uberstruct correctly.
+TEST_F(FlatlandTest, SetImageBlendFunctionUberstructTest) {
+  const ContentId kImageId1 = {1};
+  const ContentId kImageId2 = {2};
+  const TransformId kTransformId1 = {3};
+  const TransformId kTransformId2 = {4};
+
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+
+  // Create constants.
+  const uint32_t kImageWidth = 50;
+  const uint32_t kImageHeight = 100;
+
+  // Setup first image to be opaque.
+  {
+    BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
+
+    ImageProperties properties1;
+    properties1.set_size({kImageWidth, kImageHeight});
+
+    auto import_token_dup = ref_pair_1.DuplicateImportToken();
+    const allocation::GlobalBufferCollectionId global_collection_id1 =
+        CreateImage(flatland.get(), allocator.get(), kImageId1, std::move(ref_pair_1),
+                    std::move(properties1))
+            .collection_id;
+
+    flatland->CreateTransform(kTransformId1);
+    flatland->SetRootTransform(kTransformId1);
+    flatland->SetContent(kTransformId1, kImageId1);
+    flatland->SetImageBlendingFunction(kImageId1, fuchsia::ui::composition::BlendMode::SRC);
+    PRESENT(flatland, true);
+  }
+
+  // Create a second image to be transparent.
+  {
+    BufferCollectionImportExportTokens ref_pair_1 = BufferCollectionImportExportTokens::New();
+
+    ImageProperties properties1;
+    properties1.set_size({kImageWidth, kImageHeight});
+
+    auto import_token_dup = ref_pair_1.DuplicateImportToken();
+    const allocation::GlobalBufferCollectionId global_collection_id1 =
+        CreateImage(flatland.get(), allocator.get(), kImageId2, std::move(ref_pair_1),
+                    std::move(properties1))
+            .collection_id;
+
+    flatland->CreateTransform(kTransformId2);
+    flatland->AddChild(kTransformId1, kTransformId2);
+    flatland->SetContent(kTransformId2, kImageId2);
+    flatland->SetImageBlendingFunction(kImageId2, fuchsia::ui::composition::BlendMode::SRC_OVER);
+    PRESENT(flatland, true);
+  }
+
+  // Get the first image content handle
+  const auto maybe_image_1_handle = flatland->GetContentHandle(kImageId1);
+  ASSERT_TRUE(maybe_image_1_handle.has_value());
+  const auto image_1_handle = maybe_image_1_handle.value();
+
+  // Get the second image content handle
+  const auto maybe_image_2_handle = flatland->GetContentHandle(kImageId2);
+  ASSERT_TRUE(maybe_image_2_handle.has_value());
+  const auto image_2_handle = maybe_image_2_handle.value();
+
+  // Now find the data in the uber struct.
+  auto uber_struct = GetUberStruct(flatland.get());
+  EXPECT_EQ(uber_struct->local_topology.back().handle, image_2_handle);
+
+  // Grab the metadatas for each handle.
+  auto image_1_kv = uber_struct->images.find(image_1_handle);
+  EXPECT_NE(image_1_kv, uber_struct->images.end());
+
+  auto image_2_kv = uber_struct->images.find(image_2_handle);
+  EXPECT_NE(image_2_kv, uber_struct->images.end());
+
+  // Make sure the opacity fields are set properly.
+  EXPECT_TRUE(image_1_kv->second.blend_mode == fuchsia::ui::composition::BlendMode::SRC);
+  EXPECT_TRUE(image_2_kv->second.blend_mode == fuchsia::ui::composition::BlendMode::SRC_OVER);
+}
 
 // Test that changing geometric transform properties affects the local matrix of Transforms.
 TEST_F(FlatlandTest, SetGeometricTransformProperties) {

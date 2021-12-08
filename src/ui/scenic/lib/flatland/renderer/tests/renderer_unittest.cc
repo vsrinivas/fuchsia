@@ -1170,9 +1170,10 @@ VK_TEST_F(VulkanRendererTest, SolidColorTest) {
                                  .height = kTargetHeight};
 
   // Create the image meta data for the solid color renderable.
-  ImageMetadata renderable_image_data = {.identifier = allocation::kInvalidImageId,
-                                         .multiply_color = {1, 0.4, 0, 1},
-                                         .is_opaque = false};
+  ImageMetadata renderable_image_data = {
+      .identifier = allocation::kInvalidImageId,
+      .multiply_color = {1, 0.4, 0, 1},
+      .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
 
   renderer.ImportBufferImage(render_target);
 
@@ -1258,14 +1259,16 @@ VK_TEST_F(VulkanRendererTest, MultipleSolidColorTest) {
                                  .height = kTargetHeight};
 
   // Create the image meta data for the solid color renderable - red.
-  ImageMetadata renderable_image_data = {.identifier = allocation::kInvalidImageId,
-                                         .multiply_color = {1, 0, 0, 1},
-                                         .is_opaque = false};
+  ImageMetadata renderable_image_data = {
+      .identifier = allocation::kInvalidImageId,
+      .multiply_color = {1, 0, 0, 1},
+      .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
 
   // Create the image meta data for the other solid color renderable - blue.
-  ImageMetadata renderable_image_data_2 = {.identifier = allocation::kInvalidImageId,
-                                           .multiply_color = {0, 0, 1, 1},
-                                           .is_opaque = false};
+  ImageMetadata renderable_image_data_2 = {
+      .identifier = allocation::kInvalidImageId,
+      .multiply_color = {0, 0, 1, 1},
+      .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
 
   renderer.ImportBufferImage(render_target);
 
@@ -1406,7 +1409,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
                                        .vmo_index = 1,
                                        .width = 1,
                                        .height = 1,
-                                       .is_opaque = false};
+                                       .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
 
   // Import all the images.
   renderer.ImportBufferImage(render_target);
@@ -1573,7 +1576,7 @@ VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
                                       .width = 1,
                                       .height = 1,
                                       .multiply_color = {1, 0, 0, 1},
-                                      .is_opaque = false};
+                                      .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
 
   // Create the texture that will go on the transparent renderable.
   ImageMetadata transparent_texture = {.collection_id = collection_id,
@@ -1582,7 +1585,7 @@ VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
                                        .width = 1,
                                        .height = 1,
                                        .multiply_color = {0, 1, 0, 0.5},
-                                       .is_opaque = false};
+                                       .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
 
   // Import all the images.
   renderer.ImportBufferImage(render_target);

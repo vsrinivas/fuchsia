@@ -28,6 +28,17 @@ type Orientation = strict enum {
     CCW_270_DEGREES = 4;
 };
 
+/// The set of possible blending functions to choose from when determining how an image should
+/// be composited on top of other images.
+type BlendMode = strict enum {
+    /// Indicates that the source pixels replace the destination pixels. In other words,
+    /// the source pixels are treated as opaque, regardless of what alpha values are set.
+    SRC = 1;
+    /// The source pixels are drawn over the destination pixels. The final pixel color
+    /// that is displayed is calculated as: C_src + (1.0 - alpha_src) * C_dst).
+    SRC_OVER = 2;
+};
+
 type ColorRgba = struct {
     red float32;
     green float32;
@@ -689,6 +700,15 @@ protocol Flatland {
     SetImageDestinationSize(struct {
         image_id ContentId;
         size fuchsia.math.SizeU;
+    });
+
+    /// Determines the blend function to use when rendering the image specified by
+    /// |image_id|. The image must be a valid image that was previously created with
+    /// a call to |CreateImage|. For details on the different blend functions that are
+    /// available, please refer to the BlendMode enum.
+    SetImageBlendingFunction(struct {
+        image_id ContentId;
+        blend_mode BlendMode;
     });
 
 

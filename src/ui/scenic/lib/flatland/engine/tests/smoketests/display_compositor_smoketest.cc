@@ -205,7 +205,8 @@ VK_TEST_P(DisplayCompositorParameterizedSmokeTest, FullscreenRectangleTest) {
                                       .identifier = allocation::GenerateUniqueImageId(),
                                       .vmo_index = 0,
                                       .width = kTextureWidth,
-                                      .height = kTextureHeight};
+                                      .height = kTextureHeight,
+                                      .blend_mode = fuchsia::ui::composition::BlendMode::SRC};
   auto result = display_compositor->ImportBufferImage(image_metadata);
   EXPECT_TRUE(result);
 

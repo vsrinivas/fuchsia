@@ -525,8 +525,9 @@ VK_TEST_P(DisplayCompositorParameterizedPixelTest, FullscreenSolidColorRectangle
   }
 
   // Import the texture to the engine.
-  auto image_metadata =
-      ImageMetadata{.identifier = allocation::kInvalidImageId, .multiply_color = {0, 1, 0, 1}};
+  auto image_metadata = ImageMetadata{.identifier = allocation::kInvalidImageId,
+                                      .multiply_color = {0, 1, 0, 1},
+                                      .blend_mode = fuchsia::ui::composition::BlendMode::SRC};
 
   // We cannot send to display because it is not supported in allocations.
   if (!IsDisplaySupported(display_compositor.get(), kCompareCollectionId)) {
@@ -617,7 +618,8 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
                           .identifier = allocation::GenerateUniqueImageId(),
                           .vmo_index = i,
                           .width = kTextureWidth,
-                          .height = kTextureHeight};
+                          .height = kTextureHeight,
+                          .blend_mode = fuchsia::ui::composition::BlendMode::SRC};
   }
 
   // Use the VK renderer here so we can make use of software rendering.
@@ -786,12 +788,14 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   // Create the image metadatas.
   ImageMetadata image_metadatas[2];
   for (uint32_t i = 0; i < 2; i++) {
+    auto blend_mode = (i != 1) ? fuchsia::ui::composition::BlendMode::SRC
+                               : fuchsia::ui::composition::BlendMode::SRC_OVER;
     image_metadatas[i] = {.collection_id = kTextureCollectionId,
                           .identifier = allocation::GenerateUniqueImageId(),
                           .vmo_index = i,
                           .width = kTextureWidth,
                           .height = kTextureHeight,
-                          .is_opaque = (i != 1)};
+                          .blend_mode = blend_mode};
   }
 
   // Use the VK renderer here so we can make use of software rendering.
