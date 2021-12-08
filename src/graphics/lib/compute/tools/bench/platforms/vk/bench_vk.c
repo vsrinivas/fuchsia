@@ -3,6 +3,13 @@
 // found in the LICENSE file.
 
 //
+// Necessary for `clock_gettime()` on strict C99 + Linux.
+//
+#ifdef __linux__
+#define _POSIX_C_SOURCE 200809L
+#endif
+
+//
 //
 //
 #include "bench_vk.h"
