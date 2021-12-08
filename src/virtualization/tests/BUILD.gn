@@ -117,11 +117,7 @@ source_set("fake_netstack") {
     "//src/virtualization/*",
   ]
   public = [ "fake_netstack.h" ]
-  sources = [
-    "fake_netstack.cc",
-    "fake_netstack_v1.cc",
-    "fake_netstack_v1.h",
-  ]
+  sources = [ "fake_netstack.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net.interfaces",

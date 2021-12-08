@@ -5,6 +5,9 @@
 #ifndef SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
 #define SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
 
+#include <fuchsia/net/interfaces/cpp/fidl_test_base.h>
+#include <fuchsia/netstack/cpp/fidl_test_base.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/promise.h>
 #include <lib/sys/cpp/testing/enclosing_environment.h>
@@ -12,12 +15,9 @@
 
 #include <memory>
 
-#include "fake_netstack_v1.h"
-
 namespace fake_netstack::internal {
 class FakeNetwork;
-class DeviceInterface;
-}  // namespace fake_netstack::internal
+}
 
 // Implements a fake netstack, providing the APIs:
 //
@@ -50,15 +50,8 @@ class FakeNetstack {
       const fuchsia::hardware::ethernet::MacAddress& mac_addr);
 
  private:
-  fpromise::promise<fake_netstack::internal::DeviceInterface*, zx_status_t> GetDevice(
-      const fuchsia::hardware::ethernet::MacAddress& mac_addr);
-
   async::Loop loop_;
   async::Executor executor_;
-
-  // Fakes for fuchsia.netstack.Netstack.
-  fake_netstack::v1::FakeState state_v1_;
-  fake_netstack::v1::FakeNetstack netstack_v1_;
 
   // Fakes for fuchsia.net.virtualization.Control.
   std::unique_ptr<fake_netstack::internal::FakeNetwork> network_;

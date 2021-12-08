@@ -31,8 +31,6 @@
 #include <future>
 #include <queue>
 
-#include "fake_netstack_internal.h"
-#include "fake_netstack_v1.h"
 #include "src/connectivity/lib/network-device/cpp/network_device_client.h"
 
 namespace {
@@ -86,27 +84,6 @@ Packet CopyPacketFromBuffer(NetworkDeviceClient::Buffer& buffer) {
   return result;
 }
 
-// Run the two promises, returning the result of the first that completes
-// and discarding the result of the second.
-//
-// TODO(fxbug.dev/601681): When a library version becomes available, use that
-// instead.
-template <typename V, typename E>
-fpromise::promise<V, E> SelectPromise(fpromise::promise<V, E> a, fpromise::promise<V, E> b) {
-  return fpromise::make_promise([a = std::move(a), b = std::move(b)](
-                                    fpromise::context& context) mutable -> fpromise::result<V, E> {
-    fpromise::result<V, E> a_result = a(context);
-    if (!a_result.is_pending()) {
-      return std::move(a_result);
-    }
-    fpromise::result<V, E> b_result = b(context);
-    if (!b_result.is_pending()) {
-      return std::move(b_result);
-    }
-    return fpromise::pending();
-  });
-}
-
 // Run the given functions on the given dispatcher, blocking until the lambda
 // has completed.
 //
@@ -126,7 +103,7 @@ namespace fake_netstack::internal {
 //
 // Thread hostile: construction and methods should all be called on the thread
 // backing the single-threaded `executor`.
-class Device : public fuchsia::net::virtualization::Interface, public DeviceInterface {
+class Device : public fuchsia::net::virtualization::Interface {
  public:
   // Create and configure a new device.
   //
@@ -246,7 +223,7 @@ class Device : public fuchsia::net::virtualization::Interface, public DeviceInte
   const network::client::PortInfoAndMac& port_info() { return port_info_; }
 
   // Read the first available packet received by the device.
-  fpromise::promise<Packet, zx_status_t> ReadPacket() override {
+  fpromise::promise<Packet, zx_status_t> ReadPacket() {
     std::lock_guard guard(checker_);
 
     // If there is already a packet waiting, just return it directly.
@@ -263,7 +240,7 @@ class Device : public fuchsia::net::virtualization::Interface, public DeviceInte
   }
 
   // Transmit a packet over the device.
-  fpromise::promise<void, zx_status_t> WritePacket(Packet payload) override {
+  fpromise::promise<void, zx_status_t> WritePacket(Packet payload) {
     std::lock_guard guard(checker_);
 
     // Allocate a buffer.
@@ -498,41 +475,10 @@ FakeNetstack::~FakeNetstack() {
 
 void FakeNetstack::Install(sys::testing::EnvironmentServices& services) {
   zx_status_t status =
-      services.AddService(state_v1_.GetHandler(), fuchsia::net::interfaces::State::Name_);
-  FX_CHECK(status == ZX_OK) << "Failure installing FakeState into environment: "
-                            << zx_status_get_string(status);
-
-  status = services.AddService(netstack_v1_.GetHandler(), fuchsia::netstack::Netstack::Name_);
-  FX_CHECK(status == ZX_OK) << "Failure installing FakeNetstack into environment: "
-                            << zx_status_get_string(status);
-
-  status =
       services.AddService(network_->GetHandler(), fuchsia::net::virtualization::Control::Name_);
   FX_CHECK(status == ZX_OK)
       << "Failure installing fuchsia.net.virtualization.Control into environment: "
       << zx_status_get_string(status);
-}
-
-fpromise::promise<fake_netstack::internal::DeviceInterface*, zx_status_t> FakeNetstack::GetDevice(
-    const fuchsia::hardware::ethernet::MacAddress& mac_addr) {
-  // We attempt to fetch the given MAC address from both the new and the old
-  // netstacks.
-  //
-  // Only one is expected to respond, so we use the first device we get back.
-  return SelectPromise<fake_netstack::internal::DeviceInterface*, zx_status_t>(
-      network_->GetDevice(mac_addr).then(
-          [](const fpromise::result<fake_netstack::internal::Device*, zx_status_t>& result)
-              -> fpromise::result<fake_netstack::internal::DeviceInterface*, zx_status_t> {
-            if (result.is_error()) {
-              return fpromise::error_result(result.error());
-            }
-            return fpromise::ok(result.value());
-          }),
-      netstack_v1_.GetDevice(mac_addr).then(
-          [](const fpromise::result<fake_netstack::v1::Device*>& result)
-              -> fpromise::result<fake_netstack::internal::DeviceInterface*, zx_status_t> {
-            return fpromise::ok_result(result.value());
-          }));
 }
 
 fpromise::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
@@ -593,23 +539,24 @@ fpromise::promise<void, zx_status_t> FakeNetstack::SendPacket(
 
   return fpromise::schedule_for_consumer(
              &executor_,
-             fpromise::make_promise([mac_addr, this]() { return GetDevice(mac_addr); })
-                 .and_then([packet = std::move(packet)](
-                               fake_netstack::internal::DeviceInterface* const& device) {
-                   return device->WritePacket(packet);
-                 }))
+             fpromise::make_promise([mac_addr, this]() { return network_->GetDevice(mac_addr); })
+                 .and_then(
+                     [packet = std::move(packet)](fake_netstack::internal::Device* const& device) {
+                       return device->WritePacket(packet);
+                     }))
       .promise();
 }
 
 fpromise::promise<std::vector<uint8_t>, zx_status_t> FakeNetstack::ReceivePacket(
     const fuchsia::hardware::ethernet::MacAddress& mac_addr) {
   return fpromise::schedule_for_consumer(
-             &executor_, fpromise::make_promise([mac_addr, this]() { return GetDevice(mac_addr); })
-                             .and_then([](fake_netstack::internal::DeviceInterface* const& device) {
-                               return device->ReadPacket();
-                             })
-                             .and_then([](Packet& packet) -> fpromise::result<Packet, zx_status_t> {
-                               return fpromise::ok(std::move(packet));
-                             }))
+             &executor_,
+             fpromise::make_promise([mac_addr, this]() { return network_->GetDevice(mac_addr); })
+                 .and_then([](fake_netstack::internal::Device* const& device) {
+                   return device->ReadPacket();
+                 })
+                 .and_then([](Packet& packet) -> fpromise::result<Packet, zx_status_t> {
+                   return fpromise::ok(std::move(packet));
+                 }))
       .promise();
 }
