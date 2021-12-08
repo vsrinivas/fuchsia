@@ -574,6 +574,12 @@ bool runtime_test() {
 bool migrate_stress_test() {
   BEGIN_TEST;
 
+  if (true) {
+    // TODO(fxbug.dev/78695): Disabled until root cause of hangs on some hardware can be determined.
+    printf("Test disabled due to fxbug.dev/78695\n");
+    END_TEST;
+  }
+
   // Get number of CPUs in the system.
   int active_cpus = ktl::popcount(mp_get_active_mask());
   printf("Found %d active CPU(s)\n", active_cpus);
