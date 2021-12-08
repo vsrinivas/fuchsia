@@ -39,9 +39,6 @@ pub fn merge_extents(
     let object_id = left_key.object_id;
     let attribute_id = left_key.attribute_id;
 
-    // IS THIS STILL ACCURATE?
-    // TODO(jfsulliv): once we are at the base layer, we should be deleting records mapping to
-    // deleted extents. Otherwise they'll stick around forever.
     if left_key.range.end <= right_key.range.start {
         // Extents don't overlap.
         return MergeResult::EmitLeft;
@@ -164,8 +161,6 @@ fn merge_deleted_extents(
 ///
 /// Merging the two deletions in layers 0 and 2 would either result in the middle extent being
 /// fully occluded or not at all (depending on whether we replaced on the left or right layer).
-///
-/// TODO(jfsulliv): At the base layer, we should prune deleted extents completely.
 pub fn merge(
     left: &MergeLayerIterator<'_, ObjectKey, ObjectValue>,
     right: &MergeLayerIterator<'_, ObjectKey, ObjectValue>,
