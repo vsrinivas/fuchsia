@@ -7,7 +7,8 @@ use {
     proc_macro::TokenStream,
     proc_macro2::TokenStream as TokenStream2,
     quote::{format_ident, quote, ToTokens},
-    std::collections::{HashMap, HashSet},
+    std::cmp::Ordering,
+    std::collections::{BTreeMap, BTreeSet},
     syn::{
         bracketed, parenthesized,
         parse::{Parse, ParseBuffer},
@@ -49,6 +50,18 @@ impl ToTokens for StateArgs {
 impl std::fmt::Display for StateArgs {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         write!(f, "{}{}", self.name, tokenize_opt(&self.generic_args))
+    }
+}
+
+impl PartialOrd for StateArgs {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        self.name.partial_cmp(&other.name)
+    }
+}
+
+impl Ord for StateArgs {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.name.cmp(&other.name)
     }
 }
 
@@ -222,7 +235,7 @@ pub fn process(input: TokenStream) -> TokenStream {
     let args: StateMachineArgs = parse(input).expect("error processing macro");
 
     // Ensure that each state uses only one set of generic parameters.
-    let mut generics = HashMap::<Ident, StateArgs>::new();
+    let mut generics = BTreeMap::<Ident, StateArgs>::new();
     generics.insert(args.init_state.0.name.clone(), args.init_state.0.clone());
     for transition in &args.transitions {
         let mut states = vec![transition.from_name.clone()];
@@ -235,15 +248,15 @@ pub fn process(input: TokenStream) -> TokenStream {
     }
 
     // Collect unique states and state transitions.
-    let mut transitions = HashMap::<StateArgs, HashSet<StateArgs>>::new();
-    let mut state_set = HashSet::<StateArgs>::new();
+    let mut transitions = BTreeMap::<StateArgs, BTreeSet<StateArgs>>::new();
+    let mut state_set = BTreeSet::<StateArgs>::new();
     state_set.insert(args.init_state.0.clone());
     for transition in &args.transitions {
         state_set.insert(transition.from_name.clone());
         state_set.extend(transition.to_names.iter().map(|x| x.clone()));
         transitions
             .entry(transition.from_name.clone())
-            .or_insert(HashSet::new())
+            .or_insert(BTreeSet::new())
             .extend(transition.to_names.iter().map(|x| x.clone()));
     }
 
@@ -259,7 +272,7 @@ pub fn process(input: TokenStream) -> TokenStream {
 
     // Add self transitions.
     for state in &state_set {
-        transitions.entry(state.clone()).or_insert(HashSet::new()).insert(state.clone());
+        transitions.entry(state.clone()).or_insert(BTreeSet::new()).insert(state.clone());
     }
 
     // Make optional enum type definition:
