@@ -10,6 +10,7 @@ ffx_plugin("ffx_target") {
   plugin_deps = [
     "add:ffx_target_add",
     "default:ffx_target_default",
+    "echo:ffx_target_echo",
     "flash:ffx_flash",
     "forward:ffx_target_forward",
     "get-ssh-address:ffx_get_ssh_address",

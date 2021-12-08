@@ -31,6 +31,13 @@ type TunnelError = strict enum {
 
 @discoverable
 protocol RemoteControl {
+    /// Returns the input.
+    EchoString(struct {
+        value string:255;
+    }) -> (struct {
+        response string:255;
+    });
+
     // Connects to the Hub root directory. The server side will be connected to
     // a fuchsia.io.Directory handle, which can then be connected to on the
     // client side via a Directory proxy.

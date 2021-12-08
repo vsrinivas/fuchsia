@@ -44,6 +44,10 @@ impl RemoteControlService {
             .map_err(|err| anyhow::Error::new(err).context("RemoteControl stream"))
             .try_for_each_concurrent(None, |request| async {
                 match request {
+                    rcs::RemoteControlRequest::EchoString { value, responder } => {
+                        responder.send(&value)?;
+                        Ok(())
+                    }
                     rcs::RemoteControlRequest::AddId { id, responder } => {
                         self.ids.borrow_mut().push(id);
                         responder.send()?;
