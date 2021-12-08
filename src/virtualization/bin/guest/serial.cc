@@ -121,15 +121,20 @@ zx_status_t handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
   }
 
   // Open the serial service of the guest and process IO.
-  zx::socket socket;
-  zx_status_t status = guest->GetSerial(&socket);
+  fuchsia::virtualization::Guest_GetSerial_Result result;
+  zx_status_t status = guest->GetSerial(&result);
   if (status != ZX_OK) {
-    std::cerr << "Failed to open serial port: " << zx_status_get_string(status) << ".\n";
+    std::cerr << "Failed to connect with Guest: " << zx_status_get_string(status) << ".\n";
     return status;
   }
 
+  if (result.is_err()) {
+    std::cerr << "Failed to get serial socket: " << zx_status_get_string(result.err()) << ".\n";
+    return result.err();
+  }
+
   GuestConsole console(loop);
-  console.Start(std::move(socket));
+  console.Start(std::move(result.response().socket));
 
   return loop->Run();
 }

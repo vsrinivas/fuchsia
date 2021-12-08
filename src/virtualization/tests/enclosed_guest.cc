@@ -22,6 +22,7 @@
 #include <optional>
 #include <string>
 
+#include "fuchsia/virtualization/cpp/fidl.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_stub.h"
 #include "src/virtualization/tests/guest_constants.h"
@@ -169,12 +170,16 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
 
   // Connect to guest serial, and log it to the logger.
   logger.Start("Connecting to guest serial", zx::sec(10));
-  zx::socket serial_socket;
-  guest_->GetSerial([&serial_socket](zx::socket socket) { serial_socket = std::move(socket); });
+  std::optional<fuchsia::virtualization::Guest_GetSerial_Result> get_serial_result;
+
+  guest_->GetSerial([&get_serial_result](fuchsia::virtualization::Guest_GetSerial_Result result) {
+    get_serial_result = std::move(result);
+  });
+
   bool success = RunLoopUntil(
       GetLoop(),
-      [&guest_error, &serial_socket] {
-        return guest_error.has_value() || serial_socket.is_valid();
+      [&guest_error, &get_serial_result] {
+        return guest_error.has_value() || get_serial_result.has_value();
       },
       deadline);
   if (!success) {
@@ -186,7 +191,7 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
                    << zx_status_get_string(guest_error.value());
     return guest_error.value();
   }
-  serial_logger_.emplace(&Logger::Get(), std::move(serial_socket));
+  serial_logger_.emplace(&Logger::Get(), std::move(get_serial_result->response().socket));
 
   // Connect to guest console.
   logger.Start("Connecting to guest console", zx::sec(10));

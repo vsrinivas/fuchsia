@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "fuchsia/virtualization/cpp/fidl.h"
+
 static zx::socket duplicate(const zx::socket& socket) {
   zx::socket dup;
   zx_status_t status = socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
@@ -30,7 +32,8 @@ zx::socket GuestImpl::SerialSocket() { return duplicate(serial_socket_); }
 zx::socket GuestImpl::ConsoleSocket() { return duplicate(console_socket_); }
 
 void GuestImpl::GetSerial(GetSerialCallback callback) {
-  callback(duplicate(remote_serial_socket_));
+  callback(fuchsia::virtualization::Guest_GetSerial_Result::WithResponse(
+      fuchsia::virtualization::Guest_GetSerial_Response{duplicate(remote_serial_socket_)}));
 }
 
 void GuestImpl::GetConsole(GetConsoleCallback callback) {

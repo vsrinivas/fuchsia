@@ -26,6 +26,7 @@
 #include <src/virtualization/tests/guest_console.h>
 #include <src/virtualization/tests/guest_constants.h>
 
+#include "fuchsia/virtualization/cpp/fidl.h"
 #include "src/lib/cmx/cmx.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
@@ -608,12 +609,20 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(const ConfiguringEnvironmentPtr
             });
 
         // Fetch the guest's UART, and start logging it.
-        guest_controller->GetSerial([uart_completer, this](zx::socket socket) mutable {
-          // Start logging guest serial immediately, even if still waiting for
-          // the GetConsole call to finish.
-          guest_uart_.emplace(&Logger::Get(), std::move(socket));
-          uart_completer->complete_ok();
-        });
+        guest_controller->GetSerial(
+            [uart_completer, this](fuchsia::virtualization::Guest_GetSerial_Result result) mutable {
+              if (result.is_err()) {
+                std::stringstream ss;
+                ss << "Could not get guest serial socket: " << zx_status_get_string(result.err());
+                uart_completer->complete_error(
+                    SandboxResult(SandboxResult::Status::SETUP_FAILED, ss.str()));
+              } else {
+                // Start logging guest serial immediately, even if still waiting for
+                // the GetConsole call to finish.
+                guest_uart_.emplace(&Logger::Get(), std::move(result.response().socket));
+                uart_completer->complete_ok();
+              }
+            });
 
         // Wait for both the console and serial to be fetched.
         return fpromise::join_promises(console_bridge.consumer.promise(),

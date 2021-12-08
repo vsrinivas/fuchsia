@@ -26,5 +26,5 @@ protocol Guest {
     /// with the guest kernel's serial logs.
     GetSerial() -> (resource struct {
         socket zx.handle:SOCKET;
-    });
+    }) error zx.status;
 };

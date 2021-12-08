@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "fuchsia/virtualization/cpp/fidl.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/guest/serial.h"
 
@@ -36,7 +37,15 @@ zx_status_t handle_launch(int argc, const char** argv, async::Loop* loop,
 
   // Set up serial output.
   OutputWriter serial(loop);
-  guest->GetSerial([&serial](zx::socket socket) { serial.Start(std::move(socket)); });
+  guest->GetSerial([&loop, &serial](fuchsia::virtualization::Guest_GetSerial_Result result) {
+    if (result.is_err()) {
+      fprintf(stderr, "Could not connect to guest serial: %s\n",
+              zx_status_get_string(result.err()));
+      loop->Quit();
+      return;
+    }
+    serial.Start(std::move(result.response()).socket);
+  });
 
   // Set up guest console.
   GuestConsole console(loop);
