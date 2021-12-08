@@ -449,7 +449,7 @@ static void acpi_ec_release(void* ctx) {
   acpi_ec_device_t* dev = static_cast<acpi_ec_device_t*>(ctx);
 
   if (dev->ec_space_setup) {
-    AcpiRemoveAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_EC, ec_space_request_handler);
+    AcpiRemoveAddressSpaceHandler(dev->acpi_handle, ACPI_ADR_SPACE_EC, ec_space_request_handler);
   }
 
   if (dev->gpe_setup) {
@@ -572,7 +572,7 @@ zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   }
   dev->thread_setup = true;
 
-  status = AcpiInstallAddressSpaceHandler(ACPI_ROOT_OBJECT, ACPI_ADR_SPACE_EC,
+  status = AcpiInstallAddressSpaceHandler(dev->acpi_handle, ACPI_ADR_SPACE_EC,
                                           ec_space_request_handler, ec_space_setup_handler, dev);
   if (status != AE_OK) {
     xprintf("acpi-ec: Failed to install ec space handler");
