@@ -69,6 +69,7 @@ def main(argv):
     if args.needs_vulkan_framebuffer:
         content['sandbox']['dev'] = [
             'class/display-controller',
+            'class/input-report',
         ]
 
     # Inject Vulkan-related services into test component manifest.
