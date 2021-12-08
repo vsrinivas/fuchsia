@@ -84,7 +84,15 @@ class CompatHash<Word>::BucketIterator {
   constexpr bool operator!=(const BucketIterator& other) const { return !(*this == other); }
 
   constexpr BucketIterator& operator++() {  // prefix
-    i_ = BucketIndex(chain_[i_]);
+    // The chain table might encode an infinite loop here.  So cut short
+    // iteration when the total number of entries has been enumerated.  In
+    // corrupt data, this may not have covered all the entries because it hit a
+    // loop.  In valid data, the natural end will always be reached first.
+    if (++count_ > chain_.size()) [[unlikely]] {
+      i_ = 0;
+    } else {
+      i_ = BucketIndex(chain_[i_]);
+    }
     return *this;
   }
 
@@ -104,6 +112,7 @@ class CompatHash<Word>::BucketIterator {
 
   cpp20::span<const Word> chain_;
   uint32_t i_ = 0;
+  uint32_t count_ = 0;
 };
 
 }  // namespace elfldltl
