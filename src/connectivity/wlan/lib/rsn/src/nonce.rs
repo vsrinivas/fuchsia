@@ -5,11 +5,11 @@
 use crate::prf;
 use anyhow;
 use bytes::{BufMut, BytesMut};
+use fuchsia_async as fasync;
 use num::bigint::BigUint;
 use parking_lot::Mutex;
 use rand::{OsRng, Rng as _};
 use std::sync::Arc;
-use time;
 
 pub type Nonce = [u8; 32];
 
@@ -30,7 +30,7 @@ impl NonceReader {
         // Fuchsia has no support for NTP yet; instead use a regular timestamp.
         // TODO(fxbug.dev/4804): Use time in NTP format once Fuchsia added support.
         let mut buf = BytesMut::with_capacity(14);
-        buf.put_u64_le(time::precise_time_ns());
+        buf.put_i64_le(fasync::Time::now().into_nanos());
         buf.put_slice(sta_addr);
         let k = OsRng::new()?.gen::<[u8; 32]>();
         let init = prf::prf(&k[..], "Init Counter", &buf[..], 8 * std::mem::size_of_val(&k))?;
