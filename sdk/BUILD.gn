@@ -64,7 +64,6 @@ group("sdk.modular") {
 
   public_deps = [
     ":core.modular",
-    ":ddk",
     ":host_tools.all",
     ":modular_testing",
     ":zircon_sysroot",
@@ -430,7 +429,6 @@ sdk("core") {
 
   deps = [
     ":core_idk",
-    ":ddk_host_tools",
     ":host_tools",
   ]
 }
