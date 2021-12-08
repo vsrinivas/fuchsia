@@ -185,7 +185,7 @@ Component framework provides the following built-in component runners:
 [glossary.environment]: /docs/glossary/README.md#environment
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
-[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [elf-runner]: /docs/concepts/components/v2/elf_runner.md
 [environment]: /docs/concepts/components/v2/environments.md
 [fidl-directory]: /sdk/fidl/fuchsia.io/directory.fidl

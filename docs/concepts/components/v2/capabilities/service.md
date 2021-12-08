@@ -204,7 +204,7 @@ see [`//examples/components/services`][routing-example].
 [glossary.protocol]: /docs/glossary/README.md#protocol
 [glossary.service]: /docs/glossary/README.md#service
 [glossary.service-capability]: /docs/glossary/README.md#service-capability
-[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [collection]: /docs/concepts/components/v2/realms.md#collections
 [fidl-reference]: /docs/reference/fidl/language/language.md
 [life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md

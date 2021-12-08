@@ -39,6 +39,6 @@ To see component manager's log of the failed capability routing, run:
 $ fx log
 ```
 
-[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [cf-intro]: /docs/concepts/components/v2/introduction.md
 [cfv2]: /docs/glossary.md#components-v2

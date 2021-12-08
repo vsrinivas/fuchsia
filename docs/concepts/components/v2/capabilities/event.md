@@ -247,7 +247,7 @@ Notice the following key aspects of this example:
     }
     ```
 
-[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [doc-lifecycle]: /docs/concepts/components/v2/lifecycle.md
 [doc-realms]: /docs/concepts/components/v2/realms.md
 [event-source]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#EventSource

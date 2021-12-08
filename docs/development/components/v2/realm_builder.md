@@ -495,7 +495,7 @@ controller, see [offering external capabilities](#routes-from-outside).
 | Manipulating component decl |    Y |    N |
 
 
-[cap-routes]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[cap-routes]: /docs/concepts/components/v2/capabilities/README.md#routing
 [children]: https://fuchsia.dev/reference/cml#children
 [collection]: https://fuchsia.dev/reference/cml#collections
 [component-urls]: /docs/concepts/components/component_urls.md

@@ -422,7 +422,7 @@ offer: [
 [doc-monikers]: /docs/concepts/components/v2/monikers.md
 [doc-packages]: /docs/concepts/packages/package.md
 [doc-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
-[doc-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[doc-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
 [doc-service]: /docs/concepts/components/v2/capabilities/service.md
 [example-routing-failed]: /examples/components/routing_failed/README.md

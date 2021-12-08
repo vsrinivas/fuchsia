@@ -156,7 +156,7 @@ and `red`.
 ```
 
 [glossary.component]: /docs/glossary/README.md#component
-[capability-routing]: component_manifests.md#capability-routing
+[capability-routing]: capabilities/README.md#routing
 [cml-shards]: https://fuchsia.dev/reference/cml#include
 [lc-example]: /examples/components/lifecycle
 [lc-proto]: /sdk/fidl/fuchsia.process.lifecycle/lifecycle.fidl

@@ -48,36 +48,36 @@ The Component Framework includes:
 
 ## Capabilities
 
-Since Fuchsia is a capability-based operating system, software on Fuchsia
-interacts with other software through the use of
-_[capabilities][glossary.capability]_. A capability combines both access to a
-resource and a set of rights, providing both a mechanism for access control and
-a means by which to interact with the resource. In Fuchsia, capabilities
-typically have an underlying [kernel object][glossary.kernel-object] and
-programs hold [handles][glossary.handle] to reference those underlying objects.
+Since Fuchsia is a capability-based operating system, components interact with
+each other through the use of _[capabilities][glossary.capability]_.
+A capability combines access to a resource and a set of rights, providing both a
+mechanism for access control and a means by which to interact with the resource.
 
+To support the complex composition of software present in today's products, the
+Component Framework provides distinct [capability types][doc-capabilities] built
+upon Zircon [kernel objects][glossary.kernel-object].
 A common representation of a capability is a [channel][glossary.channel] that
-speaks a particular [FIDL][glossary.fidl] protocol. The "server end" and the
-"client end" of the channel each hold a handle allowing them to communicate
-with each other. The [`fuchsia.io.Directory`][fidl-directory] protocol allows a
-client to discover additional capabilities by name. To support the complex
-composition of software present in today's products, the Component Framework
-provides more [complex capabilities][doc-capabilities] built upon the Zircon
-objects. For example, [storage][doc-storage-capability] capabilities are
-represented as channels speaking the `Directory` protocol that provide access
-to a unique persistent directory created for each component.
+speaks a particular [FIDL][glossary.fidl] protocol.
 
-Fuchsia processes receive both named and numbered handles at launch. The named
-handles always speak the `Directory` protocol. The term for the collection of
-named handles is the _[namespace][glossary.namespace]_.
+The Component Framework assembles the _[namespace][glossary.namespace]_ for a
+component using [component declarations][glossary.component-declaration] that
+describe the capabilities the component requires to function.
+Components can discover the available capabilities in their namespace using the
+[`fuchsia.io.Directory`][fidl-directory] protocol.
 
-The Component Framework assembles the namespace for a component by consulting
-[component declarations][glossary.component-declaration] that describe how the
-capabilities in the namespace should be delegated at runtime. The process of
-following a chain of delegation from a consuming component to a providing
-component is called _[capability routing][glossary.capability-routing]_.
-_Component topology_ is the term for the component instance tree and the
-collective capability routes over that tree.
+At runtime, every component receives its namespace as well as a handle to the
+server end of a `Directory` channel. This `Directory` channel is called the
+the _[outgoing directory][glossary.outgoing-directory]_. Through the
+outgoing directory, the component's executable makes discoverable any
+capabilities that it provides.
+
+The Component Framework brokers discovery from a providing component's
+outgoing directory to a consuming component's namespace through a process called
+_[capability routing][glossary.capability-routing]_.
+While most capabilities are routed to component instances, _runner_ and
+_resolver_ capabilities are routed to _[environments][glossary.environment]_.
+Environments configure the behavior of the framework for the realms to which
+they are assigned.
 
 Note: In the Fuchsia process layer, "having a capability" means the process
 holds a handle to the kernel object capability in its handle table. In the
@@ -88,40 +88,38 @@ Further reading:
 
 * [Zircon kernel objects][doc-kernel-objects]
 * [Component Framework capabilities][doc-capabilities]
-* [Capability routing][doc-capability-routing]
+* [Environments][doc-environments]
 
 ## Components
 
-A _Component_ is the fundamental unit of executable software on Fuchsia.
-Components are composable, meaning that components can be selected and
-assembled in various combinations to create new components. A component and its
-children are referred to as a _[realm][glossary.realm]_. The collective
-[parent][glossary.parent-component-instance] and
-[child][glossary.child-component-instance]
-relationships of many individual components are referred to as the
-_[component instance tree][glossary.component-instance-tree]_. A
-_[moniker][glossary.moniker]_ is a topological path that identifies a specific
-component instance within a component instance tree. You will often see
-monikers represented as POSIX-like path strings. At its core, a component
-consists of the following:
+_Components_ are the foundational building blocks of software running in Fuchsia.
+Each component is a composable, sandboxed module that interacts with other
+components through capabilities.
+
+At its core, a component consists of the following:
 
 * A [Component URL][glossary.component-url], which uniquely identifies that
   component.
 * A [Component manifest][glossary.component-manifest], which describes how to
   launch the component, as well as any capability routes.
 
-Components are retrieved from a variety of origins, and can run in any runtime
-(such as a native process, or in a virtual machine). To support origin and
-runtime variability, the Component Framework can be extended through the use of
-_resolvers_ and _[runners][glossary.runner]_. Resolvers and runners are
-themselves capabilities and interact directly with the framework to extend its
-functionality.
+The Component Framework relies on _component resolvers_ to retrieve components
+from their origin. Resolvers take a component URL as an input and produce a
+component manifest and (optionally) an access mechanism to the bytes of a
+software package as output.
 
-* Resolvers take a component URL as an input and produce a component manifest
-  and (optionally) an access mechanism to the bytes of a software package as
-  output.
-* Runners consume parts of the manifest and the package, and provide the
-  component's binary with a way to execute.
+Components that include an executable program may specify any runtime
+(such as a raw process or a virtual machine) provided to the Component Framework
+through a _[component runner][glossary.runner]_. Runners consume parts of the
+manifest and the package, and provide the component's binary with a way to
+execute.
+
+Note: Components without an executable program may still route capabilities and
+host children, but no code will be executed for the component.
+
+Resolvers and runners are themselves capabilities and interact directly with the
+framework to extend its functionality. Components can implement these
+capabilities to add support for new component origins and runtimes.
 
 Note: To bootstrap the system, `component_manager` includes a built-in
 resolver, the `boot-resolver`, which resolves `fuchsia-boot://` URLs to
@@ -131,13 +129,31 @@ which executes ELF binaries stored in signed Fuchsia packages.
 Further reading:
 
 * [Component manager][doc-component-manager]
-* [Component topology][doc-topology]
-* [Realms][doc-realms]
 * [Resolver capability][doc-resolvers]
 * [Runner capability][doc-runners]
 * [Fuchsia packages][doc-packages]
 
-### Component lifecycle
+### Composition
+
+A component together with its children are referred to as a
+_[realm][glossary.realm]_.
+The collective [parent][glossary.parent-component-instance] and
+[child][glossary.child-component-instance] relationships of all individual
+components are referred to as the
+_[component instance tree][glossary.component-instance-tree]_.
+A _[moniker][glossary.moniker]_ is a topological path that identifies a specific
+component instance within a component instance tree. You will often see
+monikers represented as POSIX-like path strings.
+
+_Component topology_ is the term for the component instance tree and the
+collective capability routes over that tree.
+
+Further reading:
+
+* [Component topology][doc-topology]
+* [Realms][doc-realms]
+
+### Lifecycle
 
 Components move through the following lifecycle states:
 
@@ -160,41 +176,6 @@ Further reading:
 
 * [Component lifecycle][doc-lifecycle]
 
-### Components and capability routing
-
-When started, every component receives its namespace as well as a handle to the
-server end of a `Directory` channel. This `Directory` channel is called the
-the _[outgoing directory][glossary.outgoing-directory]_. Through the
-outgoing directory, the component's executable makes discoverable any
-capabilities that it serves directly. The Component Framework brokers discovery
-from one component's namespace to another's outgoing directory.
-
-A component can interact with the system and other components only via the
-capabilities discoverable through its namespace and the few [numbered
-handles][src-processargs] it receives. The namespace for the component is
-assembled from declarations in the component's manifest. However, these
-component manifest declarations alone are not sufficient to gain access to the
-capabilities at runtime. For these capabilities to be available, there must
-also be a valid capability route from from the consuming component to a
-provider. Since capabilities are most often routed through parent components to
-their children, parent components play an important role in defining the
-sandboxes for their child components.
-
-Namespaces use directory path semantics, so many components use a POSIX-style
-interface that treats their namespace as a local file system.
-
-While most capabilities are routed to and from component instances, _runner_
-and _resolver_ capabilities are routed to
-_[environments][glossary.environment]_. Environments configure the behavior of
-the framework for the realms to which they are assigned. Capabilities routed to
-these environments are accessed and used by the framework. Component instances
-themselves do not have runtime access to the capabilities in their
-environments.
-
-Further reading:
-
-* [Environments][doc-environments]
-
 [fidl-directory]: https://fuchsia.dev/reference/fidl/fuchsia.io#Directory
 [glossary.capability]: /docs/glossary#capability
 [glossary.handle]: /docs/glossary#handle
@@ -215,8 +196,6 @@ Further reading:
 [glossary.kernel-object]: /docs/glossary#kernel-object
 [glossary.capability-routing]: /docs/glossary#capability-routing
 [glossary.fidl]: /docs/glossary#fidl
-[src-processargs]: /zircon/system/public/zircon/processargs.h
-[doc-capability-routing]: /docs/concepts/components/v2/topology.md#capability-routing
 [doc-capabilities]: /docs/concepts/components/v2/capabilities/README.md
 [doc-kernel-objects]: /docs/reference/kernel_objects/objects.md
 [doc-storage-capability]: /docs/concepts/components/v2/capabilities/storage.md

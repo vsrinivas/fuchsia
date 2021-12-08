@@ -1,76 +1,140 @@
 # Capabilities
 
-[Capabilities][glossary.capability] can be created, routed, and used in a
-[component manifest][doc-component-manifest] to control which parts of Fuchsia
-have ability to connect to and access which resources.
+Components interact with one another through [capabilities][glossary.capability].
+A capability combines access to a resource and a set of rights, providing a
+access control and a means for interacting with the resource. Fuchsia
+capabilities typically access underlying [kernel objects][glossary.kernel-object]
+through [handles][glossary.handle] provided in the component's
+[namespace][glossary.namespace].
 
-## Routing terminology {#routing-terminology}
+A component can interact with the system and other components only through the
+discoverable capabilities from its namespace and the few
+[numbered handles][src-processargs] it receives.
 
-Component manifests declare how capabilities are routed between
-[components][glossary.component]. The language of capability routing consists of
-the following three keywords:
+## Capability routing {#routing}
 
--   `use`: When a component `uses` a capability, the capability is installed in
-    the component's namespace. A component may `use` any capability that has
-    been `offered` or `exposed` to it.
--   `offer`: A component may `offer` a capability to a *target*, which is either
-    a [child][glossary.child] or
-    [collection][doc-collections]. When a capability is offered to a child, the
-    child instance may `use` the capability or `offer` it to one of its own
-    targets. Likewise, when a capability is offered to a collection, any
-    instance in the collection may `use` the capability or `offer` it.
--   `expose`: When a component `exposes` a capability to its
-    [parent][glossary.parent], the parent may `offer` the
-    capability to one of its other children. A component may `expose` any
-    capability that it provides, or that one of its children exposes.
+Components declare new capabilities that they offer to the system and
+capabilities provided by other components (or the framework) that they require
+in their [component manifest][doc-component-manifest]. Component framework uses
+these declarations to populate the namespace.
 
-When you use these keywords together, they express how a capability is routed
-from a component instance's [outgoing directory][doc-outgoing-directory] to
-another component instance's namespace:
+For capabilities to be available at runtime, there must also be a valid
+[capability route][glossary.capability-routing] from the consuming component to
+a provider. Since capabilities are most often routed through parent components
+to their children, parent components play an important role in defining the
+sandboxes for their child components.
 
--   `use` describes the capabilities that populate a component instance's
-    namespace.
--   `expose` and `offer` describe how capabilities are passed between component
-    instances. Aside from their directionality, there is another significant
-    difference between `offer` and `expose`. A component may freely `use` a
-    capability that was `offered` to it, however, in order to prevent dependency
-    cycles between parents and children there are restrictions on `using` a
-    capability that is `exposed` to a component by its child. If the parent
-    offers no capabilities to the child which the parent *itself* provides, then
-    it can `use` from its child. If the parent does offer capabilities that it 
-    provides, then the `use` from the child must be marked as `weak`.
+Some capability types are routed to [environments][glossary.environment] rather
+than individual component instances. Environments configure the behavior of
+the framework for the realms where they are assigned. Capabilities routed to
+environments are accessed and used by the framework. Component instances do not
+have runtime access to the capabilities in their environment.
 
-## Capability types
+### Routing terminology {#routing-terminology}
 
-- [Directory capabilities](directory.md) connect to directories provided by
-  other components.
-- [Event capabilities](event.md) receive lifecycle events about components at
-  a certain scope.
-- [Protocol capabilities](protocol.md) are service nodes that can be used to
-  open a channel to a FIDL protocol.
-- [Resolver capabilities](resolvers.md) when registered in an
-  [environment](../environments.md), cause a component with a particular URL
-  scheme to be resolved with that [resolver][doc-resolvers].
-- [Runner capabilities](runners.md) determines which runner is responsible
-  for instantiating the component and assisting with its lifecycle.
-- [Service capabilities](service.md) connect to FIDL services (groups of
-  protocols) provided by other components or the framework itself.
-- [Storage capabilities](storage.md) are special-cased directories with different
-  semantics that are isolated to the components using them.
+Routing terminology divides into the following categories:
 
-`directory`, `event`, `protocol`, `service` and `storage` capabilities are routed to
-components that `use` them. `resolver` and `runner` capabilities are routed to
-[environments](#environments) that include them.
+1.  Declarations of how capabilities are routed between the component, its
+    parent, and its children:
+    -   `offer`: Declares that the capability listed is made available to a
+        [child component][doc-children] instance or a
+        [child collection][doc-collections].
+    -   `expose`: Declares that the capabilities listed are made available to
+        the parent component or to the framework. It is valid to `expose` from
+        `self` or from a child component.
+1.  Declarations of capabilities consumed or provided by the component:
+    -   `use`: For executable components, declares capabilities that this
+        component requires in its [namespace][glossary.namespace] at runtime.
+        Capabilities are routed from the `parent` unless otherwise specified,
+        and each capability must have a valid route from its source.
+    -   `capabilities`: Declares capabilities that this component provides.
+        Capabilities that are offered or exposed from `self` must appear here.
+        These capabilities often map to a node in the
+        [outgoing directory][glossary.outgoing-directory].
+
+## Capability types {#capability-types}
+
+The following capabilities can be routed:
+
+| type                   | description                   | routed to          |
+| ---------------------- | ----------------------------- | ------------------ |
+| [`protocol`]           | A filesystem node that is     | components         |
+: [capability-protocol]  : used to open a channel backed :                    :
+:                        : by a FIDL protocol.           :                    :
+| [`service`]            | A filesystem directory that   | components         |
+: [capability-service]   : is used to open a channel to  :                    :
+:                        : one of several service        :                    :
+:                        : instances.                    :                    :
+| [`directory`]          | A filesystem directory.       | components         |
+: [capability-directory] :                               :                    :
+| [`storage`]            | A writable filesystem         | components         |
+: [capability-storage]   : directory that is isolated to :                    :
+:                        : the component using it.       :                    :
+| [`resolver`]           | A capability that, when       | [environments]     |
+: [capability-resolver]  : registered in an environment, : [doc-environments] :
+:                        : causes a component with a     :                    :
+:                        : particular URL scheme to be   :                    :
+:                        : resolved with that resolver.  :                    :
+| [`runner`]             | A capability that, when       | [environments]     |
+: [capability-runner]    : registered in an environment, : [doc-environments] :
+:                        : allows the framework to use   :                    :
+:                        : that runner when starting     :                    :
+:                        : components.                   :                    :
+
+## Examples {#examples}
+
+Consider the following example that describes capability routing through the
+component instance tree:
+
+<br>![Capability routing example](/docs/concepts/components/v2/images/capability_routing_example.png)<br>
+
+In this example, the `echo` component instance provides an `fuchsia.Echo`
+protocol in its outgoing directory. This protocol is routed to the `echo_tool`
+component instance, which uses it. It is necessary for each component instance
+in the routing path to propagate `fuchsia.Echo` to the next component instance.
+
+The routing sequence is:
+
+-   `echo` hosts the `fuchsia.Echo` protocol in its outgoing directory. Also, it
+    exposes `fuchsia.Echo` from `self` so the protocol is visible to its parent,
+    `services`.
+-   `services` exposes `fuchsia.Echo` from its child `echo` to its parent,
+    `shell`.
+-   `system` offers `fuchsia.Echo` from its child `services` to its other child
+    `tools`.
+-   `tools` offers `fuchsia.Echo` from `parent` (i.e., its parent) to its child
+    `echo_tool`.
+-   `echo_tool` uses `fuchsia.Echo`. When `echo_tool` runs, it will find
+    `fuchsia.Echo` in its namespace.
+
+For a more detailed example of capability routing, see
+[`//examples/components/routing`][examples-routing].
 
 For more information on what happens when connecting to a capability, see
 [Life of a protocol open][doc-protocol-open].
 
+[capability-protocol]: /docs/concepts/components/v2/capabilities/protocol.md
+[capability-service]: /docs/concepts/components/v2/capabilities/service.md
+[capability-directory]: /docs/concepts/components/v2/capabilities/directory.md
+[capability-storage]: /docs/concepts/components/v2/capabilities/storage.md
+[capability-resolver]: /docs/concepts/components/v2/capabilities/resolvers.md
+[capability-runner]: /docs/concepts/components/v2/capabilities/runners.md
+[doc-children]: /docs/concepts/components/v2/realms.md##child-component-instances
 [doc-collections]: /docs/concepts/components/v2/realms.md#collections
 [doc-component-manifest]: /docs/concepts/components/v2/component_manifests.md
+[doc-environments]: /docs/concepts/components/v2/environments.md
 [doc-outgoing-directory]: /docs/concepts/system/abi/system.md#outgoing_directory
 [doc-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
+[examples-routing]: /examples/components/routing
 [glossary.capability]: /docs/glossary#capability
+[glossary.capability-routing]: /docs/glossary#capability-routing
 [glossary.child]: /docs/glossary#child-component-instance
 [glossary.component]: /docs/glossary#component
+[glossary.environment]: /docs/glossary#environment
+[glossary.handle]: /docs/glossary#handle
+[glossary.kernel-object]: /docs/glossary#kernel-object
+[glossary.namespace]: /docs/glossary#namespace
+[glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [glossary.parent]: /docs/glossary#parent-component-instance
+[src-processargs]: /zircon/system/public/zircon/processargs.h

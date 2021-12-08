@@ -375,7 +375,7 @@ can observe the fact that their dependencies are unavailable and quit if they so
 choose.
 
 [collections]: /docs/concepts/components/v2/realms.md#collections
-[offer]: /docs/concepts/components/v2/component_manifests.md#routing-terminology
+[offer]: /docs/concepts/components/v2/capabilities/README.md#routing-terminology
 [driver-framework]: /docs/concepts/drivers/fdf.md
 [CreateChild]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.sys2/realm.fidl;l=58;drc=599c35934155b755453a2d9c228a434436e62db5
 [OfferDecl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.sys2/decls/offer_decl.fidl;l=14;drc=1969824ecf7b1e2096ca1b6c1587545699706da8

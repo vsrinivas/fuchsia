@@ -175,7 +175,7 @@ Fuchsia supports the following framework protocols:
 [glossary.channel]: /docs/glossary/README.md#channel
 [glossary.protocol]: /docs/glossary/README.md#protocol
 [glossary.protocol-capability]: /docs/glossary/README.md#protocol-capability
-[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [fidl-reference]: /docs/reference/fidl/language/language.md
 [fidl-binder]: /sdk/fidl/fuchsia.component/binder.fidl
 [fidl-realm]: /sdk/fidl/fuchsia.component/realm.fidl

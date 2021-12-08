@@ -128,7 +128,7 @@ support standard Fuchsia URL schemes:
 
 [glossary.component-url]: /docs/glossary/README.md#component-url
 [glossary.environment]: /docs/glossary/README.md#environment
-[capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
+[capability-routing]: /docs/concepts/components/v2/capabilities/README.md#routing
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [environment]: /docs/concepts/components/v2/environments.md
 [fidl-resolver]: /sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl

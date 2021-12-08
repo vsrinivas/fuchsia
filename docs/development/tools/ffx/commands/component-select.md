@@ -54,7 +54,7 @@ Consider this example:
 - `out` is the node selector. In `ffx`, this must be one of the following
   values, which correspond to the routing terminology used in the component
   manifest and defined in
-  [routing terminology documentation](/docs/concepts/components/v2/component_manifests.md#routing-terminology).
+  [routing terminology documentation](/docs/concepts/components/v2/capabilities/README.md#routing-terminology).
   - `out`: services offered by the component. Corresponds to `offer` in the
     component manifest.
   - `expose`: services exposed by the component. Corresponds to `expose` in the

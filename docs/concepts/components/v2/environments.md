@@ -113,7 +113,7 @@ sub-realm decides to set a new environment with the runner absent).
 
 [glossary.component-url]: /docs/glossary/README.md#component-url
 [glossary.component-declaration]: /docs/glossary/README.md#component-declaration
-[doc-capability-routing]: ./component_manifests.md#capability-routing
+[doc-capability-routing]: ./capabilities/README.md#routing
 [doc-children]: https://fuchsia.dev/reference/cml#children
 [doc-collections]: https://fuchsia.dev/reference/cml#collections
 [doc-component-manager]: ./component_manager.md
