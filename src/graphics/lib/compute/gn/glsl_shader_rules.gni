@@ -7,6 +7,7 @@ import("build_rules.gni")
 import("//build/compiled_action.gni")
 
 declare_args() {
+  #
   # Set to true in your args.gn file to generate pre-processed and
   # auto-formatted shaders under the "debug" sub-directory of HotSort
   # and Spinel target generation output directories.
@@ -35,9 +36,10 @@ declare_args() {
   # Disabling the spirv-opt pass may also be useful in identifying and
   # attributing code generation bugs.
   #
-  graphics_compute_skip_spirv_opt = true
+  graphics_compute_skip_spirv_opt = false
 }
 
+#
 # Generate a human-readable version of a set of compute shaders.
 # These are pre-processed and auto-formatted to make them easier to read
 # and compare during development.
@@ -63,8 +65,10 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
     _defines += invoker.defines
   }
 
+  #
   # Locate glslangValidator host executable. This is similar to what
   # compiled_action() does.
+  #
   _host_glslang_target =
       "${graphics_compute_glslangValidator_tool_target}($host_toolchain)"
   _host_glslang_name = get_label_info(_host_glslang_target, "name")
@@ -112,6 +116,7 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
   }
 }
 
+#
 # Compile a set of glsl shaders, each into a SPIR-V module.
 #
 # NOTE: To get the list of generated files, use target_outputs(":<name>")
@@ -154,7 +159,24 @@ template("graphics_compute_compile_glsl_shader_foreach") {
     assert(defined(invoker.debug_outputs) || !defined(invoker.debug_outputs))
   }
 
-  _gen_spv_target_name = "gen_spv_${target_name}"
+  #
+  # Optimized or not?
+  #
+  _skip_spirv_opt = graphics_compute_skip_spirv_opt
+
+  if (defined(invoker.skip_spirv_opt)) {
+    _skip_spirv_opt = invoker.skip_spirv_opt
+  }
+
+  if (_skip_spirv_opt) {
+    _gen_spv_target_name = target_name
+  } else {
+    _gen_spv_target_name = "gen_spv_${target_name}"
+  }
+
+  #
+  # Compile the glsl shaders
+  #
   compiled_action_foreach(_gen_spv_target_name) {
     forward_variables_from(invoker,
                            [
@@ -194,50 +216,46 @@ template("graphics_compute_compile_glsl_shader_foreach") {
   }
 
   #
-  # optimize the modules
+  # Optimize and remap if (_skip_spirv_opt == false)
   #
-  _gen_opt_target_name = "gen_opt_${target_name}"
-  compiled_action_foreach(_gen_opt_target_name) {
-    tool = "//third_party/spirv-tools:spirv-opt"
-    sources = get_target_outputs(":${_gen_spv_target_name}")
-    outputs = [ "${_output_dir}/opt/{{source_name_part}}.spv" ]
-    args = [
-      "-O",
-      "{{source}}",
-      "-o",
-      rebase_path(outputs[0], root_build_dir),
-    ]
-    public_deps = [ ":${_gen_spv_target_name}" ]
-  }
-
-  #
-  # remap the optimized modules
-  #
-  # NOTE: Callers of graphics_compute_compile_glsl_shader_foreach(<name>) will
-  #       typically want to use target_outputs(":<name>") to get the list of
-  #       generated file. This implies that the last action *must* use
-  #       the invoker's target_name, or this won't work.
-  #
-  compiled_action_foreach(target_name) {
-    tool = "//third_party/glslang:spirv-remap"
-    _skip_spirv_opt = graphics_compute_skip_spirv_opt
-    if (defined(invoker.skip_spirv_opt)) {
-      _skip_spirv_opt = invoker.skip_spirv_opt
-    }
-    if (_skip_spirv_opt) {
+  if (!_skip_spirv_opt) {
+    #
+    # Optimize the modules
+    #
+    _gen_opt_target_name = "gen_opt_${target_name}"
+    compiled_action_foreach(_gen_opt_target_name) {
+      tool = "//third_party/spirv-tools:spirv-opt"
       sources = get_target_outputs(":${_gen_spv_target_name}")
+      outputs = [ "${_output_dir}/opt/{{source_name_part}}.spv" ]
+      args = [
+        "-O",
+        "{{source}}",
+        "-o",
+        rebase_path(outputs[0], root_build_dir),
+      ]
       public_deps = [ ":${_gen_spv_target_name}" ]
-    } else {
+    }
+
+    #
+    # Remap the optimized modules
+    #
+    # NOTE: Callers of graphics_compute_compile_glsl_shader_foreach(<name>) will
+    #       typically want to use target_outputs(":<name>") to get the list of
+    #       generated file. This implies that the last action *must* use
+    #       the invoker's target_name, or this won't work.
+    #
+    compiled_action_foreach(target_name) {
+      tool = "//third_party/glslang:spirv-remap"
       sources = get_target_outputs(":${_gen_opt_target_name}")
       public_deps = [ ":${_gen_opt_target_name}" ]
+      outputs = [ "${_output_dir}/remap/{{source_name_part}}.spv" ]
+      args = [
+        "--do-everything",  # See fxb:86545 for debugPrintfEXT()
+        "--input",
+        "{{source}}",
+        "--output",
+        rebase_path("${_output_dir}/remap", root_build_dir),
+      ]
     }
-    outputs = [ "${_output_dir}/remap/{{source_name_part}}.spv" ]
-    args = [
-      "--do-everything",
-      "--input",
-      "{{source}}",
-      "--output",
-      rebase_path("${_output_dir}/remap", root_build_dir),
-    ]
   }
 }
