@@ -12,11 +12,11 @@ if (_is_fuchsia_tree) {
   import("//build/testing/test_spec.gni")
 }
 
+# A target providing access to Vulkan at compile time when added to deps.
+graphics_compute_vulkan_loader_target = "//src/lib/vulkan"
+
 # A target that provides the GTest main() function for the host.
 graphics_compute_gtest_main_target = "//src/lib/fxl/test:gtest_main"
-
-# A target providing access to Vulkan at compile time when added to deps.
-graphics_compute_vulkan_loader_target = "//third_party/Vulkan-Loader:libvulkan"
 
 # NOTE: These definitions are used by those in build_rules.gni.
 
