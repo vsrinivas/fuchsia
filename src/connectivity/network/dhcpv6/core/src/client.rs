@@ -2404,6 +2404,16 @@ pub(crate) mod testutil {
             }
         }
     }
+
+    /// Parses `buf` and returns the DHCPv6 message type.
+    ///
+    /// # Panics
+    ///
+    /// `msg_type` panics if parsing fails.
+    pub(crate) fn msg_type(mut buf: &[u8]) -> v6::MessageType {
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        msg.msg_type()
+    }
 }
 
 #[cfg(test)]
@@ -2814,9 +2824,7 @@ mod tests {
             }
             actions => panic!("unexpected actions {:?}", actions),
         };
-        let mut buf = &buf[..];
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_eq!(msg.msg_type(), v6::MessageType::Request);
+        assert_eq!(testutil::msg_type(buf), v6::MessageType::Request);
     }
 
     // T1 and T2 are non-zero and T1 > T2, the client should ignore this IA_NA option.
@@ -2929,9 +2937,7 @@ mod tests {
             }
             actions => panic!("unexpected actions {:?}", actions),
         };
-        let mut buf = &buf[..];
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
+        assert_eq!(testutil::msg_type(buf), v6::MessageType::Solicit);
         assert_eq!(*timeout, 2 * INITIAL_SOLICIT_TIMEOUT);
         assert_matches!(
             &client.state,
@@ -2973,9 +2979,7 @@ mod tests {
             }
             actions => panic!("unexpected actions {:?}", actions),
         };
-        let mut buf = &buf[..];
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_eq!(msg.msg_type(), v6::MessageType::Request);
+        assert_eq!(testutil::msg_type(buf), v6::MessageType::Request);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
         assert_matches!(
             state,
