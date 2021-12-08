@@ -17,7 +17,6 @@ zx_library("fit-promise") {
     "lib/fpromise/barrier.h",
     "lib/fpromise/bridge.h",
     "lib/fpromise/bridge_internal.h",
-    "lib/fpromise/in_place_internal.h",
     "lib/fpromise/promise.h",
     "lib/fpromise/promise_internal.h",
     "lib/fpromise/result.h",

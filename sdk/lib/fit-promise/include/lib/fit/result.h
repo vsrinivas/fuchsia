@@ -11,22 +11,15 @@
 
 namespace fit {
 
-using fpromise::pending_result;
-using fpromise::pending;
-using fpromise::ok_result;
-using fpromise::ok;
-using fpromise::error_result;
 using fpromise::error;
-using fpromise::result_state;
+using fpromise::error_result;
+using fpromise::ok;
+using fpromise::ok_result;
+using fpromise::pending;
+using fpromise::pending_result;
 using fpromise::result;
+using fpromise::result_state;
 using fpromise::swap;
-
-using fpromise::in_place_t;
-using fpromise::in_place_type_t;
-using fpromise::in_place_index_t;
-using fpromise::in_place;
-using fpromise::in_place_type;
-using fpromise::in_place_index;
 
 }  // namespace fit
 

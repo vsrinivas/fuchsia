@@ -12,8 +12,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "in_place_internal.h"
-
 namespace fpromise {
 
 // Represents the intermediate state of a result that has not yet completed.
