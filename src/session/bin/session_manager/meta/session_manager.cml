@@ -15,6 +15,7 @@
     capabilities: [
         {
             protocol: [
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.element.Manager",
                 "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.session.ElementManager",
@@ -126,6 +127,7 @@
     expose: [
         {
             protocol: [
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.element.Manager",
                 "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.session.ElementManager",

@@ -19,6 +19,7 @@
         },
         {
             protocol: [
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",

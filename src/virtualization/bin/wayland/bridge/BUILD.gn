@@ -9,6 +9,7 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 
 base_deps = [
+  "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
   "//sdk/fidl/fuchsia.images:fuchsia.images-rustc",
   "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
   "//sdk/fidl/fuchsia.math:fuchsia.math-rustc",

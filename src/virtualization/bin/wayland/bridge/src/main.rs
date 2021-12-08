@@ -7,8 +7,9 @@
 use {
     crate::dispatcher::*,
     anyhow::Error,
+    fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization::{WaylandDispatcherRequest, WaylandDispatcherRequestStream},
-    fidl_fuchsia_wayland::ViewProducerRequestStream,
+    fidl_fuchsia_wayland::{ViewProducerRequest, ViewProducerRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_trace_provider::trace_provider_create_with_fdio,
@@ -54,8 +55,24 @@ fn spawn_wayland_dispatcher_service(mut stream: WaylandDispatcherRequestStream, 
     .detach();
 }
 
-fn spawn_view_producer_service(stream: ViewProducerRequestStream, display: Display) {
-    display.bind_view_producer(stream);
+fn spawn_view_producer_service(mut stream: ViewProducerRequestStream, display: Display) {
+    let control_handle = stream.control_handle();
+    let mut display_clone = display.clone();
+    fasync::Task::local(
+        async move {
+            while let Some(ViewProducerRequest::RequestView { responder, view_spec }) =
+                stream.try_next().await.unwrap()
+            {
+                display_clone.request_view_provider(view_spec);
+                responder.send().expect("fidl error");
+            }
+            Ok(())
+        }
+        .unwrap_or_else(|e: anyhow::Error| println!("{:?}", e)),
+    )
+    .detach();
+
+    display.bind_view_producer(control_handle);
 }
 
 fn main() -> Result<(), Error> {

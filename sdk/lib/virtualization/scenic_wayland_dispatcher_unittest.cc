@@ -60,7 +60,12 @@ class FakeDispatcher : public fuchsia::virtualization::WaylandDispatcher,
 
  private:
   // |fuchsia::virtualization::WaylandDispatcher|
-  void OnNewConnection(zx::channel channel) { connections_.push_back(std::move(channel)); }
+  void OnNewConnection(zx::channel channel) override { connections_.push_back(std::move(channel)); }
+
+  // |fuchsia::wayland::ViewProducer|
+  void RequestView(fuchsia::wayland::ViewSpec view_spec, RequestViewCallback callback) override {
+    callback();
+  }
 
   sys::testing::FakeComponent component_;
   fidl::BindingSet<fuchsia::virtualization::WaylandDispatcher> bindings_;

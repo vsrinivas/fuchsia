@@ -9,6 +9,13 @@
 
 namespace guest {
 
+void ScenicWaylandDispatcher::RequestView(
+    fuchsia::wayland::ViewSpec view_spec,
+    fuchsia::wayland::ViewProducer::RequestViewCallback callback) {
+  GetOrStartBridge();
+  view_producer_->RequestView(std::move(view_spec), std::move(callback));
+}
+
 void ScenicWaylandDispatcher::OnNewConnection(zx::channel channel) {
   GetOrStartBridge()->OnNewConnection(std::move(channel));
 }

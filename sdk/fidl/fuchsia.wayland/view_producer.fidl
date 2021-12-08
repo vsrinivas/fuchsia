@@ -5,12 +5,30 @@ library fuchsia.wayland;
 
 using fuchsia.ui.app;
 
+type ViewSpec = table {
+    /// Desktop File ID.
+    /// https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-latest.html#desktop-file-id
+    1: desktop_file_id string:256;
+};
+
 @discoverable
 protocol ViewProducer {
+    /// Call this to receive a OnNewView event. There is no guarantee that
+    /// this will result in a OnNewView event.
+    RequestView(struct {
+        view_spec ViewSpec;
+    }) -> ();
+
+    /// Event indicating that a new ViewProvider as been created. `id` is
+    /// 1, if this in response to the first RequestView request, 2, if it
+    /// is a response to the second, etc.
     -> OnNewView(resource struct {
         view_provider client_end:fuchsia.ui.app.ViewProvider;
         id uint32;
     });
+
+    /// Event indicating that previously created ViewProvider is no longer
+    /// used.
     -> OnShutdownView(struct {
         id uint32;
     });

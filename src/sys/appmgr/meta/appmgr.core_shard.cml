@@ -322,6 +322,7 @@
         },
         {
             protocol: [
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.session.Launcher",
                 "fuchsia.ui.accessibility.view.Registry",

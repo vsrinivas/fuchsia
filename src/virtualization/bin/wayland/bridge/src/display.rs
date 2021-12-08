@@ -7,16 +7,20 @@ use {
     crate::object::{NewObjectExt, ObjectRef, RequestReceiver},
     crate::registry::Registry,
     anyhow::{format_err, Error},
-    fidl::endpoints::{ClientEnd, RequestStream},
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_element::{GraphicalPresenterMarker, GraphicalPresenterProxy},
     fidl_fuchsia_ui_app::ViewProviderMarker,
     fidl_fuchsia_ui_scenic::{ScenicMarker, ScenicProxy},
-    fidl_fuchsia_wayland::ViewProducerRequestStream,
+    fidl_fuchsia_wayland::{ViewProducerControlHandle, ViewSpec},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
     futures::channel::mpsc,
     parking_lot::Mutex,
-    std::sync::Arc,
+    std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    },
     wayland::*,
 };
 
@@ -45,7 +49,7 @@ pub trait LocalViewProducerClient: Send + Sync {
 #[derive(Clone)]
 enum ViewProducerClient {
     Local(Arc<Mutex<Box<dyn LocalViewProducerClient>>>),
-    Remote(Arc<Mutex<Option<ViewProducerRequestStream>>>),
+    Remote(Arc<Mutex<Option<ViewProducerControlHandle>>>),
 }
 
 /// |Display| is the global object used to manage a wayland server.
@@ -57,20 +61,29 @@ pub struct Display {
     registry: Arc<Mutex<Registry>>,
     /// A connection to the 'Scenic' service.
     scenic: Arc<ScenicProxy>,
+    /// A connection to the 'GraphicalPresenter' service.
+    graphical_presenter: Arc<GraphicalPresenterProxy>,
     /// A binding to a public `ViewProducer` service. This is used to publish
     /// new views to the consumer.
     ///
     /// This must be bound before any views are created.
     view_producer_client: ViewProducerClient,
+    /// Number of view providers requested.
+    view_provider_requests: Arc<AtomicUsize>,
 }
 
 impl Display {
     pub fn new(registry: Registry) -> Result<Self, Error> {
-        let scenic = connect_to_protocol::<ScenicMarker>().unwrap();
+        let scenic =
+            connect_to_protocol::<ScenicMarker>().expect("failed to connect to Scenic service");
+        let graphical_presenter = connect_to_protocol::<GraphicalPresenterMarker>()
+            .expect("failed to connect to GraphicalPresenter service");
         Ok(Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),
+            graphical_presenter: Arc::new(graphical_presenter),
             view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
+            view_provider_requests: Arc::new(AtomicUsize::new(0)),
         })
     }
 
@@ -78,11 +91,17 @@ impl Display {
         registry: Registry,
         client: Arc<Mutex<Box<dyn LocalViewProducerClient>>>,
     ) -> Result<Self, Error> {
-        let scenic = connect_to_protocol::<ScenicMarker>().unwrap();
+        let scenic =
+            connect_to_protocol::<ScenicMarker>().expect("failed to connect to Scenic service");
+        let graphical_presenter = connect_to_protocol::<GraphicalPresenterMarker>()
+            .expect("failed to connect to GraphicalPresenter service");
         Ok(Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),
+            graphical_presenter: Arc::new(graphical_presenter),
             view_producer_client: ViewProducerClient::Local(client),
+            // Set this to 0 when new_local clients have been updated to request views.
+            view_provider_requests: Arc::new(AtomicUsize::new(1)),
         })
     }
 
@@ -92,10 +111,14 @@ impl Display {
     pub fn new_no_scenic(registry: Registry) -> Result<Self, Error> {
         let (c1, _c2) = zx::Channel::create()?;
         let scenic = ScenicProxy::new(fasync::Channel::from_channel(c1)?);
+        let (c1, _c2) = zx::Channel::create()?;
+        let graphical_presenter = GraphicalPresenterProxy::new(fasync::Channel::from_channel(c1)?);
         Ok(Display {
             registry: Arc::new(Mutex::new(registry)),
             scenic: Arc::new(scenic),
+            graphical_presenter: Arc::new(graphical_presenter),
             view_producer_client: ViewProducerClient::Remote(Arc::new(Mutex::new(None))),
+            view_provider_requests: Arc::new(AtomicUsize::new(0)),
         })
     }
 
@@ -104,9 +127,32 @@ impl Display {
         &self.scenic
     }
 
+    /// Provides access to the GraphicalPresenter connection for this display.
+    pub fn graphical_presenter(&self) -> &Arc<GraphicalPresenterProxy> {
+        &self.graphical_presenter
+    }
+
     /// Provides access to the global registry for this display.
     pub fn registry(&self) -> Arc<Mutex<Registry>> {
         self.registry.clone()
+    }
+
+    /// Processes view provider requests. This ignores the details of the
+    /// spec at this time but could take that into account in the future to
+    /// make sure requests are only satisfied if they match.
+    pub fn request_view_provider(&mut self, _view_spec: ViewSpec) {
+        self.view_provider_requests.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// Take one view provider request off the top. Returns false if no
+    /// request exists.
+    pub fn take_view_provider_requests(&mut self) -> bool {
+        if self.view_provider_requests.load(Ordering::Relaxed) > 0 {
+            self.view_provider_requests.fetch_sub(1, Ordering::SeqCst);
+            true
+        } else {
+            false
+        }
     }
 
     /// Publish a new view back to the client for presentation.
@@ -115,8 +161,8 @@ impl Display {
             ViewProducerClient::Local(view_producer_client) => {
                 view_producer_client.lock().new_view(view_provider, view_id);
             }
-            ViewProducerClient::Remote(view_producer_binding) => {
-                view_producer_binding
+            ViewProducerClient::Remote(view_producer_control_handle) => {
+                view_producer_control_handle
                     .lock()
                     .as_ref()
                     .expect(
@@ -125,7 +171,6 @@ impl Display {
                  The ViewProducer must be bound before issuing any new channels \
                  into the bridge.",
                     )
-                    .control_handle()
                     .send_on_new_view(view_provider, view_id)
                     .expect("Failed to emit OnNewView event");
             }
@@ -138,21 +183,23 @@ impl Display {
             ViewProducerClient::Local(view_producer_client) => {
                 view_producer_client.lock().shutdown_view(view_id);
             }
-            ViewProducerClient::Remote(view_producer_binding) => {
-                if let Some(view_producer_ref) = view_producer_binding.lock().as_ref() {
-                    let _ = view_producer_ref.control_handle().send_on_shutdown_view(view_id);
+            ViewProducerClient::Remote(view_producer_control_handle) => {
+                if let Some(view_producer_control_handle_ref) =
+                    view_producer_control_handle.lock().as_ref()
+                {
+                    let _ = view_producer_control_handle_ref.send_on_shutdown_view(view_id);
                 }
             }
         }
     }
 
-    pub fn bind_view_producer(&self, stream: ViewProducerRequestStream) {
+    pub fn bind_view_producer(&self, control_handle: ViewProducerControlHandle) {
         match &self.view_producer_client {
             ViewProducerClient::Local(_view_producer_client) => {
                 panic!("Attempting to bind remote view producer when display has local view producer client.");
             }
-            ViewProducerClient::Remote(view_producer_binding) => {
-                *view_producer_binding.lock() = Some(stream);
+            ViewProducerClient::Remote(view_producer_control_handle) => {
+                *view_producer_control_handle.lock() = Some(control_handle);
             }
         }
     }
@@ -162,7 +209,7 @@ impl Display {
             ViewProducerClient::Local(client) => {
                 *client.lock() = view_producer_client;
             }
-            ViewProducerClient::Remote(_view_producer_binding) => {
+            ViewProducerClient::Remote(_view_producer_control_handle) => {
                 panic!("Attempting to bind local view producer when display has remote view producer client.");
             }
         }

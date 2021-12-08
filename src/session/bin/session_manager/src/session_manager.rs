@@ -33,6 +33,7 @@ const MAX_CONCURRENT_CONNECTIONS: usize = 10_000;
 enum IncomingRequest {
     Manager(felement::ManagerRequestStream),
     ElementManager(ElementManagerRequestStream),
+    GraphicalPresenter(felement::GraphicalPresenterRequestStream),
     Launcher(LauncherRequestStream),
     Restarter(RestarterRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
@@ -98,6 +99,7 @@ impl SessionManager {
         fs.dir("svc")
             .add_fidl_service(IncomingRequest::Manager)
             .add_fidl_service(IncomingRequest::ElementManager)
+            .add_fidl_service(IncomingRequest::GraphicalPresenter)
             .add_fidl_service(IncomingRequest::Launcher)
             .add_fidl_service(IncomingRequest::Restarter)
             .add_fidl_service(IncomingRequest::InputDeviceRegistry)
@@ -175,6 +177,33 @@ impl SessionManager {
                 )
                 .await
                 .context("Element Manager request stream got an error.")?;
+            }
+            IncomingRequest::GraphicalPresenter(request_stream) => {
+                // Connect to GraphicalPresenter served by the session.
+                let (graphical_presenter_proxy, server_end) =
+                    fidl::endpoints::create_proxy::<felement::GraphicalPresenterMarker>()
+                        .context("Failed to create GraphicalPresenterProxy")?;
+                {
+                    let state = self.state.lock().await;
+                    let session_exposed_dir_channel = state
+                        .session_exposed_dir_channel
+                        .as_ref()
+                        .context(
+                        "Failed to connect to GraphicalPresenterProxy because no session was started",
+                    )?;
+                    fdio::service_connect_at(
+                        session_exposed_dir_channel,
+                        "fuchsia.element.GraphicalPresenter",
+                        server_end.into_channel(),
+                    )
+                    .context("Failed to connect to GraphicalPresenter service")?;
+                }
+                SessionManager::handle_graphical_presenter_request_stream(
+                    request_stream,
+                    graphical_presenter_proxy,
+                )
+                .await
+                .context("Graphical Presenter request stream got an error.")?;
             }
             IncomingRequest::Launcher(request_stream) => {
                 self.handle_launcher_request_stream(request_stream)
@@ -289,6 +318,40 @@ impl SessionManager {
                 ElementManagerRequest::ProposeElement { spec, element_controller, responder } => {
                     let mut result =
                         element_manager_proxy.propose_element(spec, element_controller).await?;
+                    responder.send(&mut result)?;
+                }
+            };
+        }
+        Ok(())
+    }
+
+    /// Serves a specified [`GraphicalPresenterRequestStream`].
+    ///
+    /// # Parameters
+    /// - `request_stream`: the GraphicalPresenterRequestStream.
+    /// - `graphical_presenter_proxy`: the GraphicalPresenterProxy that will handle the relayed commands.
+    ///
+    /// # Errors
+    /// When an error is encountered reading from the request stream.
+    pub async fn handle_graphical_presenter_request_stream(
+        mut request_stream: felement::GraphicalPresenterRequestStream,
+        graphical_presenter_proxy: felement::GraphicalPresenterProxy,
+    ) -> Result<(), Error> {
+        while let Some(request) = request_stream
+            .try_next()
+            .await
+            .context("Error handling Graphical Presenter request stream")?
+        {
+            match request {
+                felement::GraphicalPresenterRequest::PresentView {
+                    view_spec,
+                    annotation_controller,
+                    view_controller_request,
+                    responder,
+                } => {
+                    let mut result = graphical_presenter_proxy
+                        .present_view(view_spec, annotation_controller, view_controller_request)
+                        .await?;
                     responder.send(&mut result)?;
                 }
             };

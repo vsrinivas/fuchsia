@@ -7,6 +7,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.element.GraphicalPresenter",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.composition.Flatland",

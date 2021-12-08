@@ -82,9 +82,6 @@ pub struct Client {
     /// Decode and dispatch Scenic input events.
     pub input_dispatcher: InputDispatcher,
 
-    /// Root XDG surface for this client.
-    pub xdg_root_surface: Option<ObjectRef<XdgSurface>>,
-
     /// XDG surfaces. Last surface created at the back.
     pub xdg_surfaces: Vec<ObjectRef<XdgSurface>>,
 }
@@ -110,7 +107,6 @@ impl Client {
             display_info: DisplayInfo { width_in_px: 1920, height_in_px: 1080 },
             input_dispatcher: InputDispatcher::new(event_queue.clone()),
             event_queue,
-            xdg_root_surface: None,
             xdg_surfaces: vec![],
         }
     }
@@ -137,7 +133,6 @@ impl Client {
             display_info: DisplayInfo { width_in_px: 1920, height_in_px: 1080 },
             input_dispatcher: InputDispatcher::new(event_queue.clone()),
             event_queue,
-            xdg_root_surface: None,
             xdg_surfaces: vec![],
         }
     }
@@ -298,6 +293,10 @@ impl Client {
     fn handle_task(&mut self, mut task: Task) -> Result<(), Error> {
         ftrace::duration!("wayland", "Client::handle_task");
         task(self)
+    }
+
+    pub fn take_view_provider_request(&mut self) -> bool {
+        self.display.take_view_provider_requests()
     }
 }
 

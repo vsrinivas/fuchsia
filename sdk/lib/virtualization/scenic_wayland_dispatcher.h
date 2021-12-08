@@ -31,6 +31,11 @@ class ScenicWaylandDispatcher : public fuchsia::virtualization::WaylandDispatche
         listener_(std::move(listener)),
         shutdown_listener_(std::move(shutdown_listener)) {}
 
+  // Request routing of ViewProvider that matches |view_spec| from wayland bridge to
+  // the the ViewListener callback.
+  void RequestView(fuchsia::wayland::ViewSpec view_spec,
+                   fuchsia::wayland::ViewProducer::RequestViewCallback callback);
+
   // |fuchsia::virtualization::WaylandDispatcher|
   void OnNewConnection(zx::channel channel);
 

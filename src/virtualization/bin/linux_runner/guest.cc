@@ -40,6 +40,7 @@ constexpr const char* kContainerImageAlias = "debian/buster";
 constexpr const char* kContainerImageServer = "https://storage.googleapis.com/cros-containers/%d";
 constexpr const char* kDefaultContainerUser = "machina";
 constexpr const char* kLinuxUriScheme = "linux://";
+constexpr const char* kLinuxTerminalDesktopFileId = "garcon-terminal";
 constexpr const char* kVshTerminalComponent =
     "fuchsia-pkg://fuchsia.com/terminal#meta/vsh-terminal.cmx";
 constexpr const char* kWaylandBridgePackage =
@@ -862,23 +863,31 @@ void Guest::LaunchApplication(AppLaunchRequest app) {
     return;
   }
   desktop_file_id.erase(0, strlen(kLinuxUriScheme));
-  FX_LOGS(INFO) << "Launching: " << desktop_file_id;
-  grpc::ClientContext context;
-  vm_tools::container::LaunchApplicationRequest request;
-  vm_tools::container::LaunchApplicationResponse response;
+  auto launch = [this, desktop_file_id] {
+    grpc::ClientContext context;
+    vm_tools::container::LaunchApplicationRequest request;
+    vm_tools::container::LaunchApplicationResponse response;
 
-  request.set_desktop_file_id(std::move(desktop_file_id));
-  {
-    TRACE_DURATION("linux_runner", "LaunchApplicationRPC");
-    auto grpc_status = garcon_->LaunchApplication(&context, request, &response);
-    if (!grpc_status.ok() || !response.success()) {
-      FX_LOGS(ERROR) << "Failed to launch application: " << grpc_status.error_message() << ", "
-                     << response.failure_reason();
-      return;
+    request.set_desktop_file_id(std::move(desktop_file_id));
+    {
+      TRACE_DURATION("linux_runner", "LaunchApplicationRPC");
+      auto grpc_status = garcon_->LaunchApplication(&context, request, &response);
+      if (!grpc_status.ok() || !response.success()) {
+        FX_LOGS(ERROR) << "Failed to launch application: " << grpc_status.error_message() << ", "
+                       << response.failure_reason();
+        return;
+      }
     }
+    FX_LOGS(INFO) << "Application launched successfully";
+  };
+  // TODO(fxbug.dev/90026): Avoid using a desktop file for the Linux terminal.
+  if (desktop_file_id == kLinuxTerminalDesktopFileId) {
+    launch();
+  } else {
+    fuchsia::wayland::ViewSpec view_spec;
+    view_spec.set_desktop_file_id(desktop_file_id);
+    wayland_dispatcher_.RequestView(std::move(view_spec), launch);
   }
-
-  FX_LOGS(INFO) << "Application launched successfully";
   dispatched_requests_.push_back(std::move(app));
 }
 
