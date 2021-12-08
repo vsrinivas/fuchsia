@@ -53,9 +53,9 @@ struct DynamicTagObserver {};
 // indicates the tags it matches.  If any matching observer returns false then
 // this stops processing early and returns false.  Otherwise, each observer's
 // Finish method is called, stopping early if one returns false.
-template <class DiagnosticsType, class Memory, class Dyn, class... Observers>
+template <class DiagnosticsType, class Memory, class Dyn, size_t N, class... Observers>
 constexpr bool DecodeDynamic(DiagnosticsType&& diagnostics, Memory&& memory,
-                             cpp20::span<const Dyn> dyn, Observers&&... observers) {
+                             cpp20::span<const Dyn, N> dyn, Observers&&... observers) {
   // The span is an upper bound but the section is terminated by a null entry.
   for (const auto& entry : dyn) {
     // At the terminator entry, call each observer's Finish() method.
