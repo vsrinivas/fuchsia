@@ -2,19 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/net/interfaces/cpp/fidl.h>
-#include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
-#include <lib/fpromise/bridge.h>
-#include <lib/fpromise/promise.h>
-#include <lib/fpromise/scope.h>
+#include <lib/fit/thread_checker.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/trace-provider/provider.h>
-#include <lib/zx/fifo.h>
-#include <zircon/device/ethernet.h>
 #include <zircon/status.h>
 
 #include <memory>
@@ -27,8 +24,6 @@
 #include "src/virtualization/bin/vmm/device/device_base.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
-static constexpr char kInterfaceName[] = "ethv0";
-
 enum class Queue : uint16_t {
   RECEIVE = 0,
   TRANSMIT = 1,
@@ -38,6 +33,7 @@ class RxStream {
  public:
   void Init(GuestEthernet* guest_ethernet, const PhysMem& phys_mem,
             VirtioQueue::InterruptFn interrupt) {
+    std::lock_guard guard(checker_);
     guest_ethernet_ = guest_ethernet;
     phys_mem_ = &phys_mem;
     queue_.set_phys_mem(&phys_mem);
@@ -45,10 +41,12 @@ class RxStream {
   }
 
   void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, zx_gpaddr_t used) {
+    std::lock_guard guard(checker_);
     queue_.Configure(size, desc, avail, used);
   }
 
   void Notify() {
+    std::lock_guard guard(checker_);
     for (VirtioChain chain; !packet_queue_.empty() && queue_.NextChain(&chain); chain.Return()) {
       Packet pkt = packet_queue_.front();
       VirtioDescriptor desc;
@@ -76,7 +74,7 @@ class RxStream {
       uintptr_t offset = phys_mem_->offset(header + 1);
       uintptr_t length = desc.len - sizeof(*header);
       packet_queue_.pop();
-      if (length < pkt.length) {
+      if (length < pkt.data.size()) {
         // 5.1.6.3.1 Driver Requirements: Setting Up Receive Buffers: the driver
         // SHOULD populate the receive queue(s) with buffers of at least 1526
         // bytes.
@@ -86,28 +84,28 @@ class RxStream {
         FX_LOGS(ERROR) << "Dropping packet that's too large for the descriptor";
         continue;
       }
-      memcpy(phys_mem_->ptr(offset, length), reinterpret_cast<void*>(pkt.addr), pkt.length);
-      *chain.Used() = static_cast<uint32_t>(pkt.length + sizeof(*header));
-      pkt.entry.flags = ETH_FIFO_TX_OK;
-      guest_ethernet_->Complete(pkt.entry);
+      memcpy(phys_mem_->ptr(offset, length), pkt.data.data(), pkt.data.size());
+      *chain.Used() = static_cast<uint32_t>(pkt.data.size() + sizeof(*header));
+      guest_ethernet_->Complete(pkt.id, ZX_OK);
     }
   }
 
-  void Receive(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry) {
-    packet_queue_.push(Packet{addr, length, entry});
+  void Receive(cpp20::span<const uint8_t> data, uint32_t id) {
+    std::lock_guard guard(checker_);
+    packet_queue_.push(Packet{data, id});
     Notify();
   }
 
  private:
   struct Packet {
-    uintptr_t addr;
-    size_t length;
-    eth_fifo_entry_t entry;
+    cpp20::span<const uint8_t> data;
+    uint32_t id;
   };
 
+  fit::thread_checker checker_;
   GuestEthernet* guest_ethernet_ = nullptr;
   const PhysMem* phys_mem_ = nullptr;
-  std::queue<Packet> packet_queue_;
+  std::queue<Packet> packet_queue_ __TA_GUARDED(checker_);
   VirtioQueue queue_;
 };
 
@@ -121,11 +119,13 @@ class TxStream {
   }
 
   void Configure(uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail, zx_gpaddr_t used) {
+    std::lock_guard guard(checker_);
     queue_.Configure(size, desc, avail, used);
   }
 
   void Init(GuestEthernet* guest_ethernet, const PhysMem& phys_mem,
             VirtioQueue::InterruptFn interrupt) {
+    std::lock_guard guard(checker_);
     guest_ethernet_ = guest_ethernet;
     phys_mem_ = &phys_mem;
     queue_.set_phys_mem(&phys_mem);
@@ -133,6 +133,8 @@ class TxStream {
   }
 
   void Notify() {
+    std::lock_guard guard(checker_);
+
     // If Send returned ZX_ERR_SHOULD_WAIT last time Notify was called, then we should process that
     // descriptor first.
     if (pending_chain_.IsValid()) {
@@ -170,7 +172,7 @@ class TxStream {
   }
 
  private:
-  bool ProcessDescriptor(VirtioDescriptor& desc) {
+  bool ProcessDescriptor(VirtioDescriptor& desc) __TA_REQUIRES(checker_) {
     auto header = static_cast<virtio_net_hdr_t*>(desc.addr);
     uintptr_t offset = phys_mem_->offset(header + 1);
     uintptr_t length = desc.len - sizeof(*header);
@@ -180,6 +182,7 @@ class TxStream {
     return status != ZX_ERR_SHOULD_WAIT;
   }
 
+  fit::thread_checker checker_;
   GuestEthernet* guest_ethernet_ = nullptr;
   const PhysMem* phys_mem_ = nullptr;
   VirtioQueue queue_;
@@ -188,20 +191,19 @@ class TxStream {
   //
   // Tracks a chain that was read from the guest but was unable to be processed
   // immediately.
-  VirtioDescriptor pending_desc_;
-  VirtioChain pending_chain_;
+  VirtioDescriptor pending_desc_ __TA_GUARDED(checker_);
+  VirtioChain pending_chain_ __TA_GUARDED(checker_);
 };
 
 class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
                       public fuchsia::virtualization::hardware::VirtioNet,
                       public GuestEthernetDevice {
  public:
-  VirtioNetImpl(sys::ComponentContext* context) : DeviceBase(context), context_(*context) {
-    netstack_ = context_.svc()->Connect<fuchsia::netstack::Netstack>();
-    fuchsia::net::interfaces::StatePtr interfaces_state =
-        context_.svc()->Connect<fuchsia::net::interfaces::State>();
-    interfaces_state->GetWatcher(fuchsia::net::interfaces::WatcherOptions(), watcher_.NewRequest());
-  }
+  explicit VirtioNetImpl(async_dispatcher_t* dispatcher, sys::ComponentContext* context)
+      : DeviceBase(context),
+        dispatcher_(dispatcher),
+        context_(*context),
+        guest_ethernet_(dispatcher, this) {}
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
   void NotifyQueue(uint16_t queue) override {
@@ -219,8 +221,8 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   }
 
   // Called by GuestEthernet to notify us when the netstack is trying to send a packet to the guest.
-  void Receive(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry) override {
-    rx_stream_.Receive(addr, length, entry);
+  void Receive(cpp20::span<const uint8_t> data, uint32_t id) override {
+    rx_stream_.Receive(data, id);
   }
 
   // Called by GuestEthernet to notify us when the netstack is ready to receive packets.
@@ -233,129 +235,70 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   void Start(fuchsia::virtualization::hardware::StartInfo start_info,
              fuchsia::hardware::ethernet::MacAddress mac_address, bool enable_bridge,
              StartCallback callback) override {
+    // Set up VMM-related resources.
     PrepStart(std::move(start_info));
     rx_stream_.Init(&guest_ethernet_, phys_mem_,
                     fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioNetImpl::Interrupt));
     tx_stream_.Init(&guest_ethernet_, phys_mem_,
                     fit::bind_member<zx_status_t, DeviceBase>(this, &VirtioNetImpl::Interrupt));
 
-    mac_address_ = std::move(mac_address);
+    mac_address_ = mac_address;
 
-    fpromise::promise<uint32_t> guest_interface =
-        CreateGuestInterface().and_then(fit::bind_member(this, &VirtioNetImpl::EnableInterface));
-
-    if (enable_bridge) {
-      fpromise::promise<uint32_t> bridge =
-          fpromise::join_promises(FindHostInterface(), std::move(guest_interface))
-              .and_then(fit::bind_member(this, &VirtioNetImpl::CreateBridgeInterface))
-              .and_then(fit::bind_member(this, &VirtioNetImpl::EnableInterface));
-      guest_interface = std::move(bridge);
+    // Connect to netstack, and create the ethernet interface
+    zx_status_t status = CreateGuestInterface();
+    if (status != ZX_OK) {
+      bindings_.CloseAll(status);
+      return;
     }
 
-    executor_.schedule_task(
-        guest_interface
-            .and_then([callback = std::move(callback)](const uint32_t& nic_id) { callback(); })
-            .or_else([] { FX_LOGS(FATAL) << "Failed to setup guest ethernet"; })
-            .wrap_with(scope_));
+    callback();
   }
 
-  fpromise::promise<uint32_t> CreateGuestInterface() {
-    fpromise::bridge<uint32_t> bridge;
-
-    fuchsia::netstack::InterfaceConfig config;
-    config.name = kInterfaceName;
-    auto callback = [completer = std::move(bridge.completer)](
-                        fuchsia::netstack::Netstack_AddEthernetDevice_Result result) mutable {
-      if (result.is_err()) {
-        FX_LOGS(ERROR) << "Failed to create guest interface";
-        completer.complete_error();
-      } else {
-        completer.complete_ok(result.response().nicid);
-      }
-    };
-    netstack_->AddEthernetDevice("", std::move(config), device_binding_.NewBinding(),
-                                 std::move(callback));
-
-    return bridge.consumer.promise();
-  }
-
-  fpromise::promise<uint32_t> EnableInterface(const uint32_t& nic_id) {
-    netstack_->SetInterfaceStatus(nic_id, true);
-    return fpromise::make_ok_promise(nic_id);
-  }
-
-  void OnInterfacesEvent(fuchsia::net::interfaces::Event event,
-                         fpromise::completer<uint32_t> completer) {
-    std::optional result = [&event]() -> std::optional<fpromise::completer<uint32_t>::result_type> {
-      switch (event.Which()) {
-        case fuchsia::net::interfaces::Event::kExisting: {
-          std::optional<net::interfaces::Properties> validated =
-              net::interfaces::Properties::VerifyAndCreate(std::move(event.existing()));
-          if (!validated.has_value()) {
-            FX_LOGS(ERROR) << "malformed properties found in existing event from "
-                              "fuchsia.net.interfaces/Watcher";
-            return fpromise::error();
-          }
-          const net::interfaces::Properties& properties = validated.value();
-          if (properties.IsGloballyRoutable()) {
-            return fpromise::ok(static_cast<uint32_t>(properties.id()));
-          }
-          __FALLTHROUGH;
-        }
-        case fuchsia::net::interfaces::Event::kAdded:
-        case fuchsia::net::interfaces::Event::kChanged:
-        case fuchsia::net::interfaces::Event::kRemoved:
-          return std::nullopt;
-        case fuchsia::net::interfaces::Event::kIdle:
-          FX_LOGS(ERROR) << "failed to find host interface";
-          return fpromise::error();
-        case fuchsia::net::interfaces::Event::Invalid:
-          FX_LOGS(ERROR) << "invalid event received from fuchsia.net.interfaces/Watcher";
-          return fpromise::error();
-      }
-    }();
-
-    if (result.has_value()) {
-      completer.complete_or_abandon(result.value());
-    } else {
-      watcher_->Watch(
-          [this, completer = std::move(completer)](fuchsia::net::interfaces::Event event) mutable {
-            OnInterfacesEvent(std::move(event), std::move(completer));
-          });
-    }
-  }
-
-  fpromise::promise<uint32_t> FindHostInterface() {
-    fpromise::bridge<uint32_t> bridge;
-
-    watcher_->Watch([this, completer = std::move(bridge.completer)](
-                        fuchsia::net::interfaces::Event event) mutable {
-      OnInterfacesEvent(std::move(event), std::move(completer));
+  // Create a GuestEthernet interface and connect it to Netstack.
+  zx_status_t CreateGuestInterface() {
+    // Connect to netstack.
+    netstack_.set_error_handler([](zx_status_t status) {
+      FX_PLOGS(WARNING, status) << "Connection to Netstack unexpectedly closed";
     });
-
-    return bridge.consumer.promise();
-  }
-
-  fpromise::promise<uint32_t> CreateBridgeInterface(
-      const std::tuple<fpromise::result<uint32_t>, fpromise::result<uint32_t>>& nic_ids) {
-    auto& [host_id, guest_id] = nic_ids;
-    if (host_id.is_error() || guest_id.is_error()) {
-      return fpromise::make_result_promise<uint32_t>(fpromise::error());
+    zx_status_t status = context_.svc()->Connect<fuchsia::net::virtualization::Control>(
+        netstack_.NewRequest(dispatcher_));
+    if (status != ZX_OK) {
+      FX_PLOGS(WARNING, status) << "Failed to connect to netstack";
+      return status;
     }
-    fpromise::bridge<uint32_t> bridge;
 
-    auto callback = [completer = std::move(bridge.completer)](fuchsia::netstack::NetErr result,
-                                                              uint32_t nic_id) mutable {
-      if (result.status != fuchsia::netstack::Status::OK) {
-        FX_LOGS(ERROR) << "Failed to create bridge interface: " << result.message;
-        completer.complete_error();
-      } else {
-        completer.complete_ok(nic_id);
-      }
-    };
-    netstack_->BridgeInterfaces({host_id.value(), guest_id.value()}, std::move(callback));
+    // Set up the GuestEthernet device.
+    zx::status<std::unique_ptr<network::NetworkDeviceInterface>> device_interface =
+        network::NetworkDeviceInterface::Create(dispatcher_,
+                                                guest_ethernet_.GetNetworkDeviceImplClient());
+    if (device_interface.is_error()) {
+      FX_PLOGS(WARNING, status) << "Failed to create guest interface";
+      return status;
+    }
+    device_interface_ = std::move(device_interface.value());
 
-    return bridge.consumer.promise();
+    // Create a connection to the device.
+    fidl::ClientEnd<fuchsia_hardware_network::Port> port;
+    status = device_interface_->BindPort(
+        GuestEthernet::kPortId,
+        fidl::ServerEnd<fuchsia_hardware_network::Port>(fidl::CreateEndpoints(&port).value()));
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Internal error: could not bind to GuestEthernet server";
+      return status;
+    }
+
+    // Create a new network group.
+    fuchsia::net::virtualization::Config config;
+    config.set_bridged(fuchsia::net::virtualization::Bridged{});
+    netstack_->CreateNetwork(std::move(config), network_.NewRequest());
+
+    // Add our GuestEthernet device to the network.
+    interface_registration_.set_error_handler(
+        [](zx_status_t status) { FX_PLOGS(WARNING, status) << "Connection to Netstack closed"; });
+    network_->AddPort(fidl::InterfaceHandle<fuchsia::hardware::network::Port>(port.TakeChannel()),
+                      interface_registration_.NewRequest());
+
+    return ZX_OK;
   }
 
   // |fuchsia::virtualization::hardware::VirtioDevice|
@@ -381,19 +324,18 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
     callback();
   }
 
+  async_dispatcher_t* dispatcher_;  // Owned elsewhere.
   sys::ComponentContext& context_;
-  GuestEthernet guest_ethernet_{this};
-  fidl::Binding<fuchsia::hardware::ethernet::Device> device_binding_ =
-      fidl::Binding<fuchsia::hardware::ethernet::Device>(&guest_ethernet_);
-  fuchsia::netstack::NetstackPtr netstack_;
-  fuchsia::net::interfaces::WatcherPtr watcher_;
+  GuestEthernet guest_ethernet_;
+  std::unique_ptr<network::NetworkDeviceInterface> device_interface_;
+  fuchsia::net::virtualization::ControlPtr netstack_;
+  fuchsia::net::virtualization::NetworkPtr network_;
+  fuchsia::net::virtualization::InterfacePtr interface_registration_;
 
   RxStream rx_stream_;
   TxStream tx_stream_;
 
   uint32_t negotiated_features_;
-  fpromise::scope scope_;
-  async::Executor executor_ = async::Executor(async_get_default_dispatcher());
 
   fuchsia::hardware::ethernet::MacAddress mac_address_;
 };
@@ -406,6 +348,6 @@ int main(int argc, char** argv) {
   std::unique_ptr<sys::ComponentContext> context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  VirtioNetImpl virtio_net(context.get());
+  VirtioNetImpl virtio_net(loop.dispatcher(), context.get());
   return loop.Run();
 }

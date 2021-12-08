@@ -347,12 +347,15 @@ executable("device_tests") {
   deps = [
     ":device",
     ":magma_image",
+    "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.net.virtualization",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/connectivity/lib/network-device/cpp",
     "//src/graphics/drivers/msd-intel-gen/include:include",
     "//src/graphics/lib/magma/include:magma",
     "//src/graphics/lib/magma/include/virtio:headers",
@@ -378,6 +381,9 @@ fuchsia_unittest_package("device_tests_package") {
   ]
   test_specs = {
     environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
   }
 }
 

@@ -8,8 +8,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.net.interfaces.State",
-            "fuchsia.netstack.Netstack",
+            "fuchsia.net.virtualization.Control",
             "fuchsia.tracing.provider.Registry"
         ]
     }
