@@ -6,6 +6,7 @@ mod channel_listener;
 mod channel_scheduler;
 mod convert_beacon;
 mod lost_bss;
+mod probe_request;
 mod scanner;
 mod state;
 mod stats;
