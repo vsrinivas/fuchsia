@@ -25,4 +25,8 @@ pub struct DriverDumpCommand {
     /// output device graph in dot language so that it may be viewed
     #[argh(switch, short = 'g', long = "graph")]
     pub graph: bool,
+
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
 }

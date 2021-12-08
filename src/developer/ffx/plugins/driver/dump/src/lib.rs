@@ -7,7 +7,6 @@ use {
     ffx_core::ffx_plugin,
     ffx_driver::get_device_info,
     ffx_driver_dump_args::DriverDumpCommand,
-    fidl_fuchsia_driver_development as fdd,
     std::collections::{BTreeMap, VecDeque},
 };
 
@@ -16,11 +15,12 @@ fn extract_name<'a>(topo_path: &'a str) -> &'a str {
     name
 }
 
-#[ffx_plugin(
-    "driver_enabled",
-    fdd::DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
-)]
-pub async fn dump(service: fdd::DriverDevelopmentProxy, cmd: DriverDumpCommand) -> Result<()> {
+#[ffx_plugin()]
+pub async fn dump(
+    remote_control: fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
+    cmd: DriverDumpCommand,
+) -> Result<()> {
+    let service = ffx_driver::get_development_proxy(remote_control, cmd.select).await?;
     let device_info = get_device_info(&service, &[]).await?;
 
     let device_map = device_info

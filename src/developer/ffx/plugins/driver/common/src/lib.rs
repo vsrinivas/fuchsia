@@ -7,6 +7,7 @@ use {
     component_hub::{io::Directory, select::find_components},
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol, fidl_fuchsia_driver_development as fdd,
+    fidl_fuchsia_driver_development::DriverDevelopmentMarker,
     fidl_fuchsia_io as fio,
     fuchsia_zircon_status::Status,
 };
@@ -122,4 +123,19 @@ pub async fn user_choose_selector(
         // incorrectly in a selector.
         return Ok(capabilities[choice].replace(":", "*") + ":expose:" + capability);
     }
+}
+
+pub async fn get_development_proxy(
+    remote_control: fremotecontrol::RemoteControlProxy,
+    select: bool,
+) -> Result<fdd::DriverDevelopmentProxy> {
+    let selector = match select {
+        true => {
+            user_choose_selector(&remote_control, "fuchsia.driver.development.DriverDevelopment")
+                .await?
+        }
+        false => "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
+            .to_string(),
+    };
+    remotecontrol_connect::<DriverDevelopmentMarker>(&remote_control, &selector).await
 }
