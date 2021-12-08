@@ -24,7 +24,6 @@ use {
     std::{
         collections::HashSet,
         num::NonZeroUsize,
-        str::from_utf8,
         sync::{Arc, Weak},
     },
     test_runners_lib::{
@@ -212,6 +211,8 @@ impl TestServer {
 
         let (test_stdout, stdout_client) =
             zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
+        let (test_stderr, stderr_client) =
+            zx::Socket::create(zx::SocketOpts::STREAM).map_err(KernelError::CreateSocket).unwrap();
 
         let (case_listener_proxy, listener) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
@@ -221,7 +222,11 @@ impl TestServer {
         run_listener
             .on_test_case_started(
                 invocation,
-                ftest::StdHandles { out: Some(stdout_client), ..ftest::StdHandles::EMPTY },
+                ftest::StdHandles {
+                    out: Some(stdout_client),
+                    err: Some(stderr_client),
+                    ..ftest::StdHandles::EMPTY
+                },
                 listener,
             )
             .map_err(RunTestError::SendStart)?;
@@ -230,8 +235,12 @@ impl TestServer {
             fasync::Socket::from_socket(test_stdout).map_err(KernelError::SocketToAsync).unwrap();
         let mut test_stdout = SocketLogWriter::new(test_stdout);
 
+        let test_stderr =
+            fasync::Socket::from_socket(test_stderr).map_err(KernelError::SocketToAsync).unwrap();
+        let mut test_stderr = SocketLogWriter::new(test_stderr);
+
         if let Err(e) = TestServer::validate_args(&user_passed_args) {
-            test_stdout.write_str(&format!("{}", e)).await?;
+            test_stderr.write_str(&format!("{}", e)).await?;
             case_listener_proxy
                 .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
                 .map_err(RunTestError::SendFinish)?;
@@ -249,64 +258,75 @@ impl TestServer {
 
         // run test.
         // Load bearing to hold job guard.
-        let (process, _job, stdlogger, _stdin_socket) =
+        let (process, _job, stdout_logger, stderr_logger, _stdin_socket) =
             launch_component_process::<RunTestError>(&component, args).await?;
-
-        let mut buffer = vec![];
         let test_start_re = Regex::new(&format!(r"^=== RUN\s+{}$", test)).unwrap();
         let test_end_re = Regex::new(&format!(r"^\s*--- (\w*?): {} \(.*\)$", test)).unwrap();
         let mut skipped = false;
-        let mut socket_buf = vec![0u8; SOCKET_BUFFER_SIZE];
-        let mut socket = stdlogger.take_socket();
-        while let Some(bytes_read) =
-            NonZeroUsize::new(socket.read(&mut socket_buf[..]).await.map_err(LogError::Read)?)
-        {
-            let bytes = &socket_buf[..bytes_read.get()];
-            let is_last_byte_newline = *bytes.last().unwrap() == NEWLINE;
-            let mut iter = bytes.split(|&x| x == NEWLINE).peekable();
-            while let Some(b) = iter.next() {
-                if iter.peek() == None && b.len() == 0 {
-                    continue;
-                }
-                buffer.extend_from_slice(b);
+        let stderr_logger_task = stderr_logger.buffer_and_drain(&mut test_stderr);
+        let stdout_logger_task = async {
+            let mut buffer = vec![];
+            let mut socket_buf = vec![0u8; SOCKET_BUFFER_SIZE];
+            let mut socket = stdout_logger.take_socket();
+            while let Some(bytes_read) =
+                NonZeroUsize::new(socket.read(&mut socket_buf[..]).await.map_err(LogError::Read)?)
+            {
+                let bytes = &socket_buf[..bytes_read.get()];
+                let is_last_byte_newline = *bytes.last().unwrap() == NEWLINE;
+                let mut iter = bytes.split(|&x| x == NEWLINE).peekable();
+                while let Some(b) = iter.next() {
+                    if iter.peek() == None && b.len() == 0 {
+                        continue;
+                    }
+                    buffer.extend_from_slice(b);
 
-                if buffer.len() >= BUF_THRESHOLD {
-                    if iter.peek() != None || is_last_byte_newline {
-                        buffer.push(NEWLINE)
+                    if buffer.len() >= BUF_THRESHOLD {
+                        if iter.peek() != None || is_last_byte_newline {
+                            buffer.push(NEWLINE)
+                        }
+                        test_stdout.write(&buffer).await?;
+                        buffer.clear();
+                        continue;
+                    } else if buffer.len() < BUF_THRESHOLD
+                        && !is_last_byte_newline
+                        && iter.peek() == None
+                    {
+                        // last part of split without a newline, so skip printing or matching and store
+                        // it in buffer for next iteration.
+                        break;
                     }
-                    test_stdout.write(&buffer).await?;
-                    buffer.clear();
-                    continue;
-                } else if buffer.len() < BUF_THRESHOLD
-                    && !is_last_byte_newline
-                    && iter.peek() == None
-                {
-                    // last part of split without a newline, so skip printing or matching and store
-                    // it in buffer for next iteration.
-                    break;
+                    if iter.peek() == Some(&"".as_bytes())
+                        && (buffer == b"PASS" || buffer == b"FAIL")
+                    {
+                        // end of test, do nothing, no need to print it
+                    } else if test_start_re.is_match(&buffer) {
+                        // start of test, do nothing, no need to print it
+                    } else if let Some(capture) = test_end_re.captures(&buffer) {
+                        if capture.get(1).unwrap().as_bytes() == b"SKIP" {
+                            skipped = true;
+                        }
+                    } else {
+                        if iter.peek() != None || is_last_byte_newline {
+                            buffer.push(NEWLINE)
+                        }
+                        test_stdout.write(&buffer).await?;
+                    }
+                    buffer.clear()
                 }
-                if iter.peek() == Some(&"".as_bytes()) && (buffer == b"PASS" || buffer == b"FAIL") {
-                    // end of test, do nothing, no need to print it
-                } else if test_start_re.is_match(&buffer) {
-                    // start of test, do nothing, no need to print it
-                } else if let Some(capture) = test_end_re.captures(&buffer) {
-                    if capture.get(1).unwrap().as_bytes() == b"SKIP" {
-                        skipped = true;
-                    }
-                } else {
-                    if iter.peek() != None || is_last_byte_newline {
-                        buffer.push(NEWLINE)
-                    }
-                    test_stdout.write(&buffer).await?;
-                }
-                buffer.clear()
             }
-        }
 
-        if buffer.len() > 0 {
-            test_stdout.write(&buffer).await?;
-        }
-        buffer.clear();
+            if buffer.len() > 0 {
+                test_stdout.write(&buffer).await?;
+            }
+            buffer.clear();
+            Ok::<(), LogError>(())
+        };
+
+        let (out_result, err_result) =
+            futures::future::join(stdout_logger_task, stderr_logger_task).await;
+        out_result?;
+        err_result?;
+
         debug!("Waiting for test to finish: {}", test);
 
         // wait for test to end.
@@ -319,7 +339,7 @@ impl TestServer {
         // gotest returns 0 is test succeeds and 1 if test fails. This will check if test ended
         // abnormally.
         if process_info.return_code != 0 && process_info.return_code != 1 {
-            test_stdout.write_str("Test exited abnormally\n").await?;
+            test_stderr.write_str("Test exited abnormally\n").await?;
             case_listener_proxy
                 .finished(TestResult { status: Some(Status::Failed), ..TestResult::EMPTY })
                 .map_err(RunTestError::SendFinish)?;
@@ -348,26 +368,30 @@ async fn get_tests(test_component: Arc<Component>) -> Result<Vec<String>, Enumer
     args.extend(test_component.args.clone());
 
     // Load bearing to hold job guard.
-    let (process, _job, stdlogger, _stdin_socket) =
+    let (process, _job, stdout_logger, stderr_logger, _stdin_socket) =
         launch_component_process::<EnumerationError>(&test_component, args).await?;
 
-    // collect stdout in background before waiting for process termination.
-    let std_reader = LogStreamReader::new(stdlogger);
+    // collect stdout/stderr in background before waiting for process termination.
+    let stdout_reader = LogStreamReader::new(stdout_logger);
+    let stderr_reader = LogStreamReader::new(stderr_logger);
 
     fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
         .await
         .map_err(KernelError::ProcessExit)?;
 
-    let logs = std_reader.get_logs().await?;
-    // TODO(fxbug.dev/4610): logs might not be utf8, fix the code.
-    let mut output = from_utf8(&logs)?;
+    let out_logs = stdout_reader.get_logs().await?;
+    let err_logs = stderr_reader.get_logs().await?;
+
+    let output = String::from_utf8_lossy(&out_logs);
+    let error = String::from_utf8_lossy(&err_logs);
+
     let process_info = process.info().map_err(KernelError::ProcessInfo)?;
     if process_info.return_code != 0 {
         // TODO(fxbug.dev/45858): Add a error logger to API so that we can display test stdout logs.
-        error!("Failed getting list of tests:\n{}", output);
+        error!("Failed getting list of tests:\n{}\n{}", output, error);
         return Err(EnumerationError::ListTest);
     }
-    output = output.trim();
+    let output = output.trim();
     let tests = if !output.is_empty() {
         output.split("\n").into_iter().map(|t| t.into()).collect()
     } else {
@@ -380,7 +404,7 @@ async fn get_tests(test_component: Arc<Component>) -> Result<Vec<String>, Enumer
 async fn launch_component_process<E>(
     component: &Component,
     args: Vec<String>,
-) -> Result<(zx::Process, launch::ScopedJob, LoggerStream, zx::Socket), E>
+) -> Result<(zx::Process, launch::ScopedJob, LoggerStream, LoggerStream, zx::Socket), E>
 where
     E: From<NamespaceError> + From<launch::LaunchError> + From<ComponentError>,
 {
@@ -417,20 +441,21 @@ where
 
     let executable_vmo = Some(component.executable_vmo()?);
 
-    let (p, j, l) = launch::launch_process(launch::LaunchProcessArgs {
-        bin_path: &component.binary,
-        process_name: &component.name,
-        job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
-        ns: component.ns.clone(),
-        args: Some(args),
-        name_infos: None,
-        environs: component.environ.clone(),
-        handle_infos: Some(handle_infos),
-        loader_proxy_chan: Some(client_end.into_channel()),
-        executable_vmo,
-    })
-    .await?;
-    Ok((p, j, l, client))
+    let (p, j, out_l, err_l) =
+        launch::launch_process_with_separate_std_handles(launch::LaunchProcessArgs {
+            bin_path: &component.binary,
+            process_name: &component.name,
+            job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
+            ns: component.ns.clone(),
+            args: Some(args),
+            name_infos: None,
+            environs: component.environ.clone(),
+            handle_infos: Some(handle_infos),
+            loader_proxy_chan: Some(client_end.into_channel()),
+            executable_vmo,
+        })
+        .await?;
+    Ok((p, j, out_l, err_l, client))
 }
 
 #[cfg(test)]

@@ -86,7 +86,8 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
         Stopped(CaseStatus),
         Finished,
         StdoutMatch(&'static str),
-        AnyStdout,
+        StderrMatch(&'static str),
+        AnyStderr,
     }
 
     let mut expectations = vec![
@@ -199,26 +200,26 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
             vec![
                 RunEventMatch::Found,
                 RunEventMatch::Started,
-                RunEventMatch::StdoutMatch("panic: This will crash"),
-                RunEventMatch::StdoutMatch(" [recovered]"),
-                RunEventMatch::StdoutMatch("\tpanic: This will crash"),
-                RunEventMatch::StdoutMatch(""),
-                RunEventMatch::StdoutMatch(""),
+                RunEventMatch::StderrMatch("panic: This will crash"),
+                RunEventMatch::StderrMatch(" [recovered]"),
+                RunEventMatch::StderrMatch("\tpanic: This will crash"),
+                RunEventMatch::StderrMatch(""),
+                RunEventMatch::StderrMatch(""),
                 // This test will print a stack trace, we avoid matching on it.
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::AnyStdout,
-                RunEventMatch::StdoutMatch("Test exited abnormally"),
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::AnyStderr,
+                RunEventMatch::StderrMatch("Test exited abnormally"),
                 RunEventMatch::Stopped(CaseStatus::Failed),
                 RunEventMatch::Finished,
             ],
@@ -252,8 +253,11 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
             RunEventMatch::StdoutMatch(msg) => {
                 assert_eq!(event, RunEvent::case_stdout(test_case, msg))
             }
-            RunEventMatch::AnyStdout => {
-                matches::assert_matches!(event, RunEvent::CaseStdout { .. })
+            RunEventMatch::StderrMatch(msg) => {
+                assert_eq!(event, RunEvent::case_stderr(test_case, msg))
+            }
+            RunEventMatch::AnyStderr => {
+                matches::assert_matches!(event, RunEvent::CaseStderr { .. })
             }
         }
     }
