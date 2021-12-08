@@ -63,6 +63,7 @@ rustc_library("lib") {
     "src/output/line.rs",
     "src/output/mod.rs",
     "src/output/noop.rs",
+    "src/output/shell.rs",
     "src/stream_util.rs",
   ]
 }

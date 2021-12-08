@@ -8,6 +8,8 @@ use std::path::{Path, PathBuf};
 mod directory;
 mod line;
 mod noop;
+#[allow(unused)]
+mod shell;
 pub use line::{AnsiFilterWriter, MultiplexedWriter};
 
 use directory::DirectoryReporter;
