@@ -1187,13 +1187,16 @@ zx_status_t VmAddressRegion::ReserveSpace(const char* name, vaddr_t base, size_t
   vmo->set_name(name, strlen(name));
   // allocate a region and put it in the aspace list
   fbl::RefPtr<VmMapping> r(nullptr);
-  // Here we use permissive arch_mmu_flags so that the following Protect call would actually
-  // call arch_aspace().Protect to change the mmu_flags in PTE.
-  status = CreateVmMapping(
-      offset, size, 0, VMAR_FLAG_SPECIFIC, vmo, 0,
-      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE, name, &r);
+  status = CreateVmMapping(offset, size, 0, VMAR_FLAG_SPECIFIC, vmo, 0, arch_mmu_flags, name, &r);
   if (status != ZX_OK) {
     return status;
   }
-  return r->Protect(base, size, arch_mmu_flags);
+  // Directly invoke a protect on the hardware aspace to modify the protection of the existing
+  // mappings. If the desired protection flags is "no permissions" then we need to use unmap instead
+  // of protect since a mapping with no permissions is not valid on most architectures.
+  if ((arch_mmu_flags & ARCH_MMU_FLAG_PERM_RWX_MASK) == 0) {
+    return aspace_->arch_aspace().Unmap(base, size / PAGE_SIZE, nullptr);
+  } else {
+    return aspace_->arch_aspace().Protect(base, size / PAGE_SIZE, arch_mmu_flags);
+  }
 }
