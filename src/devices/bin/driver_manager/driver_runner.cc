@@ -137,13 +137,11 @@ Node* PrimaryParent(const std::vector<Node*>& parents) {
 }
 
 template <typename T>
-bool UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
-  bool unbind = ref.has_value();
-  if (unbind) {
+void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
+  if (ref.has_value()) {
     ref->Unbind();
     ref.reset();
   }
-  return unbind;
 }
 
 }  // namespace
@@ -376,7 +374,8 @@ void Node::OnBind() const {
 }
 
 bool Node::Unbind(std::unique_ptr<AsyncRemove>& async_remove) {
-  bool has_driver = UnbindAndReset(driver_ref_);
+  bool has_driver = driver_ref_.has_value();
+  UnbindAndReset(driver_ref_);
   if (has_driver) {
     // If a driver was bound to this node, store the async remove and wait for
     // the driver to stop.
