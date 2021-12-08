@@ -8,7 +8,10 @@ import("//build/rust/rustc_test.gni")
 
 group("basic_integration") {
   testonly = true
-  deps = [ ":basic_structured_config_integration_tests" ]
+  deps = [
+    ":basic_structured_config_tests_with_false",
+    ":basic_structured_config_tests_with_true",
+  ]
 }
 
 fuchsia_component("basic_config_receiver") {
@@ -16,12 +19,6 @@ fuchsia_component("basic_config_receiver") {
   manifest = "meta/receiver.cml"
   restricted_features = [ "structured_config" ]
   check_references = false  # we don't intend to execute this manifest
-}
-
-fuchsia_structured_config_values("basic_config_values") {
-  testonly = true
-  component = ":basic_config_receiver"
-  values = "config/basic_config_values.json5"
 }
 
 rustc_test("basic_integration_tests") {
@@ -37,10 +34,29 @@ rustc_test("basic_integration_tests") {
   ]
 }
 
-fuchsia_unittest_package("basic_structured_config_integration_tests") {
-  deps = [
-    ":basic_config_receiver",
-    ":basic_config_values",
-    ":basic_integration_tests",
-  ]
+# this template gives us a clear boundary around what varies in the different test executions
+template("my_flag_test") {
+  values_target = "${target_name}_values_${invoker.my_flag}"
+
+  fuchsia_structured_config_values(values_target) {
+    testonly = true
+    component = ":basic_config_receiver"
+    values = "config/basic_config_values_with_${invoker.my_flag}.json5"
+  }
+
+  fuchsia_unittest_package(target_name) {
+    deps = [
+      ":$values_target",
+      ":basic_config_receiver",
+      ":basic_integration_tests",
+    ]
+  }
+}
+
+my_flag_test("basic_structured_config_tests_with_true") {
+  my_flag = true
+}
+
+my_flag_test("basic_structured_config_tests_with_false") {
+  my_flag = false
 }
