@@ -42,7 +42,7 @@ It's time to face the truth, this ain't going to happen. Rejected.
 
 ## Summary
 
-This FTP proposes a more compact encoding for [envelopes][[1]](#Footnote1).
+This FTP proposes a more compact encoding for envelopes[^1].
 
 ## Motivation
 
@@ -92,7 +92,7 @@ Compared with the [existing envelope format][envelopes]:
 *   **A size of `UINT32_MAX` and handle count of `0` is special: it
     represents envelope content that is present, but has zero size.**
     *   This is reserved for future use if [zero-size empty structs][rfc-0045]
-        become a reality[[2]](#Footnote2), and does not impose any performance
+        become a reality[^2], and does not impose any performance
         or complexity penalty on decoders today.
         We wish to mention this now so that a possible future implementation
         does not break the wire format.
@@ -301,18 +301,12 @@ consensus on the following decisions:
 This FTP is a slimmed-down version of [rfc-0026], which was rejected since
 there wasn't enough consensus around the whole FTP.
 
-------------------------------------------------------------------------------
-
-##### Footnote1
-
-This FTP is based on [rfc-0026], but with _only_ the out-of-line envelope
+[^1]: This FTP is based on [rfc-0026], but with _only_ the out-of-line envelope
 proposal.
 Inlining, envelopes everywhere, and moving the string/vector count
 out-of-line, have all been removed.
 
-##### Footnote2
-
-Note that today, empty (zero-field) structs occupy one byte on-the-wire.
+[^2]: Note that today, empty (zero-field) structs occupy one byte on-the-wire.
 
 <!-- xrefs -->
 [envelopes]: /docs/contribute/governance/rfcs/0047_tables.md#envelopes
