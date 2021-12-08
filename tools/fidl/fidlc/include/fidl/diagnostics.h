@@ -44,8 +44,6 @@ constexpr ErrorDef ErrMissingOrdinalBeforeMember("missing ordinal before member"
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");
 constexpr ErrorDef ErrCompoundAliasIdentifier("alias identifiers cannot contain '.'");
-constexpr ErrorDef ErrOldUsingSyntaxDeprecated(
-    "old `using Name = Type;` syntax is disallowed; use `alias Name = Type;` instead");
 constexpr ErrorDef ErrMustHaveOneMember("must have at least one member");
 constexpr ErrorDef ErrUnrecognizedProtocolMember("unrecognized protocol member");
 constexpr ErrorDef ErrExpectedProtocolMember("expected protocol member");
@@ -71,8 +69,6 @@ constexpr WarningDef WarnBlankLinesWithinDocCommentBlock(
 constexpr WarningDef WarnDocCommentMustBeFollowedByDeclaration(
     "doc comment must be followed by a declaration");
 constexpr ErrorDef ErrMustHaveOneProperty("must have at least one property");
-constexpr ErrorDef ErrOldHandleSyntax(
-    "handle<type> is no longer supported, please use zx.handle:TYPE");
 constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrCannotSpecifyModifier(
     "cannot specify modifier {} for {}");
 constexpr ErrorDef<Token::KindAndSubkind> ErrCannotSpecifySubtype("cannot specify subtype for {}");

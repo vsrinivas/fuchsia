@@ -17,7 +17,6 @@ namespace fidl {
 
 // Forward decls
 namespace raw {
-class AttributeListOld;
 class AttributeList;
 }  // namespace raw
 
@@ -28,7 +27,6 @@ struct Constant;
 struct Decl;
 struct IdentifierConstant;
 struct LiteralConstant;
-struct TypeConstructorOld;
 struct Type;
 class TypeTemplate;
 class Name;
@@ -50,7 +48,6 @@ std::string Display(const flat::Attribute* a);
 std::string Display(const flat::AttributeArg* a);
 std::string Display(const flat::Constant* c);
 std::string Display(const flat::Decl* d);
-std::string Display(const flat::TypeConstructorOld* tc);
 std::string Display(const flat::Type* t);
 std::string Display(const flat::TypeTemplate* t);
 std::string Display(const flat::Name& n);

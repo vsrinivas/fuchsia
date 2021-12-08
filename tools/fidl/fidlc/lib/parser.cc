@@ -422,16 +422,12 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   return std::make_unique<raw::Attribute>(std::move(doc_comment_attr));
 }
 
-std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList(bool for_parameter) {
+std::unique_ptr<raw::AttributeList> Parser::MaybeParseAttributeList() {
   ASTScope scope(this);
   std::unique_ptr<raw::Attribute> doc_comment;
   // Doc comments must appear above attributes
   if (Peek().kind() == Token::Kind::kDocComment) {
     doc_comment = ParseDocComment();
-  }
-  if (for_parameter && doc_comment) {
-    reporter_->Report(ErrDocCommentOnParameters, previous_token_);
-    return Fail();
   }
   if (Peek().kind() == Token::Kind::kAt) {
     return ParseAttributeList(std::move(doc_comment), scope);

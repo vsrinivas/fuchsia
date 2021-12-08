@@ -78,7 +78,7 @@ std::string Display(const flat::Decl* d) {
       break;
     }
     case flat::Decl::Kind::kService: {
-      decl_kind = "resource";
+      decl_kind = "service";
       break;
     }
     case flat::Decl::Kind::kStruct: {

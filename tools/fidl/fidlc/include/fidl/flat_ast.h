@@ -1407,10 +1407,6 @@ class Library : Attributable {
   // various foo_declarations_.
   std::vector<const Decl*> declaration_order_;
 
-  // TODO(fxbug.dev/70427): This stores precomputed resourceness info for the converter to access by
-  // mapping from filename + offset to resourceness
-  std::map<SourceSpan::Key, bool> derived_resourceness;
-
  private:
   Dependencies dependencies_;
   const Libraries* all_libraries_;

@@ -27,10 +27,4 @@ std::string SourceSpan::position_str() const {
   return position;
 }
 
-SourceSpan::Key SourceSpan::ToKey() const {
-  auto filename = source_file().filename();
-  size_t offset = data().data() - source_file().data().data();
-  return {std::string(filename), offset};
-}
-
 }  // namespace fidl
