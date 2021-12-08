@@ -23,9 +23,23 @@ executable("sysmem_connector_executable") {
 }
 
 # TODO(fxbug.dev/83213) Retain v1 component while out of tree tests need it.
-fuchsia_package_with_single_component("sysmem_connector") {
+fuchsia_component("sysmem_connector_v1") {
+  component_name = "sysmem_connector"
   manifest = "meta/sysmem_connector.cmx"
   deps = [ ":sysmem_connector_executable" ]
+}
+
+fuchsia_component("sysmem_connector_v2") {
+  component_name = "sysmem_connector"
+  manifest = "meta/sysmem_connector.cml"
+  deps = [ ":sysmem_connector_executable" ]
+}
+
+fuchsia_package("sysmem_connector") {
+  deps = [
+    ":sysmem_connector_v1",
+    ":sysmem_connector_v2",
+  ]
 }
 
 executable("sysmem_connector_test_executable") {
@@ -46,7 +60,15 @@ executable("sysmem_connector_test_executable") {
   ]
 }
 
-fuchsia_unittest_package("sysmem_connector_test") {
-  manifest = "meta/sysmem_connector_test.cmx"
+fuchsia_test_component("sysmem_connector_test_component") {
+  manifest = "meta/sysmem_connector_test.cml"
   deps = [ ":sysmem_connector_test_executable" ]
+}
+
+fuchsia_test_package("sysmem_connector_test") {
+  test_components = [ ":sysmem_connector_test_component" ]
+  deps = [
+    ":sysmem_connector",
+    ":sysmem_connector_v2",
+  ]
 }

@@ -396,6 +396,12 @@
             to: [ "#system-tests" ],
             rights: [ "rw*" ],
         },
+        {
+            directory: "dev-sysmem",
+            from: "parent",
+            to: [ "#system-tests" ],
+            rights: [ "rw*" ],
+        },
 
         // Tests of the media system change their behavior based on board
         // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.

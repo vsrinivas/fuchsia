@@ -3,9 +3,6 @@
         "fuchsia-pkg://fuchsia.com/system_recovery#meta/system_recovery.cmx",
         "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx"
     ],
-    "services": {
-        "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
-    },
     "update_dependencies": [
         "fuchsia.bogus.DoesNotExist"
     ]

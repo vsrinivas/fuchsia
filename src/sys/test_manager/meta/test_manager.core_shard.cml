@@ -88,7 +88,6 @@
         },
         {
             protocol: [
-                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
@@ -99,6 +98,11 @@
             from: "self",
             to: "#test_manager",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: "#test_manager",
         },
         {
             protocol: [
@@ -185,6 +189,13 @@
             as: "dev-mediacodec",
             to: "#test_manager",
             subdir: "class/media-codec",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sysmem",
+            to: "#test_manager",
+            subdir: "class/sysmem",
         },
         {
             directory: "root-ssl-certificates",

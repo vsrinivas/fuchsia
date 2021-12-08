@@ -27,12 +27,12 @@ TEST(SysmemConnectorTest, Connect) {
   bool is_sync_complete = false;
 
   fuchsia::sysmem::AllocatorPtr allocator;
-  allocator.set_error_handler([](zx_status_t status) { ASSERT_TRUE(false); });
+  allocator.set_error_handler([](zx_status_t status) { ASSERT_EQ(status, ZX_OK); });
   component_context->svc()->Connect(allocator.NewRequest(main_loop.dispatcher()));
   allocator->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
   fuchsia::sysmem::BufferCollectionTokenPtr token;
-  token.set_error_handler([](zx_status_t status) { ASSERT_TRUE(false); });
+  token.set_error_handler([](zx_status_t status) { ASSERT_EQ(status, ZX_OK); });
   allocator->AllocateSharedCollection(token.NewRequest(main_loop.dispatcher()));
 
   token->Sync([&] {

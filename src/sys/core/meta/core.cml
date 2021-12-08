@@ -46,6 +46,10 @@
             name: "bluetooth-core",
             url: "fuchsia-pkg://fuchsia.com/bt-init#meta/bt-init.cm",
         },
+        {
+            name: "sysmem_connector",
+            url: "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cm",
+        },
 
         // Children below this line may be present on some but not all product configurations.
         // Children above this line are expected to be present on all configs that include
@@ -261,6 +265,19 @@
             protocol: "fuchsia.ui.brightness.Control",
             from: "#brightness_manager",
             to: [ "#setui_service" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sysmem",
+            to: "#sysmem_connector",
+            subdir: "class/sysmem",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "self",
+            to: "#sysmem_connector",
+            dependency: "weak_for_migration",
         },
         {
             protocol: [ "fuchsia.pkg.FontResolver" ],
@@ -487,6 +504,7 @@
                 "#stash",
                 "#stash2",
                 "#stash_secure",
+                "#sysmem_connector",
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
@@ -514,7 +532,6 @@
         },
         {
             protocol: [
-                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
@@ -524,6 +541,14 @@
             from: "self",
             to: "#starnix_manager",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+            from: "#sysmem_connector",
+            to: [
+                "#session-manager",
+                "#starnix_manager",
+            ],
         },
         {
             directory: "config-data",
@@ -655,6 +680,12 @@
         {
             directory: "dev",
             from: "parent",
+            to: "#sysmem_connector",
+            subdir: "class/sysmem",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-temperature",
             to: "#temperature-logger",
             subdir: "class/temperature",
@@ -763,7 +794,6 @@
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.intl.TimeZones",
                 "fuchsia.sys.Launcher",
-                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",

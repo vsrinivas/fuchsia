@@ -170,7 +170,7 @@ filter name:
 Job 2 state=Attached koid=30053 name=""
 
 [zxdb] job 2 attach *
-Attached Process 1 state=Running koid=28071 name=sysmem_connector.cmx
+Attached Process 1 state=Running koid=28071 name=sysmem_connector.cm
 ```
 
 > **Warning:** Be careful only to use the wildcard `attach *` command with an explicit,

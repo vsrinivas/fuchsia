@@ -165,6 +165,10 @@
             from: "#setui_service",
         },
         {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+        },
+        {
             protocol: [
                 "fuchsia.net.http.Loader",
                 "fuchsia.net.interfaces.admin.Installer",

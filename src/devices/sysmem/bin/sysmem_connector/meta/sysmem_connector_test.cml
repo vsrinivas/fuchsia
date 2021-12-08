@@ -1,0 +1,48 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_manager/system-test.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/sysmem_connector_test",
+    },
+    children: [
+        {
+            name: "sysmem_connector",
+            url: "#meta/sysmem_connector.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+        },
+        {
+            protocol: [ "fuchsia.sysmem.Allocator" ],
+            from: "#sysmem_connector",
+        },
+    ],
+    offer: [
+        // Unified logs
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#sysmem_connector" ],
+        },
+
+        // Send the real sysmem to sysmem_connector
+        {
+            directory: "dev-sysmem",
+            from: "parent",
+            to: [ "#sysmem_connector" ],
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "parent",
+            to: [ "#sysmem_connector" ],
+        },
+    ],
+}
