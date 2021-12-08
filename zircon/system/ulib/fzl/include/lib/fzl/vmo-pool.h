@@ -94,6 +94,12 @@ class VmoPool {
   // Returns the number of free buffers in this pool.
   size_t free_buffers() const { return free_buffers_.size(); }
 
+  // Returns the size (in bytes) of the buffer at a given index in this pool.
+  size_t buffer_size(uint32_t buffer_index = 0) const {
+    ZX_DEBUG_ASSERT(buffer_index < buffers_.size());
+    return buffers_[buffer_index].buffer_size;
+  }
+
   ~VmoPool();
 
   // The Buffer class offers an object-oriented way to accessing the buffers

@@ -290,4 +290,16 @@ TEST_F(VmoPoolTester, StdMove) {
   CheckAccounting(0);
 }
 
+TEST_F(VmoPoolTester, BufferSize) {
+  Init();
+
+#if ZX_DEBUG_ASSERT_IMPLEMENTED
+  ASSERT_DEATH([&] { pool_.buffer_size(-1); });
+  ASSERT_DEATH([&] { pool_.buffer_size(kNumVmos); });
+#endif
+
+  ASSERT_EQ(kVmoTestSize, pool_.buffer_size());
+  ASSERT_EQ(kVmoTestSize, pool_.buffer_size(kNumVmos - 1));
+  CheckAccounting(0);
+}
 }  // namespace
