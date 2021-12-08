@@ -9,13 +9,15 @@ use {
             channel_listener::{ChannelListener, ChannelListenerSource},
             channel_scheduler::ChannelScheduler,
             convert_beacon::construct_bss_description,
+            probe_request::{
+                probe_request_rates_for_channel, ProbeRequestParams, ProbeRequestSeries,
+            },
             Context, TimedEvent,
         },
         ddk_converter::cssid_from_ssid_unchecked,
         device::{Device, TxFlags},
         error::Error,
     },
-    anyhow::format_err,
     banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
     banjo_fuchsia_hardware_wlanphyinfo as banjo_hw_wlaninfo,
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
@@ -110,13 +112,6 @@ pub struct BoundScanner<'a> {
     ctx: &'a mut Context,
 }
 
-/// The list of `channels` the corresponding `ies` should be transmitting
-/// on in Probe Request frames.
-struct ProbeRequestChannelsIesPair {
-    channels: Vec<u8>,
-    ies: Vec<u8>,
-}
-
 enum OngoingScan {
     MlmeScan {
         /// Scan request that's currently being serviced.
@@ -134,16 +129,12 @@ enum OngoingScan {
     ActiveOffloadScan {
         /// Scan txn_id that's currently being serviced.
         mlme_txn_id: u64,
-        /// Scan arguments that are constant between scans and not buffers.
-        fixed_scan_args: banjo_wlan_mac::WlanmacActiveScanArgs,
-        /// List of SSIDs for each scan request.
-        ssids_list: Vec<banjo_ieee80211::CSsid>,
-        /// MAC header for each scan request.
-        mac_header: Vec<u8>,
-        /// List of remaining set of channels and IEs to scan in this OffloadScan.
-        remaining_channels_ies_pairs: Vec<ProbeRequestChannelsIesPair>,
         /// Unique identifier returned from the device driver when the scan began.
         in_progress_device_scan_id: u64,
+        /// Scan arguments that are constant between scans and not buffers.
+        fixed_scan_args: banjo_wlan_mac::WlanmacActiveScanArgs,
+        ///
+        probe_request_series: ProbeRequestSeries,
     },
 }
 
@@ -257,82 +248,73 @@ impl<'a> BoundScanner<'a> {
             },
         })?;
 
-        let remaining_channels_ies_pairs =
-            Self::probe_request_channels_ies_pairs(wlanmac_info, req.channel_list)?;
+        let mut probe_request_series =
+            ProbeRequestSeries::new(ssids_list, mac_header, wlanmac_info, req.channel_list)?;
+        let probe_request_params = match probe_request_series.next() {
+            Some(probe_request_params) => probe_request_params,
+            None => {
+                error!("unexpected empty ProbeRequestSeries");
+                return Err(Error::ScanError(ScanError::StartOffloadScanFails(
+                    zx::Status::INTERNAL,
+                )));
+            }
+        };
 
-        Ok(self
-            .start_next_active_scan(
-                req.txn_id,
-                banjo_wlan_mac::WlanmacActiveScanArgs {
-                    // TODO(fxbug.dev/89933): A TimeUnit is generally limited to 2 octets. Conversion here
-                    // is required since fuchsia.wlan.mlme/ScanRequest.min_channel_time has a width of
-                    // four octets.
-                    min_channel_time: zx::Duration::from(TimeUnit(req.min_channel_time as u16))
-                        .into_nanos(),
-                    max_channel_time: zx::Duration::from(TimeUnit(req.max_channel_time as u16))
-                        .into_nanos(),
-                    min_home_time: MIN_HOME_TIME.into_nanos(),
-                    min_probes_per_channel: MIN_PROBES_PER_CHANNEL,
-                    max_probes_per_channel: MAX_PROBES_PER_CHANNEL,
+        let fixed_scan_args = banjo_wlan_mac::WlanmacActiveScanArgs {
+            // TODO(fxbug.dev/89933): A TimeUnit is generally limited to 2 octets. Conversion here
+            // is required since fuchsia.wlan.mlme/ScanRequest.min_channel_time has a width of
+            // four octets.
+            min_channel_time: zx::Duration::from(TimeUnit(req.min_channel_time as u16))
+                .into_nanos(),
+            max_channel_time: zx::Duration::from(TimeUnit(req.max_channel_time as u16))
+                .into_nanos(),
+            min_home_time: MIN_HOME_TIME.into_nanos(),
+            min_probes_per_channel: MIN_PROBES_PER_CHANNEL,
+            max_probes_per_channel: MAX_PROBES_PER_CHANNEL,
 
-                    channels_list: std::ptr::null(),
-                    channels_count: 0,
-                    ssids_list: std::ptr::null(),
-                    ssids_count: 0,
-                    mac_header_buffer: std::ptr::null(),
-                    mac_header_size: 0,
-                    ies_buffer: std::ptr::null(),
-                    ies_size: 0,
-                },
-                ssids_list,
-                mac_header,
-                remaining_channels_ies_pairs,
-            )
-            .map_err(|scan_error| Error::ScanError(scan_error))?)
+            channels_list: std::ptr::null(),
+            channels_count: 0,
+            ssids_list: std::ptr::null(),
+            ssids_count: 0,
+            mac_header_buffer: std::ptr::null(),
+            mac_header_size: 0,
+            ies_buffer: std::ptr::null(),
+            ies_size: 0,
+        };
+
+        Ok(OngoingScan::ActiveOffloadScan {
+            mlme_txn_id: req.txn_id,
+            in_progress_device_scan_id: self
+                .start_next_active_scan(fixed_scan_args, probe_request_params)
+                .map_err(|scan_error| Error::ScanError(scan_error))?,
+            fixed_scan_args,
+            probe_request_series,
+        })
     }
 
     fn start_next_active_scan(
         &mut self,
-        mlme_txn_id: u64,
         fixed_scan_args: banjo_wlan_mac::WlanmacActiveScanArgs,
-        ssids_list: Vec<banjo_ieee80211::CSsid>,
-        mac_header: Vec<u8>,
-        mut remaining_channels_ies_pairs: Vec<ProbeRequestChannelsIesPair>,
-    ) -> Result<OngoingScan, ScanError> {
-        let next_channels_ies_pair = match remaining_channels_ies_pairs.pop() {
-            None => {
-                error!("remaining_chanenls_ies_pairs is empty");
-                return Err(ScanError::StartOffloadScanFails(zx::Status::INTERNAL));
-            }
-            Some(next_channels_ies_pair) => next_channels_ies_pair,
-        };
-
+        probe_request_params: ProbeRequestParams<'_>,
+    ) -> Result<u64, ScanError> {
         let wlanmac_active_scan_args = banjo_wlan_mac::WlanmacActiveScanArgs {
-            channels_list: next_channels_ies_pair.channels.as_slice().as_ptr(),
-            channels_count: next_channels_ies_pair.channels.len(),
-            ssids_list: ssids_list.as_slice().as_ptr(),
-            ssids_count: ssids_list.len(),
-            mac_header_buffer: mac_header.as_slice().as_ptr(),
-            mac_header_size: mac_header.len(),
-            ies_buffer: next_channels_ies_pair.ies.as_slice().as_ptr(),
-            ies_size: next_channels_ies_pair.ies.len(),
+            channels_list: probe_request_params.channels.as_slice().as_ptr(),
+            channels_count: probe_request_params.channels.len(),
+            ssids_list: probe_request_params.ssids_list.as_slice().as_ptr(),
+            ssids_count: probe_request_params.ssids_list.len(),
+            mac_header_buffer: probe_request_params.mac_header.as_slice().as_ptr(),
+            mac_header_size: probe_request_params.mac_header.len(),
+            ies_buffer: probe_request_params.ies.as_slice().as_ptr(),
+            ies_size: probe_request_params.ies.len(),
             ..fixed_scan_args
         };
 
         // Note: WlanmacActiveScanArgs contains raw pointers and the memory pointed
         // to must remain in scope for the duration of the call to Device::start_active_scan().
-        Ok(OngoingScan::ActiveOffloadScan {
-            mlme_txn_id,
-            fixed_scan_args,
-            ssids_list,
-            mac_header,
-            remaining_channels_ies_pairs,
-            in_progress_device_scan_id: self
-                .ctx
-                .device
-                .start_active_scan(&wlanmac_active_scan_args)
-                .map_err(|status| ScanError::StartOffloadScanFails(status))?,
-        })
+        self.ctx
+            .device
+            .start_active_scan(&wlanmac_active_scan_args)
+            .map_err(|status| ScanError::StartOffloadScanFails(status))
     }
 
     /// Called when MLME receives a beacon or probe response so that scanner saves it in a BSS map.
@@ -391,6 +373,19 @@ impl<'a> BoundScanner<'a> {
     }
 
     pub fn handle_scan_complete(&mut self, status: zx::Status, scan_id: u64) {
+        macro_rules! send_on_scan_end {
+            ($mlme_txn_id: ident, $code:expr) => {
+                let _ = self
+                    .ctx
+                    .device
+                    .mlme_control_handle()
+                    .send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id: $mlme_txn_id, code: $code })
+                    .map_err(|e| {
+                        error!("error sending MLME ScanEnd: {}", e);
+                    });
+            };
+        }
+
         match self.scanner.ongoing_scan.take() {
             Some(OngoingScan::MlmeScan { .. }) => {
                 warn!("Unexpected ScanComplete with status {:?} during MlmeScan.", status);
@@ -411,30 +406,22 @@ impl<'a> BoundScanner<'a> {
                     return;
                 }
 
-                let code = if status == zx::Status::OK {
-                    fidl_mlme::ScanResultCode::Success
-                } else {
-                    error!("passive offload scan failed: {}", status);
-                    fidl_mlme::ScanResultCode::InternalError
-                };
-
-                let _ = self
-                    .ctx
-                    .device
-                    .mlme_control_handle()
-                    .send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id: mlme_txn_id, code })
-                    .map_err(|e| {
-                        error!("error sending MLME ScanEnd: {}", e);
-                    });
+                send_on_scan_end!(
+                    mlme_txn_id,
+                    if status == zx::Status::OK {
+                        fidl_mlme::ScanResultCode::Success
+                    } else {
+                        error!("passive offload scan failed: {}", status);
+                        fidl_mlme::ScanResultCode::InternalError
+                    }
+                );
                 return;
             }
             Some(OngoingScan::ActiveOffloadScan {
                 mlme_txn_id,
-                fixed_scan_args,
-                ssids_list,
-                mac_header,
-                remaining_channels_ies_pairs,
                 in_progress_device_scan_id,
+                fixed_scan_args,
+                mut probe_request_series,
             }) => {
                 if in_progress_device_scan_id != scan_id {
                     warn!(
@@ -443,60 +430,40 @@ impl<'a> BoundScanner<'a> {
                     );
                     self.scanner.ongoing_scan.replace(OngoingScan::ActiveOffloadScan {
                         mlme_txn_id,
-                        fixed_scan_args,
-                        ssids_list,
-                        mac_header,
-                        remaining_channels_ies_pairs,
                         in_progress_device_scan_id,
+                        fixed_scan_args,
+                        probe_request_series,
                     });
                     return;
                 }
 
-                let code = if status == zx::Status::OK {
-                    fidl_mlme::ScanResultCode::Success
-                } else {
+                if status != zx::Status::OK {
                     error!("active offload scan failed: {}", status);
-                    fidl_mlme::ScanResultCode::InternalError
-                };
-
-                if code == fidl_mlme::ScanResultCode::Success
-                    || remaining_channels_ies_pairs.is_empty()
-                {
-                    let _ = self
-                        .ctx
-                        .device
-                        .mlme_control_handle()
-                        .send_on_scan_end(&mut fidl_mlme::ScanEnd { txn_id: mlme_txn_id, code })
-                        .map_err(|e| {
-                            error!("error sending MLME ScanEnd: {}", e);
-                        });
+                    send_on_scan_end!(mlme_txn_id, fidl_mlme::ScanResultCode::InternalError);
                     return;
                 }
 
-                match self.start_next_active_scan(
-                    mlme_txn_id,
-                    fixed_scan_args,
-                    ssids_list,
-                    mac_header,
-                    remaining_channels_ies_pairs,
-                ) {
-                    Ok(ongoing_scan) => {
-                        self.scanner.ongoing_scan = Some(ongoing_scan);
-                    }
-                    Err(scan_error) => {
-                        self.scanner.ongoing_scan.take();
-                        let _ = self
-                            .ctx
-                            .device
-                            .mlme_control_handle()
-                            .send_on_scan_end(&mut fidl_mlme::ScanEnd {
-                                txn_id: mlme_txn_id,
-                                code: scan_error.into(),
-                            })
-                            .map_err(|e| {
-                                error!("error sending MLME ScanEnd: {}", e);
-                            });
+                match probe_request_series.next() {
+                    None => {
+                        send_on_scan_end!(mlme_txn_id, fidl_mlme::ScanResultCode::Success);
                         return;
+                    }
+                    Some(probe_request_params) => {
+                        match self.start_next_active_scan(fixed_scan_args, probe_request_params) {
+                            Ok(in_progress_device_scan_id) => {
+                                self.scanner.ongoing_scan = Some(OngoingScan::ActiveOffloadScan {
+                                    mlme_txn_id,
+                                    in_progress_device_scan_id,
+                                    fixed_scan_args,
+                                    probe_request_series,
+                                });
+                            }
+                            Err(scan_error) => {
+                                self.scanner.ongoing_scan.take();
+                                send_on_scan_end!(mlme_txn_id, scan_error.into());
+                                return;
+                            }
+                        }
                     }
                 }
             }
@@ -552,79 +519,13 @@ impl<'a> BoundScanner<'a> {
         )
     }
 
-    fn probe_request_channels_ies_pairs(
-        wlanmac_info: &banjo_wlan_mac::WlanmacInfo,
-        channel_list: Vec<u8>,
-    ) -> Result<Vec<ProbeRequestChannelsIesPair>, Error> {
-        let (two_ghz_channels, five_ghz_channels) =
-            channel_list.into_iter().fold((vec![], vec![]), |mut acc, c| {
-                match get_band_from_channel_number(c) {
-                    banjo_hw_wlaninfo::WlanInfoBand::TWO_GHZ => acc.0.push(c),
-                    banjo_hw_wlaninfo::WlanInfoBand::FIVE_GHZ => acc.1.push(c),
-                    _ => unreachable!(),
-                }
-                (acc.0, acc.1)
-            });
-
-        Ok(vec![
-            ProbeRequestChannelsIesPair {
-                channels: two_ghz_channels,
-                ies: Self::probe_request_ies_for_band(
-                    &wlanmac_info,
-                    banjo_hw_wlaninfo::WlanInfoBand::TWO_GHZ,
-                )?,
-            },
-            ProbeRequestChannelsIesPair {
-                channels: five_ghz_channels,
-                ies: Self::probe_request_ies_for_band(
-                    &wlanmac_info,
-                    banjo_hw_wlaninfo::WlanInfoBand::FIVE_GHZ,
-                )?,
-            },
-        ])
-    }
-
-    fn probe_request_rates_for_channel(
-        wlanmac_info: &banjo_wlan_mac::WlanmacInfo,
-        channel_number: u8,
-    ) -> Result<Vec<u8>, Error> {
-        let band_info = get_band_info_for_channel_number(&wlanmac_info, channel_number)
-            .ok_or(format_err!("no band info for channel {:?}", channel_number))?;
-        Ok(band_info.rates.iter().cloned().filter(|r| *r > 0).collect())
-    }
-
-    fn probe_request_rates_for_band(
-        wlanmac_info: &banjo_wlan_mac::WlanmacInfo,
-        band: banjo_hw_wlaninfo::WlanInfoBand,
-    ) -> Result<Vec<u8>, Error> {
-        let band_info = get_band_info_for_band(&wlanmac_info, band)
-            .ok_or(format_err!("no band found for band {:?}", band))?;
-        Ok(band_info.rates.iter().cloned().filter(|r| *r > 0).collect())
-    }
-
-    fn probe_request_ies_for_band(
-        wlanmac_info: &banjo_wlan_mac::WlanmacInfo,
-        band: banjo_hw_wlaninfo::WlanInfoBand,
-    ) -> Result<Vec<u8>, Error> {
-        let rates = Self::probe_request_rates_for_band(wlanmac_info, band)?;
-        Ok(write_frame_with_dynamic_buf!(vec![], {
-            ies: {
-                supported_rates: rates,
-                extended_supported_rates: {/* continue rates */},
-            }
-        })?
-        .0)
-    }
-
     fn send_probe_req(
         &mut self,
         ssid: &[u8],
         channel: banjo_common::WlanChannel,
     ) -> Result<(), Error> {
-        let rates = Self::probe_request_rates_for_channel(
-            &self.ctx.device.wlanmac_info(),
-            channel.primary,
-        )?;
+        let rates =
+            probe_request_rates_for_channel(&self.ctx.device.wlanmac_info(), channel.primary)?;
         let (buf, bytes_written) = write_frame!(&mut self.ctx.buf_provider, {
             headers: {
                 mac::MgmtHdr: &self.probe_request_mac_header(),
@@ -673,29 +574,6 @@ impl<'a> BoundScanner<'a> {
             }
         }
     }
-}
-
-fn get_band_from_channel_number(channel: u8) -> banjo_hw_wlaninfo::WlanInfoBand {
-    // highest 2.4 GHz band channel is 14
-    if channel > 14 {
-        banjo_hw_wlaninfo::WlanInfoBand::FIVE_GHZ
-    } else {
-        banjo_hw_wlaninfo::WlanInfoBand::TWO_GHZ
-    }
-}
-
-fn get_band_info_for_channel_number(
-    wlanmac_info: &banjo_wlan_mac::WlanmacInfo,
-    channel: u8,
-) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
-    get_band_info_for_band(wlanmac_info, get_band_from_channel_number(channel))
-}
-
-fn get_band_info_for_band(
-    wlanmac_info: &banjo_wlan_mac::WlanmacInfo,
-    band: banjo_hw_wlaninfo::WlanInfoBand,
-) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
-    wlanmac_info.bands[..wlanmac_info.bands_count as usize].iter().filter(|b| b.band == band).next()
 }
 
 fn send_scan_result(txn_id: u64, bss: fidl_internal::BssDescription, device: &mut Device) {

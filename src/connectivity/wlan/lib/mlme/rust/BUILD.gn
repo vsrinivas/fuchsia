@@ -62,6 +62,7 @@ rustc_library("wlan-mlme") {
     "src/client/convert_beacon.rs",
     "src/client/lost_bss.rs",
     "src/client/mod.rs",
+    "src/client/probe_request.rs",
     "src/client/scanner.rs",
     "src/client/state.rs",
     "src/client/stats.rs",
