@@ -28,11 +28,13 @@ declare_args() {
   # corrupted. Setting this flag to true helps debugging corruptions.
   extract_minfs_metadata_on_corruption = false
 
-  # This flag isn't stable yet, don't use it.
-  # Set to true to enable fxfs/f2fs instead of minfs.  If set, any existing minfs partition will be
-  # migrated in-place to fxfs/f2fs when fshost mounts it.
+  # Set to one of "minfs", "fxfs", "f2fs" (unstable).
+  # If set to anything other than "minfs", any existing minfs partition will be
+  # migrated in-place to the specified format when fshost mounts it.
+  data_filesystem_format = "minfs"
+
+  # Soft migration: Do not use
   unstable_feature_use_fxfs = false
-  unstable_feature_use_f2fs = false
 
   # Set to true to enable legacy data partition names.
   allow_legacy_data_partition_names = true
@@ -145,17 +147,22 @@ template("generated_fshost_config") {
     if (!format_minfs_on_corruption) {
       contents += [ "-format-minfs-on-corruption" ]
     }
-    if (invoker.unstable_feature_use_fxfs) {
+    if (invoker.unstable_feature_use_fxfs ||
+        invoker.data_filesystem_format == "fxfs") {
       contents += [
         "data-filesystem-binary-path=/pkg/bin/fxfs",
         "data-filesystem-no-directory-admin",
         "data-filesystem-uses-crypt",
       ]
-    } else if (invoker.unstable_feature_use_f2fs) {
+    } else if (invoker.data_filesystem_format == "f2fs") {
       contents += [
         "data-filesystem-binary-path=/pkg/bin/f2fs",
         "data-filesystem-no-directory-admin",
       ]
+    } else if (invoker.data_filesystem_format != "minfs") {
+      assert(false,
+             "Invalid data_filesystem_format: '" +
+                 invoker.data_filesystem_format + "'")
     }
     if (invoker.allow_legacy_data_partition_names) {
       contents += [ "allow-legacy-data-partition-names" ]
