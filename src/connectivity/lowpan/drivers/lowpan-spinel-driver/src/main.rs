@@ -400,8 +400,7 @@ fn process_config_files_and_args() -> Result<Config, Error> {
 async fn main() -> Result<(), Error> {
     use std::path::Path;
 
-    fuchsia_syslog::init_with_tags(&[fuchsia_syslog::COMPONENT_NAME_PLACEHOLDER_TAG])
-        .context("initialize logging")?;
+    fuchsia_syslog::init_with_tags(&["lowpan-spinel-driver"]).context("initialize logging")?;
     fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
 
     #[cfg(test)]
