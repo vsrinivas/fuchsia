@@ -70,6 +70,14 @@ if ! ${found_target}; then
   args=(--target "$(get-device-raw)" "${args[@]}")
 fi
 
+if [[ "${args[*]}" =~ "repository default" ]]; then
+  fx-warn "Inside the Fuchsia tree, ffx has a repository specified by fx"
+  fx-warn "Using default repositories via ffx repository default may have undefined behavior"
+  fx-warn "See http://fxbug.dev/90067 for more information."
+  fx-warn "Prefer:"
+  fx-warn "   fx use"
+fi
+
 if [[ "${args[*]}" =~ "target default" ]]; then
   fx-warn "Inside the Fuchsia tree, ffx has a target specified by fx"
   fx-warn "Using default targets via ffx target default may have undefined behavior"
