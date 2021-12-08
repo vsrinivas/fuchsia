@@ -1241,12 +1241,14 @@ async fn test_stdout_to_directory() {
                 "stdout.txt".into(),
                 "\u{1b}[31mred stdout\u{1b}[0m\n",
             )
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), "")
             .with_no_run_duration()
             .with_any_start_time(),
     )
     .with_case(
         ExpectedTestCase::new("log_ansi_test", directory::Outcome::Passed)
             .with_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), "")
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), "")
             .with_no_run_duration()
             .with_any_start_time(),
     )
@@ -1300,6 +1302,7 @@ async fn test_syslog_to_directory() {
     .with_case(
         ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)
             .with_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), "")
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), "")
             .with_any_start_time()
             .with_no_run_duration(),
     )
@@ -1352,6 +1355,7 @@ async fn test_custom_artifacts_to_directory() {
     .with_case(
         ExpectedTestCase::new("use_artifact", directory::Outcome::Passed)
             .with_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), "")
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), "")
             .with_any_start_time()
             .with_no_run_duration(),
     )

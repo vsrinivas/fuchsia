@@ -92,7 +92,7 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
 
     let (failing_test_logs, events_without_failing_test_logs): (Vec<RunEvent>, Vec<RunEvent>) =
         events.into_iter().partition(|x| match x {
-            RunEvent::CaseStdout { name, stdout_message: _ } => name == "my_tests::failing_test",
+            RunEvent::CaseStderr { name, stderr_message: _ } => name == "my_tests::failing_test",
             _ => false,
         });
 
@@ -106,14 +106,14 @@ async fn launch_and_run_sample_test_internal(parallel: u16) {
     assert_eq!(
         &failing_test_logs[0..3],
         &[
-            RunEvent::case_stdout("my_tests::failing_test", panic_message),
-            RunEvent::case_stdout("my_tests::failing_test", "stack backtrace:"),
-            RunEvent::case_stdout("my_tests::failing_test", "{{{reset}}}"),
+            RunEvent::case_stderr("my_tests::failing_test", panic_message),
+            RunEvent::case_stderr("my_tests::failing_test", "stack backtrace:"),
+            RunEvent::case_stderr("my_tests::failing_test", "{{{reset}}}"),
         ]
     );
     assert_eq!(
         failing_test_logs.last().unwrap(),
-        &RunEvent::case_stdout("my_tests::failing_test", "test failed.")
+        &RunEvent::case_stderr("my_tests::failing_test", "test failed.")
     );
 }
 
@@ -147,8 +147,8 @@ async fn launch_and_run_sample_test_include_disabled() {
     );
 
     assert_eq!(
-        &events_failing_test.stdout_events[1],
-        &RunEvent::case_stdout("my_tests::failing_test", "stack backtrace:")
+        &events_failing_test.stderr_events[1],
+        &RunEvent::case_stderr("my_tests::failing_test", "stack backtrace:")
     );
 
     let events_ignored_failing_test =
@@ -170,7 +170,7 @@ async fn launch_and_run_sample_test_include_disabled() {
         &RunEvent::case_stopped("my_tests::ignored_failing_test", CaseStatus::Failed),
     );
 
-    assert!(events_ignored_failing_test.stdout_events.len() > 1, "Expected > 1 log messages");
+    assert!(events_ignored_failing_test.stderr_events.len() > 1, "Expected > 1 log messages");
 
     let events_ignored_passing_test =
         grouped_events.get(&Some("my_tests::ignored_passing_test".to_string())).unwrap();

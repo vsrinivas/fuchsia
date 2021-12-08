@@ -8,7 +8,7 @@ use {
     ftest::{Invocation, RunListenerProxy},
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
-        future::{abortable, join, AbortHandle, FutureExt as _},
+        future::{abortable, join3, AbortHandle, FutureExt as _},
         lock::Mutex,
         prelude::*,
     },
@@ -17,7 +17,6 @@ use {
     regex::Regex,
     std::{
         collections::HashSet,
-        str::from_utf8,
         sync::{Arc, Weak},
     },
     test_runners_lib::{
@@ -88,6 +87,9 @@ impl SuiteServer for TestServer {
                 let (test_stdout, stdout_client) = zx::Socket::create(zx::SocketOpts::STREAM)
                     .map_err(KernelError::CreateSocket)
                     .unwrap();
+                let (test_stderr, stderr_client) = zx::Socket::create(zx::SocketOpts::STREAM)
+                    .map_err(KernelError::CreateSocket)
+                    .unwrap();
                 let (case_listener_proxy, listener) =
                     fidl::endpoints::create_proxy::<fidl_fuchsia_test::CaseListenerMarker>()
                         .map_err(FidlError::CreateProxy)
@@ -95,19 +97,33 @@ impl SuiteServer for TestServer {
                 let test_stdout = fasync::Socket::from_socket(test_stdout)
                     .map_err(KernelError::SocketToAsync)
                     .unwrap();
+                let test_stderr = fasync::Socket::from_socket(test_stderr)
+                    .map_err(KernelError::SocketToAsync)
+                    .unwrap();
 
                 run_listener
                     .on_test_case_started(
                         invocation,
-                        ftest::StdHandles { out: Some(stdout_client), ..ftest::StdHandles::EMPTY },
+                        ftest::StdHandles {
+                            out: Some(stdout_client),
+                            err: Some(stderr_client),
+                            ..ftest::StdHandles::EMPTY
+                        },
                         listener,
                     )
                     .map_err(RunTestError::SendStart)?;
 
                 let mut test_stdout = SocketLogWriter::new(test_stdout);
+                let mut test_stderr = SocketLogWriter::new(test_stderr);
 
                 match self
-                    .run_test(&test, &run_options, test_component.clone(), &mut test_stdout)
+                    .run_test(
+                        &test,
+                        &run_options,
+                        test_component.clone(),
+                        &mut test_stdout,
+                        &mut test_stderr,
+                    )
                     .await
                 {
                     Ok(result) => {
@@ -313,6 +329,7 @@ impl TestServer {
         run_options: &ftest::RunOptions,
         test_component: Arc<Component>,
         test_stdout: &mut SocketLogWriter,
+        test_stderr: &mut SocketLogWriter,
     ) -> Result<ftest::Result_, RunTestError> {
         // Exit codes used by Rust's libtest runner.
         const TR_OK: i64 = 50;
@@ -349,7 +366,7 @@ impl TestServer {
 
         // run test.
         // Load bearing to hold job guard.
-        let (process, job, stdlogger) =
+        let (process, job, stdout_logger, stderr_logger) =
             launch_component_process::<RunTestError>(&test_component, args, test_invoke).await?;
 
         let test_exit_task = async {
@@ -364,11 +381,14 @@ impl TestServer {
             job.take().kill().unwrap();
         };
 
-        let logger_task = stdlogger.buffer_and_drain(test_stdout);
+        let stdout_logger_task = stdout_logger.buffer_and_drain(test_stdout);
+        let stderr_logger_task = stderr_logger.buffer_and_drain(test_stderr);
 
-        // Wait for test to exit and for the stdlogger to buffer and drain
-        let (logger_result, ()) = join(logger_task, test_exit_task).await;
-        logger_result?;
+        // Wait for test to exit and for the std loggers to buffer and drain
+        let (stdout_logger_result, stderr_logger_result, ()) =
+            join3(stdout_logger_task, stderr_logger_task, test_exit_task).await;
+        stdout_logger_result?;
+        stderr_logger_result?;
 
         let process_info = process.info().map_err(RunTestError::ProcessInfo)?;
 
@@ -379,7 +399,7 @@ impl TestServer {
             TR_FAILED => {
                 // Add a preceding newline so that this does not mix with test output, as
                 // test output might not contain a newline at end.
-                test_stdout.write_str("\ntest failed.\n").await?;
+                test_stderr.write_str("\ntest failed.\n").await?;
                 Ok(ftest::Result_ { status: Some(ftest::Status::Failed), ..ftest::Result_::EMPTY })
             }
             other => Err(RunTestError::UnexpectedReturnCode(other)),
@@ -445,31 +465,35 @@ async fn get_tests(
     }
 
     // Load bearing to hold job guard.
-    let (process, _job, stdlogger) =
+    let (process, _job, stdout_logger, stderr_logger) =
         launch_component_process::<EnumerationError>(&test_component, args, None).await?;
 
     // collect stdout in background before waiting for process termination.
-    let std_reader = LogStreamReader::new(stdlogger);
+    let stdout_reader = LogStreamReader::new(stdout_logger);
+    let stderr_reader = LogStreamReader::new(stderr_logger);
 
     fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
         .await
         .map_err(KernelError::ProcessExit)
         .unwrap();
 
-    let logs = std_reader.get_logs().await?;
-    // TODO(fxbug.dev/4610): logs might not be utf8, fix the code.
-    let output = from_utf8(&logs)?;
+    let stdout = stdout_reader.get_logs().await?;
+    let stdout = String::from_utf8_lossy(&stdout);
+
+    let stderr = stderr_reader.get_logs().await?;
+    let stderr = String::from_utf8_lossy(&stderr);
+
     let process_info = process.info().map_err(KernelError::ProcessInfo).unwrap();
     if process_info.return_code != 0 {
         // TODO(fxbug.dev/45858): Add a error logger to API so that we can display test stdout logs.
-        error!("Failed getting list of tests:\n{}", output);
+        error!("Failed getting list of tests:\n{}\n{}", stdout, stderr);
         return Err(EnumerationError::ListTest);
     }
 
     let mut tests = vec![];
     let regex = Regex::new(r"^(.*): test$").unwrap();
 
-    for test in output.split("\n") {
+    for test in stdout.split("\n") {
         if let Some(capture) = regex.captures(test) {
             if let Some(name) = capture.get(1) {
                 tests.push(name.as_str().into());
@@ -485,7 +509,7 @@ async fn launch_component_process<E>(
     component: &Component,
     args: Vec<String>,
     test_invoke: Option<String>,
-) -> Result<(zx::Process, launch::ScopedJob, LoggerStream), E>
+) -> Result<(zx::Process, launch::ScopedJob, LoggerStream, LoggerStream), E>
 where
     E: From<NamespaceError> + From<launch::LaunchError> + From<ComponentError>,
 {
@@ -503,7 +527,7 @@ where
         None => component.environ.clone(),
     };
 
-    Ok(launch::launch_process(launch::LaunchProcessArgs {
+    Ok(launch::launch_process_with_separate_std_handles(launch::LaunchProcessArgs {
         bin_path: &component.binary,
         process_name: &component.name,
         job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
