@@ -148,6 +148,9 @@ protocol ChildViewWatcher {
     /// cause both this channel and the Flatland channel that handed out ChildViewWatcher to be
     /// closed.
     ///
+    /// A `GetViewRef` call will hang if the View was created using `CreateView`, but returns the
+    /// View if the View was created using CreateView2. This is because `CreateView` does not mint
+    /// a ViewRef for that View.
     GetViewRef() -> (resource struct {
         view_ref fuchsia.ui.views.ViewRef;
     });
@@ -451,6 +454,8 @@ protocol Flatland {
     /// Lifecycle note. The lifetime of the ParentViewportWatcher channel is bound by the peer
     /// ViewportCreationToken. When the ViewportCreationToken dies, this ParentViewportWatcher
     /// channel is destroyed.
+    ///
+    /// Views created using `CreateView` will not be associated with a ViewRef.
     CreateView(resource struct {
         token fuchsia.ui.views.ViewCreationToken;
         parent_viewport_watcher server_end:ParentViewportWatcher;
