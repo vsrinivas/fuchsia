@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/cpp/cpp_fuzzer.gni")
 import("//build/test.gni")
+import("//build/testing/zbi_test.gni")
 import("//build/zircon/migrated_targets.gni")
 
 is_elf = current_os != "mac" && current_os != "win"
@@ -31,6 +32,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/relro.h",
     "lib/elfldltl/self.h",
     "lib/elfldltl/static-pie.h",
+    "lib/elfldltl/static-pie-with-vdso.h",
     "lib/elfldltl/symbol.h",
   ]
 
@@ -120,6 +122,74 @@ if (current_os == "linux") {
   }
 }
 
+if (is_fuchsia) {
+  static_library("static-pie") {
+    sources = [ "fuchsia-static-pie.cc" ]
+    configs += [ "//build/config/fuchsia:static-pie-config" ]
+    deps = [ "." ]
+
+    # Avoid libc references from assert() in libc++ header code.
+    defines = [ "NDEBUG=1" ]
+  }
+
+  test("fuchsia-static-pie-test") {
+    sources = [ "fuchsia-static-pie-test.cc" ]
+
+    # Avoid libc references from assert() in libc++ header code.
+    defines = [ "NDEBUG=1" ]
+
+    configs += [ "//build/config/fuchsia:static-pie-config" ]
+    if (zircon_toolchain == false) {
+      configs -= [ "//build/config/fuchsia:fdio_config" ]
+    }
+    disable_syslog_backend = true
+
+    ldflags = [
+      # The build system makes it impossible to avoid the libc dep.  But this
+      # can avoid it creating a spurious DT_NEEDED, though that's harmless
+      # enough since nothing looks at those without a dynamic linker.
+      "-Wl,--as-needed",
+
+      # A standalone binary should indicate its stack requirements.
+      # They should be minimal for this test.
+      "-Wl,-z,stack-size=0x1000",
+    ]
+
+    deps = [
+      ":static-pie",
+      "//src/zircon/lib/zircon",
+      "//zircon/third_party/ulib/musl/src/exit:abort",
+      "//zircon/third_party/ulib/musl/src/string:stdmem",
+    ]
+
+    exclude_toolchain_tags = [ "instrumented" ]
+  }
+}
+
+fuchsia_unittest_package("elfldltl-static-pie-test") {
+  deps = [
+    ":fuchsia-static-pie-test",
+    "//src/sys/testing/elftest",
+  ]
+}
+
+# Make that into a bootable ZBI with just the kernel.
+zbi_test("zbi-static-pie-test") {
+  args = [
+    "userboot=test/fuchsia-static-pie-test",
+    "kernel.enable-serial-syscalls=true",
+  ]
+
+  deps = [
+    ":fuchsia-static-pie-test",
+    "//zircon/kernel",
+  ]
+  assert_no_deps = [
+    "//zircon/system/core/*",
+    "//zircon/system/dev/*",
+  ]
+}
+
 fuchsia_unittest_package("elfldltl-tests") {
   deps = [ ":elfldltl-unittests" ]
 }
@@ -159,8 +229,10 @@ group("tests") {
 
   deps = [
     ":elfldltl-fuzzers",
+    ":elfldltl-static-pie-test",
     ":elfldltl-tests",
     ":elfldltl-unittests($host_toolchain)",
+    ":zbi-static-pie-test",
   ]
 
   if (host_os == "linux") {

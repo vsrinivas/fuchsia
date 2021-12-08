@@ -208,6 +208,7 @@ config("static-pie-config") {
   ]
   ldflags = [
     "-nostdlib",
+    "-nostartfiles",
     "-Wl,-no-dynamic-linker",
   ]
 }

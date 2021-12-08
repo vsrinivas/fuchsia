@@ -18,7 +18,13 @@ source_set("exit") {
     "//zircon/third_party/ulib/musl:musl_internal",
   ]
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  # When compiling for libc, the C functions should be exported, so don't
+  # compile with default hidden visibility.  The functions aren't annotated for
+  # export so that they can be compiled in non-libc contexts where their
+  # definitions need to have hidden visibility for hermetic linking.
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  }
 }
 
 source_set("abort") {
@@ -28,5 +34,8 @@ source_set("abort") {
     "//zircon/system/ulib/zircon-internal",
   ]
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  # See comment above.
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  }
 }

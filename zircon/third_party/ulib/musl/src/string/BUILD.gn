@@ -38,7 +38,18 @@ source_set("compiler") {
     ]
   }
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    # When compiling for libc, the C functions should be exported, so don't
+    # compile with default hidden visibility.  The functions aren't annotated
+    # for export so that they can be compiled in non-libc contexts where their
+    # definitions need to have hidden visibility for hermetic linking.
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    # When not compiling for libc, the C functions get the default hidden
+    # visibility like all other code.  But the assembly sources need -DHIDDEN
+    # to tell them to use hidden visibility.
+    defines = [ "HIDDEN=1" ]
+  }
 }
 
 source_set("stdmem") {
@@ -67,7 +78,11 @@ source_set("stdmem") {
     }
   }
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    defines = [ "HIDDEN=1" ]
+  }
 }
 
 source_set("extmem") {
@@ -84,7 +99,11 @@ source_set("extmem") {
     sources += [ "mempcpy.c" ]
   }
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    defines = [ "HIDDEN=1" ]
+  }
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -106,7 +125,11 @@ source_set("minimal_str") {
     ]
   }
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    defines = [ "HIDDEN=1" ]
+  }
 }
 
 source_set("stdstr") {
@@ -144,7 +167,11 @@ source_set("stdstr") {
     ]
   }
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    defines = [ "HIDDEN=1" ]
+  }
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -179,7 +206,11 @@ source_set("extstr") {
     ]
   }
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    defines = [ "HIDDEN=1" ]
+  }
 }
 
 source_set("bsd") {
@@ -193,7 +224,11 @@ source_set("bsd") {
     "swab.c",
   ]
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    defines = [ "HIDDEN=1" ]
+  }
 }
 
 source_set("wcs") {
@@ -222,7 +257,11 @@ source_set("wcs") {
     "wcswcs.c",
   ]
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    defines = [ "HIDDEN=1" ]
+  }
 }
 
 source_set("wmem") {
@@ -235,5 +274,9 @@ source_set("wmem") {
     "wmemset.c",
   ]
 
-  configs -= [ "//build/config:symbol_visibility_hidden" ]
+  if (zircon_toolchain != false) {
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  } else {
+    defines = [ "HIDDEN=1" ]
+  }
 }
