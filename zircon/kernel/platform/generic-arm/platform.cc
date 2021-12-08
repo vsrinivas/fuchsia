@@ -395,19 +395,7 @@ void ProcessZbiEarly() {
 
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
-    bool is_mexec_data = false;
     switch (header->type) {
-      case ZBI_TYPE_KERNEL_DRIVER:
-        // TODO(fxbug.dev/88112): This case list is being burned down as driver
-        // initialization logic is migrated to ArchDriverHandoff(Early|Late).
-        is_mexec_data = false;
-        switch (header->extra) {
-          case KDRV_ARM_GIC_V2:
-          case KDRV_ARM_GIC_V3:
-            is_mexec_data = true;
-            break;
-        }
-        break;
       case ZBI_TYPE_CMDLINE: {
         if (payload.empty()) {
           break;
@@ -424,18 +412,14 @@ void ProcessZbiEarly() {
         for (size_t i = 0; i < count; i++) {
           process_mem_range(mem_range++);
         }
-        is_mexec_data = true;
-        break;
+
+        auto result = mexec_data_image.Append(*header, zbitl::AsBytes(payload));
+        if (result.is_error()) {
+          printf("ProcessZbiEarly: failed to append memory ranges to mexec data ZBI: ");
+          zbitl::PrintViewError(result.error_value());
+        }
       }
     };
-
-    if (is_mexec_data) {
-      auto result = mexec_data_image.Append(*header, zbitl::AsBytes(payload));
-      if (result.is_error()) {
-        printf("ProcessZbiEarly: failed to append item to mexec data ZBI: ");
-        zbitl::PrintViewError(result.error_value());
-      }
-    }
   }
 
   if (auto result = view.take_error(); result.is_error()) {

@@ -10,11 +10,10 @@
 #include <zircon/boot/driver-config.h>
 
 #include <ktl/optional.h>
+#include <ktl/variant.h>
 
 // This holds (or points to) all arm64-specific data that is handed off from
 // physboot to the kernel proper at boot time.
-//
-// TODO(fxbug.dev/88059): Populate me.
 struct ArchPhysHandoff {
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_AMLOGIC_HDCP) payload.
   ktl::optional<dcfg_amlogic_hdcp_driver_t> amlogic_hdcp_driver;
@@ -24,6 +23,9 @@ struct ArchPhysHandoff {
 
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER) payload.
   ktl::optional<dcfg_arm_generic_timer_driver_t> generic_timer_driver;
+
+  // (ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2/KDRV_ARM_GIC_V3) payload.
+  ktl::variant<ktl::monostate, dcfg_arm_gicv2_driver_t, dcfg_arm_gicv3_driver_t> gic_driver;
 
   // (ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI) payload.
   ktl::optional<dcfg_arm_psci_driver_t> psci_driver;

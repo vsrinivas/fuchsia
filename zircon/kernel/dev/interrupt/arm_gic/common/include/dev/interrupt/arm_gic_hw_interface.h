@@ -58,7 +58,4 @@ uint8_t gic_get_num_lrs();
 // Registers the ops of the GIC driver initialized with HW interface layer.
 void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops);
 
-// Returns whether the GIC driver has been registered.
-bool arm_gic_is_registered();
-
 #endif  // ZIRCON_KERNEL_DEV_INTERRUPT_ARM_GIC_COMMON_INCLUDE_DEV_INTERRUPT_ARM_GIC_HW_INTERFACE_H_

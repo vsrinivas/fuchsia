@@ -10,6 +10,9 @@
 #include <dev/hdcp/amlogic_s912/init.h>
 #include <dev/hw_rng/amlogic_rng/init.h>
 #include <dev/hw_watchdog/generic32/init.h>
+#include <dev/init.h>
+#include <dev/interrupt/arm_gicv2_init.h>
+#include <dev/interrupt/arm_gicv3_init.h>
 #include <dev/psci.h>
 #include <dev/timer/arm_generic.h>
 #include <dev/uart/amlogic_s905/init.h>
@@ -21,6 +24,12 @@
 #include <phys/arch/arch-handoff.h>
 
 namespace {
+
+// Overloads to satisfy the degenerate 'no config present' case in
+// `ktl::visit(..., arch_handoff.gic_driver)` below. Related overloads defined
+// in <dev/interrupt/arm_gicv{2,3}_init.h>.
+void ArmGicInitEarly(const ktl::monostate& no_config) {}
+void ArmGicInitLate(const ktl::monostate& no_config) {}
 
 // Overloads for early UART initialization below.
 void UartInitEarly(uint32_t extra, const uart::null::Driver::config_type& config) {}
@@ -62,6 +71,10 @@ void UartInitLate(uint32_t extra) {
 }  // namespace
 
 void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
+  // Configure the GIC first so that the remaining drivers can freely register
+  // interrupt handlers.
+  ktl::visit([](const auto& config) { ArmGicInitEarly(config); }, arch_handoff.gic_driver);
+
   if (arch_handoff.generic_32bit_watchdog_driver) {
     Generic32BitWatchdogEarlyInit(arch_handoff.generic_32bit_watchdog_driver.value());
   }
@@ -76,6 +89,9 @@ void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
 }
 
 void ArchDriverHandoffLate(const ArchPhysHandoff& arch_handoff) {
+  // First, as above.
+  ktl::visit([](const auto& config) { ArmGicInitLate(config); }, arch_handoff.gic_driver);
+
   if (arch_handoff.amlogic_hdcp_driver) {
     AmlogicS912HdcpInit(arch_handoff.amlogic_hdcp_driver.value());
   }

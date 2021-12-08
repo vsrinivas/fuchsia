@@ -23,11 +23,11 @@
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
+#include <dev/interrupt/arm_gicv3_init.h>
 #include <kernel/cpu.h>
 #include <kernel/stats.h>
 #include <kernel/thread.h>
 #include <lk/init.h>
-#include <pdev/driver.h>
 #include <pdev/interrupt.h>
 #include <vm/vm.h>
 
@@ -36,7 +36,8 @@
 #include <arch/arm64.h>
 #define IFRAME_PC(frame) ((frame)->elr)
 
-// values read from zbi
+// Values read from the config.
+static uint64_t mmio_phys = 0;
 vaddr_t arm_gicv3_gic_base = 0;
 uint64_t arm_gicv3_gicd_offset = 0;
 uint64_t arm_gicv3_gicr_offset = 0;
@@ -529,35 +530,27 @@ static const struct pdev_interrupt_ops gic_ops = {
     .msi_register_handler = gic_msi_register_handler,
 };
 
-static void arm_gic_v3_init_early(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
-  auto driver = static_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
-  ASSERT(driver->mmio_phys);
+void ArmGicInitEarly(const dcfg_arm_gicv3_driver_t& config) {
+  ASSERT(config.mmio_phys);
 
   LTRACE_ENTRY;
 
-  // If a GIC driver is already registered to the GIC interface it's means we are running GICv2
-  // and we do not need to initialize GICv3. Since we have added both GICv3 and GICv2 in board.mdi,
-  // both drivers are initialized
-  if (arm_gic_is_registered()) {
-    return;
-  }
-
-  if (driver->mx8_gpr_phys) {
+  if (config.mx8_gpr_phys) {
     printf("arm-gic-v3: Applying Errata e11171 for NXP MX8!\n");
-    mx8_gpr_virt = periph_paddr_to_vaddr(driver->mx8_gpr_phys);
+    mx8_gpr_virt = periph_paddr_to_vaddr(config.mx8_gpr_phys);
     ASSERT(mx8_gpr_virt);
   }
 
-  arm_gicv3_gic_base = periph_paddr_to_vaddr(driver->mmio_phys);
+  mmio_phys = config.mmio_phys;
+  arm_gicv3_gic_base = periph_paddr_to_vaddr(mmio_phys);
   ASSERT(arm_gicv3_gic_base);
-  arm_gicv3_gicd_offset = driver->gicd_offset;
-  arm_gicv3_gicr_offset = driver->gicr_offset;
-  arm_gicv3_gicr_stride = driver->gicr_stride;
-  ipi_base = driver->ipi_base;
+  arm_gicv3_gicd_offset = config.gicd_offset;
+  arm_gicv3_gicr_offset = config.gicr_offset;
+  arm_gicv3_gicr_stride = config.gicr_stride;
+  ipi_base = config.ipi_base;
 
   if (gic_init() != ZX_OK) {
-    if (driver->optional) {
+    if (config.optional) {
       // failed to detect gic v3 but it's marked optional. continue
       return;
     }
@@ -583,7 +576,9 @@ static void arm_gic_v3_init_early(const void* driver_data, uint32_t length) {
   LTRACE_EXIT;
 }
 
-void arm_gic_v3_init_deny_regions(const void* driver_data, uint32_t length) {
+void ArmGicInitLate(const dcfg_arm_gicv3_driver_t& config) {
+  ASSERT(mmio_phys);
+
   // Place the physical address of the GICv3 registers on the MMIO deny list.
   // Users will not be able to create MMIO resources which permit mapping of the
   // GIC registers, even if they have access to the root resource.
@@ -591,20 +586,11 @@ void arm_gic_v3_init_deny_regions(const void* driver_data, uint32_t length) {
   // Unlike GICv2, only the distributor and re-distributor registers are memory
   // mapped. There is one block of distributor registers for the system, and
   // one block of redistributor registers for each CPU.
-  ASSERT(length >= sizeof(dcfg_arm_gicv3_driver_t));
-  auto driver = static_cast<const dcfg_arm_gicv3_driver_t*>(driver_data);
-  ASSERT(driver->mmio_phys);
-
-  root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicd_offset, GICD_REG_SIZE,
+  root_resource_filter_add_deny_region(mmio_phys + arm_gicv3_gicd_offset, GICD_REG_SIZE,
                                        ZX_RSRC_KIND_MMIO);
   for (cpu_num_t i = 0; i < arch_max_num_cpus(); i++) {
     root_resource_filter_add_deny_region(
-        driver->mmio_phys + driver->gicr_offset + (driver->gicr_stride * i), GICR_REG_SIZE,
+        mmio_phys + arm_gicv3_gicr_offset + (arm_gicv3_gicr_stride * i), GICR_REG_SIZE,
         ZX_RSRC_KIND_MMIO);
   }
 }
-
-LK_PDEV_INIT(arm_gic_v3_init_early, KDRV_ARM_GIC_V3, arm_gic_v3_init_early,
-             LK_INIT_LEVEL_PLATFORM_EARLY)
-LK_PDEV_INIT(arm_gic_v3_init, KDRV_ARM_GIC_V3, arm_gic_v3_init_deny_regions,
-             LK_INIT_LEVEL_PLATFORM + 1)

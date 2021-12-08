@@ -26,6 +26,7 @@
 #include <arch/regs.h>
 #include <dev/interrupt.h>
 #include <dev/interrupt/arm_gic_common.h>
+#include <dev/interrupt/arm_gicv2_init.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 #include <dev/interrupt/arm_gicv2m.h>
 #include <dev/interrupt/arm_gicv2m_msi.h>
@@ -34,7 +35,6 @@
 #include <kernel/thread.h>
 #include <ktl/iterator.h>
 #include <lk/init.h>
-#include <pdev/driver.h>
 #include <pdev/interrupt.h>
 
 #define LOCAL_TRACE 0
@@ -44,8 +44,10 @@
 
 static SpinLock gicd_lock;
 
-// values read from zbi
+// Values read from the config.
 vaddr_t arm_gicv2_gic_base = 0;
+static uint64_t mmio_phys = 0;
+static uint64_t msi_frame_phys = 0;
 uint64_t arm_gicv2_gicd_offset = 0;
 uint64_t arm_gicv2_gicc_offset = 0;
 uint64_t arm_gicv2_gich_offset = 0;
@@ -451,21 +453,21 @@ static const struct pdev_interrupt_ops gic_ops = {
     .msi_register_handler = arm_gicv2m_msi_register_handler,
 };
 
-static void arm_gic_v2_init_early(const void* driver_data, uint32_t length) {
-  ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
-  auto driver = static_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
-  ASSERT(driver->mmio_phys);
+void ArmGicInitEarly(const dcfg_arm_gicv2_driver_t& config) {
+  ASSERT(config.mmio_phys);
 
-  arm_gicv2_gic_base = periph_paddr_to_vaddr(driver->mmio_phys);
+  arm_gicv2_gic_base = periph_paddr_to_vaddr(config.mmio_phys);
   ASSERT(arm_gicv2_gic_base);
-  arm_gicv2_gicd_offset = driver->gicd_offset;
-  arm_gicv2_gicc_offset = driver->gicc_offset;
-  arm_gicv2_gich_offset = driver->gich_offset;
-  arm_gicv2_gicv_offset = driver->gicv_offset;
-  ipi_base = driver->ipi_base;
+  mmio_phys = config.mmio_phys;
+  msi_frame_phys = config.msi_frame_phys;
+  arm_gicv2_gicd_offset = config.gicd_offset;
+  arm_gicv2_gicc_offset = config.gicc_offset;
+  arm_gicv2_gich_offset = config.gich_offset;
+  arm_gicv2_gicv_offset = config.gicv_offset;
+  ipi_base = config.ipi_base;
 
   if (arm_gic_init() != ZX_OK) {
-    if (driver->optional) {
+    if (config.optional) {
       // failed to detect gic v2 but it's marked optional. continue
       return;
     }
@@ -477,13 +479,13 @@ static void arm_gic_v2_init_early(const void* driver_data, uint32_t length) {
           GICREG(0, GICC_IIDR), ipi_base, arm_gicv2_gich_offset, arm_gicv2_gicv_offset);
 
   // pass the list of physical and virtual addresses for the GICv2m register apertures
-  if (driver->msi_frame_phys) {
+  if (msi_frame_phys) {
     // the following arrays must be static because arm_gicv2m_init stashes the pointer
     static paddr_t GICV2M_REG_FRAMES[] = {0};
     static vaddr_t GICV2M_REG_FRAMES_VIRT[] = {0};
 
-    GICV2M_REG_FRAMES[0] = driver->msi_frame_phys;
-    GICV2M_REG_FRAMES_VIRT[0] = periph_paddr_to_vaddr(driver->msi_frame_phys);
+    GICV2M_REG_FRAMES[0] = msi_frame_phys;
+    GICV2M_REG_FRAMES_VIRT[0] = periph_paddr_to_vaddr(msi_frame_phys);
     ASSERT(GICV2M_REG_FRAMES_VIRT[0]);
     arm_gicv2m_init(GICV2M_REG_FRAMES, GICV2M_REG_FRAMES_VIRT, ktl::size(GICV2M_REG_FRAMES));
   }
@@ -501,33 +503,25 @@ static void arm_gic_v2_init_early(const void* driver_data, uint32_t length) {
   gicv2_hw_interface_register();
 }
 
-static void arm_gic_v2_init_deny_regions(const void* driver_data, uint32_t length) {
+void ArmGicInitLate(const dcfg_arm_gicv2_driver_t& config) {
+  ASSERT(mmio_phys);
+
   // Place the physical address of the GICv2 registers on the MMIO deny list.
   // Users will not be able to create MMIO resources which permit mapping of the
   // GIC registers, even if they have access to the root resource.
-  ASSERT(length >= sizeof(dcfg_arm_gicv2_driver_t));
-  auto driver = static_cast<const dcfg_arm_gicv2_driver_t*>(driver_data);
-  ASSERT(driver->mmio_phys);
-
-  root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicc_offset, GICC_REG_SIZE,
+  root_resource_filter_add_deny_region(mmio_phys + arm_gicv2_gicc_offset, GICC_REG_SIZE,
                                        ZX_RSRC_KIND_MMIO);
-  root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicd_offset, GICD_REG_SIZE,
+  root_resource_filter_add_deny_region(mmio_phys + arm_gicv2_gicd_offset, GICD_REG_SIZE,
                                        ZX_RSRC_KIND_MMIO);
-  if (driver->gich_offset) {
-    root_resource_filter_add_deny_region(driver->mmio_phys + driver->gich_offset, GICH_REG_SIZE,
+  if (arm_gicv2_gich_offset) {
+    root_resource_filter_add_deny_region(mmio_phys + arm_gicv2_gich_offset, GICH_REG_SIZE,
                                          ZX_RSRC_KIND_MMIO);
   }
-  if (driver->gicv_offset) {
-    root_resource_filter_add_deny_region(driver->mmio_phys + driver->gicv_offset, GICV_REG_SIZE,
+  if (arm_gicv2_gicv_offset) {
+    root_resource_filter_add_deny_region(mmio_phys + arm_gicv2_gicv_offset, GICV_REG_SIZE,
                                          ZX_RSRC_KIND_MMIO);
   }
-  if (driver->msi_frame_phys) {
-    root_resource_filter_add_deny_region(driver->msi_frame_phys, GICV2M_FRAME_REG_SIZE,
-                                         ZX_RSRC_KIND_MMIO);
+  if (msi_frame_phys) {
+    root_resource_filter_add_deny_region(msi_frame_phys, GICV2M_FRAME_REG_SIZE, ZX_RSRC_KIND_MMIO);
   }
 }
-
-LK_PDEV_INIT(arm_gic_v2_init_early, KDRV_ARM_GIC_V2, arm_gic_v2_init_early,
-             LK_INIT_LEVEL_PLATFORM_EARLY)
-LK_PDEV_INIT(arm_gic_v2_init, KDRV_ARM_GIC_V2, arm_gic_v2_init_deny_regions,
-             LK_INIT_LEVEL_PLATFORM + 1)

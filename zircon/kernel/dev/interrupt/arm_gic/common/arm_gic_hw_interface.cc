@@ -34,5 +34,3 @@ uint8_t gic_get_num_pres() { return gic_ops->get_num_pres(); }
 uint8_t gic_get_num_lrs() { return gic_ops->get_num_lrs(); }
 
 void arm_gic_hw_interface_register(const struct arm_gic_hw_interface_ops* ops) { gic_ops = ops; }
-
-bool arm_gic_is_registered() { return gic_ops != nullptr; }
