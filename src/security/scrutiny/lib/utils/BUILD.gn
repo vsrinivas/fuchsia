@@ -21,23 +21,24 @@ if (is_host) {
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:pathdiff",
       "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:thiserror",
     ]
 
-    test_deps = [
-      "//third_party/rust_crates:maplit",
-      "//third_party/rust_crates:tempfile",
-    ]
+    test_deps = [ "//third_party/rust_crates:maplit" ]
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
+      "//src/lib/digest",
       "//src/security/scrutiny/lib/utils/ffi-bridge",
+      "//src/storage/blobfs",
       "//third_party/zstd",
     ]
 
     sources = [
       "src/artifact.rs",
       "src/blobfs.rs",
+      "src/blobfs_export.rs",
       "src/bootfs.rs",
       "src/env.rs",
       "src/fvm.rs",

@@ -4,6 +4,7 @@
 
 pub mod artifact;
 pub mod blobfs;
+pub mod blobfs_export;
 pub mod bootfs;
 pub mod env;
 pub mod fvm;
