@@ -897,7 +897,7 @@ void InputSystem::InjectMouseEventHitTested(const InternalMouseEvent& event,
     // Button down on an unlatched stream -> latch it to the top-most view.
     if (button_down) {
       mouse_receiver.latched = true;
-      // TODO(fxbug.dev/80994): Change focus.
+      request_focus_(mouse_receiver.view_koid);
     }
   }
 

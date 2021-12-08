@@ -216,6 +216,23 @@ fuchsia_test_component("screenshot_integration_test") {
   deps = [ ":screenshot_integration_test_bin" ]
 }
 
+executable("flatland_mouse_integration_test_bin") {
+  testonly = true
+  sources = [ "flatland_mouse_integration_test.cc" ]
+  deps = [
+    ":common_deps",
+    "//sdk//fidl/fuchsia.ui.composition",
+    "//sdk//fidl/fuchsia.ui.pointer",
+    "//sdk//fidl/fuchsia.ui.pointerinjector",
+  ]
+}
+
+fuchsia_test_component("flatland_mouse_integration_test") {
+  component_name = "flatland_mouse_integration_test"
+  manifest = "meta/flatland_mouse_integration_test.cmx"
+  deps = [ ":flatland_mouse_integration_test_bin" ]
+}
+
 fuchsia_test_package("gfx_integration_tests") {
   package_deps_for_infra_only = [ "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider" ]
   test_components = [
@@ -239,6 +256,7 @@ fuchsia_test_package("flatland_integration_tests") {
     ":flatland_touch_integration_test",
     ":flatland_focus_integration_test",
     ":screenshot_integration_test",
+    ":flatland_mouse_integration_test",
   ]
   test_specs = {
     # TODO(fxbug.dev/71344): Should have the same environments as "gfx_integration_tests" above, but
