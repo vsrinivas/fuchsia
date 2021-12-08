@@ -10,6 +10,7 @@ fidl("fuchsia.diagnostics") {
   sources = [
     "format.fidl",
     "interest.fidl",
+    "log_settings.fidl",
     "reader.fidl",
     "selector.fidl",
     "severity.fidl",

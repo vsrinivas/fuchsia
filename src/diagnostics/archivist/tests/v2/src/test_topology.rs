@@ -77,6 +77,12 @@ pub async fn create(opts: Options) -> Result<RealmBuilder, Error> {
         )
         .await?
         .add_route(
+            RouteBuilder::protocol("fuchsia.diagnostics.LogSettings")
+                .source(RouteEndpoint::component("test/archivist"))
+                .targets(vec![RouteEndpoint::AboveRoot]),
+        )
+        .await?
+        .add_route(
             RouteBuilder::protocol("fuchsia.logger.LogSink")
                 .source(RouteEndpoint::component("test/archivist"))
                 .targets(vec![RouteEndpoint::AboveRoot]),

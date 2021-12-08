@@ -52,6 +52,24 @@ rustc_binary("log_and_crash_component_bin") {
   sources = [ "src/log_and_crash.rs" ]
 }
 
+rustc_binary("log_on_interest_bin") {
+  testonly = true
+  output_name = "log_on_interest"
+  edition = "2018"
+  source_root = "src/log_on_interest.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/log_on_interest.rs" ]
+}
+
 fuchsia_component("stub_inspect_component") {
   testonly = true
   deps = [ ":stub_inspect_component_bin" ]
@@ -76,6 +94,13 @@ fuchsia_component("log_and_crash_component") {
   testonly = true
   deps = [ ":log_and_crash_component_bin" ]
   manifest = "meta/log-and-crash.cml"
+}
+
+fuchsia_component("log_on_interest_component") {
+  component_name = "log-on-interest"
+  testonly = true
+  deps = [ ":log_on_interest_bin" ]
+  manifest = "meta/log-on-interest.cml"
 }
 
 rustc_binary("socket_puppet_bin") {
@@ -132,6 +157,7 @@ group("components") {
     ":component_with_children",
     ":log_and_crash_component",
     ":log_and_exit_component",
+    ":log_on_interest_component",
     ":socket-puppet",
     ":stdio-puppet",
     ":stub_inspect_component",

@@ -77,16 +77,6 @@ type LogFilterOptions = struct {
     tags vector<string:MAX_TAG_LEN_BYTES>:MAX_TAGS;
 };
 
-/// Max number of LogInterestSelectors that can be specified via a listener.
-const MAX_LOG_SELECTORS uint8 = 5;
-
-/// Conveyance to couple a specified Interest with its designated target,
-/// specified via a ComponentSelector.
-type LogInterestSelector = struct {
-    selector fuchsia.diagnostics.ComponentSelector;
-    interest fuchsia.diagnostics.Interest;
-};
-
 /// Max tags that will be attached to a LogMessage.
 const MAX_TAGS_PER_LOG_MESSAGE uint8 = 5;
 
@@ -134,7 +124,8 @@ protocol Log {
     ListenSafeWithSelectors(resource struct {
         log_listener client_end:LogListenerSafe;
         options box<LogFilterOptions>;
-        selectors vector<LogInterestSelector>:MAX_LOG_SELECTORS;
+        selectors
+                vector<fuchsia.diagnostics.LogInterestSelector>:fuchsia.diagnostics.MAX_LOG_SELECTORS;
     });
 };
 

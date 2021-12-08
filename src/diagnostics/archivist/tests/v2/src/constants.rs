@@ -26,5 +26,7 @@ pub const LOG_AND_EXIT_COMPONENT_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/log-and-exit.cm";
 pub const STUB_INSPECT_COMPONENT_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
+pub const LOGGER_COMPONENT_FOR_INTEREST_URL: &str =
+    "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/log-on-interest.cm";
 pub const STDIO_PUPPET_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stdio-puppet.cm";

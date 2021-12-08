@@ -191,6 +191,7 @@ impl Archivist {
     /// * `log_connector` - If provided, install log connector.
     pub async fn install_log_services(&mut self, opts: LogOpts) -> &mut Self {
         let data_repo_1 = self.data_repo().clone();
+        let data_repo_2 = self.data_repo().clone();
         let listen_sender = self.listen_sender.clone();
 
         let unattributed_log_sink_source = UnattributedLogSinkSource::new();
@@ -204,6 +205,16 @@ impl Archivist {
             .add_fidl_service(move |stream| {
                 debug!("fuchsia.logger.Log connection");
                 data_repo_1.clone().handle_log(stream, listen_sender.clone());
+            })
+            .add_fidl_service(move |stream| {
+                debug!("fuchsia.diagnostics.LogSettings connection");
+                let data_repo_for_task = data_repo_2.clone();
+                fasync::Task::spawn(async move {
+                    data_repo_for_task.handle_log_settings(stream).await.unwrap_or_else(|err| {
+                        error!(?err, "Failed to handle LogSettings");
+                    });
+                })
+                .detach();
             })
             .add_fidl_service(move |stream| {
                 debug!("unattributed fuchsia.logger.LogSink connection");

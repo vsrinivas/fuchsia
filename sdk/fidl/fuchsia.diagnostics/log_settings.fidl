@@ -1,0 +1,31 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.diagnostics;
+
+/// Max number of LogInterestSelectors that can be specified via a listener.
+const MAX_LOG_SELECTORS uint8 = 64;
+
+/// A specified Interest coupled with its designated target,
+type LogInterestSelector = struct {
+    /// Matches the components for which the interest will be requested.
+    selector ComponentSelector;
+
+    /// The interest level that will be sent to components matching the selector.
+    interest Interest;
+};
+
+/// This protocol allows clients to modify the logging behavior of components
+/// in the system.
+@discoverable
+protocol LogSettings {
+    /// Requests a change in interest for the matched components.
+    /// Sending new requests will apply the new interest to the matched
+    /// components without undoing the previous request effects.
+    /// TODO(fxbug.dev/88205): All effects of this method are reverted as soon as the protocol
+    /// is closed.
+    RegisterInterest(struct {
+        selectors vector<LogInterestSelector>:MAX_LOG_SELECTORS;
+    });
+};
