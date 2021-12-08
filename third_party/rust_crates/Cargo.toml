@@ -27,7 +27,7 @@ aes-gcm = "0.9"
 ansi_term = "0.11.0"
 anyhow = "1.0.38"
 arbitrary = { version = "0.4.0", features = ["derive"] }
-argh = "0.1.5"
+argh = "0.1.7"
 arrayvec = "0.7.1"
 async-channel = "1.6.1"
 async-lock = "2.3"

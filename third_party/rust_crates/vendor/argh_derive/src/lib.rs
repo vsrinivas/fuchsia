@@ -16,7 +16,7 @@ use {
     proc_macro2::{Span, TokenStream},
     quote::{quote, quote_spanned, ToTokens},
     std::str::FromStr,
-    syn::spanned::Spanned,
+    syn::{spanned::Spanned, LitStr},
 };
 
 mod errors;
@@ -155,7 +155,7 @@ impl<'a> StructField<'a> {
                     let tokens: TokenStream = tokens
                         .into_iter()
                         .map(|mut tree| {
-                            tree.set_span(default.span().clone());
+                            tree.set_span(default.span());
                             tree
                         })
                         .collect();
@@ -202,6 +202,10 @@ impl<'a> StructField<'a> {
         };
 
         Some(StructField { field, attrs, kind, optionality, ty_without_wrapper, name, long_name })
+    }
+
+    pub(crate) fn arg_name(&self) -> String {
+        self.attrs.arg_name.as_ref().map(LitStr::value).unwrap_or_else(|| self.name.to_string())
     }
 }
 
@@ -257,7 +261,7 @@ fn impl_from_args_struct(
         #top_or_sub_cmd_impl
     };
 
-    trait_impl.into()
+    trait_impl
 }
 
 fn impl_from_args_struct_from_args<'a>(
@@ -297,7 +301,7 @@ fn impl_from_args_struct_from_args<'a>(
 
     let impl_span = Span::call_site();
 
-    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span.clone());
+    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span);
 
     let append_missing_requirements =
         append_missing_requirements(&missing_requirements_ident, &fields);
@@ -319,7 +323,7 @@ fn impl_from_args_struct_from_args<'a>(
     };
 
     // Identifier referring to a value containing the name of the current command as an `&[&str]`.
-    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span.clone());
+    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span);
     let help = help::help(errors, cmd_name_str_array_ident, type_attrs, &fields, subcommand);
 
     let method_impl = quote_spanned! { impl_span =>
@@ -362,7 +366,7 @@ fn impl_from_args_struct_from_args<'a>(
         }
     };
 
-    method_impl.into()
+    method_impl
 }
 
 fn impl_from_args_struct_redact_arg_values<'a>(
@@ -403,7 +407,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
 
     let impl_span = Span::call_site();
 
-    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span.clone());
+    let missing_requirements_ident = syn::Ident::new("__missing_requirements", impl_span);
 
     let append_missing_requirements =
         append_missing_requirements(&missing_requirements_ident, &fields);
@@ -431,11 +435,11 @@ fn impl_from_args_struct_redact_arg_values<'a>(
     };
 
     // Identifier referring to a value containing the name of the current command as an `&[&str]`.
-    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span.clone());
+    let cmd_name_str_array_ident = syn::Ident::new("__cmd_name", impl_span);
     let help = help::help(errors, cmd_name_str_array_ident, type_attrs, &fields, subcommand);
 
     let method_impl = quote_spanned! { impl_span =>
-        fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> Result<Vec<String>, argh::EarlyExit> {
+        fn redact_arg_values(__cmd_name: &[&str], __args: &[&str]) -> std::result::Result<Vec<String>, argh::EarlyExit> {
             #( #init_fields )*
 
             argh::parse_struct_args(
@@ -476,7 +480,7 @@ fn impl_from_args_struct_redact_arg_values<'a>(
         }
     };
 
-    method_impl.into()
+    method_impl
 }
 
 /// Ensures that only the last positional arg is non-required.
@@ -622,8 +626,17 @@ fn declare_local_storage_for_redacted_fields<'a>(
                 }
             }
             FieldKind::Option => {
+                let field_slot_type = match field.optionality {
+                    Optionality::Repeating => {
+                        quote! { std::vec::Vec<String> }
+                    }
+                    Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
+                        quote! { std::option::Option<String> }
+                    }
+                };
+
                 quote! {
-                    let mut #field_name: argh::ParseValueSlotTy::<Option<String>, String> =
+                    let mut #field_name: argh::ParseValueSlotTy::<#field_slot_type, String> =
                         argh::ParseValueSlotTy {
                         slot: std::default::Default::default(),
                         parse_func: |arg, _| { Ok(arg.to_string()) },
@@ -640,12 +653,12 @@ fn declare_local_storage_for_redacted_fields<'a>(
                     }
                 };
 
-                let long_name = field.name.to_string();
+                let arg_name = field.arg_name();
                 quote! {
                     let mut #field_name: argh::ParseValueSlotTy::<#field_slot_type, String> =
                         argh::ParseValueSlotTy {
                         slot: std::default::Default::default(),
-                        parse_func: |_, _| { Ok(#long_name.to_string()) },
+                        parse_func: |_, _| { Ok(#arg_name.to_string()) },
                     };
                 }
             }
@@ -664,13 +677,27 @@ fn unwrap_redacted_fields<'a>(
         let field_name = field.name;
 
         match field.kind {
-            FieldKind::Switch | FieldKind::Option => {
+            FieldKind::Switch => {
                 quote! {
                     if let Some(__field_name) = #field_name.slot {
                         __redacted.push(__field_name);
                     }
                 }
             }
+            FieldKind::Option => match field.optionality {
+                Optionality::Repeating => {
+                    quote! {
+                        __redacted.extend(#field_name.slot.into_iter());
+                    }
+                }
+                Optionality::None | Optionality::Optional | Optionality::Defaulted(_) => {
+                    quote! {
+                        if let Some(__field_name) = #field_name.slot {
+                            __redacted.push(__field_name);
+                        }
+                    }
+                }
+            },
             FieldKind::Positional => {
                 quote! {
                     __redacted.extend(#field_name.slot.into_iter());
@@ -718,7 +745,7 @@ fn append_missing_requirements<'a>(
         match field.kind {
             FieldKind::Switch => unreachable!("switches are always optional"),
             FieldKind::Positional => {
-                let name = field.name.to_string();
+                let name = field.arg_name();
                 quote! {
                     if #field_name.slot.is_none() {
                         #mri.missing_positional_arg(#name)

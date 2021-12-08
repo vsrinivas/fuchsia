@@ -29,7 +29,9 @@ pub(crate) fn help(
     let mut format_lit = "Usage: {command_name}".to_string();
 
     let positional = fields.iter().filter(|f| f.kind == FieldKind::Positional);
-    for arg in positional {
+    let mut has_positional = false;
+    for arg in positional.clone() {
+        has_positional = true;
         format_lit.push(' ');
         positional_usage(&mut format_lit, arg);
     }
@@ -56,6 +58,14 @@ pub(crate) fn help(
 
     let description = require_description(errors, Span::call_site(), &ty_attrs.description, "type");
     format_lit.push_str(&description);
+
+    if has_positional {
+        format_lit.push_str(SECTION_SEPARATOR);
+        format_lit.push_str("Positional Arguments:");
+        for arg in positional {
+            positional_description(&mut format_lit, arg);
+        }
+    }
 
     format_lit.push_str(SECTION_SEPARATOR);
     format_lit.push_str("Options:");
@@ -126,7 +136,8 @@ fn positional_usage(out: &mut String, field: &StructField<'_>) {
         out.push('[');
     }
     out.push('<');
-    out.push_str(&field.name.to_string());
+    let name = field.arg_name();
+    out.push_str(&name);
     if field.optionality == Optionality::Repeating {
         out.push_str("...");
     }
@@ -193,6 +204,23 @@ Add a doc comment or an `#[argh(description = \"...\")]` attribute.",
         );
         "".to_string()
     })
+}
+
+/// Describes a positional argument like this:
+///  hello       positional argument description
+fn positional_description(out: &mut String, field: &StructField<'_>) {
+    let field_name = field.arg_name();
+
+    let mut description = String::from("");
+    if let Some(desc) = &field.attrs.description {
+        description = desc.content.value().trim().to_owned();
+    }
+    positional_description_format(out, &field_name, &description)
+}
+
+fn positional_description_format(out: &mut String, name: &str, description: &str) {
+    let info = argh_shared::CommandInfo { name: &*name, description };
+    argh_shared::write_description(out, &info);
 }
 
 /// Describes an option like this:
