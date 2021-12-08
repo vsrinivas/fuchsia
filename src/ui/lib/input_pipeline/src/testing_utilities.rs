@@ -51,6 +51,27 @@ pub fn create_keyboard_input_report(
     }
 }
 
+/// Creates a [input_device::InputEvent] from the provided [keyboard_binding::KeyboardEvent].
+///
+/// # Parameters
+/// - `keyboard_event`: The keyboard event in question.
+/// - `event_time`: The timestamp in nanoseconds when the event was recorded.
+/// - `handled`: Whether the event has been consumed by an upstream handler.
+#[cfg(test)]
+pub fn create_from_keyboard_event(
+    keyboard_event: keyboard_binding::KeyboardEvent,
+    event_time: input_device::EventTime,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+    handled: input_device::Handled,
+) -> input_device::InputEvent {
+    input_device::InputEvent {
+        device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
+        device_descriptor: device_descriptor.clone(),
+        event_time,
+        handled,
+    }
+}
+
 /// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys, meaning, and handled state.
 ///
 /// # Parameters
@@ -74,12 +95,7 @@ pub fn create_keyboard_event_with_handled(
         .into_with_modifiers(modifiers)
         .into_with_keymap(keymap)
         .into_with_key_meaning(key_meaning);
-    input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Keyboard(keyboard_event),
-        device_descriptor: device_descriptor.clone(),
-        event_time,
-        handled,
-    }
+    create_from_keyboard_event(keyboard_event, event_time, device_descriptor, handled)
 }
 
 /// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys and meaning.
@@ -102,17 +118,12 @@ pub fn create_keyboard_event_with_key_meaning_and_repeat_sequence(
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
     repeat_sequence: u64,
 ) -> input_device::InputEvent {
-    let device_event = keyboard_binding::KeyboardEvent::new(key, event_type)
+    let event = keyboard_binding::KeyboardEvent::new(key, event_type)
         .into_with_modifiers(modifiers)
         .into_with_key_meaning(key_meaning)
         .into_with_keymap(keymap)
         .into_with_repeat_sequence(repeat_sequence);
-    input_device::InputEvent {
-        device_event: input_device::InputDeviceEvent::Keyboard(device_event),
-        device_descriptor: device_descriptor.clone(),
-        event_time,
-        handled: input_device::Handled::No,
-    }
+    create_from_keyboard_event(event, event_time, device_descriptor, input_device::Handled::No)
 }
 
 /// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys and meaning.

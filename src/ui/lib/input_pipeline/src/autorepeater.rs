@@ -23,6 +23,7 @@ use crate::input_device::{
 };
 use crate::keyboard_binding::KeyboardEvent;
 use anyhow::{anyhow, Context, Result};
+use fidl_fuchsia_settings as fsettings;
 use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
 use fuchsia_async::{Task, Time, Timer};
 use fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info, fx_log_warn};
@@ -33,7 +34,10 @@ use std::cell::RefCell;
 use std::convert::TryInto;
 use std::rc::Rc;
 
-struct Settings {
+/// Typed autorepeat settings.  Use [Default::default()] and the `into_with_*`
+/// to create a new instance.
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub struct Settings {
     // The time delay before autorepeat kicks in.
     delay: Duration,
     // The average period between two successive autorepeats.  A reciprocal of
@@ -43,7 +47,26 @@ struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { delay: Duration::from_millis(500), period: Duration::from_seconds(1) }
+        Settings { delay: Duration::from_millis(200), period: Duration::from_millis(100) }
+    }
+}
+
+impl From<fsettings::Autorepeat> for Settings {
+    /// Conversion, since [fsettings::Autorepeat] has untyped delay and period.
+    fn from(s: fsettings::Autorepeat) -> Self {
+        Self { delay: Duration::from_nanos(s.delay), period: Duration::from_nanos(s.period) }
+    }
+}
+
+impl Settings {
+    /// Modifies the delay.
+    pub fn into_with_delay(self, delay: Duration) -> Self {
+        Self { delay, ..self }
+    }
+
+    /// Modifies the period.
+    pub fn into_with_period(self, period: Duration) -> Self {
+        Self { period, ..self }
     }
 }
 
@@ -184,7 +207,14 @@ impl Autorepeater {
     /// Creates a new [Autorepeater].  The `source` is a receiver end through which
     /// the input pipeline events are sent.  You must submit [Autorepeater::run]
     /// to an executor to start the event processing.
-    pub fn new(mut source: UnboundedReceiver<InputEvent>) -> Rc<Self> {
+    pub fn new(source: UnboundedReceiver<InputEvent>) -> Rc<Self> {
+        Self::new_with_settings(source, Default::default())
+    }
+
+    fn new_with_settings(
+        mut source: UnboundedReceiver<InputEvent>,
+        settings: Settings,
+    ) -> Rc<Self> {
         let (event_sink, event_source) = mpsc::unbounded();
 
         // We need a task to feed input events into the channel read by `run()`.
@@ -226,7 +256,7 @@ impl Autorepeater {
             event_sink,
             event_source: RefCell::new(event_source),
             state: RefCell::new(Default::default()),
-            settings: Default::default(),
+            settings,
             _event_feeder: event_feeder,
         })
     }
@@ -395,6 +425,13 @@ mod tests {
     use pin_utils::pin_mut;
     use std::task::Poll;
 
+    // Default autorepeat settings used for test.  If these settings are changed,
+    // any tests may fail, since the tests are tuned to the precise timing that
+    // is set here.
+    fn default_settings() -> Settings {
+        Settings { delay: Duration::from_millis(500), period: Duration::from_seconds(1) }
+    }
+
     // Creates a new keyboard event for testing.
     fn new_event(
         key: Key,
@@ -546,7 +583,7 @@ mod tests {
         // This API ensures that the handler is fully configured when started,
         // all the while leaving the user with an option of when and how exactly
         // to start the handler, including not immediately upon creation.
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
 
         // `sender` is where the autorepeat handler will send processed input
         // events into.  `output` is where we will read the results of the
@@ -621,7 +658,7 @@ mod tests {
     fn handled_events_are_forwarded() {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         let (input, receiver) = mpsc::unbounded();
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
         let (sender, output) = mpsc::unbounded();
         let handler_task = Task::local(async move { handler.run(sender).await });
 
@@ -680,7 +717,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
 
         let (input, receiver) = mpsc::unbounded();
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
         let (sender, output) = mpsc::unbounded();
         let handler_task = Task::local(async move { handler.run(sender).await });
 
@@ -756,7 +793,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
 
         let (input, receiver) = mpsc::unbounded();
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
         let (sender, output) = mpsc::unbounded();
         let handler_task = Task::local(async move { handler.run(sender).await });
 
@@ -836,7 +873,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
 
         let (input, receiver) = mpsc::unbounded();
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
         let (sender, output) = mpsc::unbounded();
         let handler_task = Task::local(async move { handler.run(sender).await });
 
@@ -962,7 +999,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
 
         let (input, receiver) = mpsc::unbounded();
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
         let (sender, output) = mpsc::unbounded();
         let handler_task = Task::local(async move { handler.run(sender).await });
 
@@ -1080,7 +1117,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
 
         let (input, receiver) = mpsc::unbounded();
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
         let (sender, output) = mpsc::unbounded();
         let handler_task = Task::local(async move { handler.run(sender).await });
 
@@ -1142,7 +1179,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
 
         let (input, receiver) = mpsc::unbounded();
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
         let (sender, output) = mpsc::unbounded();
         let handler_task = Task::local(async move { handler.run(sender).await });
 
@@ -1247,7 +1284,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
 
         let (input, receiver) = mpsc::unbounded();
-        let handler = Autorepeater::new(receiver);
+        let handler = Autorepeater::new_with_settings(receiver, default_settings());
         let (sender, output) = mpsc::unbounded();
         let handler_task = Task::local(async move { handler.run(sender).await });
 

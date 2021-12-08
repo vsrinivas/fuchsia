@@ -30,7 +30,6 @@ rustc_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",

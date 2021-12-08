@@ -2,17 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::autorepeater;
 use crate::input_device;
 use crate::input_handler::InputHandler;
 use anyhow::{Context, Error, Result};
 use async_trait::async_trait;
 use fidl_fuchsia_input as finput;
-use fidl_fuchsia_input_keymap as fkeymap;
+use fidl_fuchsia_settings as fsettings;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_debug, fx_log_err};
 use futures::{TryFutureExt, TryStreamExt};
 use std::cell::RefCell;
 use std::rc::Rc;
+
+use async_utils::hanging_get::client::HangingGetStream;
 
 /// The text settings handler instance. Refer to as `text_settings_handler::TextSettingsHandler`.
 /// Its task is to decorate an input event with the keymap identifier.  The instance can
@@ -23,6 +26,9 @@ pub struct TextSettingsHandler {
     /// in an refcell as it can be changed out of band through
     /// `fuchsia.input.keymap.Configuration/SetLayout`.
     keymap_id: RefCell<Option<finput::KeymapId>>,
+
+    /// Stores the currently active autorepeat settings.
+    autorepeat_settings: RefCell<Option<autorepeater::Settings>>,
 }
 
 #[async_trait(?Send)]
@@ -38,22 +44,14 @@ impl InputHandler for TextSettingsHandler {
                 event_time,
                 handled,
             } if handled == input_device::Handled::No => {
-                // Maybe instead just pass in the keymap ID directly?
-                let keymap_id = match *self.keymap_id.borrow() {
-                    Some(ref id) => match id {
-                        finput::KeymapId::FrAzerty => Some("FR_AZERTY".to_owned()),
-                        finput::KeymapId::UsDvorak => Some("US_DVORAK".to_owned()),
-                        finput::KeymapId::UsQwerty | finput::KeymapIdUnknown!() => {
-                            Some("US_QWERTY".to_owned())
-                        }
-                    },
-                    None => Some("US_QWERTY".to_owned()),
-                };
+                let keymap_id = self.get_keymap_name();
                 fx_log_debug!(
                     "text_settings_handler::Instance::handle_input_event: keymap_id = {:?}",
                     &keymap_id
                 );
-                event = event.into_with_keymap(keymap_id);
+                event = event
+                    .into_with_keymap(keymap_id)
+                    .into_with_autorepeat_settings(self.get_autorepeat_settings());
                 vec![input_device::InputEvent {
                     device_event: input_device::InputDeviceEvent::Keyboard(event),
                     device_descriptor,
@@ -69,49 +67,84 @@ impl InputHandler for TextSettingsHandler {
 
 impl TextSettingsHandler {
     /// Creates a new text settings handler instance.
-    /// `initial` contains the desired initial keymap value to be served.
-    /// Usually you want this to be `None`.
-    pub fn new(initial: Option<finput::KeymapId>) -> Rc<Self> {
-        Rc::new(Self { keymap_id: RefCell::new(initial) })
+    ///
+    /// `initial_*` contain the desired initial values to be served.  Usually
+    /// you want the defaults.
+    pub fn new(
+        initial_keymap: Option<finput::KeymapId>,
+        initial_autorepeat: Option<autorepeater::Settings>,
+    ) -> Rc<Self> {
+        Rc::new(Self {
+            keymap_id: RefCell::new(initial_keymap),
+            autorepeat_settings: RefCell::new(initial_autorepeat),
+        })
     }
 
     /// Processes requests for keymap change from `stream`.
     pub async fn process_keymap_configuration_from(
         self: &Rc<Self>,
-        mut stream: fkeymap::ConfigurationRequestStream,
+        proxy: fsettings::KeyboardProxy,
     ) -> Result<(), Error> {
-        while let Some(fkeymap::ConfigurationRequest::SetLayout { keymap, responder, .. }) = stream
-            .try_next()
-            .await
-            .context("while trying to serve fuchsia.input.keymap.Configuration")?
-        {
-            fx_log_debug!("keymap ID set to: {:?}", &keymap);
-            let mut data = self.keymap_id.borrow_mut();
-            *data = Some(keymap);
-            responder.send()?;
+        let mut stream = HangingGetStream::new(proxy, fsettings::KeyboardProxy::watch);
+        loop {
+            match stream
+                .try_next()
+                .await
+                .context("while waiting on fuchsia.settings.Keyboard/Watch")?
+            {
+                Some(fsettings::KeyboardSettings { keymap, autorepeat, .. }) => {
+                    self.set_keymap_id(keymap);
+                    self.set_autorepeat_settings(autorepeat.map(|e| e.into()));
+                    fx_log_debug!("keymap ID set to: {:?}", self.get_keymap_id());
+                }
+                e => {
+                    fx_log_err!("exiting - unexpected response: {:?}", &e);
+                    break;
+                }
+            }
         }
         Ok(())
     }
 
-    /// Gets the currently active keymap ID.
-    pub async fn get_keymap_id(&self) -> finput::KeymapId {
-        self.keymap_id.borrow().unwrap_or(finput::KeymapId::UsQwerty)
+    /// Starts reading events from the stream.  Does not block.
+    pub fn serve(self: Rc<Self>, proxy: fsettings::KeyboardProxy) {
+        fasync::Task::local(
+            async move { self.process_keymap_configuration_from(proxy).await }
+                .unwrap_or_else(|e: anyhow::Error| fx_log_err!("can't run: {:?}", e)),
+        )
+        .detach();
     }
 
-    /// Returns the function that can be used to serve
-    /// `fuchsia.input.keymap.Configuration` from
-    /// `fuchsia_component::server::ServiceFs::add_fidl_service`.
-    pub fn get_serving_fn(
-        self: Rc<Self>,
-    ) -> Box<dyn FnMut(fkeymap::ConfigurationRequestStream) -> ()> {
-        Box::new(move |stream| {
-            let handler = self.clone();
-            fasync::Task::local(
-                async move { handler.process_keymap_configuration_from(stream).await }
-                    .unwrap_or_else(|e: anyhow::Error| fx_log_err!("can't run: {:?}", e)),
-            )
-            .detach();
-        })
+    fn set_keymap_id(self: &Rc<Self>, keymap_id: Option<finput::KeymapId>) {
+        *(self.keymap_id.borrow_mut()) = keymap_id;
+    }
+
+    fn set_autorepeat_settings(self: &Rc<Self>, autorepeat: Option<autorepeater::Settings>) {
+        *(self.autorepeat_settings.borrow_mut()) = autorepeat.map(|s| s.into());
+    }
+
+    /// Gets the currently active keymap ID.
+    pub fn get_keymap_id(&self) -> Option<finput::KeymapId> {
+        self.keymap_id.borrow().clone()
+    }
+
+    /// Gets the currently active autorepeat settings.
+    pub fn get_autorepeat_settings(&self) -> Option<autorepeater::Settings> {
+        self.autorepeat_settings.borrow().clone()
+    }
+
+    fn get_keymap_name(&self) -> Option<String> {
+        // Maybe instead just pass in the keymap ID directly?
+        match *self.keymap_id.borrow() {
+            Some(id) => match id {
+                finput::KeymapId::FrAzerty => Some("FR_AZERTY".to_owned()),
+                finput::KeymapId::UsDvorak => Some("US_DVORAK".to_owned()),
+                finput::KeymapId::UsQwerty | finput::KeymapIdUnknown!() => {
+                    Some("US_QWERTY".to_owned())
+                }
+            },
+            None => Some("US_QWERTY".to_owned()),
+        }
     }
 }
 
@@ -125,28 +158,44 @@ mod tests {
     use fidl_fuchsia_input;
     use fidl_fuchsia_ui_input3;
     use fuchsia_async as fasync;
+    use fuchsia_zircon as zx;
 
-    fn get_fake_descriptor() -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Keyboard(keyboard_binding::KeyboardDeviceDescriptor {
-            keys: vec![],
-        })
+    fn input_event_from(
+        keyboard_event: keyboard_binding::KeyboardEvent,
+        handled: input_device::Handled,
+    ) -> input_device::InputEvent {
+        testing_utilities::create_from_keyboard_event(
+            keyboard_event,
+            42 as input_device::EventTime,
+            &input_device::InputDeviceDescriptor::Fake,
+            handled,
+        )
     }
 
-    fn get_fake_key_event(
+    fn key_event_with_settings(
+        keymap: Option<String>,
+        handled: input_device::Handled,
+        settings: autorepeater::Settings,
+    ) -> input_device::InputEvent {
+        let keyboard_event = keyboard_binding::KeyboardEvent::new(
+            fidl_fuchsia_input::Key::A,
+            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+        )
+        .into_with_keymap(keymap)
+        .into_with_autorepeat_settings(Some(settings));
+        input_event_from(keyboard_event, handled)
+    }
+
+    fn key_event(
         keymap: Option<String>,
         handled: input_device::Handled,
     ) -> input_device::InputEvent {
-        let descriptor = get_fake_descriptor();
-        testing_utilities::create_keyboard_event_with_handled(
+        let keyboard_event = keyboard_binding::KeyboardEvent::new(
             fidl_fuchsia_input::Key::A,
             fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-            /* modifiers= */ None,
-            42 as input_device::EventTime,
-            &descriptor,
-            keymap,
-            None,
-            handled,
         )
+        .into_with_keymap(keymap);
+        input_event_from(keyboard_event, handled)
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -196,39 +245,79 @@ mod tests {
             },
         ];
         for test in tests {
-            let handler = TextSettingsHandler::new(test.keymap_id.clone());
-            let expected = get_fake_key_event(test.expected.clone(), test.handled.clone());
-            let result =
-                handler.handle_input_event(get_fake_key_event(None, test.handled.clone())).await;
+            let handler = TextSettingsHandler::new(test.keymap_id.clone(), None);
+            let expected = key_event(test.expected.clone(), test.handled.clone());
+            let result = handler.handle_input_event(key_event(None, test.handled.clone())).await;
             assert_eq!(vec![expected], result, "for: {:?}", &test);
         }
     }
 
+    fn serve_into(
+        mut server_end: fsettings::KeyboardRequestStream,
+        keymap: Option<finput::KeymapId>,
+        autorepeat: Option<fsettings::Autorepeat>,
+    ) {
+        fasync::Task::local(async move {
+            if let Ok(Some(fsettings::KeyboardRequest::Watch { responder, .. })) =
+                server_end.try_next().await
+            {
+                let settings = fsettings::KeyboardSettings {
+                    keymap,
+                    autorepeat,
+                    ..fsettings::KeyboardSettings::EMPTY
+                };
+                responder.send(settings).expect("response sent");
+            }
+        })
+        .detach();
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn config_call_processing() {
-        let handler = TextSettingsHandler::new(None);
+        let handler = TextSettingsHandler::new(None, None);
 
-        let (client_end, server_end) =
-            fidl::endpoints::create_proxy_and_stream::<fkeymap::ConfigurationMarker>().unwrap();
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fsettings::KeyboardMarker>().unwrap();
+
+        // Serve a specific keyboard setting.
+        serve_into(
+            stream,
+            Some(finput::KeymapId::FrAzerty),
+            Some(fsettings::Autorepeat { delay: 43, period: 44 }),
+        );
 
         // Start an asynchronous handler that processes keymap configuration calls
         // incoming from `server_end`.
-        handler.clone().get_serving_fn()(server_end);
+        handler.clone().serve(proxy);
 
-        // Send one input event and verify that it is properly decorated.
-        let result = handler
-            .clone()
-            .handle_input_event(get_fake_key_event(None, input_device::Handled::No))
-            .await;
-        let expected = get_fake_key_event(Some("US_QWERTY".to_owned()), input_device::Handled::No);
-        assert_eq!(vec![expected], result);
-
-        // Now change the configuration, send another input event and verify
-        // that a modified keymap has been attached to the event.
-        client_end.set_layout(finput::KeymapId::FrAzerty).await.unwrap();
-        let result =
-            handler.handle_input_event(get_fake_key_event(None, input_device::Handled::No)).await;
-        let expected = get_fake_key_event(Some("FR_AZERTY".to_owned()), input_device::Handled::No);
-        assert_eq!(vec![expected], result);
+        // Setting the keymap with a hanging get that does not synchronize with the "main"
+        // task of the handler inherently races with `handle_input_event`.  So, the only
+        // way to test it correctly is to verify that we get a changed setting *eventually*
+        // after asking the server to hand out the modified settings.  So, we loop with an
+        // expectation that at some point the settings get applied.  To avoid a long timeout
+        // we quit the loop if nothing happened after a generous amount of time.
+        let deadline = fuchsia_async::Time::after(zx::Duration::from_seconds(5));
+        let autorepeat: autorepeater::Settings = Default::default();
+        loop {
+            let result = handler
+                .clone()
+                .handle_input_event(key_event(None, input_device::Handled::No))
+                .await;
+            let expected = key_event_with_settings(
+                Some("FR_AZERTY".to_owned()),
+                input_device::Handled::No,
+                autorepeat
+                    .clone()
+                    .into_with_delay(zx::Duration::from_nanos(43))
+                    .into_with_period(zx::Duration::from_nanos(44)),
+            );
+            if vec![expected] == result {
+                break;
+            }
+            fuchsia_async::Timer::new(fuchsia_async::Time::after(zx::Duration::from_millis(10)))
+                .await;
+            let now = fuchsia_async::Time::now();
+            assert!(now < deadline, "the settings did not get applied, was: {:?}", &result);
+        }
     }
 }

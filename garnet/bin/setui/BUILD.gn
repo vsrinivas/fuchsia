@@ -29,7 +29,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
-    "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

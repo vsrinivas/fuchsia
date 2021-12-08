@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 use {
+    ::input_pipeline::text_settings_handler::TextSettingsHandler,
     anyhow::{Context, Error},
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
-    fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
+    fidl_fuchsia_settings as fsettings, fidl_fuchsia_ui_shortcut as ui_shortcut,
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
@@ -19,11 +21,9 @@ use {
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
         keymap_handler,
         shortcut_handler::ShortcutHandler,
-        text_settings_handler,
         touch_injector_handler::TouchInjectorHandler,
     },
     scene_management::{self, SceneManager},
-    std::rc::Rc,
     std::sync::Arc,
 };
 
@@ -34,8 +34,6 @@ use {
 /// - `scene_manager`: The scene manager used by the session.
 /// - `input_device_registry_request_stream_receiver`: A receiving end of a MPSC channel for
 ///   `InputDeviceRegistry` messages.
-/// - `text_settings_handler`: An input pipeline stage that decorates `InputEvent`s with
-///    text settings (e.g. desired keymap IDs).
 /// - `node`: The inspect node to insert individual inspect handler nodes into.
 pub async fn handle_input(
     // If this is false, it means we're using the legacy Scenic Gfx API, instead of the
@@ -45,7 +43,6 @@ pub async fn handle_input(
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
-    text_settings_handler: Rc<text_settings_handler::TextSettingsHandler>,
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
 ) -> Result<InputPipeline, Error> {
@@ -55,14 +52,7 @@ pub async fn handle_input(
             input_device::InputDeviceType::Touch,
             input_device::InputDeviceType::Keyboard,
         ],
-        build_input_pipeline_assembly(
-            use_flatland,
-            scene_manager,
-            text_settings_handler,
-            icu_data_loader,
-            node,
-        )
-        .await,
+        build_input_pipeline_assembly(use_flatland, scene_manager, icu_data_loader, node).await,
     )
     .context("Failed to create InputPipeline.")?;
 
@@ -112,7 +102,6 @@ async fn add_flatland_touch_handler(
 async fn build_input_pipeline_assembly(
     use_flatland: bool,
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
-    text_settings_handler: Rc<text_settings_handler::TextSettingsHandler>,
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
 ) -> InputPipelineAssembly {
@@ -122,7 +111,7 @@ async fn build_input_pipeline_assembly(
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         // Add the text settings handler early in the pipeline to use the
         // keymap settings in the remainder of the pipeline.
-        assembly = add_text_settings_handler(text_settings_handler, assembly);
+        assembly = add_text_settings_handler(assembly);
         assembly = add_keymap_handler(assembly);
         assembly = assembly.add_autorepeater();
         assembly = add_dead_keys_handler(assembly, icu_data_loader);
@@ -165,11 +154,12 @@ fn add_inspect_handler(
 }
 
 /// Hooks up the text settings handler.
-fn add_text_settings_handler(
-    text_settings_handler: Rc<text_settings_handler::TextSettingsHandler>,
-    assembly: InputPipelineAssembly,
-) -> InputPipelineAssembly {
-    assembly.add_handler(text_settings_handler)
+fn add_text_settings_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
+    let proxy = connect_to_protocol::<fsettings::KeyboardMarker>()
+        .expect("needs a connection to fuchsia.settings.Keyboard");
+    let text_handler = TextSettingsHandler::new(None, None);
+    text_handler.clone().serve(proxy);
+    assembly.add_handler(text_handler)
 }
 
 /// Hooks up the keymapper.  The keymapper requires the text settings handler to

@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    ::input_pipeline::text_settings_handler,
     anyhow::Error,
     fidl::prelude::*,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
-    fidl_fuchsia_input_keymap as fkeymap,
     fidl_fuchsia_session_scene::{
         ManagerRequest as SceneManagerRequest, ManagerRequestStream as SceneManagerRequestStream,
     },
@@ -23,7 +21,7 @@ use {
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    futures::{StreamExt, TryStreamExt},
     scene_management::{self, SceneManager},
     std::rc::Rc,
     std::sync::Arc,
@@ -36,8 +34,6 @@ enum ExposedServices {
     AccessibilityViewRegistry(A11yViewRegistryRequestStream),
     SceneManager(SceneManagerRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
-    /// The requests for `fuchsia.input.keymap.Configuration`.
-    TextSettingsConfig(fkeymap::ConfigurationRequestStream),
 }
 
 #[fasync::run_singlethreaded]
@@ -51,17 +47,12 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(ExposedServices::AccessibilityViewRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::SceneManager);
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
-    fs.dir("svc").add_fidl_service(ExposedServices::TextSettingsConfig);
     fs.take_and_serve_directory_handle()?;
 
     let (input_device_registry_server, input_device_registry_request_stream_receiver) =
         input_device_registry_server::make_server_and_receiver();
 
     let mut input_receiver = Some(input_device_registry_request_stream_receiver);
-
-    // text_handler is used to attach keymap and text editing settings to the input events.
-    // It also listens to configuration.
-    let text_handler = text_settings_handler::TextSettingsHandler::new(None);
 
     // This call should normally never fail. The ICU data loader must be kept alive to ensure
     // Unicode data is kept in memory.
@@ -115,8 +106,6 @@ async fn main() -> Result<(), Error> {
                         request_stream,
                         Arc::clone(&scene_manager),
                         input_receiver,
-                        // All text_handler clones share data, so it is OK to clone as needed.
-                        text_handler.clone(),
                         icu_data_loader.clone(),
                         inspect_node.clone(),
                     ))
@@ -150,20 +139,6 @@ async fn main() -> Result<(), Error> {
                     }
                 }
             }
-            // Serves calls to fuchsia.input.keymap.Configuration.
-            ExposedServices::TextSettingsConfig(request_stream) => {
-                let handler = text_handler.clone();
-                fasync::Task::local(
-                    async move { handler.process_keymap_configuration_from(request_stream).await }
-                        .unwrap_or_else(|e| {
-                            fx_log_warn!(
-                                "failed to forward fkeymap::ConfigurationRequestStream: {:?}",
-                                e
-                            )
-                        }),
-                )
-                .detach();
-            }
         }
     }
 
@@ -178,7 +153,6 @@ pub async fn handle_scene_manager_request_stream(
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
-    text_handler: Rc<text_settings_handler::TextSettingsHandler>,
     icu_data_loader: icu_data::Loader,
     inspect_root: Rc<inspect::Node>,
 ) {
@@ -186,7 +160,6 @@ pub async fn handle_scene_manager_request_stream(
         use_flatland,
         scene_manager.clone(),
         input_device_registry_request_stream_receiver,
-        text_handler,
         icu_data_loader,
         &inspect_root,
     )

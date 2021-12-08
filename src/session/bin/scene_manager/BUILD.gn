@@ -18,9 +18,9 @@ rustc_binary("scene_manager_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
-    "//sdk/fidl/fuchsia.input.keymap:fuchsia.input.keymap-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.ui.accessibility.view:fuchsia.ui.accessibility.view-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
@@ -31,6 +31,7 @@ rustc_binary("scene_manager_bin") {
     "//sdk/fidl/fuchsia.ui.shortcut:fuchsia.ui.shortcut-rustc",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
     "//src/intl:icudtl",
+    "//src/lib/async-utils",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",

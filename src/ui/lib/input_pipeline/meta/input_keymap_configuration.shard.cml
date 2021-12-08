@@ -1,13 +1,7 @@
 {
-    capabilities: [
+    use: [
         {
-            protocol: [ "fuchsia.input.keymap.Configuration" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: [ "fuchsia.input.keymap.Configuration" ],
-            from: "self",
+            protocol: [ "fuchsia.settings.Keyboard" ],
         },
     ],
 }

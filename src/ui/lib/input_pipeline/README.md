@@ -30,15 +30,34 @@ The main implementation is linked in `src/lib.rs`.
 
 Change the keymap using the following commands, for example:
 
-```
-fx ffx session keyboard --keymap FR_AZERTY
-fx ffx session keyboard --keymap US_QWERTY
+```bash
+fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx keyboard --keymap UsQwerty
 ```
 
 Use:
 
+```bash
+fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx keyboard --help
 ```
-fx ffx session keyboard --help
+
+for more information.
+
+### Autorepeater
+
+Change the autorepeat settings using the following commands, for example:
+
+```bash
+fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx keyboard \
+    --autorepeat-delay 500 --autorepeat-period 200
+```
+
+> NOTE: It's currently unclear what are the units for the period and delay. 
+> See http://fxbug.dev/89717 for details.
+
+Use:
+
+```bash
+fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx keyboard --help
 ```
 
 for more information.

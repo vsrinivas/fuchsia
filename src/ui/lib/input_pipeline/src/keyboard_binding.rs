@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::autorepeater,
     crate::input_device::{self, Handled, InputDeviceBinding},
     anyhow::{format_err, Error, Result},
     async_trait::async_trait,
@@ -58,6 +59,9 @@ pub struct KeyboardEvent {
     /// keyboard event.  The counter is reset for each new autorepeat key
     /// span.
     repeat_sequence: u64,
+
+    /// The currently active autorepeater settings.
+    autorepeat_settings: Option<autorepeater::Settings>,
 }
 
 impl KeyboardEvent {
@@ -71,7 +75,20 @@ impl KeyboardEvent {
             keymap: None,
             key_meaning: None,
             repeat_sequence: 0,
+            autorepeat_settings: Default::default(),
         }
+    }
+
+    /// Converts [KeyboardEvent] into the same one, but with the specified settings.
+    pub fn into_with_autorepeat_settings(
+        self,
+        autorepeat_settings: Option<autorepeater::Settings>,
+    ) -> Self {
+        Self { autorepeat_settings, ..self }
+    }
+
+    pub fn get_autorepeat_settings(&self) -> autorepeater::Settings {
+        self.autorepeat_settings.unwrap_or(Default::default())
     }
 
     pub fn get_key(&self) -> fidl_fuchsia_input::Key {
