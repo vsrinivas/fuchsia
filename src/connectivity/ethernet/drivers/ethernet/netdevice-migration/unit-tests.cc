@@ -32,6 +32,7 @@ class NetdeviceMigrationTestHelper {
     return netdev_.rx_started_;
   }
   const ethernet_ifc_protocol_t& EthernetIfcProto() { return netdev_.ethernet_ifc_proto_; }
+  const std::array<uint8_t, MAC_SIZE>& Mac() { return netdev_.mac_; }
   const zx::bti& Bti() { return netdev_.eth_bti_; }
   template <typename T, typename F>
   T WithRxSpaces(F fn) __TA_EXCLUDES(netdev_.rx_lock_) {
@@ -847,4 +848,16 @@ TEST_F(NetdeviceMigrationDefaultSetupTest, MacAddrSetMode) {
       .WillOnce([](uint32_t p, int32_t v, const uint8_t* data, size_t data_len) { return ZX_OK; });
   Device().MacAddrSetMode(MODE_PROMISCUOUS, nullptr, 0u);
 }
+
+TEST_F(NetdeviceMigrationDefaultSetupTest, GetMac) {
+  mac_addr_protocol_t mac;
+  Device().NetworkPortGetMac(&mac);
+  netdevice_migration::NetdeviceMigrationTestHelper helper(Device());
+  std::array<uint8_t, MAC_SIZE> addr = {};
+  mac.ops->get_address(mac.ctx, addr.data());
+  for (size_t i = 0; i < addr.size(); ++i) {
+    EXPECT_EQ(addr[i], helper.Mac()[i]);
+  }
+}
+
 }  // namespace

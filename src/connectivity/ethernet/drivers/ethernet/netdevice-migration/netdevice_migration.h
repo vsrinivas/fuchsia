@@ -110,7 +110,20 @@ class NetdeviceMigration : public DeviceType,
             // Ensures that an rx buffer will always be large enough to the ethernet MTU.
             .min_rx_buffer_length = mtu,
         }),
+        mtu_(mtu),
         mac_(mac),
+        rx_types_{static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet)},
+        tx_types_{tx_support_t{
+            .type = static_cast<uint8_t>(fuchsia_hardware_network::wire::FrameType::kEthernet),
+            .features = fuchsia_hardware_network::wire::kFrameFeaturesRaw}},
+        port_info_(port_info_t{
+            .port_class =
+                static_cast<uint8_t>(fuchsia_hardware_network::wire::DeviceClass::kEthernet),
+            .rx_types_list = rx_types_.data(),
+            .rx_types_count = rx_types_.size(),
+            .tx_types_list = tx_types_.data(),
+            .tx_types_count = tx_types_.size(),
+        }),
         vmo_store_(opts) {
     for (FrameCookie& cookie : cookie_storage_) {
       tx_frame_cookies_.push_back(&cookie);
@@ -125,7 +138,11 @@ class NetdeviceMigration : public DeviceType,
   const ethernet_ifc_protocol_t ethernet_ifc_proto_;
   const zx::bti eth_bti_;
   const device_info_t info_;
+  const uint32_t mtu_;
   const std::array<uint8_t, MAC_SIZE> mac_;
+  const std::array<uint8_t, 1> rx_types_;
+  const std::array<tx_support_t, 1> tx_types_;
+  const port_info_t port_info_;
 
   std::mutex status_lock_;
   fuchsia_hardware_network::wire::StatusFlags port_status_flags_ __TA_GUARDED(status_lock_);

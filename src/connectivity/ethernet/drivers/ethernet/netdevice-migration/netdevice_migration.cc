@@ -106,7 +106,7 @@ void NetdeviceMigration::DdkRelease() { delete this; }
 
 void NetdeviceMigration::EthernetIfcStatus(uint32_t status) __TA_EXCLUDES(status_lock_) {
   port_status_t port_status = {
-      .mtu = ETH_MTU_SIZE,
+      .mtu = mtu_,
   };
   {
     std::lock_guard lock(status_lock_);
@@ -398,22 +398,29 @@ void NetdeviceMigration::NetworkDeviceImplReleaseVmo(uint8_t id) __TA_EXCLUDES(v
 
 void NetdeviceMigration::NetworkDeviceImplSetSnoop(bool snoop) {}
 
-void NetdeviceMigration::NetworkPortGetInfo(port_info_t* out_info) { *out_info = {}; }
+void NetdeviceMigration::NetworkPortGetInfo(port_info_t* out_info) { *out_info = port_info_; }
 
 void NetdeviceMigration::NetworkPortGetStatus(port_status_t* out_status)
     __TA_EXCLUDES(status_lock_) {
   std::lock_guard lock(status_lock_);
   *out_status = {
-      .mtu = ETH_MTU_SIZE,
+      .mtu = mtu_,
       .flags = static_cast<uint32_t>(port_status_flags_),
   };
 }
 
 void NetdeviceMigration::NetworkPortSetActive(bool active) {}
 
-void NetdeviceMigration::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) { *out_mac_ifc = {}; }
+void NetdeviceMigration::NetworkPortGetMac(mac_addr_protocol_t* out_mac_ifc) {
+  *out_mac_ifc = mac_addr_protocol_t{
+      .ops = &mac_addr_protocol_ops_,
+      .ctx = this,
+  };
+}
 
-void NetdeviceMigration::NetworkPortRemoved() {}
+void NetdeviceMigration::NetworkPortRemoved() {
+  zxlogf(INFO, "netdevice-migration: removed event for port %d", kPortId);
+}
 
 void NetdeviceMigration::MacAddrGetAddress(uint8_t out_mac[MAC_SIZE]) {
   static_assert(sizeof(mac_) == MAC_SIZE);
