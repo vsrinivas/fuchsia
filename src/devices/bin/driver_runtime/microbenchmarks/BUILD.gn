@@ -1,0 +1,33 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "driver_runtime_microbenchmarks"
+  testonly = true
+  sources = [
+    "channels.cc",
+    "handle_creation.cc",
+    "test_runner.cc",
+  ]
+  deps = [
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//src/devices/lib/driver:driver_runtime",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
+  ]
+  public_deps = [ "//zircon/system/ulib/perftest" ]
+}
+
+fuchsia_package_with_single_component("driver_runtime_microbenchmarks") {
+  testonly = true
+  deps = [ ":bin" ]
+  manifest = "meta/driver_runtime_microbenchmarks.cml"
+}
+
+group("microbenchmarks") {
+  testonly = true
+  deps = [ ":driver_runtime_microbenchmarks" ]
+}
