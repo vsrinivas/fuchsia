@@ -1069,19 +1069,20 @@ type Library struct {
 // Root is the top-level object for a FIDL library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
-	Name         EncodedLibraryIdentifier    `json:"name,omitempty"`
-	Consts       []Const                     `json:"const_declarations,omitempty"`
-	Bits         []Bits                      `json:"bits_declarations,omitempty"`
-	Enums        []Enum                      `json:"enum_declarations,omitempty"`
-	Protocols    []Protocol                  `json:"interface_declarations,omitempty"`
-	Services     []Service                   `json:"service_declarations,omitempty"`
-	Structs      []Struct                    `json:"struct_declarations,omitempty"`
-	Tables       []Table                     `json:"table_declarations,omitempty"`
-	Unions       []Union                     `json:"union_declarations,omitempty"`
-	DeclOrder    []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
-	Decls        DeclMap                     `json:"declarations,omitempty"`
-	Libraries    []Library                   `json:"library_dependencies,omitempty"`
-	declarations map[EncodedCompoundIdentifier]Declaration
+	Name            EncodedLibraryIdentifier    `json:"name,omitempty"`
+	Consts          []Const                     `json:"const_declarations,omitempty"`
+	Bits            []Bits                      `json:"bits_declarations,omitempty"`
+	Enums           []Enum                      `json:"enum_declarations,omitempty"`
+	Protocols       []Protocol                  `json:"interface_declarations,omitempty"`
+	Services        []Service                   `json:"service_declarations,omitempty"`
+	Structs         []Struct                    `json:"struct_declarations,omitempty"`
+	ExternalStructs []Struct                    `json:"external_struct_declarations,omitempty"`
+	Tables          []Table                     `json:"table_declarations,omitempty"`
+	Unions          []Union                     `json:"union_declarations,omitempty"`
+	DeclOrder       []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
+	Decls           DeclMap                     `json:"declarations,omitempty"`
+	Libraries       []Library                   `json:"library_dependencies,omitempty"`
+	declarations    map[EncodedCompoundIdentifier]Declaration
 }
 
 func (r *Root) initializeDeclarationsMap() {
@@ -1109,6 +1110,9 @@ func (r *Root) initializeDeclarationsMap() {
 	}
 	for i, d := range r.Unions {
 		r.declarations[d.Name] = &r.Unions[i]
+	}
+	for i, d := range r.ExternalStructs {
+		r.declarations[d.Name] = &r.ExternalStructs[i]
 	}
 }
 
@@ -1218,6 +1222,18 @@ func (r *Root) ForBindings(language string) Root {
 			}
 			res.Structs = append(res.Structs, newV)
 			res.Decls[v.Name] = r.Decls[v.Name]
+		}
+	}
+	for _, v := range r.ExternalStructs {
+		if !v.BindingsDenylistIncludes(language) {
+			newV := v
+			newV.Members = nil
+			for _, m := range v.Members {
+				if !m.BindingsDenylistIncludes(language) {
+					newV.Members = append(newV.Members, m)
+				}
+			}
+			res.ExternalStructs = append(res.ExternalStructs, newV)
 		}
 	}
 	for _, v := range r.Tables {

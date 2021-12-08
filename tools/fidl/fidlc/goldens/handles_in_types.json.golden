@@ -501,6 +501,7 @@
       }
     }
   ],
+  "external_struct_declarations": [],
   "table_declarations": [
     {
       "name": "fidl.test.handlesintypes/TableWithHandle",

@@ -9,6 +9,7 @@
   "interface_declarations": [],
   "service_declarations": [],
   "struct_declarations": [],
+  "external_struct_declarations": [],
   "table_declarations": [
     {
       "name": "fidl.test.table/EmptyTable",

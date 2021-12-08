@@ -1223,6 +1223,7 @@
       }
     }
   ],
+  "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
   "type_alias_declarations": [],

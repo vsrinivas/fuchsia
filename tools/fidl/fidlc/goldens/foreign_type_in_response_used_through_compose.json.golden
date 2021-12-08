@@ -202,7 +202,8 @@
     }
   ],
   "service_declarations": [],
-  "struct_declarations": [
+  "struct_declarations": [],
+  "external_struct_declarations": [
     {
       "name": "middle/MiddleGetFooTopResponse",
       "naming_context": [

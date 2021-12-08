@@ -108,6 +108,9 @@ type Root struct {
 	// Structs correspond to syzkaller structs.
 	Structs []Struct
 
+	// ExternalStructs correspond to external syzkaller structs.
+	ExternalStructs []Struct
+
 	// Unions correspond to syzkaller unions.
 	Unions []Union
 
@@ -675,6 +678,14 @@ func compile(fidlData fidlgen.Root) Root {
 			Name:    c.compileCompoundIdentifier(v.Name, HandlesSuffix),
 			Members: result.Handles.voidIfEmpty(),
 		})
+	}
+
+	for _, v := range fidlData.ExternalStructs {
+		// TODO(fxbug.dev/7704) remove once anonymous structs are supported
+		if v.IsRequestOrResponse {
+			v := v
+			c.payloads[v.Name] = &v
+		}
 	}
 
 	for _, v := range fidlData.Unions {

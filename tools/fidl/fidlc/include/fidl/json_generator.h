@@ -61,33 +61,6 @@ class JSONGenerator : public utils::JsonWriter<JSONGenerator> {
 
   std::ostringstream Produce();
 
-  // Specializing for structs to avoid printing request/response structs, which are
-  // handled separately.
-  void GenerateArray(std::vector<std::unique_ptr<flat::Struct>>::const_iterator begin,
-                     std::vector<std::unique_ptr<flat::Struct>>::const_iterator end) {
-    EmitArrayBegin();
-
-    bool is_first = true;
-    for (std::vector<std::unique_ptr<flat::Struct>>::const_iterator it = begin; it != end; ++it) {
-      if ((*it)->is_request_or_response)
-        continue;
-      if (is_first) {
-        Indent();
-        EmitNewlineWithIndent();
-        is_first = false;
-      } else {
-        EmitArraySeparator();
-      }
-      Generate(**it);
-    }
-    if (!is_first) {
-      Outdent();
-      EmitNewlineWithIndent();
-    }
-
-    EmitArrayEnd();
-  }
-
   void Generate(const flat::Decl* decl);
 
   void Generate(SourceSpan value);

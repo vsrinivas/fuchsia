@@ -205,7 +205,8 @@
     }
   ],
   "service_declarations": [],
-  "struct_declarations": [
+  "struct_declarations": [],
+  "external_struct_declarations": [
     {
       "name": "bottom/BottomGetFooTopResponse",
       "naming_context": [

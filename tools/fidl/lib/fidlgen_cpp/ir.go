@@ -616,8 +616,12 @@ func compile(r fidlgen.Root) *Root {
 	for _, v := range r.Structs {
 		addAnonymousLayouts(v.Layout)
 	}
+	for _, v := range r.ExternalStructs {
+		addAnonymousLayouts(v.Layout)
+	}
 
 	decls := make(map[fidlgen.EncodedCompoundIdentifier]Kinded)
+	extDecls := make(map[fidlgen.EncodedCompoundIdentifier]Kinded)
 
 	for _, v := range r.Bits {
 		decls[v.Name] = c.compileBits(v)
@@ -642,6 +646,13 @@ func compile(r fidlgen.Root) *Root {
 			c.requestResponsePayload[v.Name] = v
 		}
 		decls[v.Name] = c.compileStruct(v)
+	}
+
+	for _, v := range r.ExternalStructs {
+		if v.IsRequestOrResponse {
+			c.requestResponsePayload[v.Name] = v
+		}
+		extDecls[v.Name] = c.compileStruct(v)
 	}
 
 	for _, v := range r.Protocols {

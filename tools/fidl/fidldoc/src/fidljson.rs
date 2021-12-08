@@ -41,6 +41,7 @@ pub struct FidlJson {
     pub table_declarations: Vec<Value>,
     pub type_alias_declarations: Vec<Value>,
     pub struct_declarations: Vec<Value>,
+    pub external_struct_declarations: Vec<Value>,
     pub union_declarations: Vec<Value>,
     pub declaration_order: Vec<String>,
     pub declarations: Map<String, Value>,
@@ -68,6 +69,11 @@ impl FidlJson {
     pub fn resolve_method_payloads(&mut self) {
         let mut payloads = HashMap::<String, &Value>::new();
         for strukt in self.struct_declarations.iter() {
+            if strukt["is_request_or_response"].as_bool().unwrap() {
+                payloads.insert(strukt["name"].as_str().unwrap().to_string(), strukt);
+            }
+        }
+        for strukt in self.external_struct_declarations.iter() {
             if strukt["is_request_or_response"].as_bool().unwrap() {
                 payloads.insert(strukt["name"].as_str().unwrap().to_string(), strukt);
             }
@@ -109,6 +115,7 @@ impl FidlJson {
             table_declarations,
             type_alias_declarations,
             struct_declarations,
+            external_struct_declarations: _,
             union_declarations,
             declaration_order: _,
             declarations: _,
@@ -181,6 +188,7 @@ mod test {
             table_declarations: serde_json::from_str("[{\"name\": \"4\"},{\"name\": \"2A\"},{\"name\": \"11\"},{\"name\": \"zzz\"}]").unwrap(),
             type_alias_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/type\"},{\"name\": \"fuchsia.test/alias\"}]").unwrap(),
             struct_declarations: serde_json::from_str("[{\"name\": \"fuchsia.test/SomeLongAnonymousPrefix1\"},{\"name\": \"fuchsia.test/Struct\"},{\"name\": \"fuchsia.test/SomeLongAnonymousPrefix0\"}]").unwrap(),
+            external_struct_declarations: serde_json::from_str("[{\"name\": \"fuchsia.external/SomeLongAnonymousPrefix2\"}]").unwrap(),
             union_declarations: serde_json::from_str("[{\"name\": \"union1\"},{\"name\": \"Union1\"},{\"name\": \"UnIoN1\"}]").unwrap(),
             declaration_order: Vec::new(),
             declarations: Map::new(),
@@ -210,6 +218,11 @@ mod test {
         assert_eq!(&f.struct_declarations[0]["name"], "fuchsia.test/SomeLongAnonymousPrefix0");
         assert_eq!(&f.struct_declarations[1]["name"], "fuchsia.test/SomeLongAnonymousPrefix1");
         assert_eq!(&f.struct_declarations[2]["name"], "fuchsia.test/Struct");
+
+        assert_eq!(
+            &f.external_struct_declarations[0]["name"],
+            "fuchsia.external/SomeLongAnonymousPrefix2"
+        );
 
         assert_eq!(&f.union_declarations[0]["name"], "UnIoN1");
         assert_eq!(&f.union_declarations[1]["name"], "Union1");

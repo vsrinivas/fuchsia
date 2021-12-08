@@ -569,34 +569,39 @@ std::unique_ptr<Enum> SyscallLibraryLoader::ConvertBitsOrEnumMember(const rapidj
 bool SyscallLibraryLoader::ExtractPayload(Struct& payload, const std::string& type_name,
                                           const rapidjson::Document& document,
                                           SyscallLibrary* library) {
-  for (const auto& struct_json : document["struct_declarations"].GetArray()) {
-    std::string struct_name = struct_json["name"].GetString();
-    if (struct_name == type_name) {
-      for (const auto& arg : struct_json["members"].GetArray()) {
-        Struct* strukt = &payload;
-        const auto* type_alias = arg.HasMember("experimental_maybe_from_type_alias")
-                                     ? &arg["experimental_maybe_from_type_alias"]
-                                     : nullptr;
-        strukt->members_.emplace_back(arg["name"].GetString(),
-                                      TypeFromJson(*library, arg["type"], type_alias),
-                                      std::map<std::string, std::string>{});
-        if (arg.HasMember("maybe_attributes")) {
-          for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
-            const auto attrib_name = attrib["name"].GetString();
-            const MaybeValue maybe_value = GetAttributeStandaloneArgValue(arg, attrib_name);
-            strukt->members_.back().attributes_[CamelToSnake(attrib_name)] =
-                maybe_value.has_value() && maybe_value.value().get().IsString()
-                    ? maybe_value.value().get().GetString()
-                    : "";
+  auto FindStructDecl = [&](const rapidjson::Value& struct_list) -> bool {
+    for (const auto& struct_json : struct_list.GetArray()) {
+      std::string struct_name = struct_json["name"].GetString();
+      if (struct_name == type_name) {
+        for (const auto& arg : struct_json["members"].GetArray()) {
+          Struct* strukt = &payload;
+          const auto* type_alias = arg.HasMember("experimental_maybe_from_type_alias")
+                                       ? &arg["experimental_maybe_from_type_alias"]
+                                       : nullptr;
+          strukt->members_.emplace_back(arg["name"].GetString(),
+                                        TypeFromJson(*library, arg["type"], type_alias),
+                                        std::map<std::string, std::string>{});
+          if (arg.HasMember("maybe_attributes")) {
+            for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
+              const auto attrib_name = attrib["name"].GetString();
+              const MaybeValue maybe_value = GetAttributeStandaloneArgValue(arg, attrib_name);
+              strukt->members_.back().attributes_[CamelToSnake(attrib_name)] =
+                  maybe_value.has_value() && maybe_value.value().get().IsString()
+                      ? maybe_value.value().get().GetString()
+                      : "";
+            }
           }
         }
+
+        return true;
       }
-
-      return true;
     }
-  }
 
-  return false;
+    return false;
+  };
+
+  return FindStructDecl(document["struct_declarations"]) ||
+         FindStructDecl(document["external_struct_declarations"]);
 }
 
 // static

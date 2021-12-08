@@ -603,6 +603,7 @@ pub struct FidlIr {
     pub interface_declarations: Vec<Interface>,
     pub service_declarations: Vec<Service>,
     pub struct_declarations: Vec<Struct>,
+    pub external_struct_declarations: Vec<Struct>,
     pub table_declarations: Vec<Table>,
     pub union_declarations: Vec<Union>,
     pub type_alias_declarations: Vec<TypeAlias>,
@@ -670,7 +671,10 @@ impl FidlIr {
     }
 
     pub fn get_struct(&self, identifier: &CompoundIdentifier) -> Result<&Struct, Error> {
-        fetch_declaration!(self, struct_declarations, identifier)
+        match fetch_declaration!(self, struct_declarations, identifier) {
+            Ok(found_struct) => Ok(found_struct),
+            Err(_) => fetch_declaration!(self, external_struct_declarations, identifier),
+        }
     }
 
     pub fn get_const(&self, identifier: &CompoundIdentifier) -> Result<&Const, Error> {

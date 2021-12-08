@@ -144,6 +144,7 @@ func Elements(root fidlgen.Root) []Element {
 	var s summarizer
 
 	s.registerStructs(root.Structs)
+	s.registerStructs(root.ExternalStructs)
 	s.registerProtocolNames(root.Protocols)
 
 	s.addConsts(root.Consts)

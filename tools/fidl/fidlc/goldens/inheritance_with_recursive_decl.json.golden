@@ -486,84 +486,9 @@
         "has_padding": true,
         "has_flexible_envelope": false
       }
-    },
-    {
-      "name": "fidl.test.inheritancewithrecursivedecl/ParentFirstRequest",
-      "naming_context": [
-        "Parent",
-        "First",
-        "Request"
-      ],
-      "location": {
-        "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-        "line": 4,
-        "column": 11,
-        "length": 58
-      },
-      "is_request_or_response": true,
-      "members": [
-        {
-          "type": {
-            "kind": "request",
-            "subtype": "fidl.test.inheritancewithrecursivedecl/Parent",
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 1,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 4,
-              "alignment": 4,
-              "depth": 0,
-              "max_handles": 1,
-              "max_out_of_line": 0,
-              "has_padding": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "request",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
-            "line": 5,
-            "column": 9,
-            "length": 7
-          },
-          "field_shape_v1": {
-            "offset": 0,
-            "padding": 4
-          },
-          "field_shape_v2": {
-            "offset": 0,
-            "padding": 4
-          }
-        }
-      ],
-      "resource": true,
-      "type_shape_v1": {
-        "inline_size": 8,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 1,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      },
-      "type_shape_v2": {
-        "inline_size": 8,
-        "alignment": 8,
-        "depth": 0,
-        "max_handles": 1,
-        "max_out_of_line": 0,
-        "has_padding": true,
-        "has_flexible_envelope": false
-      }
     }
   ],
+  "external_struct_declarations": [],
   "table_declarations": [],
   "union_declarations": [],
   "type_alias_declarations": [],

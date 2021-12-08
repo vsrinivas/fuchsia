@@ -211,15 +211,16 @@ type Import struct {
 
 // Root holds all of the declarations for a FIDL library.
 type Root struct {
-	LibraryName string
-	Imports     []Import
-	Consts      []Const
-	Enums       []Enum
-	Bits        []Bits
-	Protocols   []Protocol
-	Structs     []Struct
-	Tables      []Table
-	Unions      []Union
+	LibraryName     string
+	Imports         []Import
+	Consts          []Const
+	Enums           []Enum
+	Bits            []Bits
+	Protocols       []Protocol
+	Structs         []Struct
+	Tables          []Table
+	Unions          []Union
+	ExternalStructs []Struct
 }
 
 type nameContext struct{ fidlgen.NameContext }
@@ -448,6 +449,11 @@ type compiler struct {
 
 func (c *compiler) findStruct(name fidlgen.EncodedCompoundIdentifier) (Struct, bool) {
 	for _, s := range c.Root.Structs {
+		if name == s.Identifier {
+			return s, true
+		}
+	}
+	for _, s := range c.Root.ExternalStructs {
 		if name == s.Identifier {
 			return s, true
 		}
@@ -899,6 +905,7 @@ func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
 				parameters = append(parameters, c.compileStructMember(m))
 			}
 		}
+
 		return MethodResponse{
 			WireParameters:    c.compileParameterArray(method.ResponsePayload),
 			MethodParameters:  parameters,
@@ -1187,6 +1194,14 @@ func Compile(r fidlgen.Root) Root {
 			c.requestResponsePayload[v.Name] = v
 		} else {
 			c.Root.Structs = append(c.Root.Structs, c.compileStruct(v))
+		}
+	}
+
+	for _, v := range r.ExternalStructs {
+		if v.IsRequestOrResponse {
+			c.requestResponsePayload[v.Name] = v
+		} else {
+			c.Root.ExternalStructs = append(c.Root.ExternalStructs, c.compileStruct(v))
 		}
 	}
 

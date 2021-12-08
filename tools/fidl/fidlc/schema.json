@@ -1882,6 +1882,13 @@
             },
             "type": "array"
         },
+        "external_struct_declarations": {
+            "description": "List of external structs that are used to form method payloads",
+            "items": {
+                "$ref": "#/definitions/struct"
+            },
+            "type": "array"
+        },
         "interface_declarations": {
             "description": "List of protocols",
             "items": {

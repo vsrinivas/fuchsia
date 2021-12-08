@@ -855,7 +855,9 @@
         "has_padding": true,
         "has_flexible_envelope": false
       }
-    },
+    }
+  ],
+  "external_struct_declarations": [
     {
       "name": "fidl.test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
       "naming_context": [

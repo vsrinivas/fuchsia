@@ -398,6 +398,15 @@ void Library::DecodeTypes() {
     }
   }
 
+  if (!json_definition_.HasMember("external_struct_declarations")) {
+    FieldNotFound("library", name_, "external_struct_declarations");
+  } else {
+    for (auto& str : json_definition_["external_struct_declarations"].GetArray()) {
+      structs_.emplace(std::piecewise_construct, std::forward_as_tuple(str["name"].GetString()),
+                       std::forward_as_tuple(new Struct(this, &str)));
+    }
+  }
+
   if (!json_definition_.HasMember("table_declarations")) {
     FieldNotFound("library", name_, "table_declarations");
   } else {

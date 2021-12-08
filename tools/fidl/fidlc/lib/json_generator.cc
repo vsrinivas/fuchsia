@@ -984,44 +984,42 @@ void JSONGenerator::GenerateExternalDeclarationsMember(const flat::Library* libr
 
 namespace {
 
-// Return all structs that should be emitted in the JSON IR, which consists of
-// two parts: all structs from this library (which includes all struct definitions
-// and request/response payloads defined in this library), plus any request/response
-// payloads defined in other libraries that are composed into a protocol in this
-// library.
-std::vector<const flat::Struct*> AllStructs(const flat::Library* library) {
-  std::vector<const flat::Struct*> all_structs;
-
-  for (const auto& struct_decl : library->struct_declarations_) {
-    if (struct_decl->is_request_or_response && struct_decl->members.empty())
-      continue;
-    all_structs.push_back(struct_decl.get());
-  }
+// Return all externall defined structs used by method payloads defined in this library. Such
+// structs may enter this library by being used as the payload definitions for composed
+// methods
+// TODO(fxbug.dev/88344): Also add support for non-composed named payload definitions, like:
+//  Foo(external.Bar) -> (external.Baz);
+std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
+  std::set<const flat::Struct*> external_structs;
 
   for (const auto& protocol : library->protocol_declarations_) {
     for (const auto method_with_info : protocol->all_methods) {
-      // these are already included in the library's struct declarations
-      if (!method_with_info.is_composed)
-        continue;
       const auto& method = method_with_info.method;
       if (method->maybe_request) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_request->type);
 
-        // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
-        auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        all_structs.push_back(as_struct);
+        // Make sure this is actually an externally defined struct before proceeding.
+        if (id->name.library() != library) {
+          // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
+          auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
+          external_structs.insert(as_struct);
+        }
       }
       if (method->maybe_response) {
         auto id = static_cast<const flat::IdentifierType*>(method->maybe_response->type);
 
+        // Make sure this is actually an externally defined struct before proceeding.
+        if (id->name.library() == library)
+          continue;
+
         // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
         auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
-        all_structs.push_back(as_struct);
+        external_structs.insert(as_struct);
       }
     }
   }
 
-  return all_structs;
+  return std::vector<const flat::Struct*>(external_structs.begin(), external_structs.end());
 }
 
 }  // namespace
@@ -1047,7 +1045,8 @@ std::ostringstream JSONGenerator::Produce() {
     GenerateObjectMember("experimental_resource_declarations", library_->resource_declarations_);
     GenerateObjectMember("interface_declarations", library_->protocol_declarations_);
     GenerateObjectMember("service_declarations", library_->service_declarations_);
-    GenerateObjectMember("struct_declarations", AllStructs(library_));
+    GenerateObjectMember("struct_declarations", library_->struct_declarations_);
+    GenerateObjectMember("external_struct_declarations", ExternalStructs(library_));
     GenerateObjectMember("table_declarations", library_->table_declarations_);
     GenerateObjectMember("union_declarations", library_->union_declarations_);
     GenerateObjectMember("type_alias_declarations", library_->type_alias_declarations_);

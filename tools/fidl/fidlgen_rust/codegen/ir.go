@@ -200,6 +200,7 @@ type Root struct {
 	Consts                 []Const
 	Enums                  []Enum
 	Structs                []Struct
+	ExternalStructs        []Struct
 	Unions                 []Union
 	Results                []Result
 	Tables                 []Table
@@ -217,10 +218,17 @@ func (r *Root) findProtocol(eci EncodedCompoundIdentifier) *Protocol {
 	return nil
 }
 
-func (r *Root) findStruct(eci EncodedCompoundIdentifier) *Struct {
+func (r *Root) findStruct(eci EncodedCompoundIdentifier, canBeExternal bool) *Struct {
 	for i := range r.Structs {
 		if r.Structs[i].ECI == eci {
 			return &r.Structs[i]
+		}
+	}
+	if canBeExternal {
+		for i := range r.ExternalStructs {
+			if r.Structs[i].ECI == eci {
+				return &r.ExternalStructs[i]
+			}
 		}
 	}
 	return nil
@@ -1176,7 +1184,7 @@ func (c *compiler) compileResultFromUnion(m fidlgen.Method, root Root) Result {
 		ErrType:   c.compileType(*m.ErrorType),
 	}
 
-	for _, m := range root.findStruct(m.ValueType.Identifier).Members {
+	for _, m := range root.findStruct(m.ValueType.Identifier, true).Members {
 		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
 		r.Ok = append(r.Ok, ResultOkEntry{
 			OGType:            m.OGType,
@@ -1392,7 +1400,7 @@ func (dc *derivesCompiler) fillDerivesForECI(eci EncodedCompoundIdentifier) deri
 typeSwitch:
 	switch declInfo.Type {
 	case fidlgen.StructDeclType:
-		st := dc.root.findStruct(eci)
+		st := dc.root.findStruct(eci, false)
 		if st == nil {
 			panic(fmt.Sprintf("struct not found: %v", eci))
 		}
@@ -1551,7 +1559,12 @@ func Compile(r fidlgen.Root) Root {
 		map[string]HandleMetadataWrapper{},
 	}
 
+	// TODO(azaslavsky): maybe combine these with the loops below?
 	for _, s := range r.Structs {
+		c.structs[s.Name] = s
+	}
+
+	for _, s := range r.ExternalStructs {
 		c.structs[s.Name] = s
 	}
 
@@ -1576,6 +1589,14 @@ func Compile(r fidlgen.Root) Root {
 			c.requestResponsePayload[v.Name] = v
 		} else {
 			root.Structs = append(root.Structs, c.compileStruct(v))
+		}
+	}
+
+	for _, v := range r.ExternalStructs {
+		if v.IsRequestOrResponse {
+			c.requestResponsePayload[v.Name] = v
+		} else {
+			root.ExternalStructs = append(root.ExternalStructs, c.compileStruct(v))
 		}
 	}
 

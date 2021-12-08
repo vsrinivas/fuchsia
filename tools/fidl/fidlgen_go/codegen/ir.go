@@ -418,6 +418,11 @@ type Root struct {
 	// Structs represents the list of FIDL structs represented as Go structs.
 	Structs []Struct
 
+	// ExternalStructs represents the list of FIDL structs imported from other libraries.  In
+	// practice, this means structs imported from other libraries that are used as method
+	// requests/response payloads, or payload success variants.
+	ExternalStructs []Struct
+
 	// Unions represents the list of FIDL unions represented as Go structs.
 	Unions []Union
 
@@ -452,7 +457,7 @@ type compiler struct {
 
 	// requestResponseStructs is a mapping from ECI to Structs for all request/response
 	// structs (which are currently equivalent to all the anonymous structs). This is
-	// used to lookup typeshape info when constructing the Methods and their Parameters
+	// used to lookup typeshape info when constructing the Methods and their Parameters.
 	requestResponseStructs map[fidlgen.EncodedCompoundIdentifier]Struct
 }
 
@@ -1099,6 +1104,18 @@ func Compile(fidlData fidlgen.Root) Root {
 			c.requestResponseStructs[v.Name] = c.compileStruct(v)
 		} else {
 			r.Structs = append(r.Structs, c.compileStruct(v))
+		}
+	}
+	for _, v := range fidlData.ExternalStructs {
+		// TODO(fxbug.dev/56727) Consider filtering out structs that are not used because they are
+		// only referenced by channel transports.
+		if v.IsRequestOrResponse {
+			// these Structs still need to have their correct name (...Response or
+			// ...Request) generated, which occurs in compileMethod. Only then
+			// are they appended to r.Structs.
+			c.requestResponseStructs[v.Name] = c.compileStruct(v)
+		} else {
+			r.ExternalStructs = append(r.ExternalStructs, c.compileStruct(v))
 		}
 	}
 	for _, v := range fidlData.Unions {
