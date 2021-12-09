@@ -4,9 +4,9 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_cpu") {
+ffx_plugin("ffx_temperature") {
   version = "0.1.0"
   edition = "2018"
-  plugin_deps = [ "load:ffx_cpu_load" ]
+  plugin_deps = [ "logger:ffx_temperature_logger" ]
   args_sources = [ "src/args.rs" ]
 }
