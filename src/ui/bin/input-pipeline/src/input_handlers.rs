@@ -7,7 +7,7 @@ use {
     input_pipeline as input_pipeline_lib,
     input_pipeline_lib::{
         factory_reset_handler::FactoryResetHandler, media_buttons_handler::MediaButtonsHandler,
-        modifier_handler::ModifierHandler, touch_injector_handler::TouchInjectorHandler, Size,
+        touch_injector_handler::TouchInjectorHandler, Size,
     },
     std::rc::Rc,
 };
@@ -18,13 +18,7 @@ pub async fn create(
 ) -> Vec<Rc<dyn input_pipeline_lib::input_handler::InputHandler>> {
     let scenic = connect_to_protocol::<fidl_fuchsia_ui_scenic::ScenicMarker>()
         .expect("Failed to connect to Scenic.");
-    let modifier_handler = ModifierHandler::new();
-    vec![
-        modifier_handler,
-        factory_reset_handler,
-        media_buttons_handler,
-        make_touch_injector_handler(&scenic).await,
-    ]
+    vec![factory_reset_handler, media_buttons_handler, make_touch_injector_handler(&scenic).await]
 }
 
 async fn make_touch_injector_handler(
