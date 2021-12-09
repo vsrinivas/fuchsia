@@ -1440,7 +1440,14 @@ void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   // On a read-write filesystem, set the kMinfsFlagClean on a clean unmount.
   FX_LOGS(INFO) << "Shutting down";
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
-    Sync([this, cb = std::move(cb)](zx_status_t) mutable {
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Managed VFS shutdown failed with status: " << zx_status_get_string(status);
+    }
+    Sync([this, cb = std::move(cb)](zx_status_t sync_status) mutable {
+      if (sync_status != ZX_OK) {
+        FX_LOGS(ERROR) << "Sync at unmount failed with status: "
+                       << zx_status_get_string(sync_status);
+      }
       async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
         // Ensure writeback buffer completes before auxiliary structures are deleted.
         StopWriteback();
@@ -1450,6 +1457,7 @@ void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
         // Shut down the block cache.
         bc_.reset();
 
+        // TODO(/fxbug.dev/90054): Report sync and managed shutdown status.
         // Identify to the unmounting channel that teardown is complete.
         cb(ZX_OK);
 
