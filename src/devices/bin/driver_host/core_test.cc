@@ -197,7 +197,6 @@ TEST_F(CoreTest, RebindHasOneChild) {
       EXPECT_EQ(unbind_count, 1);
 
       child->set_flag(DEV_FLAG_DEAD);
-      child->vnode.reset();
     }
 
     ctx_.loop().Quit();
