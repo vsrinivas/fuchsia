@@ -301,7 +301,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // PortSettings
   //
   // The PortSettings wraps the port settings specified in StreamBufferPartialSettings.
-  // TODO(afoxley) remove this class and just directly use StreamBufferPartialSettings now that it
+  // TODO(dalesat): remove this class and just directly use StreamBufferPartialSettings now that it
   // no longer also wraps StreamBufferSettings
   class PortSettings {
    public:

@@ -1,9 +1,1 @@
-afoxley@google.com
-dalesat@google.com
-dustingreen@google.com
-jonathanbailey@google.com
-mpuryear@google.com
-schottm@google.com
-tombergan@google.com
-
-# COMPONENT: Media
+include /src/media/OWNERS

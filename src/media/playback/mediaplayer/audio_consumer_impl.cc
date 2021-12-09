@@ -271,7 +271,7 @@ void AudioConsumerImpl::Start(fuchsia::media::AudioConsumerStartFlags flags, int
   auto now = zx::clock::get_monotonic().get();
 
   if (reference_time == fuchsia::media::NO_TIMESTAMP) {
-    // TODO(afoxley) set lead time based on flags?
+    // TODO(dalesat): set lead time based on flags?
     reference_time = now + kMinimumLeadTime;
   }
   reference_time_offset_ = now - reference_time;
@@ -349,7 +349,7 @@ void AudioConsumerImpl::SendStatusUpdate() {
         fidl::To<fuchsia::media::TimelineFunction>(core_.timeline_function()));
   }
 
-  // TODO(afoxley) set any error here
+  // TODO(dalesat): set any error here
 
   watch_status_callback_(std::move(status));
   watch_status_callback_ = nullptr;

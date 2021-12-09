@@ -11,7 +11,7 @@ namespace camera {
 
 namespace {
 // This is the max number of buffers the client can ask for when setting its constraints.
-// TODO(afoxley) This is enough to cover current clients, but should be exposed in some way
+// TODO(jsasinowski): This is enough to cover current clients, but should be exposed in some way
 // for clients to know what the limit is, since it can't increase once allocation has completed.
 inline constexpr uint32_t kNumClientBuffers = 5;
 inline constexpr uint32_t kNumMonitorMLFRBuffers = 4;

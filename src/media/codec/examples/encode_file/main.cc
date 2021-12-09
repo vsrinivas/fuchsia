@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
   size_t bytes_written = 0;
   size_t frames_written = 0;
 
-  // TODO(afoxley) add support for non-equal display and coded dimensions
+  // TODO(dalesat): add support for non-equal display and coded dimensions
   fuchsia::sysmem::ImageFormat_2 image_format = {
       .pixel_format =
           {
