@@ -123,6 +123,10 @@ __EXPORT async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_
   return dispatcher->GetAsyncDispatcher();
 }
 
+__EXPORT fdf_dispatcher_t* fdf_dispatcher_from_async_dispatcher(async_dispatcher_t* dispatcher) {
+  return static_cast<fdf_dispatcher*>(fdf_dispatcher::FromAsyncDispatcher(dispatcher));
+}
+
 __EXPORT void fdf_dispatcher_destroy(fdf_dispatcher_t* dispatcher) { return dispatcher->Destroy(); }
 
 __EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }

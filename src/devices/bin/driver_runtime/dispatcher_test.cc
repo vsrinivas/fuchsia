@@ -762,6 +762,16 @@ TEST_F(DispatcherTest, AsyncDispatcher) {
   ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
 }
 
+TEST_F(DispatcherTest, FromAsyncDispatcher) {
+  fdf_dispatcher_t* dispatcher;
+  ASSERT_NO_FATAL_FAILURES(CreateDispatcher(0, "scheduler_role", CreateFakeDriver(), &dispatcher));
+
+  async_dispatcher_t* async_dispatcher = fdf_dispatcher_get_async_dispatcher(dispatcher);
+  ASSERT_NOT_NULL(async_dispatcher);
+
+  ASSERT_EQ(fdf_dispatcher_from_async_dispatcher(async_dispatcher), dispatcher);
+}
+
 //
 // Error handling
 //

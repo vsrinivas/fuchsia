@@ -9,8 +9,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
 
 #include <fbl/auto_lock.h>
+#include <fbl/canary.h>
 #include <fbl/intrusive_double_list.h>
 
 #include "src/devices/bin/driver_runtime/async_loop_owned_event_handler.h"
@@ -48,6 +50,9 @@ class Dispatcher : public async_dispatcher_t {
   static fdf_status_t Create(uint32_t options, const char* scheduler_role,
                              size_t scheduler_role_len,
                              std::unique_ptr<Dispatcher>* out_dispatcher);
+
+  // |dispatcher| must have been retrieved via `GetAsyncDispatcher`.
+  static Dispatcher* FromAsyncDispatcher(async_dispatcher_t* dispatcher);
   async_dispatcher_t* GetAsyncDispatcher();
   void Destroy();
 
@@ -144,6 +149,8 @@ class Dispatcher : public async_dispatcher_t {
   // True if currently dispatching a message.
   // This is only relevant in the synchronized mode.
   bool dispatching_sync_ __TA_GUARDED(&callback_lock_) = false;
+
+  fbl::Canary<fbl::magic("FDFD")> canary_;
 };
 
 }  // namespace driver_runtime

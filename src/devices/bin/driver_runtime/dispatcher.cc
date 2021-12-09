@@ -143,6 +143,13 @@ fdf_status_t Dispatcher::Create(uint32_t options, const char* scheduler_role,
                         out_dispatcher);
 }
 
+// static
+Dispatcher* Dispatcher::FromAsyncDispatcher(async_dispatcher_t* dispatcher) {
+  auto ret = static_cast<Dispatcher*>(dispatcher);
+  ret->canary_.Assert();
+  return ret;
+}
+
 async_dispatcher_t* Dispatcher::GetAsyncDispatcher() {
   // Note: We inherit from async_t so we can upcast to it.
   return (async_dispatcher_t*)this;

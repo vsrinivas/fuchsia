@@ -5,6 +5,7 @@
 #ifndef LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_DISPATCHER_H_
 #define LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_DISPATCHER_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/status.h>
@@ -90,8 +91,19 @@ class Dispatcher {
     return dispatcher_ ? fdf_dispatcher_get_async_dispatcher(dispatcher_) : nullptr;
   }
 
- private:
+ protected:
   fdf_dispatcher_t* dispatcher_;
+};
+
+class UnownedDispatcher : public Dispatcher {
+ public:
+  // Will assert if |dispatcher| isn't retrieved via the `async_dispatcher` method.
+  UnownedDispatcher(async_dispatcher_t* dispatcher)
+      : Dispatcher(fdf_dispatcher_from_async_dispatcher(dispatcher)) {}
+
+  UnownedDispatcher(fdf_dispatcher_t* dispatcher) : Dispatcher(dispatcher) {}
+
+  ~UnownedDispatcher() { dispatcher_ = nullptr; }
 };
 
 }  // namespace fdf
