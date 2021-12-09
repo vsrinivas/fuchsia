@@ -301,7 +301,7 @@ where
                 use_decl.source_name
             ));
 
-            let env_moniker = env_component_instance.abs_moniker().clone();
+            let env_moniker = env_component_instance.abs_moniker().to_partial();
 
             let source = RoutingStrategy::new()
                 .registration::<DebugRegistration>()
@@ -320,7 +320,7 @@ where
                 &source,
                 &env_moniker,
                 &env_name,
-                target.abs_moniker(),
+                &target.abs_moniker().to_partial(),
             )?;
             return Ok(RouteSource::Protocol(source));
         }
@@ -340,7 +340,9 @@ where
                 .route(use_decl, target.clone(), allowed_sources, &mut ProtocolVisitor, mapper)
                 .await?;
 
-            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+            target
+                .try_get_policy_checker()?
+                .can_route_capability(&source, &target.abs_moniker().to_partial())?;
             Ok(RouteSource::Protocol(source))
         }
     }
@@ -374,7 +376,9 @@ where
         )
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    target
+        .try_get_policy_checker()?
+        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
     Ok(RouteSource::Protocol(source))
 }
 
@@ -410,7 +414,9 @@ where
                 .route(use_decl, target.clone(), allowed_sources, &mut ServiceVisitor, mapper)
                 .await?;
 
-            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+            target
+                .try_get_policy_checker()?
+                .can_route_capability(&source, &target.abs_moniker().to_partial())?;
             Ok(RouteSource::Service(source))
         }
     }
@@ -438,7 +444,9 @@ where
         )
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    target
+        .try_get_policy_checker()?
+        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
     Ok(RouteSource::Service(source))
 }
 
@@ -552,7 +560,9 @@ where
                 .route(use_decl, target.clone(), allowed_sources, &mut state, mapper)
                 .await?;
 
-            target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+            target
+                .try_get_policy_checker()?
+                .can_route_capability(&source, &target.abs_moniker().to_partial())?;
             Ok(RouteSource::Directory(source, state))
         }
     }
@@ -581,7 +591,9 @@ where
         .route_from_expose(expose_decl, target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    target
+        .try_get_policy_checker()?
+        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
     Ok(RouteSource::Directory(source, state))
 }
 
@@ -652,7 +664,9 @@ where
 {
     let source = route_to_storage_decl(use_decl, &target, mapper).await?;
     verify_instance_in_component_id_index(&source, target)?;
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    target
+        .try_get_policy_checker()?
+        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
     Ok(RouteSource::Storage(source))
 }
 
@@ -676,7 +690,9 @@ where
         .route(storage_decl.clone().into(), target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    target
+        .try_get_policy_checker()?
+        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
 
     let (dir_source_path, dir_source_instance) = match source {
         CapabilitySourceInterface::Component { capability, component } => (
@@ -754,7 +770,9 @@ where
         }),
     }?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    target
+        .try_get_policy_checker()?
+        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
     Ok(RouteSource::Runner(source))
 }
 
@@ -781,7 +799,9 @@ where
         .route(registration, target.clone(), allowed_sources, &mut ResolverVisitor, mapper)
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    target
+        .try_get_policy_checker()?
+        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
     Ok(RouteSource::Resolver(source))
 }
 
@@ -838,7 +858,9 @@ where
         .route(use_decl, target.clone(), allowed_sources, &mut state, mapper)
         .await?;
 
-    target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
+    target
+        .try_get_policy_checker()?
+        .can_route_capability(&source, &target.abs_moniker().to_partial())?;
     Ok(RouteSource::Event(source))
 }
 

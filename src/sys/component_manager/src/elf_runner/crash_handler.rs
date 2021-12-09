@@ -9,7 +9,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::TryStreamExt,
     log::error,
-    moniker::AbsoluteMoniker,
+    moniker::PartialAbsoluteMoniker,
     task_exceptions,
 };
 
@@ -18,7 +18,7 @@ use {
 // handler. No actual handling of the crash occurs here, we merely save some data on it.
 pub fn run_exceptions_server(
     component_job: &zx::Job,
-    moniker: AbsoluteMoniker,
+    moniker: PartialAbsoluteMoniker,
     resolved_url: String,
     crash_records: CrashRecords,
 ) -> Result<(), Error> {
@@ -56,7 +56,7 @@ pub fn run_exceptions_server(
 
 async fn record_exception(
     resolved_url: String,
-    moniker: AbsoluteMoniker,
+    moniker: PartialAbsoluteMoniker,
     exception_info: task_exceptions::ExceptionInfo,
     crash_records: &CrashRecords,
 ) -> Result<(), Error> {
@@ -94,7 +94,7 @@ mod tests {
     async fn crash_test() -> Result<(), Error> {
         let crash_records = CrashRecords::new();
         let url = "example://component#url".to_string();
-        let moniker = AbsoluteMoniker::from(vec!["a:0"]);
+        let moniker = PartialAbsoluteMoniker::from(vec!["a"]);
 
         let child_job =
             fruntime::job_default().create_child_job().context("failed to create child job")?;

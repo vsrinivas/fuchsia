@@ -264,7 +264,7 @@ pub trait RoutingTestModelBuilder {
     fn add_debug_capability_policy(
         &mut self,
         key: CapabilityAllowlistKey,
-        allowlist: HashSet<(AbsoluteMoniker, String)>,
+        allowlist: HashSet<(PartialAbsoluteMoniker, String)>,
     );
 
     /// Sets the path to the component ID index for the test model.
@@ -3475,7 +3475,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0"])));
+        allowlist.insert(AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["b"])));
 
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
@@ -3581,8 +3581,8 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0"])));
-        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0", "c:0"])));
+        allowlist.insert(AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["b"])));
+        allowlist.insert(AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["b", "c"])));
 
         let mut builder = T::new("a", components);
         builder.add_capability_policy(
@@ -3729,7 +3729,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert(AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b:0"])));
+        allowlist.insert(AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["b"])));
 
         let mut builder = T::new("a", components);
         builder.set_builtin_capabilities(vec![CapabilityDecl::Protocol(ProtocolDecl {
@@ -3859,7 +3859,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((AbsoluteMoniker::root(), "env_a".to_owned()));
+        allowlist.insert((PartialAbsoluteMoniker::root(), "env_a".to_owned()));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
@@ -3965,7 +3965,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((AbsoluteMoniker::from(vec!["b:0"]), "env_b".to_owned()));
+        allowlist.insert((PartialAbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
@@ -4089,7 +4089,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((AbsoluteMoniker::from(vec!["b:0"]), "env_b".to_owned()));
+        allowlist.insert((PartialAbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
@@ -4230,7 +4230,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((AbsoluteMoniker::from(vec!["b:0"]), "env_b".to_owned()));
+        allowlist.insert((PartialAbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(

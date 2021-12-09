@@ -30,7 +30,7 @@ use {
     fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
     fuchsia_zircon_status as zx_status,
     matches::assert_matches,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
+    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
     routing::{
         component_id_index::ComponentIdIndex,
         component_instance::ComponentInstanceInterface,
@@ -68,7 +68,8 @@ pub struct RoutingTestBuilderForAnalyzer {
     builtin_capabilities: Vec<CapabilityDecl>,
     builtin_runner_registrations: Vec<RunnerRegistration>,
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
-    debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+    debug_capability_policy:
+        HashMap<CapabilityAllowlistKey, HashSet<(PartialAbsoluteMoniker, String)>>,
     component_id_index_path: Option<String>,
     builtin_boot_resolver: component_internal::BuiltinBootResolver,
 }
@@ -154,7 +155,7 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
     fn add_debug_capability_policy(
         &mut self,
         key: CapabilityAllowlistKey,
-        allowlist: HashSet<(AbsoluteMoniker, String)>,
+        allowlist: HashSet<(PartialAbsoluteMoniker, String)>,
     ) {
         self.debug_capability_policy.insert(key, allowlist);
     }

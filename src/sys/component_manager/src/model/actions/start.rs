@@ -229,7 +229,7 @@ async fn make_execution_runtime(
 > {
     match component.on_terminate {
         fsys::OnTerminate::Reboot => {
-            checker.reboot_on_terminate_allowed(&component.abs_moniker)?;
+            checker.reboot_on_terminate_allowed(&component.abs_moniker.to_partial())?;
         }
         fsys::OnTerminate::None => {}
     }

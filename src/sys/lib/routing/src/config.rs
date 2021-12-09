@@ -13,7 +13,7 @@ use {
         OutDirContents, RealmBuilderResolverAndRunner,
     },
     fidl_fuchsia_sys2 as fsys,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, MonikerError},
+    moniker::{AbsoluteMonikerBase, ExtendedMoniker, MonikerError, PartialAbsoluteMoniker},
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,
@@ -111,15 +111,15 @@ pub struct RuntimeConfig {
 pub enum AllowlistEntry {
     /// Allow the component with this exact AbsoluteMoniker.
     /// Example string form in config: "/foo/bar", "/foo/bar/baz"
-    Exact(AbsoluteMoniker),
+    Exact(PartialAbsoluteMoniker),
     /// Allow any components that are children of this AbsoluteMoniker. In other words, a prefix
     /// match against the target moniker.
     /// Example string form in config: "/foo/**", "/foo/bar/**"
-    Realm(AbsoluteMoniker),
+    Realm(PartialAbsoluteMoniker),
     /// Allow any components that are in AbsoluteMoniker's collection with the given name. Also a
     /// prefix match against the target moniker but additionally scoped to a specific collection.
     /// Example string form in config: "/foo/tests:**", "/bootstrap/drivers:**"
-    Collection(AbsoluteMoniker, String),
+    Collection(PartialAbsoluteMoniker, String),
 }
 
 /// Runtime security policy.
@@ -139,7 +139,7 @@ pub struct SecurityPolicy {
     /// define the set of components which were allowed to register it as a debug capability in
     /// their environment `environment_name`.
     pub debug_capability_policy:
-        HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+        HashMap<CapabilityAllowlistKey, HashSet<(PartialAbsoluteMoniker, String)>>,
 
     /// Allowlists component child policy. These allowlists control what components are allowed
     /// to set privileged options on their children.
@@ -279,9 +279,9 @@ fn parse_allowlist_entries(strs: &Option<Vec<String>>) -> Result<Vec<AllowlistEn
         .map(|s| {
             if let Some(prefix) = s.strip_suffix("/**") {
                 let realm = if prefix.is_empty() {
-                    AbsoluteMoniker::root()
+                    PartialAbsoluteMoniker::root()
                 } else {
-                    AbsoluteMoniker::parse_string_without_instances(prefix)
+                    PartialAbsoluteMoniker::parse_string_without_instances(prefix)
                         .map_err(|e| AllowlistEntryError::RealmEntryInvalidMoniker(s.clone(), e))?
                 };
                 Ok(AllowlistEntry::Realm(realm))
@@ -294,15 +294,15 @@ fn parse_allowlist_entries(strs: &Option<Vec<String>>) -> Result<Vec<AllowlistEn
                 })?;
 
                 let realm = if realm.is_empty() {
-                    AbsoluteMoniker::root()
+                    PartialAbsoluteMoniker::root()
                 } else {
-                    AbsoluteMoniker::parse_string_without_instances(realm).map_err(|e| {
+                    PartialAbsoluteMoniker::parse_string_without_instances(realm).map_err(|e| {
                         AllowlistEntryError::CollectionEntryInvalidMoniker(s.clone(), e)
                     })?
                 };
                 Ok(AllowlistEntry::Collection(realm, collection.to_string()))
             } else {
-                let realm = AbsoluteMoniker::parse_string_without_instances(s)
+                let realm = PartialAbsoluteMoniker::parse_string_without_instances(s)
                     .map_err(|e| AllowlistEntryError::OtherInvalidMoniker(s.clone(), e))?;
                 Ok(AllowlistEntry::Exact(realm))
             }
@@ -472,11 +472,13 @@ fn parse_capability_policy(
 
 fn parse_debug_capability_policy(
     debug_registration_policy: Option<DebugRegistrationPolicyAllowlists>,
-) -> Result<HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>, Error> {
+) -> Result<HashMap<CapabilityAllowlistKey, HashSet<(PartialAbsoluteMoniker, String)>>, Error> {
     let debug_capability_policy = if let Some(debug_capability_policy) = debug_registration_policy {
         if let Some(allowlist) = debug_capability_policy.allowlist {
-            let mut policies: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>> =
-                HashMap::new();
+            let mut policies: HashMap<
+                CapabilityAllowlistKey,
+                HashSet<(PartialAbsoluteMoniker, String)>,
+            > = HashMap::new();
             for e in allowlist.into_iter() {
                 let source_moniker = ExtendedMoniker::parse_string_without_instances(
                     e.source_moniker
@@ -500,7 +502,7 @@ fn parse_debug_capability_policy(
                     Err(Error::new(PolicyConfigError::EmptyAllowlistedDebugRegistration))
                 }?;
 
-                let target_moniker = AbsoluteMoniker::parse_string_without_instances(
+                let target_moniker = PartialAbsoluteMoniker::parse_string_without_instances(
                     e.target_moniker
                         .as_ref()
                         .ok_or(PolicyConfigError::EmptyTargetMonikerDebugRegistration)?,
@@ -569,7 +571,7 @@ impl TryFrom<component_internal::SecurityPolicy> for SecurityPolicy {
 mod tests {
     use {
         super::*, cm_types::ParseError, fidl_fuchsia_io2 as fio2, matches::assert_matches,
-        std::path::PathBuf, tempfile::TempDir,
+        moniker::AbsoluteMoniker, std::path::PathBuf, tempfile::TempDir,
     };
 
     const FOO_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx";
@@ -783,14 +785,14 @@ mod tests {
                 security_policy: SecurityPolicy {
                     job_policy: JobPolicyAllowlists {
                         ambient_mark_vmo_exec: vec![
-                            AllowlistEntry::Exact(AbsoluteMoniker::root()),
-                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            AllowlistEntry::Exact(PartialAbsoluteMoniker::root()),
+                            AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["foo", "bar"])),
                         ],
                         main_process_critical: vec![
-                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["something:0", "important:0"])),
+                            AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["something", "important"])),
                         ],
                         create_raw_processes: vec![
-                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["another:0", "thing:0"])),
+                            AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["another", "thing"])),
                         ],
                     },
                     capability_policy: HashMap::from_iter(vec![
@@ -801,9 +803,9 @@ mod tests {
                             capability: CapabilityTypeName::Protocol,
                         },
                         HashSet::from_iter(vec![
-                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["bootstrap:0"])),
-                            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["core:0"])),
-                            AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["core:0", "test_manager:0"]), "tests".into()),
+                            AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["bootstrap"])),
+                            AllowlistEntry::Realm(PartialAbsoluteMoniker::from(vec!["core"])),
+                            AllowlistEntry::Collection(PartialAbsoluteMoniker::from(vec!["core", "test_manager"]), "tests".into()),
                         ].iter().cloned())
                         ),
                         (CapabilityAllowlistKey {
@@ -813,8 +815,8 @@ mod tests {
                             capability: CapabilityTypeName::Event,
                         },
                         HashSet::from_iter(vec![
-                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
-                            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
+                            AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["foo", "bar"])),
+                            AllowlistEntry::Realm(PartialAbsoluteMoniker::from(vec!["foo", "bar"])),
                         ].iter().cloned())
                         ),
                     ].iter().cloned()),
@@ -826,9 +828,9 @@ mod tests {
                             capability: CapabilityTypeName::Protocol,
                         },
                         HashSet::from_iter(vec![
-                            (AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),"bar_env1".to_string()),
-                            (AbsoluteMoniker::from(vec!["foo:0"]),"foo_env1".to_string()),
-                            (AbsoluteMoniker::from(vec!["foo:0"]),"foo_env2".to_string())
+                            (PartialAbsoluteMoniker::from(vec!["foo", "bar"]),"bar_env1".to_string()),
+                            (PartialAbsoluteMoniker::from(vec!["foo"]),"foo_env1".to_string()),
+                            (PartialAbsoluteMoniker::from(vec!["foo"]),"foo_env2".to_string())
                         ].iter().cloned())
                         ),
                         (CapabilityAllowlistKey {
@@ -838,13 +840,13 @@ mod tests {
                             capability: CapabilityTypeName::Protocol,
                         },
                         HashSet::from_iter(vec![
-                            (AbsoluteMoniker::from(vec!["root:0"]),"root_env".to_string()),
+                            (PartialAbsoluteMoniker::from(vec!["root"]),"root_env".to_string()),
                         ].iter().cloned())
                         ),
                     ].iter().cloned()),
                     child_policy: ChildPolicyAllowlists {
                         reboot_on_terminate: vec![
-                            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["something:0", "important:0"])),
+                            AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["something", "important"])),
                         ],
                     },
                 },
@@ -1076,11 +1078,11 @@ mod tests {
             "/coll:**".into(),
             "/core/test_manager/tests:**".into(),
         ]), vec![
-            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["core:0"])),
-            AllowlistEntry::Realm(AbsoluteMoniker::root()),
-            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["foo:0"])),
-            AllowlistEntry::Collection(AbsoluteMoniker::root(), "coll".into()),
-            AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["core:0", "test_manager:0"]), "tests".into())
+            AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["core"])),
+            AllowlistEntry::Realm(PartialAbsoluteMoniker::root()),
+            AllowlistEntry::Realm(PartialAbsoluteMoniker::from(vec!["foo"])),
+            AllowlistEntry::Collection(PartialAbsoluteMoniker::root(), "coll".into()),
+            AllowlistEntry::Collection(PartialAbsoluteMoniker::from(vec!["core", "test_manager"]), "tests".into())
         ])
     }
 

@@ -165,7 +165,7 @@ mod tests {
         },
         fidl_fuchsia_data as fdata,
         lazy_static::lazy_static,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
         std::{collections::HashMap, default::Default, sync::Arc},
         test_case::test_case,
     };
@@ -173,7 +173,7 @@ mod tests {
     const TEST_URL: &str = "test_url";
 
     lazy_static! {
-        static ref TEST_MONIKER: AbsoluteMoniker = AbsoluteMoniker::root();
+        static ref TEST_MONIKER: PartialAbsoluteMoniker = PartialAbsoluteMoniker::root();
         static ref PERMISSIVE_RUNTIME_CONFIG: Arc<RuntimeConfig> = {
             Arc::new(RuntimeConfig {
                 security_policy: SecurityPolicy {
@@ -227,11 +227,9 @@ mod tests {
                             $expected_policy, policy
                         );
                         assert_eq!(
-                            moniker,
-                            TEST_MONIKER.to_partial(),
+                            moniker, *TEST_MONIKER,
                             "moniker for PolicyError doesn't match. Expected {}, got {}",
-                            *TEST_MONIKER,
-                            moniker
+                            *TEST_MONIKER, moniker
                         );
                     }
                     _ => assert!(false, "expected error of type PolicyError::JobPolicyDisallowed"),

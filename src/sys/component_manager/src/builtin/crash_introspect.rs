@@ -12,7 +12,7 @@ use {
     fuchsia_zircon as zx,
     futures::{lock::Mutex, TryStreamExt},
     lazy_static::lazy_static,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+    moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
     std::sync::Arc,
 };
 
@@ -27,7 +27,7 @@ lazy_static! {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ComponentCrashInfo {
     pub url: String,
-    pub moniker: AbsoluteMoniker,
+    pub moniker: PartialAbsoluteMoniker,
 }
 
 impl Into<fsys::ComponentCrashInfo> for ComponentCrashInfo {
@@ -167,7 +167,7 @@ mod tests {
         let koid_raw = 123;
         let koid = zx::Koid::from_raw(koid_raw);
         let url = "456".to_string();
-        let moniker = AbsoluteMoniker::from(vec!["a:0"]);
+        let moniker = PartialAbsoluteMoniker::from(vec!["a"]);
         let crash_report = ComponentCrashInfo { url: url.clone(), moniker: moniker.clone() };
 
         assert_eq!(

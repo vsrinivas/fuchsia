@@ -9,7 +9,7 @@ use {
     },
     fidl_fuchsia_sys2 as fsys,
     matches::assert_matches,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
+    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker},
     routing::{
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
         component_instance::ComponentInstanceInterface,
@@ -41,7 +41,6 @@ macro_rules! instantiate_global_policy_checker_tests {
             global_policy_checker_can_route_capability_capability_cap,
             global_policy_checker_can_route_debug_capability_capability_cap,
             global_policy_checker_can_route_capability_builtin_cap,
-            global_policy_checker_can_route_capability_with_instance_ids_cap,
             global_policy_checker_can_route_capability_with_realm_allowlist_entry,
             global_policy_checker_can_route_capability_with_collection_allowlist_entry,
         }
@@ -79,8 +78,8 @@ where
                 capability: CapabilityTypeName::Event,
             },
             vec![
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0", "bar:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["foo", "bar"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["foo", "bar", "baz"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -90,10 +89,10 @@ where
             capability: InternalCapability::Event(CapabilityName::from("running")),
             component: component.as_weak(),
         };
-        let valid_path_0 = AbsoluteMoniker::from(vec!["foo:0", "bar:0"]);
-        let valid_path_1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]);
-        let invalid_path_0 = AbsoluteMoniker::from(vec!["foobar:0"]);
-        let invalid_path_1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0", "foobar:0"]);
+        let valid_path_0 = PartialAbsoluteMoniker::from(vec!["foo", "bar"]);
+        let valid_path_1 = PartialAbsoluteMoniker::from(vec!["foo", "bar", "baz"]);
+        let invalid_path_0 = PartialAbsoluteMoniker::from(vec!["foobar"]);
+        let invalid_path_1 = PartialAbsoluteMoniker::from(vec!["foo", "bar", "foobar"]);
 
         assert_matches!(
             global_policy_checker.can_route_capability(&event_capability, &valid_path_0),
@@ -125,9 +124,9 @@ where
                 capability: CapabilityTypeName::Protocol,
             },
             vec![
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root", "bootstrap"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root", "core"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -139,11 +138,11 @@ where
             }),
             top_instance: Weak::new(),
         };
-        let valid_path_0 = AbsoluteMoniker::from(vec!["root:0"]);
-        let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
-        let valid_path_2 = AbsoluteMoniker::from(vec!["root:0", "core:0"]);
-        let invalid_path_0 = AbsoluteMoniker::from(vec!["foobar:0"]);
-        let invalid_path_1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0", "foobar:0"]);
+        let valid_path_0 = PartialAbsoluteMoniker::from(vec!["root"]);
+        let valid_path_1 = PartialAbsoluteMoniker::from(vec!["root", "bootstrap"]);
+        let valid_path_2 = PartialAbsoluteMoniker::from(vec!["root", "core"]);
+        let invalid_path_0 = PartialAbsoluteMoniker::from(vec!["foobar"]);
+        let invalid_path_1 = PartialAbsoluteMoniker::from(vec!["foo", "bar", "foobar"]);
 
         assert_matches!(
             global_policy_checker.can_route_capability(&protocol_capability, &valid_path_0),
@@ -181,9 +180,9 @@ where
                 capability: CapabilityTypeName::Protocol,
             },
             vec![
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["foo"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root", "bootstrap"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root", "core"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -196,10 +195,10 @@ where
             }),
             component: component.as_weak(),
         };
-        let valid_path_0 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
-        let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "core:0"]);
-        let invalid_path_0 = AbsoluteMoniker::from(vec!["foobar:0"]);
-        let invalid_path_1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0", "foobar:0"]);
+        let valid_path_0 = PartialAbsoluteMoniker::from(vec!["root", "bootstrap"]);
+        let valid_path_1 = PartialAbsoluteMoniker::from(vec!["root", "core"]);
+        let invalid_path_0 = PartialAbsoluteMoniker::from(vec!["foobar"]);
+        let invalid_path_1 = PartialAbsoluteMoniker::from(vec!["foo", "bar", "foobar"]);
 
         assert_matches!(
             global_policy_checker.can_route_capability(&protocol_capability, &valid_path_0),
@@ -233,9 +232,9 @@ where
                 capability: CapabilityTypeName::Storage,
             },
             vec![
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["foo"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root", "bootstrap"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root", "core"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -251,10 +250,10 @@ where
             }),
             component: component.as_weak(),
         };
-        let valid_path_0 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
-        let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "core:0"]);
-        let invalid_path_0 = AbsoluteMoniker::from(vec!["foobar:0"]);
-        let invalid_path_1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0", "foobar:0"]);
+        let valid_path_0 = PartialAbsoluteMoniker::from(vec!["root", "bootstrap"]);
+        let valid_path_1 = PartialAbsoluteMoniker::from(vec!["root", "core"]);
+        let invalid_path_0 = PartialAbsoluteMoniker::from(vec!["foobar"]);
+        let invalid_path_1 = PartialAbsoluteMoniker::from(vec!["foo", "bar", "foobar"]);
 
         assert_matches!(
             global_policy_checker.can_route_capability(&protocol_capability, &valid_path_0),
@@ -288,8 +287,11 @@ where
                 capability: CapabilityTypeName::Protocol,
             },
             vec![
-                (AbsoluteMoniker::from(vec!["foo:0"]), "foo_env".to_string()),
-                (AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]), "bootstrap_env".to_string()),
+                (PartialAbsoluteMoniker::from(vec!["foo"]), "foo_env".to_string()),
+                (
+                    PartialAbsoluteMoniker::from(vec!["root", "bootstrap"]),
+                    "bootstrap_env".to_string(),
+                ),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -303,12 +305,12 @@ where
             component: component.as_weak(),
         };
         let valid_0 =
-            (AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]), "bootstrap_env".to_string());
-        let valid_1 = (AbsoluteMoniker::from(vec!["foo:0"]), "foo_env".to_string());
-        let invalid_0 = (AbsoluteMoniker::from(vec!["foobar:0"]), "foobar_env".to_string());
+            (PartialAbsoluteMoniker::from(vec!["root", "bootstrap"]), "bootstrap_env".to_string());
+        let valid_1 = (PartialAbsoluteMoniker::from(vec!["foo"]), "foo_env".to_string());
+        let invalid_0 = (PartialAbsoluteMoniker::from(vec!["foobar"]), "foobar_env".to_string());
         let invalid_1 =
-            (AbsoluteMoniker::from(vec!["foo:0", "bar:0", "foobar:0"]), "foobar_env".to_string());
-        let target_moniker = AbsoluteMoniker::from(vec!["target:0"]);
+            (PartialAbsoluteMoniker::from(vec!["foo", "bar", "foobar"]), "foobar_env".to_string());
+        let target_moniker = PartialAbsoluteMoniker::from(vec!["target"]);
 
         assert_matches!(
             global_policy_checker.can_route_debug_capability(
@@ -360,8 +362,8 @@ where
                 capability: CapabilityTypeName::Directory,
             },
             vec![
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root"])),
+                AllowlistEntry::Exact(PartialAbsoluteMoniker::from(vec!["root", "core"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -370,57 +372,10 @@ where
             capability: InternalCapability::Directory(CapabilityName::from("hub")),
             top_instance: Weak::new(),
         };
-        let valid_path_0 = AbsoluteMoniker::from(vec!["root:0"]);
-        let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "core:0"]);
-        let invalid_path_0 = AbsoluteMoniker::from(vec!["foobar:0"]);
-        let invalid_path_1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0", "foobar:0"]);
-
-        assert_matches!(
-            global_policy_checker.can_route_capability(&dir_capability, &valid_path_0),
-            Ok(())
-        );
-        assert_matches!(
-            global_policy_checker.can_route_capability(&dir_capability, &valid_path_1),
-            Ok(())
-        );
-        assert_matches!(
-            global_policy_checker.can_route_capability(&dir_capability, &invalid_path_0),
-            Err(_)
-        );
-        assert_matches!(
-            global_policy_checker.can_route_capability(&dir_capability, &invalid_path_1),
-            Err(_)
-        );
-        Ok(())
-    }
-
-    // Tests `GlobalPolicyChecker::can_route_capability()` when component monikers contain
-    // nonzero instance IDs.
-    fn global_policy_checker_can_route_capability_with_instance_ids_cap(
-        &self,
-    ) -> Result<(), Error> {
-        let mut config_builder = CapabilityAllowlistConfigBuilder::new();
-        config_builder.add_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentManager,
-                source_name: CapabilityName::from("hub"),
-                source: CapabilityAllowlistSource::Self_,
-                capability: CapabilityTypeName::Directory,
-            },
-            vec![
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0"])),
-                AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root:0", "core:0"])),
-            ],
-        );
-        let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
-        let dir_capability = CapabilitySourceInterface::<C>::Builtin {
-            capability: InternalCapability::Directory(CapabilityName::from("hub")),
-            top_instance: Weak::new(),
-        };
-        let valid_path_0 = AbsoluteMoniker::from(vec!["root:1"]);
-        let valid_path_1 = AbsoluteMoniker::from(vec!["root:5", "core:3"]);
-        let invalid_path_0 = AbsoluteMoniker::from(vec!["foobar:0"]);
-        let invalid_path_1 = AbsoluteMoniker::from(vec!["foo:0", "bar:2", "foobar:0"]);
+        let valid_path_0 = PartialAbsoluteMoniker::from(vec!["root"]);
+        let valid_path_1 = PartialAbsoluteMoniker::from(vec!["root", "core"]);
+        let invalid_path_0 = PartialAbsoluteMoniker::from(vec!["foobar"]);
+        let invalid_path_1 = PartialAbsoluteMoniker::from(vec!["foo", "bar", "foobar"]);
 
         assert_matches!(
             global_policy_checker.can_route_capability(&dir_capability, &valid_path_0),
@@ -455,8 +410,8 @@ where
                 capability: CapabilityTypeName::Protocol,
             },
             vec![
-                AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["tests:0"])),
-                AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["core:0", "tests:0"])),
+                AllowlistEntry::Realm(PartialAbsoluteMoniker::from(vec!["tests"])),
+                AllowlistEntry::Realm(PartialAbsoluteMoniker::from(vec!["core", "tests"])),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -474,18 +429,18 @@ where
             };
         }
 
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0", "test1:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0", "coll:test1:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0", "test1:0", "util:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0", "test2:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:0", "test:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:0", "coll:t:0"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests", "test1"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests", "coll:test1"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests", "test1", "util"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests", "test2"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "tests", "test"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "tests", "coll:t"])).is_ok());
 
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["foo:0"])).is_err());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0"])).is_err());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "foo:0"])).is_err());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:0"])).is_err());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:test:0"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["foo"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "foo"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "tests"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "tests:test"])).is_err());
         Ok(())
     }
 
@@ -503,8 +458,11 @@ where
                 capability: CapabilityTypeName::Protocol,
             },
             vec![
-                AllowlistEntry::Collection(AbsoluteMoniker::root(), "tests".into()),
-                AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["core:0"]), "tests".into()),
+                AllowlistEntry::Collection(PartialAbsoluteMoniker::root(), "tests".into()),
+                AllowlistEntry::Collection(
+                    PartialAbsoluteMoniker::from(vec!["core"]),
+                    "tests".into(),
+                ),
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
@@ -522,17 +480,17 @@ where
             };
         }
 
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:t1:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:t2:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:t1:0", "util:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:t1:0"])).is_ok());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "tests:t2:0"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests:t1"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests:t2"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests:t1", "util"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "tests:t1"])).is_ok());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "tests:t2"])).is_ok());
 
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["foo:0"])).is_err());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["tests:0"])).is_err());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["coll:foo:0"])).is_err());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "foo:0"])).is_err());
-        assert!(can_route!(&AbsoluteMoniker::from(vec!["core:0", "coll:tests:0"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["foo"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["tests"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["coll:foo"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "foo"])).is_err());
+        assert!(can_route!(&PartialAbsoluteMoniker::from(vec!["core", "coll:tests"])).is_err());
         Ok(())
     }
 }
@@ -541,7 +499,8 @@ where
 // construction.
 struct CapabilityAllowlistConfigBuilder {
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
-    debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+    debug_capability_policy:
+        HashMap<CapabilityAllowlistKey, HashSet<(PartialAbsoluteMoniker, String)>>,
 }
 
 impl CapabilityAllowlistConfigBuilder {
@@ -564,7 +523,7 @@ impl CapabilityAllowlistConfigBuilder {
     pub fn add_debug_capability_policy<'a>(
         &'a mut self,
         key: CapabilityAllowlistKey,
-        value: Vec<(AbsoluteMoniker, String)>,
+        value: Vec<(PartialAbsoluteMoniker, String)>,
     ) -> &'a mut Self {
         let value_set = HashSet::from_iter(value.iter().cloned());
         self.debug_capability_policy.insert(key, value_set);

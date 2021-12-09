@@ -38,7 +38,7 @@ use {
     futures::channel::oneshot,
     io_util,
     log::warn,
-    moniker::AbsoluteMoniker,
+    moniker::PartialAbsoluteMoniker,
     runner::component::ChannelEpitaph,
     std::convert::TryFrom,
     std::{convert::TryInto, path::Path, sync::Arc},
@@ -326,7 +326,7 @@ impl ElfRunner {
     async fn start_component_helper(
         &self,
         start_info: fcrunner::ComponentStartInfo,
-        moniker: AbsoluteMoniker,
+        moniker: PartialAbsoluteMoniker,
         resolved_url: String,
         program_config: ElfProgramConfig,
     ) -> Result<Option<ElfComponent>, ElfRunnerError> {
@@ -673,7 +673,7 @@ mod tests {
         futures::{StreamExt, TryStreamExt},
         io_util,
         matches::assert_matches,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+        moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
         runner::component::Controllable,
         scoped_task,
         std::path::Path,
@@ -976,7 +976,7 @@ mod tests {
         let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
@@ -1027,7 +1027,7 @@ mod tests {
         let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
         ));
         let (client_controller, server_controller) =
             create_proxy::<fcrunner::ComponentControllerMarker>()
@@ -1297,7 +1297,7 @@ mod tests {
         let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
@@ -1325,9 +1325,9 @@ mod tests {
         let config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
-                    ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(AbsoluteMoniker::from(
-                        vec!["foo:0"],
-                    ))],
+                    ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(
+                        PartialAbsoluteMoniker::from(vec!["foo"]),
+                    )],
                     ..Default::default()
                 },
                 ..Default::default()
@@ -1338,7 +1338,7 @@ mod tests {
         let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
-            AbsoluteMoniker::from(vec!["foo:0"]),
+            PartialAbsoluteMoniker::from(vec!["foo"]),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
@@ -1377,7 +1377,7 @@ mod tests {
         let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
@@ -1410,7 +1410,9 @@ mod tests {
             use_builtin_process_launcher: should_use_builtin_process_launcher(),
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
-                    main_process_critical: vec![AllowlistEntry::Exact(AbsoluteMoniker::root())],
+                    main_process_critical: vec![AllowlistEntry::Exact(
+                        PartialAbsoluteMoniker::root(),
+                    )],
                     ..Default::default()
                 },
                 ..Default::default()
@@ -1420,7 +1422,7 @@ mod tests {
         let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&config),
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");
@@ -1503,7 +1505,7 @@ mod tests {
             let runner = new_elf_runner_for_test(&config);
             let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
                 Arc::downgrade(&Arc::new(config)),
-                AbsoluteMoniker::root(),
+                PartialAbsoluteMoniker::root(),
             ));
             let (client_controller, server_controller) =
                 create_proxy::<fcrunner::ComponentControllerMarker>()
@@ -1565,7 +1567,7 @@ mod tests {
         let runner = new_elf_runner_for_test(&config);
         let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
             Arc::downgrade(&Arc::new(config)),
-            AbsoluteMoniker::root(),
+            PartialAbsoluteMoniker::root(),
         ));
         let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
             .expect("could not create component controller endpoints");

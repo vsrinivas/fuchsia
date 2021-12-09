@@ -20,6 +20,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_zircon as zx,
     futures::stream::TryStreamExt,
+    moniker::AbsoluteMonikerBase,
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
@@ -75,7 +76,7 @@ impl Hook for BuiltinRunner {
             if let InternalCapability::Runner(runner_name) = capability {
                 if *runner_name == self.name {
                     let checker =
-                        ScopedPolicyChecker::new(self.config.clone(), target_moniker.clone());
+                        ScopedPolicyChecker::new(self.config.clone(), target_moniker.to_partial());
                     let runner = self.runner.clone().get_scoped_runner(checker);
                     *capability_provider.lock().await =
                         Some(Box::new(RunnerCapabilityProvider::new(runner)));
@@ -142,7 +143,7 @@ mod tests {
         cm_rust_testing::*,
         futures::{lock::Mutex, prelude::*},
         matches::assert_matches,
-        moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
+        moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
         std::sync::Weak,
     };
 
@@ -198,9 +199,9 @@ mod tests {
         let config = Arc::new(RuntimeConfig {
             security_policy: SecurityPolicy {
                 job_policy: JobPolicyAllowlists {
-                    ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(AbsoluteMoniker::from(
-                        vec!["foo:0"],
-                    ))],
+                    ambient_mark_vmo_exec: vec![AllowlistEntry::Exact(
+                        PartialAbsoluteMoniker::from(vec!["foo"]),
+                    )],
                     ..Default::default()
                 },
                 ..Default::default()
