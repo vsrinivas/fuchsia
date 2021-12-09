@@ -4,13 +4,19 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_cpu_load") {
+ffx_plugin("ffx_temperature_logger") {
   version = "0.1.0"
   edition = "2018"
 
   sources = [ "src/lib.rs" ]
-  deps = [ "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc" ]
+  deps = [
+    "//src/developer/ffx/lib/errors:lib",
+    "//src/power/temperature-logger/fuchsia.thermal.test:fuchsia.thermal.test-rustc",
+  ]
+  test_deps = [ "//third_party/rust_crates:matches" ]
   with_unit_tests = true
 
   args_sources = [ "src/args.rs" ]
+  args_deps = [ "//third_party/rust_crates:regex" ]
+  args_with_unit_tests = true
 }

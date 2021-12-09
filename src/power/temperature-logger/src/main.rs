@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error, Result},
+    anyhow::{format_err, Context, Error, Result},
     fidl_fuchsia_device as fdevice, fidl_fuchsia_hardware_temperature as ftemperature,
     fidl_fuchsia_thermal_test::{self as fthermal, TemperatureLoggerRequest},
     fuchsia_async as fasync,
@@ -413,8 +413,11 @@ async fn inner_main() -> Result<()> {
     inspect_runtime::serve(inspector, &mut fs)?;
 
     // Construct the server, and begin serving.
-    let config: json::Value =
-        json::from_reader(std::io::BufReader::new(std::fs::File::open(CONFIG_PATH)?))?;
+    let config: json::Value = json::from_reader(std::io::BufReader::new(
+        std::fs::File::open(CONFIG_PATH)
+            .context(format!("Failed to open config file at path {}", CONFIG_PATH))?,
+    ))
+    .context("Failed to parse config file JSON")?;
     let server = ServerBuilder::new_from_json(config).build().await?;
     fs.dir("svc").add_fidl_service(move |stream: fthermal::TemperatureLoggerRequestStream| {
         TemperatureLoggerServer::handle_new_service_connection(server.clone(), stream).detach();

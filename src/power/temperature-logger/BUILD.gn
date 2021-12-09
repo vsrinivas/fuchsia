@@ -31,6 +31,10 @@ temperature_logger_config("astro_config") {
   source = "config/astro_config.json"
 }
 
+temperature_logger_config("sherlock_config") {
+  source = "config/sherlock_config.json"
+}
+
 rustc_binary("bin") {
   name = "temperature_logger"
   edition = "2018"
