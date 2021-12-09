@@ -34,15 +34,16 @@ type VolumeInfo = struct {
     /// Number of slices allocated to the volume.
     partition_slice_count uint64;
 
-    /// Limit on the maximum size in bytes of this partition, if there is one. If the size of the
+    /// Limit on the maximum slices assigned to this partition, if there is one. If the size of the
     /// partition is not limited, this value will be 0. Partitions can grow into free slices
-    /// available in the volume manager as long as the total bytes are less than this.
+    /// available in the volume manager as long as their slices are less than or equal to this
+    /// value.
     ///
     /// The partition may be larger than this limit if a smaller limit was applied after the
     /// partition had already grown to the current size.
     ///
     /// See `VolumeManager.GetPartitionLimit()`
-    byte_limit uint64;
+    slice_limit uint64;
 };
 
 /// Indicates that the partition should be created as inactive, implying that it
@@ -108,7 +109,7 @@ protocol VolumeManager {
         guid partition.GUID;
     }) -> (struct {
         status zx.status;
-        byte_count uint64;
+        slice_count uint64;
     });
 
     /// Sets the allocation limit for the partition. Partitions can not be extended beyond their
@@ -124,7 +125,7 @@ protocol VolumeManager {
     /// future.
     SetPartitionLimit(struct {
         guid partition.GUID;
-        byte_count uint64;
+        slice_count uint64;
     }) -> (struct {
         status zx.status;
     });

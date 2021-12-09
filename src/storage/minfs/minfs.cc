@@ -737,19 +737,18 @@ uint64_t Minfs::GetFreeFvmBytes() const {
     FX_LOGS(WARNING) << "FVM can't report partition limit.";
     return 0;  // Assume no free space if FVM can't respond.
   }
-  uint64_t free_fvm_bytes =
-      (manager.slice_count - manager.assigned_slice_count) * manager.slice_size;
+  uint64_t free_fvm_slices = manager.slice_count - manager.assigned_slice_count;
 
-  if (!volume.byte_limit)
-    return free_fvm_bytes;  // No partition limit.
+  if (!volume.slice_limit)
+    return free_fvm_slices * manager.slice_size;  // No partition limit.
 
-  uint64_t partition_allocated_bytes = volume.partition_slice_count * manager.slice_size;
-  if (partition_allocated_bytes > volume.byte_limit) {
+  if (volume.partition_slice_count > volume.slice_limit) {
     // Already beyond max size (the limit could have been set after our last resize).
     return 0;
   }
 
-  return std::min(free_fvm_bytes, volume.byte_limit - partition_allocated_bytes);
+  return std::min(free_fvm_slices, volume.slice_limit - volume.partition_slice_count) *
+         manager.slice_size;
 }
 #endif
 

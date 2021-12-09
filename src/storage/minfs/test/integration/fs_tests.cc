@@ -165,7 +165,7 @@ class MinfsFvmTest : public BaseFilesystemTest {
     return zx::ok(*response->info);
   }
 
-  zx_status_t SetPartitionLimit(uint64_t byte_limit) {
+  zx_status_t SetPartitionLimit(uint64_t slice_limit) {
     fbl::unique_fd fvm_fd = GetFvmFd();
     EXPECT_TRUE(fvm_fd);
 
@@ -176,7 +176,7 @@ class MinfsFvmTest : public BaseFilesystemTest {
     auto set_response =
         fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                            caller.borrow_channel()))
-            ->SetPartitionLimit(*guid_or, byte_limit);
+            ->SetPartitionLimit(*guid_or, slice_limit);
     if (set_response.status() != ZX_OK)
       return set_response.status();
     if (set_response->status != ZX_OK)
@@ -192,7 +192,7 @@ class MinfsFvmTest : public BaseFilesystemTest {
     if (get_response->status != ZX_OK)
       return get_response->status;
 
-    EXPECT_EQ(byte_limit, get_response->byte_count);
+    EXPECT_EQ(slice_limit, get_response->slice_count);
     return ZX_OK;
   }
 
@@ -407,19 +407,19 @@ TEST_F(MinfsFvmTestWith8MiBSliceSize, FreeSharedPoolBytes) {
 
   // Lower the partition limit to one more slice than the filesystem currently is using (since
   // there's only our partition in FVM, we know all used slices belong to minfs).
-  uint64_t new_limit = (manager_info->assigned_slice_count + 1) * kSliceSize;
+  uint64_t new_limit = manager_info->assigned_slice_count + 1;
   ASSERT_EQ(ZX_OK, SetPartitionLimit(new_limit));
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
   EXPECT_EQ(kSliceSize, info.free_shared_pool_bytes);  // Set exactly one slice free.
 
   // Match the limit to the current partition size.
-  new_limit = manager_info->assigned_slice_count * kSliceSize;
+  new_limit = manager_info->assigned_slice_count;
   ASSERT_EQ(ZX_OK, SetPartitionLimit(new_limit));
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
   EXPECT_EQ(0u, info.free_shared_pool_bytes);  // No slices free.
 
   // Lower the limit to to below the partition size.
-  new_limit = (manager_info->assigned_slice_count - 1) * kSliceSize;
+  new_limit = manager_info->assigned_slice_count - 1;
   ASSERT_EQ(ZX_OK, SetPartitionLimit(new_limit));
   ASSERT_NO_FATAL_FAILURE(QueryInfo(fs(), &info));
   EXPECT_EQ(0u, info.free_shared_pool_bytes);  // No slices free.

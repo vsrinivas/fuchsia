@@ -488,12 +488,11 @@ zx_status_t VPartitionManager::AllocateSlicesLocked(VPartition* vp, size_t vslic
 
     ZX_DEBUG_ASSERT_MSG(vp->entry_index() >= 1 && vp->entry_index() < fvm::kMaxVPartitions,
                         "VPartition entry index out of range.");
-    if (uint64_t max_size = max_partition_sizes_[vp->entry_index()]) {
+    if (uint64_t max_slices = max_partition_sizes_[vp->entry_index()]) {
       // Enforce the max partition size.
       auto existing_slices = GetVPartEntryLocked(vp->entry_index())->slices;
-      uint64_t requested_size =
-          safemath::ClampMul(safemath::ClampAdd(existing_slices, count), slice_size_);
-      if (requested_size > max_size) {
+      uint64_t requested_slices = safemath::ClampAdd(existing_slices, count);
+      if (requested_slices > max_slices) {
         return ZX_ERR_NO_SPACE;
       }
     }
@@ -668,32 +667,34 @@ uint64_t VPartitionManager::GetPartitionLimitInternal(size_t index) const {
 }
 
 zx_status_t VPartitionManager::GetPartitionLimitInternal(const uint8_t* guid,
-                                                         uint64_t* byte_count) const {
+                                                         uint64_t* slice_count) const {
   fbl::AutoLock lock(&lock_);
 
   if (size_t partition = GetPartitionNumberLocked(guid)) {
-    *byte_count = max_partition_sizes_[partition];
+    *slice_count = max_partition_sizes_[partition];
     return ZX_OK;
   }
 
   // The bad GUID will already have been logged by GetPartitionNumberLocked().
   zxlogf(ERROR, "Unable to get partition limit, partition not found.");
-  *byte_count = 0;
+  *slice_count = 0;
   return ZX_ERR_NOT_FOUND;
 }
 
-zx_status_t VPartitionManager::SetPartitionLimitInternal(const uint8_t* guid, uint64_t byte_count) {
+zx_status_t VPartitionManager::SetPartitionLimitInternal(const uint8_t* guid,
+                                                         uint64_t slice_count) {
   fbl::AutoLock lock(&lock_);
 
   if (size_t partition = GetPartitionNumberLocked(guid)) {
-    zxlogf(INFO, "Setting partition limit to 0x%" PRIx64 " for partition #%zu", byte_count,
+    zxlogf(INFO, "Setting partition limit to 0x%" PRIx64 " slices for partition #%zu", slice_count,
            partition);
-    max_partition_sizes_[partition] = byte_count;
+    max_partition_sizes_[partition] = slice_count;
     return ZX_OK;
   }
 
   // The partition GUID will already have been logged by GetPartitionNumberLocked().
-  zxlogf(ERROR, "Unable set partition limit to %" PRIu64 ", partition not found.", byte_count);
+  zxlogf(ERROR, "Unable set partition limit to %" PRIu64 " slices, partition not found.",
+         slice_count);
   // This additional logging by LogPartitionInfoLocked() about each partition was added due to
   // reports of failures of this function. In the future it can be removed if we find this function
   // fails in expected cases and the logging is excessive.
@@ -869,14 +870,14 @@ void VPartitionManager::Activate(ActivateRequestView request, ActivateCompleter:
 
 void VPartitionManager::GetPartitionLimit(GetPartitionLimitRequestView request,
                                           GetPartitionLimitCompleter::Sync& completer) {
-  uint64_t byte_size = 0;
-  zx_status_t status = GetPartitionLimitInternal(request->guid.value.data(), &byte_size);
-  completer.Reply(status, byte_size);
+  uint64_t slice_count = 0;
+  zx_status_t status = GetPartitionLimitInternal(request->guid.value.data(), &slice_count);
+  completer.Reply(status, slice_count);
 }
 
 void VPartitionManager::SetPartitionLimit(SetPartitionLimitRequestView request,
                                           SetPartitionLimitCompleter::Sync& completer) {
-  completer.Reply(SetPartitionLimitInternal(request->guid.value.data(), request->byte_count));
+  completer.Reply(SetPartitionLimitInternal(request->guid.value.data(), request->slice_count));
 }
 
 void VPartitionManager::SetPartitionName(SetPartitionNameRequestView request,

@@ -232,8 +232,8 @@ zx_status_t Device::BlockVolumeGetInfo(volume_manager_info_t* out_manager,
   out_manager->assigned_slice_count -= info_.reserved_slices;
 
   out_volume->partition_slice_count -= info_.reserved_slices;
-  if (out_volume->byte_limit)
-    out_volume->byte_limit -= info_.reserved_slices * out_manager->slice_size;
+  if (out_volume->slice_limit)
+    out_volume->slice_limit -= info_.reserved_slices;
 
   return ZX_OK;
 }

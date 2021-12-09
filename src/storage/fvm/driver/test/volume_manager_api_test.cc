@@ -166,19 +166,18 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   EXPECT_EQ(kExpectedFormat.pslice_count, get_info->manager->slice_count);
   EXPECT_EQ(1u, get_info->manager->assigned_slice_count);
   EXPECT_EQ(1u, get_info->volume->partition_slice_count);
-  EXPECT_EQ(0u, get_info->volume->byte_limit);
+  EXPECT_EQ(0u, get_info->volume->slice_limit);
 
   // That partition's initial limit should be 0 (no limit).
   fidl::WireResult<VolumeManager::GetPartitionLimit> get_result =
       fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetPartitionLimit(guid);
   ASSERT_OK(get_result.status(), "Transport layer error");
   ASSERT_OK(get_result->status, "Service returned error.");
-  EXPECT_EQ(get_result->byte_count, 0, "Expected 0 limit on init.");
+  EXPECT_EQ(get_result->slice_count, 0, "Expected 0 limit on init.");
 
   // Set the limit to two slices.
   fidl::WireResult<VolumeManager::SetPartitionLimit> set_result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())
-          ->SetPartitionLimit(guid, kSliceSize * 2);
+      fidl::WireCall<VolumeManager>(fvm->device()->channel())->SetPartitionLimit(guid, 2);
   ASSERT_OK(set_result.status(), "Transport layer error");
 
   // Validate the new value can be retrieved.
@@ -186,7 +185,7 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
       fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetPartitionLimit(guid);
   ASSERT_OK(get_result2.status(), "Transport layer error");
   ASSERT_OK(get_result2->status, "Service returned error.");
-  EXPECT_EQ(get_result2->byte_count, kSliceSize * 2, "Expected the limit we set.");
+  EXPECT_EQ(get_result2->slice_count, 2, "Expected the limit we set.");
 
   // Try to expand it by one slice. Since the initial size was one slice and the limit is two, this
   // should succeed.
@@ -204,7 +203,7 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   EXPECT_EQ(kExpectedFormat.pslice_count, get_info2->manager->slice_count);
   EXPECT_EQ(2u, get_info2->manager->assigned_slice_count);
   EXPECT_EQ(2u, get_info2->volume->partition_slice_count);
-  EXPECT_EQ(kSliceSize * 2, get_info2->volume->byte_limit);
+  EXPECT_EQ(2u, get_info2->volume->slice_limit);
 
   // Adding a third slice should fail since it's already at the max size.
   fidl::WireResult<Volume::Extend> bad_extend =
@@ -231,7 +230,7 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
       fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetPartitionLimit(guid);
   ASSERT_OK(last_get_result.status(), "Transport layer error");
   ASSERT_OK(last_get_result->status, "Service returned error.");
-  EXPECT_EQ(last_get_result->byte_count, 0, "Expected 0 limit on new partition.");
+  EXPECT_EQ(last_get_result->slice_count, 0, "Expected 0 limit on new partition.");
 }
 
 TEST_F(FvmVolumeManagerApiTest, SetPartitionName) {

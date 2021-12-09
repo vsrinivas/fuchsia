@@ -264,7 +264,7 @@ FakeFVMBlockDevice::FakeFVMBlockDevice(uint64_t block_count, uint32_t block_size
   manager_info_.max_virtual_slice = fvm::kMaxVSlices;
 
   volume_info_.partition_slice_count = manager_info_.assigned_slice_count;
-  volume_info_.byte_limit = 0;
+  volume_info_.slice_limit = 0;
 
   extents_.emplace(0, range::Range<uint64_t>(0, 1));
   ZX_ASSERT(slice_capacity >= manager_info_.assigned_slice_count);

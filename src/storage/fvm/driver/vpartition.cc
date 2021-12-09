@@ -481,7 +481,7 @@ zx_status_t VPartition::BlockVolumeGetInfo(volume_manager_info_t* out_manager,
 
   fbl::AutoLock lock(&lock_);
   out_volume->partition_slice_count = NumSlicesLocked();
-  out_volume->byte_limit = mgr_->GetPartitionLimitInternal(entry_index_);
+  out_volume->slice_limit = mgr_->GetPartitionLimitInternal(entry_index_);
   return ZX_OK;
 }
 

@@ -174,7 +174,8 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
 
   // The partition limit should match the value set in the integration test fshost configuration
   // (see the BUILD.gn file).
-  EXPECT_EQ(limit_result->byte_count, 117440512u);
+  constexpr uint64_t kMaxRuntimeBytes = 117440512u;
+  EXPECT_EQ(limit_result->slice_count, kMaxRuntimeBytes / kSliceSize);
 }
 
 TEST_F(BlockDeviceManagerIntegration, SetPartitionName) {

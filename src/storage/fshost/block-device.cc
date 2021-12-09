@@ -435,7 +435,7 @@ bool BlockDevice::ShouldAllowAuthoringFactory() {
   return allow_authoring_factory_fd.is_valid();
 }
 
-zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) {
+zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_byte_size) {
   // Get the partition GUID for talking to FVM.
   const fuchsia_hardware_block_partition::wire::Guid& instance_guid = GetInstanceGuid();
   if (std::all_of(std::begin(instance_guid.value), std::end(instance_guid.value),
@@ -445,16 +445,33 @@ zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64
   fbl::unique_fd fvm_fd(open(fvm_path.c_str(), O_RDONLY));
   if (!fvm_fd)
     return ZX_ERR_NOT_SUPPORTED;  // Not in FVM, nothing to do.
+  fdio_cpp::UnownedFdioCaller fvm_caller(fvm_fd.get());
 
-  // Actually set the limit.
-  fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
+  // Get the FVM slice size.
+  auto info_response =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                         fvm_caller.borrow_channel()))
+          ->GetInfo();
+  if (info_response.status() != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to request FVM Info: "
+                   << zx_status_get_string(info_response.status());
+    return info_response.status();
+  }
+  if (info_response->status != ZX_OK || !info_response->info) {
+    FX_LOGS(ERROR) << "FVM info request failed: " << zx_status_get_string(info_response->status);
+    return info_response->status;
+  }
+  uint64_t slice_size = info_response->info->slice_size;
+
+  // Set the limit (convert to slice units, rounding down).
+  uint64_t max_slice_count = max_byte_size / slice_size;
   auto response =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
-                         caller.borrow_channel()))
-          ->SetPartitionLimit(instance_guid, max_size);
+                         fvm_caller.borrow_channel()))
+          ->SetPartitionLimit(instance_guid, max_slice_count);
   if (response.status() != ZX_OK || response->status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to set partition limit for " << topological_path() << " to "
-                   << max_size << " bytes.";
+                   << max_byte_size << " bytes (" << max_slice_count << " slices).";
     if (response.status() != ZX_OK) {
       FX_LOGS(ERROR) << "  FIDL error: " << zx_status_get_string(response.status());
       return response.status();

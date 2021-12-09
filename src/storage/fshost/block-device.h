@@ -50,7 +50,7 @@ class BlockDevice : public BlockDeviceInterface {
   zx::status<std::string> VeritySeal() override;
   zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) override;
   bool ShouldAllowAuthoringFactory() override;
-  zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) override;
+  zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_byte_size) override;
   bool IsNand() const override { return false; }
   zx_status_t SetPartitionName(const std::string& fvm_path, std::string_view name) override;
 

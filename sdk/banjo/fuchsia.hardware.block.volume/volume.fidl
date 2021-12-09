@@ -34,15 +34,13 @@ type VolumeInfo = struct {
     /// Number of slices allocated to the volume.
     partition_slice_count uint64;
 
-    /// Limit on the maximum size in bytes of this partition, if there is one. If the size of the
+    /// Limit on the maximum slices assigned to this partition, if there is one. If the size of the
     /// partition is not limited, this value will be 0. Partitions can grow into free slices
-    /// available in the volume manager as long as the total bytes are less than this.
-    ///
-    /// The partition may be larger than this limit if a smaller limit was applied after the
-    /// partition had already grown to the current size.
+    /// available in the volume manager as long as their slices are less than or equal to this
+    /// value.
     ///
     /// See `VolumeManager.GetPartitionLimit()`
-    byte_limit uint64;
+    slice_limit uint64;
 };
 
 /// Describes an region within a Volume. Both units are in "slices".

@@ -81,8 +81,8 @@ class VPartitionManager : public ManagerDeviceType {
   void GetInfoInternal(VolumeManagerInfo* info) TA_EXCL(lock_);
 
   uint64_t GetPartitionLimitInternal(size_t index) const;
-  zx_status_t GetPartitionLimitInternal(const uint8_t* guid, uint64_t* byte_count) const;
-  zx_status_t SetPartitionLimitInternal(const uint8_t* guid, uint64_t byte_count);
+  zx_status_t GetPartitionLimitInternal(const uint8_t* guid, uint64_t* slice_count) const;
+  zx_status_t SetPartitionLimitInternal(const uint8_t* guid, uint64_t slice_count);
   zx_status_t SetPartitionNameInternal(const uint8_t* guid, std::string_view name);
 
   size_t DiskSize() const { return info_.block_count * info_.block_size; }
@@ -192,7 +192,7 @@ class VPartitionManager : public ManagerDeviceType {
   // Set when the driver is loaded and never changed.
   size_t slice_size_ = 0;
 
-  // Stores the maximum size in bytes for each partition, 1-indexed (0 elt is not used) the same as
+  // Stores the maximum size in slices for each partition, 1-indexed (0 elt is not used) the same as
   // GetVPartEntryLocked(). A 0 max size means there is no maximum for this partition.
   //
   // These are 0-initialized and set by the FIDL call SetPartitionLimit. It would be better in the
