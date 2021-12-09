@@ -24,6 +24,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
@@ -183,18 +184,17 @@ TEST_F(MountTest, ServeExportDirectoryExportRootDirectoryEntries) {
   ASSERT_NE(dir, nullptr);
   dir_fd.release();
   auto close_dir = fit::defer([&]() { closedir(dir); });
-  int count = 0;
-  // Verify that there is exactly one entry called "root".
+
+  // Verify that there are exactly two entries, "root" and "diagnostics".
   // TODO(fxbug.dev/34531): Adjust this test accordingly when the admin service is added.
+  std::vector<std::string> directory_entries;
   while ((entry = readdir(dir)) != nullptr) {
     if ((strcmp(entry->d_name, ".") != 0) && (strcmp(entry->d_name, "..") != 0)) {
-      EXPECT_EQ(entry->d_name, std::string_view("root"));
+      directory_entries.emplace_back(entry->d_name);
       EXPECT_EQ(entry->d_type, DT_DIR);
-      EXPECT_EQ(count, 0);
-      count++;
     }
   }
-  EXPECT_EQ(count, 1);
+  EXPECT_THAT(directory_entries, testing::UnorderedElementsAre("root", "diagnostics"));
 }
 
 TEST_F(MountTest, ServeExportDirectoryDisallowFileCreationInExportRoot) {

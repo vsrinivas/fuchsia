@@ -17,6 +17,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.minfs/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -370,6 +371,9 @@ class Minfs :
     return ZX_ERR_UNAVAILABLE;
   }
 
+  // Get a pointer to the Inspector that Minfs is using.
+  inspect::Inspector* Inspector() { return &inspector_; }
+
   // Record the location, size, and number of all non-free block regions.
   fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 
@@ -508,6 +512,46 @@ class Minfs :
   MountState mount_state_ = {};
   async::TaskClosure journal_sync_task_;
   std::unique_ptr<cobalt::CobaltLogger> cobalt_logger_ = nullptr;
+
+  // TODO(fxbug.dev/85419): Report properties using InspectTree from VFS when available.
+  inspect::Inspector inspector_;
+  inspect::Node root_node_;
+  struct InspectProperties {
+    //
+    // The properties `out_of_space_events` and `recovered_space_events` answer the following:
+    //
+    //   1. Has the device attempted to extend the volume but failed within the past 5 minutes?
+    //   2. Has the device attempted to extend the volume, and only succeeded after reclaiming
+    //      space freed by flushing the journal, in the past 5 minutes?
+    //
+    // This lets us answer the following questions while being somewhat more robust against user
+    // specific workloads (in particular, the amount and rate at which data is written/deleted):
+    //   3. How many devices have run out of space in the current boot cycle, at any point in time?
+    //   4. When a device does run out of space, does it recover after a certain period of time?
+    //      This may allow us to identify patterns over time, e.g. if something temporarily uses a
+    //      large amount of space, we might see periodic spikes which then recover for long periods.
+    //   5. Has the mitigation added in fxbug.dev/88364 been successful at preventing at least some
+    //      out of space issues?
+    //
+    // These properties may be simplified once we know the answers to #1 and #2 and have more data.
+    //
+
+    // Incremented at most once every kEventWindowDuration, if we fail to extend the volume.
+    inspect::UintProperty out_of_space_events;
+    // Incremented at most once every kEventWindowDuration, if we recovered enough space from
+    // flushing the journal to not transition into an out of space condition.
+    inspect::UintProperty recovered_space_events;
+
+  } inspect_detail_;
+  void InitializeInspectTree();
+
+  fbl::Mutex event_lock_;
+  const zx::duration kEventWindowDuration = zx::min(5);
+  zx::time last_out_of_space_event_ __TA_GUARDED(event_lock_){zx::time::infinite_past()};
+  zx::time last_recovered_space_event_ __TA_GUARDED(event_lock_){zx::time::infinite_past()};
+  void OnOutOfSpace() __TA_EXCLUDES(event_lock_);
+  void OnRecoveredFreeSpace() __TA_EXCLUDES(event_lock_);
+
 #else
   // Store start block + length for all extents. These may differ from info block for
   // sparse files.

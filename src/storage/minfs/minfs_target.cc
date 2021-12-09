@@ -68,16 +68,21 @@ zx_status_t Minfs::ContinueTransaction(size_t reserve_blocks,
     auto sync_status = BlockingJournalSync();
     if (sync_status.is_error()) {
       FX_LOGS(ERROR) << "Failed to flush journal (status: " << sync_status.status_string() << ")";
+      OnOutOfSpace();
       // Return the original status.
       return status;
     }
 
     status = (*out)->ExtendBlockReservation(reserve_blocks);
+    if (status == ZX_OK) {
+      OnRecoveredFreeSpace();
+    }
   }
 
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to extend block reservation (status: "
                    << zx::make_status(status).status_string() << ")";
+    OnOutOfSpace();
   }
 
   return status;

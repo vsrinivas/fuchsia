@@ -149,6 +149,7 @@ static_library("minfs") {
       "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/fidl-utils",
       "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/inspect",
       "//zircon/system/ulib/storage-metrics",
       "//zircon/system/ulib/sync",
       "//zircon/system/ulib/trace",

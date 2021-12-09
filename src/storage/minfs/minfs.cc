@@ -20,6 +20,7 @@
 #include <iomanip>
 #include <limits>
 #include <memory>
+#include <utility>
 
 #include <bitmap/raw-bitmap.h>
 #include <fbl/algorithm.h>
@@ -35,6 +36,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/cksum.h>
 #include <lib/fit/defer.h>
+#include <lib/inspect/service/cpp/service.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 
 #include <fbl/auto_lock.h>
@@ -46,6 +49,7 @@
 #include "src/lib/storage/vfs/cpp/journal/replay.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
+#include "src/lib/storage/vfs/cpp/service.h"
 #include "src/storage/fvm/client.h"
 #endif
 
@@ -544,16 +548,21 @@ zx_status_t Minfs::BeginTransaction(size_t reserve_inodes, size_t reserve_blocks
     auto sync_status = BlockingJournalSync();
     if (sync_status.is_error()) {
       FX_LOGS(ERROR) << "Failed to flush journal (status: " << sync_status.status_string() << ")";
+      OnOutOfSpace();
       // Return the original status.
       return status;
     }
 
     status = Transaction::Create(this, reserve_inodes, reserve_blocks, inodes_.get(), transaction);
+    if (status == ZX_OK) {
+      OnRecoveredFreeSpace();
+    }
   }
 
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to reserve blocks for transaction (status: "
                    << zx::make_status(status).status_string() << ")";
+    OnOutOfSpace();
   }
 #endif
 
@@ -694,9 +703,11 @@ Minfs::Minfs(async_dispatcher_t* dispatcher, std::unique_ptr<Bcache> bc,
       block_allocator_(std::move(block_allocator)),
       inodes_(std::move(inodes)),
       journal_sync_task_([this]() { Sync(); }),
+      inspector_{},
       limits_(sb_->Info()),
       mount_options_(mount_options) {
   zx::event::create(0, &fs_id_);
+  inspector_.CreateStatsNode();
 }
 #else
 Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
@@ -1269,6 +1280,8 @@ zx_status_t Minfs::Create(FuchsiaDispatcher* dispatcher, std::unique_ptr<Bcache>
       .dirty_cache_enabled = true,
   };
 
+  fs->InitializeInspectTree();
+
   *out = std::move(fs);
 #else
   BlockOffsets offsets(*bc, *sb);
@@ -1351,6 +1364,42 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
   return minfs::Bcache::Create(std::move(device), static_cast<uint32_t>(block_count), out);
 }
 
+void Minfs::InitializeInspectTree() {
+  root_node_ = inspector_.GetRoot().CreateChild("minfs");
+  inspect_detail_.out_of_space_events = root_node_.CreateUint("out_of_space_events", 0u);
+  inspect_detail_.recovered_space_events = root_node_.CreateUint("recovered_space_events", 0u);
+}
+
+void Minfs::OnOutOfSpace() {
+  zx::time curr_time = zx::clock::get_monotonic();
+  bool record_event = false;
+  {
+    fbl::AutoLock lock(&event_lock_);
+    if (curr_time - last_out_of_space_event_ > kEventWindowDuration) {
+      last_out_of_space_event_ = curr_time;
+      record_event = true;
+    }
+  }
+  if (record_event) {
+    inspect_detail_.out_of_space_events.Add(1u);
+  }
+}
+
+void Minfs::OnRecoveredFreeSpace() {
+  zx::time curr_time = zx::clock::get_monotonic();
+  bool record_event = false;
+  {
+    fbl::AutoLock lock(&event_lock_);
+    if (curr_time - last_recovered_space_event_ > kEventWindowDuration) {
+      last_recovered_space_event_ = curr_time;
+      record_event = true;
+    }
+  }
+  if (record_event) {
+    inspect_detail_.recovered_space_events.Add(1u);
+  }
+}
+
 #endif
 
 zx::status<std::unique_ptr<Minfs>> Mount(FuchsiaDispatcher* dispatcher,
@@ -1403,14 +1452,35 @@ zx::status<std::unique_ptr<fs::ManagedVfs>> MountAndServe(const MountOptions& mo
   // details.
   async::PostTask(dispatcher, [&fs = *fs] { fs.LogMountMetrics(); });
 
+  // Specify to fall back to DeepCopy mode instead of Live mode (the default) on failures to send
+  // a Frozen copy of the tree (e.g. if we could not create a child copy of the backing VMO).
+  // This helps prevent any issues with querying the inspect tree while the filesystem is under
+  // load, since snapshots at the receiving end must be consistent. See fxbug.dev/57330 for details.
+  inspect::TreeHandlerSettings settings{.snapshot_behavior =
+                                            inspect::TreeServerSendPreference::Frozen(
+                                                inspect::TreeServerSendPreference::Type::DeepCopy)};
+
+  auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
+      [connector = inspect::MakeTreeHandler(fs->Inspector(), dispatcher, settings)](
+          zx::channel chan) mutable {
+        connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
+        return ZX_OK;
+      });
+
   fbl::RefPtr<fs::Vnode> export_root;
   switch (serve_layout) {
     case ServeLayout::kDataRootOnly:
       export_root = std::move(data_root);
       break;
     case ServeLayout::kExportDirectory:
+
       auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
       outgoing->AddEntry("root", std::move(data_root));
+
+      auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>(fs.get());
+      outgoing->AddEntry("diagnostics", diagnostics_dir);
+      diagnostics_dir->AddEntry(fuchsia::inspect::Tree::Name_, inspect_tree);
+
       export_root = std::move(outgoing);
       break;
   }
