@@ -97,7 +97,6 @@ if (toolchain_environment == "userboot") {
     deps = [
       ":gen-vdso-syms-ld",
       "//src/zircon/lib/zircon",
-      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/userabi:headers",
       "//zircon/system/ulib/elf-psabi",
       "//zircon/system/ulib/elfload",

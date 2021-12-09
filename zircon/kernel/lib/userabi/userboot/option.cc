@@ -6,60 +6,70 @@
 
 #include "option.h"
 
-#include <lib/boot-options/word-view.h>
+#include <cstring>
 
-#include <string_view>
+#include "util.h"
 
-namespace {
+#define OPTION_DEFAULT(option)         \
+  case OPTION_##option:                \
+    value = OPTION_##option##_DEFAULT; \
+    break
 
-constexpr std::string_view kRootOpt = "userboot.root";
-constexpr std::string_view kNextOpt = "userboot.next";
-constexpr std::string_view kShutdownOpt = "userboot.shutdown";
-constexpr std::string_view kRebootOpt = "userboot.reboot";
-
-// TODO(joshuaseaton): This should really be defined as a default value of
-// `Options::next` and expressed as a std::string_view; however, that can
-// sometimes generate a writable data section. While such sections are
-// prohibited, we apply the default within ParseCmdline() below and keep this
-// value as a char array.
-constexpr const char kNextDefault[] = "bin/bootsvc";
-
-struct KeyAndValue {
-  std::string_view key, value;
-};
-
-KeyAndValue SplitOpt(std::string_view opt) {
-  std::string_view key = opt.substr(0, opt.find_first_of('='));
-  opt.remove_prefix(std::min(opt.size(), key.size() + 1));
-  return {key, opt};
+static void initialize_options(struct options* o) {
+  for (int i = 0; i < OPTION_MAX; ++i) {
+    const char* value = NULL;
+    switch (option(i)) {
+      OPTION_DEFAULT(ROOT);
+      OPTION_DEFAULT(FILENAME);
+      OPTION_DEFAULT(SHUTDOWN);
+      OPTION_DEFAULT(REBOOT);
+      case OPTION_MAX:
+        __builtin_unreachable();
+    }
+    o->value[i] = value;
+  }
 }
 
-}  // namespace
+#define OPTION_STRING(option)                          \
+  case OPTION_##option:                                \
+    string = OPTION_##option##_STRING;                 \
+    string_len = sizeof(OPTION_##option##_STRING) - 1; \
+    break
 
-void ParseCmdline(std::string_view cmdline, Options& opts) {
-  if (opts.next.empty()) {
-    opts.next = kNextDefault;
-  }
-
-  for (std::string_view opt : WordView(cmdline)) {
-    auto [key, value] = SplitOpt(opt);
-    if (key == kNextOpt) {
-      opts.next = value;
-    } else if (key == kRootOpt) {
-      // Normalize away a trailing '/', if present.
-      if (!value.empty() && value.back() == '/') {
-        value.remove_suffix(1);
-      }
-      opts.root = value;
-    } else if (key == kShutdownOpt) {
-      opts.epilogue = Epilogue::kPowerOffAfterChildExit;
-    } else if (key == kRebootOpt) {
-      opts.epilogue = Epilogue::kRebootAfterChildExit;
+static void apply_option(struct options* o, const char* arg) {
+  size_t len = strlen(arg);
+  for (int i = 0; i < OPTION_MAX; ++i) {
+    const char* string = NULL;
+    size_t string_len = 0;
+    switch (option(i)) {
+      OPTION_STRING(ROOT);
+      OPTION_STRING(FILENAME);
+      OPTION_STRING(SHUTDOWN);
+      OPTION_STRING(REBOOT);
+      case OPTION_MAX:
+        __builtin_unreachable();
+    }
+    if (len > string_len && arg[string_len] == '=' && !strncmp(arg, string, string_len)) {
+      o->value[i] = &arg[string_len + 1];
     }
   }
 }
 
-uint32_t CountOptions(std::string_view cmdline) {
-  WordView opts(cmdline);
-  return std::distance(opts.begin(), opts.end());
+uint32_t parse_options(const zx::debuglog& log, const char* cmdline, size_t cmdline_size,
+                       struct options* o) {
+  initialize_options(o);
+
+  if (cmdline_size == 0 || cmdline[cmdline_size - 1] != '\0') {
+    fail(log, "kernel command line of %zu bytes is unterminated", cmdline_size);
+  }
+
+  // Count the strings while parsing them.
+  uint32_t n = 0;
+  for (const char* p = cmdline; p < &cmdline[cmdline_size - 1]; p = strchr(p, '\0') + 1) {
+    printl(log, "option \"%s\"", p);
+    apply_option(o, p);
+    ++n;
+  }
+
+  return n;
 }

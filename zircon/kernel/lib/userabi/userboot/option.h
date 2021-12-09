@@ -7,31 +7,30 @@
 #ifndef ZIRCON_KERNEL_LIB_USERABI_USERBOOT_OPTION_H_
 #define ZIRCON_KERNEL_LIB_USERABI_USERBOOT_OPTION_H_
 
-#include <string_view>
+#include <lib/zx/debuglog.h>
+#include <zircon/types.h>
 
-// Userboot's terminal behaviour.
-enum class Epilogue {
-  kExitAfterChildLaunch,
-  kRebootAfterChildExit,    // If `userboot.reboot` is set.
-  kPowerOffAfterChildExit,  // If `userboot.shutdown` is set.
+enum option {
+  OPTION_ROOT,
+#define OPTION_ROOT_STRING "userboot.root"
+#define OPTION_ROOT_DEFAULT ""
+  OPTION_FILENAME,
+#define OPTION_FILENAME_STRING "userboot.next"
+#define OPTION_FILENAME_DEFAULT "bin/bootsvc"
+  OPTION_SHUTDOWN,
+#define OPTION_SHUTDOWN_STRING "userboot.shutdown"
+#define OPTION_SHUTDOWN_DEFAULT NULL
+  OPTION_REBOOT,
+#define OPTION_REBOOT_STRING "userboot.reboot"
+#define OPTION_REBOOT_DEFAULT NULL
+  OPTION_MAX
 };
 
-// Userboot options, as determined by a ZBI's CMDLINE payloads.
-struct Options {
-  // `userboot.root`: the BOOTFS directory under which userboot will find its
-  // child program and the libraries accessible to its loader service
-  std::string_view root;
-
-  // `userboot.next`: The root-relative child program path.
-  std::string_view next;
-
-  Epilogue epilogue = Epilogue::kExitAfterChildLaunch;
+struct options {
+  const char* value[OPTION_MAX];
 };
 
-// Parses the provided CMDLINE payload for userboot options.
-void ParseCmdline(std::string_view cmdline, Options& opts);
-
-// Counts the number of options encoded in the given string.
-uint32_t CountOptions(std::string_view cmdline);
+uint32_t parse_options(const zx::debuglog& log, const char* cmdline, size_t cmdline_size,
+                       struct options* o);
 
 #endif  // ZIRCON_KERNEL_LIB_USERABI_USERBOOT_OPTION_H_
