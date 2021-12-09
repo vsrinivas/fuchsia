@@ -23,6 +23,7 @@ rustc_binary("bin") {
   non_rust_deps = [ "//src/lib/chunked-compression" ]
 
   sources = [ "src/main.rs" ]
+  deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
 install_host_tools("host") {

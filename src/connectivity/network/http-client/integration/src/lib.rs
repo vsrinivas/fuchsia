@@ -4,10 +4,13 @@
 
 #![cfg(test)]
 
-use {
-    fidl_fuchsia_net_http as http, fuchsia_async as fasync, fuchsia_component_test::ScopedInstance,
-    fuchsia_zircon as zx, futures::StreamExt as _,
-};
+use fidl_fuchsia_net_http as http;
+use fuchsia_async as fasync;
+use fuchsia_component_test::ScopedInstance;
+use fuchsia_zircon as zx;
+use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
+use std::future::Future;
+use std::net::SocketAddr;
 
 const ROOT_DOCUMENT: &str = "Root document\n";
 
@@ -15,46 +18,96 @@ fn big_vec() -> Vec<u8> {
     (0..(32usize << 20)).map(|n| n as u8).collect()
 }
 
-async fn run<F: futures::Future<Output = ()>>(
-    func: impl Fn(http::LoaderProxy, std::net::SocketAddr) -> F,
-) {
-    use {
-        futures::{select, FutureExt as _},
-        rouille::router,
-    };
+const TRIGGER_301: &str = "/trigger_301";
+const SEE_OTHER: &str = "/see_other";
+const LOOP1: &str = "/loop1";
+const LOOP2: &str = "/loop2";
+const PENDING: &str = "/pending";
+const BIG_STREAM: &str = "/big_stream";
 
-    let server = rouille::Server::new("[::]:0", |request| {
-        router!(request,
-                (GET) (/) => {
-                    rouille::Response::text(ROOT_DOCUMENT)
-                },
-                (GET) (/trigger_301) => {
-                    rouille::Response::redirect_301("/")
-                },
-                (POST) (/see_other) => {
-                    rouille::Response::redirect_303("/")
-                },
-                (GET) (/loop1) => {
-                    rouille::Response::redirect_301("/loop2")
-                },
-                (GET) (/loop2) => {
-                    rouille::Response::redirect_301("/loop1")
-                },
-                (GET) (/responds_in_10_minutes) => {
-                    std::thread::sleep(std::time::Duration::from_secs(600));
-                    rouille::Response::text(ROOT_DOCUMENT)
-                },
-                (GET) (/big_stream) => {
-                    rouille::Response::from_data("application/octet-stream", big_vec())
-                },
-                _ => {
-                    rouille::Response::empty_404()
-                }
-        )
-    })
-    .expect("failed to create rouille server");
-    const HTTP_CLIENT_URL: &str =
-        "fuchsia-pkg://fuchsia.com/http-client-integration-tests#meta/http-client.cm";
+async fn run<F: Future<Output = ()>>(func: impl Fn(http::LoaderProxy, SocketAddr) -> F) {
+    use futures::future::Either;
+    use hyper::{
+        header,
+        service::{make_service_fn, service_fn},
+        Body, Method, Response, StatusCode,
+    };
+    use std::convert::{Infallible, TryInto as _};
+    use std::net::{IpAddr, Ipv6Addr};
+
+    let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::UNSPECIFIED), 0);
+    let listener = fasync::net::TcpListener::bind(&addr).expect("bind");
+    let server_addr = listener.local_addr().expect("local address");
+    let listener = listener
+        .accept_stream()
+        .map_ok(|(stream, _): (_, SocketAddr)| fuchsia_hyper::TcpStream { stream });
+
+    const ROOT: &str = "/";
+    let root = || ROOT.try_into().expect("root location");
+    let loop1 = || LOOP1.try_into().expect("loop1 location");
+    let loop2 = || LOOP2.try_into().expect("loop2 location");
+
+    let svc = service_fn(move |req| {
+        let ready = |t| std::future::ready(t).left_future();
+        let pending = std::future::pending().right_future();
+
+        match (req.method(), req.uri().path()) {
+            (&Method::GET, ROOT) => {
+                let response = Response::new(ROOT_DOCUMENT.into());
+                ready(response)
+            }
+            (&Method::GET, TRIGGER_301) => {
+                let mut response = Response::new(Body::empty());
+                *response.status_mut() = StatusCode::MOVED_PERMANENTLY;
+                assert_eq!(response.headers_mut().insert(header::LOCATION, root()), None);
+                ready(response)
+            }
+            (&Method::POST, SEE_OTHER) => {
+                let mut response = Response::new(Body::empty());
+                *response.status_mut() = StatusCode::SEE_OTHER;
+                assert_eq!(response.headers_mut().insert(header::LOCATION, root()), None);
+                ready(response)
+            }
+            (&Method::GET, LOOP1) => {
+                let mut response = Response::new(Body::empty());
+                *response.status_mut() = StatusCode::MOVED_PERMANENTLY;
+                assert_eq!(response.headers_mut().insert(header::LOCATION, loop2()), None);
+                ready(response)
+            }
+            (&Method::GET, LOOP2) => {
+                let mut response = Response::new(Body::empty());
+                *response.status_mut() = StatusCode::MOVED_PERMANENTLY;
+                assert_eq!(response.headers_mut().insert(header::LOCATION, loop1()), None);
+                ready(response)
+            }
+            (&Method::GET, PENDING) => pending,
+            (&Method::GET, BIG_STREAM) => {
+                let encoding = "application/octet-stream".try_into().expect("octet stream");
+                let mut response = Response::new(big_vec().into());
+                assert_eq!(
+                    response.headers_mut().insert(header::TRANSFER_ENCODING, encoding),
+                    None
+                );
+                ready(response)
+            }
+            _ => {
+                let mut response = Response::new(Body::empty());
+                *response.status_mut() = StatusCode::NOT_FOUND;
+                ready(response)
+            }
+        }
+        .map(Ok::<_, Infallible>)
+    });
+
+    let make_svc = make_service_fn(move |_: &fuchsia_hyper::TcpStream| {
+        futures::future::ok::<_, Infallible>(svc)
+    });
+
+    let server = hyper::Server::builder(hyper::server::accept::from_stream(listener))
+        .executor(fuchsia_hyper::Executor)
+        .serve(make_svc);
+
+    const HTTP_CLIENT_URL: &str = "#meta/http-client.cm";
     let http_client = ScopedInstance::new("coll".into(), HTTP_CLIENT_URL.into())
         .await
         .expect("failed to create http-client");
@@ -62,16 +115,13 @@ async fn run<F: futures::Future<Output = ()>>(
         .connect_to_protocol_at_exposed_dir::<http::LoaderMarker>()
         .expect("failed to connect to http client");
 
-    select! {
-        () = func(loader, server.server_addr()).fuse() => (),
-        () = async {
-            loop {
-                let () = server.poll();
-                // rouille isn't async, so we need to poll it until the test function completes.
-                // Sleep every now and again to avoid scorching the CPU.
-                let () = fasync::Timer::new(std::time::Duration::from_millis(10)).await;
-            }
-        }.fuse() => (),
+    let fut = func(loader, server_addr);
+    futures::pin_mut!(fut);
+    match futures::future::select(fut, server).await {
+        Either::Left(((), _server)) => {}
+        Either::Right((result, _fut)) => {
+            panic!("hyper server exited: {:?}", result);
+        }
     }
 }
 
@@ -115,11 +165,11 @@ fn check_response_common(response: &http::Response, expected_header_names: &[&st
 }
 
 fn check_response(response: &http::Response) {
-    check_response_common(response, &["server", "date", "content-type", "content-length"]);
+    check_response_common(response, &["content-length", "date"]);
 }
 
 fn check_response_big(response: &http::Response) {
-    check_response_common(response, &["server", "date", "content-type", "transfer-encoding"]);
+    check_response_common(response, &["transfer-encoding", "date"]);
 }
 
 async fn check_body(body: Option<zx::Socket>, mut expected: &[u8]) {
@@ -172,7 +222,7 @@ async fn test_fetch_response_too_slow() {
         // Deadline expires 100ms from now.
         let deadline = Some(zx::Time::after(zx::Duration::from_millis(100)));
         let http::Response { error, body, .. } = loader
-            .fetch(make_request("GET", format!("http://{}/responds_in_10_minutes", addr), deadline))
+            .fetch(make_request("GET", format!("http://{}{}", addr, PENDING), deadline))
             .await
             .expect("failed to fetch");
 
@@ -228,7 +278,7 @@ async fn test_start_http() {
 async fn test_fetch_redirect() {
     run(|loader, addr| async move {
         let response = loader
-            .fetch(make_request("GET", format!("http://{}/trigger_301", addr), None))
+            .fetch(make_request("GET", format!("http://{}{}", addr, TRIGGER_301), None))
             .await
             .expect("failed to fetch");
         let () = check_response(&response);
@@ -245,7 +295,7 @@ async fn test_start_redirect() {
         let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
         let () = loader
-            .start(make_request("GET", format!("http://{}/trigger_301", addr), None), tx)
+            .start(make_request("GET", format!("http://{}{}", addr, TRIGGER_301), None), tx)
             .expect("failed to start");
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
@@ -292,7 +342,7 @@ async fn test_start_redirect() {
 async fn test_fetch_see_other() {
     run(|loader, addr| async move {
         let response = loader
-            .fetch(make_request("POST", format!("http://{}/see_other", addr), None))
+            .fetch(make_request("POST", format!("http://{}{}", addr, SEE_OTHER), None))
             .await
             .expect("failed to fetch");
         let () = check_response(&response);
@@ -309,7 +359,7 @@ async fn test_start_see_other() {
         let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
         let () = loader
-            .start(make_request("POST", format!("http://{}/see_other", addr), None), tx)
+            .start(make_request("POST", format!("http://{}{}", addr, SEE_OTHER), None), tx)
             .expect("failed to start");
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
@@ -357,7 +407,7 @@ async fn test_start_see_other() {
 async fn test_fetch_max_redirect() {
     run(|loader, addr| async move {
         let http::Response { status_code, redirect, .. } = loader
-            .fetch(make_request("GET", format!("http://{}/loop1", addr), None))
+            .fetch(make_request("GET", format!("http://{}{}", addr, LOOP1), None))
             .await
             .expect("failed to fetch");
         // The last request in the redirect loop will always return status code 301
@@ -366,7 +416,7 @@ async fn test_fetch_max_redirect() {
             redirect,
             Some(http::RedirectTarget {
                 method: Some("GET".to_string()),
-                url: Some(format!("http://{}/loop2", addr)),
+                url: Some(format!("http://{}{}", addr, LOOP2)),
                 referrer: None,
                 ..http::RedirectTarget::EMPTY
             })
@@ -381,7 +431,7 @@ async fn test_start_redirect_loop() {
         let (tx, rx) = fidl::endpoints::create_endpoints().expect("failed to create endpoints");
 
         let () = loader
-            .start(make_request("GET", format!("http://{}/loop1", addr), None), tx)
+            .start(make_request("GET", format!("http://{}{}", addr, LOOP1), None), tx)
             .expect("failed to start");
 
         let mut rx = rx.into_stream().expect("failed to convert to stream");
@@ -400,7 +450,7 @@ async fn test_start_redirect_loop() {
                 redirect,
                 Some(http::RedirectTarget {
                     method: Some("GET".to_string()),
-                    url: Some(format!("http://{}/loop2", addr)),
+                    url: Some(format!("http://{}{}", addr, LOOP2)),
                     referrer: None,
                     ..http::RedirectTarget::EMPTY
                 })
@@ -421,7 +471,7 @@ async fn test_start_redirect_loop() {
                 redirect,
                 Some(http::RedirectTarget {
                     method: Some("GET".to_string()),
-                    url: Some(format!("http://{}/loop1", addr)),
+                    url: Some(format!("http://{}{}", addr, LOOP1)),
                     referrer: None,
                     ..http::RedirectTarget::EMPTY
                 })
@@ -437,7 +487,7 @@ async fn test_start_redirect_loop() {
 async fn test_fetch_http_big_stream() {
     run(|loader, addr| async move {
         let response = loader
-            .fetch(make_request("GET", format!("http://{}/big_stream", addr), None))
+            .fetch(make_request("GET", format!("http://{}{}", addr, BIG_STREAM), None))
             .await
             .expect("failed to fetch");
 

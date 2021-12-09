@@ -500,10 +500,6 @@ rustflags = []
 [gn.package.signal-hook."0.3.8"]
 rustflags = []
 
-[gn.package.tiny_http."0.6.4"]
-# TODO(61282): Fix the leaks and remove this.
-deps = [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
-
 [gn.package.typenum."1.14.0"]
 env_vars = [
   "TYPENUM_BUILD_CONSTS=../../../compat/typenum/consts.rs",
