@@ -14,9 +14,9 @@ use {
         error::Error,
         logger,
     },
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_minstrel as fidl_minstrel, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon as zx,
+    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
+    fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_minstrel as fidl_minstrel,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::{Bssid, MacAddr, Ssid},
     log::{error, info, log, warn},
     std::fmt,
@@ -133,7 +133,7 @@ impl crate::MlmeImpl for Ap {
     fn handle_mac_frame_rx(
         &mut self,
         frame: &[u8],
-        rx_info: banjo_fuchsia_hardware_wlan_mac::WlanRxInfo,
+        rx_info: banjo_fuchsia_hardware_wlan_softmac::WlanRxInfo,
     ) {
         Self::handle_mac_frame_rx(self, frame, rx_info)
     }
@@ -141,7 +141,7 @@ impl crate::MlmeImpl for Ap {
         Self::handle_eth_frame_tx(self, bytes);
         Ok(())
     }
-    fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
+    fn handle_hw_indication(&mut self, ind: banjo_wlan_softmac::WlanIndication) {
         Self::handle_hw_indication(self, ind);
     }
     fn handle_scan_complete(&mut self, _status: zx::Status, _scan_id: u64) {
@@ -342,7 +342,7 @@ impl Ap {
     pub fn handle_mac_frame_rx<B: ByteSlice>(
         &mut self,
         bytes: B,
-        rx_info: banjo_wlan_mac::WlanRxInfo,
+        rx_info: banjo_wlan_softmac::WlanRxInfo,
     ) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
@@ -358,7 +358,7 @@ impl Ap {
         }
 
         let body_aligned =
-            (rx_info.rx_flags & banjo_wlan_mac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0;
+            (rx_info.rx_flags & banjo_wlan_softmac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0;
 
         let mac_frame = match mac::MacFrame::parse(bytes, body_aligned) {
             Some(mac_frame) => mac_frame,
@@ -392,7 +392,7 @@ impl Ap {
         }
     }
 
-    pub fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
+    pub fn handle_hw_indication(&mut self, ind: banjo_wlan_softmac::WlanIndication) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
             None => {
@@ -741,7 +741,7 @@ mod tests {
         );
         ap.handle_mac_frame_rx(
             &[0][..],
-            banjo_wlan_mac::WlanRxInfo {
+            banjo_wlan_softmac::WlanRxInfo {
                 rx_flags: 0,
                 valid_fields: 0,
                 phy: 0,
@@ -787,7 +787,7 @@ mod tests {
             // SSID
             0, 7, 0x63, 0x6f, 0x6f, 0x6c, 0x6e, 0x65, 0x74, 0x0a,
         ];
-        let rx_info_wrong_channel = banjo_wlan_mac::WlanRxInfo {
+        let rx_info_wrong_channel = banjo_wlan_softmac::WlanRxInfo {
             rx_flags: 0,
             valid_fields: 0,
             phy: 0,
@@ -807,7 +807,7 @@ mod tests {
         assert_eq!(fake_device.wlan_queue.len(), 0);
 
         // Frame from the same channel must be processed and a probe response sent.
-        let rx_info_same_channel = banjo_wlan_mac::WlanRxInfo {
+        let rx_info_same_channel = banjo_wlan_softmac::WlanRxInfo {
             channel: banjo_common::WlanChannel {
                 primary: 1,
                 cbw: banjo_common::ChannelBandwidth::CBW20,

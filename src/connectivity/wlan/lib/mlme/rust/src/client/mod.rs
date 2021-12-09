@@ -21,8 +21,8 @@ use {
         logger,
     },
     anyhow::{self, format_err},
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, banjo_fuchsia_wlan_common as banjo_common,
-    banjo_fuchsia_wlan_internal as banjo_internal,
+    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
+    banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_internal as banjo_internal,
     channel_listener::{ChannelListenerSource, ChannelListenerState},
     channel_scheduler::ChannelScheduler,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
@@ -111,14 +111,14 @@ impl crate::MlmeImpl for ClientMlme {
     fn handle_mac_frame_rx(
         &mut self,
         bytes: &[u8],
-        rx_info: banjo_fuchsia_hardware_wlan_mac::WlanRxInfo,
+        rx_info: banjo_fuchsia_hardware_wlan_softmac::WlanRxInfo,
     ) {
         Self::on_mac_frame_rx(self, bytes, rx_info)
     }
     fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), anyhow::Error> {
         Self::on_eth_frame_tx(self, bytes).map_err(|e| e.into())
     }
-    fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication) {
+    fn handle_hw_indication(&mut self, ind: banjo_wlan_softmac::WlanIndication) {
         warn!("Unexpected HwIndication {:?} received in Client MLME.", ind);
         return;
     }
@@ -170,7 +170,7 @@ impl ClientMlme {
         self.channel_state.main_channel.map(|c| c == channel).unwrap_or(false)
     }
 
-    pub fn on_mac_frame_rx(&mut self, frame: &[u8], rx_info: banjo_wlan_mac::WlanRxInfo) {
+    pub fn on_mac_frame_rx(&mut self, frame: &[u8], rx_info: banjo_wlan_softmac::WlanRxInfo) {
         // TODO(fxbug.dev/44487): Send the entire frame to scanner.
         match mac::MacFrame::parse(frame, false) {
             Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
@@ -896,7 +896,11 @@ impl<'a> BoundClient<'a> {
     }
 
     /// Called when an arbitrary frame was received over the air.
-    pub fn on_mac_frame<B: ByteSlice>(&mut self, bytes: B, rx_info: banjo_wlan_mac::WlanRxInfo) {
+    pub fn on_mac_frame<B: ByteSlice>(
+        &mut self,
+        bytes: B,
+        rx_info: banjo_wlan_softmac::WlanRxInfo,
+    ) {
         // Safe: |state| is never None and always replaced with Some(..).
         self.sta.state = Some(self.sta.state.take().unwrap().on_mac_frame(self, bytes, rx_info));
     }
@@ -1625,7 +1629,7 @@ mod tests {
         // If this beacon is not received, the next timeout will trigger auto deauth.
         me.on_mac_frame_rx(
             BEACON_FRAME,
-            banjo_wlan_mac::WlanRxInfo {
+            banjo_wlan_softmac::WlanRxInfo {
                 rx_flags: 0,
                 valid_fields: 0,
                 phy: 0,

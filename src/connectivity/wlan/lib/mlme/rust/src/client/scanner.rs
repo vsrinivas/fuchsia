@@ -16,7 +16,7 @@ use {
         error::Error,
     },
     anyhow::format_err,
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_hardware_wlanphyinfo as banjo_hw_wlaninfo,
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
     fidl_fuchsia_wlan_internal as fidl_internal, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -203,7 +203,7 @@ impl<'a> BoundScanner<'a> {
     fn start_passive_scan(&mut self, req: &fidl_mlme::ScanRequest) -> Result<u64, zx::Status> {
         // Note: WlanmacPassiveScanArgs contains raw pointers and the memory pointed
         // to must remain in scope for the duration of the call to Device::start_passive_scan().
-        self.ctx.device.start_passive_scan(&banjo_wlan_mac::WlanmacPassiveScanArgs {
+        self.ctx.device.start_passive_scan(&banjo_wlan_softmac::WlanmacPassiveScanArgs {
             channels_list: req.channel_list.as_ptr(),
             channels_count: req.channel_list.len(),
             // TODO(fxbug.dev/89933): A TimeUnit is generally limited to 2 octets. Conversion here
@@ -244,7 +244,7 @@ impl<'a> BoundScanner<'a> {
 
         // Note: WlanmacActiveScanArgs contains raw pointers and the memory pointed
         // to must remain in scope for the duration of the call to Device::start_active_scan().
-        self.ctx.device.start_active_scan(&banjo_wlan_mac::WlanmacActiveScanArgs {
+        self.ctx.device.start_active_scan(&banjo_wlan_softmac::WlanmacActiveScanArgs {
             channels_list: req.channel_list.as_ptr(),
             channels_count: req.channel_list.len(),
             ssids_list: ssids_list.as_ptr(),
@@ -275,7 +275,7 @@ impl<'a> BoundScanner<'a> {
         beacon_interval: TimeUnit,
         capability_info: CapabilityInfo,
         ies: &[u8],
-        rx_info: banjo_wlan_mac::WlanRxInfo,
+        rx_info: banjo_wlan_softmac::WlanRxInfo,
     ) {
         let txn_id = match self.scanner.ongoing_scan {
             Some(OngoingScan::MlmeScan { req: fidl_mlme::ScanRequest { txn_id, .. }, .. }) => {
@@ -459,7 +459,7 @@ impl<'a> BoundScanner<'a> {
 }
 
 fn get_band_info(
-    iface_info: &banjo_wlan_mac::WlanmacInfo,
+    iface_info: &banjo_wlan_softmac::WlanmacInfo,
     primary_channel: u8,
 ) -> Option<&banjo_hw_wlaninfo::WlanInfoBandInfo> {
     const _2GHZ_BAND_HIGHEST_CHANNEL: u8 = 14;
@@ -522,7 +522,7 @@ mod tests {
         0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
     ];
     lazy_static! {
-        static ref RX_INFO_FOO: banjo_wlan_mac::WlanRxInfo =
+        static ref RX_INFO_FOO: banjo_wlan_softmac::WlanRxInfo =
             MockWlanRxInfo { rssi_dbm: -30, ..Default::default() }.into();
         static ref BSS_DESCRIPTION_FOO: fidl_internal::BssDescription =
             fidl_internal::BssDescription {
@@ -554,7 +554,7 @@ mod tests {
         0x05, 0x04, 0x00, 0x01, 0x00, 0x02,
     ];
     lazy_static! {
-        static ref RX_INFO_BAR: banjo_wlan_mac::WlanRxInfo =
+        static ref RX_INFO_BAR: banjo_wlan_softmac::WlanRxInfo =
             MockWlanRxInfo { rssi_dbm: -60, ..Default::default() }.into();
         static ref BSS_DESCRIPTION_BAR: fidl_internal::BssDescription =
             fidl_internal::BssDescription {

@@ -15,7 +15,7 @@ use {
         key::KeyConfig,
     },
     anyhow::format_err,
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_hardware_wlanphyinfo::WlanInfoDriverFeature,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
@@ -541,11 +541,11 @@ impl InfraBss {
     pub fn handle_hw_indication(
         &mut self,
         ctx: &mut Context,
-        ind: banjo_wlan_mac::WlanIndication,
+        ind: banjo_wlan_softmac::WlanIndication,
     ) -> Result<(), Error> {
         match ind {
-            banjo_wlan_mac::WlanIndication::PRE_TBTT => self.handle_pre_tbtt_hw_indication(ctx),
-            banjo_wlan_mac::WlanIndication::BCN_TX_COMPLETE => {
+            banjo_wlan_softmac::WlanIndication::PRE_TBTT => self.handle_pre_tbtt_hw_indication(ctx),
+            banjo_wlan_softmac::WlanIndication::BCN_TX_COMPLETE => {
                 self.handle_bcn_tx_complete_indication(ctx)
             }
             _ => {

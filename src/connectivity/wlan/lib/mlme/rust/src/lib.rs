@@ -22,7 +22,7 @@ pub use {ddk_converter::*, wlan_common as common};
 
 use {
     anyhow::{anyhow, bail, Error},
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_hardware_wlanphyinfo as ddk_wlaninfo,
     device::{Device, DeviceInterface},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -47,9 +47,9 @@ pub trait MlmeImpl {
         scheduler: common::timer::Timer<Self::TimerEvent>,
     ) -> Self;
     fn handle_mlme_message(&mut self, msg: fidl_mlme::MlmeRequest) -> Result<(), Error>;
-    fn handle_mac_frame_rx(&mut self, bytes: &[u8], rx_info: banjo_wlan_mac::WlanRxInfo);
+    fn handle_mac_frame_rx(&mut self, bytes: &[u8], rx_info: banjo_wlan_softmac::WlanRxInfo);
     fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), Error>;
-    fn handle_hw_indication(&mut self, ind: banjo_wlan_mac::WlanIndication);
+    fn handle_hw_indication(&mut self, ind: banjo_wlan_softmac::WlanIndication);
     fn handle_scan_complete(&mut self, status: zx::Status, scan_id: u64);
     fn handle_timeout(&mut self, event_id: common::timer::EventId, event: Self::TimerEvent);
     fn access_device(&mut self) -> &mut Device;
@@ -154,15 +154,15 @@ pub enum DriverEvent {
     Stop,
     // TODO(fxbug.dev/43456): We need to keep stats for these events and respond to StatsQueryRequest.
     // Indicates receipt of a MAC frame from a peer.
-    MacFrameRx { bytes: Vec<u8>, rx_info: banjo_wlan_mac::WlanRxInfo },
+    MacFrameRx { bytes: Vec<u8>, rx_info: banjo_wlan_softmac::WlanRxInfo },
     // Requests transmission of an ethernet frame over the air.
     EthFrameTx { bytes: Vec<u8> },
     // A notification of some event from the vendor driver.
-    HwIndication { ind: banjo_wlan_mac::WlanIndication },
+    HwIndication { ind: banjo_wlan_softmac::WlanIndication },
     // Reports a scan is complete.
     ScanComplete { status: zx::Status, scan_id: u64 },
     // Reports the result of an attempted frame transmission.
-    TxStatusReport { tx_status: banjo_wlan_mac::WlanTxStatus },
+    TxStatusReport { tx_status: banjo_wlan_softmac::WlanTxStatus },
     // Reports the current status of the vendor driver.
     Status { status: u32 },
 }
@@ -455,9 +455,9 @@ mod test_utils {
         }
     }
 
-    impl From<MockWlanRxInfo> for banjo_wlan_mac::WlanRxInfo {
-        fn from(mock_rx_info: MockWlanRxInfo) -> banjo_wlan_mac::WlanRxInfo {
-            banjo_wlan_mac::WlanRxInfo {
+    impl From<MockWlanRxInfo> for banjo_wlan_softmac::WlanRxInfo {
+        fn from(mock_rx_info: MockWlanRxInfo) -> banjo_wlan_softmac::WlanRxInfo {
+            banjo_wlan_softmac::WlanRxInfo {
                 rx_flags: mock_rx_info.rx_flags,
                 valid_fields: mock_rx_info.valid_fields,
                 phy: mock_rx_info.phy,

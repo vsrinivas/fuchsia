@@ -49,7 +49,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 
 #include <fidl/fuchsia.wlan.ieee80211/cpp/wire.h>
-#include <fuchsia/hardware/wlan/mac/c/banjo.h>
+#include <fuchsia/hardware/wlan/softmac/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>

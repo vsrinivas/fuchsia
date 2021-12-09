@@ -4,7 +4,7 @@
 
 use {
     anyhow::{bail, Error},
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_hardware_wlanassocinfo as banjo_wlanassocinfo,
     banjo_fuchsia_hardware_wlanphyinfo as banjo_ddk_wlanphyinfo,
     banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
@@ -89,7 +89,7 @@ pub fn build_ddk_assoc_ctx(
     }
 }
 
-pub fn get_rssi_dbm(rx_info: banjo_wlan_mac::WlanRxInfo) -> Option<i8> {
+pub fn get_rssi_dbm(rx_info: banjo_wlan_softmac::WlanRxInfo) -> Option<i8> {
     match rx_info.valid_fields & banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0 != 0
         && rx_info.rssi_dbm != 0
     {
@@ -119,7 +119,7 @@ fn blank_wmm_ac_params() -> banjo_wlanassocinfo::WlanWmmAcParams {
 }
 
 pub fn device_info_from_wlanmac_info(
-    info: banjo_wlan_mac::WlanmacInfo,
+    info: banjo_wlan_softmac::WlanmacInfo,
 ) -> Result<fidl_mlme::DeviceInfo, Error> {
     let sta_addr = info.sta_addr;
     let role = match info.mac_role {
@@ -319,8 +319,8 @@ mod tests {
         assert_eq!(expected_vht_op, ddk.vht_op);
     }
 
-    fn empty_rx_info() -> banjo_wlan_mac::WlanRxInfo {
-        banjo_wlan_mac::WlanRxInfo {
+    fn empty_rx_info() -> banjo_wlan_softmac::WlanRxInfo {
+        banjo_wlan_softmac::WlanRxInfo {
             rx_flags: 0,
             valid_fields: 0,
             phy: 0,
@@ -339,13 +339,13 @@ mod tests {
     #[test]
     fn test_get_rssi_dbm_field_not_valid() {
         let rx_info =
-            banjo_wlan_mac::WlanRxInfo { valid_fields: 0, rssi_dbm: 20, ..empty_rx_info() };
+            banjo_wlan_softmac::WlanRxInfo { valid_fields: 0, rssi_dbm: 20, ..empty_rx_info() };
         assert_eq!(get_rssi_dbm(rx_info), None);
     }
 
     #[test]
     fn test_get_rssi_dbm_zero_dbm() {
-        let rx_info = banjo_wlan_mac::WlanRxInfo {
+        let rx_info = banjo_wlan_softmac::WlanRxInfo {
             valid_fields: banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0,
             rssi_dbm: 0,
             ..empty_rx_info()
@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn test_get_rssi_dbm_all_good() {
-        let rx_info = banjo_wlan_mac::WlanRxInfo {
+        let rx_info = banjo_wlan_softmac::WlanRxInfo {
             valid_fields: banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0,
             rssi_dbm: 20,
             ..empty_rx_info()

@@ -4,8 +4,8 @@
 
 use {
     crate::{buffer::OutBuf, key},
-    banjo_fuchsia_hardware_wlan_mac::{
-        self as banjo_wlan_mac, WlanRxPacket, WlanTxPacket, WlanTxStatus, WlanmacInfo,
+    banjo_fuchsia_hardware_wlan_softmac::{
+        self as banjo_wlan_softmac, WlanRxPacket, WlanTxPacket, WlanTxStatus, WlanmacInfo,
     },
     banjo_fuchsia_hardware_wlanassocinfo::*,
     banjo_fuchsia_wlan_common as banjo_common,
@@ -81,7 +81,7 @@ impl Device {
                 .unwrap()
                 .into_ref();
         if frame_control.protected() {
-            flags.0 |= banjo_wlan_mac::WlanTxInfoFlags::PROTECTED.0 as u32;
+            flags.0 |= banjo_wlan_softmac::WlanTxInfoFlags::PROTECTED.0 as u32;
         }
         let mut peer_addr = [0u8; 6];
         peer_addr.copy_from_slice(&buf.as_slice()[PEER_ADDR_OFFSET..PEER_ADDR_OFFSET + 6]);
@@ -89,15 +89,15 @@ impl Device {
             .minstrel
             .as_ref()
             .and_then(|minstrel| {
-                let mut banjo_flags = banjo_wlan_mac::WlanTxInfoFlags(0);
+                let mut banjo_flags = banjo_wlan_softmac::WlanTxInfoFlags(0);
                 if flags.0 & TxFlags::FAVOR_RELIABILITY.0 != 0 {
-                    banjo_flags |= banjo_wlan_mac::WlanTxInfoFlags::FAVOR_RELIABILITY;
+                    banjo_flags |= banjo_wlan_softmac::WlanTxInfoFlags::FAVOR_RELIABILITY;
                 }
                 if flags.0 & TxFlags::PROTECTED.0 != 0 {
-                    banjo_flags |= banjo_wlan_mac::WlanTxInfoFlags::PROTECTED;
+                    banjo_flags |= banjo_wlan_softmac::WlanTxInfoFlags::PROTECTED;
                 }
                 if flags.0 & TxFlags::QOS.0 != 0 {
-                    banjo_flags |= banjo_wlan_mac::WlanTxInfoFlags::QOS;
+                    banjo_flags |= banjo_wlan_softmac::WlanTxInfoFlags::QOS;
                 }
                 minstrel.lock().get_tx_vector_idx(frame_control, &peer_addr, banjo_flags)
             })
@@ -140,14 +140,14 @@ impl Device {
 
     pub fn start_passive_scan(
         &self,
-        passive_scan_args: &banjo_wlan_mac::WlanmacPassiveScanArgs,
+        passive_scan_args: &banjo_wlan_softmac::WlanmacPassiveScanArgs,
     ) -> Result<u64, zx::Status> {
         self.raw_device.start_passive_scan(&passive_scan_args)
     }
 
     pub fn start_active_scan(
         &self,
-        active_scan_args: &banjo_wlan_mac::WlanmacActiveScanArgs,
+        active_scan_args: &banjo_wlan_softmac::WlanmacActiveScanArgs,
     ) -> Result<u64, zx::Status> {
         self.raw_device.start_active_scan(&active_scan_args)
     }
@@ -258,7 +258,7 @@ extern "C" fn handle_complete_tx(
 extern "C" fn handle_indication(ctx: &mut crate::DriverEventSink, ind: u32) {
     // TODO(fxbug.dev/86141): Determine if we should support this.
     let _ = ctx.0.unbounded_send(crate::DriverEvent::HwIndication {
-        ind: banjo_wlan_mac::WlanIndication(ind as u8),
+        ind: banjo_wlan_softmac::WlanIndication(ind as u8),
     });
 }
 #[no_mangle]
@@ -317,7 +317,7 @@ pub struct DeviceInterface {
         device: *mut c_void,
         options: u32,
         buf: OutBuf,
-        tx_info: banjo_wlan_mac::WlanTxInfo,
+        tx_info: banjo_wlan_softmac::WlanTxInfo,
     ) -> i32,
     /// Reports the current status to the ethernet driver.
     set_eth_status: extern "C" fn(device: *mut c_void, status: u32),
@@ -332,13 +332,13 @@ pub struct DeviceInterface {
     /// Make passive scan request to the driver
     start_passive_scan: extern "C" fn(
         device: *mut c_void,
-        passive_scan_args: *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+        passive_scan_args: *const banjo_wlan_softmac::WlanmacPassiveScanArgs,
         out_scan_id: *mut u64,
     ) -> zx::sys::zx_status_t,
     /// Make active scan request to the driver
     start_active_scan: extern "C" fn(
         device: *mut c_void,
-        active_scan_args: *const banjo_wlan_mac::WlanmacActiveScanArgs,
+        active_scan_args: *const banjo_wlan_softmac::WlanmacActiveScanArgs,
         out_scan_id: *mut u64,
     ) -> zx::sys::zx_status_t,
     /// Get information and capabilities of this WLAN interface
@@ -383,7 +383,7 @@ impl DeviceInterface {
         &self,
         options: u32,
         buf: OutBuf,
-        tx_info: banjo_wlan_mac::WlanTxInfo,
+        tx_info: banjo_wlan_softmac::WlanTxInfo,
     ) -> Result<(), zx::Status> {
         let status = (self.queue_tx)(self.device, options, buf, tx_info);
         zx::ok(status)
@@ -405,12 +405,12 @@ impl DeviceInterface {
 
     fn start_passive_scan(
         &self,
-        passive_scan_args: &banjo_wlan_mac::WlanmacPassiveScanArgs,
+        passive_scan_args: &banjo_wlan_softmac::WlanmacPassiveScanArgs,
     ) -> Result<u64, zx::Status> {
         let mut out_scan_id = 0;
         let status = (self.start_passive_scan)(
             self.device,
-            passive_scan_args as *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+            passive_scan_args as *const banjo_wlan_softmac::WlanmacPassiveScanArgs,
             &mut out_scan_id as *mut u64,
         );
         zx::ok(status).map(|_| out_scan_id)
@@ -418,12 +418,12 @@ impl DeviceInterface {
 
     fn start_active_scan(
         &self,
-        active_scan_args: &banjo_wlan_mac::WlanmacActiveScanArgs,
+        active_scan_args: &banjo_wlan_softmac::WlanmacActiveScanArgs,
     ) -> Result<u64, zx::Status> {
         let mut out_scan_id = 0;
         let status = (self.start_active_scan)(
             self.device,
-            active_scan_args as *const banjo_wlan_mac::WlanmacActiveScanArgs,
+            active_scan_args as *const banjo_wlan_softmac::WlanmacActiveScanArgs,
             &mut out_scan_id as *mut u64,
         );
         zx::ok(status).map(|_| out_scan_id)
@@ -513,7 +513,7 @@ mod test_utils {
 
     impl CapturedWlanmacPassiveScanArgs {
         pub fn from_banjo(
-            banjo_args_ptr: *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+            banjo_args_ptr: *const banjo_wlan_softmac::WlanmacPassiveScanArgs,
         ) -> CapturedWlanmacPassiveScanArgs {
             unsafe {
                 let banjo_args = *banjo_args_ptr;
@@ -545,7 +545,7 @@ mod test_utils {
 
     impl CapturedWlanmacActiveScanArgs {
         pub fn from_banjo(
-            banjo_args_ptr: *const banjo_wlan_mac::WlanmacActiveScanArgs,
+            banjo_args_ptr: *const banjo_wlan_softmac::WlanmacActiveScanArgs,
         ) -> CapturedWlanmacActiveScanArgs {
             unsafe {
                 let banjo_args = *banjo_args_ptr;
@@ -654,7 +654,7 @@ mod test_utils {
             device: *mut c_void,
             _options: u32,
             buf: OutBuf,
-            _tx_info: banjo_wlan_mac::WlanTxInfo,
+            _tx_info: banjo_wlan_softmac::WlanTxInfo,
         ) -> i32 {
             assert!(!device.is_null());
             unsafe {
@@ -679,7 +679,7 @@ mod test_utils {
             _: *mut c_void,
             _: u32,
             buf: OutBuf,
-            _: banjo_wlan_mac::WlanTxInfo,
+            _: banjo_wlan_softmac::WlanTxInfo,
         ) -> i32 {
             buf.free();
             zx::sys::ZX_ERR_IO
@@ -711,7 +711,7 @@ mod test_utils {
 
         pub extern "C" fn start_passive_scan(
             device: *mut c_void,
-            passive_scan_args: *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+            passive_scan_args: *const banjo_wlan_softmac::WlanmacPassiveScanArgs,
             out_scan_id: *mut u64,
         ) -> zx::sys::zx_status_t {
             unsafe {
@@ -726,7 +726,7 @@ mod test_utils {
 
         pub extern "C" fn start_active_scan(
             device: *mut c_void,
-            active_scan_args: *const banjo_wlan_mac::WlanmacActiveScanArgs,
+            active_scan_args: *const banjo_wlan_softmac::WlanmacActiveScanArgs,
             out_scan_id: *mut u64,
         ) -> zx::sys::zx_status_t {
             unsafe {
@@ -741,7 +741,7 @@ mod test_utils {
 
         pub extern "C" fn start_passive_scan_fails(
             _device: *mut c_void,
-            _passive_scan_args: *const banjo_wlan_mac::WlanmacPassiveScanArgs,
+            _passive_scan_args: *const banjo_wlan_softmac::WlanmacPassiveScanArgs,
             _out_scan_id: *mut u64,
         ) -> zx::sys::zx_status_t {
             zx::sys::ZX_ERR_NOT_SUPPORTED
@@ -749,7 +749,7 @@ mod test_utils {
 
         pub extern "C" fn start_active_scan_fails(
             _device: *mut c_void,
-            _active_scan_args: *const banjo_wlan_mac::WlanmacActiveScanArgs,
+            _active_scan_args: *const banjo_wlan_softmac::WlanmacActiveScanArgs,
             _out_scan_id: *mut u64,
         ) -> zx::sys::zx_status_t {
             zx::sys::ZX_ERR_NOT_SUPPORTED
@@ -1099,7 +1099,7 @@ mod tests {
         let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
-        let result = dev.start_passive_scan(&banjo_wlan_mac::WlanmacPassiveScanArgs {
+        let result = dev.start_passive_scan(&banjo_wlan_softmac::WlanmacPassiveScanArgs {
             channels_list: &[1u8, 2, 3] as *const u8,
             channels_count: 3,
             min_channel_time: zx::Duration::from_millis(0).into_nanos(),
@@ -1122,7 +1122,7 @@ mod tests {
         let mut fake_device = FakeDevice::new(&exec);
         let dev = fake_device.as_device();
 
-        let result = dev.start_active_scan(&banjo_wlan_mac::WlanmacActiveScanArgs {
+        let result = dev.start_active_scan(&banjo_wlan_softmac::WlanmacActiveScanArgs {
             channels_list: &[1u8, 2, 3] as *const u8,
             channels_count: 3,
             ssids_list: &[

@@ -7,7 +7,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_MLME_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_MVM_MLME_H_
 
-#include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
 #include <fuchsia/hardware/wlanphyinfo/cpp/banjo.h>
 #include <fuchsia/wlan/common/cpp/banjo.h>

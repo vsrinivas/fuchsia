@@ -17,7 +17,7 @@ use {
         error::Error,
         key::KeyConfig,
     },
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac,
+    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     ieee80211::MacAddr,
@@ -528,7 +528,7 @@ impl Associated {
         }
     }
 
-    fn extract_and_record_signal_dbm(&mut self, rx_info: banjo_wlan_mac::WlanRxInfo) {
+    fn extract_and_record_signal_dbm(&mut self, rx_info: banjo_wlan_softmac::WlanRxInfo) {
         ddk::get_rssi_dbm(rx_info)
             .map(|rssi_dbm| self.0.signal_strength_average.add(DecibelMilliWatt(rssi_dbm)));
     }
@@ -865,7 +865,7 @@ impl States {
         mut self,
         sta: &mut BoundClient<'_>,
         bytes: B,
-        rx_info: banjo_wlan_mac::WlanRxInfo,
+        rx_info: banjo_wlan_softmac::WlanRxInfo,
     ) -> States {
         // For now, silently drop all frames when we are off channel.
         if !sta.is_on_channel() {
@@ -873,7 +873,7 @@ impl States {
         }
 
         let body_aligned =
-            (rx_info.rx_flags & banjo_wlan_mac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0;
+            (rx_info.rx_flags & banjo_wlan_softmac::WlanRxInfoFlags::FRAME_BODY_PADDING_4.0) != 0;
 
         // Parse mac frame. Drop corrupted ones.
         trace!("Parsing MAC frame:\n  {:02x?}", bytes.deref());
@@ -937,7 +937,7 @@ impl States {
         sta: &mut BoundClient<'_>,
         mgmt_hdr: &mac::MgmtHdr,
         body: B,
-        rx_info: banjo_wlan_mac::WlanRxInfo,
+        rx_info: banjo_wlan_softmac::WlanRxInfo,
     ) -> States {
         // Parse management frame. Drop corrupted ones.
         let mgmt_body = match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
@@ -3333,8 +3333,8 @@ mod tests {
         assert_eq!(m.fake_device.wlan_queue.len(), 0);
     }
 
-    fn rx_info_with_dbm(rssi_dbm: i8) -> banjo_wlan_mac::WlanRxInfo {
-        let mut rx_info: banjo_wlan_mac::WlanRxInfo =
+    fn rx_info_with_dbm(rssi_dbm: i8) -> banjo_wlan_softmac::WlanRxInfo {
+        let mut rx_info: banjo_wlan_softmac::WlanRxInfo =
             MockWlanRxInfo { rssi_dbm, ..Default::default() }.into();
         rx_info.valid_fields |= banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0;
         rx_info

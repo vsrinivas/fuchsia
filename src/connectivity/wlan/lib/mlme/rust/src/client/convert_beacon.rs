@@ -4,7 +4,8 @@
 
 use {
     anyhow::Error,
-    banjo_fuchsia_hardware_wlan_mac as banjo_wlan_mac, fidl_fuchsia_wlan_internal as fidl_internal,
+    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
+    fidl_fuchsia_wlan_internal as fidl_internal,
     ieee80211::Bssid,
     wlan_common::{channel::derive_channel, ie, mac::CapabilityInfo, TimeUnit},
 };
@@ -15,7 +16,7 @@ pub fn construct_bss_description(
     beacon_interval: TimeUnit,
     capability_info: CapabilityInfo,
     ies: &[u8],
-    rx_info: banjo_wlan_mac::WlanRxInfo,
+    rx_info: banjo_wlan_softmac::WlanRxInfo,
 ) -> Result<fidl_internal::BssDescription, Error> {
     let mut dsss_channel = None;
     let mut parsed_ht_op = None;
@@ -76,7 +77,7 @@ mod tests {
     const BEACON_INTERVAL: u16 = 100;
     // Capability information: ESS, privacy, spectrum mgmt, radio msmt
     const CAPABILITY_INFO: CapabilityInfo = CapabilityInfo(0x1111);
-    const RX_INFO: banjo_wlan_mac::WlanRxInfo = banjo_wlan_mac::WlanRxInfo {
+    const RX_INFO: banjo_wlan_softmac::WlanRxInfo = banjo_wlan_softmac::WlanRxInfo {
         channel: banjo_common::WlanChannel {
             primary: 11,
             cbw: banjo_common::ChannelBandwidth::CBW20,

@@ -4,7 +4,7 @@
 
 use {
     crate::probe_sequence::{ProbeEntry, ProbeSequence},
-    banjo_fuchsia_hardware_wlan_mac as hw_wlan_mac,
+    banjo_fuchsia_hardware_wlan_softmac as hw_wlan_softmac,
     banjo_fuchsia_hardware_wlanassocinfo as hw_wlan_info,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_minstrel as fidl_minstrel,
     fuchsia_zircon as zx,
@@ -163,7 +163,7 @@ impl Peer {
         peer
     }
 
-    fn handle_tx_status_report(&mut self, tx_status: &hw_wlan_mac::WlanTxStatus) {
+    fn handle_tx_status_report(&mut self, tx_status: &hw_wlan_softmac::WlanTxStatus) {
         let mut last_attempted_idx = None;
         for status_entry in &tx_status.tx_status_entry[..] {
             let idx = match TxVecIdx::new(status_entry.tx_vector_idx) {
@@ -510,7 +510,7 @@ impl<T: TimerManager> MinstrelRateSelector<T> {
         }
     }
 
-    pub fn handle_tx_status_report(&mut self, tx_status: &hw_wlan_mac::WlanTxStatus) {
+    pub fn handle_tx_status_report(&mut self, tx_status: &hw_wlan_softmac::WlanTxStatus) {
         match self.peer_map.get_mut(&tx_status.peer_addr) {
             Some(peer) => {
                 peer.handle_tx_status_report(tx_status);
@@ -541,14 +541,14 @@ impl<T: TimerManager> MinstrelRateSelector<T> {
         &mut self,
         frame_control: &FrameControl,
         peer_addr: &[u8; 6],
-        flags: hw_wlan_mac::WlanTxInfoFlags,
+        flags: hw_wlan_softmac::WlanTxInfoFlags,
     ) -> Option<TxVecIdx> {
         match self.peer_map.get_mut(peer_addr) {
             None => TxVecIdx::new(ERP_START_IDX + ERP_NUM_TX_VECTOR as u16 - 1),
             Some(peer) => {
                 if frame_control.is_data() {
                     let needs_reliability =
-                        (flags & hw_wlan_mac::WlanTxInfoFlags::FAVOR_RELIABILITY).0 != 0;
+                        (flags & hw_wlan_softmac::WlanTxInfoFlags::FAVOR_RELIABILITY).0 != 0;
                     peer.get_tx_vector_idx(needs_reliability, &mut self.probe_sequence)
                 } else {
                     peer.best_erp_for_reliability
@@ -831,20 +831,20 @@ mod tests {
     }
 
     /// Helper fn to easily create tx status reports.
-    fn make_tx_status(entries: Vec<(u16, u8)>, success: bool) -> hw_wlan_mac::WlanTxStatus {
+    fn make_tx_status(entries: Vec<(u16, u8)>, success: bool) -> hw_wlan_softmac::WlanTxStatus {
         assert!(entries.len() <= 8);
         let mut tx_status_entry =
-            [hw_wlan_mac::WlanTxStatusEntry { tx_vector_idx: 0, attempts: 0 }; 8];
+            [hw_wlan_softmac::WlanTxStatusEntry { tx_vector_idx: 0, attempts: 0 }; 8];
         tx_status_entry[0..entries.len()].copy_from_slice(
             &entries
                 .into_iter()
-                .map(|(tx_vector_idx, attempts)| hw_wlan_mac::WlanTxStatusEntry {
+                .map(|(tx_vector_idx, attempts)| hw_wlan_softmac::WlanTxStatusEntry {
                     tx_vector_idx,
                     attempts,
                 })
-                .collect::<Vec<hw_wlan_mac::WlanTxStatusEntry>>()[..],
+                .collect::<Vec<hw_wlan_softmac::WlanTxStatusEntry>>()[..],
         );
-        hw_wlan_mac::WlanTxStatus { tx_status_entry, peer_addr: TEST_MAC_ADDR, success }
+        hw_wlan_softmac::WlanTxStatus { tx_status_entry, peer_addr: TEST_MAC_ADDR, success }
     }
 
     #[test]
@@ -969,7 +969,7 @@ mod tests {
             minstrel.get_fidl_peer_stats(&TEST_MAC_ADDR).expect("Failed to get peer stats").max_tp;
         let mut fc = FrameControl(0);
         fc.set_frame_type(FrameType::DATA);
-        let flags = hw_wlan_mac::WlanTxInfoFlags(0);
+        let flags = hw_wlan_softmac::WlanTxInfoFlags(0);
 
         for i in 0..(PROBE_INTERVAL as usize * expected_probes.len()) {
             let tx_vec_idx = minstrel.get_tx_vector_idx(&fc, &TEST_MAC_ADDR, flags);

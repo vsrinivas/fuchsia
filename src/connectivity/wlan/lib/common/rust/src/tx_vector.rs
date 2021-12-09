@@ -5,7 +5,7 @@
 use {
     crate::ie::SupportedRate,
     anyhow::{bail, Error},
-    banjo_fuchsia_hardware_wlan_mac as hw_wlan_mac,
+    banjo_fuchsia_hardware_wlan_softmac as hw_wlan_softmac,
     banjo_fuchsia_hardware_wlanassocinfo as hw_wlan_info,
     banjo_fuchsia_wlan_common as banjo_common,
 };
@@ -14,7 +14,7 @@ pub const HT_NUM_MCS: u8 = 32; // Only support MCS 0-31
 pub const HT_NUM_UNIQUE_MCS: u8 = 8;
 pub const ERP_NUM_TX_VECTOR: u8 = 8;
 
-const INVALID_TX_VECTOR_IDX: u16 = hw_wlan_mac::WLAN_TX_VECTOR_IDX_INVALID;
+const INVALID_TX_VECTOR_IDX: u16 = hw_wlan_softmac::WLAN_TX_VECTOR_IDX_INVALID;
 
 const HT_NUM_GI: u8 = 2;
 const HT_NUM_CBW: u8 = 2;
@@ -209,12 +209,12 @@ impl TxVector {
         &self,
         tx_flags: u32,
         minstrel_enabled: bool,
-    ) -> hw_wlan_mac::WlanTxInfo {
-        let valid_fields = hw_wlan_mac::WLAN_TX_INFO_VALID_CHAN_WIDTH
-            | hw_wlan_mac::WlanTxInfoValid::PHY.0
-            | hw_wlan_mac::WlanTxInfoValid::MCS.0
-            | if minstrel_enabled { hw_wlan_mac::WlanTxInfoValid::TX_VECTOR_IDX.0 } else { 0 };
-        hw_wlan_mac::WlanTxInfo {
+    ) -> hw_wlan_softmac::WlanTxInfo {
+        let valid_fields = hw_wlan_softmac::WLAN_TX_INFO_VALID_CHAN_WIDTH
+            | hw_wlan_softmac::WlanTxInfoValid::PHY.0
+            | hw_wlan_softmac::WlanTxInfoValid::MCS.0
+            | if minstrel_enabled { hw_wlan_softmac::WlanTxInfoValid::TX_VECTOR_IDX.0 } else { 0 };
+        hw_wlan_softmac::WlanTxInfo {
             tx_flags,
             valid_fields: valid_fields as u32,
             tx_vector_idx: self.to_idx().0,

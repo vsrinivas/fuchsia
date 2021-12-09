@@ -108,7 +108,7 @@ type SetCountryArgs = struct {
 /// A wlantap-phy device is a special vendor device and its driver (Fuchsia being the vendor)
 /// used for testing purpose.
 /// Implements a subset of `wlanmac_ifc_t` and `wlanmac_protocol_ops_t` defined in
-/// fuchsia.hardware.wlan.mac/mac.fidl
+/// fuchsia.hardware.wlan.softmac/mac.fidl
 /// Implements a subset of `WlanphyImpl` protocol defined in
 /// fuchsia.hardware.wlanphyimpl/wlanphy-impl.fidl
 protocol WlantapPhy {

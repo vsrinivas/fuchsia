@@ -4,7 +4,7 @@
 
 #include "wlantap-mac.h"
 
-#include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <fuchsia/hardware/wlan/softmac/cpp/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
