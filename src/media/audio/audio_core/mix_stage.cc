@@ -881,7 +881,8 @@ void MixStage::SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeep
       (frac_source_frames_per_dest_frame.reference_delta() * bookkeeping.step_size.raw_value());
   auto new_denominator = frac_source_frames_per_dest_frame.reference_delta();
 
-  bookkeeping.SetRateModuloAndDenominator(new_rate_modulo, new_denominator);
+  info.next_source_frame = bookkeeping.SetRateModuloAndDenominator(new_rate_modulo, new_denominator,
+                                                                   info.next_source_frame);
 }
 
 }  // namespace media::audio

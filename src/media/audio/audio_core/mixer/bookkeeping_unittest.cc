@@ -34,6 +34,7 @@ TEST(BookkeepingTest, Defaults) {
   EXPECT_FALSE(bookkeeping.gain.IsRamping());
 }
 
+constexpr Fixed kTestSourcePos = Fixed(123) + Fixed::FromRaw(4567);
 // Validate the scaling of source_pos_modulo, when setting a new rate_modulo and denominator
 // During source_pos_modulo-related tests, the non-zero values of rate_modulo do not matter.
 TEST(BookkeepingTest, SetRateModuloAndDenominatorScale) {
@@ -43,46 +44,68 @@ TEST(BookkeepingTest, SetRateModuloAndDenominatorScale) {
   EXPECT_EQ(bk.denominator(), 1ull);
 
   // Zero stays zero: source_pos_modulo remains 0.
-  bk.SetRateModuloAndDenominator(3, 10);
+  auto source_pos = bk.SetRateModuloAndDenominator(3, 10);
   EXPECT_EQ(bk.source_pos_modulo, 0ull);
   EXPECT_EQ(bk.denominator(), 10ull);
+  EXPECT_EQ(source_pos, Fixed(0));
 
   // Integer scale: 5/10 => 10/20
   bk.source_pos_modulo = 5;
-  bk.SetRateModuloAndDenominator(7, 20);
+  source_pos = bk.SetRateModuloAndDenominator(7, 20, kTestSourcePos);
   EXPECT_EQ(bk.source_pos_modulo, 10ull);
   EXPECT_EQ(bk.denominator(), 20ull);
+  EXPECT_EQ(source_pos, kTestSourcePos);
 }
 
-// Validate the truncation of fractional source_pos_modulo, after scaling.
-TEST(BookkeepingTest, SetRateModuloAndDenominatorTruncate) {
+// Validate the rounding of fractional source_pos_modulo, after scaling.
+TEST(BookkeepingTest, SetRateModuloAndDenominatorRound) {
   StubMixer mixer;
   auto& bk = mixer.bookkeeping();
-  bk.SetRateModuloAndDenominator(7, 20);
+  auto source_pos = bk.SetRateModuloAndDenominator(7, 20);
+  EXPECT_EQ(source_pos, Fixed(0));
   bk.source_pos_modulo = 10;
 
-  // Truncate: 10/20 == 8.5/17 => 8/17.
-  bk.SetRateModuloAndDenominator(2, 17);
-  EXPECT_EQ(bk.source_pos_modulo, 8ull);
+  // Round-up: 10/20 == 8.5/17 => 9/17.
+  source_pos = bk.SetRateModuloAndDenominator(2, 17, kTestSourcePos);
+  EXPECT_EQ(bk.source_pos_modulo, 9ull);
   EXPECT_EQ(bk.denominator(), 17ull);
+  EXPECT_EQ(source_pos, kTestSourcePos);
 
-  // Truncate: 8/17 == 16'000'000'000.47/34'000'000'001 => 16'000'000'000/34'000'000'001
-  bk.SetRateModuloAndDenominator(1'234'567'890, 34'000'000'001);
+  // Round-down: 9/17 == 16'000'000'000.41/30'222'222'223 => 16'000'000'000/30'222'222'223
+  source_pos = bk.SetRateModuloAndDenominator(1'234'567'890, 30'222'222'223, kTestSourcePos);
   EXPECT_EQ(bk.source_pos_modulo, 16'000'000'000ull);
-  EXPECT_EQ(bk.denominator(), 34'000'000'001ull);
+  EXPECT_EQ(bk.denominator(), 30'222'222'223ull);
+  EXPECT_EQ(source_pos, kTestSourcePos);
 }
 
 // Validate that source_pos_modulo and denominator are both unchanged, if new rate_modulo is zero.
 TEST(BookkeepingTest, SetRateModuloAndDenominatorZeroRate) {
   StubMixer mixer;
   auto& bk = mixer.bookkeeping();
-  bk.SetRateModuloAndDenominator(7, 20);
+  auto source_pos = bk.SetRateModuloAndDenominator(7, 20, kTestSourcePos);
+  EXPECT_EQ(source_pos, kTestSourcePos);
   bk.source_pos_modulo = 10;
 
-  bk.SetRateModuloAndDenominator(0, 1);
+  source_pos = bk.SetRateModuloAndDenominator(0, 1);
   // No change (to source_pos_modulo OR denominator): 10/20 => 10/20.
   EXPECT_EQ(bk.source_pos_modulo, 10ull);
   EXPECT_EQ(bk.denominator(), 20ull);
+  EXPECT_EQ(source_pos, Fixed(0));
+}
+
+// Validate that an incremented source_pos is returned, when source_pos_modulo rolls over.
+TEST(BookkeepingTest, SetRateModuloAndDenominatorModuloRollover) {
+  StubMixer mixer;
+  auto& bk = mixer.bookkeeping();
+  auto source_pos = bk.SetRateModuloAndDenominator(7, 20);
+  EXPECT_EQ(source_pos, Fixed(0));
+  bk.source_pos_modulo = 19;
+
+  source_pos = bk.SetRateModuloAndDenominator(3, 5, kTestSourcePos);
+  // Round-up: 19/20 == 4.75/5 => 5/5 => 0/5+Fixed::FromRaw(1).
+  EXPECT_EQ(bk.source_pos_modulo, 0ull);
+  EXPECT_EQ(bk.denominator(), 5ull);
+  EXPECT_EQ(source_pos, Fixed(kTestSourcePos + Fixed::FromRaw(1)));
 }
 
 // Validate the calculations that do not use rate_modulo etc.

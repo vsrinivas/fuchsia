@@ -389,7 +389,10 @@ class Mixer {
     uint64_t source_pos_modulo = 0;
 
     // Update rate_modulo|denominator|source_pos_modulo as a trio.
-    void SetRateModuloAndDenominator(uint64_t new_rate_mod, uint64_t new_denom) {
+    // The 'source_pos' param and retval are relevant only after the long-running source position
+    // has been set. This is not the case during initial mixer setup, for example.
+    Fixed SetRateModuloAndDenominator(uint64_t new_rate_mod, uint64_t new_denom,
+                                      Fixed source_pos = Fixed(0)) {
       if (kMixerPositionTraceEvents) {
         TRACE_DURATION("audio", __func__, "new_rate_mod", new_rate_mod, "new_denom", new_denom);
       }
@@ -403,18 +406,38 @@ class Mixer {
 
       // Only rescale source_pos_modulo if denominator changes. Even then, don't change denominator
       // and source_pos_modulo if new rate is zero (even if they requested a different denominator).
-      // That way we largely retain our running sub-frame fraction, when changing rate_mod/denom.
+      // That way we largely retain our running sub-frame fraction, across rate_mod/denom changes.
       if (new_denom != denominator_ && new_rate_mod) {
-        // Scale source_pos_modulo up by the new denominator, then down by the old denominator.
-        // new_source_pos_mod will not overflow uint64_t: (old) source_pos_mod < denom,
-        // so new_source_pos_mod == new_denom * F, where F (source_pos_mod/denom) is < 1.
+        // Ensure that new_source_pos_mod/new_denom == source_pos_modulo/denominator_, which means
+        //   new_source_pos_mod = source_pos_modulo * new_denom / denominator_
+        // For higher precision, round the result by adding "1/2".
+        //   new_source_pos_mod = floor((source_pos_modulo * new_denom / denominator_) + 1/2)
+        // Avoid float math and floor, and let int-division do the truncation for us:
+        //   new_source_pos_mod = (source_pos_modulo * new_denom + denominator_/2) / denominator_.
+        //
+        // The max source_pos_modulo is UINT64_MAX-1. New and old denominators should never be
+        // equal; but even if both are UINT64_MAX, the maximum (old_source_pos_mod * new_denom)
+        // product is < (UINT128_MAX - UINT64_MAX). Even after adding UINT64_MAX/2 (for rounding),
+        // new_source_pos_mod cannot overflow its uint128.
+        //
+        // source_pos_modulo is strictly < denominator_, so the scaled source_pos_mod < new_denom.
+        // Our conceptual "+1/2" for rounding could only make new_source_pos_mod EQUAL to new_denom,
+        // never exceed it. So our new source_pos_modulo cannot overflow its uint64.
         __uint128_t new_source_pos_mod = static_cast<__uint128_t>(source_pos_modulo) * new_denom;
+        new_source_pos_mod += static_cast<__uint128_t>(denominator_ / 2);
         new_source_pos_mod /= static_cast<__uint128_t>(denominator_);
+
+        if (static_cast<uint64_t>(new_source_pos_mod) == new_denom) {
+          new_source_pos_mod = 0;
+          source_pos += Fixed::FromRaw(1);
+        }
 
         source_pos_modulo = static_cast<uint64_t>(new_source_pos_mod);
         denominator_ = new_denom;
       }
       rate_modulo_ = new_rate_mod;
+
+      return source_pos;
     }
 
    private:
