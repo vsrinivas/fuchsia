@@ -135,7 +135,7 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
   bool environment_running = RunLoopUntil(
       GetLoop(), [this] { return enclosing_environment_->is_running(); }, deadline);
   if (!environment_running) {
-    FX_LOGS(ERROR) << "Timed out waiting for guest sandbox environment to become ready.";
+    FX_LOGS(ERROR) << "Timed out waiting for guest sandbox environment to become ready";
     return ZX_ERR_TIMED_OUT;
   }
 
@@ -183,13 +183,18 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
       },
       deadline);
   if (!success) {
-    FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial.";
+    FX_LOGS(ERROR) << "Timed out waiting to connect to guest's serial";
     return ZX_ERR_TIMED_OUT;
   }
   if (guest_error.has_value()) {
     FX_LOGS(ERROR) << "Error connecting to guest's serial: "
                    << zx_status_get_string(guest_error.value());
     return guest_error.value();
+  }
+
+  if (get_serial_result->is_err()) {
+    FX_PLOGS(ERROR, get_serial_result->err()) << "Failed to connect to guest's serial";
+    return get_serial_result->err();
   }
   serial_logger_.emplace(&Logger::Get(), std::move(get_serial_result->response().socket));
 

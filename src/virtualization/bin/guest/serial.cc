@@ -124,7 +124,7 @@ zx_status_t handle_serial(uint32_t env_id, uint32_t cid, async::Loop* loop,
   fuchsia::virtualization::Guest_GetSerial_Result result;
   zx_status_t status = guest->GetSerial(&result);
   if (status != ZX_OK) {
-    std::cerr << "Failed to connect with Guest: " << zx_status_get_string(status) << ".\n";
+    std::cerr << "Failed to communicate with Guest: " << zx_status_get_string(status) << ".\n";
     return status;
   }
 
