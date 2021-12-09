@@ -185,6 +185,8 @@ class Channel {
     return zx::ok(ReadReturn{Arena(rd_arena), rd_data, rd_num_bytes, out_handles});
   }
 
+  bool is_valid() const { return channel_ != FDF_HANDLE_INVALID; }
+
   fdf_handle_t get() const { return channel_; }
 
   void reset(fdf_handle_t channel = FDF_HANDLE_INVALID) {

@@ -1388,3 +1388,14 @@ TEST_F(ChannelTest, MoveConstructor) {
 
   ASSERT_EQ(0, driver_runtime::gHandleTableArena.num_allocated());
 }
+
+TEST(ChannelTest, IsValid) {
+  fdf::Channel invalid_channel;
+  ASSERT_FALSE(invalid_channel.is_valid());
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_TRUE(channels->end0.is_valid());
+
+  channels->end0.close();
+  ASSERT_FALSE(channels->end0.is_valid());
+}
