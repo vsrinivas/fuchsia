@@ -6,6 +6,7 @@ use fidl_fuchsia_overnet_protocol::TRANSFER_KEY_LENGTH;
 use rand::Rng;
 use std::array::TryFromSliceError;
 use std::convert::{TryFrom, TryInto};
+use std::net::{IpAddr, SocketAddr};
 
 pub use quic::Endpoint;
 
@@ -34,6 +35,16 @@ impl From<&NodeId> for fidl_fuchsia_overnet_protocol::NodeId {
 impl From<fidl_fuchsia_overnet_protocol::NodeId> for NodeId {
     fn from(id: fidl_fuchsia_overnet_protocol::NodeId) -> Self {
         id.id.into()
+    }
+}
+
+impl NodeId {
+    /// Packs this node ID into a link-local IPv6 address. QUIC needs addresses to associate with
+    /// connections on occasion and this is a good enough way to provide that.
+    pub fn to_ipv6_repr(self: NodeId) -> SocketAddr {
+        let mut addr = [0xfe, 0x80, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        addr[8..].copy_from_slice(&self.0.to_be_bytes());
+        SocketAddr::new(IpAddr::from(addr), 65535)
     }
 }
 

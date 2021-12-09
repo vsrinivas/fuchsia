@@ -37,13 +37,32 @@ pub async fn new_quic_link(
     config.set_initial_max_stream_data_uni(0);
     config.set_initial_max_streams_bidi(0);
     config.set_initial_max_streams_uni(0);
+    config.set_max_send_udp_payload_size(16384);
+    config.set_max_recv_udp_payload_size(16384);
     const DGRAM_QUEUE_SIZE: usize = 1024 * 1024;
     config.enable_dgram(true, DGRAM_QUEUE_SIZE, DGRAM_QUEUE_SIZE);
 
     let quic = AsyncConnection::from_connection(
+        sender.router().node_id().to_ipv6_repr(),
         match endpoint {
-            Endpoint::Client => quiche::connect(None, &scid.to_array(), &mut config)?,
-            Endpoint::Server => quiche::accept(&scid.to_array(), None, &mut config)?,
+            Endpoint::Client => quiche::connect(
+                None,
+                &quiche::ConnectionId::from_ref(&scid.to_array()),
+                receiver
+                    .peer_node_id()
+                    .map(|x| x.to_ipv6_repr())
+                    .unwrap_or_else(|| "127.0.0.1:65535".parse().unwrap()),
+                &mut config,
+            )?,
+            Endpoint::Server => quiche::accept(
+                &quiche::ConnectionId::from_ref(&scid.to_array()),
+                None,
+                receiver
+                    .peer_node_id()
+                    .map(|x| x.to_ipv6_repr())
+                    .unwrap_or_else(|| "127.0.0.1:65535".parse().unwrap()),
+                &mut config,
+            )?,
         },
         endpoint,
     );

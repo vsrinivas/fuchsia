@@ -16,6 +16,7 @@ use futures::{
 use quiche::{Connection, Shutdown};
 use std::cmp::{max, min};
 use std::collections::BTreeMap;
+use std::net::SocketAddr;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
@@ -88,6 +89,7 @@ impl WakeupMap {
 
 /// Current state of a connection - mutex guarded by AsyncConnection.
 pub struct ConnState {
+    local_addr: SocketAddr,
     conn: Pin<Box<Connection>>,
     seen_established: bool,
     closed: bool,
@@ -118,7 +120,7 @@ impl ConnState {
                 self.update_timeout();
                 self.wake_stream_io();
                 self.dgram_send.ready();
-                Poll::Ready(Ok(Some(n)))
+                Poll::Ready(Ok(Some(n.0)))
             }
             Err(quiche::Error::Done) if self.conn.is_closed() => Poll::Ready(Ok(None)),
             Err(quiche::Error::Done) => {
@@ -193,10 +195,15 @@ impl std::fmt::Debug for AsyncConnection {
 }
 
 impl AsyncConnection {
-    pub fn from_connection(conn: Pin<Box<Connection>>, endpoint: Endpoint) -> Arc<Self> {
+    pub fn from_connection(
+        local_addr: SocketAddr,
+        conn: Pin<Box<Connection>>,
+        endpoint: Endpoint,
+    ) -> Arc<Self> {
         Arc::new(Self {
             trace_id: conn.trace_id().to_string(),
             io: Mutex::new(ConnState {
+                local_addr,
                 conn,
                 seen_established: false,
                 closed: false,
@@ -271,7 +278,8 @@ impl AsyncConnection {
 
     pub async fn recv(&self, packet: &mut [u8]) -> Result<(), Error> {
         let mut io = self.io.lock().await;
-        match io.conn.recv(packet) {
+        let from = io.local_addr.clone();
+        match io.conn.recv(packet, quiche::RecvInfo { from }) {
             Ok(_) => (),
             Err(quiche::Error::Done) => (),
             Err(x) => {
@@ -719,10 +727,10 @@ impl<'b> QuicRead<'b> {
                     io.stream_recv.pending(ctx, self.id)
                 }
             }
-            Err(quiche::Error::InvalidStreamState) if !*self.ready => {
+            Err(quiche::Error::InvalidStreamState(_)) if !*self.ready => {
                 io.stream_recv.pending(ctx, self.id)
             }
-            Err(quiche::Error::InvalidStreamState) if io.conn.stream_finished(self.id) => {
+            Err(quiche::Error::InvalidStreamState(_)) if io.conn.stream_finished(self.id) => {
                 Poll::Ready(Ok((0, true)))
             }
             Err(x) => Poll::Ready(Err(x).with_context(|| {
@@ -837,7 +845,14 @@ mod test_util {
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let client = AsyncConnection::from_connection(
-            quiche::connect(None, &scid, &mut client_config().unwrap()).unwrap(),
+            "127.0.0.1:999".parse().unwrap(),
+            quiche::connect(
+                None,
+                &scid.into(),
+                "127.0.0.1:999".parse().unwrap(),
+                &mut client_config().unwrap(),
+            )
+            .unwrap(),
             Endpoint::Client,
         );
         let scid: Vec<u8> = rand::thread_rng()
@@ -845,7 +860,14 @@ mod test_util {
             .take(quiche::MAX_CONN_ID_LEN)
             .collect();
         let server = AsyncConnection::from_connection(
-            quiche::accept(&scid, None, &mut server_config().await.unwrap()).unwrap(),
+            "127.0.0.2:999".parse().unwrap(),
+            quiche::accept(
+                &scid.into(),
+                None,
+                "127.0.0.2:999".parse().unwrap(),
+                &mut server_config().await.unwrap(),
+            )
+            .unwrap(),
             Endpoint::Server,
         );
         let forward = futures::future::try_join(
