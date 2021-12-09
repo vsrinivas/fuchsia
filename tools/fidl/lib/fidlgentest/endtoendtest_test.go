@@ -78,9 +78,6 @@ func TestErrorSyntaxOfImportedComposedProtocol(t *testing.T) {
 	if method.ValueType == nil {
 		t.Fatalf("expected a .ValueType")
 	}
-	if method.ValueStruct == nil {
-		t.Fatalf("expected a .ValueStruct")
-	}
 	if method.ErrorType == nil {
 		t.Fatalf("expected a .ErrorType")
 	}

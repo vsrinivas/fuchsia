@@ -666,7 +666,8 @@ func compile(r fidlgen.Root) *Root {
 					// If we are unable to look up the struct, this implies that
 					// this is an externally defined struct. In this case, the
 					// IR exposes the declaration.
-					s = c.compileStruct(*m.ValueStruct)
+					valueTypeDecl = extDecls[m.ValueType.Identifier]
+					s = valueTypeDecl.(*Struct)
 				}
 				result := c.compileResult(s, &m)
 				if ok {

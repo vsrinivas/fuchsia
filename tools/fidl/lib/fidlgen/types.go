@@ -865,7 +865,6 @@ type Method struct {
 	HasError        bool       `json:"has_error"`
 	ResultType      *Type      `json:"maybe_response_result_type,omitempty"`
 	ValueType       *Type      `json:"maybe_response_success_type,omitempty"`
-	ValueStruct     *Struct    `json:"maybe_response_success_struct,omitempty"`
 	ErrorType       *Type      `json:"maybe_response_err_type,omitempty"`
 }
 

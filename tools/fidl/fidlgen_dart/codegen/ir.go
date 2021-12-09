@@ -890,20 +890,7 @@ func (c *compiler) compileMethodResponse(method fidlgen.Method) MethodResponse {
 				parameters = s.Members
 			}
 		} else {
-			// If we are unable to look up the struct, this implies that this is
-			// an externally defined struct. In this case, the IR exposes the
-			// declaration.
-			//
-			// We compile the members directly, such that the empty struct case
-			// results in an empty parameters list. (Note that when we compile
-			// structs otherwise, the empty struct case results in a synthetic
-			// member to represent the uint8 on the wire, hence the special
-			// handling above.)
-			// TODO(fxbug.dev/74683): This assumes the value is a struct,
-			// whereas this could be a union or table too.
-			for _, m := range method.ValueStruct.Members {
-				parameters = append(parameters, c.compileStructMember(m))
-			}
+			panic(fmt.Sprintf("Unknown request/response struct: %s", method.ValueType.Identifier))
 		}
 
 		return MethodResponse{

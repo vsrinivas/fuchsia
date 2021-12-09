@@ -387,14 +387,6 @@ void JSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_i
           result_union->members[0].maybe_used->type_ctor->type);
       GenerateObjectMember("maybe_response_result_type", result_union_type);
       GenerateObjectMember("maybe_response_success_type", success_variant_type);
-      // TODO(fxbug.dev/74683): Assumption that this is a struct, whereas this
-      // will be relaxed to also allow a union or table.
-      assert(success_variant_type->type_decl->kind == flat::Decl::Kind::kStruct);
-      const auto* success_variant_struct =
-          static_cast<const flat::Struct*>(success_variant_type->type_decl);
-      if (success_variant_struct->name.library() != library_) {
-        GenerateObjectMember("maybe_response_success_struct", success_variant_struct);
-      }
       GenerateObjectMember("maybe_response_err_type",
                            result_union->members[1].maybe_used->type_ctor->type);
     }
@@ -1015,6 +1007,26 @@ std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
         // TODO(fxbug.dev/88343): switch on union/table when those are enabled.
         auto as_struct = static_cast<const flat::Struct*>(id->type_decl);
         external_structs.insert(as_struct);
+
+        // This struct is actually wrapping an error union, so export the success variant struct
+        // as well.
+        if (method->has_error) {
+          auto response_struct = static_cast<const flat::Struct*>(id->type_decl);
+          const auto* result_union_type =
+              static_cast<const flat::IdentifierType*>(response_struct->members[0].type_ctor->type);
+
+          assert(result_union_type->type_decl->kind == flat::Decl::Kind::kUnion);
+          const auto* result_union = static_cast<const flat::Union*>(result_union_type->type_decl);
+          const auto* success_variant_type = static_cast<const flat::IdentifierType*>(
+              result_union->members[0].maybe_used->type_ctor->type);
+
+          // TODO(fxbug.dev/74683): Assumption that this is a struct, whereas this
+          // will be relaxed to also allow a union or table.
+          assert(success_variant_type->type_decl->kind == flat::Decl::Kind::kStruct);
+          const auto* success_variant_struct =
+              static_cast<const flat::Struct*>(success_variant_type->type_decl);
+          external_structs.insert(success_variant_struct);
+        }
       }
     }
   }
