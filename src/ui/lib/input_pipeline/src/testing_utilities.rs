@@ -14,6 +14,10 @@ use {
     fidl_fuchsia_ui_input3 as fidl_ui_input3, fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_zircon as zx,
     futures::FutureExt as _,
+    itertools::{
+        EitherOrBoth::{Both, Left, Right},
+        Itertools,
+    },
     maplit::hashmap,
     matches::assert_matches,
     std::collections::HashMap,
@@ -51,17 +55,38 @@ pub fn create_keyboard_input_report(
     }
 }
 
-/// Creates a [input_device::InputEvent] from the provided [keyboard_binding::KeyboardEvent].
+/// Produces a string diff of two sequences.  Useful for test output printing.
 ///
-/// # Parameters
-/// - `keyboard_event`: The keyboard event in question.
-/// - `event_time`: The timestamp in nanoseconds when the event was recorded.
-/// - `handled`: Whether the event has been consumed by an upstream handler.
-#[cfg(test)]
-pub fn create_from_keyboard_event(
+/// The debug format for the input events is kind of long, so some help with
+/// diffing is most welcome.  The output format is simplistic, but mostly enough
+/// for spotting small differences quickly.
+pub fn diff_input_events<T>(one: &[T], other: &[T]) -> String
+where
+    T: std::cmp::PartialEq + std::fmt::Debug,
+{
+    let diff: String = one
+        .iter()
+        .zip_longest(other)
+        .map(|result| match result {
+            Both(a, b) => {
+                if a == b {
+                    format!("  (_, _)\n")
+                } else {
+                    format!("  (\n    left: {:?},\n    right: {:?}\n  )\n", a, b)
+                }
+            }
+            Left(a) => format!("  ({:?}, ?)\n", a),
+            Right(b) => format!("  (?, {:?})\n", b),
+        })
+        .collect();
+    format!("[\n{}]", diff)
+}
+
+/// Creates a new [input_device::InputEvent] from the provided components.
+pub fn create_input_event(
     keyboard_event: keyboard_binding::KeyboardEvent,
-    event_time: input_device::EventTime,
     device_descriptor: &input_device::InputDeviceDescriptor,
+    event_time: input_device::EventTime,
     handled: input_device::Handled,
 ) -> input_device::InputEvent {
     input_device::InputEvent {
@@ -95,7 +120,7 @@ pub fn create_keyboard_event_with_handled(
         .into_with_modifiers(modifiers)
         .into_with_keymap(keymap)
         .into_with_key_meaning(key_meaning);
-    create_from_keyboard_event(keyboard_event, event_time, device_descriptor, handled)
+    create_input_event(keyboard_event, device_descriptor, event_time, handled)
 }
 
 /// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys and meaning.
@@ -118,12 +143,12 @@ pub fn create_keyboard_event_with_key_meaning_and_repeat_sequence(
     key_meaning: Option<fidl_fuchsia_ui_input3::KeyMeaning>,
     repeat_sequence: u64,
 ) -> input_device::InputEvent {
-    let event = keyboard_binding::KeyboardEvent::new(key, event_type)
+    let device_event = keyboard_binding::KeyboardEvent::new(key, event_type)
         .into_with_modifiers(modifiers)
         .into_with_key_meaning(key_meaning)
         .into_with_keymap(keymap)
         .into_with_repeat_sequence(repeat_sequence);
-    create_from_keyboard_event(event, event_time, device_descriptor, input_device::Handled::No)
+    create_input_event(device_event, device_descriptor, event_time, input_device::Handled::No)
 }
 
 /// Creates a [`keyboard_binding::KeyboardEvent`] with the provided keys and meaning.

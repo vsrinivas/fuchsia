@@ -186,6 +186,11 @@ impl ModifierState {
         Self { state }
     }
 
+    /// Retrieves the modifier state.
+    pub fn get_state(&self) -> Modifiers {
+        self.state.clone()
+    }
+
     /// Adds `modifier` into the modifier state as actuated, if `set` is true.
     /// Otherwise makes no changes to [ModifierState].
     ///

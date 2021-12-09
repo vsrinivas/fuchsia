@@ -164,10 +164,10 @@ mod tests {
         keyboard_event: keyboard_binding::KeyboardEvent,
         handled: input_device::Handled,
     ) -> input_device::InputEvent {
-        testing_utilities::create_from_keyboard_event(
+        testing_utilities::create_input_event(
             keyboard_event,
-            42 as input_device::EventTime,
             &input_device::InputDeviceDescriptor::Fake,
+            42 as input_device::EventTime,
             handled,
         )
     }

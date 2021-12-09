@@ -108,6 +108,7 @@ async fn build_input_pipeline_assembly(
     let mut assembly = InputPipelineAssembly::new();
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
+        assembly = add_modifier_handler(assembly);
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         // Add the text settings handler early in the pipeline to use the
         // keymap settings in the remainder of the pipeline.
@@ -143,6 +144,11 @@ async fn build_input_pipeline_assembly(
     }
 
     assembly
+}
+
+/// Hooks up the modifier keys handler.
+fn add_modifier_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
+    assembly.add_handler(input_pipeline::modifier_handler::ModifierHandler::new())
 }
 
 /// Hooks up the inspect handler.

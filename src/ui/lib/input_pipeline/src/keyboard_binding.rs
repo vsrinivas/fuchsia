@@ -14,7 +14,6 @@ use {
     fuchsia_async as fasync,
     fuchsia_syslog::fx_log_err,
     futures::{channel::mpsc::Sender, SinkExt},
-    keymaps::usages::is_modifier3,
 };
 
 /// A [`KeyboardEvent`] represents an input event from a keyboard device.
@@ -42,6 +41,9 @@ pub struct KeyboardEvent {
 
     /// The [`fidl_ui_input3::Modifiers`] associated with the pressed keys.
     modifiers: Option<fidl_ui_input3::Modifiers>,
+
+    /// The [`fidl_ui_input3::LockState`] currently computed.
+    lock_state: Option<fidl_ui_input3::LockState>,
 
     /// If set, contains the unique identifier of the keymap to be used when or
     /// if remapping the keypresses.
@@ -72,6 +74,7 @@ impl KeyboardEvent {
             key,
             event_type,
             modifiers: None,
+            lock_state: None,
             keymap: None,
             key_meaning: None,
             repeat_sequence: 0,
@@ -107,6 +110,16 @@ impl KeyboardEvent {
     /// Returns the currently applicable modifiers.
     pub fn get_modifiers(&self) -> Option<fidl_ui_input3::Modifiers> {
         self.modifiers
+    }
+
+    /// Converts [KeyboardEvent] into the same one, but with the specified lock state.
+    pub fn into_with_lock_state(self, lock_state: Option<fidl_ui_input3::LockState>) -> Self {
+        Self { lock_state, ..self }
+    }
+
+    /// Returns the currently applicable lock state.
+    pub fn get_lock_state(&self) -> Option<fidl_ui_input3::LockState> {
+        self.lock_state
     }
 
     /// Converts [KeyboardEvent] into the same one, but with the specified keymap
@@ -366,7 +379,6 @@ impl KeyboardBinding {
         // function so that the lifetime of `new_keys` above could be detached from that of the
         // spawned task.
         fn dispatch_events(
-            modifiers: Option<fidl_ui_input3::Modifiers>,
             key_events: Vec<(fidl_fuchsia_input::Key, fidl_fuchsia_ui_input3::KeyEventType)>,
             device_descriptor: input_device::InputDeviceDescriptor,
             event_time: input_device::EventTime,
@@ -378,7 +390,7 @@ impl KeyboardBinding {
                     match input_event_sender
                         .send(input_device::InputEvent {
                             device_event: input_device::InputDeviceEvent::Keyboard(
-                                KeyboardEvent::new(key, event_type).into_with_modifiers(modifiers),
+                                KeyboardEvent::new(key, event_type),
                             ),
                             device_descriptor: device_descriptor.clone(),
                             event_time: event_time_ns,
@@ -406,11 +418,6 @@ impl KeyboardBinding {
             .detach();
         }
 
-        // Track any pressed modifiers as input3 modifiers.  Note that input3
-        // modifiers are very limited at the moment.
-        let modifier_keys = new_keys.iter().filter(|key| is_modifier3(*key)).collect::<Vec<_>>();
-        let modifiers = KeyboardBinding::to_modifiers(&modifier_keys[..]);
-
         // Filter out the keys which were present in the previous keyboard report to avoid sending
         // multiple `KeyEventType::Pressed` events for a key.
         let pressed_keys = new_keys
@@ -433,7 +440,7 @@ impl KeyboardBinding {
         // a closure.
         let all_keys = released_keys.chain(pressed_keys).collect::<Vec<_>>();
 
-        dispatch_events(modifiers, all_keys, device_descriptor, event_time_ns, input_event_sender);
+        dispatch_events(all_keys, device_descriptor, event_time_ns, input_event_sender);
     }
 }
 
@@ -595,95 +602,6 @@ mod tests {
                 // Simultaneous key events are artificially separated by 1ns
                 // on purpose.
                 event_time_u64 + 1,
-                &descriptor,
-                /* keymap= */ None,
-            ),
-        ];
-
-        assert_input_report_sequence_generates_events!(
-            input_reports: reports,
-            expected_events: expected_events,
-            device_descriptor: descriptor,
-            device_type: KeyboardBinding,
-        );
-    }
-
-    /// Tests that input3 modifier keys are propagated to the event receiver.
-    #[fasync::run_singlethreaded(test)]
-    async fn input3_modifier_keys() {
-        let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
-            keys: vec![fidl_fuchsia_input::Key::CapsLock],
-        });
-        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
-
-        let reports = vec![testing_utilities::create_keyboard_input_report(
-            vec![fidl_fuchsia_input::Key::CapsLock],
-            event_time_i64,
-        )];
-
-        let expected_events = vec![testing_utilities::create_keyboard_event(
-            fidl_fuchsia_input::Key::CapsLock,
-            fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-            Some(fidl_ui_input3::Modifiers::CapsLock),
-            event_time_u64,
-            &descriptor,
-            /* keymap= */ None,
-        )];
-
-        assert_input_report_sequence_generates_events!(
-            input_reports: reports,
-            expected_events: expected_events,
-            device_descriptor: descriptor,
-            device_type: KeyboardBinding,
-        );
-    }
-
-    /// Tests that a modifier key applies to all subsequent events until the modifier key is
-    /// released.
-    #[fasync::run_singlethreaded(test)]
-    async fn repeated_modifier_key() {
-        let descriptor = input_device::InputDeviceDescriptor::Keyboard(KeyboardDeviceDescriptor {
-            keys: vec![fidl_fuchsia_input::Key::CapsLock, fidl_fuchsia_input::Key::A],
-        });
-        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
-
-        let reports = vec![
-            testing_utilities::create_keyboard_input_report(
-                vec![fidl_fuchsia_input::Key::CapsLock],
-                event_time_i64,
-            ),
-            testing_utilities::create_keyboard_input_report(
-                vec![fidl_fuchsia_input::Key::CapsLock, fidl_fuchsia_input::Key::A],
-                event_time_i64,
-            ),
-            testing_utilities::create_keyboard_input_report(
-                vec![fidl_fuchsia_input::Key::A],
-                event_time_i64,
-            ),
-        ];
-
-        let expected_events = vec![
-            testing_utilities::create_keyboard_event(
-                fidl_fuchsia_input::Key::CapsLock,
-                fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                Some(fidl_ui_input3::Modifiers::CapsLock),
-                event_time_u64,
-                &descriptor,
-                /* keymap= */ None,
-            ),
-            testing_utilities::create_keyboard_event(
-                fidl_fuchsia_input::Key::A,
-                fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                Some(fidl_ui_input3::Modifiers::CapsLock),
-                event_time_u64,
-                &descriptor,
-                /* keymap= */ None,
-            ),
-            testing_utilities::create_keyboard_event(
-                fidl_fuchsia_input::Key::CapsLock,
-                fidl_fuchsia_ui_input3::KeyEventType::Released,
-                None,
-                event_time_u64,
                 &descriptor,
                 /* keymap= */ None,
             ),

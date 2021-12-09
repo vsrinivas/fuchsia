@@ -8,7 +8,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl_fuchsia_input::Key,
-    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, Modifiers},
+    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, LockState, Modifiers},
     fidl_fuchsia_ui_shortcut as ui_shortcut,
     std::convert::TryInto,
     std::rc::Rc,
@@ -36,6 +36,7 @@ impl InputHandler for ShortcutHandler {
                 &keyboard_device_event.get_key(),
                 keyboard_device_event.get_event_type().clone(),
                 keyboard_device_event.get_modifiers().clone(),
+                keyboard_device_event.get_lock_state().clone(),
                 event_time,
             );
             // If either pressed_keys or released_keys
@@ -61,12 +62,14 @@ impl ShortcutHandler {
 /// # Parameters
 /// `key`: The key associated with the KeyEvent.
 /// `event_type`: The type of key, either pressed or released.
-/// `modifiers`: The modifiers associated the KeyEvent.
+/// `modifiers`: The modifiers associated with the KeyEvent.
+/// `lock_state`: The modifiers associated with the KeyEvent.
 /// `event_time`: The time in nanoseconds when the event was first recorded.
 fn create_key_event(
     key: &Key,
     event_type: KeyEventType,
     modifiers: Option<Modifiers>,
+    lock_state: Option<LockState>,
     event_time: input_device::EventTime,
 ) -> KeyEvent {
     KeyEvent {
@@ -74,6 +77,7 @@ fn create_key_event(
         type_: Some(event_type),
         key: Some(*key),
         modifiers,
+        lock_state,
         ..KeyEvent::EMPTY
     }
 }

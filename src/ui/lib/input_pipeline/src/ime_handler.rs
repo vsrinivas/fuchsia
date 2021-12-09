@@ -23,6 +23,8 @@ pub struct ImeHandler {
     /// The FIDL proxy (client-side stub) to the service for key event injection.
     key_event_injector: fidl_ui_input3::KeyEventInjectorProxy,
 
+    // TODO(fxbug.dev/89763): The state trackers below should be removed once
+    // we get a dedicated handler.
     /// Tracks the state of shift keys, for keymapping purposes.
     modifier_tracker: RefCell<keymaps::ModifierState>,
 
@@ -43,14 +45,12 @@ impl InputHandler for ImeHandler {
             handled: input_device::Handled::No,
         } = input_event
         {
-            self.modifier_tracker.borrow_mut().update(
-                keyboard_device_event.get_event_type(),
-                keyboard_device_event.get_key(),
-            );
-            self.lock_state_tracker.borrow_mut().update(
-                keyboard_device_event.get_event_type(),
-                keyboard_device_event.get_key(),
-            );
+            self.modifier_tracker
+                .borrow_mut()
+                .update(keyboard_device_event.get_event_type(), keyboard_device_event.get_key());
+            self.lock_state_tracker
+                .borrow_mut()
+                .update(keyboard_device_event.get_event_type(), keyboard_device_event.get_key());
             let key_event = create_key_event(
                 &keyboard_device_event,
                 event_time,
