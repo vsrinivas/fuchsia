@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <arpa/inet.h>
 #include <assert.h>
 #include <lib/zircon-internal/fnv1hash.h>
 #include <stdint.h>
@@ -133,9 +134,6 @@ static void mac_cache_init(void) {
 }
 
 void ip6_init(void* macaddr, bool quiet) {
-  char tmp[IP6TOAMAX];
-  mac_addr_t all;
-
   // Clear our ip6 -> MAC address lookup table
   mac_cache_init();
 
@@ -148,15 +146,18 @@ void ip6_init(void* macaddr, bool quiet) {
 
   eth_add_mcast_filter(&snm_mac_addr);
 
+  mac_addr_t all;
   multicast_from_ip6(&all, &ip6_ll_all_nodes);
   eth_add_mcast_filter(&all);
 
   if (!quiet) {
     printf("macaddr: %02x:%02x:%02x:%02x:%02x:%02x\n", ll_mac_addr.x[0], ll_mac_addr.x[1],
            ll_mac_addr.x[2], ll_mac_addr.x[3], ll_mac_addr.x[4], ll_mac_addr.x[5]);
-    printf("ip6addr (LL) : %s\n", ip6toa(tmp, &ll_ip6_addr));
-    printf("ip6addr (ULA): %s\n", ip6toa(tmp, &ula_ip6_addr));
-    printf("snmaddr: %s\n", ip6toa(tmp, &snm_ip6_addr));
+
+    char tmp[INET6_ADDRSTRLEN];
+    printf("ip6addr (LL) : %s\n", inet_ntop(AF_INET6, &ll_ip6_addr, tmp, sizeof(tmp)));
+    printf("ip6addr (ULA): %s\n", inet_ntop(AF_INET6, &ula_ip6_addr, tmp, sizeof(tmp)));
+    printf("snmaddr: %s\n", inet_ntop(AF_INET6, &snm_ip6_addr, tmp, sizeof(tmp)));
   }
 }
 
@@ -302,9 +303,9 @@ static void report_bad_packet(ip6_addr_t* ip6_addr, const char* msg) {
   if (ip6_addr == NULL) {
     printf("inet6: dropping packet: %s\n", msg);
   } else {
-    char addr_str[IP6TOAMAX];
-    ip6toa(addr_str, ip6_addr);
-    printf("inet6: dropping packet from %s: %s\n", addr_str, msg);
+    char addr_str[INET6_ADDRSTRLEN];
+    printf("inet6: dropping packet from %s: %s\n",
+           inet_ntop(AF_INET6, ip6_addr, addr_str, sizeof(addr_str)), msg);
   }
 }
 #endif
@@ -558,60 +559,4 @@ void eth_recv(void* _data, size_t len) {
       // do nothing
       break;
   }
-}
-
-char* ip6toa(char* _out, const void* ip6addr) {
-  // Encode our address using the scheme laid out in RFC 1884 section 2.2
-  //
-  // Basically, we have eight 16 bit words in RAM (in network byte order, aka
-  // big endian) which need to be rendered in hex with ':'s separating each
-  // word.  Once per encoding, we may choose to replace a run of 0s with "::"
-  // instead of the run.  This implementation will always replace the first run,
-  // it will not make any effort to find and replace the longest run.
-  const size_t kIPv6AddrWords = 8;
-
-  const uint16_t* addr = ip6addr;
-  char* out = _out;
-  size_t i = 0;
-
-  // Start by encoding while keeping on the lookout for any zeros.
-  for (; i < kIPv6AddrWords; ++i) {
-    // Have we found some zeros?  If so, skip the run, replace it with a "::"
-    // instead.  There is no need to do any potential endian flipping here as
-    // zero is always zero, regardless of endianness.
-    if (addr[i] == 0) {
-      while ((++i < kIPv6AddrWords) && (addr[i] == 0)) {
-      }
-
-      // If the address ends with a 0-run, then emit the full :: token and we
-      // are finished.
-      if (i == kIPv6AddrWords) {
-        sprintf(out, "::");
-        return _out;
-      }
-
-      // There are still words to be encoded, emit a single ':' and then move
-      // onto phase 2 (post-0-run encoding).
-      *(out++) = ':';
-      break;
-    }
-
-    // Skip the ':' separator if this is the first word in the sequence.
-    if (i != 0) {
-      *(out++) = ':';
-    }
-
-    // Output the word, skipping leading zeros to save space.
-    out += sprintf(out, "%x", ntohs(addr[i]));
-  }
-
-  // Phase 2 of processing.  At this point, we no longer need to look for any
-  // zero runs since we have already spent our "::" token.  Also, there is no
-  // need to worry about being the first word in the sequence, so we can
-  // unconditionally separate words with ":".
-  for (; i < kIPv6AddrWords; ++i) {
-    out += sprintf(out, ":%x", ntohs(addr[i]));
-  }
-
-  return _out;
 }

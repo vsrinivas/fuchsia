@@ -124,11 +124,6 @@ struct ndp_n_hdr {
 #define htonl(n) htobe32(n)
 #endif
 
-// Formats an IP6 address into the provided buffer (which must be
-// at least IP6TOAMAX bytes in size), and returns the buffer address.
-char* ip6toa(char* _out, const void* ip6addr);
-#define IP6TOAMAX 40
-
 // provided by inet6.c
 void ip6_init(void* macaddr, bool quiet);
 void eth_recv(void* data, size_t len);

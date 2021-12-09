@@ -45,7 +45,6 @@ group("tests") {
     "hwreg:tests",
     "id_allocator:tests",
     "image-format:tests",
-    "inet6:tests",
     "inspect:tests",
     "inspector:tests",
     "io-scheduler:tests",
