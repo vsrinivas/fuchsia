@@ -1136,6 +1136,7 @@ pub struct Document {
     /// [doc-storage]: /docs/concepts/components/v2/capabilities/storage.md
     /// [doc-resolvers]: /docs/concepts/components/v2/capabilities/resolvers.md
     /// [doc-runners]: /docs/concepts/components/v2/capabilities/runners.md
+    /// [doc-event]: /docs/concepts/components/v2/capabilities/event.md
     /// [glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
     pub capabilities: Option<Vec<Capability>>,
 
@@ -1148,12 +1149,14 @@ pub struct Document {
     /// Keys:
     ///
     /// -   A capability declaration, one of:
-    ///     -   `protocol`: The [name](#name) of a protocol capability, or
-    ///         an array of names of protocol capabilities.
-    ///     -   `directory`: The [name](#name) of a directory capability.
-    ///     -   `storage`: The [name](#name) of a storage capability.
-    /// -   `from` _(optional)_: The source of the capability. Defaults to `parent`. One
-    ///     of:
+    ///     -   `protocol`: The [name](#name) of a [protocol capability][doc-protocol],
+    ///         or an array of names.
+    ///     -   `directory`: The [name](#name) of a [directory capability][doc-directory].
+    ///     -   `storage`: The [name](#name) of a [storage capability][doc-storage].
+    ///     -   `event`: The [name](#name) of an [event capability][doc-event],
+    ///         or an array of names.
+    /// -   `from` _(optional)_: The source of the capability. Defaults to `parent`.
+    ///     One of:
     ///     -   `parent`: The component's parent.
     ///     -   `debug`: One of [`debug_capabilities`][fidl-environment-decl] in the
     ///         environment assigned to this component.
@@ -1186,6 +1189,13 @@ pub struct Document {
     ///         storage: "persistent",
     ///         path: "/data",
     ///     },
+    ///     {
+    ///         event: [
+    ///             "started",
+    ///             "stopped",
+    ///         ],
+    ///         from: "framework",
+    ///     },
     /// ],
     /// ```
     ///
@@ -1198,12 +1208,15 @@ pub struct Document {
     ///
     /// Keys:
     ///
-    /// -   A [capability name](#name) or array of names, keyed to one of
-    ///     the following typenames:
-    ///     -   `protocol`
-    ///     -   `directory`
-    ///     -   `runner`
-    ///     -   `resolver`
+    /// -   A capability declaration, one of:
+    ///     -   `protocol`: The [name](#name) of a [protocol capability][doc-protocol],
+    ///         or an array of names.
+    ///     -   `directory`: The [name](#name) of a [directory capability][doc-directory],
+    ///         or an array of names.
+    ///     -   `runner`: The [name](#name) of a [runner capability][doc-runners],
+    ///         or an array of names.
+    ///     -   `resolver`: The [name](#name) of a [resolver capability][doc-resolvers],
+    ///         or an array of names.
     /// -   `from`: The source of the capability, one of:
     ///     -   `self`: This component. Requires a corresponding
     ///         [`capability`](#capabilities) declaration.
@@ -1255,13 +1268,19 @@ pub struct Document {
     ///
     /// Keys:
     ///
-    /// -   A [capability name](#name) or array of names, keyed to one of
-    ///     the following typenames:
-    ///     -   `protocol`
-    ///     -   `directory`
-    ///     -   `storage`
-    ///     -   `runner`
-    ///     -   `resolver`
+    /// -   A capability declaration, one of:
+    ///     -   `protocol`: The [name](#name) of a [protocol capability][doc-protocol],
+    ///         or an array of names.
+    ///     -   `directory`: The [name](#name) of a [directory capability][doc-directory],
+    ///         or an array of names.
+    ///     -   `storage`: The [name](#name) of a [storage capability][doc-storage],
+    ///         or an array of names.
+    ///     -   `runner`: The [name](#name) of a [runner capability][doc-runners],
+    ///         or an array of names.
+    ///     -   `resolver`: The [name](#name) of a [resolver capability][doc-resolvers],
+    ///         or an array of names.
+    ///     -   `event`: The [name](#name) of an [event capability][doc-event],
+    ///         or an array of names.
     /// -   `from`: The source of the capability, one of:
     ///     -   `parent`: The component's parent. This source can be used for all
     ///         capability types.
@@ -1334,6 +1353,11 @@ pub struct Document {
     ///         from: "parent",
     ///         to: [ "#user-shell" ],
     ///     },
+    ///     {
+    ///         event: "stopped",
+    ///         from: "framework",
+    ///         to: [ "#logger" ],
+    ///     },
     /// ],
     /// ```
     pub offer: Option<Vec<Offer>>,
@@ -1363,7 +1387,7 @@ pub struct Document {
     ///     }
     /// }
     /// ```
-    /// TODO(87560): Write detailed syntax for the `config` section
+    /// TODO(fxbug.dev/87560): Write detailed syntax for the `config` section
     pub config: Option<BTreeMap<ConfigKey, ConfigValueType>>,
 }
 
