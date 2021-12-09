@@ -7,6 +7,28 @@
 
 package trace
 
-func GetCurrentProcessKoid() uint64 {
-	return 0
+type EventScope int
+type Arg struct{}
+type FlowID uint64
+type BlobType int
+
+func Instant(category, name string, scope EventScope, args ...Arg) {
+}
+
+func DurationBegin(category, name string, args ...Arg) {
+}
+
+func DurationEnd(category, name string, args ...Arg) {
+}
+
+func FlowBegin(category, name string, flowID FlowID, args ...Arg) {
+}
+
+func FlowStep(category, name string, flowID FlowID, args ...Arg) {
+}
+
+func FlowEnd(category, name string, flowID FlowID, args ...Arg) {
+}
+
+func Blob(typ BlobType, name string, blob []byte) {
 }

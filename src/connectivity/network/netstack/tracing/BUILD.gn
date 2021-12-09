@@ -22,6 +22,7 @@ go_library("tracing") {
     "trace/context_test.go",
     "trace/engine.go",
     "trace/engine_test.go",
+    "trace/event.go",
     "trace/notracing.go",
   ]
   deps = [
