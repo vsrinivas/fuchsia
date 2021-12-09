@@ -28,6 +28,7 @@
 ## To enable incremental package serving, run "fx --enable=incremental serve-updates ..."
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/updates.sh || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/fx-optional-features.sh || exit $?
 fx-config-read
 
@@ -191,12 +192,12 @@ else
   fi
 fi
 
-# Default the port to 8083 if it is unset.
-if [[ -z "${port}" ]]; then
-  port="8083"
-fi
-
 if is_feature_enabled "legacy_serve"; then
+  # Default the port to 8083 if it is unset.
+  if [[ -z "${port}" ]]; then
+    port="8083"
+  fi
+
   pm_serve_args=( serve -vt -repo "${repo_dir}" "${serve_flags[@]}" )
 
   # the manifest list file has relative paths and "pm serve" looks for them
@@ -208,6 +209,12 @@ else
     fx-error "The feature 'incremental' is not supported yet by ffx"
     fx-error "See http://fxbug.dev/79636 for more details."
     exit 1
+  fi
+
+  ffx-repository-check-server-address "" "$port"
+  err=$?
+  if [[ $err -ne 0 ]]; then
+    exit "$err"
   fi
 fi
 

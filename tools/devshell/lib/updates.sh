@@ -93,3 +93,69 @@ function ffx-register-repository {
 
   return 0
 }
+
+function ffx-repository-server-address {
+  local addr=$(fx-command-run ffx config get repository.server.listen)
+  err=$?
+  if [[ $err -ne 0 ]]; then
+    fx-error "Unable to get the configured repository server address."
+    return "$err"
+  fi
+
+  if [[ "$addr" = "null" ]]; then
+    echo ""
+  else
+    echo "$addr" | fx-command-run jq -r .
+  fi
+
+  return 0
+}
+
+function ffx-repository-check-server-address {
+  local expected_ip="$1"
+  local expected_port="$2"
+
+  local actual_addr=$(ffx-repository-server-address)
+  local err=$?
+  if [[ $err -ne 0 ]]; then
+    return "$err"
+  fi
+
+  if [[ -z "${actual_addr}" ]]; then
+    fx-error "repository server is currently disabled. to re-enable, run:"
+    fx-error "$ ffx config set repository.server.listen \"[::]:8083\" && ffx doctor --restart-daemon"
+    return 1
+  fi
+
+  if [[ $actual_addr =~ (.*):([0-9]+) ]]; then
+    local actual_ip="${BASH_REMATCH[1]}"
+    local actual_port="${BASH_REMATCH[2]}"
+  else
+    fx-error "could not parse ip and port from ffx server address: $actual_addr"
+    return 1
+  fi
+
+  if [[ -z "$expected_ip" ]]; then
+    expected_ip="$actual_ip"
+  elif [[ $expected_ip =~ : ]]; then
+    expected_ip="[$expected_ip]"
+  fi
+
+  if [[ -z "$expected_port" ]]; then
+    expected_port="$actual_port"
+  fi
+
+  local expected_addr="$expected_ip:$expected_port"
+
+  if [[ "$expected_addr" != "$actual_addr" ]]; then
+    fx-error "The repository server is configured to use \"${actual_addr}\", not \"${expected_addr}\""
+    fx-error "To switch to a different address, run:"
+    fx-error ""
+    fx-error "$ ffx config set repository.server.listen \"${expected_addr}\" && ffx doctor --restart-daemon"
+    fx-error ""
+    fx-error "Note: this will change the address for all repositories served by ffx"
+    return 1
+  fi
+
+  return 0
+}

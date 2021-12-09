@@ -142,41 +142,15 @@ function main {
       return $err
     fi
   else
-    if [[ -z "${port}" ]]; then
-      port="8083"
+    if [[ ! -z "$addr" ]]; then
+      fx-error "The feature 'legacy_serve' and ffx does not support the '--addr' flag"
+      exit 1
     fi
 
-    actual_addr=$(fx-command-run ffx config get repository.server.listen | sed 's/\"//g')
+    ffx-repository-check-server-address "" "$port"
     err=$?
     if [[ $err -ne 0 ]]; then
-      fx-error "Unable to get the configured repository server address."
-      return "$err"
-    fi
-
-    if [[ "$actual_addr" = "null" ]]; then
-      fx-error "Repository server is currently disabled. To re-enable, run:"
-      fx-error "$ ffx config set repository.server.listen \"${config_ip}:${port}\" && ffx doctor --restart-daemon"
-      return 1
-    fi
-
-    [[ $actual_addr =~ (.*):[0-9]+ ]]
-    actual_ip=${BASH_REMATCH[1]}
-
-    if [[ ! -z "${addr}" ]]; then
-      if [[ $addr =~ : ]]; then
-        expected_addr="[${addr}]:${port}"
-      else
-        expected_addr="${addr}:${port}"
-      fi
-    else
-      expected_addr="${actual_ip}:${port}"
-    fi
-
-    if [[ "$expected_addr" != "$actual_addr"  ]]; then
-      fx-error "The repository server is configured to use \"${actual_addr}\", not \"${expected_addr}\""
-      fx-error "To switch to a different address, run:"
-      fx-error "$ ffx config set repository.server.listen \"${expected_addr}\" && ffx doctor --restart-daemon"
-      return 1
+      exit "$err"
     fi
 
     # Use the build directory's name by default. Note that package URLs are not
