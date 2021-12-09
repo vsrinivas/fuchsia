@@ -7,7 +7,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, DurationNum, HandleBased},
     futures::task::Waker,
-    tracing::info,
+    tracing::{debug, info},
 };
 
 use crate::driver::frames_from_duration;
@@ -106,6 +106,7 @@ impl FrameVmo {
     }
 
     /// Start the audio clock for the buffer at `time`
+    /// Can't start if the format has not been set.
     pub(crate) fn start(&mut self, time: zx::Time) -> Result<()> {
         if self.start_time.is_some() || self.format.is_none() {
             return Err(Error::InvalidState);
@@ -113,7 +114,7 @@ impl FrameVmo {
         self.start_time = Some(time);
         self.latest_notify = time;
         if let Some(waker) = self.wake_on_start.take() {
-            info!("ringing the start waker");
+            debug!("ringing the start waker");
             waker.wake();
         }
         Ok(())
@@ -123,14 +124,14 @@ impl FrameVmo {
         self.start_time
     }
 
-    /// Stop the audio clock in tbe buffer.
+    /// Stop the audio clock in the buffer.
     /// returns true if the streaming was stopped.
-    pub(crate) fn stop(&mut self) -> bool {
-        if self.start_time.is_none() {
-            return false;
+    pub(crate) fn stop(&mut self) -> Result<bool> {
+        if self.format.is_none() {
+            return Err(Error::InvalidState);
         }
-        self.start_time = None;
-        true
+        let start_time = self.start_time.take();
+        Ok(start_time.is_some())
     }
 
     /// Retrieve the complete frames available from `from` to `until`
@@ -373,18 +374,26 @@ mod tests {
         assert_eq!(Ok(one_sec_later), vmo.next_frame_after(one_sec_later - 1.nanos()));
     }
 
-    #[fixture(with_test_vmo)]
     #[fuchsia::test]
-    fn test_start_stop(mut vmo: FrameVmo) {
+    fn test_start_stop() {
         let _exec = fasync::TestExecutor::new();
+
+        let mut vmo = FrameVmo::new().expect("can't make a framevmo");
+
+        // Starting before set_format is an error.
+        assert!(vmo.start(get_time_now()).is_err());
+        // Stopping before set_format is an error.
+        assert!(vmo.stop().is_err());
+
+        let _handle = vmo.set_format(TEST_FPS, TEST_FORMAT, TEST_CHANNELS, TEST_FRAMES, 0).unwrap();
 
         let start_time = get_time_now();
         assert_eq!(Ok(()), vmo.start(start_time));
         assert_eq!(Err(Error::InvalidState), vmo.start(start_time));
 
-        assert!(vmo.stop());
+        assert_eq!(Ok(true), vmo.stop());
         // stop is idempotent, but will return false if it was already stopped
-        assert!(!vmo.stop());
+        assert_eq!(Ok(false), vmo.stop());
 
         assert_eq!(Ok(()), vmo.start(start_time));
     }

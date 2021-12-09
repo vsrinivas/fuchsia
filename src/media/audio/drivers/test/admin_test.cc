@@ -303,12 +303,6 @@ void AdminTest::ValidatePositionInfo() {
     void TestBody() override { CODE }                                           \
   }
 
-// For now, certain test cases fail on a2dp-source. Skip them and complain (don't silently pass).
-#define SKIP_IF_A2DP                                                                   \
-  if (device_entry().dir_fd == DeviceEntry::kA2dp) {                                   \
-    GTEST_SKIP() << "*** Bluetooth A2DP does not support this test at this time. ***"; \
-  }
-
 //
 // Test cases that target each of the various admin commands
 //
@@ -358,9 +352,6 @@ DEFINE_ADMIN_TEST_CLASS(Start, {
 
 // ring-buffer FIDL channel should disconnect, with ZX_ERR_BAD_STATE
 DEFINE_ADMIN_TEST_CLASS(StartBeforeGetVmoShouldDisconnect, {
-  // TODO(fxbug.dev/66431): fix a2dp-source and enable these test cases for all a2dp devices.
-  SKIP_IF_A2DP;
-
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMinFormat());
 
@@ -369,9 +360,6 @@ DEFINE_ADMIN_TEST_CLASS(StartBeforeGetVmoShouldDisconnect, {
 
 // ring-buffer FIDL channel should disconnect, with ZX_ERR_BAD_STATE
 DEFINE_ADMIN_TEST_CLASS(StartWhileStartedShouldDisconnect, {
-  // TODO(fxbug.dev/66431): fix a2dp-source and enable these test cases for all devices.
-  SKIP_IF_A2DP;
-
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
   ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000, 32));
@@ -393,9 +381,6 @@ DEFINE_ADMIN_TEST_CLASS(Stop, {
 
 // ring-buffer FIDL channel should disconnect, with ZX_ERR_BAD_STATE
 DEFINE_ADMIN_TEST_CLASS(StopBeforeGetVmoShouldDisconnect, {
-  // TODO(fxbug.dev/66431): fix a2dp-source and enable these test cases for all devices.
-  SKIP_IF_A2DP;
-
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMinFormat());
 
@@ -414,9 +399,6 @@ DEFINE_ADMIN_TEST_CLASS(StopWhileStoppedIsPermitted, {
 
 // Verify position notifications at fast (64/sec) rate.
 DEFINE_ADMIN_TEST_CLASS(PositionNotifyFast, {
-  // TODO(fxbug.dev/66431): fix a2dp-source and enable these test cases for all devices.
-  SKIP_IF_A2DP;
-
   // Request a 0.5-second ring-buffer
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
@@ -429,16 +411,11 @@ DEFINE_ADMIN_TEST_CLASS(PositionNotifyFast, {
   ExpectPositionNotifyCount(16u);
   ValidatePositionInfo();
 
-  // // We can stop enqueuing additional position notifications now
-  // DisablePositionNotifications();
   WaitForError();
 });
 
 // Verify position notifications at slow (1/sec) rate.
 DEFINE_ADMIN_TEST_CLASS(PositionNotifySlow, {
-  // TODO(fxbug.dev/66431): fix a2dp-source and enable these test cases for all devices.
-  SKIP_IF_A2DP;
-
   // Request a 2-second ring-buffer
   constexpr auto kNotifsPerRingBuffer = 2u;
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
@@ -452,8 +429,6 @@ DEFINE_ADMIN_TEST_CLASS(PositionNotifySlow, {
   ExpectPositionNotifyCount(3u);
   ValidatePositionInfo();
 
-  // // We can stop enqueuing additional position notifications now
-  // DisablePositionNotifications();
   // Wait longer than the default (100 ms), as notifications are less frequent than that.
   zx::duration time_per_notif =
       zx::sec(1) * ring_buffer_frames() / pcm_format().frame_rate / kNotifsPerRingBuffer;
@@ -462,9 +437,6 @@ DEFINE_ADMIN_TEST_CLASS(PositionNotifySlow, {
 
 // Verify no position notifications arrive after stop.
 DEFINE_ADMIN_TEST_CLASS(NoPositionNotifyAfterStop, {
-  // TODO(fxbug.dev/66431): fix a2dp-source and enable these test cases for all devices.
-  SKIP_IF_A2DP;
-
   ASSERT_NO_FAILURE_OR_SKIP(RequestFormats());
   ASSERT_NO_FAILURE_OR_SKIP(RequestMaxFormat());
   ASSERT_NO_FAILURE_OR_SKIP(RequestBuffer(8000, 32));

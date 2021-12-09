@@ -410,17 +410,26 @@ impl SoftPcmOutput {
             }
             RingBufferRequest::Start { responder } => {
                 let time = fasync::Time::now();
-                if let Err(e) = self.frame_vmo.lock().start(time.into()) {
-                    warn!("Error on frame vmo start: {:?}", e);
+                match self.frame_vmo.lock().start(time.into()) {
+                    Ok(()) => responder.send(time.into_nanos() as i64)?,
+                    Err(e) => {
+                        warn!("Error on frame vmo start: {:?}", e);
+                        responder.control_handle().shutdown_with_epitaph(zx::Status::BAD_STATE);
+                    }
                 }
-                responder.send(time.into_nanos() as i64)?;
             }
-            RingBufferRequest::Stop { responder } => {
-                if self.frame_vmo.lock().stop() == false {
-                    warn!("Stopping a not started ring buffer");
+            RingBufferRequest::Stop { responder } => match self.frame_vmo.lock().stop() {
+                Ok(stopped) => {
+                    if !stopped {
+                        info!("Stopping an unstarted ring buffer");
+                    }
+                    responder.send()?;
                 }
-                responder.send()?;
-            }
+                Err(e) => {
+                    warn!("Error on frame vmo stop: {:?}", e);
+                    responder.control_handle().shutdown_with_epitaph(zx::Status::BAD_STATE);
+                }
+            },
             RingBufferRequest::WatchClockRecoveryPositionInfo { responder } => {
                 self.frame_vmo.lock().set_position_responder(responder);
             }
