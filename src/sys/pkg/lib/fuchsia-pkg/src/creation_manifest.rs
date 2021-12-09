@@ -12,6 +12,7 @@ use {
         io::{self, Read},
         path::Path,
     },
+    walkdir::WalkDir,
 };
 
 /// A `CreationManifest` lists the files that should be included in a Fuchsia package.
@@ -123,6 +124,38 @@ impl CreationManifest {
             far_contents.insert(format!("meta/{}", resource_path), host_path);
         }
         CreationManifest::from_external_and_far_contents(v1.external_contents, far_contents)
+    }
+
+    pub fn from_dir(root: impl AsRef<Path>) -> Result<Self, CreationManifestError> {
+        let root = root.as_ref();
+        let mut far_contents = BTreeMap::new();
+        let mut external_contents = BTreeMap::new();
+
+        for entry in WalkDir::new(root) {
+            let entry = entry?;
+            let path = entry.path();
+            let file_type = entry.file_type();
+            if file_type.is_dir() {
+                continue;
+            }
+            if !(file_type.is_file() || file_type.is_symlink()) {
+                return Err(CreationManifestError::InvalidFileType { path: path.to_path_buf() });
+            }
+
+            let relative_path = path
+                .strip_prefix(root)?
+                .to_str()
+                .ok_or_else(|| CreationManifestError::EmptyResourcePath)?;
+            let path =
+                path.to_str().ok_or_else(|| CreationManifestError::EmptyResourcePath)?.to_owned();
+            if relative_path.starts_with("meta") {
+                far_contents.insert(relative_path.to_owned(), path);
+            } else {
+                external_contents.insert(relative_path.to_owned(), path);
+            }
+        }
+
+        CreationManifest::from_external_and_far_contents(external_contents, far_contents)
     }
 
     /// Create a `CreationManifest` from a `pm-build`-style Fuchsia INI file (fini). fini is a
@@ -311,6 +344,7 @@ mod tests {
     use matches::assert_matches;
     use proptest::prelude::*;
     use serde_json::json;
+    use std::fs::create_dir;
 
     fn from_json_value(
         value: serde_json::Value,
@@ -528,6 +562,32 @@ mod tests {
             CreationManifest::from_pm_fini(fini.as_bytes()),
             Err(CreationManifestError::DuplicateResourcePath { path }) if path == "path"
         );
+    }
+
+    #[test]
+    fn test_from_dir() {
+        let dir = tempfile::tempdir().unwrap();
+
+        let blob1 = dir.path().join("blob1");
+        let blob2 = dir.path().join("blob2");
+        let meta_dir = dir.path().join("meta");
+        create_dir(&meta_dir).unwrap();
+
+        let meta_package = meta_dir.join("package");
+        let meta_data = meta_dir.join("data");
+
+        fs::write(&blob1, b"blob1").unwrap();
+        fs::write(&blob2, b"blob2").unwrap();
+        fs::write(&meta_package, b"meta_package").unwrap();
+        fs::write(&meta_data, b"meta_data").unwrap();
+
+        let creation_manifest = CreationManifest::from_dir(dir.path()).unwrap();
+        let far_contents = creation_manifest.far_contents();
+        let external_contents = creation_manifest.external_contents();
+        assert!(far_contents.contains_key("meta/data"));
+        assert!(far_contents.contains_key("meta/package"));
+        assert!(external_contents.contains_key("blob1"));
+        assert!(external_contents.contains_key("blob2"));
     }
 
     #[test]

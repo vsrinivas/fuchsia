@@ -36,6 +36,18 @@ pub enum CreationManifestError {
     #[error("io error")]
     IoError(#[from] io::Error),
 
+    #[error("error occured when traverse the contents of a directory")]
+    WalkDir(#[from] walkdir::Error),
+
+    #[error("error occured when strip prefix from the path")]
+    StripPrefixError(#[from] std::path::StripPrefixError),
+
+    #[error("the resource path is empty")]
+    EmptyResourcePath,
+
+    #[error("manifest contains an invalid file path '{}'.", path.display())]
+    InvalidFileType { path: std::path::PathBuf },
+
     #[error("file directory collision at: {:?}", path)]
     FileDirectoryCollision { path: String },
 }
