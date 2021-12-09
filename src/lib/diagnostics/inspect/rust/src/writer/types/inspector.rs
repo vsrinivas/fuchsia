@@ -107,7 +107,7 @@ impl Inspector {
     /// receives a reference to the root of the inspect hierarchy.
     pub fn atomic_update<F, R>(&self, update_fn: F) -> R
     where
-        F: FnMut(&Node) -> R,
+        F: FnOnce(&Node) -> R,
     {
         self.root().atomic_update(update_fn)
     }

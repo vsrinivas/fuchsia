@@ -65,16 +65,18 @@ impl Node {
     where
         F: FnOnce(&Node),
     {
-        let child = self.create_child(name);
-        initialize(&child);
-        self.record(child);
+        self.atomic_update(move |n| {
+            let child = n.create_child(name);
+            initialize(&child);
+            n.record(child);
+        });
     }
 
     /// Takes a function to execute as under a single lock of the Inspect VMO. This function
     /// receives a reference to the `Node` where this is called.
-    pub fn atomic_update<F, R>(&self, mut update_fn: F) -> R
+    pub fn atomic_update<F, R>(&self, update_fn: F) -> R
     where
-        F: FnMut(&Node) -> R,
+        F: FnOnce(&Node) -> R,
     {
         match self.inner.inner_ref() {
             None => {
