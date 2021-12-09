@@ -57,6 +57,7 @@ static constexpr bool kDebugInputBuffer = false;
 static constexpr bool kDebugOutputBuffer = false;
 // How many output frames on either side of "positions of interest" should we display
 static constexpr int64_t kOutputDisplayWindow = 128;
+static constexpr int64_t kOutputAdditionalSignalStartDisplayWindow = 128;
 
 // If debugging input/output ring buffer contents, display buffer sections for ALL frequencies.
 // Otherwise, kDebugInputBuffer|kDebugOutputBuffer only display buffers for the below frequency.
@@ -685,7 +686,9 @@ void HermeticFidelityTest::Run(
               output_analysis_start,
               "End of initial stabilization (should lead to local max value)");
           ring_buffer_chan.Display(
-              output_analysis_start, output_analysis_start + kOutputDisplayWindow,
+              output_analysis_start,
+              output_analysis_start + kOutputDisplayWindow +
+                  kOutputAdditionalSignalStartDisplayWindow,
               "Start of Analysis Section (should start with max value received on this channel)");
           ring_buffer_chan.Display(
               output_analysis_end - kOutputDisplayWindow, output_analysis_end,
@@ -748,17 +751,6 @@ void HermeticFidelityTest::Run(
         }
       }
 
-      // Retrieve the arrays of measurements for this path and channel
-      auto& curr_level_db = level_results(tc.test_name, channel_spec.channel);
-      auto& curr_sinad_db = sinad_results(tc.test_name, channel_spec.channel);
-      if constexpr (kRetainWorstCaseResults) {
-        curr_level_db[freq.idx] = std::min(curr_level_db[freq.idx], level_db);
-        curr_sinad_db[freq.idx] = std::min(curr_sinad_db[freq.idx], sinad_db);
-      } else {
-        curr_level_db[freq.idx] = level_db;
-        curr_sinad_db[freq.idx] = sinad_db;
-      }
-
       if constexpr (kDebugOutputBufferOnSinadFailure) {
         if (!out_of_band) {
           // If sinad fails by a very large amount, display important sections of the output
@@ -777,7 +769,8 @@ void HermeticFidelityTest::Run(
             ring_buffer_chan.Display(output_analysis_start - kOutputDisplayWindow,
                                      output_analysis_start, tag);
             ring_buffer_chan.Display(output_analysis_start,
-                                     output_analysis_start + kOutputDisplayWindow,
+                                     output_analysis_start + kOutputDisplayWindow +
+                                         kOutputAdditionalSignalStartDisplayWindow,
                                      "Start of analysis section (should start with max value)");
             ring_buffer_chan.Display(output_analysis_end - kOutputDisplayWindow,
                                      output_analysis_end, "Final rows of analysis section");
@@ -786,6 +779,24 @@ void HermeticFidelityTest::Run(
                                      "Post-analysis destabilization (should start with max value)");
           }
         }
+      }
+
+      // In case of device underflows, don't bother testing the remaining frequencies. Also don't
+      // retain the level+sinad vals or consider them for worst-case, since the output is invalid.
+      // TODO(fxbug.dev/80003): Remove workarounds when device-underflow conditions are fixed.
+      if (DeviceHasUnderflows(device)) {
+        break;
+      }
+
+      // Retrieve the arrays of measurements for this path and channel
+      auto& curr_level_db = level_results(tc.test_name, channel_spec.channel);
+      auto& curr_sinad_db = sinad_results(tc.test_name, channel_spec.channel);
+      if constexpr (kRetainWorstCaseResults) {
+        curr_level_db[freq.idx] = std::min(curr_level_db[freq.idx], level_db);
+        curr_sinad_db[freq.idx] = std::min(curr_sinad_db[freq.idx], sinad_db);
+      } else {
+        curr_sinad_db[freq.idx] = sinad_db;
+        curr_level_db[freq.idx] = level_db;
       }
     }
   }

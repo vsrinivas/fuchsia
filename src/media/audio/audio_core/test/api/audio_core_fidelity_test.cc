@@ -209,21 +209,24 @@ TEST_F(AudioCoreSourceFormatFidelityTest, DISABLED_Float32PassThru) {
 
 //
 // Assess frequency response and sinad for non-float32 destination sample_formats
-// TODO(fxbug.dev/86301): Output format fidelity cases --
-//   int24, int16, uint8, (float); full-scale and mute
+// TODO(fxbug.dev/86301): Output format fidelity cases -- int24, int16, uint8, (float) for both
+//   full-scale and mute; all cases single-frequency, mono float32 96k source, mono 96k dest
 
 //
 // Assess single-mix-stage frequency response and sinad, across channelization changes
-// TODO(fxbug.dev/86300): ChannelizationFidelity cases (all 48k float32) --
-//   mono stream->stereo MixStage, mono MixStage->stereo MixStage, stereo stream->mono MixStage
+// TODO(fxbug.dev/86300): ChannelizationFidelity cases -- for both point and sinc samplers;
+//   mono stream->stereo MixStage, mono MixStage->stereo MixStage, stereo stream->mono MixStage;
+//   all cases single-frequency, float32 96k source, float32 96k dest
 
 //
 // Assess single-mix-stage frequency response and sinad, across gain changes
-// TODO(fxbug.dev/86302): Gain accuracy (FR) and dynamic range (SINAD) at -30dB, -60dB, -90dB.
+// TODO(fxbug.dev/86302): Gain accuracy (FR) and dynamic range (SiNAD) at -30dB, -60dB, -90dB.
+//   all cases single-frequency, mono float32 96k source, mono float32 96k dest
 
 //
 // Assess single-mix-stage frequency response and sinad, without frame-rate conversion
 //
+
 // PointSampler MixStages are well-tested by the SourceFormat cases above.
 //
 // 48k float32 stereo stream to a 48k stereo mix stage, with custom ref clock.

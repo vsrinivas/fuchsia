@@ -21,6 +21,11 @@ namespace media::audio {
 
 namespace {
 
+// Log volume changes, incoming gain/mute requests, or the subsequent gain/mute actions taken.
+static constexpr bool kLogUsageVolumeGainActions = true;
+static constexpr bool kLogSetGainMuteRampCalls = false;
+static constexpr bool kLogSetGainMuteRampActions = false;
+
 // For debugging purposes, log all incoming calls to Play(including timestamps) and Pause().
 static constexpr bool kLogPlayCalls = false;
 static constexpr bool kLogPauseCalls = false;
@@ -398,10 +403,6 @@ void AudioRenderer::BindGainControl(
 fuchsia::media::Usage AudioRenderer::GetStreamUsage() const {
   return fuchsia::media::Usage::WithRenderUsage(fidl::Clone(usage_));
 }
-
-constexpr bool kLogUsageVolumeGainActions = true;
-constexpr bool kLogSetGainMuteRampCalls = false;
-constexpr bool kLogSetGainMuteRampActions = false;
 
 // Set a change to the usage volume+gain_adjustment
 void AudioRenderer::RealizeVolume(VolumeCommand volume_command) {

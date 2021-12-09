@@ -91,13 +91,13 @@ class AudioOutput : public AudioDevice {
   // such that any client audio packets that will have been fully consumed by |device_ref_time| will
   // still be released. There will be no call to |FinishMixJob|.
   //
-  // If the retuned optional contains a FrameSpan with |is_mute| set to true, then no frames will
+  // If the returned optional contains a FrameSpan with |is_mute| set to true, then no frames will
   // be mixed. Instead all inputs will be trimmed such that any client audio packets that will have
   // been fully consumed by |device_ref_time| will still be released. |FinishMixJob| will be called
   // with the returned FrameSpan and a null payload buffer. It is the responsibility of
   // |FinishMixJob| to produce the silence for the FrameSpan.
   //
-  // If the retuned optional contains a FrameSpan with |is_mute| set to false, then the mix
+  // If the returned optional contains a FrameSpan with |is_mute| set to false, then the mix
   // pipeline will be advanced by the requested frame region. |FinishMixJob| will be called with a
   // FrameSpan that is 'at most' as long as the span in |StartMixJob|, but this length may be
   // reduced if the pipeline is unable to fill a single, contiguous buffer will all the frames
