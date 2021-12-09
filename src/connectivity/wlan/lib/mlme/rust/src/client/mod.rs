@@ -118,10 +118,6 @@ impl crate::MlmeImpl for ClientMlme {
     fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), anyhow::Error> {
         Self::on_eth_frame_tx(self, bytes).map_err(|e| e.into())
     }
-    fn handle_hw_indication(&mut self, ind: banjo_wlan_softmac::WlanIndication) {
-        warn!("Unexpected HwIndication {:?} received in Client MLME.", ind);
-        return;
-    }
     fn handle_scan_complete(&mut self, status: zx::Status, scan_id: u64) {
         Self::handle_scan_complete(self, status, scan_id);
     }

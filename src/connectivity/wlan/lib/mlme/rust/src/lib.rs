@@ -49,7 +49,6 @@ pub trait MlmeImpl {
     fn handle_mlme_message(&mut self, msg: fidl_mlme::MlmeRequest) -> Result<(), Error>;
     fn handle_mac_frame_rx(&mut self, bytes: &[u8], rx_info: banjo_wlan_softmac::WlanRxInfo);
     fn handle_eth_frame_tx(&mut self, bytes: &[u8]) -> Result<(), Error>;
-    fn handle_hw_indication(&mut self, ind: banjo_wlan_softmac::WlanIndication);
     fn handle_scan_complete(&mut self, status: zx::Status, scan_id: u64);
     fn handle_timeout(&mut self, event_id: common::timer::EventId, event: Self::TimerEvent);
     fn access_device(&mut self) -> &mut Device;
@@ -157,8 +156,6 @@ pub enum DriverEvent {
     MacFrameRx { bytes: Vec<u8>, rx_info: banjo_wlan_softmac::WlanRxInfo },
     // Requests transmission of an ethernet frame over the air.
     EthFrameTx { bytes: Vec<u8> },
-    // A notification of some event from the vendor driver.
-    HwIndication { ind: banjo_wlan_softmac::WlanIndication },
     // Reports a scan is complete.
     ScanComplete { status: zx::Status, scan_id: u64 },
     // Reports the result of an attempted frame transmission.
@@ -380,9 +377,6 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
                                 // TODO(fxbug.dev/45464): Keep a counter of these failures.
                                 info!("Failed to handle eth frame: {}", e);
                             }
-                        }
-                        DriverEvent::HwIndication { ind } => {
-                            self.mlme_impl.handle_hw_indication(ind);
                         }
                         DriverEvent::ScanComplete { status, scan_id } => {
                             self.mlme_impl.handle_scan_complete(status, scan_id)

@@ -279,7 +279,6 @@ zx_status_t Device::Start(const rust_wlanmac_ifc_protocol_copy_t* ifc,
       .status = ifc->ops->status,
       .recv = ifc->ops->recv,
       .complete_tx = ifc->ops->complete_tx,
-      .indication = ifc->ops->indication,
       .report_tx_status = ifc->ops->report_tx_status,
       .scan_complete = ifc->ops->scan_complete,
   });

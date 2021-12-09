@@ -141,9 +141,6 @@ impl crate::MlmeImpl for Ap {
         Self::handle_eth_frame_tx(self, bytes);
         Ok(())
     }
-    fn handle_hw_indication(&mut self, ind: banjo_wlan_softmac::WlanIndication) {
-        Self::handle_hw_indication(self, ind);
-    }
     fn handle_scan_complete(&mut self, _status: zx::Status, _scan_id: u64) {
         warn!("Unexpected ScanComplete for AP MLME.");
         return;
@@ -389,20 +386,6 @@ impl Ap {
             }
         } {
             log!(e.log_level(), "failed to handle MAC frame: {}", e)
-        }
-    }
-
-    pub fn handle_hw_indication(&mut self, ind: banjo_wlan_softmac::WlanIndication) {
-        let bss = match self.bss.as_mut() {
-            Some(bss) => bss,
-            None => {
-                error!("received HW indication but BSS was not started yet");
-                return;
-            }
-        };
-
-        if let Err(e) = bss.handle_hw_indication(&mut self.ctx, ind) {
-            error!("failed to handle HW indication {:?}: {}", ind, e)
         }
     }
 }

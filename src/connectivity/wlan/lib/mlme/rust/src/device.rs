@@ -227,7 +227,6 @@ pub struct WlanmacIfcProtocolOps {
         packet: *const WlanTxPacket,
         status: i32,
     ),
-    indication: extern "C" fn(ctx: &mut crate::DriverEventSink, ind: u32),
     report_tx_status:
         extern "C" fn(ctx: &mut crate::DriverEventSink, tx_status: *const WlanTxStatus),
     scan_complete: extern "C" fn(ctx: &mut crate::DriverEventSink, status: i32, scan_id: u64),
@@ -255,13 +254,6 @@ extern "C" fn handle_complete_tx(
     // TODO(fxbug.dev/85924): Implement this to support asynchronous packet delivery.
 }
 #[no_mangle]
-extern "C" fn handle_indication(ctx: &mut crate::DriverEventSink, ind: u32) {
-    // TODO(fxbug.dev/86141): Determine if we should support this.
-    let _ = ctx.0.unbounded_send(crate::DriverEvent::HwIndication {
-        ind: banjo_wlan_softmac::WlanIndication(ind as u8),
-    });
-}
-#[no_mangle]
 extern "C" fn handle_report_tx_status(
     ctx: &mut crate::DriverEventSink,
     tx_status: *const WlanTxStatus,
@@ -284,7 +276,6 @@ const PROTOCOL_OPS: WlanmacIfcProtocolOps = WlanmacIfcProtocolOps {
     status: handle_status,
     recv: handle_recv,
     complete_tx: handle_complete_tx,
-    indication: handle_indication,
     report_tx_status: handle_report_tx_status,
     scan_complete: handle_scan_complete,
 };

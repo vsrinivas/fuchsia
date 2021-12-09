@@ -44,7 +44,6 @@ typedef struct {
   void (*status)(void *ctx, uint32_t status);
   void (*recv)(void *ctx, const wlan_rx_packet_t *packet);
   void (*complete_tx)(void *ctx, const wlan_tx_packet_t *packet, int32_t status);
-  void (*indication)(void *ctx, uint32_t ind);
   void (*report_tx_status)(void *ctx, const wlan_tx_status_t *tx_status);
   void (*scan_complete)(void *ctx, int32_t status, uint64_t scan_id);
 } rust_wlanmac_ifc_protocol_ops_copy_t;

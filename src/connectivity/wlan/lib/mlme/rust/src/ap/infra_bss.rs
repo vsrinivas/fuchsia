@@ -15,7 +15,6 @@ use {
         key::KeyConfig,
     },
     anyhow::format_err,
-    banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
     banjo_fuchsia_hardware_wlanphyinfo::WlanInfoDriverFeature,
     banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
@@ -538,24 +537,8 @@ impl InfraBss {
             .map_err(|e| Rejection::Client(client.addr, e))
     }
 
-    pub fn handle_hw_indication(
-        &mut self,
-        ctx: &mut Context,
-        ind: banjo_wlan_softmac::WlanIndication,
-    ) -> Result<(), Error> {
-        match ind {
-            banjo_wlan_softmac::WlanIndication::PRE_TBTT => self.handle_pre_tbtt_hw_indication(ctx),
-            banjo_wlan_softmac::WlanIndication::BCN_TX_COMPLETE => {
-                self.handle_bcn_tx_complete_indication(ctx)
-            }
-            _ => {
-                // Ignore unknown HW indications.
-                error!("unknown HW indication: {:?}", ind);
-                Ok(())
-            }
-        }
-    }
-
+    // TODO(fxbug.dev/88968): Determine whether this is still needed and add an API path if so.
+    #[allow(unused)]
     pub fn handle_pre_tbtt_hw_indication(&mut self, ctx: &mut Context) -> Result<(), Error> {
         // We don't need the parameters here again (i.e. tim_ele_offset), as the offset of the TIM
         // element never changes within the beacon frame template.
@@ -566,6 +549,8 @@ impl InfraBss {
         Ok(())
     }
 
+    // TODO(fxbug.dev/88968): Determine whether this is still needed and add an API path if so.
+    #[allow(unused)]
     pub fn handle_bcn_tx_complete_indication(&mut self, ctx: &mut Context) -> Result<(), Error> {
         if self.dtim_count > 0 {
             self.dtim_count -= 1;

@@ -120,7 +120,6 @@ struct MockDevice : public DeviceInterface {
         wlanmac_ifc_protocol_ops_t{.status = ifc->ops->status,
                                    .recv = ifc->ops->recv,
                                    .complete_tx = ifc->ops->complete_tx,
-                                   .indication = ifc->ops->indication,
                                    .report_tx_status = ifc->ops->report_tx_status,
                                    .scan_complete = ifc->ops->scan_complete});
     protocol_ctx_ = ifc->ctx;
