@@ -543,7 +543,7 @@ impl<'s> VirtSoundService<'s> {
         infos: &Vec<T>,
     ) -> Result<(), Error> {
         // INFO messages should be infrequent enough that we can log all of them.
-        // TODO(fxbug.dev/87645): throttle if the driver is spamming this virtqueue
+        // TODO(fxbug.dev/90031): throttle if the driver is spamming this virtqueue
         tracing::info!("CONTROLQ request: {}", req_wrapper.name);
 
         let (req_wrapper, req) =
@@ -603,7 +603,7 @@ impl<'s> VirtSoundService<'s> {
         }
 
         // INFO messages should be infrequent enough that we can log all of them.
-        // TODO(fxbug.dev/87645): throttle if the driver is spamming this virtqueue
+        // TODO(fxbug.dev/90031): throttle if the driver is spamming this virtqueue
         tracing::info!("CONTROLQ request: {} on stream {}", req_wrapper.name, id);
 
         let stream = &self.pcm_streams[id];

@@ -71,7 +71,7 @@ static STREAMS: Lazy<Vec<wire::VirtioSndPcmInfo>> = Lazy::new(|| {
     vec![
         wire::VirtioSndPcmInfo {
             hdr: wire::VirtioSndInfo { hda_fn_nid: LE32::new(0) },
-            // TODO(fxbug.dev/87645): support?
+            // TODO(fxbug.dev/90029): support?
             // VIRTIO_SND_PCM_F_MSG_POLLING
             // VIRTIO_SND_PCM_F_EVT_SHMEM_PERIODS
             // VIRTIO_SND_PCM_F_EVT_XRUNS
@@ -85,7 +85,7 @@ static STREAMS: Lazy<Vec<wire::VirtioSndPcmInfo>> = Lazy::new(|| {
         },
         wire::VirtioSndPcmInfo {
             hdr: wire::VirtioSndInfo { hda_fn_nid: LE32::new(0) },
-            // TODO(fxbug.dev/87645): support?
+            // TODO(fxbug.dev/90029): support?
             // VIRTIO_SND_PCM_F_MSG_POLLING
             // VIRTIO_SND_PCM_F_EVT_SHMEM_PERIODS
             // VIRTIO_SND_PCM_F_EVT_XRUNS
@@ -236,7 +236,7 @@ async fn apply_deadline_profile() -> Result<(), Error> {
 
     // Obtain a deadline profile for our (only) thread.
     // Currently requesting 0.5ms of CPU every 5ms.
-    // TODO(fxbug.dev/87645): tune this profile
+    // TODO(fxbug.dev/90030): tune this profile
     let (status, profile) = profile_provider
         .get_deadline_profile(
             500.micros().into_nanos() as u64, // capacity

@@ -129,7 +129,7 @@ pub fn create_audio_input<'a>(
 /// * The driver might send many buffers smaller than period_bytes. If this
 ///   happens, we may run out of packets and be forced to reject the buffer.
 ///
-/// TODO(fxbug.dev/87645): We can support the general case if necessary.
+/// TODO(fxbug.dev/90032): We can support the general case if necessary.
 struct PayloadBuffer {
     mapping: Mapping,
     packets_avail: VecDeque<Range<usize>>, // ranges with mapping
@@ -195,7 +195,7 @@ impl<T> AudioStreamConn<T> {
             Some(bytes) => match num_traits::cast::cast::<usize, u32>(bytes) {
                 Some(bytes) => bytes,
                 None => {
-                    // TODO(fxbug.dev/87645): throttle
+                    // TODO(fxbug.dev/90031): throttle
                     tracing::warn!(
                         "got unexpectedly large lead time: {}ns ({} bytes)",
                         lead_time.into_nanos(),
@@ -205,7 +205,7 @@ impl<T> AudioStreamConn<T> {
                 }
             },
             None => {
-                // TODO(fxbug.dev/87645): throttle
+                // TODO(fxbug.dev/90031): throttle
                 tracing::warn!("got negative lead time: {}ns", lead_time.into_nanos());
                 0
             }
