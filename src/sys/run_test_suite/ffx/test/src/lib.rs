@@ -179,7 +179,10 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
         run_test_suite_lib::Outcome::Timedout => {
             ffx_bail_with_code!(*TIMED_OUT_CODE, "Tests timed out.",)
         }
-        run_test_suite_lib::Outcome::Failed => ffx_bail!("Tests failed."),
+        run_test_suite_lib::Outcome::Failed | run_test_suite_lib::Outcome::DidNotFinish => {
+            ffx_bail!("Tests failed.")
+        }
+        run_test_suite_lib::Outcome::Cancelled => ffx_bail!("Tests cancelled."),
         run_test_suite_lib::Outcome::Inconclusive => ffx_bail!("Inconclusive test result."),
         run_test_suite_lib::Outcome::Error { origin } => match origin.is_internal_error() {
             // Using anyhow instead of ffx_bail here prints a message to file a bug.

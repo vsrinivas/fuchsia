@@ -234,6 +234,8 @@ pub enum ReportedOutcome {
     Timedout,
     Error,
     Skipped,
+    Cancelled,
+    DidNotFinish,
 }
 
 impl From<ftest_manager::CaseStatus> for ReportedOutcome {
@@ -257,6 +259,8 @@ impl From<crate::Outcome> for ReportedOutcome {
             crate::Outcome::Passed => Self::Passed,
             crate::Outcome::Failed => Self::Failed,
             crate::Outcome::Inconclusive => Self::Inconclusive,
+            crate::Outcome::Cancelled => Self::Cancelled,
+            crate::Outcome::DidNotFinish => Self::DidNotFinish,
             crate::Outcome::Timedout => Self::Timedout,
             crate::Outcome::Error { .. } => Self::Error,
         }

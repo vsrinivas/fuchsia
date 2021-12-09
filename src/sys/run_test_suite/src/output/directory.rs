@@ -404,6 +404,8 @@ fn into_serializable_outcome(outcome: ReportedOutcome) -> directory::Outcome {
         ReportedOutcome::Timedout => directory::Outcome::Timedout,
         ReportedOutcome::Error => directory::Outcome::Error,
         ReportedOutcome::Skipped => directory::Outcome::Skipped,
+        ReportedOutcome::Cancelled => directory::Outcome::Inconclusive,
+        ReportedOutcome::DidNotFinish => directory::Outcome::Inconclusive,
     }
 }
 

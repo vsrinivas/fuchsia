@@ -136,7 +136,6 @@ log3 for Example.Test3
     let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
 
     assert_eq!(run_result.executed, expected);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -187,7 +186,6 @@ log3 for Example.Test3
     let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
 
     assert_eq!(run_result.executed, expected);
-    assert!(run_result.successful_completion);
 
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
@@ -361,7 +359,6 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
         let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
 
         assert_eq!(run_result.executed, expected);
-        assert!(run_result.successful_completion);
     }
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
@@ -435,7 +432,6 @@ async fn launch_and_test_multiple_passing_tests() {
         let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
 
         assert_eq!(run_result.executed, expected);
-        assert!(run_result.successful_completion);
     }
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
@@ -517,7 +513,6 @@ log3 for Example.Test3
     let expected = vec!["Example.Test3"];
 
     assert_eq!(run_result.executed, expected);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -550,7 +545,6 @@ log3 for Example.Test3
     let expected = vec!["Example.Test1", "Example.Test3"];
 
     assert_eq!(run_result.executed, expected);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -582,7 +576,6 @@ async fn launch_and_test_empty_test() {
 
     assert_eq!(run_result.executed.len(), 0);
     assert_eq!(run_result.passed.len(), 0);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -601,7 +594,6 @@ async fn launch_and_test_huge_test() {
 
     assert_eq!(run_result.executed.len(), 1_000);
     assert_eq!(run_result.passed.len(), 1_000);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -637,8 +629,6 @@ log3 for Example.Test1
 
     assert_eq!(run_result.executed, expected_executed);
     assert_eq!(run_result.passed, expected_passed);
-
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -677,8 +667,6 @@ log3 for Example.Test3
 
     assert_eq!(run_result.executed, expected_executed);
     assert_eq!(run_result.passed, expected_passed);
-
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -717,7 +705,6 @@ log3 for Example.Test3
 
     assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
     assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -742,7 +729,6 @@ async fn launch_and_test_failing_v2_test_multiple_times() {
         assert_eq!(run_result.outcome, Outcome::Failed);
         assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
         assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
-        assert!(run_result.successful_completion);
     }
 }
 
@@ -780,11 +766,10 @@ Example.Test3
 
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Inconclusive);
+    assert_eq!(run_result.outcome, Outcome::DidNotFinish);
 
     assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
     assert_eq!(run_result.passed, vec!["Example.Test2"]);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -821,11 +806,10 @@ Example.Test3
 ";
     assert_output!(output, expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Inconclusive);
+    assert_eq!(run_result.outcome, Outcome::DidNotFinish);
 
     assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
     assert_eq!(run_result.passed, vec!["Example.Test2"]);
-    assert!(run_result.successful_completion);
 }
 
 // This test also acts an example on how to right a v2 test.
@@ -853,7 +837,6 @@ async fn launch_and_run_echo_test() {
 
     assert_eq!(run_result.executed, vec!["EchoTest"]);
     assert_eq!(run_result.passed, vec!["EchoTest"]);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -872,7 +855,6 @@ async fn test_timeout() {
     assert_eq!(run_result.outcome, Outcome::Timedout);
 
     assert_eq!(run_result.passed, Vec::<String>::new());
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -907,7 +889,6 @@ async fn test_timeout_multiple_times() {
     assert_output!(output, expected_output);
 
     assert_eq!(run_result.passed, Vec::<String>::new());
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -984,7 +965,6 @@ async fn test_stop_after_n_failures() {
         assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
         assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
         assert_eq!(run_result.failed, vec!["Example.Test2"]);
-        assert!(run_result.successful_completion);
     }
 }
 
@@ -1007,7 +987,6 @@ async fn test_passes_with_large_timeout() {
 
     assert_eq!(run_result.executed, vec!["EchoTest"]);
     assert_eq!(run_result.passed, vec!["EchoTest"]);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1029,7 +1008,6 @@ async fn test_logging_component() {
 ";
     assert_output!(output, expected_output);
     assert_eq!(run_result.outcome, Outcome::Passed);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1050,7 +1028,6 @@ async fn test_logging_component_min_severity() {
 ";
     assert_output!(output, expected_output);
     assert_eq!(run_result.outcome, Outcome::Passed);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1073,7 +1050,6 @@ async fn test_stdout_and_log_ansi() {
 ";
     assert_output!(output, expected_output);
     assert_eq!(run_result.outcome, Outcome::Passed);
-    assert!(run_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1114,7 +1090,6 @@ red stdout
 ";
     assert_output!(output, expected_output);
     assert_eq!(test_result.outcome, Outcome::Passed);
-    assert!(test_result.successful_completion);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1152,7 +1127,6 @@ async fn test_max_severity(max_severity: Severity) {
 
     assert_output!(output, expected_output);
     assert_eq!(run_result.outcome, Outcome::Passed);
-    assert!(run_result.successful_completion);
 
     match max_severity {
         Severity::Info => {
@@ -1401,7 +1375,7 @@ async fn test_terminate_signal() {
     )
     .await;
 
-    assert_eq!(outcome, Outcome::Inconclusive);
+    assert_eq!(outcome, Outcome::Cancelled);
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Inconclusive);
 
@@ -1444,7 +1418,7 @@ async fn test_terminate_signal_multiple_suites() {
     )
     .await;
 
-    assert_eq!(outcome, Outcome::Inconclusive);
+    assert_eq!(outcome, Outcome::Cancelled);
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Inconclusive);
 

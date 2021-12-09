@@ -113,6 +113,8 @@ async fn main() {
             std::process::exit(-fuchsia_zircon::Status::TIMED_OUT.into_raw());
         }
         run_test_suite_lib::Outcome::Failed
+        | run_test_suite_lib::Outcome::Cancelled
+        | run_test_suite_lib::Outcome::DidNotFinish
         | run_test_suite_lib::Outcome::Inconclusive
         | run_test_suite_lib::Outcome::Error { .. } => {
             std::process::exit(1);

@@ -52,7 +52,15 @@ pub enum Outcome {
     Failed,
     Inconclusive,
     Timedout,
-    Error { origin: Arc<RunTestSuiteError> },
+    /// Suite was stopped prematurely due to cancellation by the user.
+    Cancelled,
+    /// Suite did not report completion.
+    // TODO(fxbug.dev/90037) - this outcome indicates an internal error as test manager isn't
+    // sending expected events. We should return an error instead.
+    DidNotFinish,
+    Error {
+        origin: Arc<RunTestSuiteError>,
+    },
 }
 
 impl Outcome {
@@ -67,7 +75,9 @@ impl PartialEq for Outcome {
             (Self::Passed, Self::Passed)
             | (Self::Failed, Self::Failed)
             | (Self::Inconclusive, Self::Inconclusive)
-            | (Self::Timedout, Self::Timedout) => true,
+            | (Self::Timedout, Self::Timedout)
+            | (Self::Cancelled, Self::Cancelled)
+            | (Self::DidNotFinish, Self::DidNotFinish) => true,
             (Self::Error { origin }, Self::Error { origin: other_origin }) => {
                 format!("{}", origin.as_ref()) == format!("{}", other_origin.as_ref())
             }
@@ -83,6 +93,8 @@ impl fmt::Display for Outcome {
             Outcome::Failed => write!(f, "FAILED"),
             Outcome::Inconclusive => write!(f, "INCONCLUSIVE"),
             Outcome::Timedout => write!(f, "TIMED OUT"),
+            Outcome::Cancelled => write!(f, "CANCELLED"),
+            Outcome::DidNotFinish => write!(f, "DID_NOT_FINISH"),
             Outcome::Error { .. } => write!(f, "ERROR"),
         }
     }
@@ -104,12 +116,6 @@ pub struct SuiteRunResult {
 
     /// All tests which failed.
     pub failed: Vec<String>,
-
-    /// Suite protocol completed without error.
-    pub successful_completion: bool,
-
-    /// Whether or not execution of the suite was cancelled by the user.
-    pub cancelled: bool,
 
     /// restricted logs produced by this suite run which exceed expected log level.
     pub restricted_logs: Vec<String>,
@@ -633,10 +639,16 @@ async fn collect_results_for_suite<F: Future<Output = ()>>(
         .collect::<Vec<_>>();
     test_cases_in_progress.sort();
 
+    // TODO(fxbug.dev/90037) - unless the suite was cancelled, this indicates an internal error.
+    // Test manager should always report CaseFinished before terminating the event stream.
     if test_cases_in_progress.len() != 0 {
         match outcome {
-            Outcome::Passed | Outcome::Failed => {
-                outcome = Outcome::Inconclusive;
+            Outcome::Passed | Outcome::Failed if !cancelled => {
+                warn!(
+                    "Some test cases in {} did not complete. This will soon return an internal error",
+                    running_suite.url()
+                );
+                outcome = Outcome::DidNotFinish;
             }
             _ => {}
         }
@@ -655,7 +667,7 @@ async fn collect_results_for_suite<F: Future<Output = ()>>(
     if cancelled {
         match outcome {
             Outcome::Passed | Outcome::Failed => {
-                outcome = Outcome::Inconclusive;
+                outcome = Outcome::Cancelled;
             }
             _ => {}
         }
@@ -666,6 +678,19 @@ async fn collect_results_for_suite<F: Future<Output = ()>>(
             ))
             .await
             .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
+    }
+
+    // TODO(fxbug.dev/90037) - this actually indicates an internal error. In the case that
+    // run-test-suite drains all the events for the suite, test manager should've reported an
+    // outcome for the suite. We should remove this outcome and return a new error enum instead.
+    if !successful_completion && !cancelled {
+        warn!(
+            "No result was returned for {}. This will soon return an internal error",
+            running_suite.url()
+        );
+        if matches!(&outcome, Outcome::Passed | Outcome::Failed) {
+            outcome = Outcome::DidNotFinish;
+        }
     }
 
     let mut test_cases_executed = test_cases_executed
@@ -687,8 +712,6 @@ async fn collect_results_for_suite<F: Future<Output = ()>>(
         executed: test_cases_executed,
         passed: test_cases_passed,
         failed: test_cases_failed,
-        successful_completion,
-        cancelled,
         restricted_logs,
     })
 }
@@ -931,7 +954,7 @@ pub async fn run_test<'a, Out: Write, F: 'a + Future<Output = ()>>(
                     Some(threshold) => accumulated_failures >= threshold.get(),
                     None => false,
                 };
-                let stop_due_to_cancellation = result.cancelled;
+                let stop_due_to_cancellation = matches!(&result.outcome, Outcome::Cancelled);
 
                 if stop_due_to_timeout || stop_due_to_failures || stop_due_to_cancellation {
                     args.run_controller.stop()?;
@@ -982,8 +1005,6 @@ async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
                 executed,
                 passed,
                 failed,
-                successful_completion,
-                cancelled,
                 restricted_logs,
             })) => {
                 println!("\n");
@@ -991,15 +1012,15 @@ async fn collect_results(mut stream: SuiteResults<'_>) -> Outcome {
                     println!("Failed tests: {}", failed.join(", "))
                 }
                 println!("{} out of {} tests passed...", passed.len(), executed.len());
-                println!("{} completed with result: {}", &url, outcome);
+                match &outcome {
+                    Outcome::Cancelled => println!("{} was cancelled before completion.", &url),
+                    Outcome::DidNotFinish => {
+                        println!("{} did not complete successfully.", &url)
+                    }
+                    outcome => println!("{} completed with result: {}", &url, outcome),
+                }
                 if executed.is_empty() {
                     println!("WARN: No test cases were executed!");
-                }
-                if !successful_completion && !cancelled {
-                    println!("{} did not complete successfully.", &url);
-                }
-                if cancelled {
-                    println!("{} was cancelled before completion.", &url);
                 }
                 if restricted_logs.len() > 0 {
                     if outcome == Outcome::Passed {
