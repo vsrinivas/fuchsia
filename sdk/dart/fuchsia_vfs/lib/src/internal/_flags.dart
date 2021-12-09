@@ -56,11 +56,7 @@ class Flags {
     }
     // Explicitly reject NODE_REFERENCE together with any invalid flags.
     if ((flags & openFlagNodeReference) != 0) {
-      const int validFlagsForNodeRef = openFlagNodeReference |
-          openFlagDirectory |
-          openFlagNotDirectory |
-          openFlagDescribe;
-      if ((flags & ~validFlagsForNodeRef) != 0) {
+      if ((flags & ~openFlagsAllowedWithNodeReference) != 0) {
         return false;
       }
     }
