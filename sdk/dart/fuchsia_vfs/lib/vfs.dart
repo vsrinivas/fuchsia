@@ -6,6 +6,7 @@ export 'src/composed_pseudo_dir.dart';
 export 'src/pseudo_dir.dart';
 export 'src/pseudo_file.dart';
 export 'src/pseudo_vmo_file.dart';
+export 'src/remote_dir.dart';
 export 'src/service.dart';
 export 'src/vmo_file.dart';
 export 'src/vnode.dart';

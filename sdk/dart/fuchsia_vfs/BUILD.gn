@@ -22,6 +22,7 @@ dart_library("fuchsia_vfs") {
     "src/pseudo_dir.dart",
     "src/pseudo_file.dart",
     "src/pseudo_vmo_file.dart",
+    "src/remote_dir.dart",
     "src/service.dart",
     "src/vmo_file.dart",
     "src/vnode.dart",
@@ -47,6 +48,7 @@ dart_test_component("unittests-component") {
     "pseudo_dir_test.dart",
     "pseudo_file_test.dart",
     "pseudo_vmo_file_test.dart",
+    "remote_dir_test.dart",
     "service_test.dart",
     "vmo_file_test.dart",
   ]
