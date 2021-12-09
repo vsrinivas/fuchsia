@@ -1,0 +1,73 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+_spinel_includes = "${graphics_compute_dir}/spinel2/platforms/vk/include"
+
+config("find_target_config") {
+  include_dirs = [ _spinel_includes ]
+}
+
+source_set("find_target") {
+  public = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+  ]
+
+  sources = [
+    "${_spinel_includes}/spinel/platforms/vk/ext/find_target/find_target.h",
+    "find_target.c",
+  ]
+
+  public_deps = [ "${graphics_compute_dir}/spinel2/platforms/vk" ]
+
+  public_configs = [ ":find_target_config" ]
+
+  #
+  # Target archives
+  #
+  if (is_fuchsia) {
+    #
+    # Fuchsia builds only include required targets
+    #
+    if (board_name == "astro") {
+      #  defines = [ "SPN_VK_TARGET_ARM_BIFROST4" ]
+      #  deps = [ "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/arm/bifrost4:spinel_vk_arm_bifrost4_resource" ]
+    } else if (board_name == "sherlock" || board_name == "vim3") {
+      #  defines = [ "SPN_VK_TARGET_ARM_BIFROST8" ]
+      #  deps = [ "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/arm/bifrost8:spinel_vk_arm_bifrost8_resource" ]
+    } else {  # Default assumes an Intel GEN GPU (x86) board_name
+      defines = [
+        # "SPN_VK_TARGET_INTEL_GEN8",
+        "SPN_VK_TARGET_NVIDIA_SM50",  # FIXME(allanmac): Delete NVIDIA target
+      ]
+      deps = [
+        # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_resource",
+        "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/nvidia/sm35:spinel_vk_nvidia_sm35_resource",
+        # FIXME(allanmac): Delete NVIDIA target
+      ]
+    }
+  } else {  # Otherwise, this is a host build
+    #
+    # Defaults to linking every target archive -- this is normally not
+    # what you want but it's a host build.
+    #
+    defines = [
+      "SPN_VK_TARGET_ARCHIVE_LINKABLE",
+
+      # "SPN_VK_TARGET_ARCHIVE_AMD_GCN3",
+      # "SPN_VK_TARGET_ARM_BIFROST4",
+      # "SPN_VK_TARGET_ARM_BIFROST8",
+      # "SPN_VK_TARGET_INTEL_GEN8",
+      "SPN_VK_TARGET_NVIDIA_SM50",
+    ]
+    deps = [
+      # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/amd/gcn3:spinel_vk_amd_gcn3_linkable",
+      # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/arm/bifrost4:spinel_vk_arm_bifrost4_linkable",
+      # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/arm/bifrost8:spinel_vk_arm_bifrost8_linkable",
+      # "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/intel/gen8:spinel_vk_intel_gen8_linkable",
+      "${graphics_compute_dir}/spinel2/platforms/vk/targets/vendors/nvidia/sm35:spinel_vk_nvidia_sm35_linkable",
+    ]
+  }
+}

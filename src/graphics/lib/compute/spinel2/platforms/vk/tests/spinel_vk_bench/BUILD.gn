@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+#
+# spinel-vk-bench: Benchmark Spinel using SVG files
+#
+graphics_compute_vulkan_executable("spinel2-vk-bench") {
+  sources = [ "main.c" ]
+
+  deps = [
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+  ]
+
+  public_deps = [
+    "${graphics_compute_dir}/spinel2/platforms/vk/ext/find_target",
+    "surface",
+    "widget",
+  ]
+
+  #
+  # Ensure that a host executable is built on Linux hosts
+  #
+  if (is_fuchsia && host_os == "linux") {
+    data_deps = [ ":spinel2-vk-bench($host_toolchain)" ]
+  }
+}
+
+group("spinel_vk_bench") {
+  testonly = true
+  deps = [ ":spinel2-vk-bench" ]
+}

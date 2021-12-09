@@ -1,0 +1,74 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// PATHS ALLOC
+//
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+// The allocation is performed by a single invocation.
+//
+layout(local_size_x = SPN_DEVICE_PATHS_ALLOC_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_PATHS_ALLOC();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_BLOCK_POOL_IDS(readwrite, noaccess);
+SPN_BUFFER_DEFINE_PATHS_COPY_ALLOC(writeonly);
+
+//
+//
+//
+void
+main()
+{
+  //
+  // Allocate `alloc_span` blocks from the block pool and store the
+  // span's pool base in the ring buffer slot for the copy kernel to
+  // read.
+  //
+  if (gl_SubgroupInvocationID == 0)
+    {
+      SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_ids),
+                        block_pool_ids,
+                        push.devaddr_block_pool_ids);
+
+      SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(paths_copy_alloc),
+                        paths_copy_alloc,
+                        push.devaddr_paths_copy_alloc);
+
+      const uint32_t reads = atomicAdd(block_pool_ids.atomics[SPN_BLOCK_POOL_ATOMICS_READS],  //
+                                       push.pc_span);
+
+      paths_copy_alloc.extent[push.pc_alloc_idx] = reads;
+    }
+}
+
+//
+//
+//

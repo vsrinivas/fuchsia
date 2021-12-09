@@ -1,0 +1,84 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+#
+# Spinel library
+#
+config("config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("spinel2") {
+  public_configs = [ ":config" ]
+  public = [
+    "include/spinel/spinel.h",
+    "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_opcodes.h",
+    "include/spinel/spinel_result.h",
+    "include/spinel/spinel_types.h",
+  ]
+  sources = [
+    "composition.c",
+    "composition.h",
+    "context.c",
+    "context.h",
+    "core.h",
+    "core_c.h",
+    "include/spinel/spinel.h",
+    "include/spinel/spinel_assert.h",
+    "include/spinel/spinel_opcodes.h",
+    "include/spinel/spinel_result.h",
+    "include/spinel/spinel_types.h",
+    "path_builder.c",
+    "path_builder.h",
+    "raster_builder.c",
+    "raster_builder.h",
+    "spinel_assert.c",
+    "state_assert.h",
+    "styling.c",
+    "styling.h",
+    "swapchain.c",
+    "swapchain.h",
+    "weakref.c",
+    "weakref.h",
+  ]
+  deps = [ "${graphics_compute_dir}/common" ]
+
+  # Platform-specific libraries and tests are
+  # friends of this source set.
+  friend = [
+    "platforms/vk",
+    # "platforms/vk/tests",
+  ]
+}
+
+# group("spinel_ext_unittests") {
+#   testonly = true
+#   public_deps = [ "ext/svg2spinel:svg2spinel_unittests" ]
+# }
+
+# This group provides a target that tests can link against.  It
+# provides the Vulkan-based Spinel API, and the vk_find_targets loader
+# library that simply links all target files into the library itself
+# for easier deployments.
+
+# group("spinel_vk_for_tests") {
+#   public_deps = [
+#     ":spinel",
+#     "platforms/vk:vk",
+#     "platforms/vk:vk_find_target",
+#   ]
+# }
+
+# group("tests") {
+#   testonly = true
+#   public_deps = [ "platforms/vk/tests" ]
+# }
+
+# group("vk_unittests") {
+#   testonly = true
+#   public_deps = [ "platforms/vk/tests:vk_unittests" ]
+# }

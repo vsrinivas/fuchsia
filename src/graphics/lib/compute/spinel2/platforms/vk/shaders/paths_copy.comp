@@ -1,0 +1,403 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// PATHS COPY
+//
+// FIXME(allanmac): hoist buffer references to global scope
+// FIXME(allanmac): use a block expander here
+// FIXME(allanmac): the alloc ring can be fixed size
+//
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_EXT_control_flow_attributes : require
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+//
+//
+
+layout(local_size_x = SPN_DEVICE_PATHS_COPY_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_PATHS_COPY();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_BLOCK_POOL_IDS(noaccess, readonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_BLOCKS(readwrite);
+SPN_BUFFER_DEFINE_BLOCK_POOL_HOST_MAP(readwrite);
+SPN_BUFFER_DEFINE_PATHS_COPY_ALLOC(readonly);
+SPN_BUFFER_DEFINE_PATHS_COPY_RING(readonly);
+
+//
+// Local defines
+//
+#define SPN_PATHS_COPY_SUBGROUP_SIZE (1 << SPN_DEVICE_PATHS_COPY_SUBGROUP_SIZE_LOG2)
+
+#define SPN_PATHS_COPY_SUBGROUPS                                                                   \
+  (SPN_DEVICE_PATHS_COPY_WORKGROUP_SIZE / SPN_PATHS_COPY_SUBGROUP_SIZE)
+
+//
+//
+//
+#define SPN_PATHS_COPY_SUBGROUP_MASK (SPN_PATHS_COPY_SUBGROUP_SIZE - 1)
+
+#define SPN_PATHS_COPY_PATH_HEAD_DWORDS_FULL (SPN_PATH_HEAD_DWORDS & ~SPN_PATHS_COPY_SUBGROUP_MASK)
+
+#define SPN_PATHS_COPY_PATH_HEAD_DWORDS_FRAC                                                       \
+  (SPN_GLSL_MAX_MACRO(uint32_t, SPN_PATH_HEAD_DWORDS_POW2_RU, SPN_PATHS_COPY_SUBGROUP_SIZE) &      \
+   ~SPN_PATHS_COPY_SUBGROUP_MASK)
+
+//
+//
+//
+// clang-format off
+#define SPN_PATHS_COPY_ONE_BITS  (SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_LOG2 + SPN_TAGGED_BLOCK_ID_BITS_TAG)
+#define SPN_PATHS_COPY_ONE_MASK  SPN_GLSL_BITS_TO_MASK(SPN_PATHS_COPY_ONE_BITS)
+#define SPN_PATHS_COPY_ONE       (1 << SPN_PATHS_COPY_ONE_BITS)
+// clang-format on
+
+//
+//
+//
+#define SPN_PATHS_COPY_GET_ROLLING(diff)                                                           \
+  SPN_BITFIELD_EXTRACT(uint32_t(diff), SPN_PATHS_COPY_ONE_BITS, 32 - SPN_PATHS_COPY_ONE_BITS)
+
+#define SPN_PATHS_COPY_UPDATE_ROLLING(tbid, bid)                                                   \
+  (((bid) << SPN_TAGGED_BLOCK_ID_BITS_TAG) | ((tbid)&SPN_PATHS_COPY_ONE_MASK))
+
+//
+//
+//
+void
+spn_copy_segs(SPN_BUFFER_TYPE(paths_copy_ring) pc_ring,
+              SPN_BUFFER_TYPE(block_pool_blocks) bp_blocks)
+{
+  [[unroll]] for (int ii = 0; ii < SPN_BLOCK_POOL_BLOCK_DWORDS; ii += SPN_PATHS_COPY_SUBGROUP_SIZE)
+  {
+    bp_blocks.extent[ii] = pc_ring.extent[ii];
+  }
+}
+
+//
+//
+//
+void
+spn_copy_node(SPN_BUFFER_TYPE(paths_copy_ring) pc_ring,
+              SPN_BUFFER_TYPE(block_pool_blocks) bp_blocks,
+              SPN_BUFFER_TYPE(block_pool_ids) bp_ids,
+              const uint32_t bp_base)
+{
+  //
+  // update host-initialized tagged block id "pointers" so that they
+  // point to device-side blocks
+  //
+  for (int ii = 0; ii < SPN_BLOCK_POOL_BLOCK_DWORDS; ii += SPN_PATHS_COPY_SUBGROUP_SIZE)
+    {
+      // load tagged_block_id word from host block
+      uint32_t tbid = pc_ring.extent[ii];
+
+      // calculate ahead of time
+      const uint32_t bp_offset = SPN_PATHS_COPY_GET_ROLLING(tbid - push.pc_rolling);
+      const uint32_t bp_id_idx = (bp_base + bp_offset) & push.bp_mask;
+
+      // if tbid is not invalid then update its block id
+      if (tbid != SPN_TAGGED_BLOCK_ID_INVALID)
+        {
+          const uint32_t bid = bp_ids.ids[bp_id_idx];
+
+          tbid = SPN_PATHS_COPY_UPDATE_ROLLING(tbid, bid);
+        }
+
+      // store updated tagged block id to device-side block
+      bp_blocks.extent[ii] = tbid;
+    }
+}
+
+//
+//
+//
+
+void
+spn_copy_head(SPN_BUFFER_TYPE(paths_copy_ring) pc_ring,
+              SPN_BUFFER_TYPE(block_pool_blocks) bp_blocks,
+              SPN_BUFFER_TYPE(block_pool_ids) bp_ids,
+              const uint32_t bp_base,
+              const uint32_t path_id_d)
+{
+  //
+  // Block pool host map
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_host_map),
+                    bp_host_map,
+                    push.devaddr_block_pool_host_map);
+
+  //
+  // if the entire subgroup consists of path header words then copy
+  // it... but also update the header map
+  //
+  // note that this loop bound might evaluate to zero
+  //
+  for (int ii = 0; ii < SPN_PATHS_COPY_PATH_HEAD_DWORDS_FULL; ii += SPN_PATHS_COPY_SUBGROUP_SIZE)
+    {
+      const uint32_t ph_dword = pc_ring.extent[ii];
+
+      bp_blocks.extent[ii] = ph_dword;
+
+      // the very first dword of the head is the host-side id
+      if ((ii == 0) && (gl_SubgroupInvocationID == 0))
+        {
+          bp_host_map.extent[ph_dword] = path_id_d;
+        }
+    }
+
+  //
+  // this case handles one subgroup that is a mix of header words and
+  // tagged block ids
+  //
+  // if the loop starts at 0 then also update the host map
+  //
+  for (int ii = SPN_PATHS_COPY_PATH_HEAD_DWORDS_FULL; ii < SPN_PATHS_COPY_PATH_HEAD_DWORDS_FRAC;
+       ii += SPN_PATHS_COPY_SUBGROUP_SIZE)
+    {
+      uint32_t tbid = pc_ring.extent[ii];
+
+      // the very first word of the head is the host-side id
+#if (SPN_PATHS_COPY_PATH_HEAD_DWORDS_FULL == 0)
+      if ((ii == 0) && (gl_SubgroupInvocationID == 0))
+        {
+          bp_host_map.extent[tbid] = path_id_d;
+        }
+#endif
+
+      // calculate ahead of time
+      const uint32_t bp_offset = SPN_PATHS_COPY_GET_ROLLING(tbid - push.pc_rolling);
+      const uint32_t bp_id_idx = (bp_base + bp_offset) & push.bp_mask;
+
+      // if this dword is not part of the path header and tbid is not
+      // invalid then update its block id
+      if ((ii + gl_SubgroupInvocationID) >= SPN_PATH_HEAD_DWORDS)
+        {
+          if (tbid != SPN_TAGGED_BLOCK_ID_INVALID)
+            {
+              const uint32_t bid = bp_ids.ids[bp_id_idx];
+
+              tbid = SPN_PATHS_COPY_UPDATE_ROLLING(tbid, bid);
+            }
+        }
+
+      // store updated tagged block id to device-side block
+      bp_blocks.extent[ii] = tbid;
+    }
+
+  //
+  // the remaining dwords are treated like a node
+  //
+  for (int ii = SPN_PATHS_COPY_PATH_HEAD_DWORDS_FRAC; ii < SPN_BLOCK_POOL_BLOCK_DWORDS;
+       ii += SPN_PATHS_COPY_SUBGROUP_SIZE)
+    {
+      // load tagged_block_id dword from host block
+      uint32_t tbid = pc_ring.extent[ii];
+
+      // calculate ahead of time
+      const uint32_t bp_offset = SPN_PATHS_COPY_GET_ROLLING(tbid - push.pc_rolling);
+      const uint32_t bp_id_idx = (bp_base + bp_offset) & push.bp_mask;
+
+      // if tbid is not invalid then update its block id
+      if (tbid != SPN_TAGGED_BLOCK_ID_INVALID)
+        {
+          const uint32_t bid = bp_ids.ids[bp_id_idx];
+
+          tbid = SPN_PATHS_COPY_UPDATE_ROLLING(tbid, bid);
+        }
+
+      // store updated tagged block id to device-side block
+      bp_blocks.extent[ii] = tbid;
+    }
+}
+
+//
+//
+//
+
+void
+main()
+{
+  //
+  // THERE ARE 3 TYPES OF PATH COPYING COMMANDS:
+  //
+  // - HEAD
+  // - NODE
+  // - SEGS
+  //
+  // THESE ARE SUBGROUP ORIENTED KERNELS
+  //
+  // A SUBGROUP CAN OPERATE ON [1,N] BLOCKS
+  //
+
+  //
+  // It's likely that peak bandwidth is achievable with a single
+  // workgroup.
+  //
+  // So let's keep the grids modestly sized and for simplicity and
+  // portability let's also assume that a single workgroup can perform
+  // all steps in the copy.
+  //
+  // Launch as large of a workgroup as possiblex
+  //
+  // 1. ATOMICALLY ALLOCATE BLOCKS BP_ELEMS POOL
+  // 2. CONVERT COMMANDS IN PC_ELEMS BLOCK OFFSETS
+  // 3. FOR EACH COMMAND:
+  //      - HEAD: SAVE HEAD ID TO PC_ELEMS MAP.
+  //              CONVERT AND COPY H INDICES.
+  //
+  //      - NODE: CONVERT AND COPY B INDICES
+  //
+  //      - SEGS: BULK COPY
+  //
+  // B : number of words in block -- always pow2
+  // W : intelligently/arbitrarily chosen factor of B -- always pow2
+  //
+
+  // define "paths copy alloc" bufref
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(paths_copy_alloc),
+                    paths_copy_alloc,
+                    push.devaddr_paths_copy_alloc);
+
+  // load the copied atomic read "base" from gmem
+  SPN_SUBGROUP_UNIFORM const uint32_t bp_base = paths_copy_alloc.extent[push.pc_alloc_idx];
+
+  // every subgroup/simd that will work on the block loads the same command
+#if (SPN_PATHS_COPY_SUBGROUPS == 1)
+
+  SPN_SUBGROUP_UNIFORM
+  const uint32_t sid = gl_WorkGroupID.x;
+
+#else
+
+  SPN_SUBGROUP_UNIFORM
+  const uint32_t sid = gl_WorkGroupID.x * SPN_PATHS_COPY_SUBGROUPS + gl_SubgroupID;
+
+  if (sid >= push.pc_span)
+    {
+      return;  // this subgroup has no work
+    }
+
+#endif
+
+  // path builder data can be spread across two spans
+  SPN_SUBGROUP_UNIFORM uint32_t pc_idx = push.pc_head + sid;
+
+  if (pc_idx >= push.pc_size)
+    {
+      pc_idx -= push.pc_size;
+    }
+
+  //
+  // Block and cmd rings share a buffer
+  //
+  // [<--- blocks --->|<--- cmds --->]
+  //
+
+  // define paths copy ring buffer reference
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(paths_copy_ring), pc_cmds, push.devaddr_paths_copy_ring);
+
+  // broadcast load the command across the subgroup
+  SPN_SUBGROUP_UNIFORM const uint32_t pc_cmd =
+    pc_cmds.extent[push.pc_size * SPN_BLOCK_POOL_BLOCK_DWORDS + pc_idx];
+
+  // what do we want pc_elems do with this block?
+  SPN_SUBGROUP_UNIFORM const uint32_t tag = SPN_PATHS_COPY_CMD_GET_TYPE(pc_cmd);
+
+  // compute offset from rolling base to get index into block pool ring allocation
+  SPN_SUBGROUP_UNIFORM const uint32_t bp_offset =
+    SPN_PATHS_COPY_GET_ROLLING(pc_cmd - push.pc_rolling);
+
+  // index into id ring
+  SPN_SUBGROUP_UNIFORM const uint32_t bp_ids_idx = (bp_base + bp_offset) & push.bp_mask;
+
+  // define block pool ids buffer
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_ids), bp_ids, push.devaddr_block_pool_ids);
+
+  // convert the pc_cmd's block pool ring idx into a block id
+  SPN_SUBGROUP_UNIFORM const uint32_t path_id_d = bp_ids.ids[bp_ids_idx];
+
+  //
+  // Paths copy ring buffer reference
+  //
+  const uint32_t pc_block_idx = pc_idx * SPN_BLOCK_POOL_BLOCK_DWORDS +  //
+                                gl_SubgroupInvocationID;
+
+  uvec2 pc_block_offset;
+
+  umulExtended(pc_block_idx,
+               4,                   // sizeof(uint32_t)
+               pc_block_offset.y,   // msb
+               pc_block_offset.x);  // lsb
+
+  SPN_BUFREF_DEFINE_AT_OFFSET_U32VEC2(SPN_BUFFER_TYPE(paths_copy_ring),
+                                      pc_ring,
+                                      push.devaddr_paths_copy_ring,
+                                      pc_block_offset);
+
+  //
+  // Block pool buffer reference
+  //
+  const uint32_t bp_block_idx = path_id_d * SPN_BLOCK_POOL_SUBBLOCK_DWORDS +  //
+                                gl_SubgroupInvocationID;
+
+  uvec2 bp_block_offset;
+
+  umulExtended(bp_block_idx,
+               4,                   // sizeof(uint32_t)
+               bp_block_offset.y,   // msb
+               bp_block_offset.x);  // lsb
+
+  SPN_BUFREF_DEFINE_AT_OFFSET_U32VEC2(SPN_BUFFER_TYPE(block_pool_blocks),
+                                      bp_blocks,
+                                      push.devaddr_block_pool_blocks,
+                                      bp_block_offset);
+
+  //
+  // Switch on cmd type
+  //
+  // Copy from `paths_copy_ring` to `block_pool_blocks`
+  //
+  if (tag == SPN_PATHS_COPY_CMD_TYPE_SEGS)
+    {
+      spn_copy_segs(pc_ring, bp_blocks);
+    }
+  else if (tag == SPN_PATHS_COPY_CMD_TYPE_NODE)
+    {
+      spn_copy_node(pc_ring, bp_blocks, bp_ids, bp_base);
+    }
+  else  // (tag == SPN_PATHS_COPY_CMD_TYPE_HEAD)
+    {
+      spn_copy_head(pc_ring, bp_blocks, bp_ids, bp_base, path_id_d);
+    }
+}
+
+//
+//
+//

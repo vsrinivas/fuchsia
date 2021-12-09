@@ -1,0 +1,1107 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// RASTERS PREFIX
+//
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_shuffle : require
+#extension GL_KHR_shader_subgroup_shuffle_relative : require
+#extension GL_KHR_shader_subgroup_vote : require
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+//
+//
+layout(local_size_x = SPN_DEVICE_RASTERS_PREFIX_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_RASTERS_PREFIX();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_BLOCK_POOL_IDS(readonly, readonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_BLOCKS(readwrite);
+SPN_BUFFER_DEFINE_TTRKS_HEADER(readonly, readonly);
+SPN_BUFFER_DEFINE_TTRK_KEYVALS(readonly);
+
+//
+// Local defines
+//
+// clang-format off
+#define SPN_RP_SUBGROUP_SIZE  (1 << SPN_DEVICE_RASTERS_PREFIX_SUBGROUP_SIZE_LOG2)
+#define SPN_RP_SUBGROUPS      (SPN_DEVICE_RASTERS_PREFIX_WORKGROUP_SIZE / SPN_RP_SUBGROUP_SIZE)
+#define SPN_RP_SUBGROUP_MASK  (SPN_RP_SUBGROUP_SIZE - 1)
+
+#define SPN_RP_TILES          (SPN_RP_SUBGROUP_SIZE / SPN_TILE_HEIGHT)
+
+#if ( SPN_RP_TILES == 1 )
+
+#define SPN_RP_TILE_OFFSET    0
+#define SPN_RP_TILE_IID       gl_SubgroupInvocationID
+
+#else // multi-tile
+
+#define SPN_RP_TILE_OFFSET    (gl_SubgroupInvocationID >> SPN_DEVICE_TILE_HEIGHT_LOG2)
+#define SPN_RP_TILE_IID       (gl_SubgroupInvocationID & SPN_TILE_HEIGHT_MASK)
+
+#endif
+// clang-format on
+
+//
+// This shader only requires a subgroup of shared memory.
+//
+struct spn_rasters_prefix_smem
+{
+  int acc[SPN_RP_SUBGROUP_SIZE];
+};
+
+//
+//
+//
+#if (SPN_RP_SUBGROUPS == 1)
+
+shared spn_rasters_prefix_smem smem;
+
+#define SPN_SMEM() smem
+
+#else
+
+shared spn_rasters_prefix_smem smem[SPN_DEVICE_RASTERS_PREFIX_SUBGROUPS];
+
+#define SPN_SMEM() smem[gl_SubgroupID]
+
+#endif
+
+//
+// Zero the accumulator
+//
+void
+spn_ttpb_zero()
+{
+  SPN_SMEM().acc[gl_SubgroupInvocationID] = 0;
+}
+
+//
+// FIXME(allanmac): preload more ttsb ids with Duff's device
+//
+void
+spn_ttsk_accum(SPN_BUFFER_TYPE(block_pool_blocks) bp_blocks,
+               const u32vec2                       ttsk,
+               SPN_SUBGROUP_UNIFORM uint32_t       from,
+               SPN_SUBGROUP_UNIFORM const uint32_t to)
+{
+  for (; from < to; from += SPN_RP_TILES)
+    {
+      const uint32_t ttsk_iid = from + SPN_RP_TILE_OFFSET;
+      const uint32_t ttsb_id  = subgroupShuffle(SPN_TTXK_GET_TTXB_ID(ttsk), ttsk_iid);
+
+      if (ttsk_iid < to)
+        {
+          const uint32_t ttsb_base = ttsb_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+          const uint32_t ttsb_idx  = ttsb_base + SPN_RP_TILE_IID;
+          const uint32_t tts       = bp_blocks.extent[ttsb_idx];
+
+          if (tts != SPN_TTS_INVALID)
+            {
+              const int      dy = SPN_TTS_GET_DY(tts);
+              const uint32_t ty = SPN_RP_TILE_OFFSET * SPN_TILE_HEIGHT + SPN_TTS_GET_TY_PIXEL(tts);
+
+              atomicAdd(SPN_SMEM().acc[ty], dy);
+            }
+        }
+    }
+}
+
+//
+//
+//
+int
+spn_ttpb_gather()
+{
+  subgroupMemoryBarrierShared();
+
+  int ttp = SPN_SMEM().acc[gl_SubgroupInvocationID];
+
+#if (SPN_RP_TILES >= 2)
+
+  ttp += subgroupShuffleDown(ttp, SPN_RP_SUBGROUP_SIZE / 2);
+
+#endif
+#if (SPN_RP_TILES >= 4)
+
+  ttp += subgroupShuffleDown(ttp, SPN_RP_SUBGROUP_SIZE / 4);
+
+#endif
+
+#if (SPN_RP_TILES >= 8)
+#error "Too many tiles!"
+#endif
+
+  //
+  // zero unused
+  //
+#if (SPN_RP_TILES > 1)
+
+#if (SPN_RP_TILES == 2)
+
+  if (gl_SubgroupInvocationID >= SPN_RP_SUBGROUP_SIZE / 2)
+    {
+      ttp = 0;
+    }
+
+#elif (SPN_RP_TILES == 4)
+
+  if (gl_SubgroupInvocationID >= SPN_RP_SUBGROUP_SIZE / 4)
+    {
+      ttp = 0;
+    }
+
+#else
+#error "Too many tiles!"
+#endif
+
+#endif
+
+  return ttp;
+}
+
+void
+spn_ttpb_store(SPN_BUFFER_TYPE(block_pool_blocks) bp_blocks,
+               SPN_SUBGROUP_UNIFORM const uint32_t ttpb_id,
+               const int                           ttp)
+{
+  //
+  // Store to TTPB.
+  //
+#if (SPN_RP_TILES > 1)
+  if (gl_SubgroupInvocationID < SPN_TILE_HEIGHT)
+#endif
+    {
+      SPN_SUBGROUP_UNIFORM const uint32_t ttpb_base = ttpb_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+
+      bp_blocks.extent[ttpb_base + gl_SubgroupInvocationID] = ttp;
+    }
+}
+
+//
+//
+//
+void
+spn_ttrk_to_ttsk(const u32vec2 rk, out u32vec2 sk)
+{
+  //
+  // Convert from a TTRK to a nearly correct TTSK:
+  //
+  // TTRK (64-BIT COMPARE)
+  //
+  //  0                                                                63
+  //  | TTSB_ID | NEW_X | NEW_Y | X_LO | X_HI |   Y  | RASTER COHORT ID |
+  //  +---------+-------+-------+------+------+------+------------------+
+  //  |    27   |   1   |   1   |   3  |   9  |  12  |        11        |
+  //
+  //  TO:
+  //
+  //  0                                             63
+  //  | TTSB ID | NEW_X | NEW_Y | SPAN_REM |  X |  Y |
+  //  +---------+-------+-------+----------+----+----+
+  //  |    27   |   1   |   1   | 11 [<0]  | 12 | 12 |
+  //
+  //
+  // NOTE: The [-1] span is relaxed to really only need the sign bit
+  // enabled. This works because TTSK and TTPK keys are now segregated
+  // in the raster structure.  For now, the high 8 bits of the span
+  // are lit.
+  //
+  // This results in:
+  //
+  //  0                                                     63
+  //  | TTSB ID | NEW_X | NEW_Y | UNUSED | SPAN_HI |  X |  Y |
+  //  +---------+-------+-------+--------+---------+----+----+
+  //  |    27   |   1   |   1   |    3   |  8 (=1) | 12 | 12 |
+  //
+  const uint32_t x_lo = SPN_BITFIELD_EXTRACT(rk[0], SPN_TTRK_LO_OFFSET_X, SPN_TTRK_LO_BITS_X);
+
+  sk[0] = rk[0];
+  sk[1] = SPN_TTXK_HI_MASK_SPAN | (rk[1] << SPN_TTRK_HI_BITS_COHORT);  // TTSK.SPAN < 0
+  sk[1] = SPN_BITFIELD_INSERT(sk[1], x_lo, SPN_TTXK_HI_OFFSET_X, SPN_TTRK_LO_BITS_X);
+}
+
+//
+// Macros to load and read the header and meta info from registers.
+// This scheme reduces register pressure.
+//
+//  0: uint32_t nodes;    // # of nodes  -- not including header
+//  1: uint32_t ttsks;    // # of ttsks
+//  2: uint32_t ttpks;    // # of ttpks
+//  3: uint32_t pkidx;    // block pool dword of first ttpk.lo
+//  4: uint32_t blocks;   // # of blocks -- head+node+skb+pkb
+//  5: uint32_t rk_reads; // offset of next ttsk
+//  6: uint32_t pk_reads; // offset of next ttpk
+//  7: uint32_t pb_reads; // offset of next ttpb
+//
+#define SPN_RP_INFO_SIZE (SPN_RASTER_HEAD_QWORDS + 3)
+
+#define SPN_RP_INFO_OFFSET_SK_READS                                                                \
+  (SPN_RASTER_HEAD_QWORDS + SPN_RASTER_COHORT_META_ALLOC_OFFSET_SK_READS)
+
+#define SPN_RP_INFO_OFFSET_PK_READS                                                                \
+  (SPN_RASTER_HEAD_QWORDS + SPN_RASTER_COHORT_META_ALLOC_OFFSET_PK_READS)
+
+#define SPN_RP_INFO_OFFSET_PB_READS (SPN_RASTER_HEAD_QWORDS + 2)
+
+//
+//
+//
+
+#define SPN_RP_INFO_VECTOR_LENGTH                                                                  \
+  ((SPN_RP_INFO_SIZE + SPN_RP_SUBGROUP_SIZE - 1) / SPN_RP_SUBGROUP_SIZE)
+
+//
+//
+//
+
+#define SPN_RP_INFO_BANK(i_) ((i_) / SPN_RP_SUBGROUP_SIZE)
+#define SPN_RP_INFO_LANE(i_) ((i_) % SPN_RP_SUBGROUP_SIZE)
+
+//
+//
+//
+
+#define SPN_RP_INFO_BROADCAST(info_, i_)                                                           \
+  subgroupBroadcast(info_[SPN_RP_INFO_BANK(i_)], SPN_RP_INFO_LANE(i_))
+
+#define SPN_RP_INFO_SET(info_, i_, v_)                                                             \
+  if (gl_SubgroupInvocationID == SPN_RP_INFO_LANE(i_))                                             \
+    {                                                                                              \
+      info_[SPN_RP_INFO_BANK(i_)] = v_;                                                            \
+    }
+
+#define SPN_RP_INFO_INC(info_, i_, d_)                                                             \
+  if (gl_SubgroupInvocationID == SPN_RP_INFO_LANE(i_))                                             \
+    {                                                                                              \
+      info_[SPN_RP_INFO_BANK(i_)] += d_;                                                           \
+    }
+
+//
+//
+//
+
+// clang-format off
+#define SPN_RP_INFO_GET_NODES(info_)       SPN_RP_INFO_BROADCAST(info_, SPN_RASTER_HEAD_LO_OFFSET_NODES)
+#define SPN_RP_INFO_GET_TTSKS(info_)       SPN_RP_INFO_BROADCAST(info_, SPN_RASTER_HEAD_LO_OFFSET_TTSKS)
+#define SPN_RP_INFO_GET_TTPKS(info_)       SPN_RP_INFO_BROADCAST(info_, SPN_RASTER_HEAD_LO_OFFSET_TTPKS)
+#define SPN_RP_INFO_GET_PKIDX(info_)       SPN_RP_INFO_BROADCAST(info_, SPN_RASTER_HEAD_LO_OFFSET_PKIDX)
+#define SPN_RP_INFO_GET_BLOCKS(info_)      SPN_RP_INFO_BROADCAST(info_, SPN_RASTER_HEAD_LO_OFFSET_BLOCKS)
+
+#define SPN_RP_INFO_GET_SK_READS(info_)    SPN_RP_INFO_BROADCAST(info_, SPN_RP_INFO_OFFSET_SK_READS)
+#define SPN_RP_INFO_GET_PK_READS(info_)    SPN_RP_INFO_BROADCAST(info_, SPN_RP_INFO_OFFSET_PK_READS)
+#define SPN_RP_INFO_GET_PB_READS(info_)    SPN_RP_INFO_BROADCAST(info_, SPN_RP_INFO_OFFSET_PB_READS)
+
+#define SPN_RP_INFO_SET_SK_READS(info_,v_) SPN_RP_INFO_SET(info_, SPN_RP_INFO_OFFSET_SK_READS, v_)
+#define SPN_RP_INFO_SET_PK_READS(info_,v_) SPN_RP_INFO_SET(info_, SPN_RP_INFO_OFFSET_PK_READS, v_)
+#define SPN_RP_INFO_SET_PB_READS(info_,v_) SPN_RP_INFO_SET(info_, SPN_RP_INFO_OFFSET_PB_READS, v_)
+
+#define SPN_RP_INFO_INC_SK_READS(info_,d_) SPN_RP_INFO_INC(info_, SPN_RP_INFO_OFFSET_SK_READS, d_)
+#define SPN_RP_INFO_INC_PK_READS(info_,d_) SPN_RP_INFO_INC(info_, SPN_RP_INFO_OFFSET_PK_READS, d_)
+#define SPN_RP_INFO_INC_PB_READS(info_,d_) SPN_RP_INFO_INC(info_, SPN_RP_INFO_OFFSET_PB_READS, d_)
+// clang-format on
+
+//
+//
+//
+
+#define SPN_RP_MAX_SUBBLOCKS (SPN_RP_SUBGROUP_SIZE * SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK)
+
+//
+//
+//
+SPN_SUBGROUP_UNIFORM
+uint32_t
+spn_ballot_find_lsb(SPN_SUBGROUP_UNIFORM const u32vec4 ballot)
+{
+#if (SPN_RP_SUBGROUP_SIZE <= 32)
+
+  // returns -1 if ballot is 0
+  return findLSB(ballot[0]);
+
+#elif (SPN_RP_SUBGROUP_SIZE <= 64)
+
+  // unfortunately we need to check for 0 before LSB
+  if (subgroupBallotBitCount(ballot) == 0)
+    {
+      return -1;
+    }
+  else
+    {
+      return subgroupBallotFindLSB(ballot);
+    }
+
+#else
+#error "Subgroup size unsupported!"
+#endif
+}
+
+//
+//
+//
+SPN_SUBGROUP_UNIFORM
+uint
+spn_ballot_find_msb_lt(SPN_SUBGROUP_UNIFORM const u32vec4  new_y_ballot,
+                       SPN_SUBGROUP_UNIFORM const uint32_t sk_iid_to,
+                       SPN_SUBGROUP_UNIFORM const bool     sk_iid_to_is_invalid)
+{
+  //
+  // Since there is no equivalent ballot operation we define one here.
+  //
+  // returns -1 if:
+  //   - sk_iid_to == 0
+  //   - masked value is 0
+  //
+  if (sk_iid_to_is_invalid)
+    {
+#if (SPN_RP_SUBGROUP_SIZE <= 32)
+      return findMSB(new_y_ballot[0]);
+#else
+      // unfortunately we need to check for 0 before MSB
+      if (subgroupBallotBitCount(new_y_ballot) == 0)
+        {
+          return -1;
+        }
+      else
+        {
+          return subgroupBallotFindMSB(new_y_ballot);
+        }
+#endif
+    }
+  else
+    {
+      uint32_t msb;
+
+#if (SPN_RP_SUBGROUP_SIZE <= 32)
+      msb = findMSB(new_y_ballot[0] & gl_SubgroupLtMask[0]);
+#else
+      if (subgroupBallotBitCount(new_y_ballot) == 0)
+        {
+          msb = -1;
+        }
+      else
+        {
+          msb = subgroupBallotFindMSB(new_y_ballot & gl_SubgroupLtMask);
+        }
+#endif
+
+      return subgroupShuffle(msb, sk_iid_to);
+    }
+}
+
+//
+// Clear the bits below the sk_iid_to lane
+//
+
+void
+spn_ballots_clear_lte(SPN_SUBGROUP_UNIFORM inout u32vec4  new_x_ballot,
+                      SPN_SUBGROUP_UNIFORM inout u32vec4  new_y_ballot,
+                      SPN_SUBGROUP_UNIFORM const uint32_t sk_iid_to)
+{
+  SPN_SUBGROUP_UNIFORM int bits = int(sk_iid_to + 1);
+
+#if (SPN_RP_SUBGROUP_SIZE > 64)
+
+#error "Subgroup size unsupported!"
+
+#elif (SPN_RP_SUBGROUP_SIZE == 64)
+
+  if (bits > 32)
+    {
+      SPN_SUBGROUP_UNIFORM const int bits_33_64 = bits - 32;
+
+      new_x_ballot[1] = SPN_BITFIELD_INSERT(new_x_ballot[1], 0, 0, bits_33_64);
+      new_y_ballot[1] = SPN_BITFIELD_INSERT(new_y_ballot[1], 0, 0, bits_33_64);
+
+      bits -= 32;
+    }
+#endif
+
+  new_x_ballot[0] = SPN_BITFIELD_INSERT(new_x_ballot[0], 0, 0, bits);
+  new_y_ballot[0] = SPN_BITFIELD_INSERT(new_y_ballot[0], 0, 0, bits);
+}
+
+//
+// Acquire TTPB subblock.
+//
+
+SPN_SUBGROUP_UNIFORM
+uint
+spn_pb_alloc(SPN_BUFFER_TYPE(block_pool_ids) bp_ids,
+             inout uint32_t                      info[SPN_RP_INFO_VECTOR_LENGTH],
+             inout uint32_t                      pb_subblocks,
+             SPN_SUBGROUP_UNIFORM inout uint32_t pb_subblocks_next)
+
+{
+  if (pb_subblocks_next == SPN_RP_MAX_SUBBLOCKS)
+    {
+      SPN_SUBGROUP_UNIFORM const uint32_t info_pb_reads = SPN_RP_INFO_GET_PB_READS(info);
+
+      pb_subblocks = bp_ids.ids[(info_pb_reads + gl_SubgroupInvocationID) & push.bp_mask];
+
+      SPN_RP_INFO_INC_PB_READS(info, SPN_RP_SUBGROUP_SIZE);
+
+      pb_subblocks_next = 0;
+    }
+
+  SPN_SUBGROUP_UNIFORM const uint32_t iid = pb_subblocks_next >>  //
+                                            SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_LOG2;
+
+  SPN_SUBGROUP_UNIFORM const uint32_t subblock = pb_subblocks_next &  //
+                                                 SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK_MASK;
+
+  pb_subblocks_next += 1;
+
+  SPN_SUBGROUP_UNIFORM const uint32_t ttpb_id = subgroupShuffle(pb_subblocks, iid) | subblock;
+
+  return ttpb_id;
+}
+
+//
+// FIXME(allanmac): For now, we're writing out TTPK keys one at a time
+// -- it may or may not be beneficial to accumulate a subgroup of keys.
+// Stores are fire-and-forget...
+//
+void
+spn_ttpk_store(SPN_BUFFER_TYPE(block_pool_ids) bp_ids,
+               SPN_BUFFER_TYPE(block_pool_blocks) bp_blocks,
+               inout uint32_t                      info[SPN_RP_INFO_VECTOR_LENGTH],
+               inout uint32_t                      pk_blocks,
+               SPN_SUBGROUP_UNIFORM inout uint32_t pk_blocks_next,
+               SPN_SUBGROUP_UNIFORM inout uint32_t pk_off,
+               const u32vec2                       ttpk)
+{
+  if (pk_blocks_next == SPN_RP_SUBGROUP_SIZE)
+    {
+      SPN_SUBGROUP_UNIFORM const uint32_t info_pk_reads = SPN_RP_INFO_GET_PK_READS(info);
+
+      pk_blocks = bp_ids.ids[(info_pk_reads + gl_SubgroupInvocationID) & push.bp_mask];
+
+      SPN_RP_INFO_INC_PK_READS(info, SPN_RP_SUBGROUP_SIZE);
+
+      pk_blocks_next = 0;
+    }
+
+  SPN_SUBGROUP_UNIFORM uint32_t pk_block  = subgroupShuffle(pk_blocks, pk_blocks_next);
+  SPN_SUBGROUP_UNIFORM uint32_t pk_bp_idx = pk_block * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + pk_off;
+
+  if (pk_off == SPN_BLOCK_POOL_BLOCK_QWORDS - 1)
+    {
+      if (++pk_blocks_next == SPN_RP_SUBGROUP_SIZE)
+        {
+          SPN_SUBGROUP_UNIFORM const uint32_t info_pk_reads = SPN_RP_INFO_GET_PK_READS(info);
+
+          pk_blocks = bp_ids.ids[(info_pk_reads + gl_SubgroupInvocationID) & push.bp_mask];
+
+          SPN_RP_INFO_INC_PK_READS(info, SPN_RP_SUBGROUP_SIZE);
+
+          pk_blocks_next = 0;
+        }
+
+      // next block
+      pk_block = subgroupShuffle(pk_blocks, pk_blocks_next);
+
+      // store to end of curr block
+      bp_blocks.extent[pk_bp_idx]                               = pk_block;
+      bp_blocks.extent[pk_bp_idx + SPN_BLOCK_POOL_BLOCK_QWORDS] = SPN_TTXK_INVALID[1];
+
+      // start at beginning of next block
+      pk_bp_idx = pk_block * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + 0;
+      pk_off    = 0;
+    }
+
+  bp_blocks.extent[pk_bp_idx]                               = ttpk[0];
+  bp_blocks.extent[pk_bp_idx + SPN_BLOCK_POOL_BLOCK_QWORDS] = ttpk[1];
+
+  pk_off += 1;
+}
+
+//
+// Construct and initialize a raster object with TTSK keys, TTPK keys
+// and associated TTPB blocks.
+//
+
+void
+main()
+{
+  //
+  // The raster layout is strided because it benefits raster reclamation:
+  //
+  //   union {
+  //     u32   dwords[block_size];
+  //     struct {
+  //       u32 lo[block_size/2];
+  //       u32 hi[block_size/2];
+  //     };
+  //   };
+  //
+  // This complicates the PREFIX and PLACE shaders.
+  //
+  // The raster header's .lo dwords:
+  //
+  //   uint32_t nodes;   // # of nodes  -- not including header
+  //   uint32_t ttsks;   // # of ttsks
+  //   uint32_t ttpks;   // # of ttpks
+  //   uint32_t pkidx;   // block pool dword of first ttpk.lo
+  //   uint32_t blocks;  // # of blocks -- head+node+skb+pkb
+  //
+  // The layout of allocated blocks is as follows:
+  //
+  //   ... | HEAD(1) | NODES(0+) | TTPB(0+) | ...
+  //
+  // Unlike previous Spinel implementations, TTPK keys immediately
+  // follow TTSK keys.  The starting index of the TTPK keys in the
+  // head or nodes is recorded in the raster header.
+  //
+  // This enables the PLACE shader to be split into two specialized
+  // shaders.
+  //
+
+  //
+  // What is the cohort id for this subgroup?
+  //
+#if (SPN_RP_SUBGROUPS == 1)
+  SPN_SUBGROUP_UNIFORM
+  const uint32_t cid = gl_WorkGroupID.x;
+#else
+  SPN_SUBGROUP_UNIFORM
+  const uint32_t cid = gl_WorkGroupID.x * SPN_RP_SUBGROUPS + gl_SubgroupID;
+
+  if (cid >= raster_span)
+    {
+      return;  // empty subgroup
+    }
+#endif
+
+  //
+  // Load the SK and PK reads from the meta table
+  //
+  uint32_t info[SPN_RP_INFO_VECTOR_LENGTH];
+
+  // define ttrks bufref
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttrks_header), ttrks, push.devaddr_ttrks_header);
+
+#if (SPN_RP_SUBGROUP_SIZE >= SPN_RP_INFO_SIZE)
+
+  // lane ids 5 and 6
+  if ((gl_SubgroupInvocationID >= SPN_RP_INFO_OFFSET_SK_READS) &&  //
+      (gl_SubgroupInvocationID <= SPN_RP_INFO_OFFSET_PK_READS))
+    {
+      // NOTE: highp = mediump - undefined
+      const uint32_t iid = gl_SubgroupInvocationID - SPN_RP_INFO_OFFSET_SK_READS;
+
+      info[0] = ttrks.meta.alloc[cid][iid];
+    }
+
+#elif (SPN_RP_SUBGROUP_SIZE == 4)
+
+#if (SPN_RASTER_HEAD_QWORDS == 5)
+
+  // lane ids 1 and 2 in second row of registers
+  if ((gl_SubgroupInvocationID >= SPN_RP_INFO_OFFSET_SK_READS - 4) &&  //
+      (gl_SubgroupInvocationID <= SPN_RP_INFO_OFFSET_PK_READS - 4))
+    {
+      // NOTE: highp = mediump - undefined
+      const uint32_t iid = gl_SubgroupInvocationID - (SPN_RP_INFO_OFFSET_SK_READS - 4);
+
+      info[1] = ttrks.meta.alloc[cid][iid];
+    }
+
+#else
+#error "Error: update for subgroupSize == 4"
+#endif
+
+#elif
+#error "Unsupported: subgroupSize < 4"
+#endif
+
+  //
+  // Note on initializing block and subblock allocators:
+  //
+  // - the rem count is relative to the end of the subgroup
+  // - don't bother trying to precisely load blocks ids
+  //
+  // FIXME(allanmac): clamp these allocations to a memory transaction so
+  // we don't unncessarily load blocks.
+  //
+
+  //
+  // SK BLOCKS
+  //
+  // NOTE(allanmac): consider not loading so many blocks but we
+  // require at least 2 and the pk and ttpb block ranges might overlap
+  // with this initial load... so leave this for now.
+  //
+  SPN_SUBGROUP_UNIFORM uint32_t info_sk_reads = SPN_RP_INFO_GET_SK_READS(info);
+  SPN_SUBGROUP_UNIFORM uint32_t info_pb_reads = info_sk_reads;  // + 1 + INFO_GET_NODES()
+
+  // load sk blocks
+  SPN_SUBGROUP_UNIFORM uint32_t sk_blocks_next = 0;
+  uint32_t                      sk_blocks;
+
+  // define bufref block_pool_ids
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_ids), bp_ids, push.devaddr_block_pool_ids);
+
+  sk_blocks = bp_ids.ids[(info_sk_reads + gl_SubgroupInvocationID) & push.bp_mask];
+
+  // increment sk reads
+  info_sk_reads += SPN_RP_SUBGROUP_SIZE;
+
+  SPN_RP_INFO_SET_SK_READS(info, info_sk_reads);
+
+  //
+  // LOAD THE RASTER HEADER INFO
+  //
+  SPN_SUBGROUP_UNIFORM const uint32_t head_id = subgroupBroadcast(sk_blocks, 0);
+
+  const uint32_t head_idx = head_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
+
+  // define block pool blocks bufref
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_blocks), bp_blocks, push.devaddr_block_pool_blocks);
+
+#if (SPN_RP_SUBGROUP_SIZE >= SPN_RP_INFO_SIZE)
+
+  if (gl_SubgroupInvocationID < SPN_RASTER_HEAD_QWORDS)
+    {
+      info[0] = bp_blocks.extent[head_idx];
+    }
+
+#elif (SPN_RP_SUBGROUP_SIZE == 4)
+
+#if (SPN_RASTER_HEAD_QWORDS == 5)
+
+  info[0] = bp_blocks.extent[head_idx];
+
+  if (gl_SubgroupInvocationID < 1)
+    {
+      info[1] = bp_blocks.extent[head_idx + 4];
+    }
+#else
+#error "Error: update for subgroupSize == 4"
+#endif
+
+#elif
+#error "Unsupported: subgroupSize < 4"
+#endif
+
+  //
+  // PK BLOCKS
+  //
+  // NOTE(allanmac): consider not loading so many blocks -- we only
+  // need one but sometimes we can borrow from sk and overlap with the
+  // ttpb blocks.
+  //
+  SPN_SUBGROUP_UNIFORM uint32_t info_pk_reads = SPN_RP_INFO_GET_PK_READS(info);
+
+  SPN_SUBGROUP_UNIFORM uint32_t pk_blocks_next;
+  uint32_t                      pk_blocks;
+
+  if (info_sk_reads > info_pk_reads)
+    {
+      SPN_SUBGROUP_UNIFORM const uint32_t info_sk_pk_reads_diff = info_sk_reads - info_pk_reads;
+
+      // borrow from the sk block load
+      pk_blocks      = sk_blocks;
+      pk_blocks_next = SPN_RP_SUBGROUP_SIZE - info_sk_pk_reads_diff;
+
+      // increment pk reads
+      info_pk_reads += info_sk_pk_reads_diff;
+    }
+  else
+    {
+      // go ahead and read a subgroup of pk blocks
+      pk_blocks      = bp_ids.ids[(info_pk_reads + gl_SubgroupInvocationID) & push.bp_mask];
+      pk_blocks_next = 0;
+
+      // increment pk reads
+      info_pk_reads += SPN_RP_SUBGROUP_SIZE;
+    }
+
+  SPN_RP_INFO_SET_PK_READS(info, info_pk_reads);
+
+  //
+  // PKIDX STATE
+  //
+  SPN_SUBGROUP_UNIFORM const uint32_t pk_idx = SPN_RP_INFO_GET_PKIDX(info);
+  SPN_SUBGROUP_UNIFORM uint32_t       pk_off = pk_idx & SPN_BLOCK_POOL_BLOCK_DWORDS_MASK;
+
+  //
+  // How many TTRK keys?
+  //
+  SPN_SUBGROUP_UNIFORM uint32_t rk_rem = SPN_RP_INFO_GET_TTSKS(info);
+
+  if (rk_rem > 0)
+    {
+      //
+      // PB SUBBLOCKS INIT
+      //
+      // NOTE(allanmac): attempt to borrow from the pk
+      // load... otherwise start out with zero allocated blocks.
+      //
+      info_pb_reads += 1 + SPN_RP_INFO_GET_NODES(info);
+
+      SPN_SUBGROUP_UNIFORM uint32_t pb_subblocks_next;
+      uint32_t                      pb_subblocks;
+
+      if (info_pk_reads > info_pb_reads)
+        {
+          SPN_SUBGROUP_UNIFORM const uint32_t info_pk_pb_reads_diff = info_pk_reads - info_pb_reads;
+
+          // borrow from pk block load
+          pb_subblocks      = pk_blocks;
+          pb_subblocks_next = (SPN_RP_SUBGROUP_SIZE - info_pk_pb_reads_diff) *  //
+                              SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK;
+
+          // increment pk reads
+          info_pb_reads += info_pk_pb_reads_diff;
+        }
+      else
+        {
+          // go ahead and read a subgroup of pb blocks
+          pb_subblocks      = bp_ids.ids[(info_pb_reads + gl_SubgroupInvocationID) & push.bp_mask];
+          pb_subblocks_next = 0;
+
+          // increment pb reads
+          info_pb_reads += SPN_RP_SUBGROUP_SIZE;
+        }
+
+      SPN_RP_INFO_SET_PB_READS(info, info_pb_reads);
+
+      //
+      // RK OFFSET
+      //
+      SPN_SUBGROUP_UNIFORM uint32_t rk_off = ttrks.meta.rk_off[cid];
+
+      //
+      // SK STATE
+      //
+      uint32_t sk_off     = SPN_RASTER_HEAD_QWORDS + gl_SubgroupInvocationID;
+      uint32_t sk_hi_from = 0;
+
+      //
+      // For all TTRK keys...
+      //
+      SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttrk_keyvals), ttrk_keyvals, push.devaddr_ttrk_keyvals);
+
+      while (true)
+        {
+          u32vec2 rk;  // don't care about inactive lanes
+
+          const bool rk_is_valid = (gl_SubgroupInvocationID < rk_rem);
+
+          if (rk_is_valid)
+            {
+              rk = ttrk_keyvals.extent[rk_off + gl_SubgroupInvocationID];
+            }
+
+          const uint32_t sk_block0 = subgroupShuffle(sk_blocks, sk_blocks_next);
+          const uint32_t sk_block1 = subgroupShuffle(sk_blocks, sk_blocks_next + 1);
+
+          // default to an invalid key
+          u32vec2 sk = SPN_TTXK_INVALID;
+
+          //
+          //
+          //
+          if (rk_is_valid)
+            {
+              // try to be branchless
+              const bool     sk_off_is_block0 = (sk_off < SPN_BLOCK_POOL_BLOCK_QWORDS - 1);
+              const uint32_t sk_off_adjust = sk_off_is_block0 ? 0 : SPN_BLOCK_POOL_BLOCK_QWORDS - 1;
+              const uint32_t sk_off_block  = sk_off_is_block0 ? sk_block0 : sk_block1;
+
+              // store ttsk here
+              const uint32_t sk_bp_base = sk_off_block * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+              const uint32_t sk_bp_idx  = sk_bp_base + sk_off - sk_off_adjust;
+
+              // convert to ttsk as late as possible
+              spn_ttrk_to_ttsk(rk, sk);
+
+              // write TTSK keys to raster blocks
+              bp_blocks.extent[sk_bp_idx]                               = sk[0];
+              bp_blocks.extent[sk_bp_idx + SPN_BLOCK_POOL_BLOCK_QWORDS] = sk[1];
+
+              // was any sk written to last slot in block before link?
+              if (sk_off == SPN_BLOCK_POOL_BLOCK_QWORDS - 2)
+                {
+                  //
+                  // NOTE(allanmac): This will be correctly overwritten
+                  // if this was the last TTSK key and there are zero
+                  // TTPK keys.
+                  //
+                  const uint32_t sk_bp_idx_next = sk_bp_idx + 1;
+
+                  // clang-format off
+                  bp_blocks.extent[sk_bp_idx_next]                               = sk_block1;
+                  bp_blocks.extent[sk_bp_idx_next + SPN_BLOCK_POOL_BLOCK_QWORDS] = SPN_TTXK_INVALID[1];
+                  // clang-format on
+                }
+            }
+
+          //
+          // Accumulate TTSB values and emit TTPK keys
+          //
+          // The property that can be exploited to avoid accumulating
+          // irrelevant TTSB subblocks is this:
+          //
+          //   If TTRK is a ----- followed by a ----- then ------.
+          //                NEW_Y               NEW_Y      SKIP
+          //                NEW_X               NEW_Y      SKIP
+          //                NEW_Y               NEW_X      ZERO & ACCUMULATE
+          //                NEW_X               NEW_X             ACCUMULATE
+          //
+          // Expect many iterations of this shader attempting to exploit this
+          // property.
+          //
+          // Other things that have to happen first:
+          //
+          //   - Split key sorting -- keep u32vec2 dwords in separate
+          //     extents.  This would enable an concurrent shader to
+          //     independently scan the TTRK keys at a more reasonable
+          //     additional bandwidth cost.
+          //
+          //   - Mark TTRK keys with a "SKIP" bit during segmentation.
+          //
+          //   - Always precisely skip *..Y spans.
+          //
+          // An alternative way to look at the accumulation:
+          //
+          //   [?..?] : ACCUMULATE
+          //   [?..X) : ACCUMULATE
+          //   [?..Y) : SKIP
+          //
+          //   [Y..?] : ACCUMULATE
+          //   [Y..X) : ACCUMULATE
+          //   [Y..Y) : SKIP
+          //
+          //   [X..?] : ACCUMULATE
+          //   [X..X) : ACCUMULATE
+          //   [X..Y) : SKIP
+          //
+          // ('?' indices no X or Y flag in either the first or last lane)
+          //
+          // A third way to look at the accumulation is:
+          //
+          //   For all X:
+          //     1) to:   min lane of X                 / ELSE return subgroup size
+          //     2) from: max lane of Y less than x_lsb / ELSE previous 'to'
+          //     3) if y_lsb was found: zero
+          //     4) accumulate [from,to]
+          //     5) if x_lsb was found: store to TTPK(xy[to]-xy[from])
+          //     6) mask off x_lsb and y_lsb lanes [0,to)
+          //
+          // Note that this isn't precise and may accumulate more TTSB
+          // values than necessary.
+          //
+          // See CUDA implementation for a more sophisticated implementation.
+          //
+          SPN_SUBGROUP_UNIFORM u32vec4 new_x_ballot = subgroupBallot(SPN_TTSK_IS_NEW_X(sk));
+          SPN_SUBGROUP_UNIFORM u32vec4 new_y_ballot = subgroupBallot(SPN_TTSK_IS_NEW_Y(sk));
+
+          SPN_SUBGROUP_UNIFORM const bool is_last_loop = (rk_rem <= SPN_RP_SUBGROUP_SIZE);
+          SPN_SUBGROUP_UNIFORM uint32_t   sk_iid_from  = 0;
+
+          while (true)
+            {
+              // find least X : [0,UINT32_MAX]
+              SPN_SUBGROUP_UNIFORM
+              const uint32_t sk_iid_to = spn_ballot_find_lsb(new_x_ballot);
+
+              // no more X's in subgroup?
+              SPN_SUBGROUP_UNIFORM
+              const bool sk_iid_to_is_invalid = (sk_iid_to >= SPN_RP_SUBGROUP_SIZE);
+
+              // no more X's in raster?
+              if (sk_iid_to_is_invalid && is_last_loop)
+                {
+                  break;
+                }
+
+              // find greatest Y < X : [0,UINT32_MAX]
+              SPN_SUBGROUP_UNIFORM
+              const uint32_t sk_iid_from_new_y = spn_ballot_find_msb_lt(new_y_ballot,  //
+                                                                        sk_iid_to,     //
+                                                                        sk_iid_to_is_invalid);
+
+              // valid Y?
+              if (sk_iid_from_new_y < SPN_RP_SUBGROUP_SIZE)
+                {
+                  // zero the accumulator
+                  spn_ttpb_zero();
+
+                  // Y followed by X
+                  sk_iid_from = sk_iid_from_new_y;
+
+                  // there is a new XY coordinate
+                  sk_hi_from = subgroupShuffle(SPN_TTXK_GET_MASKED_XY(sk), sk_iid_from);
+                }
+
+              // accumulate span
+              spn_ttsk_accum(bp_blocks, sk, sk_iid_from, min(sk_iid_to, SPN_RP_SUBGROUP_SIZE));
+
+              // no more X keys?
+              if (sk_iid_to_is_invalid)
+                {
+                  break;
+                }
+
+              // acquire TTPB subblock
+              SPN_SUBGROUP_UNIFORM
+              const uint32_t ttpb_id = spn_pb_alloc(bp_ids, info, pb_subblocks, pb_subblocks_next);
+
+              // span range is: [sk_hi_from.x+1,sk_hi_to.x)
+              SPN_SUBGROUP_UNIFORM
+              const uint32_t sk_hi_to = subgroupShuffle(SPN_TTXK_GET_MASKED_XY(sk), sk_iid_to);
+
+              // construct TTPK -- span defaults to zero
+              SPN_SUBGROUP_UNIFORM
+              u32vec2 ttpk = { ttpb_id, sk_hi_from + SPN_TTXK_HI_ONE_X };
+
+              // load the accumulated TTPB
+              const int ttp = spn_ttpb_gather();
+
+              // if all zeroes then skip calculating span
+              if (subgroupAny(ttp != 0))
+                {
+                  // store TTP values to TTPB
+                  spn_ttpb_store(bp_blocks, ttpb_id, ttp);
+
+                  // both are on same Y tile line and to > from
+                  SPN_SUBGROUP_UNIFORM uint32_t span_hi = (sk_hi_to - sk_hi_from);
+                  SPN_SUBGROUP_UNIFORM uint32_t span    = span_hi >> SPN_TTXK_HI_OFFSET_XY;
+
+                  // set TTPK span
+                  SPN_TTXK_SET_SPAN(ttpk, span);
+                }
+
+              // save sk_hi_to.x
+              sk_hi_from = sk_hi_to;
+
+              //
+              // immediately store TTPK
+              //
+              // FIXME(allanmac): writing a TTPK key at a time is
+              // not ideal -- see steps that have to happen before
+              // switching to a potentially faster implementation.
+              //
+              spn_ttpk_store(bp_ids, bp_blocks, info, pk_blocks, pk_blocks_next, pk_off, ttpk);
+
+              // we're done with all these bits
+              spn_ballots_clear_lte(new_x_ballot, new_y_ballot, sk_iid_to);
+
+              // x followed by x
+              sk_iid_from = sk_iid_to;
+            }
+
+          //
+          // are we done?
+          //
+          if (is_last_loop)
+            {
+              break;
+            }
+
+          // increment/decrement counters
+          rk_rem -= SPN_RP_SUBGROUP_SIZE;
+          rk_off += SPN_RP_SUBGROUP_SIZE;
+          sk_off += SPN_RP_SUBGROUP_SIZE;
+
+          // did any valid lane write to the next block?
+          if (subgroupAll(sk_off >= SPN_BLOCK_POOL_BLOCK_QWORDS - 1))
+            {
+              // adjust
+              sk_off -= SPN_BLOCK_POOL_BLOCK_QWORDS - 1;
+
+              // move to next block
+              sk_blocks_next += 1;
+
+              // replenish?
+              if (sk_blocks_next == SPN_RP_SUBGROUP_SIZE - 1)
+                {
+                  // reset to 0
+                  sk_blocks_next = 0;
+
+                  // move last to first
+                  sk_blocks = subgroupShuffleDown(sk_blocks, SPN_RP_SUBGROUP_SIZE - 1);
+
+                  // load SPN_RP_SUBGROUP_SIZE - 1
+                  SPN_SUBGROUP_UNIFORM const uint32_t  //
+                    info_sk_reads = SPN_RP_INFO_GET_SK_READS(info);
+
+                  if (gl_SubgroupInvocationID >= 1)
+                    {
+                      //
+                      // NOTE: highp = highp + mediump - 1;
+                      //
+                      // clang-format off
+                      sk_blocks = bp_ids.ids[(info_sk_reads + gl_SubgroupInvocationID - 1) & push.bp_mask];
+                      // clang-format on
+                    }
+
+                  // increment rk reads
+                  SPN_RP_INFO_INC_SK_READS(info, SPN_RP_SUBGROUP_SIZE - 1);
+                }
+            }
+        }
+    }
+
+  //
+  // Finish up by flushing unflushed TTPKs.
+  //
+  // FIXME(allanmac): writing the TTPK keys out one at a time is not
+  // ideal so consider writing out a subgroup at a time.
+  //
+  // But since we're writing them out one at a time, there is nothing to
+  // do here.
+  //
+
+  //
+  // Finish up by invalidating the final node.
+  //
+  {
+    SPN_SUBGROUP_UNIFORM const uint32_t pk_block0  = subgroupShuffle(pk_blocks, pk_blocks_next);
+    SPN_SUBGROUP_UNIFORM const uint32_t pk_bp_base = pk_block0 * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+    uint32_t                            pk_bp_off  = pk_off + gl_SubgroupInvocationID;
+
+    for (; pk_bp_off < SPN_BLOCK_POOL_BLOCK_QWORDS; pk_bp_off += SPN_RP_SUBGROUP_SIZE)
+      {
+        const uint32_t pk_bp_idx = pk_bp_base + pk_bp_off;
+
+        bp_blocks.extent[pk_bp_idx]                               = SPN_TTXK_INVALID[0];
+        bp_blocks.extent[pk_bp_idx + SPN_BLOCK_POOL_BLOCK_QWORDS] = SPN_TTXK_INVALID[1];
+      }
+  }
+}
+
+//
+//
+//

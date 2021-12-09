@@ -1,0 +1,391 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// FILL SCAN
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+// Workgroup size
+//
+layout(local_size_x = SPN_DEVICE_FILL_SCAN_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_FILL_SCAN();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_RASTERIZE_FILL_SCAN(readonly, readwrite, writeonly);
+SPN_BUFFER_DEFINE_RASTERIZE_FILL_CMDS(readonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_HOST_MAP(readonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_BLOCKS_U32VEC4(readonly);
+
+//
+// Local defines
+//
+// clang-format off
+#define SPN_FILL_SCAN_SUBGROUP_SIZE  (1 << SPN_DEVICE_FILL_SCAN_SUBGROUP_SIZE_LOG2)
+#define SPN_FILL_SCAN_SUBGROUP_MASK  SPN_BITS_TO_MASK(SPN_DEVICE_FILL_SCAN_SUBGROUP_SIZE_LOG2)
+#define SPN_FILL_SCAN_SUBGROUPS      (SPN_DEVICE_FILL_SCAN_WORKGROUP_SIZE / SPN_FILL_SCAN_SUBGROUP_SIZE)
+#define SPN_FILL_SCAN_CMD_SLAB_SIZE  (SPN_FILL_SCAN_SUBGROUP_SIZE * SPN_DEVICE_FILL_SCAN_ROWS)
+// clang-format on
+
+//
+// This kernel is executing a prefix-sum on each path primitive count.
+//
+// A slab of commands will be loaded and scanned in registers with an
+// offset determined by a global atomic add.  The prefix sums are then
+// stored to global memory.
+//
+
+void
+main()
+{
+  //
+  // Every subgroup loads a slab of path header primitive counts.
+  //
+#if (SPN_FILL_SCAN_SUBGROUPS == 1)
+  SPN_SUBGROUP_UNIFORM const uint sid = gl_WorkGroupID.x;
+#else
+  SPN_SUBGROUP_UNIFORM const uint sid = gl_WorkGroupID.x * SPN_FILL_SCAN_SUBGROUPS + gl_SubgroupID;
+#endif
+
+  // The expansion factor can be tuned -- bigger is usually better
+  // unless it results in spills.
+  //
+  const uint cmd_base = sid * SPN_FILL_SCAN_CMD_SLAB_SIZE + gl_SubgroupInvocationID;
+
+  //
+  // Only load the host id and transform type -- ignore the transform
+  // and clip indices.
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(rasterize_fill_cmds),
+                    rasterize_fill_cmds,
+                    push.devaddr_rasterize_fill_cmds);
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  u32vec2 path_proj##I = { SPN_TAGGED_BLOCK_ID_INVALID, 0 };                                       \
+  uint    cmd_idx##I   = cmd_base + I * SPN_FILL_SCAN_SUBGROUP_SIZE;                               \
+                                                                                                   \
+  if (cmd_idx##I < push.cmd_span)                                                                  \
+    {                                                                                              \
+      cmd_idx##I += push.cmd_head;                                                                 \
+                                                                                                   \
+      if (cmd_idx##I >= push.cmd_size)                                                             \
+        {                                                                                          \
+          cmd_idx##I -= push.cmd_size;                                                             \
+        }                                                                                          \
+                                                                                                   \
+      /* only need first two dwords of header */                                                   \
+      path_proj##I = rasterize_fill_cmds.extent[cmd_idx##I].xy;                                    \
+    }
+
+  SPN_DEVICE_FILL_SCAN_EXPAND();
+
+  //
+  // Convert the host id to device block id
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_host_map),
+                    block_pool_host_map,
+                    push.devaddr_block_pool_host_map);
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (path_proj##I[0] != SPN_TAGGED_BLOCK_ID_INVALID)                                              \
+    {                                                                                              \
+      path_proj##I[0] = block_pool_host_map.extent[path_proj##I[0]];                               \
+    }
+
+  SPN_DEVICE_FILL_SCAN_EXPAND();
+
+  //
+  // Init each prims array with the first 8 dwords of the path header.
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_blocks_u32vec4),
+                    block_pool_blocks_u32vec4,
+                    push.devaddr_block_pool_blocks);
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  u32vec4 prims##I[2] = { u32vec4(0), u32vec4(0) };                                                \
+  {                                                                                                \
+    if (path_proj##I[0] != SPN_TAGGED_BLOCK_ID_INVALID)                                            \
+      {                                                                                            \
+        /* SPN_BLOCK_POOL_SUBBLOCK_DWORDS_LOG2 >= 2 */                                             \
+        const uint header_idx = path_proj##I[0] * (SPN_BLOCK_POOL_SUBBLOCK_DWORDS / 4);            \
+                                                                                                   \
+        prims##I[0] = block_pool_blocks_u32vec4.extent[header_idx + 0];                            \
+        prims##I[1] = block_pool_blocks_u32vec4.extent[header_idx + 1];                            \
+      }                                                                                            \
+  }
+
+  SPN_DEVICE_FILL_SCAN_EXPAND();
+
+  //
+  // If transform is projective, move line/quad/cubic tag counts to
+  // first 3 dwords, otherwise zero.
+  //
+  //                AFFINE                   PROJECTIVE
+  //       -----------------------    ------------------------
+  //   0:             0               SPN_RAST_TYPE_PROJ_LINE
+  //   1:             0               SPN_RAST_TYPE_PROJ_QUAD
+  //   2:             0               SPN_RAST_TYPE_PROJ_CUBIC
+  //   3:  SPN_RAST_TYPE_LINE                    0
+  //   4:  SPN_RAST_TYPE_QUAD                    0
+  //   5:  SPN_RAST_TYPE_CUBIC                   0
+  //   6:  SPN_RAST_TYPE_RAT_QUAD     SPN_RAST_TYPE_RAT_QUAD
+  //   7:  SPN_RAST_TYPE_RAT_CUBIC    SPN_RAST_TYPE_RAT_CUBIC
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  {                                                                                                \
+    const bool is_proj = SPN_CMD_FILL_IS_TRANSFORM_TYPE_PROJECTIVE(path_proj##I);                  \
+                                                                                                   \
+    prims##I[0][0] = is_proj ? prims##I[0][3] : 0; /* SPN_RAST_TYPE_PROJ_LINE  */                  \
+    prims##I[0][1] = is_proj ? prims##I[1][0] : 0; /* SPN_RAST_TYPE_PROJ_QUAD  */                  \
+    prims##I[0][2] = is_proj ? prims##I[1][1] : 0; /* SPN_RAST_TYPE_PROJ_CUBIC */                  \
+                                                                                                   \
+    if (is_proj)                                                                                   \
+      {                                                                                            \
+        prims##I[0][3] = 0; /* SPN_RAST_TYPE_LINE  */                                              \
+        prims##I[1][0] = 0; /* SPN_RAST_TYPE_QUAD  */                                              \
+        prims##I[1][1] = 0; /* SPN_RAST_TYPE_CUBIC */                                              \
+      }                                                                                            \
+  }
+
+  SPN_DEVICE_FILL_SCAN_EXPAND();
+
+  //
+  // The total 32-bit register footprint is now:
+  //
+  //   prims:  8 * expansion factor
+  //
+
+  //
+  // Vertically sum the prim counts.
+  //
+  u32vec4 totals_v[2] = { prims0[0], prims0[1] };
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (I > 0)                                                                                       \
+    {                                                                                              \
+      totals_v[0] += prims##I[0];                                                                  \
+      totals_v[1] += prims##I[1];                                                                  \
+    }
+
+  SPN_DEVICE_FILL_SCAN_EXPAND();
+
+  //
+  // The total 32-bit register footprint is now:
+  //
+  //   prims:     8 * expansion factor
+  //   totals_v:  8
+  //
+
+  //
+  // Horizontally inclusive add the prim totals.
+  //
+  u32vec4 totals_inc[2];
+
+  totals_inc[0][0] = subgroupInclusiveAdd(totals_v[0][0]);  // SPN_RAST_TYPE_PROJ_LINE
+  totals_inc[0][1] = subgroupInclusiveAdd(totals_v[0][1]);  // SPN_RAST_TYPE_PROJ_QUAD
+  totals_inc[0][2] = subgroupInclusiveAdd(totals_v[0][2]);  // SPN_RAST_TYPE_PROJ_CUBIC
+  totals_inc[0][3] = subgroupInclusiveAdd(totals_v[0][3]);  // SPN_RAST_TYPE_LINE
+  totals_inc[1][0] = subgroupInclusiveAdd(totals_v[1][0]);  // SPN_RAST_TYPE_QUAD
+  totals_inc[1][1] = subgroupInclusiveAdd(totals_v[1][1]);  // SPN_RAST_TYPE_CUBIC
+  totals_inc[1][2] = subgroupInclusiveAdd(totals_v[1][2]);  // SPN_RAST_TYPE_RAT_QUAD
+  totals_inc[1][3] = subgroupInclusiveAdd(totals_v[1][3]);  // SPN_RAST_TYPE_RAT_CUBIC
+
+  //
+  // The total 32-bit register footprint is now:
+  //
+  //   prims:       8 * expansion factor
+  //   totals_inc:  8
+  //
+
+  ////////////////////////////////////////////////////////////////////
+  //
+  // Note that most GPU's can perform a subgroup width of coalesced
+  // atomic ops simultaneously so it's beneficial to have several
+  // adjacent lanes performing the same atomic operation.
+  //
+  // This observation influences the structure of the remaining code.
+  //
+  ////////////////////////////////////////////////////////////////////
+
+  //
+  // Grab the total number of prims for the entire subgroup. These are
+  // found in the last lane.
+  //
+#if (SPN_FILL_SCAN_SUBGROUP_SIZE == 4)
+
+  uint totals_red[2] = { 0, 0 };
+
+#define SPN_FS_BCAST_TOTAL(rt_)                                                                    \
+  {                                                                                                \
+    SPN_SUBGROUP_UNIFORM const uint total_red =                                                    \
+      subgroupBroadcast(totals_inc[rt_ / 4][rt_ & 3], SPN_FILL_SCAN_SUBGROUP_SIZE - 1);            \
+                                                                                                   \
+    if (((rt_ & ~3) + gl_SubgroupInvocationID) == rt_)                                             \
+      totals_red[rt_ / 4] = total_red;                                                             \
+  }
+
+#elif (SPN_FILL_SCAN_SUBGROUP_SIZE >= 8)
+
+  uint totals_red = 0;
+
+#define SPN_FS_BCAST_TOTAL(rt_)                                                                    \
+  {                                                                                                \
+    SPN_SUBGROUP_UNIFORM const uint total_red =                                                    \
+      subgroupBroadcast(totals_inc[rt_ / 4][rt_ & 3], SPN_FILL_SCAN_SUBGROUP_SIZE - 1);            \
+                                                                                                   \
+    if (gl_SubgroupInvocationID == rt_)                                                            \
+      totals_red = total_red;                                                                      \
+  }
+
+#else
+#error "Unexpected subgroup size!"
+#endif
+
+  SPN_FS_BCAST_TOTAL(SPN_RAST_TYPE_PROJ_LINE);
+  SPN_FS_BCAST_TOTAL(SPN_RAST_TYPE_PROJ_QUAD);
+  SPN_FS_BCAST_TOTAL(SPN_RAST_TYPE_PROJ_CUBIC);
+  SPN_FS_BCAST_TOTAL(SPN_RAST_TYPE_LINE);
+  SPN_FS_BCAST_TOTAL(SPN_RAST_TYPE_QUAD);
+  SPN_FS_BCAST_TOTAL(SPN_RAST_TYPE_CUBIC);
+  SPN_FS_BCAST_TOTAL(SPN_RAST_TYPE_RAT_QUAD);
+  SPN_FS_BCAST_TOTAL(SPN_RAST_TYPE_RAT_CUBIC);
+
+  //
+  // The total 32-bit register footprint is now:
+  //
+  //   prims:       8 * expansion factor
+  //   totals_inc:  8
+  //   totals_red:  2 (subgroup_size = 4) / 1 (subgroup_size = 8+)
+  //
+  // This implies an expansion factor of 4+ is reasonable on a GPU
+  // that supports 64 registers per thread.
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(rasterize_fill_scan),
+                    fill_scan,
+                    push.devaddr_rasterize_fill_scan);
+
+  //
+  // Atomically add totals to global primitive counts.
+  //
+#if (SPN_FILL_SCAN_SUBGROUP_SIZE == 4)
+
+  uint bases[2] = { 0, 0 };
+
+  bases[0] = atomicAdd(fill_scan.counts[0 + gl_SubgroupInvocationID], totals_red[0]);
+  bases[1] = atomicAdd(fill_scan.counts[4 + gl_SubgroupInvocationID], totals_red[1]);
+
+#elif (SPN_FILL_SCAN_SUBGROUP_SIZE >= 8)
+
+  uint bases = 0;
+
+#if (SPN_FILL_SCAN_SUBGROUP_SIZE > 8)
+  if (gl_SubgroupInvocationID < SPN_RAST_TYPE_COUNT)
+#endif
+    {
+      bases = atomicAdd(fill_scan.counts[gl_SubgroupInvocationID], totals_red);
+    }
+
+#else
+#error "Unexpected subgroup size!"
+#endif
+
+  //
+  // The total 32-bit register footprint is now:
+  //
+  //   prims:       8 * expansion factor
+  //   totals_inc:  8
+  //   bases:       2 (subgroup_size = 4) / 1 (subgroup_size = 8+)
+  //
+  // This implies an expansion factor of 4+ is reasonable on a GPU
+  // that supports 64 registers per thread.
+  //
+
+  //
+  // Distribute the primitive bases.
+  //
+#if (SPN_FILL_SCAN_SUBGROUP_SIZE == 4)
+
+#define SPN_FS_BCAST_BASES(rt_)                                                                    \
+  totals_inc[rt_ / 4][rt_ & 3] += subgroupBroadcast(bases[rt_ / 4], rt_ & 3);
+
+#elif (SPN_FILL_SCAN_SUBGROUP_SIZE >= 8)
+
+#define SPN_FS_BCAST_BASES(rt_) totals_inc[rt_ / 4][rt_ & 3] += subgroupBroadcast(bases, rt_);
+
+#else
+#error "Unexpected subgroup size!"
+#endif
+
+  SPN_FS_BCAST_BASES(SPN_RAST_TYPE_PROJ_LINE);
+  SPN_FS_BCAST_BASES(SPN_RAST_TYPE_PROJ_QUAD);
+  SPN_FS_BCAST_BASES(SPN_RAST_TYPE_PROJ_CUBIC);
+  SPN_FS_BCAST_BASES(SPN_RAST_TYPE_LINE);
+  SPN_FS_BCAST_BASES(SPN_RAST_TYPE_QUAD);
+  SPN_FS_BCAST_BASES(SPN_RAST_TYPE_CUBIC);
+  SPN_FS_BCAST_BASES(SPN_RAST_TYPE_RAT_QUAD);
+  SPN_FS_BCAST_BASES(SPN_RAST_TYPE_RAT_CUBIC);
+
+  //
+  // For each command, store two u32vec4 vectors that contain the base
+  // index for each primitive rasterization command.
+  //
+  // The u32vec4[2] vectors are strided by subgroup:
+  //
+  //               ...
+  //   { u32vec4[0] * subgroup_size },
+  //   { u32vec4[1] * subgroup_size }
+  //               ...
+  //
+  // clang-format off
+  SPN_SUBGROUP_UNIFORM const uint prefix_span = push.cmd_span + (push.cmd_span & ~SPN_FILL_SCAN_SUBGROUP_MASK);
+  const                      uint prefix_base = sid * SPN_FILL_SCAN_CMD_SLAB_SIZE * 2 + gl_SubgroupInvocationID;
+  // clang-format on
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  const uint prefix_idx##I = prefix_base + I * SPN_FILL_SCAN_SUBGROUP_SIZE * 2;                    \
+                                                                                                   \
+  if (prefix_idx##I < prefix_span)                                                                 \
+    {                                                                                              \
+      totals_inc[0] -= prims##I[0];                                                                \
+      totals_inc[1] -= prims##I[1];                                                                \
+                                                                                                   \
+      fill_scan.prefix[prefix_idx##I + 0 * SPN_FILL_SCAN_SUBGROUP_SIZE] = totals_inc[0];           \
+      fill_scan.prefix[prefix_idx##I + 1 * SPN_FILL_SCAN_SUBGROUP_SIZE] = totals_inc[1];           \
+    }
+
+  SPN_DEVICE_FILL_SCAN_EXPAND();
+}
+
+//
+//
+//

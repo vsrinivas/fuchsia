@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+_spinel_includes = "${graphics_compute_dir}/spinel2/include"
+
+config("color_config") {
+  include_dirs = [ _spinel_includes ]
+}
+
+source_set("color") {
+  public = [ "${_spinel_includes}/spinel/ext/color/color.h" ]
+
+  sources = [
+    "${_spinel_includes}/spinel/ext/color/color.h",
+    "color.c",
+  ]
+
+  public_configs = [ ":color_config" ]
+}

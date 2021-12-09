@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+_spinel_includes = "${graphics_compute_dir}/spinel2/include"
+
+config("transform_stack_config") {
+  include_dirs = [ _spinel_includes ]
+}
+
+source_set("transform_stack") {
+  public =
+      [ "${_spinel_includes}/spinel/ext/transform_stack/transform_stack.h" ]
+
+  sources = [
+    "${_spinel_includes}/spinel/ext/transform_stack/transform_stack.h",
+    "transform_stack.c",
+  ]
+
+  public_deps = [ "${graphics_compute_dir}/spinel2" ]
+
+  public_configs = [ ":transform_stack_config" ]
+}

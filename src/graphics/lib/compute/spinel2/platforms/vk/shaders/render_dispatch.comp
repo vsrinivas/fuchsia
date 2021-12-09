@@ -1,0 +1,84 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// RENDERT DISPATCH
+//
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+// SPN_DEVICE_RENDER_WORKGROUP_SIZE must equal 1
+//
+layout(local_size_x = SPN_DEVICE_RENDER_DISPATCH_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_RENDER_DISPATCH();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_TTCKS_HEADER(noaccess, readwrite, noaccess);
+
+//
+// Local defines
+//
+// clang-format off
+#define SPN_WORKGROUP_SUBGROUPS (SPN_DEVICE_RENDER_WORKGROUP_SIZE >> SPN_DEVICE_RENDER_SUBGROUP_SIZE_LOG2)
+// clang-format on
+
+//
+// This is a single-lane workgroup.
+//
+// There should be no need to predicate on (gl_LocalInvocationID.x == 0).
+//
+void
+main()
+{
+  //
+  // Define ttcks header bufref
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttcks_header), ttcks, push.devaddr_ttcks_header);
+
+  //
+  // Load number of segments
+  //
+  const uint32_t segment_count = ttcks.render_dispatch.w;
+
+  //
+  // One subgroup per segment count
+  //
+  const uint32_t wgs = (segment_count + SPN_WORKGROUP_SUBGROUPS - 1) / SPN_WORKGROUP_SUBGROUPS;
+
+  //
+  // Store dispatch
+  //
+  const u32vec4 dispatch = { wgs, 1, 1, segment_count };
+
+  ttcks.render_dispatch = dispatch;
+
+  // debugPrintfEXT("render_dispatch: %v4u\n", dispatch);
+}
+
+//
+//
+//

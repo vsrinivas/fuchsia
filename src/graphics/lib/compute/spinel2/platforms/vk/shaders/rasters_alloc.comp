@@ -1,0 +1,273 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// RASTERS ALLOC
+//
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+//
+//
+layout(local_size_x = SPN_DEVICE_RASTERS_ALLOC_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_RASTERS_ALLOC();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_BLOCK_POOL_IDS(readwrite, readonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_BLOCKS_U32VEC4(writeonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_HOST_MAP(writeonly);
+SPN_BUFFER_DEFINE_TTRKS_HEADER(readwrite, noaccess);
+SPN_BUFFER_DEFINE_RASTER_IDS(readonly);
+
+//
+// Local definse
+//
+#define SPN_RASTERS_ALLOC_SUBGROUP_SIZE (1 << SPN_DEVICE_RASTERS_ALLOC_SUBGROUP_SIZE_LOG2)
+
+//
+// There is a fixed-size meta table per raster cohort that we use to
+// peform a mostly coalesced sizing and allocation of blocks.
+//
+// This code is simple and fast and each lane runs in isolation except
+// for a atomic operation reducing subgroup prefix sum.
+//
+void
+main()
+{
+  // access to the meta extent is linear
+  const bool is_active = gl_GlobalInvocationID.x < push.ids_span;
+
+  // raster index
+  uint32_t raster_ids_idx = push.ids_head + gl_GlobalInvocationID.x;
+
+  if (raster_ids_idx >= push.ids_size)
+    {
+      raster_ids_idx -= push.ids_size;
+    }
+
+  //
+  // active cohorts store the computed info directly to the header block
+  //
+  uint32_t raster_h;
+  u32vec4  header_lo;
+  uint32_t blocks;
+  uint32_t extra = 0;
+
+  // define ttrks bufref
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttrks_header), ttrks, push.devaddr_ttrks_header);
+
+  if (is_active)
+    {
+      // define rasters bufref
+      SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(raster_ids), raster_ids, push.devaddr_raster_ids);
+
+      // load raster_id as early as possible
+      raster_h = raster_ids.extent[raster_ids_idx];
+
+      // load meta_in
+      blocks                                     = ttrks.meta.blocks[gl_GlobalInvocationID.x];
+      header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTSKS] = ttrks.meta.ttrks[gl_GlobalInvocationID.x];
+      header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTPKS] = ttrks.meta.ttpks[gl_GlobalInvocationID.x];
+
+      // how many blocks will the ttpb vectors consume?
+      extra = (header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTPKS] +  //
+               SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK - 1) /     //
+              SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK;            //
+
+      // total keys
+      const uint32_t ttxks = header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTSKS] +  //
+                             header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTPKS];   //
+
+      //
+      // how many extra blocks do we need to store all the keys in a
+      // head and nodes?
+      //
+      // note: the "-1" is due to the final qword being used to point to
+      // the next node
+      //
+      const uint32_t ttxks_hn_pad = SPN_RASTER_HEAD_QWORDS + ttxks;
+      const uint32_t ttxks_hn_ru  = ttxks_hn_pad + SPN_RASTER_NODE_QWORDS - 2;
+      const uint32_t ttxks_hn     = ttxks_hn_ru / (SPN_RASTER_NODE_QWORDS - 1);
+
+      // increment extra
+      extra += ttxks_hn;
+
+      // how many nodes trail the head?
+      header_lo[SPN_RASTER_HEAD_LO_OFFSET_NODES] = ttxks_hn - 1;
+
+      // update blocks
+      blocks += extra;
+    }
+
+  //
+  // allocate blocks from block pool
+  //
+  // first perform a prefix sum on the subgroup to reduce atomic
+  // operation traffic
+  //
+  // this idiom can be pushed further to operate across a workgroup or
+  // operated on vectors.
+  //
+  const uint32_t inc          = subgroupInclusiveAdd(extra);
+  uint32_t       bp_ids_reads = 0;
+
+  // define bufref block_pool_ids
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_ids), bp_ids, push.devaddr_block_pool_ids);
+
+  // last lane performs the block pool alloc with an atomic increment
+  if (gl_SubgroupInvocationID == SPN_RASTERS_ALLOC_SUBGROUP_SIZE - 1)
+    {
+      bp_ids_reads = atomicAdd(bp_ids.atomics[SPN_BLOCK_POOL_ATOMICS_READS], inc);
+    }
+
+  // broadcast block pool base to all lanes
+  SPN_SUBGROUP_UNIFORM
+  const uint32_t bp_ids_base = subgroupBroadcast(bp_ids_reads,  //
+                                                 SPN_RASTERS_ALLOC_SUBGROUP_SIZE - 1);
+
+  //
+  // store meta header
+  //
+  if (is_active)
+    {
+      // exclusive
+      const uint32_t exc = inc - extra;
+
+      // update block pool reads base for each lane
+      const uint32_t reads = bp_ids_base + exc;
+
+      // get block_id of each raster head
+      const uint32_t head_block_id = bp_ids.ids[reads & push.bp_mask];
+
+      // define bufref block_pool_ids
+      SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_host_map),
+                        bp_host_map,
+                        push.devaddr_block_pool_host_map);
+
+      // update map
+      bp_host_map.extent[raster_h] = head_block_id;
+
+      //
+      // The layout of allocated blocks is as follows:
+      //
+      //   ... | HEAD(1) | NODES(0+) | TTPB(0+) | ...
+      //
+      // Unlike previous Spinel implementations, TTPK keys immediately
+      // follow TTSK keys.  The starting index of the TTPK keys in the
+      // head or nodes is recorded in the raster header.
+      //
+      const uint32_t pk0_pad = SPN_RASTER_HEAD_QWORDS +  //
+                               header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTSKS];
+
+      uint32_t       pk0_node = pk0_pad / (SPN_RASTER_NODE_QWORDS - 1);
+      const uint32_t pk0_base = pk0_node * (SPN_RASTER_NODE_QWORDS - 1);
+      uint32_t       pk0_off  = pk0_pad - pk0_base;
+
+      //
+      // NOTE(allanmac): If there are any TTSK keys and if there are
+      // zero TTPK keys then adjust for the special case where there
+      // are (SPN_RASTER_NODE_QWORDS - 1) TTSK keys in the final
+      // node.
+      //
+      if ((pk0_off == 0) &&  //
+          (header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTPKS] == 0) &&
+          (header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTSKS] != 0))
+        {
+          pk0_node -= 1;
+          pk0_off = SPN_RASTER_NODE_QWORDS - 1;
+        }
+
+      const uint32_t pk0_reads     = reads + pk0_node;
+      const uint32_t pk0_block_id  = bp_ids.ids[pk0_reads & push.bp_mask];
+      const uint32_t pk0_node_base = pk0_block_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+
+      //
+      // save the ttrk and ttpk reads
+      //
+      ttrks.meta.alloc[gl_GlobalInvocationID.x] = u32vec2(reads, pk0_reads);
+
+      //
+      // save the absolute block pool index of the first TTPK
+      //
+      // NOTE(allanmac): if there were zero TTPK keys then
+      //
+      header_lo[SPN_RASTER_HEAD_LO_OFFSET_PKIDX] = pk0_node_base + pk0_off;
+
+      //
+      // Write out u32vec4 and uint32_t to header resulting in this:
+      //
+      //   raster head block
+      //   {
+      //     struct spn_raster_header.lo
+      //     {
+      //       uint32_t32_t nodes;   // # of nodes  -- not including header
+      //       uint32_t32_t ttsks;   // # of ttsks
+      //       uint32_t32_t ttpks;   // # of ttpks
+      //       uint32_t32_t pkidx;   // block pool dword of first ttpk.lo
+      //       uint32_t32_t blocks;  // # of blocks -- head+node+skb+pkb
+      //
+      //       ... uninitialized ...
+      //     }
+      //     ...
+      //   }
+      //
+      // NOTE(allanmac): We're explicitly writing a second u32vec4 because
+      // GLSL appears to be confused by the block pool descriptor
+      // aliasing (which is technically illegal).  It's likely a
+      // spirv-opt or glslangValidator error.  Once buffer references
+      // are available, we can write this the correct way.
+      //
+      const uint32_t raster_head_base = head_block_id * SPN_BLOCK_POOL_SUBBLOCK_OWORDS;
+
+      // define block pool blocks uvec4 bufref
+      SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_blocks_u32vec4),
+                        bp_blocks_u32vec4,
+                        push.devaddr_block_pool_blocks);
+
+      bp_blocks_u32vec4.extent[raster_head_base] = header_lo;
+
+      // debugPrintfEXT("header: %v4u, %u\n", header_lo, blocks);
+
+      //
+      // A smart compiler will reduce this to a dword store
+      //
+      // FIXME(allanmac): with buffer references we can avoid this
+      // vector store.
+      //
+      u32vec4 header_dword5;
+
+      header_dword5[0] = blocks;
+
+      bp_blocks_u32vec4.extent[raster_head_base + 1] = header_dword5;
+    }
+}
+
+//
+//
+//

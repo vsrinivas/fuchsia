@@ -19,6 +19,7 @@ group("compute") {
     "spinel-rs",
     "spinel-rs-sys",
     "spinel/platforms/vk",
+    "spinel2/platforms/vk",
     "surpass",
     "svg",
   ]

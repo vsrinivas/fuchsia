@@ -1,0 +1,282 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// TTCKS SEGMENT
+//
+// TODO(allanmac): Perform `is_valid` tests as skippablel pass.
+//
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_KHR_shader_subgroup_shuffle_relative : require
+#extension GL_EXT_control_flow_attributes : require
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+//
+//
+layout(local_size_x = SPN_DEVICE_TTCKS_SEGMENT_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_TTCKS_SEGMENT();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_TTCKS_HEADER(readonly, readwrite, writeonly);
+SPN_BUFFER_DEFINE_TTCK_KEYVALS(readonly);
+
+//
+// Local defines
+//
+// clang-format off
+#define SPN_SUBGROUP_SIZE  (1 << SPN_DEVICE_TTCKS_SEGMENT_SUBGROUP_SIZE_LOG2)
+#define SPN_SUBGROUPS      (SPN_DEVICE_TTCKS_SEGMENT_WORKGROUP_SIZE / SPN_SUBGROUP_SIZE)
+#define SPN_SUBGROUP_TTCKS (SPN_DEVICE_TTCKS_SEGMENT_ROWS * SPN_SUBGROUP_SIZE)
+// clang-format on
+
+//
+// Cap total rows at 32
+//
+#if (SPN_DEVICE_TTCKS_SEGMENT_ROWS > 32)
+#error "Error: SPN_DEVICE_TTCKS_SEGMENT_ROWS > 32"
+#endif
+
+//
+//
+//
+
+void
+main()
+{
+  //
+  // Define ttcks header bufref
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttcks_header), ttcks, push.devaddr_ttcks_header);
+
+  //
+  // Get ttcks.count
+  //
+  SPN_SUBGROUP_UNIFORM const uint32_t ttcks_count = ttcks.segment_dispatch.w;
+
+  //
+  // Every subgroup processes a block of ttcks
+  //
+  // clang-format off
+#if (SPN_SUBGROUPS == 1)
+  SPN_SUBGROUP_UNIFORM const uint32_t ttcks_base = (gl_WorkGroupID.x * SPN_SUBGROUP_TTCKS);
+#else
+  SPN_SUBGROUP_UNIFORM const uint32_t ttcks_base = (gl_WorkGroupID.x * SPN_SUBGROUPS + gl_SubgroupID) * SPN_SUBGROUP_TTCKS;
+  // clang-format on
+
+  // Does this subgroup have work?
+  if (ttcks_base >= ttcks_count)
+    {
+      return;
+    }
+#endif
+
+  //
+  // Keyvals base index
+  //
+  const uint32_t ttcks_idx_row0 = ttcks_base + gl_SubgroupInvocationID;
+
+  //
+  // Define ttck_keyvals bufref
+  //
+  u32vec2 ttcks_curr_offset;
+
+  umulExtended(ttcks_idx_row0,
+               8,                     // sizeof(ttck)
+               ttcks_curr_offset.y,   // msb
+               ttcks_curr_offset.x);  // lsb
+
+  SPN_BUFREF_DEFINE_AT_OFFSET_U32VEC2(SPN_BUFFER_TYPE(ttck_keyvals),
+                                      ttcks_curr,
+                                      push.devaddr_ttck_keyvals,
+                                      ttcks_curr_offset);
+
+  //
+  // Load ttck keyvals
+  //
+  uint32_t curr[SPN_DEVICE_TTCKS_SEGMENT_ROWS];
+
+  const bool is_full_block = (ttcks_base + SPN_SUBGROUP_TTCKS - 1) < ttcks_count;
+
+  if (is_full_block)
+    {
+      [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTCKS_SEGMENT_ROWS; ii++)
+      {
+        curr[ii] = ttcks_curr.extent[ii * SPN_SUBGROUP_SIZE].y;
+      }
+    }
+  else  // partial
+    {
+      [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTCKS_SEGMENT_ROWS; ii++)
+      {
+        const uint32_t ttcks_idx = ttcks_idx_row0 + ii * SPN_SUBGROUP_SIZE;
+
+        if (ttcks_idx < ttcks_count)
+          {
+            curr[ii] = ttcks_curr.extent[ii * SPN_SUBGROUP_SIZE].y;
+          }
+      }
+    }
+
+  //
+  // Get prev keyval
+  //
+  uint32_t prev[SPN_DEVICE_TTCKS_SEGMENT_ROWS];
+
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTCKS_SEGMENT_ROWS; ii++)
+  {
+    prev[ii] = subgroupShuffleUp(curr[ii], 1);
+  }
+
+  //
+  // Fix lane 0 prev[] for rows [1,ROWS-1]
+  //
+  const bool is_lane0 = (gl_SubgroupInvocationID == 0);
+
+  [[unroll]] for (uint32_t ii = 1, jj = 0; ii < SPN_DEVICE_TTCKS_SEGMENT_ROWS; ii++, jj++)
+  {
+    const uint32_t last = subgroupBroadcast(curr[jj], SPN_SUBGROUP_SIZE - 1);
+
+    if (is_lane0)
+      {
+        prev[ii] = last;
+      }
+  }
+
+  //
+  // Fix lane 0 prev[] for row 0
+  //
+  if (is_lane0)
+    {
+      if (ttcks_idx_row0 > 0)
+        {
+          //
+          // If this is the first key in any block other the first
+          // then broadcast load the last key in the previous block.
+          //
+          // NOTE: This keyval may have already had its NEW_X/NEW_Y
+          // bits updated by another subgroup.
+          //
+          u32vec2 ttcks_prev_offset;
+
+          umulExtended(ttcks_idx_row0 - 1,
+                       8,                     // sizeof(ttck)
+                       ttcks_prev_offset.y,   // msb
+                       ttcks_prev_offset.x);  // lsb
+
+          SPN_BUFREF_DEFINE_AT_OFFSET_U32VEC2(SPN_BUFFER_TYPE(ttck_keyvals),
+                                              ttcks_prev,
+                                              push.devaddr_ttck_keyvals,
+                                              ttcks_prev_offset);
+
+          prev[0] = ttcks_prev.extent[0].y;
+        }
+      else
+        {
+          //
+          // This is the first block and first lane so we want to
+          // force recording of a new y in order to clear the prefix
+          // accumulator.
+          //
+          // Note that we do not have to trigger detection of a new
+          // cohort id because the `rk_off` extent has already been
+          // zeroed.
+          //
+          prev[0] = curr[0] ^ SPN_TTCK_HI_MASK_XY;
+        }
+    }
+
+  //////////////////////////////////////////////////////////////////////
+  //
+  // At this point every row has:
+  //
+  //   * curr ttck
+  //   * prev ttck
+  //
+  //////////////////////////////////////////////////////////////////////
+
+  //
+  // Find the valid ttck key changes for this block
+  //
+  bool is_new_tile[SPN_DEVICE_TTCKS_SEGMENT_ROWS];
+
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTCKS_SEGMENT_ROWS; ii++)
+  {
+    const uint32_t ttcks_idx = ttcks_idx_row0 + ii * SPN_SUBGROUP_SIZE;
+    const bool     is_valid  = (ttcks_idx < ttcks_count);
+    const bool     is_new_xy = ((curr[ii] ^ prev[ii]) & SPN_TTCK_HI_MASK_XY) != 0;
+
+    is_new_tile[ii] = (is_valid && is_new_xy);
+  }
+
+  //
+  // Count the key changes
+  //
+  uint32_t count = 0;
+
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTCKS_SEGMENT_ROWS; ii++)
+  {
+    count += subgroupBallotBitCount(subgroupBallot(is_new_tile[ii]));
+  }
+
+  //
+  // Allocate space in the indices array
+  //
+  uint32_t base = 0;
+
+  if (gl_SubgroupInvocationID == 0)
+    {
+      base = atomicAdd(ttcks.render_dispatch.w, count);
+    }
+
+  base = subgroupBroadcast(base, 0);
+
+  //
+  // Store new tile offsets
+  //
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTCKS_SEGMENT_ROWS; ii++)
+  {
+    const uvec4    ballot = subgroupBallot(is_new_tile[ii]);
+    const uint32_t exc    = subgroupBallotExclusiveBitCount(ballot);
+
+    if (is_new_tile[ii])
+      {
+        const uint32_t ttcks_idx = ttcks_idx_row0 + ii * SPN_SUBGROUP_SIZE;
+
+        ttcks.offsets[base + exc] = ttcks_idx;
+
+        // debugPrintfEXT("ttcks.offsets[%08u]: %u\n", base + exc, ttcks_idx);
+      }
+
+    base += subgroupBallotBitCount(ballot);
+  }
+}
+
+//
+//
+//

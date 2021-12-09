@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+_spinel_includes = "${graphics_compute_dir}/spinel2/include"
+
+config("svg2spinel_config") {
+  include_dirs = [ _spinel_includes ]
+}
+
+source_set("svg2spinel") {
+  public = [ "${_spinel_includes}/spinel/ext/svg2spinel/svg2spinel.h" ]
+
+  sources = [
+    "${_spinel_includes}/spinel/ext/svg2spinel/svg2spinel.h",
+    "svg2spinel.c",
+  ]
+
+  public_deps = [
+    "${graphics_compute_dir}/spinel2/ext/color",
+    "${graphics_compute_dir}/spinel2/ext/transform_stack",
+    "${graphics_compute_dir}/svg",
+  ]
+
+  deps = [ "${graphics_compute_dir}/spinel2/ext/geometry" ]
+
+  public_configs = [ ":svg2spinel_config" ]
+}
+#
+#
+#
+# graphics_compute_unittests("svg2spinel_unittests") {
+#   sources = [ "svg2spinel_unittest.cc" ]
+#
+#   deps = [
+#     ":svg2spinel",
+#     "${graphics_compute_dir}/svg",
+#     "${graphics_compute_dir}/tests/common/svg",
+#     "${graphics_compute_dir}/tests/mock_spinel:mock_spinel_test_utils",
+#   ]
+# }

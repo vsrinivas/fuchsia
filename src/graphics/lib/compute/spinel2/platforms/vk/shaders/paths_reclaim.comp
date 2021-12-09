@@ -1,0 +1,340 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// PATHS RECLAIM
+//
+//
+// FIXME(allanmac): Use one inclusive bitcount.
+//
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_basic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+//
+//
+layout(local_size_x = SPN_DEVICE_PATHS_RECLAIM_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_RECLAIM();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_RECLAIM(readonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_IDS(readwrite, writeonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_BLOCKS(readonly);
+SPN_BUFFER_DEFINE_BLOCK_POOL_HOST_MAP(readonly);
+
+//
+// Local defines
+//
+#define SPN_PATHS_RECLAIM_SUBGROUP_SIZE (1 << SPN_DEVICE_PATHS_RECLAIM_SUBGROUP_SIZE_LOG2)
+
+#define SPN_PATHS_RECLAIM_SUBGROUPS                                                                \
+  (SPN_DEVICE_PATHS_RECLAIM_WORKGROUP_SIZE / SPN_PATHS_RECLAIM_SUBGROUP_SIZE)
+
+//
+// Block expansion size
+//
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND_SIZE                                                        \
+  (SPN_BLOCK_POOL_BLOCK_DWORDS / SPN_PATHS_RECLAIM_SUBGROUP_SIZE)
+
+//
+// Block expansion
+//
+#if (SPN_PATHS_RECLAIM_BLOCK_EXPAND_SIZE == 1)
+
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND() SPN_EXPAND_1()
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST 0
+
+#elif (SPN_PATHS_RECLAIM_BLOCK_EXPAND_SIZE == 2)
+
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND() SPN_EXPAND_2()
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST 1
+
+#elif (SPN_PATHS_RECLAIM_BLOCK_EXPAND_SIZE == 4)
+
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND() SPN_EXPAND_4()
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST 3
+#elif (SPN_PATHS_RECLAIM_BLOCK_EXPAND_SIZE == 8)
+
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND() SPN_EXPAND_8()
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST 7
+
+#elif (SPN_PATHS_RECLAIM_BLOCK_EXPAND_SIZE == 16)
+
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND() SPN_EXPAND_16()
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST 15
+
+#elif (SPN_PATHS_RECLAIM_BLOCK_EXPAND_SIZE == 32)
+
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND() SPN_EXPAND_32()
+#define SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST 31
+
+#endif
+
+//
+// Broadcast to a compile-time lane
+//
+#define SPN_PATHS_RECLAIM_BROADCAST(E, O, I)                                                       \
+  subgroupBroadcast(E, O - I * SPN_PATHS_RECLAIM_SUBGROUP_SIZE)
+
+//
+// A single workgroup reclaims an array of handles.
+//
+// FIXME(allanmac): move these ids into an SMEM array and let subgroups
+// grab the next unreclaimed id.
+//
+void
+main()
+{
+  //
+  // This is a subgroup/warp-centric kernel.
+  //
+  // Which subgroup in the grid is this?
+  //
+#if (SPN_PATHS_RECLAIM_SUBGROUPS == 1)
+  SPN_SUBGROUP_UNIFORM uint32_t sid = gl_WorkGroupID.x;
+#else
+  SPN_SUBGROUP_UNIFORM uint32_t sid =
+    gl_WorkGroupID.x * SPN_PATHS_RECLAIM_SUBGROUPS + gl_SubgroupID;
+
+  // this an empty subgroup?
+  if (sid >= push.ring_span)
+    return;
+#endif
+
+  //
+  // Which slot in the ring?
+  //
+  uint32_t reclaim_idx = push.ring_head + sid;
+
+  if (reclaim_idx >= push.ring_size)
+    {
+      reclaim_idx -= push.ring_size;
+    }
+
+  // define reclaim bufref
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(reclaim), reclaim, push.devaddr_reclaim);
+
+  // get host path id
+  SPN_SUBGROUP_UNIFORM const uint32_t path_h = reclaim.extent[reclaim_idx];
+
+  // define host map bufref
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_host_map),
+                    bp_host_map,
+                    push.devaddr_block_pool_host_map);
+
+  // get the path header block from the map
+  SPN_SUBGROUP_UNIFORM uint32_t node_id = bp_host_map.extent[path_h];
+
+  //
+  // load the entire head block into registers and start
+  // reclaiming blocks
+  //
+  const uint32_t h_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
+
+  // define block pool blocks bufref
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_blocks), bp_blocks, push.devaddr_block_pool_blocks);
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  uint32_t h##I = bp_blocks.extent[h_idx + I * SPN_PATHS_RECLAIM_SUBGROUP_SIZE];
+
+  SPN_PATHS_RECLAIM_BLOCK_EXPAND();
+
+  //
+  // pick out count.blocks from the header
+  //
+  SPN_SUBGROUP_UNIFORM uint32_t count_blocks;
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (SPN_PATH_HEAD_ELEM_IN_RANGE(SPN_PATHS_RECLAIM_SUBGROUP_SIZE,                                 \
+                                  SPN_PATH_HEAD_OFFSET_BLOCKS,                                     \
+                                  I))                                                              \
+    {                                                                                              \
+      count_blocks = SPN_PATHS_RECLAIM_BROADCAST(h##I, SPN_PATH_HEAD_OFFSET_BLOCKS, I);            \
+    }
+
+  SPN_PATHS_RECLAIM_BLOCK_EXPAND();
+
+  //
+  // acquire a span in the block pool ids ring for reclaimed ids
+  //
+  uint32_t bp_ids_writes = 0;
+
+  // define block pool ids bufref
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_ids), bp_ids, push.devaddr_block_pool_ids);
+
+  if (gl_SubgroupInvocationID == 0)
+    {
+      bp_ids_writes = atomicAdd(bp_ids.atomics[SPN_BLOCK_POOL_ATOMICS_WRITES], count_blocks);
+    }
+
+  SPN_SUBGROUP_UNIFORM uint32_t       bp_ids_base = subgroupBroadcast(bp_ids_writes, 0);
+  SPN_SUBGROUP_UNIFORM const uint32_t bp_ids_max  = bp_ids_base + count_blocks;
+
+  //
+  // invalidate all header components
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_PATHS_RECLAIM_SUBGROUP_SIZE, I))                          \
+    {                                                                                              \
+      if (SPN_PATH_HEAD_PARTIALLY_HEADER(SPN_PATHS_RECLAIM_SUBGROUP_SIZE, I))                      \
+        {                                                                                          \
+          if (SPN_PATH_HEAD_IS_HEADER(SPN_PATHS_RECLAIM_SUBGROUP_SIZE, I))                         \
+            {                                                                                      \
+              h##I = SPN_TAGGED_BLOCK_ID_INVALID;                                                  \
+            }                                                                                      \
+        }                                                                                          \
+    }
+
+  SPN_PATHS_RECLAIM_BLOCK_EXPAND();
+
+  //
+  // shift away all tags
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_PATHS_RECLAIM_SUBGROUP_SIZE, I))                          \
+    {                                                                                              \
+      h##I = SPN_TAGGED_BLOCK_ID_GET_ID(h##I);                                                     \
+    }
+
+  SPN_PATHS_RECLAIM_BLOCK_EXPAND();
+
+  //
+  // blindly swap the current node id with the "next" id
+  //
+  {
+    SPN_SUBGROUP_UNIFORM const uint32_t node_next =
+      subgroupBroadcast(SPN_GLSL_CONCAT(h, SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST),
+                        SPN_PATHS_RECLAIM_SUBGROUP_SIZE - 1);
+
+    if (gl_SubgroupInvocationID == SPN_PATHS_RECLAIM_SUBGROUP_SIZE - 1)
+      {
+        SPN_GLSL_CONCAT(h, SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST) = node_id;
+      }
+
+    node_id = node_next;
+  }
+
+  //
+  // find ring index of all blocks and store -- FIXME -- NOT COALESCED
+  //
+  // FIXME(allanmac): this is NOT COALESCED -- fix this
+  //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  if (!SPN_PATH_HEAD_ENTIRELY_HEADER(SPN_PATHS_RECLAIM_SUBGROUP_SIZE, I))                          \
+    {                                                                                              \
+      const bool     is_block     = SPN_BLOCK_ID_IS_BLOCK(h##I);                                   \
+      const u32vec4  block_ballot = subgroupBallot(is_block);                                      \
+      const uint32_t bp_ids_off   = bp_ids_base + subgroupBallotExclusiveBitCount(block_ballot);   \
+                                                                                                   \
+      if (is_block)                                                                                \
+        {                                                                                          \
+          bp_ids.ids[bp_ids_off & push.bp_mask] = h##I;                                            \
+        }                                                                                          \
+                                                                                                   \
+      bp_ids_base += subgroupBallotBitCount(block_ballot);                                         \
+                                                                                                   \
+      if (bp_ids_base == bp_ids_max)                                                               \
+        {                                                                                          \
+          return;                                                                                  \
+        }                                                                                          \
+    }
+
+  SPN_PATHS_RECLAIM_BLOCK_EXPAND();
+
+  //
+  // process next node
+  //
+  while (true)
+    {
+      //
+      // load entire node
+      //
+      const uint32_t n_idx = node_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS + gl_SubgroupInvocationID;
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  uint32_t n##I = bp_blocks.extent[n_idx + I * SPN_PATHS_RECLAIM_SUBGROUP_SIZE];
+
+      SPN_PATHS_RECLAIM_BLOCK_EXPAND();
+
+      //
+      // shift away all tags
+      //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L) n##I = SPN_TAGGED_BLOCK_ID_GET_ID(n##I);
+
+      SPN_PATHS_RECLAIM_BLOCK_EXPAND();
+
+      //
+      // blindly swap the current node id with the "next" id
+      //
+      {
+        SPN_SUBGROUP_UNIFORM const uint32_t node_next =
+          subgroupBroadcast(SPN_GLSL_CONCAT(n, SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST),
+                            SPN_PATHS_RECLAIM_SUBGROUP_SIZE - 1);
+
+        if (gl_SubgroupInvocationID == SPN_PATHS_RECLAIM_SUBGROUP_SIZE - 1)
+          {
+            SPN_GLSL_CONCAT(n, SPN_PATHS_RECLAIM_BLOCK_EXPAND_I_LAST) = node_id;
+          }
+
+        node_id = node_next;
+      }
+
+      //
+      // find ring index of all blocks and store
+      //
+      // FIXME(allanmac): this is NOT COALESCED -- fix this
+      //
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  {                                                                                                \
+    const bool     is_block     = SPN_BLOCK_ID_IS_BLOCK(n##I);                                     \
+    const u32vec4  block_ballot = subgroupBallot(is_block);                                        \
+    const uint32_t bp_ids_off   = bp_ids_base + subgroupBallotExclusiveBitCount(block_ballot);     \
+                                                                                                   \
+    if (is_block)                                                                                  \
+      {                                                                                            \
+        bp_ids.ids[bp_ids_off & push.bp_mask] = n##I;                                              \
+      }                                                                                            \
+                                                                                                   \
+    bp_ids_base += subgroupBallotBitCount(block_ballot);                                           \
+                                                                                                   \
+    if (bp_ids_base == bp_ids_max)                                                                 \
+      {                                                                                            \
+        return;                                                                                    \
+      }                                                                                            \
+  }
+
+      SPN_PATHS_RECLAIM_BLOCK_EXPAND();
+    }
+}
+
+//
+//
+//

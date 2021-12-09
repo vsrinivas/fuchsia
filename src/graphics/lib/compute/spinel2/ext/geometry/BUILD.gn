@@ -1,0 +1,32 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+_spinel_includes = "${graphics_compute_dir}/spinel2/include"
+
+config("geometry_config") {
+  include_dirs = [ _spinel_includes ]
+}
+
+source_set("geometry") {
+  public = [
+    "${_spinel_includes}/spinel/ext/geometry/arc.h",
+    "${_spinel_includes}/spinel/ext/geometry/ellipse.h",
+    "${_spinel_includes}/spinel/ext/geometry/svg_arc.h",
+  ]
+
+  sources = [
+    "${_spinel_includes}/spinel/ext/geometry/arc.h",
+    "${_spinel_includes}/spinel/ext/geometry/ellipse.h",
+    "${_spinel_includes}/spinel/ext/geometry/svg_arc.h",
+    "arc.c",
+    "ellipse.c",
+    "svg_arc.c",
+  ]
+
+  deps = [ "${graphics_compute_dir}/spinel2" ]
+
+  public_configs = [ ":geometry_config" ]
+}

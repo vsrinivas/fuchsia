@@ -1,0 +1,234 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/tools/target_archive/gn/target_archive.gni")
+
+#
+# Declare Spinel Vulkan target.
+#
+template("spinel_vk_target") {
+  #
+  # Where is the Spinel library?
+  #
+  _compute_dir = "//src/graphics/lib/compute"
+  _spinel_dir = "${_compute_dir}/spinel2"
+  _spinel_include_dir = "${_compute_dir}/spinel2/include"
+  _spinel_vk_dir = "${_spinel_dir}/platforms/vk"
+
+  #
+  # struct_sources
+  #
+  struct_sources = [
+    "${_compute_dir}/common/macros.h",
+    "${_spinel_dir}/core.h",
+    "${_spinel_dir}/core_c.h",
+    "${_spinel_vk_dir}/expand_x.h",
+    "${_spinel_vk_dir}/shaders/pipelines.h",
+    "${_spinel_vk_dir}/target.h",
+    "${_spinel_vk_dir}/target_init_group_sizes.h",
+    "${_spinel_vk_dir}/target_requirements.h",
+    "//third_party/Vulkan-Headers/include/vulkan/vk_platform.h",
+    "//third_party/Vulkan-Headers/include/vulkan/vulkan_core.h",
+    "config.h",
+    "header.c",
+  ]
+
+  if (defined(invoker.struct_sources)) {
+    struct_sources += invoker.struct_sources
+  }
+
+  #
+  # struct_include_dirs
+  #
+  struct_include_dirs = [
+    _compute_dir,
+    _spinel_dir,
+    _spinel_include_dir,
+    _spinel_vk_dir,
+    "//third_party/Vulkan-Headers/include",
+  ]
+
+  if (defined(invoker.struct_include_dirs)) {
+    struct_include_dirs += invoker.struct_include_dirs
+  }
+
+  #
+  # shader_sources
+  #
+  # ******************************************
+  # *** must match order in vk/pipelines.h ***
+  # ******************************************
+  #
+  # NOSORT
+  shader_sources = [
+    "${_spinel_vk_dir}/shaders/block_pool_init.comp",
+    "${_spinel_vk_dir}/shaders/fill_dispatch.comp",
+    "${_spinel_vk_dir}/shaders/fill_expand.comp",
+    "${_spinel_vk_dir}/shaders/fill_scan.comp",
+    "${_spinel_vk_dir}/shaders/paths_alloc.comp",
+    "${_spinel_vk_dir}/shaders/paths_copy.comp",
+    "${_spinel_vk_dir}/shaders/paths_reclaim.comp",
+    "${_spinel_vk_dir}/shaders/place_ttpk.comp",
+    "${_spinel_vk_dir}/shaders/place_ttsk.comp",
+    "${_spinel_vk_dir}/shaders/rasterize_cubic.comp",
+    "${_spinel_vk_dir}/shaders/rasterize_line.comp",
+    "${_spinel_vk_dir}/shaders/rasterize_proj_cubic.comp",
+    "${_spinel_vk_dir}/shaders/rasterize_proj_line.comp",
+    "${_spinel_vk_dir}/shaders/rasterize_proj_quad.comp",
+    "${_spinel_vk_dir}/shaders/rasterize_quad.comp",
+    "${_spinel_vk_dir}/shaders/rasterize_rat_cubic.comp",
+    "${_spinel_vk_dir}/shaders/rasterize_rat_quad.comp",
+    "${_spinel_vk_dir}/shaders/rasters_alloc.comp",
+    "${_spinel_vk_dir}/shaders/rasters_prefix.comp",
+    "${_spinel_vk_dir}/shaders/rasters_reclaim.comp",
+    "${_spinel_vk_dir}/shaders/render.comp",
+    "${_spinel_vk_dir}/shaders/render_dispatch.comp",
+    "${_spinel_vk_dir}/shaders/ttcks_segment.comp",
+    "${_spinel_vk_dir}/shaders/ttcks_segment_dispatch.comp",
+    "${_spinel_vk_dir}/shaders/ttrks_segment.comp",
+    "${_spinel_vk_dir}/shaders/ttrks_segment_dispatch.comp",
+  ]
+
+  #
+  # shader_inputs
+  #
+  shader_inputs = [
+    "${_spinel_dir}/core.h",
+    "${_spinel_include_dir}/spinel/spinel_opcodes.h",
+    "${_spinel_vk_dir}/expand_x.h",
+    "${_spinel_vk_dir}/shaders/bufref.h",
+    "${_spinel_vk_dir}/shaders/core_glsl.h",
+    "${_spinel_vk_dir}/shaders/macros.h",
+    "${_spinel_vk_dir}/shaders/partition.h",
+    "${_spinel_vk_dir}/shaders/pipelines.h",
+    "${_spinel_vk_dir}/shaders/push.h",
+    "${_spinel_vk_dir}/shaders/rasterize.comp",
+    "config.h",
+  ]
+
+  if (defined(invoker.shader_inputs)) {
+    shader_inputs += invoker.shader_inputs
+  }
+
+  #
+  # shader_include_dirs
+  #
+  shader_include_dirs = [
+    ".",  # "config.h"
+    _spinel_dir,
+    _spinel_include_dir,
+    _spinel_vk_dir,
+  ]
+
+  if (defined(invoker.shader_include_dirs)) {
+    shader_include_dirs += invoker.shader_include_dirs
+  }
+
+  #
+  # defines
+  #
+  if (defined(invoker.defines)) {
+    defines = invoker.defines
+  }
+
+  #
+  # Radix Sort label and target archive filename
+  #
+  _rs_target_gen_dir =
+      get_label_info(invoker.radix_sort_vk_target_u64_outputs, "target_gen_dir")
+  _rs_name = get_label_info(invoker.radix_sort_vk_target_u64_outputs, "name")
+  _rs_source = _rs_target_gen_dir + "/" + _rs_name + "/" + _rs_name + ".ar"
+
+  #
+  # Invoke customized target archive template
+  #
+  forward_variables_from(invoker,
+                         [
+                           "is_resource",
+                           "is_linkable",
+                         ])
+
+  assert(defined(is_resource) || defined(is_linkable),
+         "Define either `is_resource` or `is_linkable` boolean")
+
+  if (defined(is_resource) && is_resource) {
+    target_archive_resource(target_name) {
+      binary_deps = [ invoker.radix_sort_vk_target_u64_outputs ]
+      binary_sources = [ _rs_source ]
+      forward_variables_from(invoker,
+                             [
+                               "struct_sources",
+                               "struct_include_dirs",
+                               "shader_sources",
+                               "shader_inputs",
+                               "shader_include_dirs",
+                               "defines",
+                               "skip_spirv_opt",
+                             ])
+      if (!defined(skip_spirv_opt)) {
+        skip_spirv_opt = true  # FIXME
+      }
+      gen_debug_shaders = true
+    }
+  } else if (defined(is_linkable) && is_linkable) {
+    target_archive_linkable(target_name) {
+      binary_deps = [ invoker.radix_sort_vk_target_u64_outputs ]
+      binary_sources = [ _rs_source ]
+      forward_variables_from(invoker,
+                             [
+                               "struct_sources",
+                               "struct_include_dirs",
+                               "shader_sources",
+                               "shader_inputs",
+                               "shader_include_dirs",
+                               "defines",
+                               "skip_spirv_opt",
+                             ])
+      if (!defined(skip_spirv_opt)) {
+        skip_spirv_opt = true  # FIXME
+      }
+      gen_debug_shaders = true
+    }
+  }
+}
+
+#
+# Fuchsia resource Spinel target
+#
+template("spinel_vk_target_resource") {
+  spinel_vk_target(target_name) {
+    is_resource = true
+    forward_variables_from(invoker,
+                           [
+                             "struct_sources",
+                             "struct_include_dirs",
+                             "shader_sources",
+                             "shader_inputs",
+                             "shader_include_dirs",
+                             "radix_sort_vk_target_u64_outputs",
+                             "defines",
+                             "skip_spirv_opt",
+                           ])
+  }
+}
+
+#
+# Linkable Spinel target
+#
+template("spinel_vk_target_linkable") {
+  spinel_vk_target(target_name) {
+    is_linkable = true
+    forward_variables_from(invoker,
+                           [
+                             "struct_sources",
+                             "struct_include_dirs",
+                             "shader_sources",
+                             "shader_inputs",
+                             "shader_include_dirs",
+                             "radix_sort_vk_target_u64_outputs",
+                             "defines",
+                             "skip_spirv_opt",
+                           ])
+  }
+}

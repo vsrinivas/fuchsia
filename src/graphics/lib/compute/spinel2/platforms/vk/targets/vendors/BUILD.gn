@@ -1,0 +1,37 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+_spinel_vk_targets_dir =
+    "//src/graphics/lib/compute/spinel2/platforms/vk/targets/vendors"
+
+#
+# This GN target is for verifying that the Spinel targets and shaders
+# are building properly independent of the Spinel source sets.
+#
+group("vendors_resource") {
+  deps = [
+    #    "${_spinel_vk_targets_dir}/amd/gcn3:spinel_vk_amd_gcn3_resource",
+    #    "${_spinel_vk_targets_dir}/arm/bifrost4:spinel_vk_arm_bifrost4_resource",
+    #    "${_spinel_vk_targets_dir}/arm/bifrost8:spinel_vk_arm_bifrost8_resource",
+    #    "${_spinel_vk_targets_dir}/intel/gen8:spinel_vk_intel_gen8_resource",
+    "${_spinel_vk_targets_dir}/nvidia/sm35:spinel_vk_nvidia_sm35_resource",
+  ]
+}
+
+group("vendors_linkable") {
+  deps = [
+    #    "${_spinel_vk_targets_dir}/amd/gcn3:spinel_vk_amd_gcn3_linkable",
+    #    "${_spinel_vk_targets_dir}/arm/bifrost4:spinel_vk_arm_bifrost4_linkable",
+    #    "${_spinel_vk_targets_dir}/arm/bifrost8:spinel_vk_arm_bifrost8_linkable",
+    #    "${_spinel_vk_targets_dir}/intel/gen8:spinel_vk_intel_gen8_linkable",
+    "${_spinel_vk_targets_dir}/nvidia/sm35:spinel_vk_nvidia_sm35_linkable",
+  ]
+}
+
+group("vendors") {
+  deps = [
+    ":vendors_linkable",
+    ":vendors_resource",
+  ]
+}

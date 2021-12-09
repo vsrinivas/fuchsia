@@ -1,0 +1,66 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+config("surface_config") {
+  #
+  # NOTE: For now this is hanging off of spinel-vk-bench but should be
+  # hoisted elsewhere in the tree.
+  #
+  # #include "surface/surface_xcb.h"
+  # #include "surface/surface_fuchsia.h"
+  #
+  include_dirs = [ "include" ]
+}
+
+source_set("surface") {
+  public = [
+    "include/surface/surface.h",
+    "include/surface/surface_types.h",
+  ]
+
+  public_deps = [ "//src/lib/vulkan" ]
+
+  sources = [
+    "surface.c",
+    "surface_debug.c",
+    "surface_debug.h",
+    "surface_default.c",
+    "surface_default.h",
+  ]
+
+  deps = [
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+  ]
+
+  if (is_host) {
+    sources += [ "surface_xcb.c" ]
+    public += [ "include/surface/surface_xcb.h" ]
+    libs = [ "xcb" ]
+  }
+
+  if (is_fuchsia) {
+    deps += [
+      "//sdk/fidl/fuchsia.input",
+      "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_c",
+      "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+      "//sdk/lib/fdio",
+      "//src/lib/fxl",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+    ]
+
+    sources += [
+      "surface_fuchsia_fb.cc",
+      "surface_fuchsia_key_to_hid.c",
+      "surface_fuchsia_key_to_hid.h",
+    ]
+
+    public += [ "include/surface/surface_fuchsia_fb.h" ]
+  }
+
+  public_configs = [ ":surface_config" ]
+}

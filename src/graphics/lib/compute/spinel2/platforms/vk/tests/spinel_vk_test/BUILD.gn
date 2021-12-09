@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+source_set("spinel_vk_test_sources") {
+  testonly = true
+  sources = [
+    "env.cc",
+    "env.h",
+    "env_spinel_vk_target.cc",
+    "env_spinel_vk_target.h",
+    "env_vk_device.cc",
+    "env_vk_device.h",
+    "env_vk_instance.cc",
+    "env_vk_instance.h",
+    "fxt_spinel_vk.cc",
+    "fxt_spinel_vk.h",
+    "fxt_spinel_vk_render.cc",
+    "fxt_spinel_vk_render.h",
+  ]
+  deps = [
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+    graphics_compute_gtest_target,
+  ]
+  public_deps = [
+    "${graphics_compute_dir}/spinel2/ext/svg2spinel",
+    "${graphics_compute_dir}/spinel2/platforms/vk/ext/find_target",
+  ]
+}
+
+graphics_compute_unittests("spinel-vk-api-unittests") {
+  testonly = true
+  sources = [ "spinel_vk_api_unittests.cc" ]
+  deps = [ ":spinel_vk_test_sources" ]
+}
+
+graphics_compute_unittests("spinel-vk-simple-unittests") {
+  testonly = true
+  sources = [ "spinel_vk_simple_unittests.cc" ]
+  deps = [ ":spinel_vk_test_sources" ]
+}
+
+graphics_compute_unittests("spinel-vk-svg-unittests") {
+  testonly = true
+  sources = [ "spinel_vk_svg_unittests.cc" ]
+  deps = [ ":spinel_vk_test_sources" ]
+}
+
+graphics_compute_unittests_package("spinel-vk-test") {
+  testonly = true
+  deps = [
+    ":spinel-vk-api-unittests",  # basic API tests
+    ":spinel-vk-simple-unittests",  # simple rendering tests
+    ":spinel-vk-svg-unittests",  # svg rendering tests
+  ]
+
+  #
+  # Ensure that a host executable is built on Linux hosts
+  #
+  if (is_fuchsia && host_os == "linux") {
+    data_deps = [ ":spinel-vk-test($host_toolchain)" ]
+  }
+}
+
+group("spinel_vk_test") {
+  testonly = true
+  deps = [ ":spinel-vk-test" ]
+}

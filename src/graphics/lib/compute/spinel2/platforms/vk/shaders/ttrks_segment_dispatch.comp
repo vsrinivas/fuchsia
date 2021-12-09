@@ -1,0 +1,84 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// TTRKS SEGMENT DISPATCH
+//
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+// SPN_DEVICE_TTRKS_SEGMENT_WORKGROUP_SIZE must equal 1
+//
+layout(local_size_x = SPN_DEVICE_TTRKS_SEGMENT_DISPATCH_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_TTRKS_SEGMENT_DISPATCH();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_TTRKS_HEADER(noaccess, readwrite);
+
+//
+// Local defines
+//
+// clang-format off
+#define SPN_WORKGROUP_TTRKS  (SPN_DEVICE_TTRKS_SEGMENT_ROWS * SPN_DEVICE_TTRKS_SEGMENT_WORKGROUP_SIZE)
+// clang-format on
+
+//
+// This is a single-lane workgroup.
+//
+// There should be no need to predicate on (gl_LocalInvocationID.x == 0).
+//
+void
+main()
+{
+  //
+  // Define ttrks bufref
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttrks_header), ttrks, push.devaddr_ttrks_header);
+
+  //
+  // Load ttrks count
+  //
+  const uint32_t ttrks_count = ttrks.count_dispatch.w;
+
+  //
+  // A workgroup processes a block of TTRKS
+  //
+  const uint32_t wgs = (ttrks_count + SPN_WORKGROUP_TTRKS - 1) / SPN_WORKGROUP_TTRKS;
+
+  //
+  // Store dispatch
+  //
+  const u32vec4 dispatch = { wgs, 1, 1, ttrks_count };
+
+  ttrks.count_dispatch = dispatch;
+
+  // debugPrintfEXT("TTRKS.DISPATCH: %v4u\n", dispatch);
+}
+
+//
+//
+//

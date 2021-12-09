@@ -1,0 +1,91 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// TTCKS SEGMENT DISPATCH
+//
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+//
+//
+layout(local_size_x = SPN_DEVICE_TTCKS_SEGMENT_DISPATCH_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_TTCKS_SEGMENT_DISPATCH();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_TTCKS_HEADER(readwrite, noaccess, noaccess);
+
+//
+// Local defines
+//
+// clang-format off
+#define SPN_WORKGROUP_TTCKS  (SPN_DEVICE_TTCKS_SEGMENT_ROWS * SPN_DEVICE_TTCKS_SEGMENT_WORKGROUP_SIZE)
+// clang-format on
+
+//
+// Cap total rows at 32
+//
+#if (SPN_DEVICE_TTCKS_SEGMENT_ROWS > 32)
+#error "Error: SPN_DEVICE_TTCKS_SEGMENT_ROWS > 32"
+#endif
+
+//
+// This is a single-lane workgroup.
+//
+// There should be no need to predicate on (gl_LocalInvocationID.x == 0).
+//
+void
+main()
+{
+  //
+  // Define ttcks bufref
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttcks_header), ttcks, push.devaddr_ttcks_header);
+
+  //
+  // Load ttcks count
+  //
+  const uint32_t ttcks_count = ttcks.segment_dispatch.w;
+
+  //
+  // A workgroup processes a block of TTCKS
+  //
+  const uint32_t wgs = (ttcks_count + SPN_WORKGROUP_TTCKS - 1) / SPN_WORKGROUP_TTCKS;
+
+  //
+  // Store dispatch
+  //
+  const u32vec4 dispatch = { wgs, 1, 1, ttcks_count };
+
+  ttcks.segment_dispatch = dispatch;
+
+  // debugPrintfEXT("ttcks_segment_dispatch: %v4u\n", dispatch);
+}
+
+//
+//
+//

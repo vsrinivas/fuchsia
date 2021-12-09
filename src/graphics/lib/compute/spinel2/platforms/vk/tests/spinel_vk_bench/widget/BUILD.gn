@@ -1,0 +1,43 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+config("widget_config") {
+  #
+  # For now this is hanging off of spinel-vk-bench
+  #
+  # #include "widget/widget.h"
+  #
+  include_dirs = [ "include" ]
+}
+
+source_set("widget") {
+  public = [
+    "include/widget/fps.h",
+    "include/widget/mouse.h",
+    "include/widget/svg.h",
+    "include/widget/widget.h",
+    "include/widget/widget_types.h",
+  ]
+
+  sources = [
+    "fps.c",
+    "mouse.c",
+    "roboto_mono_regular.c",
+    "roboto_mono_regular.h",
+    "svg.c",
+    "widget.c",
+    "widget_defn.h",
+  ]
+
+  deps = [ "${graphics_compute_dir}/common" ]
+
+  public_deps = [
+    "${graphics_compute_dir}/spinel2/ext/svg2spinel",
+    "../surface",
+  ]
+
+  public_configs = [ ":widget_config" ]
+}

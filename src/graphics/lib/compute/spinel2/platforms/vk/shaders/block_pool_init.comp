@@ -1,0 +1,83 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// BLOCK POOL INIT
+//
+// Initialize the block pool.
+//
+// FIXME(allanmac): Use a constant offset buffer reference
+//
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_EXT_control_flow_attributes : require
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+// Workgroup size
+//
+layout(local_size_x = SPN_DEVICE_BLOCK_POOL_INIT_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_BLOCK_POOL_INIT();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_BLOCK_POOL_IDS(writeonly, writeonly);
+
+//
+// Local defines
+//
+#define SPN_BPI_IDS_PER_WORKGROUP                                                                  \
+  (SPN_DEVICE_BLOCK_POOL_INIT_WORKGROUP_SIZE * SPN_DEVICE_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION)
+
+//
+//
+//
+void
+main()
+{
+  // define bufref block_pool_ids
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(block_pool_ids), bp_ids, push.devaddr_block_pool_ids);
+
+  uint32_t bp_ids_idx = gl_WorkGroupID.x * SPN_BPI_IDS_PER_WORKGROUP + gl_LocalInvocationID.x;
+
+  //
+  // initialize atomics to [ 0, bp_size ]
+  //
+  if (bp_ids_idx < 2)
+    {
+      bp_ids.atomics[bp_ids_idx] = bp_ids_idx * push.bp_size;
+    }
+
+  //
+  // initialize the pool ids
+  //
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_BLOCK_POOL_INIT_BP_IDS_PER_INVOCATION; ii++)
+  {
+    if (bp_ids_idx < push.bp_size)
+      {
+        bp_ids.ids[bp_ids_idx] = bp_ids_idx * SPN_BLOCK_POOL_SUBBLOCKS_PER_BLOCK;
+      }
+
+    bp_ids_idx += SPN_DEVICE_BLOCK_POOL_INIT_WORKGROUP_SIZE;
+  }
+}
+
+//
+//
+//

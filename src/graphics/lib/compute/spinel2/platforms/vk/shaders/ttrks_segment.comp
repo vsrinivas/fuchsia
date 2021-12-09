@@ -1,0 +1,396 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#version 460
+
+//
+// SEGMENT TTRK
+//
+// FIXME(allanmac): The OpenCL and CUDA versions of this kernel are more
+// sophisticated but let's see how this performs.  Optimize this later
+// using CUDA & OpenCL techniques.
+//
+// FIXME(allanmac): Transition to a split lo/hi sort.
+//
+// FIXME(allanmac): Add a "SKIP" bit to the TTRK.
+//
+
+//
+//
+//
+#extension GL_EXT_debug_printf : enable
+
+//
+//
+//
+#extension GL_GOOGLE_include_directive : require
+#extension GL_KHR_shader_subgroup_shuffle_relative : require
+#extension GL_KHR_shader_subgroup_arithmetic : require
+#extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_EXT_control_flow_attributes : require
+
+//
+//
+//
+#include "config.h"
+#include "push.h"
+
+//
+//
+//
+layout(local_size_x = SPN_DEVICE_TTRKS_SEGMENT_WORKGROUP_SIZE) in;
+
+//
+// Push constants
+//
+SPN_PUSH_LAYOUT_TTRKS_SEGMENT();
+
+//
+// Buffer references
+//
+SPN_BUFFER_DEFINE_TTRKS_HEADER(readwrite, readonly);
+SPN_BUFFER_DEFINE_TTRK_KEYVALS(readonly);
+
+//
+// MACROS
+//
+// clang-format off
+#define SPN_SUBGROUP_SIZE                    (1 << SPN_DEVICE_TTRKS_SEGMENT_SUBGROUP_SIZE_LOG2)
+#define SPN_SUBGROUPS                        (SPN_DEVICE_TTRKS_SEGMENT_WORKGROUP_SIZE / SPN_SUBGROUP_SIZE)
+#define SPN_SUBGROUP_TTRKS                   (SPN_DEVICE_TTRKS_SEGMENT_ROWS * SPN_SUBGROUP_SIZE)
+
+#define SPN_TTRK_COUNT_BITS_TTPK_COUNT       16
+#define SPN_TTRK_COUNT_BITS_BLOCK_COUNT      16
+
+#define SPN_TTRK_COUNT_OFFSET_TTPK_COUNT     0
+#define SPN_TTRK_COUNT_OFFSET_BLOCK_COUNT    (SPN_TTRK_COUNT_BITS_TTPK_COUNT)
+
+#define SPN_TTRK_COUNT_ONE_TTPK_COUNT        (1 << SPN_TTRK_COUNT_OFFSET_TTPK_COUNT)
+#define SPN_TTRK_COUNT_ONE_BLOCK_COUNT       (1 << SPN_TTRK_COUNT_OFFSET_BLOCK_COUNT)
+
+#define SPN_TTRK_COUNT_GET_TTPK_COUNT(s_)    SPN_BITFIELD_EXTRACT(s_,SPN_TTRK_COUNT_OFFSET_TTPK_COUNT,SPN_TTRK_COUNT_BITS_TTPK_COUNT)
+#define SPN_TTRK_COUNT_GET_BLOCK_COUNT(s_)   SPN_BITFIELD_EXTRACT(s_,SPN_TTRK_COUNT_OFFSET_BLOCK_COUNT,SPN_TTRK_COUNT_BITS_BLOCK_COUNT)
+
+#define SPN_TTRK_IS_NEW_COHORT(curr_, prev_) (((curr_.y ^ prev_.y) & SPN_TTRK_HI_MASK_COHORT) != 0)
+
+#define SPN_TTRK_ROW_LAST                    (SPN_DEVICE_TTRKS_SEGMENT_ROWS - 1)
+// clang-format on
+
+//
+// Make sure the scan can't overflow.
+//
+#if (SPN_SUBGROUP_TTRKS >= (1 << SPN_TTRK_COUNT_BITS_TTPK_COUNT))
+#error "Error: Too many TTRK keyvals in subgroup.  Reduce row count."
+#endif
+
+#if (SPN_SUBGROUP_TTRKS >= (1 << SPN_TTRK_COUNT_BITS_BLOCK_COUNT))
+#error "Error: Too many TTRK keyvals in subgroup.  Reduce row count."
+#endif
+
+//
+// Update curr TTRK.NEW_Y/NEW_X flags
+//
+// Also emit a `ttrk_count` for later scanning:
+//
+//   0                         31
+//   | TTPK COUNT | BLOCK COUNT |
+//   +------------+-------------+
+//   |     16     |      16     |
+//
+uint32_t
+spn_ttrk_update_and_compare(inout u32vec2 curr, const u32vec2 prev)
+{
+  //
+  // Update curr TTRK.NEW_Y/NEW_X
+  //
+  // clang-format off
+  const uint32_t xor_lo        = (curr.x ^ prev.x);                               // XOR TTRK.X_LO
+  const bool     is_new_x_lo   = ((xor_lo & SPN_TTRK_LO_MASK_X) != 0);            // XOR.X_LO != 0
+  uint32_t       new_xy        = is_new_x_lo ? SPN_TTRK_LO_MASK_NEW_X : 0;        // init NEW_XY
+  const uint32_t xor_hi        = (curr.y ^ prev.y);                               // XOR TTRK.HI
+  const bool     is_new_x_hi   = ((xor_hi & SPN_TTRK_HI_MASK_X) != 0);            // XOR.X_HI != 0
+  new_xy                       = is_new_x_hi ? SPN_TTRK_LO_MASK_NEW_X : new_xy;   // update NEW_XY
+  const bool     is_new_y      = ((xor_hi & SPN_TTRK_HI_MASK_Y) != 0);            // XOR.Y_HI != 0
+  new_xy                       = is_new_y ? SPN_TTRK_LO_MASK_NEW_Y : new_xy;      // update NEW_XY
+  const bool     is_new_cohort = ((xor_hi & SPN_TTRK_HI_MASK_COHORT) != 0);       // COHORT != 0
+  new_xy                       = is_new_cohort ? SPN_TTRK_LO_MASK_NEW_Y : new_xy; // COHORT != 0
+  curr.x                      |= new_xy;                                          // update curr.NEW_XY
+  // clang-format on
+
+  //
+  // Set TTPK count
+  //
+  const bool     is_new_ttpk = (new_xy == SPN_TTRK_LO_MASK_NEW_X);               // new_xy == NEW_X
+  const uint32_t ttpk_count  = is_new_ttpk ? SPN_TTRK_COUNT_ONE_TTPK_COUNT : 0;  // set .TTPK_COUNT
+
+  //
+  // Set BLOCK count
+  //
+  const uint32_t block_count = SPN_BLOCK_ID_IS_BLOCK(curr.x) ? SPN_TTRK_COUNT_ONE_BLOCK_COUNT : 0;
+
+  return (ttpk_count | block_count);
+}
+
+//
+//
+//
+void
+main()
+{
+  //
+  // Define ttrks header bufref
+  //
+  SPN_BUFREF_DEFINE(SPN_BUFFER_TYPE(ttrks_header), ttrks, push.devaddr_ttrks_header);
+
+  //
+  // Get ttrks.count
+  //
+  SPN_SUBGROUP_UNIFORM const uint32_t ttrks_count = ttrks.count_dispatch.w;
+
+  //
+  // Every subgroup processes a block of ttrks
+  //
+#if (SPN_SUBGROUPS == 1)
+  // clang-format off
+  SPN_SUBGROUP_UNIFORM const uint32_t ttrks_base = (gl_WorkGroupID.x * SPN_SUBGROUP_TTRKS);
+#else
+  SPN_SUBGROUP_UNIFORM const uint32_t ttrks_base = (gl_WorkGroupID.x * SPN_SUBGROUPS + gl_SubgroupID) * SPN_SUBGROUP_TTRKS;
+  // clang-format on
+
+  // Does this subgroup have work?
+  if (ttrks_base >= ttrks_count)
+    {
+      return;
+    }
+#endif
+
+  //
+  // Keyvals base index
+  //
+  const uint32_t ttrks_idx_row0 = ttrks_base + gl_SubgroupInvocationID;
+
+  //
+  // Define ttrk_keyvals bufref
+  //
+  u32vec2 ttrks_curr_offset;
+
+  umulExtended(ttrks_idx_row0,
+               8,                     // sizeof(ttrk)
+               ttrks_curr_offset.y,   // msb
+               ttrks_curr_offset.x);  // lsb
+
+  SPN_BUFREF_DEFINE_AT_OFFSET_U32VEC2(SPN_BUFFER_TYPE(ttrk_keyvals),
+                                      ttrks_curr,
+                                      push.devaddr_ttrk_keyvals,
+                                      ttrks_curr_offset);
+
+  //
+  // Load ttrk keyvals
+  //
+  u32vec2 curr[SPN_DEVICE_TTRKS_SEGMENT_ROWS];
+
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTRKS_SEGMENT_ROWS; ii++)
+  {
+    const uint32_t idx = ttrks_idx_row0 + ii * SPN_SUBGROUP_SIZE;
+
+    if (idx < ttrks_count)
+      {
+        curr[ii] = ttrks_curr.extent[ii * SPN_SUBGROUP_SIZE];
+      }
+    else
+      {
+        curr[ii] = u32vec2(0, SPN_TTRK_HI_MASK_COHORT);  //
+      }
+  }
+
+  //
+  // Get prev keyval
+  //
+  u32vec2 prev[SPN_DEVICE_TTRKS_SEGMENT_ROWS];
+
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTRKS_SEGMENT_ROWS; ii++)
+  {
+    prev[ii] = subgroupShuffleUp(curr[ii], 1);
+  }
+
+  //
+  // Fix lane 0 prev[] for rows [1,ROWS-1]
+  //
+  const bool is_lane0 = (gl_SubgroupInvocationID == 0);
+
+  [[unroll]] for (uint32_t ii = 1, jj = 0; ii < SPN_DEVICE_TTRKS_SEGMENT_ROWS; ii++, jj++)
+  {
+    const u32vec2 last = subgroupBroadcast(curr[jj], SPN_SUBGROUP_SIZE - 1);
+
+    if (is_lane0)
+      {
+        prev[ii] = last;
+      }
+  }
+
+  //
+  // Fix lane 0 prev[] for row 0
+  //
+  if (is_lane0)
+    {
+      if (ttrks_idx_row0 > 0)
+        {
+          //
+          // If this is the first key in any block other the first
+          // then broadcast load the last key in the previous block.
+          //
+          // NOTE: This keyval may have already had its NEW_X/NEW_Y
+          // bits updated by another subgroup.
+          //
+          u32vec2 ttrks_prev_offset;
+
+          umulExtended(ttrks_idx_row0 - 1,
+                       8,                     // sizeof(ttrk)
+                       ttrks_prev_offset.y,   // msb
+                       ttrks_prev_offset.x);  // lsb
+
+          SPN_BUFREF_DEFINE_AT_OFFSET_U32VEC2(SPN_BUFFER_TYPE(ttrk_keyvals),
+                                              ttrks_prev,
+                                              push.devaddr_ttrk_keyvals,
+                                              ttrks_prev_offset);
+
+          prev[0] = ttrks_prev.extent[0];
+        }
+      else
+        {
+          //
+          // This is the first block and first lane so we want to
+          // force recording of a new y in order to clear the prefix
+          // accumulator.
+          //
+          prev[0].x = curr[0].x;
+          prev[0].y = curr[0].y ^ SPN_TTRK_HI_MASK_Y;
+        }
+    }
+
+  //
+  // Update curr ttrks and get counts
+  //
+  uint32_t ttrk_count[SPN_DEVICE_TTRKS_SEGMENT_ROWS];
+
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTRKS_SEGMENT_ROWS; ii++)
+  {
+    ttrk_count[ii] = spn_ttrk_update_and_compare(curr[ii], prev[ii]);
+  }
+
+  //
+  // Store updated ttrk keyvals back to extent
+  //
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTRKS_SEGMENT_ROWS; ii++)
+  {
+    const uint32_t idx = ttrks_idx_row0 + ii * SPN_SUBGROUP_SIZE;
+
+    if (idx < ttrks_count)
+      {
+        ttrks_curr.extent[ii * SPN_SUBGROUP_SIZE] = curr[ii];
+      }
+  }
+
+  //
+  // Exclusive add all TTPK and BLOCK counts
+  //
+  uint32_t ttrk_count_exc[SPN_DEVICE_TTRKS_SEGMENT_ROWS];
+  uint32_t prev_last = 0;
+
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTRKS_SEGMENT_ROWS; ii++)
+  {
+    ttrk_count_exc[ii] = prev_last + subgroupInclusiveAdd(ttrk_count[ii]);
+    prev_last          = subgroupBroadcast(ttrk_count_exc[ii], SPN_SUBGROUP_SIZE - 1);
+    ttrk_count_exc[ii] = ttrk_count_exc[ii] - ttrk_count[ii];
+  }
+
+  //////////////////////////////////////////////////////////////////////
+  //
+  // At this point every row has:
+  //
+  //   * curr ttrk
+  //   * prev ttrk
+  //   * exclusive prefix-sum of block and ttpk counts
+  //
+  // An invalid cohort id identifies an invalid keyval.
+  //
+  //////////////////////////////////////////////////////////////////////
+
+  //
+  // Atomically accumulate meta data for the raster cohort:
+  //
+  //   * meta.rk_off
+  //   * meta.blocks
+  //   * meta.ttpks
+  //   * meta.ttrks
+  //
+  // Note that the explicit "+" signs in the atomicAdd() difference
+  // operations are for clarity.
+  //
+  [[unroll]] for (uint32_t ii = 0; ii < SPN_DEVICE_TTRKS_SEGMENT_ROWS; ii++)
+  {
+    const uint32_t idx = ttrks_idx_row0 + ii * SPN_SUBGROUP_SIZE;
+
+    if (SPN_TTRK_IS_NEW_COHORT(curr[ii], prev[ii]))
+      {
+        const uint32_t curr_cohort_id = SPN_TTRK_GET_COHORT(curr[ii]);
+        const uint32_t prev_cohort_id = SPN_TTRK_GET_COHORT(prev[ii]);
+
+        // meta.rk_off
+        ttrks.meta.rk_off[curr_cohort_id] = idx;
+
+        // meta.ttrks
+        atomicAdd(ttrks.meta.ttrks[curr_cohort_id], -idx);
+        atomicAdd(ttrks.meta.ttrks[prev_cohort_id], +idx);
+
+        // meta.blocks
+        const uint32_t block_count = SPN_TTRK_COUNT_GET_BLOCK_COUNT(ttrk_count_exc[ii]);
+
+        atomicAdd(ttrks.meta.blocks[curr_cohort_id], -block_count);
+        atomicAdd(ttrks.meta.blocks[prev_cohort_id], +block_count);
+
+        // meta.ttpks
+        const uint32_t ttpk_count = SPN_TTRK_COUNT_GET_TTPK_COUNT(ttrk_count_exc[ii]);
+
+        atomicAdd(ttrks.meta.ttpks[curr_cohort_id], -ttpk_count);
+        atomicAdd(ttrks.meta.ttpks[prev_cohort_id], +ttpk_count);
+      }
+  }
+
+  //
+  // Finalize by accumulating the contributions of the very last
+  // keyval in the block.
+  //
+  // Note that `prev_last` contains the exclusive prefix-sum of the
+  // row *following* the last row in the block.
+  //
+  if (gl_SubgroupInvocationID == SPN_SUBGROUP_SIZE - 1)
+    {
+      const uint32_t curr_cohort_id = SPN_TTRK_GET_COHORT(curr[SPN_TTRK_ROW_LAST]);
+
+      //
+      // If the number of keyvals is a multiple of SPN_SUBGROUP_TTRKS
+      // then the final keyval has to contribute its position to the
+      // ttrk count.
+      //
+      if ((ttrks_idx_row0 + SPN_TTRK_ROW_LAST * SPN_SUBGROUP_SIZE + 1) == ttrks_count)
+        {
+          atomicAdd(ttrks.meta.ttrks[curr_cohort_id], +ttrks_count);
+        }
+
+      // meta.blocks
+      const uint32_t block_count = SPN_TTRK_COUNT_GET_BLOCK_COUNT(prev_last);
+
+      atomicAdd(ttrks.meta.blocks[curr_cohort_id], +block_count);
+
+      // meta.ttpks
+      const uint32_t ttpk_count = SPN_TTRK_COUNT_GET_TTPK_COUNT(prev_last);
+
+      atomicAdd(ttrks.meta.ttpks[curr_cohort_id], +ttpk_count);
+    }
+}
+
+//
+//
+//
