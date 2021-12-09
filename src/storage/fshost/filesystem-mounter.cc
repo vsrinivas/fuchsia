@@ -205,21 +205,15 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::channel fs_diagnostics_dir_client, fs_diagnostics_dir_server;
-  zx_status_t status =
-      zx::channel::create(0, &fs_diagnostics_dir_client, &fs_diagnostics_dir_server);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "failed to create channel for diagnostics dir: "
-                   << zx_status_get_string(status);
-    return status;
+  zx::status<zx::channel> export_root =
+      MountFilesystem(FsManager::MountPoint::kBlob, "/pkg/bin/blobfs", options,
+                      std::move(block_device), FS_SVC | FS_SVC_BLOBFS);
+  if (export_root.is_error()) {
+    return export_root.error_value();
   }
 
-  zx::status ret = MountFilesystem(FsManager::MountPoint::kBlob, "/pkg/bin/blobfs", options,
-                                   std::move(block_device), FS_SVC | FS_SVC_BLOBFS);
-  if (ret.is_error()) {
-    return ret.error_value();
-  }
-  status = fshost_.SetFsExportRoot(FsManager::MountPoint::kBlob, std::move(ret).value());
+  zx_status_t status =
+      fshost_.SetFsExportRoot(FsManager::MountPoint::kBlob, std::move(export_root.value()));
   if (status != ZX_OK) {
     return status;
   }

@@ -72,14 +72,17 @@ zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, Serve
     return status;
   }
 
-  // TODO(fxbug.dev/57330): Remove DeepCopy when we support requesting different
-  // consistency from servers.
+  // Specify to fall back to DeepCopy mode instead of Live mode (the default) on failures to send
+  // a Frozen copy of the tree (e.g. if we could not create a child copy of the backing VMO).
+  // This helps prevent any issues with querying the inspect tree while the filesystem is under
+  // load, since snapshots at the receiving end must be consistent. See fxbug.dev/57330 for details.
+  inspect::TreeHandlerSettings settings{.snapshot_behavior =
+                                            inspect::TreeServerSendPreference::Frozen(
+                                                inspect::TreeServerSendPreference::Type::DeepCopy)};
+
   auto inspect_tree = fbl::MakeRefCounted<fs::Service>(
-      [connector = inspect::MakeTreeHandler(
-           blobfs_->GetMetrics()->inspector(), loop_->dispatcher(),
-           inspect::TreeHandlerSettings{
-               .snapshot_behavior = inspect::TreeServerSendPreference::Frozen(
-                   inspect::TreeServerSendPreference::Type::DeepCopy)})](zx::channel chan) mutable {
+      [connector = inspect::MakeTreeHandler(blobfs_->GetMetrics()->inspector(), loop_->dispatcher(),
+                                            settings)](zx::channel chan) mutable {
         connector(fidl::InterfaceRequest<fuchsia::inspect::Tree>(std::move(chan)));
         return ZX_OK;
       });
