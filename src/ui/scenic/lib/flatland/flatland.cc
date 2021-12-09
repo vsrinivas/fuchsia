@@ -811,6 +811,9 @@ void Flatland::CreateImage(ContentId image_id,
   // Set the default sample region of the image to be the full image.
   SetImageSampleRegion(image_id, {0, 0, static_cast<float>(properties.size().width),
                                   static_cast<float>(properties.size().height)});
+
+  FLATLAND_VERBOSE_LOG << "Flatland::CreateImage" << handle << " for " << local_root_
+                       << " size:" << properties.size().width << "x" << properties.size().height;
 }
 
 void Flatland::SetImageSampleRegion(ContentId image_id, RectF rect) {
@@ -1218,6 +1221,8 @@ void Flatland::ReleaseImage(ContentId image_id) {
     ReportBadOperationError();
     return;
   }
+
+  FLATLAND_VERBOSE_LOG << "Flatland::ReleaseImage" << content_kv->second << " for " << local_root_;
 
   bool erased_from_graph = transform_graph_.ReleaseTransform(content_kv->second);
   FX_DCHECK(erased_from_graph);
