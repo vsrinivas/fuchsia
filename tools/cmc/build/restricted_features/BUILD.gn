@@ -30,3 +30,8 @@ group("structured_config") {
     "//tools/cmc:*",
   ]
 }
+
+# The allowlist of components that can use the "hub" feature in CML.
+group("hub") {
+  # Available to all components in fuchsia.git
+}

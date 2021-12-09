@@ -80,6 +80,7 @@ template("cm") {
                              "deps",
                              "metadata",
                              "output_name",
+                             "restricted_features",
                              "testonly",
                              "visibility",
                            ])
@@ -107,19 +108,26 @@ template("cm") {
     # TODO(fxbug.dev/86993): Remove this flag and set SDK type as default.
     args += [ "--experimental-sdk-output" ]
 
+    if (!defined(restricted_features)) {
+      restricted_features = []
+    }
+
+    # Restricted features that don't require an explicit opt-in.
+    #
+    # Useful for features which we want to allow globally in tree but
+    # restrict out of tree.
+    restricted_features += [ "hub" ]
+
     # Opt-in to the requested restricted_features.
-    if (defined(invoker.restricted_features) &&
-        invoker.restricted_features != []) {
-      args += [ "--features" ] + invoker.restricted_features
+    args += [ "--features" ] + restricted_features
 
-      if (!defined(deps)) {
-        deps = []
-      }
+    if (!defined(deps)) {
+      deps = []
+    }
 
-      # Add a dependency on the feature's allowlist.
-      foreach(feature, invoker.restricted_features) {
-        deps += [ "//tools/cmc/build/restricted_features:" + feature ]
-      }
+    # Add a dependency on the feature's allowlist.
+    foreach(feature, restricted_features) {
+      deps += [ "//tools/cmc/build/restricted_features:" + feature ]
     }
 
     if (defined(invoker.experimental_force_runner)) {

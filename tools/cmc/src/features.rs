@@ -48,6 +48,9 @@ pub enum Feature {
 
     /// Enables structured configuration support in CML.
     StructuredConfig,
+
+    /// Allows `hub` framework capability to be used.
+    Hub,
 }
 
 impl FromStr for Feature {
@@ -57,6 +60,7 @@ impl FromStr for Feature {
             "services" => Ok(Feature::Services),
             "dynamic_offers" => Ok(Feature::DynamicOffers),
             "structured_config" => Ok(Feature::StructuredConfig),
+            "hub" => Ok(Feature::Hub),
             _ => Err(format!("unrecognized feature \"{}\"", s)),
         }
     }
@@ -68,6 +72,7 @@ impl fmt::Display for Feature {
             Feature::Services => "services",
             Feature::DynamicOffers => "dynamic_offers",
             Feature::StructuredConfig => "structured_config",
+            Feature::Hub => "hub",
         })
     }
 }
@@ -80,12 +85,16 @@ mod tests {
     fn feature_is_parsed() {
         assert_eq!(Feature::Services, "services".parse::<Feature>().unwrap());
         assert_eq!(Feature::DynamicOffers, "dynamic_offers".parse::<Feature>().unwrap());
+        assert_eq!(Feature::StructuredConfig, "structured_config".parse::<Feature>().unwrap());
+        assert_eq!(Feature::Hub, "hub".parse::<Feature>().unwrap());
     }
 
     #[test]
     fn feature_is_printed() {
         assert_eq!("services", Feature::Services.to_string());
         assert_eq!("dynamic_offers", Feature::DynamicOffers.to_string());
+        assert_eq!("structured_config", Feature::StructuredConfig.to_string());
+        assert_eq!("hub", Feature::Hub.to_string());
     }
 
     #[test]

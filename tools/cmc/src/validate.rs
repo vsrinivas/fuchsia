@@ -538,8 +538,11 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // All directory "use" expressions must have directory rights.
-        if use_.directory.is_some() {
+        if let Some(directory) = use_.directory.as_ref() {
+            if directory.as_str() == "hub" && use_.from == Some(cml::UseFromRef::Framework) {
+                self.features.check(Feature::Hub)?;
+            }
+            // All directory "use" expressions must have directory rights.
             match &use_.rights {
                 Some(rights) => self.validate_directory_rights(&rights)?,
                 None => return Err(Error::validate("Rights required for this use statement.")),
@@ -611,9 +614,16 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Ensure that directories exposed from self are defined in `capabilities`.
         if let Some(directory) = expose.directory.as_ref() {
             for directory in directory {
+                if directory.as_str() == "hub"
+                    && expose.from.iter().any(|r| *r == cml::ExposeFromRef::Framework)
+                {
+                    {
+                        self.features.check(Feature::Hub)?;
+                    }
+                }
+                // Ensure that directories exposed from self are defined in `capabilities`.
                 if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
                     if !self.all_directories.contains(directory) {
                         return Err(Error::validate(format!(
@@ -730,9 +740,14 @@ impl<'a> ValidationContext<'a> {
             }
         }
 
-        // Ensure that directories offered from self are defined in `capabilities`.
         if let Some(directory) = offer.directory.as_ref() {
             for directory in directory {
+                if directory.as_str() == "hub"
+                    && offer.from.iter().any(|r| *r == cml::OfferFromRef::Framework)
+                {
+                    self.features.check(Feature::Hub)?;
+                }
+                // Ensure that directories offered from self are defined in `capabilities`.
                 if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
                     if !self.all_directories.contains(directory) {
                         return Err(Error::validate(format!(
@@ -2112,7 +2127,7 @@ mod tests {
                         "rights": ["r*"],
                         "subdir": "blob",
                     },
-                    { "directory": "hub", "from": "framework" },
+                    { "directory": "data", "from": "framework" },
                     { "runner": "elf", "from": "#logger",  },
                     { "resolver": "pkg_resolver", "from": "#logger" },
                 ],
@@ -2539,10 +2554,10 @@ mod tests {
                         "dependency": "weak_for_migration"
                     },
                     {
-                        "directory": "hub",
+                        "directory": "config",
                         "from": "framework",
                         "to": [ "#modular" ],
-                        "as": "hub",
+                        "as": "config",
                         "dependency": "strong"
                     },
                     {
@@ -5411,6 +5426,68 @@ mod tests {
                 ],
             }),
             Err(Error::RestrictedFeature(s)) if s == "dynamic_offers"
+        ),
+    }
+
+    // Tests the use of hub when the "hub" feature is set.
+    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::Hub]), {
+        test_cml_use_hub(
+            json!({
+                "use": [
+                    {
+                        "directory": "hub",
+                        "from": "framework",
+                        "rights": [ "r*" ],
+                        "path": "/hub",
+                    },
+                ],
+                "expose": [
+                    { "directory": "hub", "from": "framework" },
+                ],
+                "offer": [
+                    { "directory": "hub", "from": "framework", "to": "#child" },
+                ],
+                "children": [
+                    { "name": "child", "url": "fuchsia-pkg://child" }
+                ],
+            }),
+            Ok(())
+        ),
+    }}
+
+    // Tests the use of hub fails when the "hub" feature is not set.
+    test_validate_cml! {
+        test_cml_use_hub_without_feature(
+            json!({
+                "use": [
+                    {
+                        "directory": "hub",
+                        "from": "framework",
+                        "rights": [ "r*" ],
+                        "path": "/hub",
+                    },
+                ],
+            }),
+            Err(Error::RestrictedFeature(s)) if s == "hub"
+        ),
+        test_cml_expose_hub_without_feature(
+            json!({
+                "expose": [
+                    { "directory": "hub", "from": "framework" },
+                ],
+            }),
+            Err(Error::RestrictedFeature(s)) if s == "hub"
+        ),
+        test_cml_offer_hub_without_feature(
+            json!({
+                "offer": [
+                    { "directory": "hub", "from": "framework", "to": "#child" },
+                ],
+                "children": [
+                    { "name": "child", "url": "fuchsia-pkg://child" }
+                ],
+            }),
+            Err(Error::RestrictedFeature(s)) if s == "hub"
         ),
     }
 
