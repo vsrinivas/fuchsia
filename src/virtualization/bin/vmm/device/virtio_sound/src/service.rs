@@ -381,7 +381,7 @@ impl<'s> PcmStream<'s> {
         reply_controlq::err(req_wrapper.take_chain(), wire::VIRTIO_SND_S_BAD_MSG)
     }
 
-    /// Handle output data messages sent to TXQ
+    /// Handle data messages sent to TXQ
     async fn handle_tx<'a, 'b, 'c>(
         &self,
         req_wrapper: RequestWrapper<'a, 'b, 'c>,
@@ -401,34 +401,6 @@ impl<'s> PcmStream<'s> {
         };
 
         // Dispatch to our output stream.
-        self.stream.on_receive_data(req_wrapper.take_chain(), lock).await?;
-        Ok(())
-    }
-
-    /// Handle input data requests sent to RXQ
-    async fn handle_rx<'a, 'b, 'c>(
-        &self,
-        req_wrapper: RequestWrapper<'a, 'b, 'c>,
-        lock: sequencer::Lock,
-    ) -> Result<(), Error> {
-        // We can't transfer data unless we have prepared a connection.
-        match self.state.get() {
-            PcmState::Prepared(_) | PcmState::Started(_) | PcmState::Stopped(_) => (),
-            _ => {
-                tracing::warn!(
-                    "RXQ message received from wrong state {:?}; ignoring",
-                    self.state.get()
-                );
-                reply_rxq::err_from_readable(
-                    req_wrapper.take_chain(),
-                    wire::VIRTIO_SND_S_BAD_MSG,
-                    0,
-                )?;
-                return Ok(());
-            }
-        };
-
-        // Dispatch to our input stream.
         self.stream.on_receive_data(req_wrapper.take_chain(), lock).await?;
         Ok(())
     }
@@ -658,67 +630,21 @@ impl<'s> VirtSoundService<'s> {
         stream.handle_tx(req_wrapper, lock).await
     }
 
-    /// Dispatch a message from the rxq.
-    /// On error:
-    /// * If the error is recoverable, we send an error status back to the driver and return Ok().
-    /// * If the error is not recoverable, we return Err().
-    ///
-    /// The sequencer lock is used to ensure that packets are forwarded in the expected order.
-    /// It will be held until the packet is forwarded, then may be released to allow waiting
-    /// concurrently for multiple packets.
-    pub async fn dispatch_rxq<'a, 'b>(
-        &self,
-        chain: ReadableChain<'a, 'b>,
-        lock: sequencer::Lock,
-    ) -> Result<(), Error> {
-        // Each rx message is composed of a header struct followed by a writable buffer and status.
-        // First read the header so we know which stream to dispatch to.
-        let mut req_wrapper = RequestWrapper::new("RXQ", chain);
-        let hdr = match req_wrapper.parse_header::<wire::VirtioSndPcmXfer>() {
-            Ok(x) => x,
-            Err(err) => {
-                tracing::error!("{}", err);
-                return reply_rxq::err_from_readable(
-                    req_wrapper.take_chain(),
-                    wire::VIRTIO_SND_S_BAD_MSG,
-                    0,
-                );
-            }
-        };
-
-        // RX messages must target a valid input stream.
-        let id = hdr.stream_id.get() as usize;
-        if id >= self.pcm_streams.len() {
-            tracing::error!("rxq dispatch error: unknown stream_id {}", id);
-            return reply_rxq::err_from_readable(
-                req_wrapper.take_chain(),
-                wire::VIRTIO_SND_S_BAD_MSG,
-                0,
-            );
-        }
-
-        let stream = &self.pcm_streams[id];
-        if stream.dir != PcmDir::Input {
-            tracing::error!("rxq dispatch error: stream_id {} is an output stream", id);
-            return reply_rxq::err_from_readable(
-                req_wrapper.take_chain(),
-                wire::VIRTIO_SND_S_BAD_MSG,
-                0,
-            );
-        }
-
-        // Dispatch to the stream.
-        stream.handle_rx(req_wrapper, lock).await
-    }
-
     /// Performs background work. The returned future may never complete. To stop performing
     /// background work, drop the returned future.
     pub async fn do_background_work(&self) -> Result<(), Error> {
-        futures::stream::iter(self.pcm_streams.iter().map(|pcm_stream| Ok(pcm_stream)))
-            .try_for_each_concurrent(
-                None, /* unlimited concurrency */
-                |pcm_stream| async move { pcm_stream.stream.do_background_work().await },
-            )
-            .await
+        futures::stream::iter(
+            self.pcm_streams
+                .iter()
+                .filter(|pcm_stream| match pcm_stream.dir {
+                    PcmDir::Output => true,
+                    PcmDir::Input => false, // TODO(fxbug.dev/87645): implement input streams
+                })
+                .map(|pcm_stream| Ok(pcm_stream)),
+        )
+        .try_for_each_concurrent(None /* unlimited concurrency */, |pcm_stream| async move {
+            pcm_stream.stream.do_background_work().await
+        })
+        .await
     }
 }
