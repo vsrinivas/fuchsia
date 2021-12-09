@@ -399,6 +399,8 @@ def main():
                     if f.endswith('.dart'):
                         dart_sources.append(
                             os.path.relpath(os.path.join(path, f), source_dir))
+            if os.path.exists(dest_dir):
+                shutil.rmtree(dest_dir)
             shutil.copytree(
                 source_base_dir,
                 dest_dir,
