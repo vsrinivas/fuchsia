@@ -291,11 +291,11 @@ func onTable(value gidlir.Record, decl *gidlmixer.TableDecl) string {
 			return "None"
 		}
 		var b strings.Builder
-		b.WriteString("Some(std::array::IntoIter::new([")
+		b.WriteString("Some([")
 		for _, tuple := range unknownTuples {
 			b.WriteString(tuple)
 		}
-		b.WriteString("]).collect())")
+		b.WriteString("].into())")
 		return b.String()
 	}
 	tableFields = append(tableFields, fmt.Sprintf("unknown_data: %s", unknownData()))

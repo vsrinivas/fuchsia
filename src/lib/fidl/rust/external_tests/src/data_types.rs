@@ -194,10 +194,8 @@ fn value_table() {
     assert_eq!(age, Some(30));
 
     let bytes = vec![1, 2, 3, 4, 5, 6, 7, 8];
-    let unknown = ValueRecord {
-        unknown_data: Some(std::array::IntoIter::new([(123, bytes.clone())]).collect()),
-        ..ValueRecord::EMPTY
-    };
+    let unknown =
+        ValueRecord { unknown_data: Some([(123, bytes.clone())].into()), ..ValueRecord::EMPTY };
     let unknown_data = unknown.unknown_data.as_ref().unwrap();
     assert_eq!(unknown_data.len(), 1);
     assert_eq!(unknown_data.get(&123), Some(&bytes));
@@ -223,11 +221,11 @@ fn resource_table() {
     let bytes = vec![1, 2, 3, 4, 5, 6, 7, 8];
     let unknown = ResourceRecord {
         unknown_data: Some(
-            std::array::IntoIter::new([(
+            [(
                 123,
                 fidl::UnknownData { bytes: bytes.clone(), handles: vec![fidl::Handle::invalid()] },
-            )])
-            .collect(),
+            )]
+            .into(),
         ),
         ..ResourceRecord::EMPTY
     };
