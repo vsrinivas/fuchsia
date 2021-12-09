@@ -4,12 +4,14 @@
 
 #[cfg(test)]
 use anyhow::Result;
+use component_events::events::Event as _;
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_test_realm as fntr;
+use fuchsia_zircon as zx;
 use net_declare::fidl_mac;
 use netemul::Endpoint as _;
 use netstack_testing_common::realms::{KnownServiceProvider, Netstack2, TestSandboxExt as _};
@@ -20,6 +22,8 @@ const ETH2_MAC_ADDRESS: fnet::MacAddress = fidl_mac!("05:06:07:08:09:10");
 const ETH1_INTERFACE_NAME: &'static str = "eth1";
 const ETH2_INTERFACE_NAME: &'static str = "eth2";
 const EXPECTED_INTERFACE_NAME: &'static str = "added-interface";
+const FAKE_STUB_URL: &'static str = "#meta/test-stub.cm";
+const TEST_STUB_MONIKER_REGEX: &'static str = ".*/stubs:test-stub";
 
 /// Creates a `netemul::TestRealm` with a Netstack2 instance and the Network
 /// Test Realm.
@@ -120,7 +124,7 @@ async fn open_hermetic_network_realm_exposed_directory(
         .expect("failed to connect to realm protocol");
     let (directory_proxy, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
         .expect("failed to create Directory proxy");
-    let mut child_ref = network_test_realm_common::create_hermetic_network_relam_child_ref();
+    let mut child_ref = network_test_realm::create_hermetic_network_realm_child_ref();
     realm_proxy
         .open_exposed_dir(&mut child_ref, server_end)
         .await
@@ -134,9 +138,15 @@ async fn has_hermetic_network_realm(realm: &netemul::TestRealm<'_>) -> bool {
     let realm_proxy = realm
         .connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("failed to connect to realm protocol");
-    network_test_realm_common::has_hermetic_network_realm(&realm_proxy)
+    network_test_realm::has_hermetic_network_realm(&realm_proxy)
         .await
         .expect("failed to check for hermetic network realm")
+}
+
+async fn has_stub(realm: &netemul::TestRealm<'_>) -> bool {
+    let realm_proxy =
+        connect_to_hermetic_network_realm_protocol::<fcomponent::RealmMarker>(realm).await;
+    network_test_realm::has_stub(&realm_proxy).await.expect("failed to check for stub")
 }
 
 async fn add_interface_to_system_netstack<'a>(
@@ -486,6 +496,240 @@ async fn stop_hermetic_network_realm_with_no_existing_realm() {
             .stop_hermetic_network_realm()
             .await
             .expect("failed to stop hermetic network realm"),
+        Err(fntr::Error::HermeticNetworkRealmNotRunning),
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn start_stub() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    network_test_realm
+        .start_stub(FAKE_STUB_URL)
+        .await
+        .expect("start_stub failed")
+        .expect("start_stub error");
+
+    assert!(has_stub(&realm).await);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn start_stub_with_existing_stub() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let event_source =
+        component_events::events::EventSource::new().expect("failed to create event source");
+
+    let mut event_stream = event_source
+        .subscribe(vec![component_events::events::EventSubscription::new(
+            vec![component_events::events::Started::NAME, component_events::events::Stopped::NAME],
+            component_events::events::EventMode::Async,
+        )])
+        .await
+        .expect("failed to subscribe to EventSource");
+
+    network_test_realm
+        .start_stub(FAKE_STUB_URL)
+        .await
+        .expect("start_stub failed")
+        .expect("start_stub error");
+
+    let event_matcher =
+        component_events::matcher::EventMatcher::ok().moniker_regex(TEST_STUB_MONIKER_REGEX);
+
+    let component_events::events::StartedPayload {} = event_matcher
+        .clone()
+        .wait::<component_events::events::Started>(&mut event_stream)
+        .await
+        .expect("initial test-stub observe start event failed")
+        .result()
+        .expect("initial test-stub observe start event error");
+
+    network_test_realm
+        .start_stub(FAKE_STUB_URL)
+        .await
+        .expect("start_stub replace failed")
+        .expect("start_stub replace error");
+
+    // Verify that the previously running stub was replaced. That is, check that
+    // the stub was stopped and then started.
+    let stopped_event = event_matcher
+        .clone()
+        .wait::<component_events::events::Stopped>(&mut event_stream)
+        .await
+        .expect("test-stub observe stop event failed");
+
+    // Note that stopped_event.result below borrows from `stopped_event`. As a
+    // result it needs to be in a different statement.
+    let component_events::events::StoppedPayload { status } =
+        stopped_event.result().expect("test-stub observe stop event error");
+    assert_eq!(
+        *status,
+        component_events::events::ExitStatus::Crash(zx::Status::PEER_CLOSED.into_raw())
+    );
+
+    let component_events::events::StartedPayload {} = event_matcher
+        .clone()
+        .wait::<component_events::events::Started>(&mut event_stream)
+        .await
+        .expect("replacement test-stub observe start event failed")
+        .result()
+        .expect("replacement test-stub observe start event error");
+
+    assert!(has_stub(&realm).await);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn start_stub_with_non_existent_component() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    assert_eq!(
+        network_test_realm
+            .start_stub("#meta/non-existent-stub.cm")
+            .await
+            .expect("failed to call start_stub"),
+        Err(fntr::Error::ComponentNotFound),
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn start_stub_with_malformed_component_url() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    assert_eq!(
+        network_test_realm
+            .start_stub("malformed-component-url")
+            .await
+            .expect("failed to call start_stub"),
+        Err(fntr::Error::InvalidArguments),
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn start_stub_with_no_hermetic_network_realm() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = create_netstack_realm("start_stub_with_no_hermetic_network_realm", &sandbox)
+        .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    assert_eq!(
+        network_test_realm.start_stub(FAKE_STUB_URL).await.expect("failed to call start_stub"),
+        Err(fntr::Error::HermeticNetworkRealmNotRunning),
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn stop_stub() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm =
+        create_netstack_realm("start_stub", &sandbox).expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    network_test_realm
+        .start_stub(FAKE_STUB_URL)
+        .await
+        .expect("start_stub failed")
+        .expect("start_stub error");
+
+    network_test_realm.stop_stub().await.expect("stop_stub failed").expect("stop_stub error");
+
+    assert!(!has_stub(&realm).await);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn stop_stub_with_no_running_stub() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = create_netstack_realm("stop_stub_with_no_hermetic_network_realm", &sandbox)
+        .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    assert_eq!(
+        network_test_realm.stop_stub().await.expect("failed to call stop_stub"),
+        Err(fntr::Error::StubNotRunning),
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn stop_stub_with_no_hermetic_network_realm() {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let realm = create_netstack_realm("stop_stub_with_no_hermetic_network_realm", &sandbox)
+        .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    assert_eq!(
+        network_test_realm.stop_stub().await.expect("failed to call stop_stub"),
         Err(fntr::Error::HermeticNetworkRealmNotRunning),
     );
 }

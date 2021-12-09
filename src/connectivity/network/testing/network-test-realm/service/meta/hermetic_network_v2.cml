@@ -24,6 +24,12 @@
             url: "#meta/netstack-conformance.cm",
         },
     ],
+    collections: [
+        {
+            name: "stubs",
+            durability: "single_run",
+        },
+    ],
     offer: [
         {
             protocol: [ "fuchsia.device.NameProvider" ],
@@ -62,7 +68,13 @@
                 "#dhcpd",
                 "#dhcpv6-client",
                 "#dns-resolver",
+                "#stubs",
             ],
+        },
+        {
+            protocol: [ "fuchsia.netstack.Netstack" ],
+            from: "#netstack",
+            to: [ "#stubs" ],
         },
     ],
     expose: [
@@ -74,6 +86,12 @@
                 "fuchsia.netstack.Netstack",
             ],
             from: "#netstack",
+        },
+        {
+            // Enables the Network Test Realm controller to add and remove
+            // components in the "stubs" collection.
+            protocol: [ "fuchsia.component.Realm" ],
+            from: "framework",
         },
     ],
 }

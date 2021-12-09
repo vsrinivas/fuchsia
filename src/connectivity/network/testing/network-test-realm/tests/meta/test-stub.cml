@@ -1,0 +1,7 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // Empty component used to verify that a stub can be added to the Network
+    // Test Realm.
+}

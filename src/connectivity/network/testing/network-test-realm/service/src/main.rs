@@ -118,7 +118,8 @@ async fn find_enabled_interface_id(
     // fuchsia.net.debug. As an intermediate solution, the deprecated
     // ListInterfaces method is used to obtain the matching interface id (which
     // isn't available via the devfs route).
-    connect_to_system_protocol::<fstack::StackMarker>()?
+    SystemConnector
+        .connect_to_protocol::<fstack::StackMarker>()?
         .list_interfaces()
         .await
         .map_err(|e| {
@@ -158,8 +159,9 @@ async fn find_enabled_interface_id(
 /// manipulate the interface that has the provided `id`.
 async fn connect_to_interface_admin_control(
     id: u64,
-    debug_interfaces_proxy: &fnet_debug::InterfacesProxy,
+    connector: &impl Connector,
 ) -> Result<fnet_interfaces_ext::admin::Control, fntr::Error> {
+    let debug_interfaces_proxy = connector.connect_to_protocol::<fnet_debug::InterfacesMarker>()?;
     let (control, server) =
         fnet_interfaces_ext::admin::Control::create_endpoints().map_err(|e| {
             error!("create_proxy failure: {:?}", e);
@@ -173,11 +175,8 @@ async fn connect_to_interface_admin_control(
 }
 
 /// Enables the interface with `id` using the provided `debug_interfaces_proxy`.
-async fn enable_interface(
-    id: u64,
-    debug_interfaces_proxy: &fnet_debug::InterfacesProxy,
-) -> Result<(), fntr::Error> {
-    let control_proxy = connect_to_interface_admin_control(id, debug_interfaces_proxy).await?;
+async fn enable_interface(id: u64, connector: &impl Connector) -> Result<(), fntr::Error> {
+    let control_proxy = connect_to_interface_admin_control(id, connector).await?;
     let _did_enable: bool = control_proxy
         .enable()
         .await
@@ -194,11 +193,8 @@ async fn enable_interface(
 
 /// Disables the interface with `id` using the provided
 /// `debug_interfaces_proxy`.
-async fn disable_interface(
-    id: u64,
-    debug_interfaces_proxy: &fnet_debug::InterfacesProxy,
-) -> Result<(), fntr::Error> {
-    let control_proxy = connect_to_interface_admin_control(id, debug_interfaces_proxy).await?;
+async fn disable_interface(id: u64, connector: &impl Connector) -> Result<(), fntr::Error> {
+    let control_proxy = connect_to_interface_admin_control(id, connector).await?;
     let _did_disable: bool = control_proxy
         .disable()
         .await
@@ -213,39 +209,176 @@ async fn disable_interface(
     Ok(())
 }
 
-/// Connects to a protocol within the "hermetic-network" realm.
-async fn connect_to_hermetic_network_realm_protocol<
-    P: fidl::endpoints::DiscoverableProtocolMarker,
->() -> Result<P::Proxy, fntr::Error> {
-    Ok(fuchsia_component::client::connect_to_childs_protocol::<P>(
-        network_test_realm_common::HERMETIC_NETWORK_REALM_NAME.to_string(),
-        Some(network_test_realm_common::HERMETIC_NETWORK_COLLECTION_NAME.to_string()),
-    )
-    .await
-    .map_err(|e| {
-        error!(
-            "failed to connect to hermetic network realm protocol {} with error: {:?}",
-            P::NAME,
-            e
-        );
-        fntr::Error::Internal
-    })?)
+fn create_child_decl(child_name: &str, url: &str) -> fdecl::Child {
+    fdecl::Child {
+        name: Some(child_name.to_string()),
+        url: Some(url.to_string()),
+        // TODO(https://fxbug.dev/90085): Remove the startup field when the
+        // child is being created in a single_run collection. In such a case,
+        // this field is currently required to be set to
+        // `fdecl::StartupMode::Lazy` even though it is a no-op.
+        startup: Some(fdecl::StartupMode::Lazy),
+        ..fdecl::Child::EMPTY
+    }
 }
 
-fn connect_to_system_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>(
-) -> Result<P::Proxy, fntr::Error> {
-    Ok(fuchsia_component::client::connect_to_protocol::<P>().map_err(|e| {
-        error!("failed to connect to {} with error: {:?}", P::NAME, e);
-        fntr::Error::Internal
-    })?)
+/// Creates a child component named `child_name` within the provided
+/// `collection_name`.
+///
+/// The `url` corresponds to the URL of the component to add. The `connector`
+/// connects to the desired realm.
+async fn create_child(
+    mut collection_ref: fdecl::CollectionRef,
+    child: fdecl::Child,
+    connector: &impl Connector,
+) -> Result<(), fntr::Error> {
+    let realm_proxy = connector.connect_to_protocol::<fcomponent::RealmMarker>()?;
+
+    realm_proxy
+        .create_child(&mut collection_ref, child, fcomponent::CreateChildArgs::EMPTY)
+        .await
+        .map_err(|e| {
+            error!("create_child failed: {:?}", e);
+            fntr::Error::Internal
+        })?
+        .map_err(|e| {
+            match e {
+                // Variants that may be returned by the `CreateChild` method.
+                fcomponent::Error::InstanceCannotResolve => fntr::Error::ComponentNotFound,
+                fcomponent::Error::InvalidArguments => fntr::Error::InvalidArguments,
+                fcomponent::Error::CollectionNotFound
+                | fcomponent::Error::InstanceAlreadyExists
+                | fcomponent::Error::InstanceDied
+                | fcomponent::Error::ResourceUnavailable
+                // Variants that are not returned by the `CreateChild` method.
+                | fcomponent::Error::AccessDenied
+                | fcomponent::Error::InstanceCannotStart
+                | fcomponent::Error::InstanceNotFound
+                | fcomponent::Error::Internal
+                | fcomponent::Error::ResourceNotFound
+                | fcomponent::Error::Unsupported => {
+                    error!("create_child error: {:?}", e);
+                    fntr::Error::Internal
+                }
+            }
+        })
 }
 
-async fn has_hermetic_network_realm() -> Result<bool, fntr::Error> {
-    let realm_proxy = connect_to_system_protocol::<fcomponent::RealmMarker>()?;
-    Ok(network_test_realm_common::has_hermetic_network_realm(&realm_proxy).await.map_err(|e| {
+#[derive(thiserror::Error, Debug)]
+enum DestroyChildError {
+    #[error("Internal error")]
+    Internal,
+    #[error("Component not running")]
+    NotRunning,
+}
+
+/// Destroys the child component that corresponds to `child_ref`.
+///
+/// The `connector` connects to the desired realm. A `not_running_error` will be
+/// returned if the provided `child_ref` does not exist.
+async fn destroy_child(
+    mut child_ref: fdecl::ChildRef,
+    connector: &impl Connector,
+) -> Result<(), DestroyChildError> {
+    let realm_proxy = connector
+        .connect_to_protocol::<fcomponent::RealmMarker>()
+        .map_err(|_e| DestroyChildError::Internal)?;
+
+    realm_proxy
+        .destroy_child(&mut child_ref)
+        .await
+        .map_err(|e| {
+            error!("destroy_child failed: {:?}", e);
+            DestroyChildError::Internal
+        })?
+        .map_err(|e| {
+            match e {
+            // Variants that may be returned by the `DestroyChild`
+            // method. `CollectionNotFound` and `InstanceNotFound`
+            // mean that the hermetic network realm does not exist. All
+            // other errors are propagated as internal errors.
+            fcomponent::Error::CollectionNotFound
+            | fcomponent::Error::InstanceNotFound =>
+                DestroyChildError::NotRunning,
+            fcomponent::Error::InstanceDied
+            | fcomponent::Error::InvalidArguments
+            // Variants that are not returned by the `DestroyChild`
+            // method.
+            | fcomponent::Error::AccessDenied
+            | fcomponent::Error::InstanceAlreadyExists
+            | fcomponent::Error::InstanceCannotResolve
+            | fcomponent::Error::InstanceCannotStart
+            | fcomponent::Error::Internal
+            | fcomponent::Error::ResourceNotFound
+            | fcomponent::Error::ResourceUnavailable
+            | fcomponent::Error::Unsupported => {
+                error!("destroy_child error: {:?}", e);
+                DestroyChildError::Internal
+            }
+    }
+        })
+}
+
+async fn has_stub(connector: &impl Connector) -> Result<bool, fntr::Error> {
+    let realm_proxy = connector.connect_to_protocol::<fcomponent::RealmMarker>()?;
+    network_test_realm::has_stub(&realm_proxy).await.map_err(|e| {
         error!("failed to check for hermetic network realm: {:?}", e);
         fntr::Error::Internal
-    })?)
+    })
+}
+
+/// A type that can connect to a FIDL protocol within a particular realm.
+trait Connector {
+    fn connect_to_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>(
+        &self,
+    ) -> Result<P::Proxy, fntr::Error>;
+}
+
+/// Connects to protocols that are exposed to the Network Test Realm.
+struct SystemConnector;
+
+impl Connector for SystemConnector {
+    fn connect_to_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>(
+        &self,
+    ) -> Result<P::Proxy, fntr::Error> {
+        fuchsia_component::client::connect_to_protocol::<P>().map_err(|e| {
+            error!("failed to connect to {} with error: {:?}", P::NAME, e);
+            fntr::Error::Internal
+        })
+    }
+}
+
+/// Connects to protocols within the hermetic-network realm.
+struct HermeticNetworkConnector {
+    child_directory: fio::DirectoryProxy,
+}
+
+impl HermeticNetworkConnector {
+    async fn new() -> Result<Self, fntr::Error> {
+        Ok(Self {
+            child_directory: fuchsia_component::client::open_childs_exposed_directory(
+                network_test_realm::HERMETIC_NETWORK_REALM_NAME.to_string(),
+                Some(network_test_realm::HERMETIC_NETWORK_COLLECTION_NAME.to_string()),
+            )
+            .await
+            .map_err(|e| {
+                error!("open_childs_exposed_directory failed: {:?}", e);
+                fntr::Error::Internal
+            })?,
+        })
+    }
+}
+
+impl Connector for HermeticNetworkConnector {
+    fn connect_to_protocol<P: fidl::endpoints::DiscoverableProtocolMarker>(
+        &self,
+    ) -> Result<P::Proxy, fntr::Error> {
+        fuchsia_component::client::connect_to_protocol_at_dir_root::<P>(&self.child_directory)
+            .map_err(|e| {
+                error!("failed to connect to {} with error: {:?}", P::NAME, e);
+                fntr::Error::Internal
+            })
+    }
 }
 
 /// A controller for creating and manipulating the Network Test Realm.
@@ -276,11 +409,15 @@ async fn has_hermetic_network_realm() -> Result<bool, fntr::Error> {
 struct Controller {
     /// Interface IDs that have been mutated on the system's Netstack.
     mutated_interface_ids: Vec<u64>,
+
+    /// Connector to access protocols within the hermetic-network realm. If the
+    /// hermetic-network realm does not exist, then this will be `None`.
+    hermetic_network_connector: Option<HermeticNetworkConnector>,
 }
 
 impl Controller {
     fn new() -> Self {
-        Self { mutated_interface_ids: Vec::<u64>::new() }
+        Self { mutated_interface_ids: Vec::<u64>::new(), hermetic_network_connector: None }
     }
 
     async fn handle_request(
@@ -301,8 +438,67 @@ impl Controller {
                 let mut result = self.add_interface(mac_address, &name).await;
                 responder.send(&mut result)?;
             }
+            fntr::ControllerRequest::StartStub { component_url, responder } => {
+                let mut result = self.start_stub(&component_url).await;
+                responder.send(&mut result)?;
+            }
+            fntr::ControllerRequest::StopStub { responder } => {
+                let mut result = self.stop_stub().await;
+                responder.send(&mut result)?;
+            }
         }
         Ok(())
+    }
+
+    /// Starts a test stub within the hermetic-network realm.
+    async fn start_stub(&self, component_url: &str) -> Result<(), fntr::Error> {
+        // Stubs exist only within the hermetic-network realm. Therefore,
+        // the hermetic-network realm must exist.
+        let hermetic_network_connector = self
+            .hermetic_network_connector
+            .as_ref()
+            .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
+
+        if has_stub(hermetic_network_connector).await? {
+            // The `Controller` only configures one test stub at a time. As a
+            // result, any existing stub must be stopped before a new one is
+            // started.
+            self.stop_stub().await.map_err(|e| match e {
+                fntr::Error::StubNotRunning => {
+                    error!("attempted to stop stub that was not running");
+                    fntr::Error::Internal
+                }
+                fntr::Error::ComponentNotFound
+                | fntr::Error::HermeticNetworkRealmNotRunning
+                | fntr::Error::Internal
+                | fntr::Error::InterfaceNotFound
+                | fntr::Error::InvalidArguments => e,
+            })?;
+        }
+
+        create_child(
+            fdecl::CollectionRef { name: network_test_realm::STUB_COLLECTION_NAME.to_string() },
+            create_child_decl(network_test_realm::STUB_COMPONENT_NAME, component_url),
+            hermetic_network_connector,
+        )
+        .await
+    }
+
+    /// Stops the test stub within the hermetic-network realm.
+    async fn stop_stub(&self) -> Result<(), fntr::Error> {
+        // Stubs exist only within the hermetic-network realm. Therefore,
+        // the hermetic-network realm must exist.
+        let hermetic_network_connector = self
+            .hermetic_network_connector
+            .as_ref()
+            .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
+
+        destroy_child(network_test_realm::create_stub_child_ref(), hermetic_network_connector)
+            .await
+            .map_err(|e| match e {
+                DestroyChildError::Internal => fntr::Error::Internal,
+                DestroyChildError::NotRunning => fntr::Error::StubNotRunning,
+            })
     }
 
     /// Adds an interface to the hermetic Netstack.
@@ -316,11 +512,12 @@ impl Controller {
         mac_address: fnet_ext::MacAddress,
         name: &str,
     ) -> Result<(), fntr::Error> {
-        if !has_hermetic_network_realm().await? {
-            // A hermetic Netstack must be running for an interface to be
-            // added.
-            return Err(fntr::Error::HermeticNetworkRealmNotRunning);
-        }
+        // A hermetic Netstack must be running for an interface to be
+        // added.
+        let hermetic_network_connector = self
+            .hermetic_network_connector
+            .as_ref()
+            .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
 
         let device_client_end = find_device_client_end(mac_address).await?;
         let interface_id_to_disable = find_enabled_interface_id(mac_address).await?;
@@ -329,8 +526,8 @@ impl Controller {
         // interface name cannot be specified when adding an interface via
         // fuchsia.net.stack.Stack. As a result, the Network Test Realm
         // currently does not support Netstack3.
-        let id: u32 = connect_to_hermetic_network_realm_protocol::<fnetstack::NetstackMarker>()
-            .await?
+        let id: u32 = hermetic_network_connector
+            .connect_to_protocol::<fnetstack::NetstackMarker>()?
             .add_ethernet_device(
                 DEFAULT_INTERFACE_TOPOLOGICAL_PATH,
                 &mut fnetstack::InterfaceConfig {
@@ -350,16 +547,13 @@ impl Controller {
                 fntr::Error::Internal
             })?;
 
-        let hermetic_network_interfaces_proxy =
-            connect_to_hermetic_network_realm_protocol::<fnet_debug::InterfacesMarker>().await?;
         // Enable the interface that was newly added to the hermetic Netstack.
         // It is not enabled by default.
-        enable_interface(id.into(), &hermetic_network_interfaces_proxy).await?;
+        enable_interface(id.into(), hermetic_network_connector).await?;
 
         if let Some(interface_id_to_disable) = interface_id_to_disable {
             // Disable the matching interface on the system's Netstack.
-            let interfaces_proxy = connect_to_system_protocol::<fnet_debug::InterfacesMarker>()?;
-            disable_interface(interface_id_to_disable, &interfaces_proxy).await?;
+            disable_interface(interface_id_to_disable, &SystemConnector).await?;
             self.mutated_interface_ids.push(interface_id_to_disable);
         }
         Ok(())
@@ -371,57 +565,31 @@ impl Controller {
     /// system's Netstack will be re-enabled. Returns an error if there is not
     /// a running "hermetic-network" realm.
     async fn stop_hermetic_network_realm(&mut self) -> Result<(), fntr::Error> {
-        let mut child_ref = network_test_realm_common::create_hermetic_network_relam_child_ref();
-        connect_to_system_protocol::<fcomponent::RealmMarker>()?
-            .destroy_child(&mut child_ref)
-            .await
-            .map_err(|e| {
-                error!("destroy_child failed: {:?}", e);
-                fntr::Error::Internal
-            })?
-            .map_err(|e| {
-                match e {
-                    // Variants that may be returned by the `DestroyChild`
-                    // method. `CollectionNotFound` and `InstanceNotFound`
-                    // mean that the hermetic network realm does not exist. All
-                    // other errors are propagated as internal errors.
-                    fcomponent::Error::CollectionNotFound
-                    | fcomponent::Error::InstanceNotFound =>
-                        fntr::Error::HermeticNetworkRealmNotRunning,
-                    fcomponent::Error::InstanceDied
-                    | fcomponent::Error::InvalidArguments
-                    // Variants that are not returned by the `DestroyChild`
-                    // method.
-                    | fcomponent::Error::AccessDenied
-                    | fcomponent::Error::InstanceAlreadyExists
-                    | fcomponent::Error::InstanceCannotResolve
-                    | fcomponent::Error::InstanceCannotStart
-                    | fcomponent::Error::Internal
-                    | fcomponent::Error::ResourceNotFound
-                    | fcomponent::Error::ResourceUnavailable
-                    | fcomponent::Error::Unsupported => {
-                        error!("destroy_child error: {:?}", e);
-                        fntr::Error::Internal
-                    }
+        destroy_child(
+            network_test_realm::create_hermetic_network_realm_child_ref(),
+            &SystemConnector,
+        )
+        .await
+        .map_err(|e| match e {
+            DestroyChildError::NotRunning => {
+                self.hermetic_network_connector = None;
+                fntr::Error::HermeticNetworkRealmNotRunning
             }
-            })?;
-
-        let interfaces_proxy = connect_to_system_protocol::<fnet_debug::InterfacesMarker>()?;
+            DestroyChildError::Internal => fntr::Error::Internal,
+        })?;
 
         // Attempt to re-enable all previously disabled interfaces on the
         // system's Netstack. If the controller fails to re-enable any of them,
         // then an error is logged but not returned. Re-enabling interfaces is
         // done on a best-effort basis.
         futures::stream::iter(self.mutated_interface_ids.drain(..))
-            .for_each_concurrent(None, |id| {
-                let interfaces_proxy = &interfaces_proxy;
-                async move {
-                    enable_interface(id, &interfaces_proxy).await.unwrap_or_else(|e| {
-                        warn!("failed to re-enable interface id: {} with erorr: {:?}", id, e)
-                    })
-                }
+            .for_each_concurrent(None, |id| async move {
+                enable_interface(id, &SystemConnector).await.unwrap_or_else(|e| {
+                    warn!("failed to re-enable interface id: {} with erorr: {:?}", id, e)
+                })
             })
             .await;
+        self.hermetic_network_connector = None;
         Ok(())
     }
 
@@ -433,7 +601,7 @@ impl Controller {
         &mut self,
         netstack: fntr::Netstack,
     ) -> Result<(), fntr::Error> {
-        if has_hermetic_network_realm().await? {
+        if let Some(_hermetic_network_connector) = &self.hermetic_network_connector {
             // The `Controller` only configures one hermetic network realm
             // at a time. As a result, any existing realm must be stopped before
             // a new one is started.
@@ -441,7 +609,11 @@ impl Controller {
                 fntr::Error::HermeticNetworkRealmNotRunning => {
                     panic!("attempted to stop hermetic network realm that was not running")
                 }
-                fntr::Error::Internal | fntr::Error::InterfaceNotFound => e,
+                fntr::Error::ComponentNotFound
+                | fntr::Error::Internal
+                | fntr::Error::InterfaceNotFound
+                | fntr::Error::InvalidArguments
+                | fntr::Error::StubNotRunning => e,
             })?;
         }
 
@@ -449,29 +621,16 @@ impl Controller {
             fntr::Netstack::V2 => HERMETIC_NETWORK_V2_URL,
         };
 
-        connect_to_system_protocol::<fcomponent::RealmMarker>()?
-            .create_child(
-                &mut fdecl::CollectionRef {
-                    name: network_test_realm_common::HERMETIC_NETWORK_COLLECTION_NAME.to_string(),
-                },
-                fdecl::Child {
-                    name: Some(network_test_realm_common::HERMETIC_NETWORK_REALM_NAME.to_string()),
-                    url: Some(url.to_string()),
-                    startup: Some(fdecl::StartupMode::Lazy),
-                    ..fdecl::Child::EMPTY
-                },
-                fcomponent::CreateChildArgs::EMPTY,
-            )
-            .await
-            .map_err(|e| {
-                error!("create_child failed: {:?}", e);
-                fntr::Error::Internal
-            })?
-            .map_err(|e| {
-                error!("create_child error: {:?}", e);
-                fntr::Error::Internal
-            })?;
+        create_child(
+            fdecl::CollectionRef {
+                name: network_test_realm::HERMETIC_NETWORK_COLLECTION_NAME.to_string(),
+            },
+            create_child_decl(network_test_realm::HERMETIC_NETWORK_REALM_NAME, url),
+            &SystemConnector,
+        )
+        .await?;
 
+        self.hermetic_network_connector = Some(HermeticNetworkConnector::new().await?);
         Ok(())
     }
 }

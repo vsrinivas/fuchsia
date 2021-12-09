@@ -10,4 +10,13 @@
     program: {
         binary: "bin/network_test_realm_integration_test",
     },
+    use: [
+        // Used to validate the starting and stopping of test stubs. Note that
+        // the `client.shard.cml` above includes a use statement for "stopped"
+        // events.
+        {
+            event: "started",
+            from: "framework",
+        },
+    ],
 }

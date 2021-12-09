@@ -12,6 +12,12 @@ pub const HERMETIC_NETWORK_COLLECTION_NAME: &'static str = "enclosed-network";
 /// Name of the realm that contains the hermetic network components.
 pub const HERMETIC_NETWORK_REALM_NAME: &'static str = "hermetic-network";
 
+/// Name of the collection that contains the test stub.
+pub const STUB_COLLECTION_NAME: &'static str = "stubs";
+
+/// Name of the component that corresponds to the test stub.
+pub const STUB_COMPONENT_NAME: &'static str = "test-stub";
+
 /// Returns true if the hermetic network realm exists.
 ///
 /// The provided `realm_proxy` should correspond to the Network Test Realm
@@ -22,9 +28,41 @@ pub const HERMETIC_NETWORK_REALM_NAME: &'static str = "hermetic-network";
 /// An error will be returned if the `realm_proxy` encounters an error while
 /// attempting to list the children of the Network Test Realm.
 pub async fn has_hermetic_network_realm(realm_proxy: &fcomponent::RealmProxy) -> Result<bool> {
+    let child_ref = create_hermetic_network_realm_child_ref();
+    has_running_child(
+        fdecl::CollectionRef { name: HERMETIC_NETWORK_COLLECTION_NAME.to_string() },
+        &child_ref,
+        realm_proxy,
+    )
+    .await
+}
+
+/// Returns true if the hermetic-network realm contains a stub.
+///
+/// The provided `realm_proxy` should correspond to the hermetic-network realm.
+///
+/// # Errors
+///
+/// An error will be returned if the `realm_proxy` encounters an error while
+/// attempting to list the children of the hermetic-network realm.
+pub async fn has_stub(realm_proxy: &fcomponent::RealmProxy) -> Result<bool> {
+    let child_ref = create_stub_child_ref();
+    has_running_child(
+        fdecl::CollectionRef { name: STUB_COLLECTION_NAME.to_string() },
+        &child_ref,
+        realm_proxy,
+    )
+    .await
+}
+
+/// Returns true if the `realm_proxy` contains the `expected_child_ref` within
+/// the provided `collection_ref`.
+async fn has_running_child(
+    mut collection_ref: fdecl::CollectionRef,
+    expected_child_ref: &fdecl::ChildRef,
+    realm_proxy: &fcomponent::RealmProxy,
+) -> Result<bool> {
     let (iterator_proxy, server_end) = fidl::endpoints::create_proxy().unwrap();
-    let mut collection_ref =
-        fdecl::CollectionRef { name: HERMETIC_NETWORK_COLLECTION_NAME.to_string() };
     let list_children_result = realm_proxy
         .list_children(&mut collection_ref, server_end)
         .await
@@ -35,9 +73,7 @@ pub async fn has_hermetic_network_realm(realm_proxy: &fcomponent::RealmProxy) ->
             let children =
                 iterator_proxy.next().await.context("failed to iterate over children")?;
 
-            let expected_child = create_hermetic_network_relam_child_ref();
-
-            Ok(children.iter().find(|&child| *child == expected_child).is_some())
+            Ok(children.iter().any(|child| child == expected_child_ref))
         }
         Err(error) => match error {
             // Variants that may be returned by the `ListChildren` method.
@@ -63,9 +99,17 @@ pub async fn has_hermetic_network_realm(realm_proxy: &fcomponent::RealmProxy) ->
 }
 
 /// Returns a `fdecl::ChildRef` that corresponds to the hermetic network realm.
-pub fn create_hermetic_network_relam_child_ref() -> fdecl::ChildRef {
+pub fn create_hermetic_network_realm_child_ref() -> fdecl::ChildRef {
     fdecl::ChildRef {
         name: HERMETIC_NETWORK_REALM_NAME.to_string(),
         collection: Some(HERMETIC_NETWORK_COLLECTION_NAME.to_string()),
+    }
+}
+
+/// Returns a `fdecl::ChildRef` that corresponds to the test stub.
+pub fn create_stub_child_ref() -> fdecl::ChildRef {
+    fdecl::ChildRef {
+        name: STUB_COMPONENT_NAME.to_string(),
+        collection: Some(STUB_COLLECTION_NAME.to_string()),
     }
 }

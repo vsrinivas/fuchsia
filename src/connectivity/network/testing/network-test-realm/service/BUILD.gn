@@ -10,7 +10,7 @@ rustc_binary("bin") {
   output_name = "realm_controller_server"
   edition = "2018"
   deps = [
-    ":network_test_realm_common",
+    ":network_test_realm",
     "//garnet/lib/rust/files_async",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
@@ -31,12 +31,13 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:thiserror",
   ]
   sources = [ "src/main.rs" ]
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-rustc_library("network_test_realm_common") {
+rustc_library("network_test_realm") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",

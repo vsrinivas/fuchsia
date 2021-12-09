@@ -5,6 +5,7 @@ library fuchsia.net.test.realm;
 
 using fuchsia.net;
 using fuchsia.net.interfaces;
+using fuchsia.url;
 
 /// Standard error codes for the `Controller` protocol.
 type Error = strict enum {
@@ -16,6 +17,12 @@ type Error = strict enum {
     HERMETIC_NETWORK_REALM_NOT_RUNNING = 2;
     /// A network interface was expected to exist, but was not found.
     INTERFACE_NOT_FOUND = 3;
+    /// A stub was expected to exist, but was not found.
+    STUB_NOT_RUNNING = 4;
+    /// At least one argument was not valid.
+    INVALID_ARGUMENTS = 5;
+    /// The relevant component was not found.
+    COMPONENT_NOT_FOUND = 6;
 };
 
 /// A controller for creating and manipulating the Network Test Realm.
@@ -84,4 +91,33 @@ protocol Controller {
         mac_address fuchsia.net.MacAddress;
         name fuchsia.net.interfaces.name;
     }) -> (struct {}) error Error;
+
+    /// Starts a test stub.
+    ///
+    /// Any previously running stub will be terminated before the provided
+    /// stub corresponding to `component_url` is started.
+    ///
+    /// + request `component_url` the URL of the component to run.
+    /// * error `COMPONENT_NOT_FOUND` if a component correspodning to
+    ///     `component_url` could not be resolved.
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
+    ///     hermetic network realm.
+    /// * error `INTERNAL` for internal errors, including failure to add the
+    ///     desired stub within the hermetic network realm.
+    /// * error `INVALID_ARGUMENTS` if the `component_url` is malformed.
+    StartStub(struct {
+        component_url fuchsia.url.Url;
+    }) -> (struct {}) error Error;
+
+    /// Stops the currently running stub.
+    ///
+    /// Other existing hermetic network realm components will continue to be run
+    /// after this is invoked.
+    ///
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
+    ///     hermetic network realm.
+    /// * error `STUB_NOT_RUNNING` if there is no running stub.
+    /// * error `INTERNAL` for internal errors, including failure to destroy the
+    ///     stub component.
+    StopStub() -> (struct {}) error Error;
 };

@@ -9,5 +9,6 @@ fidl("fuchsia.net.test.realm") {
   public_deps = [
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.interfaces",
+    "//sdk/fidl/fuchsia.url",
   ]
 }
