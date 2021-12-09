@@ -175,7 +175,7 @@ mod tests {
     async fn ensure_startup_is_awaited() {
         let delegate = service::MessageHub::create_hub();
         let mut factory_impl = SettingHandlerFactoryImpl::new(
-            std::array::IntoIter::new([SettingType::Unknown]).collect(),
+            [SettingType::Unknown].into(),
             Arc::new(ServiceContext::new(None, Some(delegate.clone()))),
             Arc::new(AtomicU64::new(0)),
         );

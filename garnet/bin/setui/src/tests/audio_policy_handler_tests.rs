@@ -93,8 +93,8 @@ impl TestEnvironment {
 
         let client_proxy = ClientProxy::new(messenger);
 
-        let components: HashSet<_> = std::array::IntoIter::new([SettingType::Audio]).collect();
-        let policies: HashSet<_> = std::array::IntoIter::new([PolicyType::Audio]).collect();
+        let components: HashSet<_> = [SettingType::Audio].into();
+        let policies: HashSet<_> = [PolicyType::Audio].into();
         let mut agent_authority = Authority::create(delegate.clone(), components, policies, None)
             .await
             .expect("failed to create agent authority");

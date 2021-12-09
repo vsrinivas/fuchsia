@@ -638,8 +638,7 @@ async fn test_invalid_stream_fails() {
 
     // AudioInfo has to have 5 streams, but make them all the same stream type so that we can
     // perform a set call with a stream that isn't in the AudioInfo.
-    let counters: HashMap<_, _> =
-        std::array::IntoIter::new([(AudioStreamType::Background, 0)]).collect();
+    let counters: HashMap<_, _> = [(AudioStreamType::Background, 0)].into();
 
     let test_audio_info = AudioInfo {
         streams: [

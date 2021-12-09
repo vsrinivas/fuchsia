@@ -180,11 +180,11 @@ impl ServiceConfiguration {
     fn set_fidl_interfaces(&mut self, interfaces: HashSet<fidl::Interface>) {
         self.fidl_interfaces = interfaces;
 
-        let display_subinterfaces = std::array::IntoIter::new([
+        let display_subinterfaces = [
             fidl::Interface::Display(fidl::display::InterfaceFlags::LIGHT_SENSOR),
             fidl::Interface::Display(fidl::display::InterfaceFlags::BASE),
-        ])
-        .collect();
+        ]
+        .into();
 
         // Consolidate display type.
         // TODO(fxbug.dev/76991): Remove this special handling once light sensor is its own FIDL

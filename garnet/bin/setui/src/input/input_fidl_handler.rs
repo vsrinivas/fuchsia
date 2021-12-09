@@ -39,8 +39,7 @@ fn to_request(fidl_input_states: Vec<FidlInputState>) -> Option<Request> {
             let device_type: InputDeviceType = input_state.device_type.unwrap().into();
             let device_state = input_state.state.clone().unwrap().into();
             let device_name = input_state.name.clone().unwrap_or_else(|| device_type.to_string());
-            let source_states =
-                std::array::IntoIter::new([(DeviceStateSource::SOFTWARE, device_state)]).collect();
+            let source_states = [(DeviceStateSource::SOFTWARE, device_state)].into();
             InputDevice { name: device_name, device_type, state: device_state, source_states }
         })
         .collect();

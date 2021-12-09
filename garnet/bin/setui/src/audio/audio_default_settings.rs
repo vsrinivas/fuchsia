@@ -47,7 +47,7 @@ lazy_static! {
 }
 
 pub(crate) fn create_default_modified_counters() -> ModifiedCounters {
-    std::array::IntoIter::new([
+    IntoIterator::into_iter([
         AudioStreamType::Background,
         AudioStreamType::Media,
         AudioStreamType::Interruption,

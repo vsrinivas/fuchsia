@@ -29,7 +29,6 @@ use crate::setup::types::SetupInfo;
 #[cfg(test)]
 use serde::Deserialize;
 use serde::Serialize;
-use std::array;
 use std::collections::HashSet;
 use std::convert::TryFrom;
 
@@ -223,20 +222,20 @@ pub(crate) trait Merge<Other = Self> {
 
 /// Returns the default interfaces supported by any product if none are supplied.
 pub fn get_default_interfaces() -> HashSet<fidl::InterfaceSpec> {
-    array::IntoIter::new([
+    [
         fidl::InterfaceSpec::Accessibility,
         fidl::InterfaceSpec::Intl,
         fidl::InterfaceSpec::Privacy,
         fidl::InterfaceSpec::Setup,
-    ])
-    .collect()
+    ]
+    .into()
 }
 
 /// Returns all known setting types. New additions to SettingType should also
 /// be inserted here.
 #[cfg(test)]
 pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
-    array::IntoIter::new([
+    [
         SettingType::Accessibility,
         SettingType::Audio,
         SettingType::Display,
@@ -250,8 +249,8 @@ pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
         SettingType::NightMode,
         SettingType::Privacy,
         SettingType::Setup,
-    ])
-    .collect()
+    ]
+    .into()
 }
 
 #[cfg(test)]

@@ -34,7 +34,7 @@ const LIGHT_NAME_3: &str = "light_name_3";
 
 fn get_test_light_info() -> LightInfo {
     LightInfo {
-        light_groups: std::array::IntoIter::new([
+        light_groups: [
             (
                 LIGHT_NAME_1.to_string(),
                 LightGroup {
@@ -57,8 +57,8 @@ fn get_test_light_info() -> LightInfo {
                     disable_conditions: vec![],
                 },
             ),
-        ])
-        .collect(),
+        ]
+        .into(),
     }
 }
 
@@ -408,11 +408,7 @@ async fn test_light_set_from_configuration() {
     changed_light_group.name = LIGHT_NAME_3.to_string();
     changed_light_group.lights = vec![LightState { value: Some(LightValue::Brightness(0.99)) }];
     let expected_light_info = LightInfo {
-        light_groups: std::array::IntoIter::new([(
-            LIGHT_NAME_3.to_string(),
-            changed_light_group.clone(),
-        )])
-        .collect(),
+        light_groups: [(LIGHT_NAME_3.to_string(), changed_light_group.clone())].into(),
     };
 
     let env = TestLightEnvironmentBuilder::new()
@@ -563,13 +559,8 @@ async fn test_light_set_single_light() {
         LightState { value: Some(LightValue::Brightness(LIGHT_2_CHANGED_VAL)) },
     ];
 
-    let starting_light_info = LightInfo {
-        light_groups: std::array::IntoIter::new([(
-            TEST_LIGHT_NAME.to_string(),
-            original_light_group,
-        )])
-        .collect(),
-    };
+    let starting_light_info =
+        LightInfo { light_groups: [(TEST_LIGHT_NAME.to_string(), original_light_group)].into() };
 
     let mut expected_light_info = starting_light_info.clone();
     let _ = expected_light_info
@@ -715,13 +706,8 @@ async fn test_set_wrong_value_type() {
         hardware_index: vec![0, 1],
         disable_conditions: vec![],
     };
-    let starting_light_info = LightInfo {
-        light_groups: std::array::IntoIter::new([(
-            TEST_LIGHT_NAME.to_string(),
-            original_light_group,
-        )])
-        .collect(),
-    };
+    let starting_light_info =
+        LightInfo { light_groups: [(TEST_LIGHT_NAME.to_string(), original_light_group)].into() };
 
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
     let env = TestLightEnvironmentBuilder::new()
@@ -793,13 +779,8 @@ async fn test_set_invalid_rgb_values() {
         hardware_index: vec![0],
         disable_conditions: vec![],
     };
-    let starting_light_info = LightInfo {
-        light_groups: std::array::IntoIter::new([(
-            TEST_LIGHT_NAME.to_string(),
-            original_light_group,
-        )])
-        .collect(),
-    };
+    let starting_light_info =
+        LightInfo { light_groups: [(TEST_LIGHT_NAME.to_string(), original_light_group)].into() };
 
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
     let env = TestLightEnvironmentBuilder::new()

@@ -251,7 +251,7 @@ impl<A: Address + 'static, R: Role + 'static> Audience<A, R> {
             Audience::Group(group) => {
                 group.audiences.iter().map(|audience| audience.flatten()).flatten().collect()
             }
-            _ => std::array::IntoIter::new([self.clone()]).collect(),
+            _ => [self.clone()].into(),
         }
     }
 }

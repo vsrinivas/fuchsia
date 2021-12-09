@@ -219,7 +219,7 @@ mod tests {
             disable_conditions: vec![],
         };
 
-        let light_groups: HashMap<_, _> = std::array::IntoIter::new([
+        let light_groups: HashMap<_, _> = IntoIterator::into_iter([
             (String::from("test"), light_group_1.clone()),
             (String::from("test2"), light_group_2.clone()),
         ])

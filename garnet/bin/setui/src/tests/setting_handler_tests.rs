@@ -140,7 +140,7 @@ async fn test_write_notify() {
     let agent_context = crate::agent::Context::new(
         agent_receptor,
         delegate,
-        std::array::IntoIter::new([SettingType::Accessibility]).collect(),
+        [SettingType::Accessibility].into(),
         HashSet::new(),
         None,
     )
@@ -256,7 +256,7 @@ impl StateController {
             let reporter = reporter.clone();
             let invocation_counts_reporter = invocation_counts_reporter.clone();
             Box::pin(async move {
-                let invocation_counts = std::array::IntoIter::new([
+                let invocation_counts = IntoIterator::into_iter([
                     (State::Startup, 0),
                     (State::Listen, 0),
                     (State::EndListen, 0),

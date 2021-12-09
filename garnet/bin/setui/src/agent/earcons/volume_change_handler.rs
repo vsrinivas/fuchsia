@@ -120,7 +120,7 @@ impl VolumeChangeHandler {
             }
         }
 
-        std::array::IntoIter::new(all_streams)
+        IntoIterator::into_iter(all_streams)
             .filter(|stream| changed_stream_types.contains(&stream.stream_type))
             .collect()
     }
@@ -301,11 +301,8 @@ mod tests {
             fake_values();
         let delegate = service::MessageHub::create_hub();
         let publisher = event::Publisher::create(&delegate, MessengerType::Unbound).await;
-        let last_user_volumes: HashMap<_, _> = std::array::IntoIter::new([
-            (AudioStreamType::Media, 1.0),
-            (AudioStreamType::Interruption, 0.5),
-        ])
-        .collect();
+        let last_user_volumes: HashMap<_, _> =
+            [(AudioStreamType::Media, 1.0), (AudioStreamType::Interruption, 0.5)].into();
 
         let mut handler = VolumeChangeHandler {
             common_earcons_params: CommonEarconsParams {

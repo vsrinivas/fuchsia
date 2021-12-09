@@ -22,11 +22,11 @@ use std::sync::Arc;
 const ENV_NAME: &str = "settings_service_configuration_test_environment";
 
 fn get_test_interface_specs() -> HashSet<InterfaceSpec> {
-    std::array::IntoIter::new([InterfaceSpec::Accessibility, InterfaceSpec::Privacy]).collect()
+    [InterfaceSpec::Accessibility, InterfaceSpec::Privacy].into()
 }
 
 fn get_test_policy_types() -> HashSet<PolicyType> {
-    std::array::IntoIter::new([PolicyType::Unknown]).collect()
+    [PolicyType::Unknown].into()
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -109,9 +109,7 @@ async fn test_default_policy_configuration_provided() {
     let configuration = ServiceConfiguration::from(
         AgentConfiguration::default(),
         // Include audio setting so audio policy works.
-        EnabledInterfacesConfiguration::with_interfaces(
-            std::array::IntoIter::new([InterfaceSpec::Audio]).collect(),
-        ),
+        EnabledInterfacesConfiguration::with_interfaces([InterfaceSpec::Audio].into()),
         policy_configuration,
         flags,
     );
