@@ -28,20 +28,19 @@ impl TryFrom<&Vec<String>> for GnRustType {
     type Error = Error;
 
     fn try_from(value: &Vec<String>) -> Result<Self, Self::Error> {
-        if value.len() != 1 {
-            return Err(anyhow!("malformed crate type description. Expects vector of length 1"));
-        }
-        let internal = &value[0];
-        match internal.as_str() {
-            "bin" => Ok(GnRustType::Binary),
-            "lib" => Ok(GnRustType::Library),
-            "rlib" => Ok(GnRustType::StaticLibrary),
-            "proc-macro" => Ok(GnRustType::ProcMacro),
-            "test" => Ok(GnRustType::Test),
-            "example" => Ok(GnRustType::Example),
-            "bench" => Ok(GnRustType::Bench),
-            "custom-build" => Ok(GnRustType::BuildScript),
-            err => Err(anyhow!("unknown crate type: {}", err)),
+        match value.as_slice() {
+            [value] => match value.as_str() {
+                "bin" => Ok(GnRustType::Binary),
+                "lib" => Ok(GnRustType::Library),
+                "rlib" => Ok(GnRustType::StaticLibrary),
+                "proc-macro" => Ok(GnRustType::ProcMacro),
+                "test" => Ok(GnRustType::Test),
+                "example" => Ok(GnRustType::Example),
+                "bench" => Ok(GnRustType::Bench),
+                "custom-build" => Ok(GnRustType::BuildScript),
+                value => Err(anyhow!("unknown crate type: {}", value)),
+            },
+            value => Err(anyhow!("unhandled multiple crate types: {:?}", value)),
         }
     }
 }

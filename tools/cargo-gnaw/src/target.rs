@@ -155,8 +155,9 @@ impl<'a> GnTarget<'a> {
                 .expect("searching up from the crate root we must find a cargo.toml");
         }
 
-        let package_root =
-            package_root.strip_prefix(project_root).expect("all crates are under FUCHSIA_DIR");
+        let package_root = package_root.strip_prefix(project_root).unwrap_or_else(|e| {
+            panic!("{}: {} is not under FUCHSIA_DIR({})", e, package_root, project_root.display())
+        });
         assert_ne!(
             package_root.as_os_str(),
             "third_party/rust_crates",
