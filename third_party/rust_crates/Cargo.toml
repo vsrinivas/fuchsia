@@ -224,7 +224,6 @@ rust_icu_uloc = { version = "1.0.3", default-features = false, features = ["rena
 rust_icu_unorm2 = { version = "1.0.3", default-features = false, features = ["renaming", "icu_version_in_env", "icu_version_67_plus"] }
 rust_icu_ustring = { version = "1.0.3", default-features = false, features = ["renaming", "icu_version_in_env"] }
 smallvec = "1.2"
-time = "0.1"
 tokio-rustls = "0.13.0"
 trust-dns-proto = { version = "0.21.0-alpha.4", default-features = false, features = ["testing"] }
 trust-dns-resolver = { version = "0.21.0-alpha.4", default-features = false, features = ["testing"] }

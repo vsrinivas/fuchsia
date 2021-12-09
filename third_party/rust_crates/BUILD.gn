@@ -812,12 +812,6 @@ group("thiserror") {
   deps = [ ":thiserror-v1_0_23" ]
 }
 
-if (current_os == "fuchsia") {
-  group("time") {
-    deps = [ ":time-v0_1_42" ]
-  }
-}
-
 group("tokio") {
   deps = [ ":tokio-v0_2_21" ]
 }

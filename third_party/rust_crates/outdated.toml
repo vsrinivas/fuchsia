@@ -112,7 +112,6 @@ skip_updating = [
     "test-case",
     "textwrap",
     "thiserror",
-    "time",
     "tokio",
     "tokio-rustls",
     "toml",
