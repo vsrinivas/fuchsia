@@ -34,6 +34,57 @@ TEST(BookkeepingTest, Defaults) {
   EXPECT_FALSE(bookkeeping.gain.IsRamping());
 }
 
+// Validate the scaling of source_pos_modulo, when setting a new rate_modulo and denominator
+// During source_pos_modulo-related tests, the non-zero values of rate_modulo do not matter.
+TEST(BookkeepingTest, SetRateModuloAndDenominatorScale) {
+  StubMixer mixer;
+  auto& bk = mixer.bookkeeping();
+  EXPECT_EQ(bk.source_pos_modulo, 0ull);
+  EXPECT_EQ(bk.denominator(), 1ull);
+
+  // Zero stays zero: source_pos_modulo remains 0.
+  bk.SetRateModuloAndDenominator(3, 10);
+  EXPECT_EQ(bk.source_pos_modulo, 0ull);
+  EXPECT_EQ(bk.denominator(), 10ull);
+
+  // Integer scale: 5/10 => 10/20
+  bk.source_pos_modulo = 5;
+  bk.SetRateModuloAndDenominator(7, 20);
+  EXPECT_EQ(bk.source_pos_modulo, 10ull);
+  EXPECT_EQ(bk.denominator(), 20ull);
+}
+
+// Validate the truncation of fractional source_pos_modulo, after scaling.
+TEST(BookkeepingTest, SetRateModuloAndDenominatorTruncate) {
+  StubMixer mixer;
+  auto& bk = mixer.bookkeeping();
+  bk.SetRateModuloAndDenominator(7, 20);
+  bk.source_pos_modulo = 10;
+
+  // Truncate: 10/20 == 8.5/17 => 8/17.
+  bk.SetRateModuloAndDenominator(2, 17);
+  EXPECT_EQ(bk.source_pos_modulo, 8ull);
+  EXPECT_EQ(bk.denominator(), 17ull);
+
+  // Truncate: 8/17 == 16'000'000'000.47/34'000'000'001 => 16'000'000'000/34'000'000'001
+  bk.SetRateModuloAndDenominator(1'234'567'890, 34'000'000'001);
+  EXPECT_EQ(bk.source_pos_modulo, 16'000'000'000ull);
+  EXPECT_EQ(bk.denominator(), 34'000'000'001ull);
+}
+
+// Validate that source_pos_modulo and denominator are both unchanged, if new rate_modulo is zero.
+TEST(BookkeepingTest, SetRateModuloAndDenominatorZeroRate) {
+  StubMixer mixer;
+  auto& bk = mixer.bookkeeping();
+  bk.SetRateModuloAndDenominator(7, 20);
+  bk.source_pos_modulo = 10;
+
+  bk.SetRateModuloAndDenominator(0, 1);
+  // No change (to source_pos_modulo OR denominator): 10/20 => 10/20.
+  EXPECT_EQ(bk.source_pos_modulo, 10ull);
+  EXPECT_EQ(bk.denominator(), 20ull);
+}
+
 // Validate the calculations that do not use rate_modulo etc.
 TEST(BookkeepingTest, SourceLenToDestLen_NoModulo) {
   // integral delta and step, no remainder

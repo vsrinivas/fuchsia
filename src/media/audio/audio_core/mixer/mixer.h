@@ -388,27 +388,33 @@ class Mixer {
     // TODO(fxbug.dev/85108): Refactor Bookkeeping and SourceInfo.
     uint64_t source_pos_modulo = 0;
 
-    void SetRateModuloAndDenominator(uint64_t rate_mod, uint64_t denom,
-                                     SourceInfo* info = nullptr) {
+    // Update rate_modulo|denominator|source_pos_modulo as a trio.
+    void SetRateModuloAndDenominator(uint64_t new_rate_mod, uint64_t new_denom) {
       if (kMixerPositionTraceEvents) {
-        TRACE_DURATION("audio", __func__, "rate_mod", rate_mod, "denom", denom);
+        TRACE_DURATION("audio", __func__, "new_rate_mod", new_rate_mod, "new_denom", new_denom);
       }
-      FX_CHECK(denom > 0);
-      FX_CHECK(rate_mod < denom);
-      if (!rate_mod) {
-        rate_modulo_ = 0;
-        denominator_ = 1;
-        source_pos_modulo = 0;
-        return;
-      }
+      FX_CHECK(new_denom > 0);
+      FX_CHECK(new_rate_mod < new_denom);
+      FX_CHECK(denominator_ > 0) << "denominator: " << denominator_;
+      FX_CHECK(rate_modulo_ < denominator_)
+          << "rate_modulo: " << rate_modulo_ << ", denominator: " << denominator_;
+      FX_CHECK(source_pos_modulo < denominator_)
+          << "source_pos_modulo: " << source_pos_modulo << ", denominator: " << denominator_;
 
-      rate_modulo_ = rate_mod;
-      if (denom != denominator_) {
-        __uint128_t temp_source_pos_mod =
-            (static_cast<__uint128_t>(source_pos_modulo) * denom) / denominator_;
-        denominator_ = denom;
-        source_pos_modulo = static_cast<uint64_t>(temp_source_pos_mod);
+      // Only rescale source_pos_modulo if denominator changes. Even then, don't change denominator
+      // and source_pos_modulo if new rate is zero (even if they requested a different denominator).
+      // That way we largely retain our running sub-frame fraction, when changing rate_mod/denom.
+      if (new_denom != denominator_ && new_rate_mod) {
+        // Scale source_pos_modulo up by the new denominator, then down by the old denominator.
+        // new_source_pos_mod will not overflow uint64_t: (old) source_pos_mod < denom,
+        // so new_source_pos_mod == new_denom * F, where F (source_pos_mod/denom) is < 1.
+        __uint128_t new_source_pos_mod = static_cast<__uint128_t>(source_pos_modulo) * new_denom;
+        new_source_pos_mod /= static_cast<__uint128_t>(denominator_);
+
+        source_pos_modulo = static_cast<uint64_t>(new_source_pos_mod);
+        denominator_ = new_denom;
       }
+      rate_modulo_ = new_rate_mod;
     }
 
    private:
@@ -516,6 +522,8 @@ class Mixer {
   // the filter, when producing output for a specific instant in time. Positive filter width refers
   // to how far forward (positively) the filter looks, from the PTS in question; negative filter
   // width refers to how far backward (negatively) the filter looks, from that same PTS.
+  // For example, a pure "sample and hold" resampler might have a negative filter width of almost
+  // one frame and a positive filter width of zero.
   //
   // Note that filter widths do NOT include the center PTS in question, so in that regard they are
   // not equivalent to the filter's length.

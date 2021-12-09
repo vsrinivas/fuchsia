@@ -80,7 +80,7 @@ class MixStage : public ReadableStream {
                                     int64_t dest_frame, zx::time mono_now_from_dest,
                                     bool timeline_changed);
   void SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
-                   TimelineRate& frac_source_frames_per_dest_frame);
+                   const TimelineRate& frac_source_frames_per_dest_frame);
 
   void MixStream(Mixer& mixer, ReadableStream& stream);
   bool ProcessMix(Mixer& mixer, ReadableStream& stream, const ReadableStream::Buffer& buffer);

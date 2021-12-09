@@ -596,13 +596,12 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   info.source_ref_clock_to_frac_source_frames = snapshot.timeline_function;
   info.source_ref_clock_to_frac_source_frames_generation = snapshot.generation;
 
-  // If the source timeline indicates that it is paused, then our step_size must be 0.
-  // Exit early, since we need not proceed onward to measure position error and rate-adjust clocks.
+  // If source rate is zero, the stream is not running. Set rates/transforms to zero and exit.
   if (info.source_ref_clock_to_frac_source_frames.subject_delta() == 0) {
-    info.clock_mono_to_frac_source_frames = TimelineFunction();
-    info.dest_frames_to_frac_source_frames = TimelineFunction();
-    bookkeeping.step_size = Fixed(0);
-    bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
+    info.clock_mono_to_frac_source_frames = TimelineFunction(TimelineRate::Zero);
+    info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate::Zero);
+
+    SetStepSize(info, bookkeeping, TimelineRate::Zero);
     return;
   }
 
@@ -613,8 +612,10 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   FX_LOGS(TRACE) << clock::TimelineFunctionToString(info.clock_mono_to_frac_source_frames,
                                                     "mono-to-frac-source");
 
-  // Assert we can map from local monotonic-time to fractional source frames.
-  FX_DCHECK(info.clock_mono_to_frac_source_frames.rate().reference_delta());
+  // Assert we can map between local monotonic-time and fractional source frames
+  // (neither numerator nor denominator can be zero).
+  FX_DCHECK(info.clock_mono_to_frac_source_frames.subject_delta() *
+            info.clock_mono_to_frac_source_frames.reference_delta());
 
   // UpdateDestTrans
   //
@@ -622,13 +623,12 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // We should only be here if we have a valid mix job. This means a job which supplies a valid
   // transformation from reference time to destination frames (based on dest frame rate).
   //
-  // If the dest timeline indicates that it is paused, then our step_size must be 0.
-  // Exit early, since we need not proceed onward to measure position error and rate-adjust clocks.
+  // If dest rate is zero, the destination is not running. Set rates/transforms to zero and exit.
   FX_DCHECK(cur_mix_job_.dest_ref_clock_to_frac_dest_frame.rate().reference_delta());
   if (cur_mix_job_.dest_ref_clock_to_frac_dest_frame.subject_delta() == 0) {
-    info.dest_frames_to_frac_source_frames = TimelineFunction();
-    bookkeeping.step_size = Fixed(0);
-    bookkeeping.SetRateModuloAndDenominator(0, 1, &info);
+    info.dest_frames_to_frac_source_frames = TimelineFunction(TimelineRate::Zero);
+
+    SetStepSize(info, bookkeeping, TimelineRate::Zero);
     return;
   }
 
@@ -660,9 +660,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   auto dest_frame = cur_mix_job_.dest_start_frame;
   auto mono_now_from_dest = zx::time{dest_frames_to_clock_mono.Apply(dest_frame)};
 
-  // If source timeline has changed, redefine the source pos that corresponds to this dest pos and
-  // use a step_size that matches the new source-to-dest relationship. Exit early: we should use the
-  // new relationship for at least one mix before measuring pos error and rate-adjusting clocks.
+  // Redefine the relationship between source and dest clocks, if source timeline has changed.
+  // Perform a stream's initial mix without error measurement or clock rate-adjustment.
   if (info.source_ref_clock_to_frac_source_frames_generation != clock_generation_for_previous_mix) {
     if constexpr (kLogInitialPositionSync) {
       FX_LOGS(INFO) << "MixStage(" << this << "), stream(" << &stream
@@ -872,7 +871,7 @@ void MixStage::SyncSourcePositionFromClocks(AudioClock& source_clock, AudioClock
 
 // From a TimelineRate, calculate the [step_size, denominator, rate_modulo] used by Mixer::Mix()
 void MixStage::SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
-                           TimelineRate& frac_source_frames_per_dest_frame) {
+                           const TimelineRate& frac_source_frames_per_dest_frame) {
   bookkeeping.step_size = Fixed::FromRaw(frac_source_frames_per_dest_frame.Scale(1));
 
   // Now that we have a new step_size, generate new rate_modulo and denominator values to
@@ -882,10 +881,7 @@ void MixStage::SetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeep
       (frac_source_frames_per_dest_frame.reference_delta() * bookkeeping.step_size.raw_value());
   auto new_denominator = frac_source_frames_per_dest_frame.reference_delta();
 
-  // Reduce this fraction before setting it.
-  TimelineRate reduced_rate{new_rate_modulo, new_denominator};
-  bookkeeping.SetRateModuloAndDenominator(reduced_rate.subject_delta(),
-                                          reduced_rate.reference_delta(), &info);
+  bookkeeping.SetRateModuloAndDenominator(new_rate_modulo, new_denominator);
 }
 
 }  // namespace media::audio

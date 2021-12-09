@@ -968,7 +968,7 @@ class MixStagePositionTest : public MixStageTest {
     FX_CHECK(source_pos_modulo < denominator);
     if (denominator > 1) {
       bookkeeping.SetRateModuloAndDenominator(1, denominator);
-      bookkeeping.source_pos_modulo = source_pos_modulo;
+      bookkeeping.source_pos_modulo = std::min(source_pos_modulo, bookkeeping.denominator() - 1);
     }
     mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
     RunLoopUntilIdle();
@@ -1054,7 +1054,7 @@ TEST_F(MixStagePositionTest, PosError_RoundToNs) {
 
 // Verify that SourceInfo.source_pos_error correctly incorporates source_pos_modulo.
 TEST_F(MixStagePositionTest, PosError_IncludePosModulo) {
-  // Validate floor behavior plus pos_modulo/denominator contribution
+  // Validate floor behavior plus pos_modulo / denominator contribution
   {
     // Source position error 2 +56/100 frac frames is 6.51ns, rounds out to 7ns.
     SCOPED_TRACE("position_error 2 frac frames plus 56/100");

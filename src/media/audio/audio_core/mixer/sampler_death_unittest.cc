@@ -155,7 +155,7 @@ TEST_P(SamplerDeathTest, NumeratorTooHigh) {
   EXPECT_DEATH(mixer_->bookkeeping().SetRateModuloAndDenominator(42, 42), "");
 }
 
-// Incoming source_pos_modulo can be just less than, but not equal to, denominator.
+// Incoming source_pos_modulo can be just less than, but cannot equal, denominator.
 TEST_P(SamplerDeathTest, SourcePosModuloTooHigh) {
   auto mix_params = SamplerDeathTest::DefaultMixParams();
   mixer_->bookkeeping().SetRateModuloAndDenominator(64, 243);
