@@ -197,6 +197,12 @@ class Pool {
   // Pretty-prints the memory ranges contained in the pool.
   void PrintMemoryRanges(const char* prefix, FILE* f = stdout) const;
 
+  // These are the components of what PrintMemoryRanges does internally,
+  // for use on different kinds of containers of memalloc::Range objects.
+  static void PrintMemoryRangeHeader(const char* prefix, FILE* f = stdout);
+  static void PrintOneMemoryRange(const memalloc::Range& range, const char* prefix,
+                                  FILE* f = stdout);
+
  private:
   using mutable_iterator = typename List::iterator;
   using TypeUpdateFunc = fit::inline_function<void(Type&)>;

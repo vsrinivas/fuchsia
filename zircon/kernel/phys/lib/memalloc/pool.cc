@@ -41,6 +41,12 @@ constexpr std::optional<uint64_t> Align(uint64_t addr, uint64_t alignment) {
   return (addr + alignment - 1) & ~(alignment - 1);
 }
 
+// Two hex `uint64_t`s, plus "[0x", ", 0x", and ")".
+constexpr int kRangeColWidth = 2 * 16 + 3 + 4 + 1;
+
+// A rough estimate: 4 digits, a decimal point, and a letter for a size.
+constexpr int kSizeColWidth = 7;
+
 }  // namespace
 
 fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContext> state) {
@@ -436,20 +442,23 @@ Pool::Node* Pool::RemoveNodeAt(mutable_iterator it) {
 }
 
 void Pool::PrintMemoryRanges(const char* prefix, FILE* f) const {
-  // Two hex `uint64_t`s, plus "[0x", ", 0x", and ")".
-  constexpr int kRangeColWidth = 2 * 16 + 3 + 4 + 1;
-  // A rough estimate: 4 digits, a decimal point, and a letter for a size.
-  constexpr int kSizeColWidth = 7;
+  PrintMemoryRangeHeader(prefix, f);
+  for (const memalloc::Range& range : *this) {
+    PrintOneMemoryRange(range, prefix, f);
+  }
+}
 
+void Pool::PrintMemoryRangeHeader(const char* prefix, FILE* f) {
   fprintf(f, "%s: | %-*s | %-*s | Type\n", prefix, kRangeColWidth, "Physical memory range",
           kSizeColWidth, "Size");
-  for (const memalloc::Range& range : *this) {
-    pretty::FormattedBytes size(static_cast<size_t>(range.size));
-    std::string_view type = ToString(range.type);
-    fprintf(f, "%s: | [0x%016" PRIx64 ", 0x%016" PRIx64 ") | %*s | %-.*s\n",  //
-            prefix, range.addr, range.end(),                                  //
-            kSizeColWidth, size.c_str(), static_cast<int>(type.size()), type.data());
-  }
+}
+
+void Pool::PrintOneMemoryRange(const memalloc::Range& range, const char* prefix, FILE* f) {
+  pretty::FormattedBytes size(static_cast<size_t>(range.size));
+  std::string_view type = ToString(range.type);
+  fprintf(f, "%s: | [0x%016" PRIx64 ", 0x%016" PRIx64 ") | %*s | %-.*s\n",  //
+          prefix, range.addr, range.end(),                                  //
+          kSizeColWidth, size.c_str(), static_cast<int>(type.size()), type.data());
 }
 
 }  // namespace memalloc
