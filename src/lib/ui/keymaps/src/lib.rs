@@ -61,36 +61,35 @@ impl<'a> Keymap<'a> {
     pub fn apply(
         &self,
         key: Key,
-        modifier_state: &ModifierState,
-        lock_state: &LockStateKeys,
+        modifier_state: &impl ModifierChecker,
+        lock_state: &impl LockStateChecker,
     ) -> Option<KeyMeaning> {
         let hid_usage = usages::input3_key_to_hid_usage(key);
 
         match key {
             // Nonprintable keys get their own key meaning.
-            Key::Enter => Some(KeyMeaning::NonPrintableKey(
-                NonPrintableKey::Enter,
-            )),
-            Key::Tab => Some(KeyMeaning::NonPrintableKey(
-                NonPrintableKey::Tab,
-            )),
-            Key::Backspace => Some(KeyMeaning::NonPrintableKey(
-                NonPrintableKey::Backspace,
-            )),
+            Key::Enter => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Enter)),
+            Key::Tab => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Tab)),
+            Key::Backspace => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Backspace)),
             // Printable keys get code points as key meanings.
-            _ => {
-                self.hid_usage_to_code_point(hid_usage, modifier_state, lock_state)
+            _ => self
+                .hid_usage_to_code_point(hid_usage, modifier_state, lock_state)
                 .map(KeyMeaning::Codepoint)
                 .map_err(|e| {
                     fx_log_err!(
-                        "keymaps::Keymap::apply: Could not convert HID usage to code point: {:?}, modifiers: {:?}",
+                        concat!(
+                            "keymaps::Keymap::apply: ",
+                            "Could not convert HID usage to code point: {:?}, ",
+                            "modifiers: {:?} ",
+                            "lock_state: {:?}",
+                        ),
                         &hid_usage,
                         modifier_state,
+                        lock_state,
                     );
                     e
                 })
-                .ok()
-            }
+                .ok(),
         }
     }
 
@@ -100,8 +99,8 @@ impl<'a> Keymap<'a> {
     pub fn hid_usage_to_code_point(
         &self,
         hid_usage: u32,
-        modifier_state: &ModifierState,
-        lock_state: &LockStateKeys,
+        modifier_state: &impl ModifierChecker,
+        lock_state: &impl LockStateChecker,
     ) -> Result<u32> {
         if (hid_usage as usize) < self.map.len() {
             if let Some(ref map_entry) = self.map[hid_usage as usize] {
@@ -136,6 +135,11 @@ impl<'a> Keymap<'a> {
     }
 }
 
+/// A trait for something that can be tested for modifier presence.
+pub trait ModifierChecker: std::fmt::Debug {
+    fn test(&self, value: Modifiers) -> bool;
+}
+
 /// Tracks the current state of "significant" modifier keys.
 ///
 /// Currently, a modifier key is "significant" if it affects the mapping of a
@@ -149,6 +153,13 @@ pub struct ModifierState {
 impl Default for ModifierState {
     fn default() -> Self {
         Self { state: Modifiers::from_bits_allow_unknown(0) }
+    }
+}
+
+impl ModifierChecker for ModifierState {
+    /// Test if the modifier state contains the modifiers from `value`.
+    fn test(&self, value: Modifiers) -> bool {
+        self.state.contains(value)
     }
 }
 
@@ -200,11 +211,6 @@ impl ModifierState {
             false => self,
             true => self.with(value),
         }
-    }
-
-    /// Returns true if the modifier value is set.
-    pub fn test(&self, value: Modifiers) -> bool {
-        self.state.contains(value)
     }
 
     /// Update the modifier tracker state with this event.
@@ -325,6 +331,11 @@ enum State {
     LockPressedSecondTime,
 }
 
+/// A lock state checker.
+pub trait LockStateChecker: std::fmt::Debug {
+    fn test(&self, value: LockState) -> bool;
+}
+
 /// The lock state of the lock keys.
 ///
 /// Consult the state diagram below for the intended state transition.  The
@@ -347,6 +358,13 @@ pub struct LockStateKeys {
 impl Default for LockStateKeys {
     fn default() -> Self {
         LockStateKeys { state: HashMap::new() }
+    }
+}
+
+impl LockStateChecker for LockStateKeys {
+    /// Returns true if the lock state value is set.
+    fn test(&self, value: LockState) -> bool {
+        self.state.contains_key(&value)
     }
 }
 
@@ -375,11 +393,6 @@ impl LockStateKeys {
             false => self,
             true => self.with(value),
         }
-    }
-
-    /// Returns true if the lock state value is set.
-    pub fn test(&self, value: LockState) -> bool {
-        self.state.contains_key(&value)
     }
 
     /// Update the modifier tracker state with this event.

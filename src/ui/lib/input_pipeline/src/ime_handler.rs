@@ -8,28 +8,56 @@ use {
     crate::keyboard_binding,
     anyhow::Error,
     async_trait::async_trait,
-    fidl_fuchsia_ui_input3 as fidl_ui_input3,
+    fidl_fuchsia_ui_input3::{self as fidl_ui_input3, LockState, Modifiers},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_syslog::{fx_log_debug, fx_log_err},
-    keymaps,
-    std::cell::RefCell,
+    keymaps::{self, LockStateChecker, ModifierChecker},
     std::convert::TryInto,
     std::rc::Rc,
 };
 
+#[derive(Debug)]
+pub struct FrozenLockState {
+    lock_state: LockState,
+}
+
+impl From<LockState> for FrozenLockState {
+    fn from(lock_state: LockState) -> Self {
+        FrozenLockState { lock_state }
+    }
+}
+
+impl LockStateChecker for FrozenLockState {
+    fn test(&self, value: LockState) -> bool {
+        self.lock_state.contains(value)
+    }
+}
+
+/// Modifier state plus a tester method.
+#[derive(Debug)]
+pub struct FrozenModifierState {
+    state: Modifiers,
+}
+
+impl From<fidl_fuchsia_ui_input3::Modifiers> for FrozenModifierState {
+    fn from(state: Modifiers) -> Self {
+        FrozenModifierState { state }
+    }
+}
+
+impl ModifierChecker for FrozenModifierState {
+    fn test(&self, value: Modifiers) -> bool {
+        self.state.contains(value)
+    }
+}
+
 /// [`ImeHandler`] is responsible for dispatching key events to the IME service, thus making sure
 /// that key events are delivered to application runtimes (e.g., web, Flutter).
+///
+/// > NOTE: The [ImeHandler] requires [ModifierHandler] to be installed upstream to apply the keymaps correctly.
 pub struct ImeHandler {
     /// The FIDL proxy (client-side stub) to the service for key event injection.
     key_event_injector: fidl_ui_input3::KeyEventInjectorProxy,
-
-    // TODO(fxbug.dev/89763): The state trackers below should be removed once
-    // we get a dedicated handler.
-    /// Tracks the state of shift keys, for keymapping purposes.
-    modifier_tracker: RefCell<keymaps::ModifierState>,
-
-    /// Tracks the lock state (CapsLock, NumLock etc) for keymapping purposes.
-    lock_state_tracker: RefCell<keymaps::LockStateKeys>,
 }
 
 #[async_trait(?Send)]
@@ -45,21 +73,10 @@ impl InputHandler for ImeHandler {
             handled: input_device::Handled::No,
         } = input_event
         {
-            self.modifier_tracker
-                .borrow_mut()
-                .update(keyboard_device_event.get_event_type(), keyboard_device_event.get_key());
-            self.lock_state_tracker
-                .borrow_mut()
-                .update(keyboard_device_event.get_event_type(), keyboard_device_event.get_key());
-            let key_event = create_key_event(
-                &keyboard_device_event,
-                event_time,
-                &self.modifier_tracker.borrow(),
-                &self.lock_state_tracker.borrow(),
-            );
+            let key_event = create_key_event(&keyboard_device_event, event_time);
             self.dispatch_key(key_event).await;
             // Consume the input event.
-            input_event.handled = input_device::Handled::Yes
+            input_event.handled = input_device::Handled::Yes;
         }
         vec![input_event]
     }
@@ -82,11 +99,7 @@ impl ImeHandler {
     async fn new_handler(
         key_event_injector: fidl_ui_input3::KeyEventInjectorProxy,
     ) -> Result<Rc<Self>, Error> {
-        let handler = ImeHandler {
-            key_event_injector,
-            modifier_tracker: Default::default(),
-            lock_state_tracker: Default::default(),
-        };
+        let handler = ImeHandler { key_event_injector };
 
         Ok(Rc::new(handler))
     }
@@ -114,31 +127,34 @@ impl ImeHandler {
 /// # Parameters
 /// * `event`: The keyboard event to process.
 /// * `event_time`: The time in nanoseconds when the event was first recorded.
-/// * `modifier_state`: The state of the monitored modifier keys (e.g. Shift, or CapsLock).
-///   Used to determine, for example, whether a key press results in an `a` or an `A`.
 fn create_key_event(
     event: &keyboard_binding::KeyboardEvent,
     event_time: input_device::EventTime,
-    modifier_state: &keymaps::ModifierState,
-    lock_state: &keymaps::LockStateKeys,
 ) -> fidl_ui_input3::KeyEvent {
-    let (key, event_type, modifiers) =
-        (event.get_key(), event.get_event_type(), event.get_modifiers());
+    let modifier_state: FrozenModifierState =
+        event.get_modifiers().unwrap_or(Modifiers::from_bits_allow_unknown(0)).into();
+    let lock_state: FrozenLockState =
+        event.get_lock_state().unwrap_or(LockState::from_bits_allow_unknown(0)).into();
     fx_log_debug!(
-        "ImeHandler::create_key_event: key:{:?}, modifier_state:{:?}, event_type: {:?}",
-        key,
-        &modifier_state,
-        event_type
+        "ImeHandler::create_key_event: key:{:?}, modifier_state: {:?}, lock_state: {:?}, event_type: {:?}",
+        event.get_key(),
+        modifier_state,
+        lock_state,
+        event.get_event_type(),
     );
     // Don't override the key meaning if already set, e.g. by prior stage.
-    let key_meaning =
-        event.get_key_meaning().or(keymaps::US_QWERTY.apply(key, modifier_state, &lock_state));
+    let key_meaning = event.get_key_meaning().or(keymaps::US_QWERTY.apply(
+        event.get_key(),
+        &modifier_state,
+        &lock_state,
+    ));
 
     fidl_ui_input3::KeyEvent {
         timestamp: Some(event_time.try_into().unwrap_or_default()),
-        type_: Some(event_type),
-        key: Some(key),
-        modifiers,
+        type_: event.get_event_type().into(),
+        key: event.get_key().into(),
+        modifiers: event.get_modifiers(),
+        lock_state: event.get_lock_state(),
         key_meaning,
         ..fidl_ui_input3::KeyEvent::EMPTY
     }
@@ -147,9 +163,13 @@ fn create_key_event(
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::keyboard_binding, crate::testing_utilities,
+        super::*,
+        crate::keyboard_binding::{self, KeyboardEvent},
+        crate::testing_utilities,
         fidl_fuchsia_input as fidl_input, fidl_fuchsia_ui_input3 as fidl_ui_input3,
-        fuchsia_async as fasync, futures::StreamExt, matches::assert_matches,
+        fuchsia_async as fasync,
+        futures::StreamExt,
+        matches::assert_matches,
     };
 
     fn handle_events(ime_handler: Rc<ImeHandler>, input_events: Vec<input_device::InputEvent>) {
@@ -175,7 +195,11 @@ mod tests {
             ..
         })) = request_stream.next().await
         {
-            assert_eq!(&key_event, expected_events_iter.next().unwrap());
+            assert_eq!(
+                &key_event,
+                expected_events_iter.next().unwrap(),
+                "left == actual; right == expected"
+            );
 
             // All the expected events have been received, so make sure no more events
             // are present before returning.
@@ -201,6 +225,10 @@ mod tests {
     }
 
     /// Tests that a pressed key event is dispatched.
+    ///
+    /// > NOTE: The `device_descriptor` used in this test case and elsewhere
+    /// *must* be of type `KeyboardDeviceDescriptor` as this is required by the
+    /// pattern matching in `ImeHandler`.
     #[fasync::run_singlethreaded(test)]
     async fn pressed_key() {
         let (proxy, request_stream) = connect_to_key_event_injector();
@@ -224,7 +252,6 @@ mod tests {
             timestamp: Some(event_time_i64),
             type_: Some(fidl_ui_input3::KeyEventType::Pressed),
             key: Some(fidl_input::Key::A),
-            modifiers: None,
             // A key "A" without shift is a lowercase 'a'.
             key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(97)),
             ..fidl_ui_input3::KeyEvent::EMPTY
@@ -258,7 +285,6 @@ mod tests {
             timestamp: Some(event_time_i64),
             type_: Some(fidl_ui_input3::KeyEventType::Released),
             key: Some(fidl_input::Key::A),
-            modifiers: None,
             key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(97)),
             ..fidl_ui_input3::KeyEvent::EMPTY
         }];
@@ -321,7 +347,6 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::A),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(97)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -329,7 +354,6 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Released),
                 key: Some(fidl_input::Key::A),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(97)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -337,7 +361,6 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::B),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(98)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -345,7 +368,6 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::C),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(42)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -354,7 +376,12 @@ mod tests {
         handle_events(ime_handler, input_events);
         assert_ime_receives_events(expected_events, request_stream).await;
     }
-    /// Tests that modifier keys are dispatched appropriately.
+
+    // Tests that modifier keys are dispatched appropriately.
+    //
+    // This test depends on the incoming event having correct modifier and lock
+    // state.  Typically you'd do this by installing a ModifierHandler upstream
+    // of this pipeline stage.
     #[fasync::run_singlethreaded(test)]
     async fn repeated_modifier_key() {
         let (proxy, request_stream) = connect_to_key_event_injector();
@@ -368,29 +395,37 @@ mod tests {
         );
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
         let input_events: Vec<input_device::InputEvent> = vec![
-            testing_utilities::create_keyboard_event(
-                fidl_input::Key::CapsLock,
-                fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                Some(fidl_ui_input3::Modifiers::CapsLock),
-                event_time_u64,
+            testing_utilities::create_input_event(
+                KeyboardEvent::new(
+                    fidl_input::Key::CapsLock,
+                    fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                )
+                .into_with_modifiers(Some(fidl_ui_input3::Modifiers::CapsLock))
+                .into_with_lock_state(Some(fidl_ui_input3::LockState::CapsLock)),
                 &device_descriptor,
-                /* keymap= */ None,
+                event_time_u64,
+                input_device::Handled::No,
             ),
-            testing_utilities::create_keyboard_event(
-                fidl_input::Key::A,
-                fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                Some(fidl_ui_input3::Modifiers::CapsLock),
-                event_time_u64,
+            testing_utilities::create_input_event(
+                KeyboardEvent::new(
+                    fidl_input::Key::A,
+                    fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                )
+                .into_with_modifiers(Some(fidl_ui_input3::Modifiers::CapsLock))
+                .into_with_lock_state(Some(fidl_ui_input3::LockState::CapsLock)),
                 &device_descriptor,
-                /* keymap= */ None,
+                event_time_u64,
+                input_device::Handled::No,
             ),
-            testing_utilities::create_keyboard_event(
-                fidl_input::Key::CapsLock,
-                fidl_fuchsia_ui_input3::KeyEventType::Released,
-                None,
-                event_time_u64,
+            testing_utilities::create_input_event(
+                KeyboardEvent::new(
+                    fidl_input::Key::CapsLock,
+                    fidl_fuchsia_ui_input3::KeyEventType::Released,
+                )
+                .into_with_lock_state(Some(fidl_ui_input3::LockState::CapsLock)),
                 &device_descriptor,
-                /* keymap= */ None,
+                event_time_u64,
+                input_device::Handled::No,
             ),
         ];
 
@@ -400,6 +435,7 @@ mod tests {
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::CapsLock),
                 modifiers: Some(fidl_ui_input3::Modifiers::CapsLock),
+                lock_state: Some(fidl_ui_input3::LockState::CapsLock),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -408,6 +444,7 @@ mod tests {
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::A),
                 modifiers: Some(fidl_ui_input3::Modifiers::CapsLock),
+                lock_state: Some(fidl_ui_input3::LockState::CapsLock),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(65)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -415,7 +452,7 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Released),
                 key: Some(fidl_input::Key::CapsLock),
-                modifiers: None,
+                lock_state: Some(fidl_ui_input3::LockState::CapsLock),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -473,7 +510,6 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::Enter),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
                     fidl_ui_input3::NonPrintableKey::Enter,
                 )),
@@ -483,7 +519,6 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::Tab),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
                     fidl_ui_input3::NonPrintableKey::Tab,
                 )),
@@ -494,7 +529,6 @@ mod tests {
                 // Test that things also work when a key is released.
                 type_: Some(fidl_ui_input3::KeyEventType::Released),
                 key: Some(fidl_input::Key::Backspace),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
                     fidl_ui_input3::NonPrintableKey::Backspace,
                 )),
@@ -536,7 +570,6 @@ mod tests {
             timestamp: Some(event_time_i64),
             type_: Some(fidl_ui_input3::KeyEventType::Pressed),
             key: Some(fidl_input::Key::Tab),
-            modifiers: None,
             key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
                 fidl_ui_input3::NonPrintableKey::Tab,
             )),
@@ -563,7 +596,7 @@ mod tests {
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::LeftShift,
                 fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                None,
+                Some(Modifiers::LeftShift | Modifiers::Shift),
                 event_time_u64,
                 &device_descriptor,
                 /* keymap= */ None,
@@ -571,7 +604,7 @@ mod tests {
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::RightShift,
                 fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                None,
+                Some(Modifiers::LeftShift | Modifiers::RightShift | Modifiers::Shift),
                 event_time_u64,
                 &device_descriptor,
                 /* keymap= */ None,
@@ -579,7 +612,7 @@ mod tests {
             testing_utilities::create_keyboard_event(
                 fidl_input::Key::A,
                 fidl_fuchsia_ui_input3::KeyEventType::Pressed,
-                None,
+                Some(Modifiers::LeftShift | Modifiers::RightShift | Modifiers::Shift),
                 event_time_u64,
                 &device_descriptor,
                 /* keymap= */ None,
@@ -591,7 +624,7 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::LeftShift),
-                modifiers: None,
+                modifiers: Some(Modifiers::LeftShift | Modifiers::Shift),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -599,7 +632,7 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::RightShift),
-                modifiers: None,
+                modifiers: Some(Modifiers::RightShift | Modifiers::LeftShift | Modifiers::Shift),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -607,7 +640,7 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::A),
-                modifiers: None,
+                modifiers: Some(Modifiers::RightShift | Modifiers::LeftShift | Modifiers::Shift),
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(65)), // "A"
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -653,7 +686,6 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::LeftCtrl),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
@@ -661,7 +693,6 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::Tab),
-                modifiers: None,
                 key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
                     fidl_ui_input3::NonPrintableKey::Tab,
                 )),
