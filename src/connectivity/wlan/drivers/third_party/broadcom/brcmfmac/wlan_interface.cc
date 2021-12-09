@@ -20,7 +20,7 @@
 #include <cstdio>
 #include <cstring>
 
-#include "fuchsia/hardware/wlanif/c/banjo.h"
+#include "fuchsia/hardware/wlan/fullmac/c/banjo.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"

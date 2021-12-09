@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DEVICE_H_
 
-#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>

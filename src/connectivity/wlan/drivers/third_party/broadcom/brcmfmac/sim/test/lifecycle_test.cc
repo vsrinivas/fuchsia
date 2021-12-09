@@ -14,7 +14,7 @@
  * CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <zircon/errors.h>

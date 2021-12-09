@@ -1,0 +1,399 @@
+struct/member fuchsia.hardware.wlan.fullmac/DeleteKeyDescriptor.address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/DeleteKeyDescriptor.key_id uint16
+struct/member fuchsia.hardware.wlan.fullmac/DeleteKeyDescriptor.key_type fuchsia.hardware.wlanassocinfo/WlanKeyType
+struct fuchsia.hardware.wlan.fullmac/DeleteKeyDescriptor
+struct/member fuchsia.hardware.wlan.fullmac/SetKeyDescriptor.address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/SetKeyDescriptor.cipher_suite_oui array<uint8,3>
+struct/member fuchsia.hardware.wlan.fullmac/SetKeyDescriptor.cipher_suite_type uint8
+struct/member fuchsia.hardware.wlan.fullmac/SetKeyDescriptor.key vector<uint8>
+struct/member fuchsia.hardware.wlan.fullmac/SetKeyDescriptor.key_id uint16
+struct/member fuchsia.hardware.wlan.fullmac/SetKeyDescriptor.key_type fuchsia.hardware.wlanassocinfo/WlanKeyType
+struct/member fuchsia.hardware.wlan.fullmac/SetKeyDescriptor.rsc uint64
+struct fuchsia.hardware.wlan.fullmac/SetKeyDescriptor
+union/member fuchsia.hardware.wlan.fullmac/StatsUnion.ap_mlme_stats fuchsia.hardware.wlan.fullmac/WlanifApMlmeStats
+union/member fuchsia.hardware.wlan.fullmac/StatsUnion.client_mlme_stats fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats
+strict union fuchsia.hardware.wlan.fullmac/StatsUnion
+const fuchsia.hardware.wlan.fullmac/WLANIF_MAX_HISTOGRAMS_PER_TYPE uint8 8
+const fuchsia.hardware.wlan.fullmac/WLANIF_MAX_NOISE_FLOOR_SAMPLES uint8 255
+const fuchsia.hardware.wlan.fullmac/WLANIF_MAX_RSSI_SAMPLES uint8 255
+const fuchsia.hardware.wlan.fullmac/WLANIF_MAX_RX_RATE_INDEX_SAMPLES uint8 196
+const fuchsia.hardware.wlan.fullmac/WLANIF_MAX_SNR_SAMPLES uint16 256
+const fuchsia.hardware.wlan.fullmac/WLANIF_NUM_RATES_AC uint8 120
+const fuchsia.hardware.wlan.fullmac/WLANIF_NUM_RATES_B uint8 4
+const fuchsia.hardware.wlan.fullmac/WLANIF_NUM_RATES_G uint8 8
+const fuchsia.hardware.wlan.fullmac/WLANIF_NUM_RATES_N uint8 64
+const fuchsia.hardware.wlan.fullmac/WLAN_IE_BODY_MAX_LEN uint32 255
+const fuchsia.hardware.wlan.fullmac/WLAN_MAX_KEYLIST_SIZE uint32 4
+const fuchsia.hardware.wlan.fullmac/WLAN_MAX_OP_RATES uint32 12
+const fuchsia.hardware.wlan.fullmac/WLAN_MSDU_MAX_LEN uint32 2304
+const fuchsia.hardware.wlan.fullmac/WLAN_SCAN_MAX_SSIDS_PER_REQUEST uint32 32
+const fuchsia.hardware.wlan.fullmac/WLAN_VIE_MAX_LEN uint32 510
+const fuchsia.hardware.wlan.fullmac/WLAN_WMM_PARAM_LEN uint32 18
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.REFUSED_AP_OUT_OF_MEMORY 5
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.REFUSED_BASIC_RATES_MISMATCH 6
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.REFUSED_CAPABILITIES_MISMATCH 3
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.REFUSED_EXTERNAL_REASON 4
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.REFUSED_NOT_AUTHENTICATED 2
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.REFUSED_REASON_UNSPECIFIED 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.REFUSED_TEMPORARILY 8
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED 7
+enum/member fuchsia.hardware.wlan.fullmac/WlanAssocResult.SUCCESS 0
+strict enum fuchsia.hardware.wlan.fullmac/WlanAssocResult uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthResult.ANTI_CLOGGING_TOKEN_REQUIRED 2
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthResult.FAILURE_TIMEOUT 5
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthResult.FINITE_CYCLIC_GROUP_NOT_SUPPORTED 3
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthResult.REFUSED 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthResult.REJECTED 4
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthResult.SUCCESS 0
+strict enum fuchsia.hardware.wlan.fullmac/WlanAuthResult uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthType.FAST_BSS_TRANSITION 3
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthType.OPEN_SYSTEM 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthType.SAE 4
+enum/member fuchsia.hardware.wlan.fullmac/WlanAuthType.SHARED_KEY 2
+strict enum fuchsia.hardware.wlan.fullmac/WlanAuthType uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanEapolResult.SUCCESS 0
+enum/member fuchsia.hardware.wlan.fullmac/WlanEapolResult.TRANSMISSION_FAILURE 1
+strict enum fuchsia.hardware.wlan.fullmac/WlanEapolResult uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanJoinResult.FAILURE_TIMEOUT 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanJoinResult.INTERNAL_ERROR 2
+enum/member fuchsia.hardware.wlan.fullmac/WlanJoinResult.SUCCESS 0
+strict enum fuchsia.hardware.wlan.fullmac/WlanJoinResult uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.ACTION 8192
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.ACTION_NO_ACK 16384
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.ASSOC_REQ 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.ASSOC_RESP 2
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.ATIM 512
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.AUTH 2048
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.BEACON 256
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.DEAUTH 4096
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.DISASSOC 1024
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.PROBE_REQ 16
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.PROBE_RESP 32
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.REASSOC_REQ 4
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.REASSOC_RESP 8
+enum/member fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag.TIMING_AD 64
+strict enum fuchsia.hardware.wlan.fullmac/WlanMgmtCaptureFlag uint32
+enum/member fuchsia.hardware.wlan.fullmac/WlanScanResult.CANCELED_BY_DRIVER_OR_FIRMWARE 5
+enum/member fuchsia.hardware.wlan.fullmac/WlanScanResult.INTERNAL_ERROR 3
+enum/member fuchsia.hardware.wlan.fullmac/WlanScanResult.INVALID_ARGS 2
+enum/member fuchsia.hardware.wlan.fullmac/WlanScanResult.NOT_SUPPORTED 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanScanResult.SHOULD_WAIT 4
+enum/member fuchsia.hardware.wlan.fullmac/WlanScanResult.SUCCESS 0
+strict enum fuchsia.hardware.wlan.fullmac/WlanScanResult uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanScanType.ACTIVE 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanScanType.PASSIVE 2
+strict enum fuchsia.hardware.wlan.fullmac/WlanScanType uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanStartResult.BSS_ALREADY_STARTED_OR_JOINED 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanStartResult.NOT_SUPPORTED 3
+enum/member fuchsia.hardware.wlan.fullmac/WlanStartResult.RESET_REQUIRED_BEFORE_START 2
+enum/member fuchsia.hardware.wlan.fullmac/WlanStartResult.SUCCESS 0
+strict enum fuchsia.hardware.wlan.fullmac/WlanStartResult uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanStopResult.BSS_ALREADY_STOPPED 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanStopResult.INTERNAL_ERROR 2
+enum/member fuchsia.hardware.wlan.fullmac/WlanStopResult.SUCCESS 0
+strict enum fuchsia.hardware.wlan.fullmac/WlanStopResult uint8
+enum/member fuchsia.hardware.wlan.fullmac/WlanifAntennaFreq.ANTENNA_2_G 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanifAntennaFreq.ANTENNA_5_G 2
+strict enum fuchsia.hardware.wlan.fullmac/WlanifAntennaFreq uint8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAntennaId.freq fuchsia.hardware.wlan.fullmac/WlanifAntennaFreq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAntennaId.index uint8
+struct fuchsia.hardware.wlan.fullmac/WlanifAntennaId
+struct/member fuchsia.hardware.wlan.fullmac/WlanifApMlmeStats.not_used fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct fuchsia.hardware.wlan.fullmac/WlanifApMlmeStats
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocConfirm.association_id uint16
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocConfirm.result_code fuchsia.hardware.wlan.fullmac/WlanAssocResult
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocConfirm.wmm_param array<uint8,18>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocConfirm.wmm_param_present bool
+struct fuchsia.hardware.wlan.fullmac/WlanifAssocConfirm
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocInd.listen_interval uint16
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocInd.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocInd.rsne array<uint8,255>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocInd.rsne_len uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocInd.ssid fuchsia.hardware.wlan.fullmac/WlanifSsid
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocInd.vendor_ie array<uint8,510>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocInd.vendor_ie_len uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifAssocInd
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocReq.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocReq.rsne array<uint8,255>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocReq.rsne_len uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocReq.vendor_ie array<uint8,510>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocReq.vendor_ie_len uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifAssocReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocResp.association_id uint16
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocResp.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAssocResp.result_code fuchsia.hardware.wlan.fullmac/WlanAssocResult
+struct fuchsia.hardware.wlan.fullmac/WlanifAssocResp
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthConfirm.auth_type fuchsia.hardware.wlan.fullmac/WlanAuthType
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthConfirm.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthConfirm.result_code fuchsia.hardware.wlan.fullmac/WlanAuthResult
+struct fuchsia.hardware.wlan.fullmac/WlanifAuthConfirm
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthInd.auth_type fuchsia.hardware.wlan.fullmac/WlanAuthType
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthInd.peer_sta_address array<uint8,6>
+struct fuchsia.hardware.wlan.fullmac/WlanifAuthInd
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthReq.auth_failure_timeout uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthReq.auth_type fuchsia.hardware.wlan.fullmac/WlanAuthType
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthReq.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthReq.sae_password vector<uint8>
+struct fuchsia.hardware.wlan.fullmac/WlanifAuthReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthResp.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifAuthResp.result_code fuchsia.hardware.wlan.fullmac/WlanAuthResult
+struct fuchsia.hardware.wlan.fullmac/WlanifAuthResp
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.band_id uint8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.base_frequency uint16
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.channels array<uint8,64>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.ht_caps ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.ht_supported bool
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.num_channels uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.num_rates uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.rates array<uint16,12>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.vht_caps ddk.hw.wlan.ieee80211/Ieee80211VhtCapabilities
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities.vht_supported bool
+struct fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.beacon_period uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.bss_type fuchsia.hardware.wlanassocinfo/WlanBssType
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.bssid array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.cap uint16
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.chan fuchsia.hardware.wlanassocinfo/WlanChannel
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.ies_bytes vector<uint8>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.local_time uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.rssi_dbm int8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.snr_db int8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifBssDescription.timestamp uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifBssDescription
+struct/member fuchsia.hardware.wlan.fullmac/WlanifCapturedFrameResult.data vector<uint8>
+struct fuchsia.hardware.wlan.fullmac/WlanifCapturedFrameResult
+struct/member fuchsia.hardware.wlan.fullmac/WlanifChannelSwitchInfo.new_channel uint8
+struct fuchsia.hardware.wlan.fullmac/WlanifChannelSwitchInfo
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.assoc_data_rssi fuchsia.hardware.wlan.fullmac/WlanifRssiStats
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.beacon_rssi fuchsia.hardware.wlan.fullmac/WlanifRssiStats
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.data_frame fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.mgmt_frame fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.noise_floor_histograms vector<fuchsia.hardware.wlan.fullmac/WlanifNoiseFloorHistogram>:8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.rssi_histograms vector<fuchsia.hardware.wlan.fullmac/WlanifRssiHistogram>:8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.rx_frame fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.rx_rate_index_histograms vector<fuchsia.hardware.wlan.fullmac/WlanifRxRateIndexHistogram>:8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.snr_histograms vector<fuchsia.hardware.wlan.fullmac/WlanifSnrHistogram>:8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.svc_msg fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats.tx_frame fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct fuchsia.hardware.wlan.fullmac/WlanifClientMlmeStats
+struct/member fuchsia.hardware.wlan.fullmac/WlanifCounter.count uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifCounter.name string
+struct fuchsia.hardware.wlan.fullmac/WlanifCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDeauthConfirm.peer_sta_address array<uint8,6>
+struct fuchsia.hardware.wlan.fullmac/WlanifDeauthConfirm
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDeauthIndication.locally_initiated bool
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDeauthIndication.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDeauthIndication.reason_code ddk.hw.wlan.ieee80211/ReasonCode
+struct fuchsia.hardware.wlan.fullmac/WlanifDeauthIndication
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDeauthReq.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDeauthReq.reason_code ddk.hw.wlan.ieee80211/ReasonCode
+struct fuchsia.hardware.wlan.fullmac/WlanifDeauthReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDelKeysReq.keylist array<fuchsia.hardware.wlan.fullmac/DeleteKeyDescriptor,4>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDelKeysReq.num_keys uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifDelKeysReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDisassocConfirm.status int32
+struct fuchsia.hardware.wlan.fullmac/WlanifDisassocConfirm
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDisassocIndication.locally_initiated bool
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDisassocIndication.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDisassocIndication.reason_code ddk.hw.wlan.ieee80211/ReasonCode
+struct fuchsia.hardware.wlan.fullmac/WlanifDisassocIndication
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDisassocReq.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDisassocReq.reason_code uint16
+struct fuchsia.hardware.wlan.fullmac/WlanifDisassocReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDispatcherStats.any_packet fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDispatcherStats.ctrl_frame fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDispatcherStats.data_frame fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifDispatcherStats.mgmt_frame fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct fuchsia.hardware.wlan.fullmac/WlanifDispatcherStats
+struct/member fuchsia.hardware.wlan.fullmac/WlanifEapolConfirm.dst_addr array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifEapolConfirm.result_code fuchsia.hardware.wlan.fullmac/WlanEapolResult
+struct fuchsia.hardware.wlan.fullmac/WlanifEapolConfirm
+struct/member fuchsia.hardware.wlan.fullmac/WlanifEapolIndication.data vector<uint8>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifEapolIndication.dst_addr array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifEapolIndication.src_addr array<uint8,6>
+struct fuchsia.hardware.wlan.fullmac/WlanifEapolIndication
+struct/member fuchsia.hardware.wlan.fullmac/WlanifEapolReq.data vector<uint8>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifEapolReq.dst_addr array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifEapolReq.src_addr array<uint8,6>
+struct fuchsia.hardware.wlan.fullmac/WlanifEapolReq
+enum/member fuchsia.hardware.wlan.fullmac/WlanifFeature.DMA 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanifFeature.SYNTH 2
+strict enum fuchsia.hardware.wlan.fullmac/WlanifFeature uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifHistBucket.bucket_index uint16
+struct/member fuchsia.hardware.wlan.fullmac/WlanifHistBucket.num_samples uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifHistBucket
+enum/member fuchsia.hardware.wlan.fullmac/WlanifHistScope.PER_ANTENNA 2
+enum/member fuchsia.hardware.wlan.fullmac/WlanifHistScope.STATION 1
+strict enum fuchsia.hardware.wlan.fullmac/WlanifHistScope uint8
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.AssocReq(fuchsia.hardware.wlan.fullmac/WlanifAssocReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.AssocResp(fuchsia.hardware.wlan.fullmac/WlanifAssocResp resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.AuthReq(fuchsia.hardware.wlan.fullmac/WlanifAuthReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.AuthResp(fuchsia.hardware.wlan.fullmac/WlanifAuthResp resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.DataQueueTx(uint32 options,fuchsia.hardware.ethernet/EthernetNetbuf netbuf) -> (int32 status,fuchsia.hardware.ethernet/EthernetNetbuf netbuf)
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.DeauthReq(fuchsia.hardware.wlan.fullmac/WlanifDeauthReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.DelKeysReq(fuchsia.hardware.wlan.fullmac/WlanifDelKeysReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.DisassocReq(fuchsia.hardware.wlan.fullmac/WlanifDisassocReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.EapolReq(fuchsia.hardware.wlan.fullmac/WlanifEapolReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.JoinReq(fuchsia.hardware.wlan.fullmac/WlanifJoinReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.Query() -> (fuchsia.hardware.wlan.fullmac/WlanifQueryInfo info)
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.ResetReq(fuchsia.hardware.wlan.fullmac/WlanifResetReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.SaeFrameTx(fuchsia.hardware.wlan.fullmac/WlanifSaeFrame frame) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.SaeHandshakeResp(fuchsia.hardware.wlan.fullmac/WlanifSaeHandshakeResp resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.SetKeysReq(fuchsia.hardware.wlan.fullmac/WlanifSetKeysReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.SetMulticastPromisc(bool enable) -> (int32 status)
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.Start(client_end:fuchsia.hardware.wlan.fullmac/WlanifImplIfc ifc) -> (int32 status,zx/handle:CHANNEL sme_channel)
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.StartCaptureFrames(fuchsia.hardware.wlan.fullmac/WlanifStartCaptureFramesReq req) -> (fuchsia.hardware.wlan.fullmac/WlanifStartCaptureFramesResp resp)
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.StartReq(fuchsia.hardware.wlan.fullmac/WlanifStartReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.StartScan(fuchsia.hardware.wlan.fullmac/WlanifScanReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.StatsQueryReq() -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.Stop() -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.StopCaptureFrames() -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.StopReq(fuchsia.hardware.wlan.fullmac/WlanifStopReq req) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImpl.WmmStatusReq() -> ()
+protocol fuchsia.hardware.wlan.fullmac/WlanifImpl
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.AssocConf(fuchsia.hardware.wlan.fullmac/WlanifAssocConfirm resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.AssocInd(fuchsia.hardware.wlan.fullmac/WlanifAssocInd resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.AuthConf(fuchsia.hardware.wlan.fullmac/WlanifAuthConfirm resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.AuthInd(fuchsia.hardware.wlan.fullmac/WlanifAuthInd resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.DataRecv(vector<uint8> data,uint32 flags) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.DeauthConf(fuchsia.hardware.wlan.fullmac/WlanifDeauthConfirm resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.DeauthInd(fuchsia.hardware.wlan.fullmac/WlanifDeauthIndication ind) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.DisassocConf(fuchsia.hardware.wlan.fullmac/WlanifDisassocConfirm resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.DisassocInd(fuchsia.hardware.wlan.fullmac/WlanifDisassocIndication ind) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.EapolConf(fuchsia.hardware.wlan.fullmac/WlanifEapolConfirm resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.EapolInd(fuchsia.hardware.wlan.fullmac/WlanifEapolIndication ind) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.JoinConf(fuchsia.hardware.wlan.fullmac/WlanifJoinConfirm resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.OnChannelSwitch(fuchsia.hardware.wlan.fullmac/WlanifChannelSwitchInfo ind) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.OnPmkAvailable(fuchsia.hardware.wlan.fullmac/WlanifPmkInfo info) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.OnScanEnd(fuchsia.hardware.wlan.fullmac/WlanifScanEnd end) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.OnScanResult(fuchsia.hardware.wlan.fullmac/WlanifScanResult result) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.OnWmmStatusResp(int32 s,fuchsia.hardware.wlanassocinfo/WlanWmmParams wmm_params) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.RelayCapturedFrame(fuchsia.hardware.wlan.fullmac/WlanifCapturedFrameResult result) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.SaeFrameRx(fuchsia.hardware.wlan.fullmac/WlanifSaeFrame frame) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.SaeHandshakeInd(fuchsia.hardware.wlan.fullmac/WlanifSaeHandshakeInd ind) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.SignalReport(fuchsia.hardware.wlan.fullmac/WlanifSignalReportIndication ind) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.StartConf(fuchsia.hardware.wlan.fullmac/WlanifStartConfirm resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.StatsQueryResp(fuchsia.hardware.wlan.fullmac/WlanifStatsQueryResponse resp) -> ()
+protocol/member fuchsia.hardware.wlan.fullmac/WlanifImplIfc.StopConf(fuchsia.hardware.wlan.fullmac/WlanifStopConfirm resp) -> ()
+protocol fuchsia.hardware.wlan.fullmac/WlanifImplIfc
+struct/member fuchsia.hardware.wlan.fullmac/WlanifJoinConfirm.result_code fuchsia.hardware.wlan.fullmac/WlanJoinResult
+struct fuchsia.hardware.wlan.fullmac/WlanifJoinConfirm
+struct/member fuchsia.hardware.wlan.fullmac/WlanifJoinReq.join_failure_timeout uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifJoinReq.nav_sync_delay uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifJoinReq.num_op_rates uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifJoinReq.op_rates array<uint8,12>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifJoinReq.selected_bss fuchsia.hardware.wlan.fullmac/WlanifBssDescription
+struct fuchsia.hardware.wlan.fullmac/WlanifJoinReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifMlmeStats.stats fuchsia.hardware.wlan.fullmac/StatsUnion
+struct/member fuchsia.hardware.wlan.fullmac/WlanifMlmeStats.tag fuchsia.hardware.wlan.fullmac/WlanifMlmeStatsType
+struct fuchsia.hardware.wlan.fullmac/WlanifMlmeStats
+enum/member fuchsia.hardware.wlan.fullmac/WlanifMlmeStatsType.AP 1
+enum/member fuchsia.hardware.wlan.fullmac/WlanifMlmeStatsType.CLIENT 0
+strict enum fuchsia.hardware.wlan.fullmac/WlanifMlmeStatsType uint8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifNoiseFloorHistogram.antenna_id fuchsia.hardware.wlan.fullmac/WlanifAntennaId
+struct/member fuchsia.hardware.wlan.fullmac/WlanifNoiseFloorHistogram.hist_scope fuchsia.hardware.wlan.fullmac/WlanifHistScope
+struct/member fuchsia.hardware.wlan.fullmac/WlanifNoiseFloorHistogram.invalid_samples uint64 0
+struct/member fuchsia.hardware.wlan.fullmac/WlanifNoiseFloorHistogram.noise_floor_samples vector<fuchsia.hardware.wlan.fullmac/WlanifHistBucket>:255
+struct fuchsia.hardware.wlan.fullmac/WlanifNoiseFloorHistogram
+struct/member fuchsia.hardware.wlan.fullmac/WlanifPacketCounter.drop fuchsia.hardware.wlan.fullmac/WlanifCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifPacketCounter.drop_bytes fuchsia.hardware.wlan.fullmac/WlanifCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifPacketCounter.in fuchsia.hardware.wlan.fullmac/WlanifCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifPacketCounter.in_bytes fuchsia.hardware.wlan.fullmac/WlanifCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifPacketCounter.out fuchsia.hardware.wlan.fullmac/WlanifCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifPacketCounter.out_bytes fuchsia.hardware.wlan.fullmac/WlanifCounter
+struct fuchsia.hardware.wlan.fullmac/WlanifPacketCounter
+struct/member fuchsia.hardware.wlan.fullmac/WlanifPmkInfo.pmk vector<uint8>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifPmkInfo.pmkid vector<uint8>
+struct fuchsia.hardware.wlan.fullmac/WlanifPmkInfo
+struct/member fuchsia.hardware.wlan.fullmac/WlanifQueryInfo.bands array<fuchsia.hardware.wlan.fullmac/WlanifBandCapabilities,2>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifQueryInfo.driver_features uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifQueryInfo.features uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifQueryInfo.mac_addr array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifQueryInfo.num_bands uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifQueryInfo.role fuchsia.hardware.wlanphyinfo/WlanInfoMacRole
+struct fuchsia.hardware.wlan.fullmac/WlanifQueryInfo
+struct/member fuchsia.hardware.wlan.fullmac/WlanifResetReq.set_default_mib bool
+struct/member fuchsia.hardware.wlan.fullmac/WlanifResetReq.sta_address array<uint8,6>
+struct fuchsia.hardware.wlan.fullmac/WlanifResetReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRssiHistogram.antenna_id fuchsia.hardware.wlan.fullmac/WlanifAntennaId
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRssiHistogram.hist_scope fuchsia.hardware.wlan.fullmac/WlanifHistScope
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRssiHistogram.invalid_samples uint64 0
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRssiHistogram.rssi_samples vector<fuchsia.hardware.wlan.fullmac/WlanifHistBucket>:255
+struct fuchsia.hardware.wlan.fullmac/WlanifRssiHistogram
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRssiStats.hist vector<uint64>
+struct fuchsia.hardware.wlan.fullmac/WlanifRssiStats
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRxRateIndexHistogram.antenna_id fuchsia.hardware.wlan.fullmac/WlanifAntennaId
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRxRateIndexHistogram.hist_scope fuchsia.hardware.wlan.fullmac/WlanifHistScope
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRxRateIndexHistogram.invalid_samples uint64 0
+struct/member fuchsia.hardware.wlan.fullmac/WlanifRxRateIndexHistogram.rx_rate_index_samples vector<fuchsia.hardware.wlan.fullmac/WlanifHistBucket>:196
+struct fuchsia.hardware.wlan.fullmac/WlanifRxRateIndexHistogram
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSaeFrame.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSaeFrame.sae_fields vector<uint8>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSaeFrame.seq_num uint16
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSaeFrame.status_code ddk.hw.wlan.ieee80211/StatusCode
+struct fuchsia.hardware.wlan.fullmac/WlanifSaeFrame
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSaeHandshakeInd.peer_sta_address array<uint8,6>
+struct fuchsia.hardware.wlan.fullmac/WlanifSaeHandshakeInd
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSaeHandshakeResp.peer_sta_address array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSaeHandshakeResp.status_code ddk.hw.wlan.ieee80211/StatusCode
+struct fuchsia.hardware.wlan.fullmac/WlanifSaeHandshakeResp
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanEnd.code fuchsia.hardware.wlan.fullmac/WlanScanResult
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanEnd.txn_id uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifScanEnd
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.bss_type fuchsia.hardware.wlanassocinfo/WlanBssType
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.bssid array<uint8,6>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.channel_list array<uint8,64>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.max_channel_time uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.min_channel_time uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.num_channels uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.num_ssids uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.probe_delay uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.scan_type fuchsia.hardware.wlan.fullmac/WlanScanType
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.ssid fuchsia.hardware.wlan.fullmac/WlanifSsid
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.ssid_list array<fuchsia.hardware.wlan.fullmac/WlanifSsid,32>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanReq.txn_id uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifScanReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanResult.bss fuchsia.hardware.wlan.fullmac/WlanifBssDescription
+struct/member fuchsia.hardware.wlan.fullmac/WlanifScanResult.txn_id uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifScanResult
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSetKeysReq.keylist array<fuchsia.hardware.wlan.fullmac/SetKeyDescriptor,4>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSetKeysReq.num_keys uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifSetKeysReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSignalReportIndication.rssi_dbm int8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSignalReportIndication.snr_db int8
+struct fuchsia.hardware.wlan.fullmac/WlanifSignalReportIndication
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSnrHistogram.antenna_id fuchsia.hardware.wlan.fullmac/WlanifAntennaId
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSnrHistogram.hist_scope fuchsia.hardware.wlan.fullmac/WlanifHistScope
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSnrHistogram.invalid_samples uint64 0
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSnrHistogram.snr_samples vector<fuchsia.hardware.wlan.fullmac/WlanifHistBucket>:256
+struct fuchsia.hardware.wlan.fullmac/WlanifSnrHistogram
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSsid.data array<uint8,32>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifSsid.len uint8
+struct fuchsia.hardware.wlan.fullmac/WlanifSsid
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartCaptureFramesReq.mgmt_frame_flags uint32
+struct fuchsia.hardware.wlan.fullmac/WlanifStartCaptureFramesReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartCaptureFramesResp.status int32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartCaptureFramesResp.supported_mgmt_frames uint32
+struct fuchsia.hardware.wlan.fullmac/WlanifStartCaptureFramesResp
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartConfirm.result_code fuchsia.hardware.wlan.fullmac/WlanStartResult
+struct fuchsia.hardware.wlan.fullmac/WlanifStartConfirm
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.beacon_period uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.bss_type fuchsia.hardware.wlanassocinfo/WlanBssType
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.channel uint8
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.dtim_period uint32
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.rsne array<uint8,255>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.rsne_len uint64
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.ssid fuchsia.hardware.wlan.fullmac/WlanifSsid
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.vendor_ie array<uint8,510>
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStartReq.vendor_ie_len uint64
+struct fuchsia.hardware.wlan.fullmac/WlanifStartReq
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStats.dispatcher_stats fuchsia.hardware.wlan.fullmac/WlanifDispatcherStats
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStats.mlme_stats vector<fuchsia.hardware.wlan.fullmac/WlanifMlmeStats>
+struct fuchsia.hardware.wlan.fullmac/WlanifStats
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStatsQueryResponse.stats fuchsia.hardware.wlan.fullmac/WlanifStats
+struct fuchsia.hardware.wlan.fullmac/WlanifStatsQueryResponse
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStopConfirm.result_code fuchsia.hardware.wlan.fullmac/WlanStopResult
+struct fuchsia.hardware.wlan.fullmac/WlanifStopConfirm
+struct/member fuchsia.hardware.wlan.fullmac/WlanifStopReq.ssid fuchsia.hardware.wlan.fullmac/WlanifSsid
+struct fuchsia.hardware.wlan.fullmac/WlanifStopReq
+library fuchsia.hardware.wlan.fullmac

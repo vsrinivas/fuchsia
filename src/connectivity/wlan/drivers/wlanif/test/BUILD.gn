@@ -71,7 +71,7 @@ test("impl_unittest") {
   sources = [ "impl_unittest.cc" ]
 
   deps = [
-    "//sdk/banjo/fuchsia.hardware.wlanif:fuchsia.hardware.wlanif_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

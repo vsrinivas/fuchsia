@@ -4,7 +4,7 @@
 
 #include "device.h"
 
-#include <fuchsia/hardware/wlanif/c/banjo.h>
+#include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
 #include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/internal/c/banjo.h>

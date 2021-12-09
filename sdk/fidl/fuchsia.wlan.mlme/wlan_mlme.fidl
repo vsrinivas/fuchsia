@@ -56,7 +56,7 @@ type ScanRequest = struct {
 /// and only includes the QoS Info, reserved, and AC parameters fields.
 const WMM_PARAM_LEN uint8 = 18;
 
-// LINT.ThenChange(//sdk/banjo/fuchsia.hardware.wlanif/wlanif.banjo)
+// LINT.ThenChange(//sdk/banjo/fuchsia.hardware.wlan.fullmac/wlanif.banjo)
 
 /// WFA WMM v1.2, 2.2.1
 alias QosInfo = uint8;
