@@ -16,6 +16,23 @@
 
 namespace {
 std::atomic<int> outstanding = 0;
+
+zx_koid_t ProcessID() {
+  zx::unowned<zx::process> process = zx::process::self();
+  zx_info_handle_basic_t info;
+  zx_status_t status = zx_object_get_info(process->get(), ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                          nullptr /* actual */, nullptr /* avail */);
+  EXPECT_EQ(status, ZX_OK);
+  return info.koid;
+}
+
+std::string ProcessName() {
+  zx::unowned<zx::process> process = zx::process::self();
+  char process_name[ZX_MAX_NAME_LEN];
+  process->get_property(ZX_PROP_NAME, process_name, sizeof(process_name));
+  return process_name;
+}
+
 }  // namespace
 
 // AgisTest uses asynchronous FIDL entrypoints to provide reusable code for real
@@ -33,6 +50,9 @@ class AgisTest : public testing::Test {
       FX_LOG(ERROR, "agis-test", "AgisTest::ErrHandler");
       loop_->Quit();
     });
+
+    process_id_ = ProcessID();
+    process_name_ = ProcessName();
   }
 
   void TearDown() override {
@@ -49,24 +69,26 @@ class AgisTest : public testing::Test {
     }
   }
 
-  void Register(const char *url) {
+  void Register(zx_koid_t process_id, std::string process_name) {
     outstanding++;
-    session_->Register(url, [&](fuchsia::gpu::agis::Session_Register_Result result) {
-      fuchsia::gpu::agis::Session_Register_Response response(std::move(result.response()));
-      const auto status = result.err();
-      EXPECT_EQ(status, fuchsia::gpu::agis::Status::OK);
-      zx::handle socket = response.ResultValue_();
-      EXPECT_NE(socket.get(), 0ul) << "Null socket handle response";
-      int socket_fd = -1;
-      EXPECT_EQ(ZX_OK, fdio_fd_create(socket.release(), &socket_fd));
-      close(socket_fd);
-      outstanding--;
-    });
+    session_->Register(
+        process_id, std::move(process_name),
+        [&](fuchsia::gpu::agis::Session_Register_Result result) {
+          fuchsia::gpu::agis::Session_Register_Response response(std::move(result.response()));
+          const auto status = result.err();
+          EXPECT_EQ(status, fuchsia::gpu::agis::Status::OK);
+          zx::handle socket = response.ResultValue_();
+          EXPECT_NE(socket.get(), 0ul) << "Null socket handle response";
+          int socket_fd = -1;
+          EXPECT_EQ(ZX_OK, fdio_fd_create(socket.release(), &socket_fd));
+          close(socket_fd);
+          outstanding--;
+        });
   }
 
-  void Unregister(const char *url) {
+  void Unregister(zx_koid_t process_id) {
     outstanding++;
-    session_->Unregister(url, [&](fuchsia::gpu::agis::Session_Unregister_Result result) {
+    session_->Unregister(process_id, [&](fuchsia::gpu::agis::Session_Unregister_Result result) {
       EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
       outstanding--;
     });
@@ -82,8 +104,8 @@ class AgisTest : public testing::Test {
         case fuchsia::gpu::agis::Status::OK: {
           std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
           for (auto &connection : connections) {
-            FX_LOGF(INFO, "agis-test", "AgisTest::Connection \"%s\"",
-                    connection.component_url().c_str());
+            FX_LOGF(INFO, "agis-test", "AgisTest::Connection \"%lu\" \"%s\"",
+                    connection.process_id(), connection.process_name().c_str());
           }
           num_connections_ = connections.size();
           break;
@@ -99,99 +121,106 @@ class AgisTest : public testing::Test {
   std::unique_ptr<async::Loop> loop_;
   fuchsia::gpu::agis::SessionPtr session_;
   size_t num_connections_;
+  zx_koid_t process_id_;
+  std::string process_name_;
 };
 
 TEST_F(AgisTest, Register) {
-  const char *url = "fuchsia.gpu.agis.test-register";
-  Register(url);
+  Register(process_id_, process_name_);
   outstanding++;
-  session_->Register(url, [&](fuchsia::gpu::agis::Session_Register_Result result) {
-    EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::ALREADY_REGISTERED);
-    outstanding--;
-  });
-  Unregister(url);
+  session_->Register(process_id_, process_name_,
+                     [&](fuchsia::gpu::agis::Session_Register_Result result) {
+                       EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::ALREADY_REGISTERED);
+                       outstanding--;
+                     });
+  Unregister(process_id_);
 }
 
 TEST_F(AgisTest, Unregister) {
-  const char *url = "fuchsia.gpu.agis.test-unregister";
-  Register(url);
-  Unregister(url);
-  session_->Unregister(url, [&](fuchsia::gpu::agis::Session_Unregister_Result result) {
+  Register(process_id_, process_name_);
+  Unregister(process_id_);
+  session_->Unregister(process_id_, [&](fuchsia::gpu::agis::Session_Unregister_Result result) {
     const auto status = result.err();
     EXPECT_EQ(status, fuchsia::gpu::agis::Status::NOT_FOUND);
   });
 }
 
 TEST_F(AgisTest, Connections) {
-  const char *url0 = "fuchsia.gpu.agis.test-connections-0";
-  const char *url1 = "fuchsia.gpu.agis.test-connections-1";
-  Register(url0);
-  Register(url1);
+  Register(process_id_, process_name_);
+  Register(process_id_ + 1, process_name_ + "+1");
   Connections();
   LoopWait();
   EXPECT_EQ(num_connections_, 2ul);
-  Unregister(url0);
-  Unregister(url1);
+  Unregister(process_id_);
+  Unregister(process_id_ + 1);
   Connections();
   LoopWait();
   EXPECT_EQ(num_connections_, 0ul);
 }
 
 TEST_F(AgisTest, MaxConnections) {
-  char url[PATH_MAX];
   uint32_t i = 0;
   for (i = 0; i < fuchsia::gpu::agis::MAX_CONNECTIONS; i++) {
-    snprintf(url, PATH_MAX, "%s%04d", "fuchsia.gpu.agis.max-connections", i);
-    Register(url);
+    Register(process_id_ + i, process_name_ + "+" + std::to_string(i));
   }
-  snprintf(url, PATH_MAX, "%s%04d", "fuchsia.gpu.agis.max-connections", i);
   outstanding++;
-  session_->Register(url, [&](fuchsia::gpu::agis::Session_Register_Result result) {
-    EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::CONNECTIONS_EXCEEDED);
-    outstanding--;
-  });
+  session_->Register(process_id_ + i, process_name_ + "+" + std::to_string(i),
+                     [&](fuchsia::gpu::agis::Session_Register_Result result) {
+                       EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::CONNECTIONS_EXCEEDED);
+                       outstanding--;
+                     });
   for (i = 0; i < fuchsia::gpu::agis::MAX_CONNECTIONS; i++) {
-    snprintf(url, PATH_MAX, "%s%04d", "fuchsia.gpu.agis.max-connections", i);
-    Unregister(url);
+    Unregister(process_id_ + i);
   }
 }
 
 TEST_F(AgisTest, UsableSocket) {
   // Register and retrieve the socket for the server.
   int server_fd = -1;
-  const char *url = "fuchsia.gpu.agis.test-usable-socket";
   outstanding++;
-  session_->Register(url, [&](fuchsia::gpu::agis::Session_Register_Result result) {
-    fuchsia::gpu::agis::Session_Register_Response response(std::move(result.response()));
-    EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
-    zx::handle socket = response.ResultValue_();
-    EXPECT_EQ(ZX_OK, fdio_fd_create(socket.release(), &server_fd));
-    outstanding--;
-  });
+  session_->Register(
+      process_id_, process_name_, [&](fuchsia::gpu::agis::Session_Register_Result result) {
+        fuchsia::gpu::agis::Session_Register_Response response(std::move(result.response()));
+        EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
+        zx::handle socket = response.ResultValue_();
+        EXPECT_EQ(ZX_OK, fdio_fd_create(socket.release(), &server_fd));
+        outstanding--;
+      });
   LoopWait();
   EXPECT_NE(server_fd, -1);
 
   // Get the port assignment for the client.
   outstanding++;
   uint16_t port = 0;
+  std::string process_name;
   session_->Connections([&](fuchsia::gpu::agis::Session_Connections_Result result) {
     fuchsia::gpu::agis::Session_Connections_Response response(std::move(result.response()));
     EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
     std::vector<fuchsia::gpu::agis::Connection> connections(response.ResultValue_());
     EXPECT_EQ(connections.size(), 1ul);
     port = connections.front().port();
+    process_name = connections.front().process_name();
     outstanding--;
   });
   LoopWait();
   EXPECT_NE(port, 0);
+  EXPECT_EQ(process_name, process_name_);
 
   // Start server listening on the socket retrieved from AGIS.
+  std::mutex mutex;
+  bool listening(false);
+  std::condition_variable condition;
   const char message[] = "AGIS Client Message";
   outstanding++;
   std::thread server([&] {
-    const int kMaxPendingQueueSize = 1;
-    const int listen_rv = listen(server_fd, kMaxPendingQueueSize);
-    ASSERT_EQ(listen_rv, 0) << "Listen failed with " << strerror(errno);
+    {
+      std::unique_lock lock(mutex);
+      const int kMaxPendingQueueSize = 1;
+      const int listen_rv = listen(server_fd, kMaxPendingQueueSize);
+      ASSERT_EQ(listen_rv, 0) << "Listen failed with " << strerror(errno);
+      listening = true;
+      condition.notify_one();
+    }
 
     // Accept connection from the client.
     struct sockaddr_in client_addr;
@@ -218,9 +247,15 @@ TEST_F(AgisTest, UsableSocket) {
   inet_aton("127.0.0.1", &(serv_addr.sin_addr));
 
   // Connect to the server.
-  const int connect_rv =
-      connect(client_fd, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr));
-  ASSERT_EQ(connect_rv, 0) << "Connect failed with: " << strerror(errno);
+  {
+    std::unique_lock lock(mutex);
+    while (!listening) {
+      condition.wait(lock);
+    }
+    const int connect_rv =
+        connect(client_fd, reinterpret_cast<struct sockaddr *>(&serv_addr), sizeof(serv_addr));
+    ASSERT_EQ(connect_rv, 0) << "Connect failed with: " << strerror(errno);
+  }
 
   // Send message to the server.
   const ssize_t bytes_written = write(client_fd, message, strlen(message));
@@ -233,7 +268,8 @@ TEST_F(AgisTest, UsableSocket) {
 }
 
 TEST(AgisDisconnect, Main) {
-  const std::string url("fuchsia.gpu.agis.test-disconnect");
+  zx_koid_t process_id = ProcessID();
+  std::string process_name = ProcessName();
   bool disconnect_outstanding = false;
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
@@ -244,7 +280,7 @@ TEST(AgisDisconnect, Main) {
     }
   };
 
-  // Create a Session, register |url| and verify its presence.
+  // Create a Session, register |process_id| and verify its presence.
   {
     fuchsia::gpu::agis::SessionPtr session;
     context->svc()->Connect(session.NewRequest(loop->dispatcher()));
@@ -256,10 +292,11 @@ TEST(AgisDisconnect, Main) {
     });
 
     disconnect_outstanding = true;
-    session->Register(url, [&](fuchsia::gpu::agis::Session_Register_Result result) {
-      EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
-      disconnect_outstanding = false;
-    });
+    session->Register(process_id, process_name,
+                      [&](fuchsia::gpu::agis::Session_Register_Result result) {
+                        EXPECT_EQ(result.err(), fuchsia::gpu::agis::Status::OK);
+                        disconnect_outstanding = false;
+                      });
     loop_wait();
 
     disconnect_outstanding = true;
@@ -270,7 +307,8 @@ TEST(AgisDisconnect, Main) {
       EXPECT_EQ(connections.size(), 1ul);
       bool found = false;
       for (const auto &connection : connections) {
-        if (connection.component_url() == url) {
+        if (connection.process_id() == process_id) {
+          EXPECT_EQ(connection.process_name(), process_name);
           found = true;
           break;
         }
@@ -281,7 +319,7 @@ TEST(AgisDisconnect, Main) {
     loop_wait();
   }
 
-  // Create a new Session and verify that |url| is no longer registered.
+  // Create a new Session and verify that |process_id| is no longer registered.
   fuchsia::gpu::agis::SessionPtr session;
   context->svc()->Connect(session.NewRequest(loop->dispatcher()));
   session.set_error_handler([&loop](zx_status_t status) {
@@ -299,7 +337,8 @@ TEST(AgisDisconnect, Main) {
       auto connections(result.response().ResultValue_());
       bool component_found = false;
       for (const auto &connection : connections) {
-        if (connection.component_url() == url) {
+        if (connection.process_id() == process_id) {
+          EXPECT_EQ(connection.process_name(), process_name);
           component_found = true;
           break;
         }
