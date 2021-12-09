@@ -229,3 +229,111 @@ that they continue to use `Update` when they wish to mutate their instance of
 `T`, it is OK for them to read `T` directly without using `Read` as this
 will not cause any undefined behavior when done concurrently with other readers
 in the system.
+
+## `SeqLock`
+
+### Overview
+
+Sequence locks are synchronization primitives which allow for concurrent read
+access to a set of data without ever excluding write updates.  Reads are
+performed as transactions, which succeed if and only if there is no concurrent
+write operation which overlaps with the read transaction.  Sequence locks can be
+useful in patterns where any of the following conditions hold:
+
++ Read operations are expected to greatly out-number write operations, and high
+  levels of read concurrency are desired.
++ Write operations must never be delayed by concurrent read operations.
++ Readers have strictly read-only access to the shared state of the published
+  data.  No modifications of the state are allowed, as would be required when
+  using an synchronization primitive such as a mutex.
+
+To assist in implementing data sharing via a sequence lock, `libconcurrent`
+offers the `SeqLock` primitive.  The `SeqLock` behaves like a spinlock when
+acquired exclusively for write access, while still allowing concurrent read
+transactions to take place.
+
+### Rules
+
+In order to properly implement a sequence lock pattern, there are a few rules
+which must be obeyed at all times.
+
+1) Data protected by a `SeqLock` may be both read and written concurrently,
+therefore care must be taken to always access the data in a way which is free
+from data races.
+2) Reads of, and writes to the data protected by the `SeqLock` must always
+properly synchronize-with the internals of the lock in order to ensure proper
+behavior on architectures with weak memory ordering.
+3) No decisions based on protected data should ever be made _during_ a read
+transaction.  It is only after a read transaction has _successfully_ concluded
+that a program is guaranteed to have made a coherent observation of the
+protected data.
+
+Rules #1 and #2 can be easily satisfied by always accessing protected data using
+the `WellDefinedCopy` primitives described above.
+
+### Example
+
+Here is a small example of how it looks to use a SeqLock.
+
+```c++
+class MyClass {
+ public:
+  void Update(const Foo& foo) {
+    seq_lock_.Acquire();  // Acquire the lock for exclusive write access.
+    foo_.Update(foo);     // The wrapper ensures data race free access, as well
+                          // as properly synchronizing-with the lock.
+    seq_lock_.Release();  // Release the lock to allow concurrent read
+                          // trasnactions to succeed.
+  }
+
+  Foo Observe() {
+    Foo ret;
+    concurrent::SeqLock::ReadTransactionToken token;
+    do {
+      // Start a new read transaction.  Note that this operation will spin if
+      // there happens to be write transaction taking place at the same time. Be
+      // sure to use one of the TryBeginReadTransaction forms along with a
+      // timeout if this is a time sensitive code path where the observation
+      // operation may need to be aborted if it is taking too long.
+      token = seq_lock_.BeginReadTransaction();
+
+      // Make a local copy of the data using the WellDefinedCopyWrapper to
+      // ensure that we have no data races, and that we properly
+      // synchronize-with the lock and any concurrent write operations.
+      foo_.Read(ret);
+
+      // End the transaction, and check to see if it succeeded.  If it didn't
+      // then an update operation must have overlapped with this observation
+      // operation.  Keep trying until we manage to make a coherent observation
+      // with no overlapping concurrent write.
+    } while (!seq_lock_.EndReadTransaction(token));
+
+    // Our read transaction was successful.  It is now OK to make decisions
+    // based on our results, stored in |ret|
+    return ret;
+  }
+
+ private:
+  concurrent::SeqLock seq_lock_;
+  concurrent::WellDefinedCopyWrapper<Foo> foo_ TA_GUARDED(seq_lock_);
+};
+```
+
+### Blocking behavior
+
+Both the `BeginReadTransaction` and the `Acquire` operations have the potential
+to spin-wait if there happens to be another thread which has currently
+`Acquire`ed the lock for exclusive access. Technically, the operations never
+result in the thread blocking in the scheduler, however they will spin waiting
+for the lock to become uncontested before proceeding.
+
+If users are executing in a time sensitive context, or a read operation is being
+conducted against data which is being updated by another (potentially malicious)
+process, `Try` versions of the `BeginReadTransaction` and the `Acquire` may be
+used along with a timeout to limit the amount of spinning which may eventually
+take place.
+
++ `bool TryBeginReadTransaction(ReadTransactionToken& out_token, zx_duration_t timeout)`
++ `bool TryBeginReadTransactionDeadline(ReadTransactionToken& out_token, zx_time_t deadline)`
++ `bool TryAcquire(zx_duration_t timeout)`
++ `bool TryAcquireDeadline(zx_time_t deadline)`

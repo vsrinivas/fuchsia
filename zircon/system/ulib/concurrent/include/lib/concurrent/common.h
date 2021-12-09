@@ -6,6 +6,7 @@
 #define LIB_CONCURRENT_COMMON_H_
 
 #include <stdint.h>
+#include <zircon/assert.h>
 
 #include <memory>
 

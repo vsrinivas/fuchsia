@@ -4,15 +4,24 @@
 
 import("//build/cpp/library_headers.gni")
 
-library_headers("concurrent-headers") {
+library_headers("headers") {
   headers = [
     "lib/concurrent/common.h",
     "lib/concurrent/copy.h",
+    "lib/concurrent/seqlock.h",
+    "lib/concurrent/seqlock.inc",
   ]
 }
 
 source_set("concurrent") {
   sources = [ "copy.cc" ]
-  public_deps = [ ":concurrent-headers" ]
+
+  if (is_fuchsia && !is_kernel) {
+    sources += [ "seqlock_usermode_fuchsia.cc" ]
+  } else if (is_host) {
+    sources += [ "seqlock_usermode_posix.cc" ]
+  }
+
+  public_deps = [ ":headers" ]
   deps = [ "//sdk/lib/stdcompat" ]
 }
