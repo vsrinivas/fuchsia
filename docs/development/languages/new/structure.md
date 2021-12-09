@@ -16,7 +16,7 @@ which is loaded into newly created processes by their creator.
 
 The public entry points for the vDSO are defined in
 [//zircon/vdso](/zircon/vdso/).
-This file is processed by the [kazoo](/docs/concepts/kernel/vdso.md#kazoo-tool)
+This file is processed by the [kazoo](/docs/concepts/kernel/vdso.md#kazoo_tool)
 tool.
 
 ## Async
