@@ -501,7 +501,7 @@ TODO(fxbug.dev/32938)
 
 TODO(fxbug.dev/32938)
 '''
-    with open(md, 'wb') as f:
+    with open(md, 'w') as f:
         f.write(stub)
 
 
