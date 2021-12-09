@@ -126,6 +126,10 @@ SYSCALL_CATEGORY_BEGIN(blocking)
     SYSCALL_IN_CATEGORY(object_wait_one)
     SYSCALL_IN_CATEGORY(object_wait_many)
     SYSCALL_IN_CATEGORY(port_wait)
+    SYSCALL_IN_CATEGORY(stream_writev)
+    SYSCALL_IN_CATEGORY(stream_writev_at)
+    SYSCALL_IN_CATEGORY(stream_readv)
+    SYSCALL_IN_CATEGORY(stream_readv_at)
     SYSCALL_IN_CATEGORY(vcpu_enter)
     SYSCALL_IN_CATEGORY(vmo_read)
     SYSCALL_IN_CATEGORY(vmo_write)
@@ -4855,6 +4859,7 @@ TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$0-36
 	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
+	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
 	MOVD vector+8(FP), R2
@@ -4862,6 +4867,7 @@ TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$0-36
 	MOVD actual+24(FP), R4
 	BL vdso_zx_stream_writev(SB)
 	MOVW R0, ret+32(FP)
+	BL runtime·exitsyscall(SB)
 	MOVD g_m(g), R21
 	MOVD $0, m_vdsoSP(R21)
 	RET
@@ -4875,6 +4881,7 @@ TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$0-44
 	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
+	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
 	MOVD offset+8(FP), R2
@@ -4883,6 +4890,7 @@ TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$0-44
 	MOVD actual+32(FP), R5
 	BL vdso_zx_stream_writev_at(SB)
 	MOVW R0, ret+40(FP)
+	BL runtime·exitsyscall(SB)
 	MOVD g_m(g), R21
 	MOVD $0, m_vdsoSP(R21)
 	RET
@@ -4896,6 +4904,7 @@ TEXT runtime·vdsoCall_zx_stream_readv(SB),NOSPLIT,$0-36
 	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
+	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
 	MOVD vector+8(FP), R2
@@ -4903,6 +4912,7 @@ TEXT runtime·vdsoCall_zx_stream_readv(SB),NOSPLIT,$0-36
 	MOVD actual+24(FP), R4
 	BL vdso_zx_stream_readv(SB)
 	MOVW R0, ret+32(FP)
+	BL runtime·exitsyscall(SB)
 	MOVD g_m(g), R21
 	MOVD $0, m_vdsoSP(R21)
 	RET
@@ -4916,6 +4926,7 @@ TEXT runtime·vdsoCall_zx_stream_readv_at(SB),NOSPLIT,$0-44
 	DMB $0xe
 	MOVD RSP, R20
 	MOVD R20, m_vdsoSP(R21)
+	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
 	MOVD offset+8(FP), R2
@@ -4924,6 +4935,7 @@ TEXT runtime·vdsoCall_zx_stream_readv_at(SB),NOSPLIT,$0-44
 	MOVD actual+32(FP), R5
 	BL vdso_zx_stream_readv_at(SB)
 	MOVW R0, ret+40(FP)
+	BL runtime·exitsyscall(SB)
 	MOVD g_m(g), R21
 	MOVD $0, m_vdsoSP(R21)
 	RET
@@ -10507,6 +10519,7 @@ TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$8-36
 	MOVQ DX, m_vdsoPC(R14)
 	LEAQ 24(SP), DX
 	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
 	MOVQ vector+8(FP), DX
@@ -10515,6 +10528,7 @@ TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$8-36
 	MOVQ vdso_zx_stream_writev(SB), AX
 	CALL AX
 	MOVL AX, ret+32(FP)
+	CALL runtime·exitsyscall(SB)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -10531,6 +10545,7 @@ TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$8-44
 	MOVQ DX, m_vdsoPC(R14)
 	LEAQ 24(SP), DX
 	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
 	MOVQ offset+8(FP), DX
@@ -10540,6 +10555,7 @@ TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$8-44
 	MOVQ vdso_zx_stream_writev_at(SB), AX
 	CALL AX
 	MOVL AX, ret+40(FP)
+	CALL runtime·exitsyscall(SB)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -10556,6 +10572,7 @@ TEXT runtime·vdsoCall_zx_stream_readv(SB),NOSPLIT,$8-36
 	MOVQ DX, m_vdsoPC(R14)
 	LEAQ 24(SP), DX
 	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
 	MOVQ vector+8(FP), DX
@@ -10564,6 +10581,7 @@ TEXT runtime·vdsoCall_zx_stream_readv(SB),NOSPLIT,$8-36
 	MOVQ vdso_zx_stream_readv(SB), AX
 	CALL AX
 	MOVL AX, ret+32(FP)
+	CALL runtime·exitsyscall(SB)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -10580,6 +10598,7 @@ TEXT runtime·vdsoCall_zx_stream_readv_at(SB),NOSPLIT,$8-44
 	MOVQ DX, m_vdsoPC(R14)
 	LEAQ 24(SP), DX
 	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
 	MOVQ offset+8(FP), DX
@@ -10589,6 +10608,7 @@ TEXT runtime·vdsoCall_zx_stream_readv_at(SB),NOSPLIT,$8-44
 	MOVQ vdso_zx_stream_readv_at(SB), AX
 	CALL AX
 	MOVL AX, ret+40(FP)
+	CALL runtime·exitsyscall(SB)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -17069,7 +17089,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
     {
       "name": "stream_writev",
       "attributes": [
-        "*"
+        "*",
+        "blocking"
       ],
       "top_description": [
         "Write", "data", "to", "a", "stream", "at", "the", "current", "seek", "offset", "."
@@ -17120,7 +17141,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
     {
       "name": "stream_writev_at",
       "attributes": [
-        "*"
+        "*",
+        "blocking"
       ],
       "top_description": [
         "Write", "data", "to", "a", "stream", "at", "the", "given", "offset", "."
@@ -17178,7 +17200,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
     {
       "name": "stream_readv",
       "attributes": [
-        "*"
+        "*",
+        "blocking"
       ],
       "top_description": [
         "Read", "data", "from", "a", "stream", "at", "the", "current", "seek", "offset", "."
@@ -17228,7 +17251,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
     {
       "name": "stream_readv_at",
       "attributes": [
-        "*"
+        "*",
+        "blocking"
       ],
       "top_description": [
         "Read", "data", "from", "a", "stream", "at", "the", "given", "offset", "."
@@ -20482,7 +20506,7 @@ KERNEL_SYSCALL(stream_create, zx_status_t, /* no attributes */, 4,
     zx_off_t seek,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* out_stream))
 
-KERNEL_SYSCALL(stream_writev, zx_status_t, /* no attributes */, 5,
+BLOCKING_SYSCALL(stream_writev, zx_status_t, /* no attributes */, 5,
     (handle, options, vector, num_vector, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,
@@ -20490,7 +20514,7 @@ KERNEL_SYSCALL(stream_writev, zx_status_t, /* no attributes */, 5,
     size_t num_vector,
     user_out_ptr<size_t> actual))
 
-KERNEL_SYSCALL(stream_writev_at, zx_status_t, /* no attributes */, 6,
+BLOCKING_SYSCALL(stream_writev_at, zx_status_t, /* no attributes */, 6,
     (handle, options, offset, vector, num_vector, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,
@@ -20499,7 +20523,7 @@ KERNEL_SYSCALL(stream_writev_at, zx_status_t, /* no attributes */, 6,
     size_t num_vector,
     user_out_ptr<size_t> actual))
 
-KERNEL_SYSCALL(stream_readv, zx_status_t, /* no attributes */, 5,
+BLOCKING_SYSCALL(stream_readv, zx_status_t, /* no attributes */, 5,
     (handle, options, vector, num_vector, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,
@@ -20507,7 +20531,7 @@ KERNEL_SYSCALL(stream_readv, zx_status_t, /* no attributes */, 5,
     size_t num_vector,
     user_out_ptr<size_t> actual))
 
-KERNEL_SYSCALL(stream_readv_at, zx_status_t, /* no attributes */, 6,
+BLOCKING_SYSCALL(stream_readv_at, zx_status_t, /* no attributes */, 6,
     (handle, options, offset, vector, num_vector, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,
@@ -23085,7 +23109,7 @@ KERNEL_SYSCALL(stream_create, zx_status_t, /* no attributes */, 4,
     zx_off_t seek,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_stream))
 
-KERNEL_SYSCALL(stream_writev, zx_status_t, /* no attributes */, 5,
+BLOCKING_SYSCALL(stream_writev, zx_status_t, /* no attributes */, 5,
     (handle, options, vector, num_vector, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,
@@ -23093,7 +23117,7 @@ KERNEL_SYSCALL(stream_writev, zx_status_t, /* no attributes */, 5,
     size_t num_vector,
     size_t* actual))
 
-KERNEL_SYSCALL(stream_writev_at, zx_status_t, /* no attributes */, 6,
+BLOCKING_SYSCALL(stream_writev_at, zx_status_t, /* no attributes */, 6,
     (handle, options, offset, vector, num_vector, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,
@@ -23102,7 +23126,7 @@ KERNEL_SYSCALL(stream_writev_at, zx_status_t, /* no attributes */, 6,
     size_t num_vector,
     size_t* actual))
 
-KERNEL_SYSCALL(stream_readv, zx_status_t, /* no attributes */, 5,
+BLOCKING_SYSCALL(stream_readv, zx_status_t, /* no attributes */, 5,
     (handle, options, vector, num_vector, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,
@@ -23110,7 +23134,7 @@ KERNEL_SYSCALL(stream_readv, zx_status_t, /* no attributes */, 5,
     size_t num_vector,
     size_t* actual))
 
-KERNEL_SYSCALL(stream_readv_at, zx_status_t, /* no attributes */, 6,
+BLOCKING_SYSCALL(stream_readv_at, zx_status_t, /* no attributes */, 6,
     (handle, options, offset, vector, num_vector, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,

@@ -23,6 +23,7 @@ protocol stream {
 
     /// Write data to a stream at the current seek offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
+    @blocking
     stream_writev(resource struct {
         handle handle:STREAM;
         options uint32;
@@ -34,6 +35,7 @@ protocol stream {
 
     /// Write data to a stream at the given offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
+    @blocking
     stream_writev_at(resource struct {
         handle handle:STREAM;
         options uint32;
@@ -46,6 +48,7 @@ protocol stream {
 
     /// Read data from a stream at the current seek offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
+    @blocking
     stream_readv(resource struct {
         handle handle:STREAM;
         options uint32;
@@ -57,6 +60,7 @@ protocol stream {
 
     /// Read data from a stream at the given offset.
     /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
+    @blocking
     stream_readv_at(resource struct {
         handle handle:STREAM;
         options uint32;
