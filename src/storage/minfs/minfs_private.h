@@ -400,12 +400,12 @@ class Minfs :
 
   const Allocator& GetBlockAllocator() const final { return *block_allocator_; }
   // Returns number of blocks available.
-  uint32_t BlocksAvailable() const { return GetBlockAllocator().GetAvailable(); }
+  size_t BlocksAvailable() const { return GetBlockAllocator().GetAvailable(); }
 
   // Returns number of reserved blocks but are yet to be allocated.
   // This helps to determine if we should fail incoming writes because we will
   // run out of space.
-  uint32_t BlocksReserved() const { return GetBlockAllocator().GetReserved(); }
+  size_t BlocksReserved() const { return GetBlockAllocator().GetReserved(); }
 
 #ifndef __Fuchsia__
   BlockOffsets GetBlockOffsets() const final { return offsets_; }

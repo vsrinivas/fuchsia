@@ -82,26 +82,27 @@ Header& Metadata::GetHeader() const {
   return *reinterpret_cast<Header*>(static_cast<uint8_t*>(data_->data()));
 }
 
-VPartitionEntry& Metadata::GetPartitionEntry(unsigned idx) const {
+VPartitionEntry& Metadata::GetPartitionEntry(size_t idx) const {
   const Header& header = GetHeader();
   size_t offset = MetadataOffset(SuperblockType::kPrimary) + header.GetPartitionEntryOffset(idx);
   ZX_ASSERT(offset + sizeof(VPartitionEntry) <= data_->size());
   if (idx > header.GetPartitionTableEntryCount()) {
     fprintf(stderr,
-            "fatal: Accessing out-of-bounds partition (idx %u, table has %lu usable entries)\n",
+            "fatal: Accessing out-of-bounds partition (idx %zu, table has %lu usable entries)\n",
             idx, header.GetPartitionTableEntryCount());
     ZX_ASSERT(idx <= header.GetPartitionTableEntryCount());
   }
   return *reinterpret_cast<VPartitionEntry*>(reinterpret_cast<uint8_t*>(data_->data()) + offset);
 }
 
-SliceEntry& Metadata::GetSliceEntry(unsigned idx) const {
+SliceEntry& Metadata::GetSliceEntry(size_t idx) const {
   const Header& header = GetHeader();
   size_t offset = MetadataOffset(SuperblockType::kPrimary) + header.GetSliceEntryOffset(idx);
   ZX_ASSERT(offset + sizeof(SliceEntry) <= data_->size());
   if (idx > header.GetAllocationTableUsedEntryCount()) {
-    fprintf(stderr, "fatal: Accessing out-of-bounds slice (idx %u, table has %lu usable entries)\n",
-            idx, header.GetAllocationTableUsedEntryCount());
+    fprintf(stderr,
+            "fatal: Accessing out-of-bounds slice (idx %zu, table has %lu usable entries)\n", idx,
+            header.GetAllocationTableUsedEntryCount());
     ZX_ASSERT(idx <= header.GetAllocationTableUsedEntryCount());
   }
   return *reinterpret_cast<SliceEntry*>(reinterpret_cast<uint8_t*>(data_->data()) + offset);

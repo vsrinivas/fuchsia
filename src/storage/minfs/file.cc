@@ -114,7 +114,7 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
 
     // Since we are updating the file in "chunks", only update the on-disk inode size
     // with the portion we've written so far.
-    blk_t last_byte = (bno_start + bno_count) * Vfs()->BlockSize();
+    blk_t last_byte = static_cast<blk_t>((bno_start + bno_count) * Vfs()->BlockSize());
     ZX_ASSERT_MSG(last_byte <= fbl::round_up(allocation_state_.GetNodeSize(), Vfs()->BlockSize()),
                   "Offset :%u to be updated is beyond the allowed nodesize :%lu", last_byte,
                   fbl::round_up(allocation_state_.GetNodeSize(), Vfs()->BlockSize()));
@@ -389,7 +389,7 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
 
   size_t reserve_blocks = reserve_blocks_or.value();
   zx_status_t status;
-  auto transaction_or = GetTransaction(reserve_blocks);
+  auto transaction_or = GetTransaction(static_cast<uint32_t>(reserve_blocks));
   if (transaction_or.is_error()) {
     return transaction_or.error_value();
   }

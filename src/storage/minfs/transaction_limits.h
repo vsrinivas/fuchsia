@@ -19,7 +19,7 @@ blk_t GetBlockBitmapBlocks(const Superblock& info);
 
 // Returns the required number of blocks for a write at the given |offset|
 // and |length|.
-zx::status<blk_t> GetRequiredBlockCount(size_t offset, size_t length, uint32_t block_size);
+zx::status<blk_t> GetRequiredBlockCount(size_t offset, size_t length, size_t block_size);
 
 // Calculates and tracks the number of Minfs metadata / data blocks that can be modified within one
 // transaction, as well as the corresponding Journal sizes.

@@ -72,7 +72,7 @@ class FakeBlockDevice : public ddk::BlockImplProtocol<FakeBlockDevice> {
         last_trim_length_ += operation->trim.length;
         break;
     }
-    completion_cb(cookie, ZX_OK, operation);
+    completion_cb(cookie, result, operation);
   }
 
   int num_trim_calls() const { return num_trim_calls_; }

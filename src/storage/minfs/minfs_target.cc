@@ -93,7 +93,7 @@ zx::status<> Minfs::AddDirtyBytes(uint64_t dirty_bytes, bool allocated) {
     fbl::AutoLock lock(&hash_lock_);
     // We need to allocate the block. Make sure that we have
     // enough space.
-    uint32_t blocks_needed = BlocksReserved();
+    uint32_t blocks_needed = static_cast<uint32_t>(BlocksReserved());
     uint32_t local_blocks_available = Info().block_count - Info().alloc_block_count;
     if (blocks_needed > local_blocks_available) {
       // Check if fvm has free slices.

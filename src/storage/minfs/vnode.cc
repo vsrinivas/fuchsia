@@ -122,8 +122,8 @@ zx_status_t VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
 
 zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
   if (!indirect_file_) {
-    zx::status<std::unique_ptr<LazyBuffer>> buffer =
-        LazyBuffer::Create(fs_->bc_.get(), "minfs-indirect-file", fs_->BlockSize());
+    zx::status<std::unique_ptr<LazyBuffer>> buffer = LazyBuffer::Create(
+        fs_->bc_.get(), "minfs-indirect-file", static_cast<uint32_t>(fs_->BlockSize()));
     if (buffer.is_error())
       return buffer.take_error();
     indirect_file_ = std::move(buffer).value();
@@ -270,7 +270,7 @@ zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
     // The open_count() needs to be read within the lock to make the compiler's checking happy,
     // but we don't actually need this lock and can run into recursive locking if we hold it for
     // the subsequent operations in this block.
-    int oc;
+    size_t oc;
     {
       std::lock_guard lock(mutex_);
       oc = open_count();
@@ -675,7 +675,7 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
   memcpy(&(*out)->inode_, &inode, sizeof(inode));
 
   (*out)->ino_ = ino;
-  (*out)->SetSize((*out)->inode_.size);
+  (*out)->SetSize(static_cast<uint32_t>((*out)->inode_.size));
 }
 
 #ifdef __Fuchsia__
@@ -778,7 +778,7 @@ zx_status_t VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
     // Shrink the size to be block-aligned if we are removing blocks from
     // the end of the vnode.
     if (start_bno * fs_->BlockSize() < inode_size) {
-      SetSize(start_bno * fs_->BlockSize());
+      SetSize(static_cast<uint32_t>(start_bno * fs_->BlockSize()));
     }
 
     // Write zeroes to the rest of the remaining block, if it exists

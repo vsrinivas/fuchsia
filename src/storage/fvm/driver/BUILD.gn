@@ -78,9 +78,6 @@ source_set("shared") {
   ]
 
   configs += [ "//build/config:all_source" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {
@@ -103,9 +100,6 @@ test("fvm-driver-unittests") {
     "//src/devices/testing/no_ddk",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO: delete the below and fix compiler errors.
-  configs += [ "//build/config:Wno-unused-but-set-variable" ]
 }
 
 fuchsia_unittest_package("fvm-driver-unittests-package") {

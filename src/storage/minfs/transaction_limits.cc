@@ -28,7 +28,7 @@ blk_t GetBlockBitmapBlocks(const Superblock& info) {
   return bitmap_blocks;
 }
 
-zx::status<blk_t> GetRequiredBlockCount(size_t offset, size_t length, uint32_t block_size) {
+zx::status<blk_t> GetRequiredBlockCount(size_t offset, size_t length, size_t block_size) {
   if (block_size != kMinfsBlockSize) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -97,7 +97,8 @@ void TransactionLimits::CalculateDataBlocks() {
 
   max_data_blocks_ = GetRequiredBlockCount(offset, kMaxWriteBytes, BlockSize()).value();
 
-  blk_t direct_blocks = (fbl::round_up(kMaxWriteBytes, BlockSize()) / BlockSize()) + 1;
+  blk_t direct_blocks =
+      static_cast<blk_t>((fbl::round_up(kMaxWriteBytes, BlockSize()) / BlockSize()) + 1);
   blk_t max_indirect_blocks = max_data_blocks_ - direct_blocks;
 
   max_meta_data_blocks_ = std::max(max_directory_blocks, max_indirect_blocks);

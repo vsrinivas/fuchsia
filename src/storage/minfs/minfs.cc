@@ -215,7 +215,7 @@ zx_status_t CreateFvmData(const MountOptions& options, Superblock* info,
 
   // Inode slice: Compute the number required to contain at least the default number of inodes.
   auto inode_blocks = (kMinfsDefaultInodeCount + kMinfsInodesPerBlock - 1) / kMinfsInodesPerBlock;
-  info->ino_slices = (inode_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice;
+  info->ino_slices = static_cast<uint32_t>((inode_blocks + kBlocksPerSlice - 1) / kBlocksPerSlice);
   request.offset = kFVMBlockInodeStart / kBlocksPerSlice;
   request.length = info->ino_slices;
   if ((status = device->VolumeExtend(request.offset, request.length)) != ZX_OK) {
@@ -1542,9 +1542,9 @@ void Minfs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
 
 zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
-  uint32_t reserved_blocks = BlocksReserved();
+  size_t reserved_blocks = BlocksReserved();
 
-  info.block_size = BlockSize();
+  info.block_size = static_cast<uint32_t>(BlockSize());
   info.max_filename_size = kMinfsMaxNameSize;
   info.fs_type = VFS_TYPE_MINFS;
   info.total_bytes = Info().block_count * Info().block_size;

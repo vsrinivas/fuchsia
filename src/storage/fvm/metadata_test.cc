@@ -41,7 +41,8 @@ VPartitionEntry CreatePartitionEntry(size_t slices) {
   std::uniform_int_distribution<uint32_t> d2;
   uint32_t flags = d2(rand);
 
-  return VPartitionEntry(type, guid, slices, VPartitionEntry::StringFromArray(name), flags);
+  return VPartitionEntry(type, guid, static_cast<uint32_t>(slices),
+                         VPartitionEntry::StringFromArray(name), flags);
 }
 
 void ValidateMetadata(Metadata& metadata, const std::vector<VPartitionEntry>& expected_partitions,

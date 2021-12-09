@@ -122,7 +122,8 @@ BaseBufferView::Flusher GetIndirectFlusher(VnodeMinfs* vnode, LazyBuffer* file,
           return EnumerateBlocks(
               range, [vnode, buffer, range, device_block](BlockRange r) -> zx::status<uint64_t> {
                 zx_status_t status = vnode->Vfs()->GetMutableBcache()->Writeblk(
-                    device_block.block() + (r.Start() - range.Start()), buffer->Data(r.Start()));
+                    static_cast<blk_t>(device_block.block() + (r.Start() - range.Start())),
+                    buffer->Data(r.Start()));
                 if (status == ZX_OK) {
                   return zx::ok(1);
                 } else {

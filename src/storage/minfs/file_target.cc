@@ -42,8 +42,9 @@ bool File::IsDirty() const {
 zx::status<> File::WalkFileBlocks(size_t offset, size_t length,
                                   WalkWriteBlockHandlerType& handler) {
   ZX_ASSERT(DirtyCacheEnabled());
-  blk_t start_block = offset / Vfs()->BlockSize();
-  blk_t end_block = (offset + length + Vfs()->BlockSize() - 1) / Vfs()->BlockSize();
+  blk_t start_block = static_cast<blk_t>(offset / Vfs()->BlockSize());
+  blk_t end_block =
+      static_cast<blk_t>((offset + length + Vfs()->BlockSize() - 1) / Vfs()->BlockSize());
   size_t aligned_length = (end_block - start_block) * Vfs()->BlockSize();
   while (aligned_length > 0) {
     VnodeMapper mapper(this);

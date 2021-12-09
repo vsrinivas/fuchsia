@@ -100,10 +100,10 @@ class Metadata {
   Header& GetHeader() const;
 
   // Accesses the partition table. Note that |idx| is one-based.
-  VPartitionEntry& GetPartitionEntry(unsigned idx) const;
+  VPartitionEntry& GetPartitionEntry(size_t idx) const;
 
   // Accesses the allocation table. Note that |idx| is one-based.
-  SliceEntry& GetSliceEntry(unsigned idx) const;
+  SliceEntry& GetSliceEntry(size_t idx) const;
 
   // Gets a view of the raw metadata buffer.
   const MetadataBuffer* Get() const;
