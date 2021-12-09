@@ -44,7 +44,6 @@ Stay informed about the Fuchsia project by joining a discussion group.
 
 The following are general Fuchsia discussion groups:
 
-
 <table>
   <tr>
    <td><strong>Group</strong>
@@ -272,11 +271,21 @@ Fuchsia’s leadership:
 The Fuchsia project encourages well-tested, high-quality contributions from
 anyone who wants to contribute to Fuchsia, not just from Googlers.
 
-To learn more about how to contribute a code change to Fuchsia, see [Contribute changes](/docs/development/source_code/contribute_changes.md).
-
+To learn more about how to contribute a code change to Fuchsia,
+see [Contribute changes](/docs/development/source_code/contribute_changes.md).
 
 ## Report an issue
 
 Did you see a line of documentation or code that you think needs to be improved?
 You can help get these kinds of concerns resolved by filing an issue in Monorail.
 For more information, see [Report an Issue](/docs/contribute/report-issue.md).
+
+All participation in groups, bugs, and forums must adhere to the
+[Fuchsia Code of Conduct](/CODE_OF_CONDUCT.md).
+Report Code of Conduct issues directly to the Community Management team via:
+
+ * [Email](mailto:community-managers@fuchsia.dev)
+ * Discord, via the `@Community Managers` role,
+   or to any individual Community Manager (identified by that role) via direct message.
+ * [A Monorail ticket](https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Report%20Community%20Abuse&ts=1605208884).
+   Note that such tickets are only visible to Community Managers.
