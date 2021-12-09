@@ -2448,7 +2448,7 @@ rust_library("codespan-reporting-v0_11_1") {
 
 rust_library("combine-v4_6_1") {
   crate_name = "combine"
-  crate_root = "//third_party/rust_crates/forks/combine/src/lib.rs"
+  crate_root = "//third_party/rust_crates/vendor/combine/src/lib.rs"
   output_name = "combine-34104a60ff055e3e"
   configs -= [
     "//build/config/rust:edition_2018",
@@ -2466,6 +2466,7 @@ rust_library("combine-v4_6_1") {
     "--edition=2018",
     "-Cmetadata=34104a60ff055e3e",
     "-Cextra-filename=-34104a60ff055e3e",
+    "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"bytes\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",

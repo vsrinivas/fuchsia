@@ -306,8 +306,6 @@ winapi = { path = "empty/winapi" }
 winapi-util = { path = "empty/winapi-util" }
 
 ### Forks: vendored crates whose code doesn't match the upstream version
-# TODO(fxbug.dev/81590) re-vendor when combine makes next release after 4.6.0
-combine = { path = "forks/combine" }
 fatfs = { path = "forks/fatfs" }
 libm = { path = "forks/libm" }
 rustls = { path = "forks/rustls" }
