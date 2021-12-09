@@ -717,6 +717,12 @@ void ReplyAndWait(const Message& request, uint32_t message_count, fdf::Channel s
 
   process_loop->StartThread();
 
+  // TODO(fxbug.dev/87840): we should use Dispatcher::Destroy once implemented.
+  auto shutdown = fit::defer([&]() {
+    process_loop->Quit();
+    process_loop->JoinThreads();
+  });
+
   std::set<fdf_txid_t> live_ids;
   std::vector<fdf::Channel::ReadReturn> live_requests;
 
@@ -848,6 +854,12 @@ TEST_F(ChannelTest, CallManagedThreadAllowsSyncCalls) {
   ASSERT_EQ(ZX_OK, driver_runtime::Dispatcher::CreateWithLoop(
                        FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "", 0, driver, &loop_,
                        &allow_sync_calls_dispatcher));
+
+  // TODO(fxbug.dev/87840): we should use Dispatcher::Destroy once implemented.
+  auto shutdown = fit::defer([&]() {
+    loop_.Quit();
+    loop_.JoinThreads();
+  });
 
   // Signaled once the Channel::Call completes.
   sync_completion_t call_complete;
