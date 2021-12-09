@@ -3577,7 +3577,7 @@ mod tests {
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let _actions: Vec<Action> = client.handle_message_receive(msg);
+        assert_matches!(client.handle_message_receive(msg)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(
@@ -3610,7 +3610,7 @@ mod tests {
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let _actions: Vec<Action> = client.handle_message_receive(msg);
+        assert_matches!(client.handle_message_receive(msg)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(
@@ -3626,8 +3626,16 @@ mod tests {
             }))
         );
 
-        // The client should transition to Requesting and select the server that sent the best advertise.
-        let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+        // The client should transition to Requesting and select the server that
+        // sent the best advertise.
+        assert_matches!(
+            &client.handle_timeout(ClientTimerType::Retransmission)[..],
+           [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+           ] if testutil::msg_type(buf) == v6::MessageType::Request
+        );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(state, Some(ClientState::Requesting(Requesting {
@@ -3643,7 +3651,15 @@ mod tests {
         })) if *server_id == server_id_1);
 
         for count in 1..REQUEST_MAX_RC + 1 {
-            let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+            assert_matches!(
+                &client.handle_timeout(ClientTimerType::Retransmission)[..],
+               [
+                    Action::SendMessage(buf),
+                    // `_timeout` is not checked because retransmission timeout
+                    // calculation is covered in its respective test.
+                    Action::ScheduleTimer(ClientTimerType::Retransmission, _timeout)
+               ] if testutil::msg_type(buf) == v6::MessageType::Request
+            );
             let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
                 &client;
             let (server_id, retrans_count) = match state {
@@ -3664,8 +3680,16 @@ mod tests {
             assert_eq!(*retrans_count, count);
         }
 
-        // When the retransmission count reaches REQUEST_MAX_RC, the client should select another server.
-        let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+        // When the retransmission count reaches REQUEST_MAX_RC, the client
+        // should select another server.
+        assert_matches!(
+            &client.handle_timeout(ClientTimerType::Retransmission)[..],
+           [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+           ] if testutil::msg_type(buf) == v6::MessageType::Request
+        );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         let (server_id, retrans_count) = match state {
@@ -3686,7 +3710,15 @@ mod tests {
         assert_eq!(*retrans_count, 0);
 
         for count in 1..REQUEST_MAX_RC + 1 {
-            let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+            assert_matches!(
+                &client.handle_timeout(ClientTimerType::Retransmission)[..],
+               [
+                    Action::SendMessage(buf),
+                    // `_timeout` is not checked because retransmission timeout
+                    // calculation is covered in its respective test.
+                    Action::ScheduleTimer(ClientTimerType::Retransmission, _timeout)
+               ] if testutil::msg_type(buf) == v6::MessageType::Request
+            );
             let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
                 &client;
             let (server_id, retrans_count) = match state {
@@ -3710,7 +3742,13 @@ mod tests {
         // When the retransmission count reaches REQUEST_MAX_RC, and the client
         // does not have information about another server, the client should
         // restart server discovery.
-        let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+        assert_matches!(
+            &client.handle_timeout(ClientTimerType::Retransmission)[..],
+           [
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_SOLICIT_TIMEOUT)
+           ] if testutil::msg_type(buf) == v6::MessageType::Solicit
+        );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
         assert_matches!(state,
             Some(ClientState::ServerDiscovery(ServerDiscovery {
@@ -3751,7 +3789,7 @@ mod tests {
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let _actions: Vec<Action> = client.handle_message_receive(msg);
+        assert_matches!(client.handle_message_receive(msg)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(
@@ -3783,7 +3821,7 @@ mod tests {
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let _actions: Vec<Action> = client.handle_message_receive(msg);
+        assert_matches!(client.handle_message_receive(msg)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(
@@ -3800,7 +3838,14 @@ mod tests {
         );
 
         // The client should transition to Requesting and select the server that sent the best advertise.
-        let _actions: Vec<Action> = client.handle_timeout(ClientTimerType::Retransmission);
+        assert_matches!(
+            &client.handle_timeout(ClientTimerType::Retransmission)[..],
+           [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+           ] if testutil::msg_type(buf) == v6::MessageType::Request
+        );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         assert_matches!(&state, Some(ClientState::Requesting(Requesting {
                 client_id: _,
