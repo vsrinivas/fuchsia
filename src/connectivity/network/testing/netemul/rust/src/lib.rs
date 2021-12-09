@@ -241,6 +241,13 @@ pub struct TestRealm<'a> {
     _sandbox: &'a TestSandbox,
 }
 
+impl<'a> std::fmt::Debug for TestRealm<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        let Self { realm: _, name, _sandbox } = self;
+        f.debug_struct("TestRealm").field("name", name).finish_non_exhaustive()
+    }
+}
+
 impl<'a> TestRealm<'a> {
     /// Connects to a protocol within the realm.
     pub fn connect_to_protocol<S>(&self) -> Result<S::Proxy>
@@ -544,6 +551,13 @@ pub struct TestNetwork<'a> {
     sandbox: &'a TestSandbox,
 }
 
+impl<'a> std::fmt::Debug for TestNetwork<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        let Self { name, network: _, sandbox: _ } = self;
+        f.debug_struct("TestNetwork").field("name", name).finish_non_exhaustive()
+    }
+}
+
 impl<'a> TestNetwork<'a> {
     /// Attaches `ep` to this network.
     pub async fn attach_endpoint(&self, ep: &TestEndpoint<'a>) -> Result<()> {
@@ -609,6 +623,13 @@ pub struct TestEndpoint<'a> {
     endpoint: fnetemul_network::EndpointProxy,
     name: String,
     _sandbox: &'a TestSandbox,
+}
+
+impl<'a> std::fmt::Debug for TestEndpoint<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        let Self { endpoint: _, name, _sandbox } = self;
+        f.debug_struct("TestEndpoint").field("name", name).finish_non_exhaustive()
+    }
 }
 
 impl<'a> std::ops::Deref for TestEndpoint<'a> {
@@ -864,6 +885,24 @@ pub struct TestInterface<'a> {
     interface_state: fnet_interfaces::StateProxy,
     control: fidl_fuchsia_net_interfaces_ext::admin::Control,
     device_control: Option<fidl_fuchsia_net_interfaces_admin::DeviceControlProxy>,
+}
+
+impl<'a> std::fmt::Debug for TestInterface<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
+        let Self {
+            endpoint,
+            id,
+            stack: _,
+            netstack: _,
+            interface_state: _,
+            control: _,
+            device_control: _,
+        } = self;
+        f.debug_struct("TestInterface")
+            .field("endpoint", endpoint)
+            .field("id", id)
+            .finish_non_exhaustive()
+    }
 }
 
 impl<'a> std::ops::Deref for TestInterface<'a> {

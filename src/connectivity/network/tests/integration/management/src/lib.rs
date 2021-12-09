@@ -4,6 +4,8 @@
 
 #![cfg(test)]
 
+pub mod virtualization;
+
 use std::collections::HashMap;
 
 use fidl_fuchsia_net as net;

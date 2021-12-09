@@ -7,14 +7,20 @@ import("//build/rust/rustc_test.gni")
 rustc_test("management") {
   output_name = "netstack_management_integration_test"
   deps = [
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
+    "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
     "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces-rustc",
+    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin-rustc",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
+    "//src/connectivity/lib/ping",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
@@ -24,12 +30,18 @@ rustc_test("management") {
     "//src/lib/fuchsia-component",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:test-case",
   ]
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/lib.rs",
+    "src/virtualization.rs",
+  ]
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
