@@ -399,7 +399,6 @@ impl Peer {
     /// publishing link metadata
     pub(crate) fn new_client(
         node_id: NodeId,
-        local_node_id: NodeId,
         conn_id: ConnectionId,
         conn: Pin<Box<quiche::Connection>>,
         service_observer: Observer<Vec<String>>,
@@ -412,8 +411,7 @@ impl Peer {
             conn_id,
         );
         let (command_sender, command_receiver) = mpsc::channel(1);
-        let conn =
-            AsyncConnection::from_connection(local_node_id.to_ipv6_repr(), conn, Endpoint::Client);
+        let conn = AsyncConnection::from_connection(conn, Endpoint::Client);
         let conn_stats = Arc::new(PeerConnStats::default());
         let (conn_stream_writer, conn_stream_reader) = conn.alloc_bidi();
         assert_eq!(conn_stream_writer.id(), 0);
@@ -454,7 +452,6 @@ impl Peer {
     /// Construct a new server peer - spawns tasks to handle responding to control stream requests
     pub(crate) fn new_server(
         node_id: NodeId,
-        local_node_id: NodeId,
         conn_id: ConnectionId,
         conn: Pin<Box<quiche::Connection>>,
         router: &Arc<Router>,
@@ -465,8 +462,7 @@ impl Peer {
             node_id,
             conn_id,
         );
-        let conn =
-            AsyncConnection::from_connection(local_node_id.to_ipv6_repr(), conn, Endpoint::Server);
+        let conn = AsyncConnection::from_connection(conn, Endpoint::Server);
         let conn_stats = Arc::new(PeerConnStats::default());
         let (conn_stream_writer, conn_stream_reader) = conn.bind_id(0);
         let channel_proxy_stats = Arc::new(MessageStats::default());
