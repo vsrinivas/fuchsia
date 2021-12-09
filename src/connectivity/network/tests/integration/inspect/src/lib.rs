@@ -4,10 +4,13 @@
 
 #![cfg(test)]
 
-use diagnostics_hierarchy::Property;
+use std::{collections::HashMap, num::NonZeroU16};
+
 use fuchsia_async as fasync;
 use fuchsia_inspect::testing::TreeAssertion;
 use fuchsia_zircon as zx;
+
+use diagnostics_hierarchy::Property;
 use itertools::Itertools as _;
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet};
 use net_types::ip::Ip as _;
@@ -25,8 +28,6 @@ use packet_formats::{
     ipv4::{Ipv4Header as _, Ipv4PacketBuilder},
     udp::{UdpPacketBuilder, UdpParseArgs},
 };
-use std::collections::HashMap;
-use std::num::NonZeroU16;
 use test_case::test_case;
 
 /// A helper type to provide address verification in inspect NIC data.

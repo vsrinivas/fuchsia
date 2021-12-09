@@ -4,20 +4,20 @@
 
 #![cfg(test)]
 
-use {
-    fidl::endpoints::DiscoverableProtocolMarker as _,
-    fidl::endpoints::Proxy as _,
-    fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2, fidl_fuchsia_logger as flogger,
-    fidl_fuchsia_netstack as fnetstack,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
-    },
-    fuchsia_zircon as zx,
-    futures::{FutureExt as _, StreamExt as _},
-    netstack_testing_common::realms::{Netstack, Netstack2},
-    vfs::directory::entry::DirectoryEntry as _,
+use fidl::endpoints::{DiscoverableProtocolMarker as _, Proxy as _};
+use fidl_fuchsia_io as fio;
+use fidl_fuchsia_io2 as fio2;
+use fidl_fuchsia_logger as flogger;
+use fidl_fuchsia_netstack as fnetstack;
+use fuchsia_component::server::ServiceFs;
+use fuchsia_component_test::{
+    mock::MockHandles, ChildOptions, RealmBuilder, RouteBuilder, RouteEndpoint,
 };
+use fuchsia_zircon as zx;
+
+use futures::{FutureExt as _, StreamExt as _};
+use netstack_testing_common::realms::{Netstack, Netstack2};
+use vfs::directory::entry::DirectoryEntry as _;
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn start_with_cache_no_space() {

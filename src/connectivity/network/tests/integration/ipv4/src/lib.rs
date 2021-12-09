@@ -9,16 +9,20 @@ use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 
 use futures::StreamExt as _;
 use net_declare::std_ip_v4;
-use net_types::ip::{self as net_types_ip};
-use net_types::MulticastAddress as _;
+use net_types::{
+    ip::{self as net_types_ip},
+    MulticastAddress as _,
+};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{setup_network, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT};
 use netstack_testing_macros::variants_test;
 use packet::ParsablePacket as _;
-use packet_formats::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
-use packet_formats::igmp::{messages::IgmpMembershipReportV2, IgmpMessage};
-use packet_formats::ip::Ipv4Proto;
-use packet_formats::testutil::parse_ip_packet;
+use packet_formats::{
+    ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck},
+    igmp::{messages::IgmpMembershipReportV2, IgmpMessage},
+    ip::Ipv4Proto,
+    testutil::parse_ip_packet,
+};
 
 #[variants_test]
 async fn sends_igmp_reports<E: netemul::Endpoint>(name: &str) {

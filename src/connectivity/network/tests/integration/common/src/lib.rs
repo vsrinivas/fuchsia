@@ -22,15 +22,17 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use futures::stream::{Stream, StreamExt as _, TryStreamExt as _};
-use net_types::ethernet::Mac;
-use net_types::ip as net_types_ip;
-use net_types::Witness as _;
+use net_types::{ethernet::Mac, ip as net_types_ip, Witness as _};
 use packet::serialize::{InnerPacketBuilder, Serializer};
-use packet_formats::ethernet::{EtherType, EthernetFrameBuilder};
-use packet_formats::icmp::ndp::{self, options::NdpOptionBuilder, RouterAdvertisement};
-use packet_formats::icmp::{IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode};
-use packet_formats::ip::Ipv6Proto;
-use packet_formats::ipv6::Ipv6PacketBuilder;
+use packet_formats::{
+    ethernet::{EtherType, EthernetFrameBuilder},
+    icmp::{
+        ndp::{self, options::NdpOptionBuilder, RouterAdvertisement},
+        IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode,
+    },
+    ip::Ipv6Proto,
+    ipv6::Ipv6PacketBuilder,
+};
 use zerocopy::ByteSlice;
 
 use crate::realms::TestSandboxExt as _;

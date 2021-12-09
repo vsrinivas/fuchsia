@@ -14,12 +14,13 @@ use futures::{
 };
 use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_subnet};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _};
-use netstack_testing_common::realms::{Netstack2, TestSandboxExt as _};
-use netstack_testing_common::Result;
+use netstack_testing_common::{
+    realms::{Netstack2, TestSandboxExt as _},
+    Result,
+};
 use netstack_testing_macros::variants_test;
-use packet::Serializer;
-use packet_formats;
-use packet_formats::ipv4::Ipv4Header;
+use packet::Serializer as _;
+use packet_formats::{self, ipv4::Ipv4Header as _};
 
 async fn run_udp_socket_test(
     server: &netemul::TestRealm<'_>,

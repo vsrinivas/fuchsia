@@ -4,18 +4,21 @@
 
 #![cfg(test)]
 
+use std::cell::RefCell;
+
 use async_utils::async_once::Once;
 use dhcp::protocol::IntoFidlExt as _;
 use fuchsia_async::TimeoutExt as _;
-use futures::future::TryFutureExt as _;
-use futures::stream::{self, StreamExt as _, TryStreamExt as _};
-use net_declare::{fidl_ip_v4, fidl_mac, std_ip_v4};
-use netstack_testing_common::realms::{
-    constants, KnownServiceProvider, Netstack2, TestSandboxExt as _,
+use futures::{
+    future::TryFutureExt as _,
+    stream::{self, StreamExt as _, TryStreamExt as _},
 };
-use netstack_testing_common::Result;
+use net_declare::{fidl_ip_v4, fidl_mac, std_ip_v4};
+use netstack_testing_common::{
+    realms::{constants, KnownServiceProvider, Netstack2, TestSandboxExt as _},
+    Result,
+};
 use netstack_testing_macros::variants_test;
-use std::cell::RefCell;
 
 // Encapsulates a minimal configuration needed to test a DHCP client/server combination.
 struct DhcpTestConfig {

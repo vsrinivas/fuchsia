@@ -4,13 +4,16 @@
 
 #![cfg(test)]
 
-use anyhow::Context as _;
+use std::{collections::HashMap, convert::TryInto as _};
+
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
 use fidl_fuchsia_net_stack as net_stack;
 use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
 use fidl_fuchsia_netemul as fnetemul;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
+
+use anyhow::Context as _;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
@@ -20,19 +23,16 @@ use netstack_testing_common::{
     ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
-use packet::serialize::Serializer as _;
-use packet::ParsablePacket as _;
-use packet_formats::error::ParseError;
-use packet_formats::ethernet::{
-    EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt as _,
+use packet::{serialize::Serializer as _, ParsablePacket as _};
+use packet_formats::{
+    error::ParseError,
+    ethernet::{EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt as _},
+    icmp::{
+        IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs,
+        IcmpUnusedCode, MessageBody as _, OriginalPacket,
+    },
+    ip::IpPacketBuilder as _,
 };
-use packet_formats::icmp::{
-    IcmpEchoRequest, IcmpIpExt, IcmpMessage, IcmpPacket, IcmpPacketBuilder, IcmpParseArgs,
-    IcmpUnusedCode, MessageBody as _, OriginalPacket,
-};
-use packet_formats::ip::IpPacketBuilder as _;
-use std::collections::HashMap;
-use std::convert::TryInto as _;
 use test_case::test_case;
 
 /// Regression test: test that Netstack.SetInterfaceStatus does not kill the channel to the client

@@ -4,7 +4,6 @@
 
 //! Provides utilities for test realms.
 
-use async_trait::async_trait;
 use fidl::endpoints::DiscoverableProtocolMarker as _;
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_net_debug as fnet_debug;
@@ -24,6 +23,8 @@ use fidl_fuchsia_netstack as fnetstack;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fidl_fuchsia_posix_socket_packet as fposix_socket_packet;
 use fidl_fuchsia_stash as fstash;
+
+use async_trait::async_trait;
 
 use crate::Result;
 

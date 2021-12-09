@@ -18,15 +18,16 @@ use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
-use futures::future::{FutureExt as _, TryFutureExt as _};
-use futures::stream::{self, StreamExt as _};
+use futures::{
+    future::{FutureExt as _, TryFutureExt as _},
+    stream::{self, StreamExt as _},
+};
 use net_declare::fidl_ip_v4;
 use net_types::ip as net_types_ip;
-use netstack_testing_common::realms::{
-    KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _,
-};
 use netstack_testing_common::{
-    interfaces, try_all, try_any, wait_for_component_stopped, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
+    interfaces,
+    realms::{KnownServiceProvider, Manager, Netstack2, TestSandboxExt as _},
+    try_all, try_any, wait_for_component_stopped, ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT,
 };
 use netstack_testing_macros::variants_test;
 

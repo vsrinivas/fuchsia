@@ -4,11 +4,11 @@
 
 #![cfg(test)]
 
-use std::collections::HashMap;
-use std::convert::TryFrom as _;
+use std::{collections::HashMap, convert::TryFrom as _};
+
+use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 
 use anyhow::anyhow;
-use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use futures::{SinkExt as _, StreamExt as _, TryFutureExt as _};
 use matches::assert_matches;
 use net_declare::{fidl_subnet, std_socket_addr_v4};

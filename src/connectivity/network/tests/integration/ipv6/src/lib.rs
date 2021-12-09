@@ -4,8 +4,7 @@
 
 #![cfg(test)]
 
-use std::convert::TryFrom as _;
-use std::mem::size_of;
+use std::{convert::TryFrom as _, mem::size_of};
 
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_stack as net_stack;
@@ -13,38 +12,40 @@ use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_netstack_ext::RouteTable;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
-use test_case::test_case;
 
-use anyhow::{self, Context};
+use anyhow::{self, Context as _};
 use futures::{
     future, Future, FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _,
 };
-use net_types::ethernet::Mac;
-use net_types::ip::{self as net_types_ip, Ip};
 use net_types::{
+    ethernet::Mac,
+    ip::{self as net_types_ip, Ip},
     LinkLocalAddress as _, MulticastAddress as _, SpecifiedAddress as _, Witness as _,
 };
-use netstack_testing_common::constants::{eth as eth_consts, ipv6 as ipv6_consts};
-use netstack_testing_common::realms::{
-    constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt,
-};
 use netstack_testing_common::{
+    constants::{eth as eth_consts, ipv6 as ipv6_consts},
+    realms::{constants, KnownServiceProvider, Netstack, Netstack2, TestSandboxExt},
     send_ra_with_router_lifetime, setup_network, setup_network_with, sleep, write_ndp_message,
     Result, ASYNC_EVENT_CHECK_INTERVAL, ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
     ASYNC_EVENT_POSITIVE_CHECK_TIMEOUT, NDP_MESSAGE_TTL,
 };
 use netstack_testing_macros::variants_test;
 use packet::ParsablePacket as _;
-use packet_formats::ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck};
-use packet_formats::icmp::mld::MldPacket;
-use packet_formats::icmp::ndp::{
-    options::{NdpOption, NdpOptionBuilder, PrefixInformation, RouteInformationBuilder},
-    NeighborAdvertisement, NeighborSolicitation, RoutePreference, RouterAdvertisement,
-    RouterSolicitation,
+use packet_formats::{
+    ethernet::{EtherType, EthernetFrame, EthernetFrameLengthCheck},
+    icmp::{
+        mld::MldPacket,
+        ndp::{
+            options::{NdpOption, NdpOptionBuilder, PrefixInformation, RouteInformationBuilder},
+            NeighborAdvertisement, NeighborSolicitation, RoutePreference, RouterAdvertisement,
+            RouterSolicitation,
+        },
+        IcmpParseArgs, Icmpv6Packet,
+    },
+    ip::Ipv6Proto,
+    testutil::{parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet},
 };
-use packet_formats::icmp::{IcmpParseArgs, Icmpv6Packet};
-use packet_formats::ip::Ipv6Proto;
-use packet_formats::testutil::{parse_icmp_packet_in_ip_packet_in_ethernet_frame, parse_ip_packet};
+use test_case::test_case;
 
 /// The expected number of Router Solicitations sent by the netstack when an
 /// interface is brought up as a host.

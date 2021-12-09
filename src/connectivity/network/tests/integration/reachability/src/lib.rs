@@ -6,11 +6,14 @@
 // Increase recursion limit in order to use `futures::select`.
 #![recursion_limit = "256"]
 
+use std::{collections::HashMap, convert::TryInto as _};
+
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_neighbor as fnet_neighbor;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
+
 use futures::{FutureExt as _, Stream, StreamExt as _, TryFutureExt as _};
 use net_declare::{fidl_subnet, net_ip_v4, net_ip_v6, net_mac};
 use netstack_testing_common::{
@@ -30,7 +33,6 @@ use packet_formats::{
     testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
 };
 use reachability_core::State;
-use std::{collections::HashMap, convert::TryInto as _};
 use test_case::test_case;
 
 const INTERNET_V4: net_types::ip::Ipv4Addr = net_ip_v4!("8.8.8.8");

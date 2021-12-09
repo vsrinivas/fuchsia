@@ -2,17 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Context, Error},
-    fidl_fuchsia_net_stack::StackMarker,
-    fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker},
-    fuchsia_async::{self as fasync},
-    fuchsia_component::client,
-    futures::TryStreamExt,
-    std::io::{Read, Write},
-    std::net::{TcpListener, TcpStream},
-    structopt::StructOpt,
+use std::{
+    io::{Read, Write},
+    net::{TcpListener, TcpStream},
 };
+
+use fidl_fuchsia_net_stack::StackMarker;
+use fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, Event, SyncManagerMarker};
+use fuchsia_async as fasync;
+use fuchsia_component::client;
+
+use anyhow::{format_err, Context as _, Error};
+use futures::TryStreamExt as _;
+use structopt::StructOpt;
 
 const BUS_NAME: &str = "test-bus";
 const SERVER_NAME: &str = "server";
