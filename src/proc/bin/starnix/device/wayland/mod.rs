@@ -6,11 +6,11 @@ mod bridge_client;
 mod buffer_collection_file;
 mod dma_buf_file;
 mod file_creation;
-mod image_file;
 mod wayland;
 
 pub use buffer_collection_file::*;
 pub use dma_buf_file::*;
 pub use wayland::*;
 
+pub mod image_file;
 pub mod vulkan;
