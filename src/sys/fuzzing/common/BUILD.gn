@@ -37,6 +37,8 @@ source_set("common") {
     "signal-coordinator.h",
     "status.cc",
     "status.h",
+    "sync-wait.cc",
+    "sync-wait.h",
     "transceiver.cc",
     "transceiver.h",
   ]
@@ -96,6 +98,7 @@ test("unittests_bin") {
     "run-once-unittest.cc",
     "shared-memory-unittest.cc",
     "signal-coordinator-unittest.cc",
+    "sync-wait-unittest.cc",
     "transceiver-unittest.cc",
   ]
   deps = [
