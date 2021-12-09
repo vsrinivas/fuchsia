@@ -1,0 +1,39 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("integration") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+executable("accessor2logger_test_bin") {
+  testonly = true
+  sources = [ "test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/diagnostics/accessor2logger",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_test_component("component") {
+  deps = [ ":accessor2logger_test_bin" ]
+  manifest = "meta/test_component.cml"
+}
+
+fuchsia_test_package("package") {
+  package_name = "accessor2logger-integration-test"
+  test_components = [ ":component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}

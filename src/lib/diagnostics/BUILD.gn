@@ -16,6 +16,7 @@ group("diagnostics") {
 group("tests") {
   testonly = true
   deps = [
+    "//src/lib/diagnostics/accessor2logger/integration",
     "//src/lib/diagnostics/accessor2logger/tests",
     "//src/lib/diagnostics/data:tests",
     "//src/lib/diagnostics/hierarchy:tests",
