@@ -49,6 +49,21 @@ declare_args() {
     "halt_on_error=1",
   ]
 
+  # Default [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html)
+  # options (before the `TSAN_OPTIONS` environment variable is read at runtime).
+  # This can be set as a build argument to affect most "tsan" variants in
+  # $variants (which see), or overrideen in $toolchain_args in one of those
+  # variants. This can be a list of strings or a single string.
+  #
+  # Note that even if this is empty, programs in this build **cannot** define
+  # their own `__tsan_default_options` C function.  Instead, they can use a
+  # sanitizer_extra_options() target in their `deps` and then any options
+  # injected that way can override that option's setting in this list.
+  #
+  # TODO(fxbug.dev/89981): `ignore_noninstrumented_modules=1` can be reevaluated
+  # when/if we have an instrumented libstd for Rust.
+  tsan_default_options = [ "ignore_noninstrumented_modules=1" ]
+
   # Default [Scudo](https://llvm.org/docs/ScudoHardenedAllocator.html) options
   # (before the `SCUDO_OPTIONS` environment variable is read at runtime).
   # Scudo is the memory allocator in Fuchsia's C library, so this affects all
@@ -74,6 +89,7 @@ sanitizer_default_options_args = [
   "lsan_default_options",
   "ubsan_default_options",
   "scudo_default_options",
+  "tsan_default_options",
 ]
 
 # Adapt to being used in the Fuchsia GN build or in the Zircon build.

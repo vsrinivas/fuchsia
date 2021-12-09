@@ -1279,6 +1279,15 @@ declare_args() {
         "llvm-profdata",
       ]
     },
+    {
+      configs = [ "//build/config/sanitizers:tsan" ]
+      tags = [
+        "instrumentation-runtime",
+        "instrumented",
+        "kernel-excluded",
+        "tsan",
+      ]
+    },
 
     {
       configs = [ "//build/config/sanitizers:ubsan" ]
@@ -1483,6 +1492,16 @@ declare_args() {
       select_variant = [
         {
           variant = "profile"
+          host = true
+        },
+      ]
+    },
+    {
+      name = "host_tsan"
+      select_variant = []
+      select_variant = [
+        {
+          variant = "tsan"
           host = true
         },
       ]

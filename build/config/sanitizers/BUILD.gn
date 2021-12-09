@@ -221,3 +221,46 @@ sanitizer_default_options("ubsan_default_options") {
 variant("sancov") {
   common_flags = [ "-fsanitize-coverage=trace-pc-guard" ]
 }
+
+variant("tsan") {
+  common_flags = [ "-fsanitize=thread" ]
+
+  # TODO(phosek): use runtime.json instead of invoking Clang.
+  if (is_mac) {
+    extension = "_osx_dynamic.dylib"
+  } else {
+    extension = ".a"
+  }
+
+  # For dynamic linking (macOS), there is just one combined DSO.
+  # For static linking (other platforms), there are separate libraries for the
+  # generic (C) and C++-specific runtime support.
+  needed_tsan_libs = [ "tsan" ]
+  if (extension == ".a") {
+    needed_tsan_libs += [ "tsan_cxx" ]
+  }
+  rustflags = []
+  foreach(tsan, needed_tsan_libs) {
+    libclang_rt_tsan = rebase_path(
+            exec_script("/usr/bin/env",
+                        [
+                          "${rebased_clang_prefix}/clang",
+                          "--target=${current_target_tuple}",
+                          "-print-file-name=libclang_rt.${tsan}${extension}",
+                        ],
+                        "trim string"),
+            root_build_dir)
+    rustflags += [ "-Clink-arg=${libclang_rt_tsan}" ]
+  }
+
+  deps = [ ":tsan_default_options" ]
+
+  # Expose the presence of sanitizers as a compile-time condition.
+  # This allows conditional compilation of code for this variant,
+  # for instance in order to disable a specific test case.
+  # TODO(fxbug.dev/87239): use cfg_sanitize instead.
+  rustflags += [ "--cfg=feature=\"variant_tsan\"" ]
+}
+
+sanitizer_default_options("tsan_default_options") {
+}

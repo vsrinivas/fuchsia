@@ -29,6 +29,11 @@ all_variant_tags = [
   # as well.
   "asan",
 
+  # The `tsan` tag is used for variants that implement thread-sanitizers.
+  # These should always list `instrumented` and `instrumentation-runtime`
+  # as well.
+  "tsan",
+
   # The `ubsan` tag is used for variants that implement undefined-behaviour
   # sanitizers. These should always list 'instrumented' as well.
   "ubsan",

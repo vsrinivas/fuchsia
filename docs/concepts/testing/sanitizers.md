@@ -25,6 +25,7 @@ Fuchsia currently supports the following sanitizers:
 *    [AddressSanitizer][llvm-asan]{:.external} (ASan) detects instances of
      out-of-bounds access, use after free / return / scope, and double free.
 *    [LeakSanitizer][llvm-lsan]{:.external} (LSan) detects memory leaks.
+*    [ThreadSanitizer][llvm-tsan]{:.external} (TSan) detects data races (host-only).
 *    [UndefinedBehaviorSanitizer][llvm-ubsan]{:.external} (UBSan) detects
      specific issues of relying on undefined program behavior.
 
@@ -112,6 +113,7 @@ following strings:
 *   `ERROR: AddressSanitizer`
 *   `ERROR: LeakSanitizer`
 *   `SUMMARY: UndefinedBehaviorSanitizer`
+*   `WARNING: ThreadSanitizer`
 
 Following these messages you will find stack traces that identify the nature of
 the problem and point to the root cause. You can find these messages in
