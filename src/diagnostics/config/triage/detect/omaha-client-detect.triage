@@ -1,6 +1,6 @@
 {
     select: {
-        installation_error_timestamps: "INSPECT:/core/omaha-client-service:root/platform_metrics/installation_error_events/children/*:ts",
+        installation_error_timestamps: "INSPECT:core/omaha-client-service:root/platform_metrics/installation_error_events/children/*:ts",
     },
     eval: {
         // The timestamps output by OMCL are monontonic time, and Now() is as well.
