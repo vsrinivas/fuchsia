@@ -883,7 +883,7 @@ mod test_utils {
         let mut bands = [default_band_info(); WLAN_INFO_MAX_BANDS as usize];
         bands[0] = WlanInfoBandInfo {
             band: WlanInfoBand::TWO_GHZ,
-            rates: arr!([12, 24, 48, 54, 96, 108], WLAN_INFO_BAND_INFO_MAX_RATES as usize),
+            rates: arr!([6, 9, 12, 18, 24, 36, 48, 54], WLAN_INFO_BAND_INFO_MAX_RATES as usize),
             supported_channels: WlanInfoChannelList {
                 base_freq: 2407,
                 channels: arr!(

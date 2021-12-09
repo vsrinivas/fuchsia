@@ -11,11 +11,13 @@ pub struct ProbeRequestSeries {
     ies_series: Vec<ProbeRequestIes>,
 }
 
-struct ProbeRequestIes {
-    channels: Vec<u8>,
-    ies: Vec<u8>,
+#[derive(Debug)]
+pub struct ProbeRequestIes {
+    pub channels: Vec<u8>,
+    pub ies: Vec<u8>,
 }
 
+#[derive(Debug)]
 pub struct ProbeRequestParams<'a> {
     pub ssids_list: &'a Vec<banjo_ieee80211::CSsid>,
     pub mac_header: &'a Vec<u8>,
@@ -60,22 +62,26 @@ impl ProbeRequestSeries {
                 (acc.0, acc.1)
             });
 
-        Ok(vec![
-            ProbeRequestIes {
-                channels: two_ghz_channels,
-                ies: probe_request_ies_for_band(
-                    &wlanmac_info,
-                    banjo_hw_wlaninfo::WlanInfoBand::TWO_GHZ,
-                )?,
-            },
-            ProbeRequestIes {
+        let mut ies_series = vec![];
+        if !five_ghz_channels.is_empty() {
+            ies_series.push(ProbeRequestIes {
                 channels: five_ghz_channels,
                 ies: probe_request_ies_for_band(
                     &wlanmac_info,
                     banjo_hw_wlaninfo::WlanInfoBand::FIVE_GHZ,
                 )?,
-            },
-        ])
+            });
+        }
+        if !two_ghz_channels.is_empty() {
+            ies_series.push(ProbeRequestIes {
+                channels: two_ghz_channels,
+                ies: probe_request_ies_for_band(
+                    &wlanmac_info,
+                    banjo_hw_wlaninfo::WlanInfoBand::TWO_GHZ,
+                )?,
+            });
+        }
+        Ok(ies_series)
     }
 }
 

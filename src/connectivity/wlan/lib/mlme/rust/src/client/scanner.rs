@@ -595,7 +595,9 @@ mod tests {
             buffer::FakeBufferProvider,
             client::{
                 channel_listener::{LEvent, MockListenerState},
-                channel_scheduler, ClientConfig,
+                channel_scheduler,
+                probe_request::ProbeRequestIes,
+                ClientConfig,
             },
             device::FakeDevice,
             test_utils::MockWlanRxInfo,
@@ -604,6 +606,7 @@ mod tests {
         ieee80211::Ssid,
         lazy_static::lazy_static,
         std::{cell::RefCell, convert::TryFrom, rc::Rc},
+        test_case::test_case,
         wlan_common::{
             assert_variant,
             sequence::SequenceManager,
@@ -691,11 +694,11 @@ mod tests {
         }
     }
 
-    fn active_scan_req() -> fidl_mlme::ScanRequest {
+    fn active_scan_req(channel_list: &[u8]) -> fidl_mlme::ScanRequest {
         fidl_mlme::ScanRequest {
             txn_id: 1337,
             scan_type: fidl_mlme::ScanTypes::Active,
-            channel_list: vec![6],
+            channel_list: Vec::from(channel_list),
             ssid_list: vec![
                 Ssid::try_from("foo").unwrap().into(),
                 Ssid::try_from("bar").unwrap().into(),
@@ -738,7 +741,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
-        let scan_req = fidl_mlme::ScanRequest { probe_delay: 0, ..active_scan_req() };
+        let scan_req = fidl_mlme::ScanRequest { probe_delay: 0, ..active_scan_req(&[6]) };
         scanner
             .bind(&mut ctx)
             .on_sme_scan(scan_req, m.listener_state.create_channel_listener_fn(), &mut m.chan_sched)
@@ -803,7 +806,7 @@ mod tests {
         let mut ctx = m.make_ctx();
         let mut scanner = Scanner::new(IFACE_MAC);
 
-        let scan_req = fidl_mlme::ScanRequest { probe_delay: 5, ..active_scan_req() };
+        let scan_req = fidl_mlme::ScanRequest { probe_delay: 5, ..active_scan_req(&[6]) };
         scanner
             .bind(&mut ctx)
             .on_sme_scan(scan_req, m.listener_state.create_channel_listener_fn(), &mut m.chan_sched)
@@ -925,7 +928,7 @@ mod tests {
     }
 
     #[test]
-    fn test_start_passive_scan_success() {
+    fn test_start_offload_passive_scan_success() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
@@ -948,7 +951,7 @@ mod tests {
             m.fake_device.captured_passive_scan_args,
             Some(ref passive_scan_args) => {
                 assert_eq!(passive_scan_args.channels.len(), 1);
-                assert_eq!(passive_scan_args.channels, vec![6]);
+                assert_eq!(passive_scan_args.channels, &[6]);
                 assert_eq!(passive_scan_args.min_channel_time, 102_400_000);
                 assert_eq!(passive_scan_args.max_channel_time, 307_200_000);
                 assert_eq!(passive_scan_args.min_home_time, 0);
@@ -979,8 +982,51 @@ mod tests {
         );
     }
 
+    #[test_case(&[6],
+                Some(ProbeRequestIes {
+                    channels: vec![6],
+                    ies: vec![ 0x01, // Element ID for Supported Rates
+                               0x08, // Length
+                               0x00, 0x00, 0x0C, 0x18, 0x30, 0x36, 0x60, 0x6C // Supported Rates
+                    ]}),
+                None; "single channel")]
+    #[test_case(&[1, 2, 3, 4, 5],
+                Some(ProbeRequestIes {
+                    channels: vec![1, 2, 3, 4, 5],
+                    ies: vec![ 0x01, // Element ID for Supported Rates
+                               0x08, // Length
+                               0x00, 0x00, 0x0C, 0x18, 0x30, 0x36, 0x60, 0x6C // Supported Rates
+                ]}),
+                None; "multiple channels 2.4GHz band")]
+    #[test_case(&[36, 40, 100, 108],
+                None,
+                Some(ProbeRequestIes {
+                    channels: vec![36, 40, 100, 108],
+                    ies: vec![ 0x01, // Element ID for Supported Rates
+                               0x06, // Length
+                               0x0C, 0x18, 0x30, 0x36, 0x60, 0x6C // Supported Rates
+                    ],
+                }); "multiple channels 5GHz band")]
+    #[test_case(&[1, 2, 3, 4, 5, 36, 40, 100, 108],
+                Some(ProbeRequestIes {
+                    channels: vec![1, 2, 3, 4, 5],
+                    ies: vec![ 0x01, // Element ID for Supported Rates
+                               0x08, // Length
+                               0x00, 0x00, 0x0C, 0x18, 0x30, 0x36, 0x60, 0x6C // Supported Rates
+                    ]}),
+                Some(ProbeRequestIes {
+                    channels: vec![36, 40, 100, 108],
+                    ies: vec![ 0x01, // Element ID for Supported Rates
+                               0x06, // Length
+                               0x0C, 0x18, 0x30, 0x36, 0x60, 0x6C // Supported Rates
+                    ],
+                }); "multiple bands")]
     #[test]
-    fn test_start_active_scan_success() {
+    fn test_start_active_scan_success(
+        channel_list: &[u8],
+        expected_two_ghz_probe_request_ies: Option<ProbeRequestIes>,
+        expected_five_ghz_probe_request_ies: Option<ProbeRequestIes>,
+    ) {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
@@ -992,74 +1038,79 @@ mod tests {
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                active_scan_req(),
+                active_scan_req(channel_list),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
             .expect("expect scan req accepted");
 
-        // Verify that active offload scan is requested
-        assert_variant!(
-            m.fake_device.captured_active_scan_args,
-            Some(ref active_scan_args) => {
-                assert_eq!(active_scan_args.channels.len(), 1);
-                assert_eq!(active_scan_args.channels, vec![6]);
-                assert_eq!(active_scan_args.ssids.len(), 2);
-                assert_eq!(active_scan_args.ssids,
-                           vec![
-                               cssid_from_ssid_unchecked(&Ssid::try_from("foo").unwrap().into()),
-                               cssid_from_ssid_unchecked(&Ssid::try_from("bar").unwrap().into()),
-                           ]);
-                assert_eq!(active_scan_args.mac_header_buffer.len(), 24);
-                assert_eq!(active_scan_args.mac_header_buffer,
-                           vec![
-                               0x40, 0x00, // Frame Control
-                               0x00, 0x00, // Duration
-                               0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 1
-                               0x07, 0x07, 0x07, 0x07, 0x07, 0x07, // Address 2
-                               0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 3
-                               0x10, 0x00, // Sequence Control
-                           ]);
-                assert_eq!(active_scan_args.ies_buffer.len(), 8);
-                assert_eq!(active_scan_args.ies_buffer,
-                           vec![
-                               0x01, // Element ID for Supported Rates
-                               0x06, // Length
-                               // TODO(fxbug.dev/89695): Hardcoded channel 1 for initial change
-                               // and to allow driver bringup work to proceed.
-                               0x0C, 0x18, 0x30, 0x36, 0x60, 0x6C // Supported Rates
-                           ][..]);
-                assert_eq!(active_scan_args.min_channel_time, 102_400_000);
-                assert_eq!(active_scan_args.max_channel_time, 307_200_000);
-                assert_eq!(active_scan_args.min_home_time, 0);
-                assert_eq!(active_scan_args.min_probes_per_channel, 0);
-                assert_eq!(active_scan_args.max_probes_per_channel, 0);
-            },
-            "active offload scan not initiated"
-        );
-        let expected_scan_id = m.fake_device.next_scan_id - 1;
+        for probe_request_ies in
+            &[expected_two_ghz_probe_request_ies, expected_five_ghz_probe_request_ies]
+        {
+            println!("probe_request_ies: {:?}", probe_request_ies);
 
-        // Mock receiving beacons
-        handle_beacon_foo(&mut scanner, &mut ctx);
-        let scan_result = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanResult>()
-            .expect("error reading ScanResult");
-        assert_eq!(scan_result.txn_id, 1337);
-        assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
-        assert_eq!(scan_result.bss, *BSS_DESCRIPTION_FOO);
+            match probe_request_ies {
+                None => {}
+                Some(ProbeRequestIes { channels, ies }) => {
+                    // Verify that active offload scan is requested
+                    assert_variant!(
+                        m.fake_device.captured_active_scan_args,
+                        Some(ref active_scan_args) => {
+                            assert_eq!(active_scan_args.channels.len(), channels.len());
+                            assert_eq!(active_scan_args.channels, *channels);
+                            assert_eq!(active_scan_args.ssids.len(), 2);
+                            assert_eq!(active_scan_args.ssids,
+                                       vec![
+                                           cssid_from_ssid_unchecked(&Ssid::try_from("foo").unwrap().into()),
+                                           cssid_from_ssid_unchecked(&Ssid::try_from("bar").unwrap().into()),
+                                       ]);
+                            assert_eq!(active_scan_args.mac_header_buffer.len(), 24);
+                            assert_eq!(active_scan_args.mac_header_buffer,
+                                       vec![
+                                           0x40, 0x00, // Frame Control
+                                           0x00, 0x00, // Duration
+                                           0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 1
+                                           0x07, 0x07, 0x07, 0x07, 0x07, 0x07, // Address 2
+                                           0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // Address 3
+                                           0x10, 0x00, // Sequence Control
+                                       ]);
+                            assert_eq!(active_scan_args.ies_buffer.len(), ies.len());
+                            assert_eq!(active_scan_args.ies_buffer,
+                                       ies[..]);
+                            assert_eq!(active_scan_args.min_channel_time, 102_400_000);
+                            assert_eq!(active_scan_args.max_channel_time, 307_200_000);
+                            assert_eq!(active_scan_args.min_home_time, 0);
+                            assert_eq!(active_scan_args.min_probes_per_channel, 0);
+                            assert_eq!(active_scan_args.max_probes_per_channel, 0);
+                        },
+                        "active offload scan not initiated"
+                    );
+                    let expected_scan_id = m.fake_device.next_scan_id - 1;
 
-        handle_beacon_bar(&mut scanner, &mut ctx);
-        let scan_result = m
-            .fake_device
-            .next_mlme_msg::<fidl_mlme::ScanResult>()
-            .expect("error reading ScanResult");
-        assert_eq!(scan_result.txn_id, 1337);
-        assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
-        assert_eq!(scan_result.bss, *BSS_DESCRIPTION_BAR);
+                    // Mock receiving beacons
+                    handle_beacon_foo(&mut scanner, &mut ctx);
+                    let scan_result = m
+                        .fake_device
+                        .next_mlme_msg::<fidl_mlme::ScanResult>()
+                        .expect("error reading ScanResult");
+                    assert_eq!(scan_result.txn_id, 1337);
+                    assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
+                    assert_eq!(scan_result.bss, *BSS_DESCRIPTION_FOO);
 
-        // Verify ScanEnd sent after handle_scan_complete
-        scanner.bind(&mut ctx).handle_scan_complete(zx::Status::OK, expected_scan_id);
+                    handle_beacon_bar(&mut scanner, &mut ctx);
+                    let scan_result = m
+                        .fake_device
+                        .next_mlme_msg::<fidl_mlme::ScanResult>()
+                        .expect("error reading ScanResult");
+                    assert_eq!(scan_result.txn_id, 1337);
+                    assert!(scan_result.timestamp_nanos > test_start_timestamp_nanos);
+                    assert_eq!(scan_result.bss, *BSS_DESCRIPTION_BAR);
+
+                    // Verify ScanEnd sent after handle_scan_complete
+                    scanner.bind(&mut ctx).handle_scan_complete(zx::Status::OK, expected_scan_id);
+                }
+            }
+        }
         let scan_end = m
             .fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
@@ -1105,7 +1156,7 @@ mod tests {
         let mut scanner = Scanner::new(IFACE_MAC);
 
         let result = scanner.bind(&mut ctx).on_sme_scan(
-            active_scan_req(),
+            active_scan_req(&[6]),
             m.listener_state.create_channel_listener_fn(),
             &mut m.chan_sched,
         );
@@ -1180,7 +1231,7 @@ mod tests {
         scanner
             .bind(&mut ctx)
             .on_sme_scan(
-                active_scan_req(),
+                active_scan_req(&[6]),
                 m.listener_state.create_channel_listener_fn(),
                 &mut m.chan_sched,
             )
