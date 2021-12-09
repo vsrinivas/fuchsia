@@ -48,7 +48,6 @@
                     "/bootstrap/netsvc",
                     "/bootstrap/svchost",
                     "/core",
-                    "/core/debug_serial",
                     "/core/test_manager/system-tests:**",
                 ],
             },
@@ -82,7 +81,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/debug_serial",
                 ],
             },
             {
@@ -93,7 +91,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/debug_serial",
                 ],
             },
             {
@@ -104,7 +101,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/debug_serial",
                 ],
             },
             {
@@ -115,7 +111,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/debug_serial",
                 ],
             },
             {
@@ -154,7 +149,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/debug_serial",
                 ],
             },
             {
@@ -175,7 +169,6 @@
                 target_monikers: [
                     "/bootstrap",
                     "/core",
-                    "/core/debug_serial",
                 ],
             },
             {
@@ -187,7 +180,6 @@
                     "/bootstrap",
                     "/bootstrap/fshost",
                     "/core",
-                    "/core/debug_serial",
                     "/core/starnix_manager/starnix_runner",
                     "/core/test_manager/starnix_test_runner/starnix_runner",
                     "/core/test_manager/system-tests:**",

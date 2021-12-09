@@ -10,8 +10,8 @@ rustc_binary("bin") {
   with_unit_tests = true
   edition = "2018"
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial-rustc",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

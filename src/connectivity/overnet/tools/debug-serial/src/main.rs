@@ -6,10 +6,10 @@
 
 use anyhow::{Context as _, Error};
 use fasync::unblock;
-use fidl_fuchsia_boot::RootResourceMarker;
 use fidl_fuchsia_hardware_serial::{
     Class, NewDeviceProxy_Request, NewDeviceProxy_RequestStream, NewDeviceRequest,
 };
+use fidl_fuchsia_kernel::DebugResourceMarker;
 use fuchsia_async::{self as fasync, Time, Timer};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{self as zx, DurationNum};
@@ -39,10 +39,10 @@ async fn writer_task(mut rx: mpsc::Receiver<Vec<u8>>) -> Result<(), Error> {
 
 async fn reader_task(
     mut tx: mpsc::Sender<Vec<u8>>,
-    root_resource: zx::Resource,
+    debug_resource: zx::Resource,
 ) -> Result<(), Error> {
     loop {
-        let raw_handle = root_resource.raw_handle();
+        let raw_handle = debug_resource.raw_handle();
         let v = unblock(move || {
             let mut buffer = [0u8; 1024];
             let mut actual = 0usize;
@@ -69,16 +69,18 @@ async fn main() -> Result<(), Error> {
     svc_dir.add_fidl_service(IncomingService::NewDeviceProxy);
     fs.take_and_serve_directory_handle()?;
 
-    let root_resource =
-        fuchsia_component::client::connect_to_protocol::<RootResourceMarker>()?.get().await?;
+    let debug_resource =
+        fuchsia_component::client::connect_to_protocol::<DebugResourceMarker>()?.get().await?;
 
     let (tx_write, rx_write) = mpsc::channel(0);
     let (tx_read, rx_read) = mpsc::channel(0);
 
     let reader = &Mutex::new(Some(rx_read));
 
-    let r =
-        future::try_join3(reader_task(tx_read, root_resource), writer_task(rx_write), async move {
+    let r = future::try_join3(
+        reader_task(tx_read, debug_resource),
+        writer_task(rx_write),
+        async move {
             fs.for_each_concurrent(None, move |IncomingService::NewDeviceProxy(requests)| {
                 let tx_write = tx_write.clone();
                 requests.for_each_concurrent(None, move |request| {
@@ -90,7 +92,7 @@ async fn main() -> Result<(), Error> {
                                     run_safe(request, &mut tx_write.clone(), &mut r).await;
                                     *reader.lock().await = Some(r);
                                 } else {
-                                    log::warn!("Failed to acquire root resource (already taken)")
+                                    log::warn!("Failed to acquire debug resource (already taken)")
                                 }
                             }
                             Err(e) => log::warn!("Bad incoming request: {:?}", e),
@@ -100,9 +102,10 @@ async fn main() -> Result<(), Error> {
             })
             .await;
             Ok(())
-        })
-        .map_ok(drop)
-        .await;
+        },
+    )
+    .map_ok(drop)
+    .await;
 
     if let Err(e) = &r {
         log::error!("main loop failed: {:?}", e);
