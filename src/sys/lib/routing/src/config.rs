@@ -109,15 +109,16 @@ pub struct RuntimeConfig {
 /// A single security policy allowlist entry.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum AllowlistEntry {
-    /// Allow the component with this exact AbsoluteMoniker.
+    /// Allow the component with this exact PartialAbsoluteMoniker.
     /// Example string form in config: "/foo/bar", "/foo/bar/baz"
     Exact(PartialAbsoluteMoniker),
-    /// Allow any components that are children of this AbsoluteMoniker. In other words, a prefix
-    /// match against the target moniker.
+    /// Allow any components that are children of this PartialAbsoluteMoniker. In other words, a
+    /// prefix match against the target moniker.
     /// Example string form in config: "/foo/**", "/foo/bar/**"
     Realm(PartialAbsoluteMoniker),
-    /// Allow any components that are in AbsoluteMoniker's collection with the given name. Also a
-    /// prefix match against the target moniker but additionally scoped to a specific collection.
+    /// Allow any components that are in PartialAbsoluteMoniker's collection with the given name.
+    /// Also a prefix match against the target moniker but additionally scoped to a specific
+    /// collection.
     /// Example string form in config: "/foo/tests:**", "/bootstrap/drivers:**"
     Collection(PartialAbsoluteMoniker, String),
 }

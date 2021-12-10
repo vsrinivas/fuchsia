@@ -322,7 +322,7 @@ fn allowlist_entry_matches(
 }
 
 /// Evaluates security policy relative to a specific Component (based on that Component's
-/// AbsoluteMoniker).
+/// PartialAbsoluteMoniker).
 pub struct ScopedPolicyChecker {
     /// The runtime configuration containing the security policy to apply.
     config: Weak<RuntimeConfig>,

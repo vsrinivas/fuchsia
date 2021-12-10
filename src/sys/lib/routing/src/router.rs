@@ -23,8 +23,8 @@ use {
     derivative::Derivative,
     from_enum::FromEnum,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase,
-        PartialAbsoluteMoniker, PartialChildMoniker,
+        AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, PartialAbsoluteMoniker,
+        PartialChildMoniker,
     },
     std::{marker::PhantomData, sync::Arc},
 };
@@ -99,12 +99,12 @@ where
         V: Clone + Send + Sync + 'static,
         M: DebugRouteMapper + 'static,
     {
-        mapper.add_use(target.abs_moniker().clone(), use_decl.clone().into());
+        mapper.add_use(target.abs_moniker().to_partial(), use_decl.clone().into());
         let target_capabilities = target.lock_resolved_state().await?.capabilities();
         Ok(CapabilitySourceInterface::<C>::Component {
             capability: sources.find_component_source(
                 use_decl.source_name(),
-                target.abs_moniker(),
+                &target.abs_moniker().to_partial(),
                 &target_capabilities,
                 visitor,
                 mapper,
@@ -530,7 +530,7 @@ pub trait Sources: Clone + Send + Sync {
     fn find_component_source<V, M>(
         &self,
         name: &CapabilityName,
-        abs_moniker: &AbsoluteMoniker,
+        abs_moniker: &PartialAbsoluteMoniker,
         capabilities: &[CapabilityDecl],
         visitor: &mut V,
         mapper: &mut M,
@@ -726,7 +726,7 @@ where
     fn find_component_source<V, M>(
         &self,
         name: &CapabilityName,
-        abs_moniker: &AbsoluteMoniker,
+        abs_moniker: &PartialAbsoluteMoniker,
         capabilities: &[CapabilityDecl],
         visitor: &mut V,
         mapper: &mut M,
@@ -787,7 +787,7 @@ where
         O: OfferDeclCommon + FromEnum<OfferDecl> + ErrorNotFoundFromParent + Clone,
         M: DebugRouteMapper,
     {
-        mapper.add_use(target.abs_moniker().clone(), use_.clone().into());
+        mapper.add_use(target.abs_moniker().to_partial(), use_.clone().into());
         match use_.source() {
             UseSource::Framework => {
                 Ok(UseResult::Source(CapabilitySourceInterface::<C>::Framework {
@@ -919,14 +919,14 @@ where
         E: ExposeDeclCommon + FromEnum<ExposeDecl> + Clone,
         M: DebugRouteMapper,
     {
-        mapper.add_registration(target.abs_moniker().clone(), registration.clone().into());
+        mapper.add_registration(target.abs_moniker().to_partial(), registration.clone().into());
         match registration.source() {
             RegistrationSource::Self_ => {
                 let target_capabilities = target.lock_resolved_state().await?.capabilities();
                 Ok(RegistrationResult::Source(CapabilitySourceInterface::<C>::Component {
                     capability: sources.find_component_source(
                         registration.source_name(),
-                        target.abs_moniker(),
+                        &target.abs_moniker().to_partial(),
                         &target_capabilities,
                         visitor,
                         mapper,
@@ -1059,7 +1059,7 @@ where
         M: DebugRouteMapper,
     {
         loop {
-            mapper.add_offer(target.abs_moniker().clone(), offer.clone().into());
+            mapper.add_offer(target.abs_moniker().to_partial(), offer.clone().into());
             OfferVisitor::visit(visitor, &offer)?;
 
             match offer.source() {
@@ -1068,7 +1068,7 @@ where
                     return Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Component {
                         capability: sources.find_component_source(
                             offer.source_name(),
-                            target.abs_moniker(),
+                            &target.abs_moniker().to_partial(),
                             &target_capabilities,
                             visitor,
                             mapper,
@@ -1244,7 +1244,7 @@ where
         M: DebugRouteMapper,
     {
         loop {
-            mapper.add_expose(target.abs_moniker().clone(), expose.clone().into());
+            mapper.add_expose(target.abs_moniker().to_partial(), expose.clone().into());
             ExposeVisitor::visit(visitor, &expose)?;
 
             match expose.source() {
@@ -1253,7 +1253,7 @@ where
                     return Ok(ExposeResult::Source(CapabilitySourceInterface::<C>::Component {
                         capability: sources.find_component_source(
                             expose.source_name(),
-                            target.abs_moniker(),
+                            &target.abs_moniker().to_partial(),
                             &target_capabilities,
                             visitor,
                             mapper,

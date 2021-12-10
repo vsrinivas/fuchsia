@@ -48,8 +48,8 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
     from_enum::FromEnum,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker,
-        RelativeMoniker, RelativeMonikerBase,
+        AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker, RelativeMoniker,
+        RelativeMonikerBase,
     },
     std::{
         path::{Path, PathBuf},
@@ -100,18 +100,18 @@ pub trait DebugRouteMapper: Send + Sync + Clone {
     type RouteMap: std::fmt::Debug;
 
     #[allow(unused_variables)]
-    fn add_use(&mut self, abs_moniker: AbsoluteMoniker, use_decl: UseDecl) {}
+    fn add_use(&mut self, abs_moniker: PartialAbsoluteMoniker, use_decl: UseDecl) {}
 
     #[allow(unused_variables)]
-    fn add_offer(&mut self, abs_moniker: AbsoluteMoniker, offer_decl: OfferDecl) {}
+    fn add_offer(&mut self, abs_moniker: PartialAbsoluteMoniker, offer_decl: OfferDecl) {}
 
     #[allow(unused_variables)]
-    fn add_expose(&mut self, abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl) {}
+    fn add_expose(&mut self, abs_moniker: PartialAbsoluteMoniker, expose_decl: ExposeDecl) {}
 
     #[allow(unused_variables)]
     fn add_registration(
         &mut self,
-        abs_moniker: AbsoluteMoniker,
+        abs_moniker: PartialAbsoluteMoniker,
         registration_decl: RegistrationDecl,
     ) {
     }
@@ -119,7 +119,7 @@ pub trait DebugRouteMapper: Send + Sync + Clone {
     #[allow(unused_variables)]
     fn add_component_capability(
         &mut self,
-        abs_moniker: AbsoluteMoniker,
+        abs_moniker: PartialAbsoluteMoniker,
         capability_decl: CapabilityDecl,
     ) {
     }

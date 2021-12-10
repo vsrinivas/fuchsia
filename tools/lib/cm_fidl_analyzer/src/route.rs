@@ -9,7 +9,7 @@ use {
     },
     cm_rust::{CapabilityDecl, CapabilityName, ExposeDecl, OfferDecl, UseDecl},
     fuchsia_zircon_status as zx_status,
-    moniker::AbsoluteMoniker,
+    moniker::PartialAbsoluteMoniker,
     routing::{DebugRouteMapper, RegistrationDecl},
     serde::{Deserialize, Serialize},
     thiserror::Error,
@@ -219,21 +219,21 @@ impl RouteMapper {
 impl DebugRouteMapper for RouteMapper {
     type RouteMap = RouteMap;
 
-    fn add_use(&mut self, abs_moniker: AbsoluteMoniker, use_decl: UseDecl) {
+    fn add_use(&mut self, abs_moniker: PartialAbsoluteMoniker, use_decl: UseDecl) {
         self.route.push(RouteSegment::UseBy {
             node_path: NodePath::from(abs_moniker),
             capability: use_decl,
         })
     }
 
-    fn add_offer(&mut self, abs_moniker: AbsoluteMoniker, offer_decl: OfferDecl) {
+    fn add_offer(&mut self, abs_moniker: PartialAbsoluteMoniker, offer_decl: OfferDecl) {
         self.route.push(RouteSegment::OfferBy {
             node_path: NodePath::from(abs_moniker),
             capability: offer_decl,
         })
     }
 
-    fn add_expose(&mut self, abs_moniker: AbsoluteMoniker, expose_decl: ExposeDecl) {
+    fn add_expose(&mut self, abs_moniker: PartialAbsoluteMoniker, expose_decl: ExposeDecl) {
         self.route.push(RouteSegment::ExposeBy {
             node_path: NodePath::from(abs_moniker),
             capability: expose_decl,
@@ -242,7 +242,7 @@ impl DebugRouteMapper for RouteMapper {
 
     fn add_registration(
         &mut self,
-        abs_moniker: AbsoluteMoniker,
+        abs_moniker: PartialAbsoluteMoniker,
         registration_decl: RegistrationDecl,
     ) {
         self.route.push(RouteSegment::RegisterBy {
@@ -253,7 +253,7 @@ impl DebugRouteMapper for RouteMapper {
 
     fn add_component_capability(
         &mut self,
-        abs_moniker: AbsoluteMoniker,
+        abs_moniker: PartialAbsoluteMoniker,
         capability_decl: CapabilityDecl,
     ) {
         self.route.push(RouteSegment::DeclareBy {
