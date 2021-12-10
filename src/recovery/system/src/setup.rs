@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Context, Error};
-use futures::channel::mpsc;
-use rouille::{self, router, Request, Response};
+use anyhow::{Context as _, Error};
+use fuchsia_async as fasync;
+use hyper::{Body, Request, Response};
 use serde::{Deserialize, Serialize};
-use std::io::Read;
-use std::thread;
+use std::convert::Infallible;
+use std::future::Future;
+use std::net::{IpAddr, SocketAddr};
 
-const SERVER_IP: &str = "::";
-const SERVER_PORT: &str = "8880";
+const SERVER_PORT: u16 = 8880;
 
 pub enum SetupEvent {
     Root,
@@ -33,57 +33,88 @@ struct DevhostRequestInfo {
     pub authorized_keys: String,
 }
 
-fn parse_ota_json(request: &Request) -> Result<DevhostConfig, Error> {
-    let mut host_addr = request.remote_addr().ip().to_string();
-    if request.remote_addr().is_ipv6() {
-        host_addr = format!("[{}]", host_addr);
-    }
-    let mut body = request.data().ok_or(anyhow!("Post body already read?"))?;
+async fn parse_ota_json(
+    request: Request<Body>,
+    remote_addr: IpAddr,
+) -> Result<DevhostConfig, Error> {
+    use bytes::buf::ext::BufExt as _;
 
-    let mut json_str = String::new();
-    body.read_to_string(&mut json_str).context("Failed to read request body")?;
+    let body = hyper::body::aggregate(request.into_body()).await.context("read request")?;
+    let DevhostRequestInfo { port, authorized_keys } =
+        serde_json::from_reader(body.reader()).context("Failed to parse JSON")?;
 
-    let cfg: DevhostRequestInfo =
-        serde_json::from_str(&json_str).context("Failed to parse JSON")?;
-
-    let result = DevhostConfig {
-        url: format!("http://{}:{}/config.json", host_addr, cfg.port),
-        authorized_keys: cfg.authorized_keys.clone(),
-    };
-    Ok(result)
+    let url = format!("http://{}/config.json", SocketAddr::new(remote_addr, port));
+    Ok(DevhostConfig { url, authorized_keys })
 }
 
-fn serve(request: &Request, rouille_sender: mpsc::UnboundedSender<SetupEvent>) -> Response {
-    router!(request,
-        (GET) (/) => {
-            rouille_sender.unbounded_send(SetupEvent::Root).expect("Async thread closed the channel.");
-            rouille::Response::text("Root document\n")
-        },
-        (POST) (/ota/devhost) => {
-            // get devhost info out of POST request.
-            let result = parse_ota_json(request);
-            match result {
-                Err(e) => rouille::Response::text(format!("Bad request: {:?}", e)).with_status_code(400),
-                Ok(cfg) => {
-                    rouille_sender.unbounded_send(SetupEvent::DevhostOta { cfg }).expect("Async thread closed the channel.");
-                    rouille::Response::text("Started OTA\n")
-                },
-            }
-        },
-        _ => {
-            rouille::Response::text("Unknown command\n").with_status_code(404)
+async fn serve<Fut, F>(
+    request: Request<Body>,
+    remote_addr: SocketAddr,
+    handler: F,
+) -> Response<Body>
+where
+    Fut: Future<Output = ()>,
+    F: FnOnce(SetupEvent) -> Fut,
+{
+    use hyper::{Method, StatusCode};
+
+    match (request.method(), request.uri().path()) {
+        (&Method::GET, "/") => {
+            let () = handler(SetupEvent::Root).await;
+            Response::new("Root document".into())
         }
-    )
+        (&Method::POST, "/ota/devhost") => {
+            // get devhost info out of POST request.
+            match parse_ota_json(request, remote_addr.ip()).await {
+                Err(e) => {
+                    let mut response = Response::new(format!("Bad request: {:?}", e).into());
+                    *response.status_mut() = StatusCode::BAD_REQUEST;
+                    response
+                }
+                Ok(cfg) => {
+                    let () = handler(SetupEvent::DevhostOta { cfg }).await;
+                    Response::new("Started OTA".into())
+                }
+            }
+        }
+        _ => {
+            let mut response = Response::new("Unknown command".into());
+            *response.status_mut() = StatusCode::NOT_FOUND;
+            response
+        }
+    }
 }
 
-pub fn start_server() -> Result<mpsc::UnboundedReceiver<SetupEvent>, Error> {
+pub fn start_server<Fut, F>(handler: F) -> impl Future<Output = Result<(), hyper::Error>>
+where
+    Fut: Future<Output = ()>,
+    F: FnOnce(SetupEvent) -> Fut,
+    Fut: Send + 'static,
+    F: Clone + Send + 'static,
+{
+    use futures::{FutureExt as _, TryStreamExt as _};
+    use hyper::service::{make_service_fn, service_fn};
+
     println!("recovery: start_server");
 
-    let address = format!("{}:{}", SERVER_IP, SERVER_PORT);
-    let (rouille_sender, async_receiver) = mpsc::unbounded();
-    thread::Builder::new().name("setup-server".into()).spawn(move || {
-        rouille::start_server(address, move |request| serve(&request, rouille_sender.clone()));
-    })?;
+    let addr = SocketAddr::new(IpAddr::V6(std::net::Ipv6Addr::UNSPECIFIED), SERVER_PORT);
+    let listener = fasync::net::TcpListener::bind(&addr).expect("bind");
+    let listener = listener
+        .accept_stream()
+        .map_ok(|(stream, _): (_, SocketAddr)| fuchsia_hyper::TcpStream { stream });
 
-    Ok(async_receiver)
+    let make_svc = make_service_fn(move |fuchsia_hyper::TcpStream { stream }| {
+        let handler = handler.clone();
+        std::future::ready((|| {
+            let remote_addr = stream.std().peer_addr().context("peer addr")?;
+            Ok::<_, Error>(service_fn(move |request| {
+                let handler = handler.clone();
+                serve(request, remote_addr, handler).map(Ok::<_, Infallible>)
+            }))
+        })())
+    });
+
+    hyper::Server::builder(hyper::server::accept::from_stream(listener))
+        .executor(fuchsia_hyper::Executor)
+        .serve(make_svc)
 }

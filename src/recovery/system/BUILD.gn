@@ -71,11 +71,12 @@ rustc_binary("bin") {
     "//src/sys/pkg/lib/isolated-ota",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-channel",
+    "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:png",
-    "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
@@ -142,7 +143,6 @@ rustc_binary("bin_fdr") {
     "//third_party/rust_crates:euclid",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:png",
-    "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:thiserror",
   ]
   sources = [

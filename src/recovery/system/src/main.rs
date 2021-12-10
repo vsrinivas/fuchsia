@@ -310,32 +310,48 @@ impl RecoveryViewAssistant {
 
     #[cfg(feature = "http_setup_server")]
     fn setup(app_context: &AppContext, view_key: ViewKey) -> Result<(), Error> {
-        let mut receiver = setup::start_server()?;
-        let local_app_context = app_context.clone();
-        let f = async move {
-            while let Some(event) = receiver.next().await {
-                println!("recovery: received request");
-                match event {
-                    SetupEvent::Root => local_app_context.queue_message(
-                        MessageTarget::View(view_key),
-                        make_message(RecoveryMessages::EventReceived),
-                    ),
-                    SetupEvent::DevhostOta { cfg } => {
-                        local_app_context.queue_message(
-                            MessageTarget::View(view_key),
-                            make_message(RecoveryMessages::StartingOta),
-                        );
-                        let result = ota::run_devhost_ota(cfg).await;
-                        local_app_context.queue_message(
-                            MessageTarget::View(view_key),
-                            make_message(RecoveryMessages::OtaFinished { result }),
-                        );
-                    }
-                }
-            }
-        };
+        use futures::FutureExt as _;
 
-        fasync::Task::local(f).detach();
+        // TODO: it should be possible to pass a handler function and avoid the need for message
+        // passing, but AppContext eventually contains carnelian::FrameBufferPtr which is an alias
+        // for Rc<_> which is !Send.
+        let (sender, receiver) = async_channel::unbounded();
+        fasync::Task::local(
+            setup::start_server(move |event| async move { sender.send(event).await.unwrap() }).map(
+                |result| {
+                    result
+                        .unwrap_or_else(|error| eprintln!("recovery: HTTP server error: {}", error))
+                },
+            ),
+        )
+        .detach();
+
+        fasync::Task::local(
+            receiver
+                .fold(app_context.clone(), move |local_app_context, event| async move {
+                    println!("recovery: received request");
+                    match event {
+                        SetupEvent::Root => local_app_context.queue_message(
+                            MessageTarget::View(view_key),
+                            make_message(RecoveryMessages::EventReceived),
+                        ),
+                        SetupEvent::DevhostOta { cfg } => {
+                            local_app_context.queue_message(
+                                MessageTarget::View(view_key),
+                                make_message(RecoveryMessages::StartingOta),
+                            );
+                            let result = ota::run_devhost_ota(cfg).await;
+                            local_app_context.queue_message(
+                                MessageTarget::View(view_key),
+                                make_message(RecoveryMessages::OtaFinished { result }),
+                            );
+                        }
+                    }
+                    local_app_context
+                })
+                .map(|_: AppContext| ()),
+        )
+        .detach();
 
         Ok(())
     }
