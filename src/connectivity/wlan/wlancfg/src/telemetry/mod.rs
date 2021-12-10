@@ -200,6 +200,9 @@ pub enum TelemetryEvent {
     OnChannelSwitched {
         info: fidl_internal::ChannelSwitchInfo,
     },
+    /// Notify telemetry that there was a decision to look for networks to roam to after evaluating
+    /// the existing connection.
+    RoamingScan,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -930,6 +933,9 @@ impl Telemetry {
                         .log_device_connected_channel_cobalt_metrics(info.new_channel)
                         .await;
                 }
+            }
+            TelemetryEvent::RoamingScan => {
+                self.stats_logger.log_roaming_scan_metrics().await;
             }
         }
     }
@@ -1928,6 +1934,16 @@ impl StatsLogger {
             self.cobalt_1dot1_proxy,
             &mut metric_events.iter_mut(),
             "log_device_connected_channel_cobalt_metrics",
+        );
+    }
+
+    async fn log_roaming_scan_metrics(&mut self) {
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_occurrence,
+            metrics::POLICY_PROACTIVE_ROAMING_SCAN_COUNTS_METRIC_ID,
+            1,
+            &[],
         );
     }
 }
@@ -4436,6 +4452,21 @@ mod tests {
         test_helper.advance_by(24.hours(), test_fut.as_mut());
         let metrics = test_helper.get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID);
         assert_eq!(metrics.len(), 0);
+    }
+
+    #[fuchsia::test]
+    fn test_log_device_performed_roaming_scan() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send a roaming scan event
+        test_helper.telemetry_sender.send(TelemetryEvent::RoamingScan);
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        // Check that the event was logged to cobalt.
+        let metrics =
+            test_helper.get_logged_metrics(metrics::POLICY_PROACTIVE_ROAMING_SCAN_COUNTS_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
     }
 
     struct TestHelper {

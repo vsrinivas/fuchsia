@@ -1107,8 +1107,8 @@ async fn restore_state_after_setting_country_code(
 fn handle_periodic_connection_stats(
     connection_stats: PeriodicConnectionStats,
     iface_manager: &mut IfaceManagerService,
-    iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
-    network_selector: Arc<NetworkSelector>,
+    _iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    _network_selector: Arc<NetworkSelector>,
     roaming_search_futures: &mut FuturesUnordered<
         BoxFuture<'static, Option<client_types::ConnectionCandidate>>,
     >,
@@ -1135,15 +1135,8 @@ fn handle_periodic_connection_stats(
     // consider roaming. Currently this will never cause a scan.
     let connection_quality = score_connection_quality(&connection_stats);
     if connection_quality < THRESHOLD_BAD_CONNECTION {
-        // Kick off a scan to find a roaming candidate
-        let scan_fut = async move {
-            let ignore_list = vec![];
-            network_selector
-                .clone()
-                .find_best_connection_candidate(iface_manager_client.clone(), &ignore_list)
-                .await
-        };
-        roaming_search_futures.push(scan_fut.boxed());
+        // Record for metrics that a scan was performed for roaming.
+        iface_manager.telemetry_sender.send(TelemetryEvent::RoamingScan);
 
         // Record that a roam scan happened and another should not happen again for a while.
         iface_manager.set_iface_roam_scan_time(connection_stats.iface_id, fasync::Time::now());
