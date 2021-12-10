@@ -10,7 +10,7 @@ use std::{io::Error, path::Path};
 
 /// A reporter that acts as a data sink and does not save results or artifacts.
 pub(super) struct NoopReporter;
-struct NoopDirectoryWriter;
+pub(super) struct NoopDirectoryWriter;
 
 impl Reporter for NoopReporter {
     fn new_entity(&self, _: &EntityId, _: &str) -> Result<(), Error> {

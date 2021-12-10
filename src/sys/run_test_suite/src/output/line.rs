@@ -5,33 +5,6 @@
 use std::io::{Error, Write};
 use vte::{Parser, Perform};
 
-/// A writer that writes to two writers.
-pub struct MultiplexedWriter<A: Write, B: Write> {
-    a: A,
-    b: B,
-}
-
-impl<A: Write, B: Write> Write for MultiplexedWriter<A, B> {
-    fn write(&mut self, bytes: &[u8]) -> Result<usize, Error> {
-        let bytes_written = self.a.write(bytes)?;
-        // Since write is allowed to only write a portion of the data,
-        // we force a and b to write the same number of bytes.
-        self.b.write_all(&bytes[..bytes_written])?;
-        Ok(bytes_written)
-    }
-
-    fn flush(&mut self) -> Result<(), Error> {
-        self.a.flush()?;
-        self.b.flush()
-    }
-}
-
-impl<A: Write, B: Write> MultiplexedWriter<A, B> {
-    pub fn new(a: A, b: B) -> Self {
-        Self { a, b }
-    }
-}
-
 /// A wrapper around a `Write` that filters out ANSI escape sequences before writing to the
 /// wrapped object.
 /// AnsiFilterWriter assumes the bytes are valid UTF8, and clears its state on newline in an
@@ -124,19 +97,6 @@ impl Perform for FoundChars {
 mod test {
     use super::*;
     use ansi_term::{Color, Style};
-
-    #[test]
-    fn multiplexed_writer() {
-        const WRITTEN: &str = "test output";
-
-        let mut buf_1: Vec<u8> = vec![];
-        let mut buf_2: Vec<u8> = vec![];
-        let mut multiplexed_writer = MultiplexedWriter::new(&mut buf_1, &mut buf_2);
-
-        multiplexed_writer.write_all(WRITTEN.as_bytes()).expect("write_all failed");
-        assert_eq!(std::str::from_utf8(&buf_1).unwrap(), WRITTEN);
-        assert_eq!(std::str::from_utf8(&buf_2).unwrap(), WRITTEN);
-    }
 
     #[test]
     fn no_ansi_unaffected() {

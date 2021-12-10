@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::output::{
+    noop::NoopDirectoryWriter, ArtifactType, DirectoryArtifactType, DynArtifact,
+    DynDirectoryArtifact, EntityId, ReportedOutcome, Reporter, Timestamp,
+};
 use fuchsia_async as fasync;
 use log::error;
 use parking_lot::Mutex;
@@ -11,6 +15,9 @@ use std::{
     sync::{atomic::AtomicU32, Arc},
     time::Duration,
 };
+
+/// Duration after which to emit an excessive duration log.
+const EXCESSIVE_DURATION: Duration = Duration::from_secs(60);
 
 /// A handle around an inner writer. This serves as a "multiplexing" writer that
 /// writes bytes from multiple sources into a single serial destination, typically
@@ -115,9 +122,280 @@ impl<W: 'static + Write + Send + Sync> std::ops::Drop for ShellWriterHandle<W> {
     }
 }
 
+/// A reporter that outputs results and artifacts to a single stream, usually stdout.
+/// This reporter is intended to provide "live" updates to a developer watching while
+/// tests are executed.
+pub struct ShellReporter<W: 'static + Write + Send + Sync> {
+    /// Arc around the writer, used to dispense more handles.
+    inner: Arc<Mutex<W>>,
+    /// Map containing known information about each entity.
+    entity_state_map: Mutex<HashMap<EntityId, EntityState>>,
+    /// Number of completed suites, used to output
+    completed_suites: AtomicU32,
+}
+
+/// All known state needed by a |ShellReporter| to display results.
+struct EntityState {
+    name: String,
+    excessive_duration_task: Option<fasync::Task<()>>,
+    children: Vec<EntityId>,
+    restricted_logs: Option<Arc<Mutex<Vec<u8>>>>,
+    run_state: EntityRunningState,
+}
+
+enum EntityRunningState {
+    NotRunning,
+    Started,
+    Finished(ReportedOutcome),
+}
+
+impl EntityState {
+    fn new<S: Into<String>>(name: S) -> Self {
+        Self {
+            name: name.into(),
+            excessive_duration_task: None,
+            children: vec![],
+            restricted_logs: None,
+            run_state: EntityRunningState::NotRunning,
+        }
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+}
+
+impl<W: 'static + Write + Send + Sync> ShellReporter<W> {
+    pub fn new(inner: W) -> Self {
+        let inner = Arc::new(Mutex::new(inner));
+        Self::new_from_arc(inner)
+    }
+
+    pub fn new_from_arc(inner: Arc<Mutex<W>>) -> Self {
+        let mut entity_state_map = HashMap::new();
+        entity_state_map.insert(EntityId::TestRun, EntityState::new("TEST RUN"));
+        Self {
+            inner,
+            entity_state_map: Mutex::new(entity_state_map),
+            completed_suites: AtomicU32::new(0),
+        }
+    }
+
+    fn new_writer_handle(&self, prefix: Option<String>) -> Box<DynArtifact> {
+        Box::new(ShellWriterHandle::new_handle(Arc::clone(&self.inner), prefix))
+    }
+
+    fn num_known_suites(entity_map: &HashMap<EntityId, EntityState>) -> usize {
+        entity_map.keys().filter(|id| matches!(id, EntityId::Suite(_))).count()
+    }
+}
+
+impl<W: 'static + Write + Send + Sync> Reporter for ShellReporter<W> {
+    fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error> {
+        let mut map = self.entity_state_map.lock();
+        map.insert(entity.clone(), EntityState::new(name));
+        if let EntityId::Case { suite, .. } = entity {
+            map.get_mut(&EntityId::Suite(*suite)).unwrap().children.push(entity.clone());
+        }
+        Ok(())
+    }
+
+    fn entity_started(&self, entity: &EntityId, _: Timestamp) -> Result<(), Error> {
+        let mut writer = self.new_writer_handle(None);
+        let mut entity_map_lock = self.entity_state_map.lock();
+        let mut entity_entry = entity_map_lock.get_mut(entity).unwrap();
+        entity_entry.run_state = EntityRunningState::Started;
+        let name = entity_entry.name().to_string();
+        match entity {
+            EntityId::TestRun => (),
+            EntityId::Suite(_) => (),
+            EntityId::Case { .. } => {
+                writeln!(writer, "[RUNNING]\t{}", name)?;
+                entity_entry.excessive_duration_task = Some(fasync::Task::spawn(async move {
+                    fasync::Timer::new(EXCESSIVE_DURATION).await;
+                    writeln!(
+                        writer,
+                        "[duration - {}]:\tStill running after {:?} seconds",
+                        name,
+                        EXCESSIVE_DURATION.as_secs()
+                    )
+                    .unwrap_or_else(|e| error!("Failed to write: {:?}", e));
+                }));
+            }
+        }
+        Ok(())
+    }
+
+    fn entity_stopped(
+        &self,
+        entity: &EntityId,
+        outcome: &ReportedOutcome,
+        _: Timestamp,
+    ) -> Result<(), Error> {
+        let mut writer = self.new_writer_handle(None);
+        let mut entity_map_lock = self.entity_state_map.lock();
+        entity_map_lock.get_mut(entity).unwrap().run_state = EntityRunningState::Finished(*outcome);
+        let entity_entry = entity_map_lock.get_mut(entity).unwrap();
+        let name = entity_entry.name().to_string();
+
+        // cancel any tasks for reporting excessive duration
+        let _ = entity_entry.excessive_duration_task.take();
+        match entity {
+            EntityId::TestRun => (),
+            EntityId::Suite(_) => (),
+            EntityId::Case { .. } => {
+                // We don't list error result as it indicates the test didn't finish.
+                if *outcome != ReportedOutcome::Error {
+                    writeln!(writer, "[{}]\t{}", outcome, name)?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn entity_finished(&self, entity: &EntityId) -> Result<(), Error> {
+        let mut writer = self.new_writer_handle(None);
+        let entity_map_lock = self.entity_state_map.lock();
+        let entity_entry = entity_map_lock.get(entity).unwrap();
+        let name = entity_entry.name().to_string();
+        let outcome = match &entity_entry.run_state {
+            EntityRunningState::Finished(outcome) => *outcome,
+            _ => ReportedOutcome::Inconclusive,
+        };
+        let children: Vec<_> = entity_entry.children.iter().cloned().collect();
+        match entity {
+            EntityId::TestRun => (),
+            EntityId::Suite(_) => {
+                if matches!(entity_entry.run_state, EntityRunningState::NotRunning) {
+                    // no need to output a report if the test wasn't even started.
+                    return Ok(());
+                }
+
+                let cases: Vec<_> =
+                    children.iter().map(|child| entity_map_lock.get(child).unwrap()).collect();
+                let executed: Vec<_> = cases
+                    .iter()
+                    .filter(|case| match &case.run_state {
+                        EntityRunningState::Finished(_) | EntityRunningState::Started => true,
+                        EntityRunningState::NotRunning => false,
+                    })
+                    .collect();
+                let mut failed: Vec<_> = cases
+                    .iter()
+                    .filter(|case| {
+                        matches!(
+                            &case.run_state,
+                            EntityRunningState::Finished(
+                                ReportedOutcome::Failed | ReportedOutcome::Timedout
+                            )
+                        )
+                    })
+                    .map(|case| case.name())
+                    .collect();
+                failed.sort();
+                let mut not_finished: Vec<_> = cases
+                    .iter()
+                    .filter(|case| {
+                        matches!(
+                            &case.run_state,
+                            EntityRunningState::Started
+                                | EntityRunningState::Finished(ReportedOutcome::Error)
+                        )
+                    })
+                    .map(|case| case.name())
+                    .collect();
+                not_finished.sort();
+                let num_passed = cases
+                    .iter()
+                    .filter(|case| {
+                        matches!(
+                            &case.run_state,
+                            EntityRunningState::Finished(ReportedOutcome::Passed)
+                        )
+                    })
+                    .count();
+
+                let suite_number =
+                    self.completed_suites.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                if suite_number > 0 {
+                    writeln!(
+                        writer,
+                        "\nTest run count {}/{}",
+                        suite_number + 1,
+                        Self::num_known_suites(&*entity_map_lock),
+                    )?;
+                }
+                writeln!(writer)?;
+                if !failed.is_empty() {
+                    writeln!(writer, "Failed tests: {}", failed.join(", "))?;
+                }
+                if !not_finished.is_empty() {
+                    writeln!(writer, "\nThe following test(s) never completed:")?;
+                    for t in not_finished {
+                        writeln!(writer, "{}", t)?;
+                    }
+                }
+                writeln!(writer, "{} out of {} tests passed...", num_passed, executed.len())?;
+
+                if let Some(restricted_logs) = &entity_entry.restricted_logs {
+                    writeln!(writer, "\nTest {} produced unexpected high-severity logs:", &name)?;
+                    writeln!(writer, "----------------xxxxx----------------")?;
+                    writer.write_all(restricted_logs.lock().as_slice())?;
+                    writeln!(writer, "\n----------------xxxxx----------------")?;
+                    writeln!(writer, "Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity\n")?;
+                }
+                match outcome {
+                    ReportedOutcome::Cancelled => {
+                        writeln!(writer, "{} was cancelled before completion.", &name)?
+                    }
+                    ReportedOutcome::DidNotFinish => {
+                        writeln!(writer, "{} did not complete successfully.", &name)?
+                    }
+                    other => writeln!(writer, "{} completed with result: {}", &name, other)?,
+                }
+            }
+            EntityId::Case { .. } => (),
+        }
+        Ok(())
+    }
+
+    fn new_artifact(
+        &self,
+        entity: &EntityId,
+        artifact_type: &ArtifactType,
+    ) -> Result<Box<DynArtifact>, Error> {
+        let mut lock = self.entity_state_map.lock();
+        let mut entity = lock.get_mut(entity).unwrap();
+        let name = entity.name();
+
+        Ok(match artifact_type {
+            ArtifactType::Stdout => self.new_writer_handle(format!("[stdout - {}]\n", name).into()),
+            ArtifactType::Stderr => self.new_writer_handle(format!("[stderr - {}]\n", name).into()),
+            ArtifactType::Syslog => self.new_writer_handle(None),
+            ArtifactType::RestrictedLog => {
+                // Restricted logs are saved for reporting when the entity completes.
+                let log_buffer = Arc::new(Mutex::new(vec![]));
+                entity.restricted_logs = Some(log_buffer.clone());
+                Box::new(ShellWriterHandle::new_handle(log_buffer, None))
+            }
+        })
+    }
+
+    fn new_directory_artifact(
+        &self,
+        _entity: &EntityId,
+        _artifact_type: &DirectoryArtifactType,
+        _component_moniker: Option<String>,
+    ) -> Result<Box<DynDirectoryArtifact>, Error> {
+        // For the purpose of live reporting we don't display anything from a directory.
+        Ok(Box::new(NoopDirectoryWriter))
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::output::{CaseId, RunReporter, SuiteId};
     use std::io::ErrorKind;
 
     #[test]
@@ -316,7 +594,7 @@ mod test {
         struct InterruptWriter {
             buf: Vec<u8>,
             returned_interrupt: bool,
-        };
+        }
         impl Write for InterruptWriter {
             fn write(&mut self, buf: &[u8]) -> Result<usize, Error> {
                 if !self.returned_interrupt {
@@ -352,5 +630,237 @@ mod test {
         assert_eq!(output.lock().buf.as_slice(), b"[prefix] hello\n");
         assert_eq!(write_handle_2.write(b"\n").unwrap(), b"\n".len());
         assert_eq!(output.lock().buf.as_slice(), b"[prefix] hello\n[prefix2] world\n");
+    }
+
+    #[fuchsia::test]
+    async fn report_case_events() {
+        let output = Arc::new(Mutex::new(vec![]));
+        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let suite_reporter =
+            run_reporter.new_suite("test-suite", &SuiteId(0)).expect("create suite");
+
+        let case_1_reporter = suite_reporter.new_case("case-1", &CaseId(0)).expect("create case");
+        let case_2_reporter = suite_reporter.new_case("case-2", &CaseId(1)).expect("create case");
+
+        case_1_reporter.started(Timestamp::Unknown).expect("case started");
+        let mut expected = "[RUNNING]\tcase-1\n".to_string();
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_2_reporter.started(Timestamp::Unknown).expect("case started");
+        expected.push_str("[RUNNING]\tcase-2\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_1_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop case");
+        expected.push_str("[PASSED]\tcase-1\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_2_reporter.stopped(&ReportedOutcome::Failed, Timestamp::Unknown).expect("stop case");
+        expected.push_str("[FAILED]\tcase-2\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_1_reporter.finished().expect("finish case");
+        case_2_reporter.finished().expect("finish case");
+        suite_reporter.stopped(&ReportedOutcome::Failed, Timestamp::Unknown).expect("stop suite");
+        suite_reporter.finished().expect("finish suite");
+
+        expected.push_str("\n");
+        expected.push_str("Failed tests: case-2\n");
+        expected.push_str("1 out of 2 tests passed...\n");
+        expected.push_str("test-suite completed with result: FAILED\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+    }
+
+    #[fuchsia::test]
+    async fn syslog_artifacts() {
+        let output = Arc::new(Mutex::new(vec![]));
+        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let suite_reporter =
+            run_reporter.new_suite("test-suite", &SuiteId(0)).expect("create suite");
+        let mut syslog_writer =
+            suite_reporter.new_artifact(&ArtifactType::Syslog).expect("create syslog");
+
+        writeln!(syslog_writer, "[log] test syslog").expect("write to syslog");
+        let mut expected = "[log] test syslog\n".to_string();
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected);
+
+        suite_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop suite");
+        writeln!(syslog_writer, "[log] more test syslog").expect("write to syslog");
+        expected.push_str("[log] more test syslog\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected);
+
+        suite_reporter.finished().expect("finish suite");
+        expected.push_str("\n");
+        expected.push_str("0 out of 0 tests passed...\n");
+        expected.push_str("test-suite completed with result: PASSED\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+    }
+
+    #[fuchsia::test]
+    async fn report_retricted_logs() {
+        let output = Arc::new(Mutex::new(vec![]));
+        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let suite_reporter =
+            run_reporter.new_suite("test-suite", &SuiteId(0)).expect("create suite");
+
+        let case_reporter = suite_reporter.new_case("case-0", &CaseId(0)).expect("create case");
+        case_reporter.started(Timestamp::Unknown).expect("case started");
+        case_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop case");
+        case_reporter.finished().expect("finish case");
+
+        let mut expected = "[RUNNING]\tcase-0\n".to_string();
+        expected.push_str("[PASSED]\tcase-0\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        suite_reporter.stopped(&ReportedOutcome::Failed, Timestamp::Unknown).expect("stop suite");
+        let mut restricted_log = suite_reporter
+            .new_artifact(&ArtifactType::RestrictedLog)
+            .expect("create restricted log");
+        write!(restricted_log, "suite restricted log").expect("write to restricted log");
+        drop(restricted_log);
+
+        suite_reporter.finished().expect("finish suite");
+        expected.push_str("\n");
+        expected.push_str("1 out of 1 tests passed...\n");
+        expected.push_str("\nTest test-suite produced unexpected high-severity logs:\n");
+        expected.push_str("----------------xxxxx----------------\n");
+        expected.push_str("suite restricted log\n\n");
+        expected.push_str("----------------xxxxx----------------\n");
+        expected.push_str("Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity\n");
+        expected.push_str("\ntest-suite completed with result: FAILED\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+    }
+
+    #[fuchsia::test]
+    async fn stdout_artifacts() {
+        let output = Arc::new(Mutex::new(vec![]));
+        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let suite_reporter =
+            run_reporter.new_suite("test-suite", &SuiteId(0)).expect("create suite");
+
+        let case_0_reporter = suite_reporter.new_case("case-0", &CaseId(0)).expect("create case");
+        let case_1_reporter = suite_reporter.new_case("case-1", &CaseId(1)).expect("create case");
+        case_0_reporter.started(Timestamp::Unknown).expect("start case");
+        case_1_reporter.started(Timestamp::Unknown).expect("start case");
+        let mut expected = "[RUNNING]\tcase-0\n[RUNNING]\tcase-1\n".to_string();
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        let mut case_0_stdout =
+            case_0_reporter.new_artifact(&ArtifactType::Stdout).expect("create artifact");
+        let mut case_1_stdout =
+            case_1_reporter.new_artifact(&ArtifactType::Stdout).expect("create artifact");
+
+        writeln!(case_0_stdout, "stdout from case 0").expect("write to stdout");
+        writeln!(case_1_stdout, "stdout from case 1").expect("write to stdout");
+
+        expected.push_str("[stdout - case-0]\nstdout from case 0\n");
+        expected.push_str("[stdout - case-1]\nstdout from case 1\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_0_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop case");
+        case_1_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop case");
+        expected.push_str("[PASSED]\tcase-0\n");
+        expected.push_str("[PASSED]\tcase-1\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        case_0_reporter.finished().expect("finish case");
+        case_1_reporter.finished().expect("finish case");
+        suite_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop suite");
+
+        suite_reporter.finished().expect("finish suite");
+        expected.push_str("\n");
+        expected.push_str("2 out of 2 tests passed...\n");
+        expected.push_str("test-suite completed with result: PASSED\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+    }
+
+    #[fuchsia::test]
+    async fn report_unfinished() {
+        let output = Arc::new(Mutex::new(vec![]));
+        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let suite_reporter =
+            run_reporter.new_suite("test-suite", &SuiteId(0)).expect("create suite");
+        suite_reporter.started(Timestamp::Unknown).expect("suite started");
+
+        let case_reporter = suite_reporter.new_case("case-0", &CaseId(0)).expect("create case");
+        case_reporter.started(Timestamp::Unknown).expect("case started");
+        case_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop case");
+        case_reporter.finished().expect("finish case");
+        let mut expected = "[RUNNING]\tcase-0\n[PASSED]\tcase-0\n".to_string();
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        // add a case that finishes with ERROR
+        let unfinished_case_1 = suite_reporter.new_case("case-1", &CaseId(1)).expect("create case");
+        unfinished_case_1.started(Timestamp::Unknown).expect("case started");
+        unfinished_case_1.stopped(&ReportedOutcome::Error, Timestamp::Unknown).expect("stop case");
+        unfinished_case_1.finished().expect("finish case");
+        expected.push_str("[RUNNING]\tcase-1\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        // add a case that doesn't finish at all
+        let unfinished_case_2 = suite_reporter.new_case("case-2", &CaseId(2)).expect("create case");
+        unfinished_case_2.started(Timestamp::Unknown).expect("case started");
+        unfinished_case_2.finished().expect("finish case");
+        expected.push_str("[RUNNING]\tcase-2\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+
+        suite_reporter.stopped(&ReportedOutcome::Failed, Timestamp::Unknown).expect("stop suite");
+        suite_reporter.finished().expect("finish suite");
+        expected.push_str("\n");
+        expected.push_str("\nThe following test(s) never completed:\n");
+        expected.push_str("case-1\n");
+        expected.push_str("case-2\n");
+        expected.push_str("1 out of 3 tests passed...\n");
+        expected.push_str("test-suite completed with result: FAILED\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+    }
+
+    #[fuchsia::test]
+    async fn report_cancelled_suite() {
+        let output = Arc::new(Mutex::new(vec![]));
+        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let suite_reporter =
+            run_reporter.new_suite("test-suite", &SuiteId(0)).expect("create suite");
+        suite_reporter.started(Timestamp::Unknown).expect("suite started");
+
+        let case_reporter = suite_reporter.new_case("case", &CaseId(0)).expect("create new case");
+        case_reporter.started(Timestamp::Unknown).expect("case started");
+        case_reporter.finished().expect("case finished");
+        suite_reporter
+            .stopped(&ReportedOutcome::Cancelled, Timestamp::Unknown)
+            .expect("stop suite");
+        suite_reporter.finished().expect("case finished");
+
+        let mut expected = "[RUNNING]\tcase\n".to_string();
+        expected.push_str("\n");
+        expected.push_str("\nThe following test(s) never completed:\n");
+        expected.push_str("case\n");
+        expected.push_str("0 out of 1 tests passed...\n");
+        expected.push_str("test-suite was cancelled before completion.\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
+    }
+
+    #[fuchsia::test]
+    async fn report_suite_did_not_finish() {
+        let output = Arc::new(Mutex::new(vec![]));
+        let run_reporter = RunReporter::new_for_test(ShellReporter::new_from_arc(output.clone()));
+        let suite_reporter =
+            run_reporter.new_suite("test-suite", &SuiteId(0)).expect("create suite");
+        suite_reporter.started(Timestamp::Unknown).expect("suite started");
+
+        let case_reporter = suite_reporter.new_case("case", &CaseId(0)).expect("create new case");
+        case_reporter.started(Timestamp::Unknown).expect("case started");
+        case_reporter.finished().expect("case finished");
+        suite_reporter
+            .stopped(&ReportedOutcome::DidNotFinish, Timestamp::Unknown)
+            .expect("stop suite");
+        suite_reporter.finished().expect("case finished");
+
+        let mut expected = "[RUNNING]\tcase\n".to_string();
+        expected.push_str("\n");
+        expected.push_str("\nThe following test(s) never completed:\n");
+        expected.push_str("case\n");
+        expected.push_str("0 out of 1 tests passed...\n");
+        expected.push_str("test-suite did not complete successfully.\n");
+        assert_eq!(String::from_utf8(output.lock().clone()).unwrap(), expected,);
     }
 }

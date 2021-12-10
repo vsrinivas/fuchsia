@@ -7,10 +7,13 @@ use std::path::{Path, PathBuf};
 
 mod directory;
 mod line;
+#[allow(unused)]
+mod mux;
 mod noop;
 #[allow(unused)]
 mod shell;
-pub use line::{AnsiFilterWriter, MultiplexedWriter};
+pub use line::AnsiFilterWriter;
+pub use mux::MultiplexedWriter;
 
 use directory::DirectoryReporter;
 use fidl_fuchsia_test_manager as ftest_manager;
@@ -85,6 +88,13 @@ impl RunReporter {
         let artifact_wrapper =
             Box::new(|_type: &ArtifactType, artifact: Box<DynArtifact>| artifact);
         Ok(Self { reporter, artifact_wrapper })
+    }
+
+    #[cfg(test)]
+    fn new_for_test<R: 'static + Reporter + Send + Sync>(inner: R) -> Self {
+        let artifact_wrapper =
+            Box::new(|_type: &ArtifactType, artifact: Box<DynArtifact>| artifact);
+        Self { reporter: Box::new(inner), artifact_wrapper }
     }
 
     /// Create a new artifact scoped to the test run.
@@ -226,7 +236,7 @@ pub enum DirectoryArtifactType {
 }
 
 /// Common outcome type for test results, suites, and test cases.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum ReportedOutcome {
     Passed,
     Failed,
@@ -236,6 +246,22 @@ pub enum ReportedOutcome {
     Skipped,
     Cancelled,
     DidNotFinish,
+}
+
+impl std::fmt::Display for ReportedOutcome {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let repr = match self {
+            Self::Passed => "PASSED",
+            Self::Failed => "FAILED",
+            Self::Inconclusive => "INCONCLUSIVE",
+            Self::Timedout => "TIMED_OUT",
+            Self::Error => "ERROR",
+            Self::Skipped => "SKIPPED",
+            Self::Cancelled => "CANCELLED",
+            Self::DidNotFinish => "DID_NOT_FINISH",
+        };
+        write!(f, "{}", repr)
+    }
 }
 
 impl From<ftest_manager::CaseStatus> for ReportedOutcome {
@@ -359,6 +385,7 @@ impl ZxTime {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum Timestamp {
     Unknown,
     Given(ZxTime),
