@@ -20,6 +20,7 @@ std::shared_ptr<Options> RunnerTest::DefaultOptions(Runner* runner) {
 }
 
 void RunnerTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
+  runner->SetWaitThreshold(SyncWait::kDefaultThreshold);
   options_ = options;
   options_->set_seed(1);
   runner->Configure(options_);
@@ -95,22 +96,22 @@ void RunnerTest::RunUntilIdle() {
 
 bool RunnerTest::HasTestInput() {
   bool has_input = HasTestInput(zx::duration::infinite());
-  sync_completion_signal(&started_sync_);
+  started_sync_.Signal();
   return has_input;
 }
 
-void RunnerTest::AwaitStarted() { sync_completion_wait(&started_sync_, ZX_TIME_INFINITE); }
+void RunnerTest::AwaitStarted() { started_sync_.WaitFor("runner to send test input"); }
 
-bool RunnerTest::HasStatus() const { return sync_completion_signaled(&status_sync_); }
+bool RunnerTest::HasStatus() const { return status_sync_.is_signaled(); }
 
 zx_status_t RunnerTest::GetStatus() {
-  sync_completion_wait(&status_sync_, ZX_TIME_INFINITE);
+  status_sync_.WaitFor("runner to complete");
   return status_;
 }
 
 void RunnerTest::SetStatus(zx_status_t status) {
   status_ = status;
-  sync_completion_signal(&status_sync_);
+  status_sync_.Signal();
 }
 
 // Unit tests.

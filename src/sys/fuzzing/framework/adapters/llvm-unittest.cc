@@ -4,10 +4,9 @@
 
 #include "src/sys/fuzzing/framework/adapters/llvm.h"
 
-#include <lib/sync/completion.h>
-
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/common/testing/signal-coordinator.h"
 
 // Test fixtures.
@@ -47,8 +46,8 @@ TEST(LLVMTargetAdapterTest, GetParameters) {
 TEST(LLVMTargetAdapterTest, Connect) {
   LLVMTargetAdapter adapter;
 
-  sync_completion_t closed;
-  auto handler = adapter.GetHandler(/* on_close */ [&]() { sync_completion_signal(&closed); });
+  SyncWait closed;
+  auto handler = adapter.GetHandler(/* on_close */ [&]() { closed.Signal(); });
 
   TargetAdapterSyncPtr ptr;
   handler(ptr.NewRequest());
@@ -73,7 +72,7 @@ TEST(LLVMTargetAdapterTest, Connect) {
   EXPECT_EQ(last_input.size, test_input.size());
 
   coordinator.Reset();
-  sync_completion_wait(&closed, ZX_TIME_INFINITE);
+  closed.WaitFor("close");
 }
 
 }  // namespace

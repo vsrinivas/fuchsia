@@ -7,7 +7,6 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/process.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -20,6 +19,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/common/testing/signal-coordinator.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/testing/module.h"

@@ -7,7 +7,6 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/socket.h>
 #include <stddef.h>
 
@@ -20,6 +19,7 @@
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/run-once.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -30,6 +30,10 @@ class Transceiver final {
  public:
   Transceiver();
   ~Transceiver();
+
+  // Sets the threshold after which an indefinite wait will log a warning. This is disabled by
+  // default, but is set in tests to help diagnose flake.
+  void SetWaitThreshold(zx::duration threshold);
 
   // Asynchronously reads bytes from |input|'s socket into the |Input| passed to |callback|. Invokes
   // |callback| with |ZX_ERR_BAD_STATE| if |Shutdown| has been called.
@@ -65,7 +69,7 @@ class Transceiver final {
   std::mutex mutex_;
   std::deque<std::unique_ptr<Request>> requests_ FXL_GUARDED_BY(mutex_);
   bool stopped_ FXL_GUARDED_BY(mutex_) = false;
-  sync_completion_t sync_;
+  SyncWait sync_;
 
   RunOnce close_;
   RunOnce join_;

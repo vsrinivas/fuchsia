@@ -8,7 +8,6 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fit/function.h>
-#include <lib/sync/completion.h>
 
 #include <atomic>
 #include <memory>
@@ -20,6 +19,7 @@
 #include "src/sys/fuzzing/common/monitors.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/run-once.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -44,6 +44,10 @@ class Runner {
   // Accessors.
   Result result() const { return result_; }
   Input result_input() const { return result_input_.Duplicate(); }
+
+  // Sets the threshold after which an indefinite wait will log a warning. This is disabled by
+  // default, but is set in tests to help diagnose flake.
+  void SetWaitThreshold(zx::duration threshold);
 
   // Lets this objects add defaults to unspecified options.
   virtual void AddDefaults(Options* options) = 0;
@@ -131,7 +135,7 @@ class Runner {
 
   // Worker variables.
   std::thread worker_;
-  sync_completion_t worker_sync_;
+  SyncWait worker_sync_;
   bool idle_ FXL_GUARDED_BY(mutex_) = false;
   std::atomic<bool> stopped_ = false;
 

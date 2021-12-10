@@ -40,6 +40,10 @@ class ControllerImpl : public Controller {
   ControllerImpl();
   ~ControllerImpl() override;
 
+  // Sets the threshold after which an indefinite wait will log a warning. This is disabled by
+  // default, but is set in tests to help diagnose flake.
+  void SetWaitThreshold(zx::duration threshold);
+
   // Sets the runner used to perform tasks.
   void SetRunner(std::unique_ptr<Runner> runner);
 
@@ -110,7 +114,7 @@ class ControllerImpl : public Controller {
   std::thread reader_;
   std::deque<CorpusReaderRequest> readers_ FXL_GUARDED_BY(mutex_);
   bool reading_ FXL_GUARDED_BY(mutex_) = true;
-  sync_completion_t pending_readers_;
+  SyncWait pending_readers_;
 
   RunOnce close_;
   RunOnce interrupt_;

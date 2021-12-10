@@ -59,13 +59,13 @@ class Binding {
       FX_CHECK(status == ZX_OK) << "Bind: " << zx_status_get_string(status);
       return;
     }
-    sync_completion_t sync;
+    SyncWait sync;
     PostTask([this, &sync, channel = std::move(channel)]() mutable {
       auto status = binding_.Bind(std::move(channel));
       FX_CHECK(status == ZX_OK) << "Bind: " << zx_status_get_string(status);
-      sync_completion_signal(&sync);
+      sync.Signal();
     });
-    sync_completion_wait(&sync, ZX_TIME_INFINITE);
+    sync.WaitFor("dispatcher to complete binding");
   }
 
   // Unbinds (and closes) the underlying channel from this object. This can be called from a
@@ -78,12 +78,12 @@ class Binding {
       binding_.Unbind();
       return;
     }
-    sync_completion_t sync;
+    SyncWait sync;
     PostTask([this, &sync]() {
       binding_.Unbind();
-      sync_completion_signal(&sync);
+      sync.Signal();
     });
-    sync_completion_wait(&sync, ZX_TIME_INFINITE);
+    sync.WaitFor("dispatcher to complete unbinding");
   }
 
   // Blocks until the underlying channel is unbound and closed.

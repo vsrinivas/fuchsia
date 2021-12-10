@@ -10,6 +10,8 @@
 
 namespace fuzzing {
 
+FakeTransceiver::FakeTransceiver() { transceiver_.SetWaitThreshold(SyncWait::kDefaultThreshold); }
+
 FidlInput FakeTransceiver::Transmit(Input input) {
   std::lock_guard<std::mutex> lock(mutex_);
   FidlInput fidl_input;
@@ -20,14 +22,14 @@ FidlInput FakeTransceiver::Transmit(Input input) {
 
 Input FakeTransceiver::Receive(FidlInput fidl_input) {
   std::lock_guard<std::mutex> lock(mutex_);
-  sync_completion_t sync;
+  SyncWait sync;
   Input received;
   transceiver_.Receive(std::move(fidl_input), [&sync, &received](zx_status_t status, Input input) {
     FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
     received = std::move(input);
-    sync_completion_signal(&sync);
+    sync.Signal();
   });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  sync.WaitFor("data to be received");
   return received;
 }
 

@@ -12,15 +12,15 @@ RunOnce::RunOnce(fit::closure task) : task_(std::move(task)) {}
 
 RunOnce::~RunOnce() {
   FX_CHECK(running_);
-  sync_completion_wait(&ran_, ZX_TIME_INFINITE);
+  ran_.WaitFor("task to complete");
 }
 
 void RunOnce::Run() {
   if (running_.exchange(true)) {
-    sync_completion_wait(&ran_, ZX_TIME_INFINITE);
+    ran_.WaitFor("task to complete");
   } else {
     task_();
-    sync_completion_signal(&ran_);
+    ran_.Signal();
   }
 }
 

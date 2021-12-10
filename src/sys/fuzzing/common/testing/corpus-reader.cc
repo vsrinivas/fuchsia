@@ -22,14 +22,14 @@ void FakeCorpusReader::Next(FidlInput fidl_input, NextCallback callback) {
     } else {
       inputs_.push_back(std::move(input));
     }
-    sync_completion_signal(&sync_);
+    sync_.Signal();
   });
   callback(ZX_OK);
 }
 
 bool FakeCorpusReader::AwaitNext() {
   while (true) {
-    sync_completion_wait(&sync_, ZX_TIME_INFINITE);
+    sync_.WaitFor("next corpus element");
     {
       std::lock_guard<std::mutex> lock(mutex_);
       if (!inputs_.empty()) {
@@ -50,7 +50,7 @@ Input FakeCorpusReader::GetNext() {
     input = std::move(inputs_.front());
     inputs_.pop_front();
     if (inputs_.empty() && has_more_) {
-      sync_completion_reset(&sync_);
+      sync_.Reset();
     }
   }
   return input;

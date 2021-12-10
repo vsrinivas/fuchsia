@@ -6,11 +6,11 @@
 #define SRC_SYS_FUZZING_COMMON_RUN_ONCE_H_
 
 #include <lib/fit/function.h>
-#include <lib/sync/completion.h>
 
 #include <atomic>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -28,7 +28,7 @@ class RunOnce final {
  private:
   fit::closure task_;
   std::atomic<bool> running_ = false;
-  sync_completion_t ran_;
+  SyncWait ran_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(RunOnce);
 };

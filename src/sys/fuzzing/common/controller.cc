@@ -20,6 +20,7 @@ ControllerImpl::ControllerImpl()
   dispatcher_ = binding_.dispatcher();
   options_ = std::make_shared<Options>();
   transceiver_ = std::make_shared<Transceiver>();
+  SetWaitThreshold(zx::duration(0));
   reader_ = std::thread([this]() { ReadCorpusLoop(); });
 }
 
@@ -29,6 +30,14 @@ ControllerImpl::~ControllerImpl() {
   Join();
 }
 
+void ControllerImpl::SetWaitThreshold(zx::duration threshold) {
+  pending_readers_.set_threshold(threshold);
+  transceiver_->SetWaitThreshold(threshold);
+  if (runner_) {
+    runner_->SetWaitThreshold(threshold);
+  }
+}
+
 void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
   FX_DCHECK(runner_);
   binding_.Bind(std::move(request));
@@ -36,6 +45,7 @@ void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
 
 void ControllerImpl::SetRunner(std::unique_ptr<Runner> runner) {
   runner_ = std::move(runner);
+  runner_->SetWaitThreshold(pending_readers_.threshold());
   AddDefaults();
   runner_->Configure(options_);
 }
@@ -90,7 +100,7 @@ void ControllerImpl::ReadCorpus(CorpusType corpus_type, fidl::InterfaceHandle<Co
     std::lock_guard<std::mutex> lock(mutex_);
     if (reading_) {
       readers_.emplace_back(corpus_type, std::move(ptr));
-      sync_completion_signal(&pending_readers_);
+      pending_readers_.Signal();
     }
   }
   // If |!reading|, the |ptr| will be dropped, signalling the controller is shutting down..
@@ -100,7 +110,7 @@ void ControllerImpl::ReadCorpus(CorpusType corpus_type, fidl::InterfaceHandle<Co
 void ControllerImpl::ReadCorpusLoop() {
   while (true) {
     // |pending_readers_| will be signalled on object destruction.
-    sync_completion_wait(&pending_readers_, ZX_TIME_INFINITE);
+    pending_readers_.WaitFor("more corpus readers");
     CorpusType corpus_type;
     CorpusReaderSyncPtr reader;
     {
@@ -113,7 +123,7 @@ void ControllerImpl::ReadCorpusLoop() {
       reader = std::move(request.second);
       readers_.pop_front();
       if (reading_ && readers_.empty()) {
-        sync_completion_reset(&pending_readers_);
+        pending_readers_.Reset();
       }
     }
     size_t offset = 1;
@@ -213,7 +223,7 @@ void ControllerImpl::CloseImpl() {
   {
     std::lock_guard<std::mutex> lock(mutex_);
     reading_ = false;
-    sync_completion_signal(&pending_readers_);
+    pending_readers_.Signal();
   }
   transceiver_->Close();
 }

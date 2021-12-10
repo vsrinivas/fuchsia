@@ -31,6 +31,7 @@ Runner::Runner()
       interrupt_([this] { InterruptImpl(); }),
       join_([this]() { JoinImpl(); }) {
   // Start the worker and ensure is up and running.
+  SetWaitThreshold(zx::duration(0));
   worker_ = std::thread([this]() { Worker(); });
   bool idle = true;
   do {
@@ -47,6 +48,8 @@ Runner::~Runner() {
   interrupt_.Run();
   join_.Run();
 }
+
+void Runner::SetWaitThreshold(zx::duration threshold) { worker_sync_.set_threshold(threshold); }
 
 zx_status_t Runner::Configure(const std::shared_ptr<Options>& options) {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -77,7 +80,7 @@ void Runner::Pend(uint8_t action, Input input, fit::function<void(zx_status_t)> 
   action_ = action;
   input_ = std::move(input);
   callback_ = std::move(callback);
-  sync_completion_signal(&worker_sync_);
+  worker_sync_.Signal();
 }
 
 void Runner::Execute(Input input, fit::function<void(zx_status_t)> callback) {
@@ -109,8 +112,8 @@ void Runner::Worker() {
       idle_ = true;
     }
     // Wait indefinitely. Destroying this object will call |StopImpl|.
-    sync_completion_wait(&worker_sync_, ZX_TIME_INFINITE);
-    sync_completion_reset(&worker_sync_);
+    worker_sync_.WaitFor("more work to do");
+    worker_sync_.Reset();
     uint8_t action;
     Input input;
     fit::function<void(zx_status_t)> callback;
@@ -173,7 +176,7 @@ void Runner::CloseImpl() {
     std::lock_guard<std::mutex> lock(mutex_);
     idle_ = false;
     action_ = kStop;
-    sync_completion_signal(&worker_sync_);
+    worker_sync_.Signal();
   }
 }
 

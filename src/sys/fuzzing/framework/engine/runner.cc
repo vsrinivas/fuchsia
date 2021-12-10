@@ -381,32 +381,32 @@ void RunnerImpl::FuzzLoopStrict(fit::function<Input*(bool)> next_input,
   next_input_ = next_input(/* first */ true);
   last_input_ = nullptr;
   // Set initial sync state.
-  sync_completion_signal(&next_input_ready_);
-  sync_completion_reset(&next_input_taken_);
-  sync_completion_signal(&last_input_taken_);
-  sync_completion_reset(&last_input_ready_);
+  next_input_ready_.Signal();
+  next_input_taken_.Reset();
+  last_input_taken_.Signal();
+  last_input_ready_.Reset();
   auto loop = std::thread([this, ignore_errors]() { RunLoop(ignore_errors); });
   while (true) {
-    sync_completion_wait(&last_input_ready_, ZX_TIME_INFINITE);
-    sync_completion_reset(&last_input_ready_);
+    last_input_ready_.WaitFor("feedback from last input");
+    last_input_ready_.Reset();
     if (stopped_) {
       break;
     }
     // Analyze feedback from inputN
     auto* last_input = last_input_;
-    sync_completion_signal(&last_input_taken_);
+    last_input_taken_.Signal();
     finish_run(last_input);
-    sync_completion_wait(&next_input_taken_, ZX_TIME_INFINITE);
-    sync_completion_reset(&next_input_taken_);
+    next_input_taken_.WaitFor("next input to be consumed");
+    next_input_taken_.Reset();
     if (stopped_) {
       break;
     }
     // Generate inputN+1
     next_input_ = next_input(/* first */ false);
-    sync_completion_signal(&next_input_ready_);
+    next_input_ready_.Signal();
   }
-  sync_completion_signal(&last_input_taken_);
-  sync_completion_signal(&next_input_ready_);
+  last_input_taken_.Signal();
+  next_input_ready_.Signal();
   loop.join();
 }
 
@@ -414,32 +414,32 @@ void RunnerImpl::FuzzLoopRelaxed(fit::function<Input*(bool)> next_input,
                                  fit::function<void(Input*)> finish_run, bool ignore_errors) {
   next_input_ = next_input(/* first */ true);
   last_input_ = nullptr;
-  sync_completion_signal(&next_input_ready_);
-  sync_completion_reset(&next_input_taken_);
-  sync_completion_signal(&last_input_taken_);
-  sync_completion_reset(&last_input_ready_);
+  next_input_ready_.Signal();
+  next_input_taken_.Reset();
+  last_input_taken_.Signal();
+  last_input_ready_.Reset();
   auto loop = std::thread([this, ignore_errors]() { RunLoop(ignore_errors); });
   while (true) {
-    sync_completion_wait(&next_input_taken_, ZX_TIME_INFINITE);
-    sync_completion_reset(&next_input_taken_);
+    next_input_taken_.WaitFor("next input to be consumed");
+    next_input_taken_.Reset();
     if (stopped_) {
       break;
     }
     // Generate inputN+1
     next_input_ = next_input(/* first */ false);
-    sync_completion_signal(&next_input_ready_);
-    sync_completion_wait(&last_input_ready_, ZX_TIME_INFINITE);
-    sync_completion_reset(&last_input_ready_);
+    next_input_ready_.Signal();
+    last_input_ready_.WaitFor("feedback to analyze");
+    last_input_ready_.Reset();
     if (stopped_) {
       break;
     }
     // Analyze feedback from inputN
     auto* last_input = last_input_;
-    sync_completion_signal(&last_input_taken_);
+    last_input_taken_.Signal();
     finish_run(last_input);
   }
-  sync_completion_signal(&last_input_taken_);
-  sync_completion_signal(&next_input_ready_);
+  last_input_taken_.Signal();
+  next_input_ready_.Signal();
   loop.join();
 }
 
@@ -470,17 +470,17 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
     }
     // Wait for the next input to be ready. If attempting to detect a leak, use the previous input.
     if (!detect_leaks) {
-      sync_completion_wait(&next_input_ready_, ZX_TIME_INFINITE);
-      sync_completion_reset(&next_input_ready_);
+      next_input_ready_.WaitFor("next input to be produced");
+      next_input_ready_.Reset();
       // Get the next input, if there is one.
       test_input = next_input_;
       if (test_input) {
-        sync_completion_signal(&next_input_taken_);
+        next_input_taken_.Signal();
       }
     }
     // Wait for proxies to respond.
     while (pending_proxy_signals_ != 0) {
-      sync_completion_wait(&process_sync_, ZX_TIME_INFINITE);
+      process_sync_.WaitFor("processes to acknowledge start");
       has_error |= HasError(test_input);
     }
     if (has_error && !ignore_errors) {
@@ -503,7 +503,7 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
     coordinator_.SignalPeer(kStart);
     ResetTimer();
     // Wait for the adapter to signal the run is complete.
-    sync_completion_wait(&adapter_sync_, ZX_TIME_INFINITE);
+    adapter_sync_.WaitFor("adapter to complete run");
     has_error = HasError(test_input);
     // Signal proxies that a run has ended.
     {
@@ -516,7 +516,7 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
     }
     // Wait for proxies to respond.
     while (pending_proxy_signals_ != 0) {
-      sync_completion_wait(&process_sync_, ZX_TIME_INFINITE);
+      process_sync_.WaitFor("processes to acknowledge finish");
       has_error |= HasError(test_input);
     }
     if (has_error && !ignore_errors) {
@@ -543,21 +543,21 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
       }
     }
     // Inform the worker that it can analyze the feedback from last input now.
-    sync_completion_wait(&last_input_taken_, ZX_TIME_INFINITE);
-    sync_completion_reset(&last_input_taken_);
+    last_input_taken_.WaitFor("feedback to be analyzed");
+    last_input_taken_.Reset();
     last_input_ = test_input;
-    sync_completion_signal(&last_input_ready_);
+    last_input_ready_.Signal();
   }
   stopped_ = true;
-  sync_completion_signal(&next_input_taken_);
-  sync_completion_signal(&last_input_ready_);
+  next_input_taken_.Signal();
+  last_input_ready_.Signal();
 }
 
 void RunnerImpl::ClearErrors() {
   Runner::ClearErrors();
   error_ = 0;
-  sync_completion_reset(&adapter_sync_);
-  sync_completion_reset(&process_sync_);
+  adapter_sync_.Reset();
+  process_sync_.Reset();
 }
 
 ///////////////////////////////////////////////////////////////
@@ -589,7 +589,7 @@ void RunnerImpl::ConnectTargetAdapter() {
   FX_DCHECK(target_adapter_handler_);
   target_adapter_handler_(target_adapter_.NewRequest());
   auto eventpair = coordinator_.Create([this](zx_signals_t observed) {
-    sync_completion_signal(&adapter_sync_);
+    adapter_sync_.Signal();
     // The only signal we expected to receive from the target adapter is |kFinish| after each run.
     return observed == kFinish;
   });
@@ -603,7 +603,7 @@ bool RunnerImpl::OnSignal() {
   auto pending = pending_proxy_signals_.fetch_sub(1);
   FX_DCHECK(pending);
   if (pending == 1) {
-    sync_completion_signal(&process_sync_);
+    process_sync_.Signal();
   }
   return true;
 }
@@ -612,16 +612,16 @@ void RunnerImpl::OnError(uintptr_t error) {
   // Only the first proxy to detect an error awakens the |RunLoop|. Subsequent errors are dropped.
   uintptr_t expected = 0;
   if (error_.compare_exchange_strong(expected, error)) {
-    sync_completion_signal(&adapter_sync_);
-    sync_completion_signal(&process_sync_);
+    adapter_sync_.Signal();
+    process_sync_.Signal();
   }
 }
 
-void RunnerImpl::ResetSyncIfNoPendingError(sync_completion_t* sync) {
+void RunnerImpl::ResetSyncIfNoPendingError(SyncWait* sync) {
   // Avoid race by resetting then "unresetting", i.e. signalling, if there's a pending error.
-  sync_completion_reset(sync);
+  sync->Reset();
   if (error_.load()) {
-    sync_completion_signal(sync);
+    sync->Signal();
   }
 }
 
@@ -675,18 +675,18 @@ bool RunnerImpl::HasError(const Input* last_input) {
 void RunnerImpl::ResetTimer() {
   auto run_limit = zx::duration(options_->run_limit());
   run_deadline_ = run_limit.get() ? zx::deadline_after(run_limit) : zx::time::infinite();
-  sync_completion_signal(&timer_sync_);
+  timer_sync_.Signal();
 }
 
 void RunnerImpl::Timer() {
   while (run_deadline_ != zx::time::infinite_past()) {
     if (run_deadline_ < zx::clock::get_monotonic()) {
       OnError(kTimeout);
-      sync_completion_wait(&timer_sync_, ZX_TIME_INFINITE);
+      timer_sync_.WaitFor("error to be handled");
     } else {
-      sync_completion_wait_deadline(&timer_sync_, run_deadline_.get());
+      timer_sync_.WaitUntil(run_deadline_);
     }
-    sync_completion_reset(&timer_sync_);
+    timer_sync_.Reset();
   }
 }
 
@@ -704,7 +704,7 @@ fit::deferred_action<fit::closure> RunnerImpl::SyncScope() {
   UpdateMonitors(UpdateReason::INIT);
   return fit::defer<fit::closure>([this]() {
     run_deadline_ = zx::time::infinite();
-    sync_completion_signal(&timer_sync_);
+    timer_sync_.Signal();
     stopped_ = true;
     UpdateMonitors(UpdateReason::DONE);
   });
@@ -757,7 +757,7 @@ void RunnerImpl::InterruptImpl() {
   Runner::Interrupt();
   deadline_ = zx::time::infinite_past();
   run_deadline_ = zx::time::infinite_past();
-  sync_completion_signal(&timer_sync_);
+  timer_sync_.Signal();
 }
 
 void RunnerImpl::JoinImpl() {

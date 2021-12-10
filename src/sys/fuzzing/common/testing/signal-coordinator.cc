@@ -18,14 +18,14 @@ void FakeSignalCoordinator::Pair(zx::eventpair paired) {
 bool FakeSignalCoordinator::SignalPeer(Signal signal) { return coordinator_.SignalPeer(signal); }
 
 zx_signals_t FakeSignalCoordinator::AwaitSignal() {
-  sync_completion_wait(&sync_, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync_);
+  sync_.WaitFor("signal to be received");
+  sync_.Reset();
   return observed_;
 }
 
 bool FakeSignalCoordinator::OnSignal(zx_signals_t observed) {
   observed_ = observed;
-  sync_completion_signal(&sync_);
+  sync_.Signal();
   return (observed & ZX_EVENTPAIR_PEER_CLOSED) == 0;
 }
 

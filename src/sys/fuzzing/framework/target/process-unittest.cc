@@ -10,7 +10,6 @@
 #include "src/sys/fuzzing/framework/target/process.h"
 
 #include <lib/fidl/cpp/binding.h>
-#include <lib/sync/completion.h>
 
 #include <memory>
 #include <unordered_map>
@@ -18,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/options.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
 #include "src/sys/fuzzing/framework/testing/module.h"

@@ -142,10 +142,10 @@ class RunnerTest : public ::testing::Test {
 
   std::shared_ptr<Options> options_;
   std::unordered_map<std::string, Feedback> feedback_;
-  sync_completion_t started_sync_;
+  SyncWait started_sync_;
 
   zx_status_t status_ = ZX_ERR_INTERNAL;
-  sync_completion_t status_sync_;
+  SyncWait status_sync_;
 };
 
 }  // namespace fuzzing

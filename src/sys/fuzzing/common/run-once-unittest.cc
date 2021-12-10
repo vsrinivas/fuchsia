@@ -15,14 +15,14 @@
 namespace fuzzing {
 
 TEST(RunOnceTest, Run) {
-  sync_completion_t called;
-  sync_completion_t proceed;
+  SyncWait called;
+  SyncWait proceed;
   std::atomic<size_t> calls = 0;
   std::atomic<size_t> callers = 0;
 
   RunOnce once([&]() {
-    sync_completion_signal(&called);
-    sync_completion_wait(&proceed, ZX_TIME_INFINITE);
+    called.Signal();
+    proceed.WaitFor("permission to proceed");
     calls++;
   });
 
@@ -42,7 +42,7 @@ TEST(RunOnceTest, Run) {
   EXPECT_EQ(callers, 0U);
   EXPECT_EQ(calls, 0U);
 
-  sync_completion_signal(&proceed);
+  proceed.Signal();
   t1.join();
   t2.join();
   t3.join();

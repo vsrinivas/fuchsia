@@ -72,11 +72,11 @@ TEST_F(ProcessProxyTest, SignalPeer) {
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   zx_signals_t observed;
-  sync_completion_t sync;
+  SyncWait sync;
   SignalCoordinator coordinator;
   auto eventpair = coordinator.Create([&](zx_signals_t signals) {
     observed = signals;
-    sync_completion_signal(&sync);
+    sync.Signal();
     return true;
   });
 
@@ -84,30 +84,30 @@ TEST_F(ProcessProxyTest, SignalPeer) {
   EXPECT_EQ(proxy->Connect(std::move(eventpair), IgnoreTarget(), IgnoreOptions()), ZX_OK);
 
   impl.Start(/* detect_leaks */ false);
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  sync.WaitFor("start without leak detection");
+  sync.Reset();
   EXPECT_EQ(observed, kStart);
 
   impl.Start(/* detect_leaks */ true);
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  sync.WaitFor("start with leak detection");
+  sync.Reset();
   EXPECT_EQ(observed, kStartLeakCheck);
 
   impl.Finish();
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  sync.WaitFor("finish");
+  sync.Reset();
   EXPECT_EQ(observed, kFinish);
 }
 
 TEST_F(ProcessProxyTest, AwaitSignals) {
   ProcessProxyImpl impl(pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
-  sync_completion_t sync;
+  SyncWait sync;
   ProcessProxyImpl* failed_impl = nullptr;
-  impl.SetHandlers([&]() { sync_completion_signal(&sync); },
+  impl.SetHandlers([&]() { sync.Signal(); },
                    [&](ProcessProxyImpl* failed) {
                      failed_impl = failed;
-                     sync_completion_signal(&sync);
+                     sync.Signal();
                    });
 
   auto proxy = Bind(&impl);
@@ -115,23 +115,22 @@ TEST_F(ProcessProxyTest, AwaitSignals) {
   auto eventpair = coordinator.Create([](zx_signals_t signals) { return true; });
   EXPECT_EQ(proxy->Connect(std::move(eventpair), IgnoreTarget(), IgnoreOptions()), ZX_OK);
 
-  sync_completion_reset(&sync);
+  sync.Reset();
   coordinator.SignalPeer(kStart);
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  sync.WaitFor("start");
 
-  sync_completion_reset(&sync);
+  sync.Reset();
   coordinator.SignalPeer(kFinish);
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  EXPECT_FALSE(impl.leak_suspected());
+  sync.WaitFor("finish without leaks");
 
-  sync_completion_reset(&sync);
+  sync.Reset();
   coordinator.SignalPeer(kFinishWithLeaks);
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  sync.WaitFor("finish with leaks");
   EXPECT_TRUE(impl.leak_suspected());
 
-  sync_completion_reset(&sync);
+  sync.Reset();
   coordinator.Reset();
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  sync.WaitFor("leak detection");
   EXPECT_EQ(failed_impl, &impl);
 }
 

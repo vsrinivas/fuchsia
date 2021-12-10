@@ -12,7 +12,7 @@
 
 namespace fuzzing {
 
-MonitorClients::MonitorClients() { sync_completion_signal(&allow_add_); }
+MonitorClients::MonitorClients() { allow_add_.Signal(); }
 
 MonitorClients::~MonitorClients() { CloseAll(); }
 
@@ -21,7 +21,7 @@ void MonitorClients::Add(fidl::InterfaceHandle<Monitor> monitor) {
   MonitorPtr ptr;
   ptr.Bind(std::move(monitor), dispatcher_.get());
   // If a call to |Finish| is being performed, wait for it to complete.
-  sync_completion_wait(&allow_add_, ZX_TIME_INFINITE);
+  allow_add_.WaitFor("a call to `Finish` to complete");
   dispatcher_.PostTask(
       [this, ptr = std::move(ptr)]() mutable { monitors_.AddInterfacePtr(std::move(ptr)); });
 }
@@ -51,20 +51,20 @@ void MonitorClients::Update(UpdateReason reason) {
 
 void MonitorClients::Finish() {
   size_t num_responses = 0;
-  sync_completion_t finished;
+  SyncWait finished;
   auto status = GetStatus();
   dispatcher_.PostTask([this, &num_responses, &finished, status = std::move(status)]() {
     // Prevent new additions.
-    sync_completion_reset(&allow_add_);
+    allow_add_.Reset();
     if (monitors_.size() == 0) {
-      sync_completion_signal(&finished);
+      finished.Signal();
       return;
     }
     for (auto& ptr : monitors_.ptrs()) {
       (*ptr)->Update(UpdateReason::DONE, CopyStatus(status), [this, &num_responses, &finished]() {
         ++num_responses;
         if (num_responses >= monitors_.size()) {
-          sync_completion_signal(&finished);
+          finished.Signal();
         }
       });
     }
@@ -72,23 +72,23 @@ void MonitorClients::Finish() {
   // If a monitor closes its channel or otherwise encounters an error concurrently with the call to
   // |Update| above, |finished| may not be signalled. In this event, just close this end of the
   // channel after a short duration; at worst a single status message is lost.
-  sync_completion_wait(&finished, ZX_SEC(1));
+  finished.TimedWait(zx::sec(1));
   CloseAll();
-  sync_completion_signal(&allow_add_);
+  allow_add_.Signal();
 }
 
 void MonitorClients::CloseAll() {
-  sync_completion_reset(&allow_add_);
+  allow_add_.Reset();
   if (thrd_equal(dispatcher_.thrd(), thrd_current())) {
     monitors_.CloseAll();
     return;
   }
-  sync_completion_t sync;
+  SyncWait sync;
   dispatcher_.PostTask([this, &sync]() {
     monitors_.CloseAll();
-    sync_completion_signal(&sync);
+    sync.Signal();
   });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  sync.WaitFor("monitors to close");
 }
 
 }  // namespace fuzzing

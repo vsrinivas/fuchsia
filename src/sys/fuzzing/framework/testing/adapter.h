@@ -8,7 +8,6 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/sync/completion.h>
 
 #include <memory>
 
@@ -18,6 +17,7 @@
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -64,8 +64,8 @@ class FakeTargetAdapter final : public TargetAdapter {
   // signals |rsync_|. When |AwaitSignals| is called, it blocks on |rsync_|, reads |obeserved_|, and
   // signals |wsync_|. In this way, each received signal is paired with a call to |AwaitSignal|.
   zx_signals_t observed_;
-  sync_completion_t rsync_;
-  sync_completion_t wsync_;
+  SyncWait rsync_;
+  SyncWait wsync_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeTargetAdapter);
 };

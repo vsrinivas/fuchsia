@@ -7,7 +7,6 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/sync/completion.h>
 
 #include <deque>
 #include <memory>
@@ -16,6 +15,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -51,7 +51,7 @@ class FakeMonitor final : public Monitor {
   std::mutex mutex_;
   std::deque<UpdateReason> reasons_;
   std::deque<Status> statuses_;
-  sync_completion_t sync_;
+  SyncWait sync_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeMonitor);
 };

@@ -8,13 +8,13 @@
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
-#include <lib/sync/completion.h>
 
 #include <mutex>
 #include <vector>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/sys/fuzzing/common/dispatcher.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -56,7 +56,7 @@ class MonitorClients final {
   fidl::InterfacePtrSet<Monitor> monitors_;
 
   // Blocks calls to |Add| if a call to |Finish| is in progress until the latter completes.
-  sync_completion_t allow_add_;
+  SyncWait allow_add_;
 };
 
 }  // namespace fuzzing

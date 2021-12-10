@@ -13,7 +13,7 @@
 
 namespace fuzzing {
 
-FakeTargetAdapter::FakeTargetAdapter() : binding_(this) { sync_completion_signal(&wsync_); }
+FakeTargetAdapter::FakeTargetAdapter() : binding_(this) { wsync_.Signal(); }
 
 fidl::InterfaceRequestHandler<TargetAdapter> FakeTargetAdapter::GetHandler() {
   return [&](fidl::InterfaceRequest<TargetAdapter> request) {
@@ -34,10 +34,10 @@ void FakeTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,
                                 ConnectCallback callback) {
   test_input_.LinkReserved(std::move(test_input));
   coordinator_.Pair(std::move(eventpair), [this](zx_signals_t observed) {
-    sync_completion_wait(&wsync_, ZX_TIME_INFINITE);
-    sync_completion_reset(&wsync_);
+    wsync_.WaitFor("signal to be received");
+    wsync_.Reset();
     observed_ = observed;
-    sync_completion_signal(&rsync_);
+    rsync_.Signal();
     return !(observed & ZX_EVENTPAIR_PEER_CLOSED);
   });
   callback();
@@ -50,15 +50,15 @@ zx_signals_t FakeTargetAdapter::AwaitSignal() {
 }
 
 zx_status_t FakeTargetAdapter::AwaitSignal(const zx::duration& timeout, zx_signals_t* out) {
-  auto status = sync_completion_wait(&rsync_, timeout.get());
+  auto status = rsync_.TimedWait(timeout);
   if (status != ZX_OK) {
     return status;
   }
-  sync_completion_reset(&rsync_);
+  rsync_.Reset();
   if (out) {
     *out = observed_;
   }
-  sync_completion_signal(&wsync_);
+  wsync_.Signal();
   return ZX_OK;
 }
 

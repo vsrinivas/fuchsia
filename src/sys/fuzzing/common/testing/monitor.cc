@@ -24,7 +24,7 @@ void FakeMonitor::Update(UpdateReason reason, Status status, UpdateCallback call
     std::lock_guard<std::mutex> lock(mutex_);
     reasons_.push_back(reason);
     statuses_.push_back(std::move(status));
-    sync_completion_signal(&sync_);
+    sync_.Signal();
   }
   callback();
 }
@@ -36,7 +36,7 @@ UpdateReason FakeMonitor::NextReason() {
 }
 
 Status FakeMonitor::NextStatus(UpdateReason* out_reason) {
-  sync_completion_wait(&sync_, ZX_TIME_INFINITE);
+  sync_.WaitFor("next status update");
   UpdateReason reason;
   Status status;
   {
@@ -46,7 +46,7 @@ Status FakeMonitor::NextStatus(UpdateReason* out_reason) {
     status = std::move(statuses_.front());
     statuses_.pop_front();
     if (reasons_.empty()) {
-      sync_completion_reset(&sync_);
+      sync_.Reset();
     }
   }
   if (out_reason) {

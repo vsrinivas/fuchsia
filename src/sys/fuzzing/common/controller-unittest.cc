@@ -31,6 +31,8 @@ class ControllerTest : public ::testing::Test {
  public:
   // Implicitly tests |Controller::SetRunner| and |Controller::Bind|.
   ControllerSyncPtr Bind() {
+    controller_.SetWaitThreshold(SyncWait::kDefaultThreshold);
+
     auto runner = std::make_unique<FakeRunner>();
     runner_ = runner.get();
     controller_.SetRunner(std::move(runner));

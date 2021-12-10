@@ -7,7 +7,6 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/sync/completion.h>
 
 #include <memory>
 #include <mutex>
@@ -15,6 +14,7 @@
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/binding.h"
 #include "src/sys/fuzzing/common/input.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/common/transceiver.h"
 
 namespace fuzzing {
@@ -43,7 +43,7 @@ class FakeCorpusReader final : public CorpusReader {
  private:
   Binding<CorpusReader> binding_;
   Transceiver transceiver_;
-  sync_completion_t sync_;
+  SyncWait sync_;
   std::mutex mutex_;
   std::deque<Input> inputs_ FXL_GUARDED_BY(mutex_);
   bool has_more_ FXL_GUARDED_BY(mutex_) = true;

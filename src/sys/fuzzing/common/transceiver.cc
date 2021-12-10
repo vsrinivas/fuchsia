@@ -40,6 +40,7 @@ struct Transceiver::Request {
 };
 
 Transceiver::Transceiver() : close_([this]() { CloseImpl(); }), join_([this]() { JoinImpl(); }) {
+  SetWaitThreshold(zx::duration(0));
   worker_ = std::thread([this]() { Worker(); });
 }
 
@@ -47,6 +48,8 @@ Transceiver::~Transceiver() {
   Close();
   Join();
 }
+
+void Transceiver::SetWaitThreshold(zx::duration threshold) { sync_.set_threshold(threshold); }
 
 zx_status_t Transceiver::Pend(std::unique_ptr<Request> request) {
   bool stopped;
@@ -56,7 +59,7 @@ zx_status_t Transceiver::Pend(std::unique_ptr<Request> request) {
     if (!stopped) {
       stopped_ = request->type == Request::kStop;
       requests_.push_back(std::move(request));
-      sync_completion_signal(&sync_);
+      sync_.Signal();
     }
   }
   if (stopped) {
@@ -72,13 +75,13 @@ void Transceiver::Worker() {
   while (true) {
     std::unique_ptr<Request> request;
     // Wait indefinitely. Destroying this object will send |kStop|.
-    sync_completion_wait(&sync_, ZX_TIME_INFINITE);
+    sync_.WaitFor("more data to transfer");
     {
       std::lock_guard<std::mutex> lock(mutex_);
       request = std::move(requests_.front());
       requests_.pop_front();
       if (requests_.empty()) {
-        sync_completion_reset(&sync_);
+        sync_.Reset();
       }
     }
     switch (request->type) {

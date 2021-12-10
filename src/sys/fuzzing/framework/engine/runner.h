@@ -9,7 +9,6 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/sync/completion.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/time.h>
 #include <stddef.h>
@@ -28,6 +27,7 @@
 #include "src/sys/fuzzing/common/runner.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 #include "src/sys/fuzzing/framework/engine/corpus.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/mutagen.h"
@@ -149,7 +149,7 @@ class RunnerImpl final : public Runner {
 
   // Resets |sync|, but only if there is no pending error, allowing |RunLoop| to avoid blocking
   // in the error case.
-  void ResetSyncIfNoPendingError(sync_completion_t* sync);
+  void ResetSyncIfNoPendingError(SyncWait* sync);
 
   // Returns false if no error is pending. Otherwise, if the error is recoverable (e.g. a process
   // exit when not detecting exits), it recovers and returns false. Otherwise, it records the
@@ -172,15 +172,15 @@ class RunnerImpl final : public Runner {
   std::atomic<bool> stopped_ = true;
   Input* next_input_ = nullptr;
   Input* last_input_ = nullptr;
-  sync_completion_t next_input_ready_;
-  sync_completion_t next_input_taken_;
-  sync_completion_t last_input_ready_;
-  sync_completion_t last_input_taken_;
-  sync_completion_t run_finished_;
+  SyncWait next_input_ready_;
+  SyncWait next_input_taken_;
+  SyncWait last_input_ready_;
+  SyncWait last_input_taken_;
+  SyncWait run_finished_;
 
   // Timer variables
   std::thread timer_;
-  sync_completion_t timer_sync_;
+  SyncWait timer_sync_;
   zx::time run_deadline_ = zx::time::infinite();
 
   // Input generation and management variables.
@@ -193,14 +193,14 @@ class RunnerImpl final : public Runner {
   TargetAdapterSyncPtr target_adapter_;
   SignalCoordinator coordinator_;
   SharedMemory test_input_;
-  sync_completion_t adapter_sync_;
+  SyncWait adapter_sync_;
 
   // Feedback collection and analysis variables.
   std::shared_ptr<ModulePool> pool_;
   std::mutex mutex_;
   std::vector<std::unique_ptr<ProcessProxyImpl>> proxies_ FXL_GUARDED_BY(mutex_);
   std::atomic<size_t> pending_proxy_signals_ = 0;
-  sync_completion_t process_sync_;
+  SyncWait process_sync_;
 
   // Represents the different types of fuzzing-ending errors. If an input results in multiple errors
   // from different processes, only the first assignment is handled as the primary error.

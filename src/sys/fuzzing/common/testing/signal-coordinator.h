@@ -5,9 +5,8 @@
 #ifndef SRC_SYS_FUZZING_COMMON_TESTING_SIGNAL_COORDINATOR_H_
 #define SRC_SYS_FUZZING_COMMON_TESTING_SIGNAL_COORDINATOR_H_
 
-#include <lib/sync/completion.h>
-
 #include "src/sys/fuzzing/common/signal-coordinator.h"
+#include "src/sys/fuzzing/common/sync-wait.h"
 
 namespace fuzzing {
 
@@ -37,7 +36,7 @@ class FakeSignalCoordinator final {
   bool OnSignal(zx_signals_t observed);
 
   SignalCoordinator coordinator_;
-  sync_completion_t sync_;
+  SyncWait sync_;
   zx_signals_t observed_ = 0;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeSignalCoordinator);

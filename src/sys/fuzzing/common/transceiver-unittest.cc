@@ -11,37 +11,38 @@ namespace {
 
 TEST(TransceiverTest, Receive) {
   Transceiver transceiver;
+  transceiver.SetWaitThreshold(SyncWait::kDefaultThreshold);
   Input input({0xde, 0xad, 0xbe, 0xef, 0xfe, 0xed, 0xfa, 0xce});
   zx::socket sender;
   zx_status_t rx_result;
   Input rx_input;
 
   FidlInput fidl_input1;
-  sync_completion_t sync;
+  SyncWait sync;
   EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &sender, &fidl_input1.socket), ZX_OK);
   fidl_input1.size = input.size();
   fpromise::result<Input, zx_status_t> receive_result;
   transceiver.Receive(std::move(fidl_input1), [&](zx_status_t result, Input received) {
     rx_result = result;
     rx_input = std::move(received);
-    sync_completion_signal(&sync);
+    sync.Signal();
   });
 
   // Send data all at once.
   EXPECT_EQ(sender.write(0, input.data(), input.size(), nullptr), ZX_OK);
 
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  sync.WaitFor("transceiver to receive contiguous data");
   EXPECT_EQ(rx_result, ZX_OK);
   EXPECT_EQ(rx_input, input);
 
   FidlInput fidl_input2;
-  sync_completion_reset(&sync);
+  sync.Reset();
   fidl_input2.size = input.size();
   EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &sender, &fidl_input2.socket), ZX_OK);
   transceiver.Receive(std::move(fidl_input2), [&](zx_status_t result, Input received) {
     rx_result = result;
     rx_input = std::move(received);
-    sync_completion_signal(&sync);
+    sync.Signal();
   });
 
   // Send data in pieces.
@@ -52,27 +53,28 @@ TEST(TransceiverTest, Receive) {
   zx::nanosleep(zx::deadline_after(zx::usec(1)));
   EXPECT_EQ(sender.write(0, &data[split], input.size() - split, nullptr), ZX_OK);
 
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  sync.WaitFor("transceiver to receive fragmented data");
   EXPECT_EQ(rx_result, ZX_OK);
   EXPECT_EQ(rx_input, input);
 
   // Try to receive after closing.
   FidlInput fidl_input3;
-  sync_completion_reset(&sync);
+  sync.Reset();
   fidl_input3.size = input.size();
   EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &sender, &fidl_input3.socket), ZX_OK);
   transceiver.Close();
   transceiver.Receive(std::move(fidl_input3), [&](zx_status_t result, Input received) {
     rx_result = result;
-    sync_completion_signal(&sync);
+    sync.Signal();
   });
 
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  sync.WaitFor("transceiver to close");
   EXPECT_EQ(rx_result, ZX_ERR_BAD_STATE);
 }
 
 TEST(TransceiverTest, Transmit) {
   Transceiver transceiver;
+  transceiver.SetWaitThreshold(SyncWait::kDefaultThreshold);
   Input input({0xfe, 0xed, 0xfa, 0xce});
 
   FidlInput fidl_input;
