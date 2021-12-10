@@ -34,7 +34,6 @@ async fn waiter_component(handles: MockHandles, sender: mpsc::Sender<()>) -> Res
 }
 
 #[fasync::run_singlethreaded(test)]
-#[ignore]
 async fn test_interop() -> Result<()> {
     let (sender, mut receiver) = mpsc::channel(1);
 

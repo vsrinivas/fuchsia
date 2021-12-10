@@ -130,7 +130,8 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   void set_collection(Collection collection);
   void set_driver_host(DriverHostComponent* driver_host);
   void set_driver_ref(
-      fidl::ServerBindingRef<fuchsia_component_runner::ComponentController> driver_ref);
+      std::optional<fidl::ServerBindingRef<fuchsia_component_runner::ComponentController>>
+          driver_ref);
   void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
   void set_controller_ref(
       fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);

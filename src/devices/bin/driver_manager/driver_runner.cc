@@ -281,10 +281,7 @@ Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driv
   }
 }
 
-Node::~Node() {
-  UnbindAndReset(controller_ref_);
-  UnbindAndReset(node_ref_);
-}
+Node::~Node() { UnbindAndReset(controller_ref_); }
 
 const std::string& Node::name() const { return name_; }
 
@@ -313,8 +310,9 @@ void Node::set_collection(Collection collection) { collection_ = collection; }
 
 void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
 
-void Node::set_driver_ref(fidl::ServerBindingRef<frunner::ComponentController> driver_ref) {
-  driver_ref_.emplace(std::move(driver_ref));
+void Node::set_driver_ref(
+    std::optional<fidl::ServerBindingRef<frunner::ComponentController>> driver_ref) {
+  driver_ref_ = std::move(driver_ref);
 }
 
 void Node::set_controller_ref(fidl::ServerBindingRef<fdf::NodeController> controller_ref) {
@@ -697,7 +695,16 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   auto driver = std::make_unique<DriverComponent>(std::move(*start));
   auto bind_driver =
       fidl::BindServer(dispatcher_, std::move(request->controller), driver.get(),
-                       [this](DriverComponent* driver, auto, auto) { drivers_.erase(*driver); });
+                       [this, node = node.weak_from_this()](DriverComponent* driver, auto, auto) {
+                         // When the driver is unbound, we need to inform the
+                         // associated node that its driver ref is no longer
+                         // valid, and that there is no longer a driver bound to
+                         // the node.
+                         if (auto ptr = node.lock()) {
+                           ptr->set_driver_ref({});
+                         }
+                         drivers_.erase(*driver);
+                       });
   node.set_driver_ref(bind_driver);
   driver->set_driver_ref(std::move(bind_driver));
   auto watch = driver->Watch(dispatcher_);
