@@ -191,6 +191,11 @@ func NewWithDataPath(dataPath string) (SDKProperties, error) {
 			return sdk, err
 		}
 		sdk.dataPath = filepath.Join(homeDir, ".fuchsia")
+		if !FileExists(sdk.dataPath) {
+			if err := os.MkdirAll(sdk.dataPath, os.ModePerm); err != nil {
+				return sdk, err
+			}
+		}
 	}
 
 	toolsDir, err := sdk.GetToolsDir()
@@ -209,6 +214,14 @@ func NewWithDataPath(dataPath string) (SDKProperties, error) {
 	}
 
 	sdk.globalPropertiesFilename = filepath.Join(sdk.dataPath, "global_ffx_props.json")
+	if !FileExists(sdk.globalPropertiesFilename) {
+		f, err := os.Create(sdk.globalPropertiesFilename)
+		if err != nil {
+			return sdk, err
+		}
+
+		defer f.Close()
+	}
 	err = initFFXGlobalConfig(sdk)
 	return sdk, err
 }
