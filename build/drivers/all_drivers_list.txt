@@ -216,6 +216,7 @@
 //src/devices/tests/interop:v1_driver
 //src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver-driver
 //src/devices/tests/mock-device:mock-device-driver
+//src/devices/tests/services:root_driver
 //src/devices/tests/string-bind-test:child-driver-driver
 //src/devices/tests/string-bind-test:parent-driver-driver
 //src/devices/tests/sysdev:sysdev-driver

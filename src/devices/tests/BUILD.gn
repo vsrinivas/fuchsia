@@ -30,6 +30,7 @@ group("tests") {
     "interop:tests",
     "isolateddevmgr:tests",
     "libdriver-integration-test",
+    "services:tests",
     "string-bind-test",
   ]
 }
@@ -69,6 +70,7 @@ group("drivers") {
     "interop:v1",
     "isolateddevmgr:isolateddevmgr-test-driver",
     "mock-device:mock-device",
+    "services:root",
     "string-bind-test:child-driver",
     "string-bind-test:parent-driver",
     "sysdev:sysdev",

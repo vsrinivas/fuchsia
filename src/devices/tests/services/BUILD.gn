@@ -1,0 +1,89 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":services_test" ]
+}
+
+fidl("fuchsia.services.test") {
+  testonly = true
+  sources = [ "services.test.fidl" ]
+}
+
+driver_bind_rules("root_bind") {
+  disable_autobind = true
+  bind_output = "root.bindbc"
+}
+
+fuchsia_driver("root_driver") {
+  testonly = true
+  output_name = "services_root"
+  sources = [ "root_driver.cc" ]
+  deps = [
+    ":fuchsia.services.test_llcpp",
+    ":root_bind",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
+    "//src/devices/bind/fuchsia.test:bind.fuchsia.test",
+    "//src/devices/lib/driver2:llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_driver_component("root") {
+  testonly = true
+  manifest = "meta/root.cml"
+  restricted_features = [ "services" ]
+  deps = [ ":root_driver" ]
+  info = "root-info.json"
+}
+
+rustc_test("bin") {
+  testonly = true
+  output_name = "services_bin"
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    ":fuchsia.services.test-rustc",
+    "//garnet/lib/rust/files_async",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+cmc_merge("realm.cml") {
+  sources = [
+    "//sdk/lib/driver_test_realm/meta/driver_test_realm.cml",
+    "meta/realm.shard.cml",
+  ]
+}
+
+fuchsia_test_component("realm") {
+  manifest = "${target_out_dir}/realm.cml"
+  restricted_features = [
+    "dynamic_offers",
+    "services",
+  ]
+  deps = [ ":realm.cml" ]
+}
+
+fuchsia_unittest_package("services_test") {
+  deps = [
+    ":bin",
+    ":realm",
+    ":root",
+    "//src/devices/bin/driver_host2:component",
+  ]
+}
