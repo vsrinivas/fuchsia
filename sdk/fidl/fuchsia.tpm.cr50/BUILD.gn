@@ -5,7 +5,10 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.tpm.cr50") {
-  sources = [ "cr50.fidl" ]
+  sources = [
+    "cr50.fidl",
+    "pinweaver.fidl",
+  ]
   public_deps = [
     "//sdk/fidl/fuchsia.tpm",
     "//zircon/vdso/zx",

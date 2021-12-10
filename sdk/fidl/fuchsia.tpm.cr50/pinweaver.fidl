@@ -1,0 +1,209 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.tpm.cr50;
+
+using zx;
+
+/// All the errors that can be returned by the CR50 for the PinWeaver protocol.
+type PinWeaverError = strict enum : uint32 {
+    VERSION_MISMATCH = 0x10000;
+    TREE_INVALID = 0x10001;
+    LENGTH_INVALID = 0x10002;
+    TYPE_INVALID = 0x10003;
+    BITS_PER_LEVEL_INVALID = 0x10004;
+    HEIGHT_INVALID = 0x10005;
+    LABEL_INVALID = 0x10006;
+    DELAY_SCHEUDLE_INVALID = 0x10007;
+    PATH_AUTH_FAILED = 0x10008;
+    LEAF_VERSION_MISMATCH = 0x10009;
+    HMAC_AUTH_FAILED = 0x1000A;
+    LOWENT_AUTH_FAILED = 0x1000B;
+    RESET_AUTH_FAILED = 0x1000C;
+    CRYPTO_FAILURE = 0x1000D;
+    RATE_LIMIT_REACHED = 0x1000E;
+    ROOT_NOT_FOUND = 0x1000F;
+    NV_EMPTY = 0x10010;
+    NV_LENGTH_MISMATCH = 0x10011;
+    NV_VERSION_MISMATCH = 0x10012;
+    PCR_NOT_MATCH = 0x10013;
+};
+
+/// Maximum number of delay schedule entries.
+const DELAY_SCHEDULE_MAX_COUNT uint32 = 32;
+/// Maximum size of the credential metadata.
+const CREDENTIAL_METADATA_MAX_SIZE uint32 = 2048;
+/// Maximum size of a low entropy secret
+const LE_SECRET_MAX_SIZE uint32 = 32;
+/// Maximum size of a high entropy secret
+const HE_SECRET_MAX_SIZE uint32 = 32;
+/// Size of a SHA256 hash.
+const HASH_SIZE uint32 = 32;
+/// Size of a HMAC-SHA256 hash.
+const MAC_SIZE uint32 = 32;
+
+/// The identifier corresponding to a credential within the Merkle tree.
+/// This is a globally unique identifier that identifies a specific
+/// location in the tree.
+alias Label = uint64;
+/// A secure SHA256 sized byte buffer. These are used by the intermediate
+/// Merkle tree nodes including the root hash.
+alias Hash = array<byte, HASH_SIZE>;
+/// A HMAC-SHA256 over the credential metadata and a secret key stored by
+/// the CR50. These form the leaf hashes of the Merkle tree.
+alias Mac = array<byte, MAC_SIZE>;
+/// Opaque metadata for credential as produced by the PinWeaver server.
+alias CredMetadata = bytes:CREDENTIAL_METADATA_MAX_SIZE;
+/// A low entropy or user provided secret such as a pin or password.
+alias LeSecret = bytes:LE_SECRET_MAX_SIZE;
+/// A high entropy secret that is randomly generated and usable for symmetric
+/// key encryption.
+alias HeSecret = bytes:HE_SECRET_MAX_SIZE;
+/// The list of auxiliary hashes for a particular leaf node. These are the
+/// hashes which together with the leaf nodes HMAC are required to recompute
+/// the updated root hash of the hash tree.
+alias AuxiliaryHashes = vector<Hash>:128;
+
+/// The allowed attempt count for a given credential and the amount of time
+/// to wait until an attempt resets.
+type DelayScheduleEntry = struct {
+    attempt_count uint32;
+    time_delay zx.duration;
+};
+
+/// Parameters to InsertLeaf method.
+/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as parameter arguments.
+type InsertLeafParams = table {
+    /// `label` is the location of the leaf in the tree.
+    1: label Label;
+    /// `h_aux` is the auxiliary hashes from the bottom left to top right.
+    2: h_aux AuxiliaryHashes;
+    /// `le_secret` is the low entropy secret.
+    3: le_secret LeSecret;
+    /// `he_secret` is the high entropy secret protected by the `le_secret`.
+    4: he_secret HeSecret;
+    /// `reset_secret` is the reset secret to reset the leaf node.
+    5: reset_secret HeSecret;
+    /// `delay_schedule` is the delay on authentication attempts.
+    6: delay_schedule vector<DelayScheduleEntry>:DELAY_SCHEDULE_MAX_COUNT;
+};
+
+/// Response from the InsertLeaf method.
+/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as parameter arguments.
+type InsertLeafResponse = table {
+    /// `root_hash` is set to the updated root hash of the tree.
+    1: root_hash Hash;
+    /// `cred_metadata` is set to the wrapped leaf data.
+    2: cred_metadata CredMetadata;
+    /// `mac` is set to the hmac used in the merkle tree calculation.
+    3: mac Mac;
+};
+
+/// Parameters to RemoveLeaf method.
+/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as parameter arguments.
+type RemoveLeafParams = table {
+    /// `label` is the location of the leaf in the tree.
+    1: label Label;
+    /// `h_aux` is the auxiliary hashes from bottom left to top right.
+    2: h_aux AuxiliaryHashes;
+    /// `mac` is set to the HMAC used in the Merkle tree calculation.
+    3: mac Mac;
+};
+
+/// Parameters to the TryAuth method.
+/// TODO(fxbug.dev/88343): Replace with anonymous tables when avaliable as parameter arguments.
+type TryAuthParams = table {
+    /// `le_secret` is the low entropy secret limited by the delay_schedule.
+    1: le_secret LeSecret;
+    /// `h_aux` is the auxiliary hashes from bottom left to top right.
+    2: h_aux AuxiliaryHashes;
+    /// `cred_metadata` is set to the wrapped leaf data.
+    3: cred_metadata CredMetadata;
+};
+
+/// Authentication can succeed and fail three distinct ways see the `TryAuth()`
+/// method for how. This response is returned on all `TryAuth()` calls with
+/// one member of the union being filled based on the success or error type.
+type TryAuthResponse = flexible union {
+    1: success TryAuthSuccess;
+    2: failed TryAuthFailed;
+    3: rate_limited TryAuthRateLimited;
+};
+
+/// Returned on authentication success when the low entropy secret is correct.
+type TryAuthSuccess = table {
+    1: root_hash Hash;
+    2: he_secret HeSecret;
+    3: reset_secret HeSecret;
+    4: cred_metadata CredMetadata;
+    5: mac Mac;
+};
+
+/// Returned on authentication failure when the low entropy secret is incorrect.
+type TryAuthFailed = table {
+    1: root_hash Hash;
+    2: cred_metadata CredMetadata;
+    3: mac Mac;
+};
+
+/// Returned on authentication failure when the rate limit has been reached.
+/// This is distinct from the other failure mode as the provided low entropy
+/// secret may be correct but the caller is locked out until `time_to_wait`
+/// has passed.
+type TryAuthRateLimited = table {
+    1: time_to_wait zx.duration;
+};
+
+/// The PinWeaver protocol defines the low level interface to the CR50
+/// firmware for low entropy credentials. This interface allows the caller
+/// which should be a high trust component the ability to seal high entropy
+/// secrets behind rate-limited low entropy secrets which can only be unsealed
+/// if the correct low entropy secret is provided and the rate limit has not
+/// been reached.
+@discoverable
+protocol PinWeaver {
+    /// Returns the current protocol version.
+    GetVersion() -> (struct {
+        protocol_version uint8;
+    });
+
+    /// Creates an empty Merkle tree with `bits_per_level` and `height`.
+    /// On Success
+    /// Returns the `root_hash` of the empty tree with the given parameters.
+    ResetTree(struct {
+        bits_per_level uint8;
+        height uint8;
+    }) -> (struct {
+        root_hash Hash;
+    }) error PinWeaverError;
+
+    /// Inserts a leaf into the Merkle tree.
+    /// `params` see `InsertLeafParams`.
+    /// On Success
+    /// `result` see `InseltLeafResponse`.
+    InsertLeaf(struct {
+        params InsertLeafParams;
+    }) -> (struct {
+        result InsertLeafResponse;
+    }) error PinWeaverError;
+
+    /// Removes a leaf from the Merkle tree.
+    /// `params` see `RemoveLeafParams`.
+    /// On Success
+    /// `root_hash` is the updated root hash of the tree.
+    RemoveLeaf(struct {
+        params RemoveLeafParams;
+    }) -> (struct {
+        root_hash Hash;
+    }) error PinWeaverError;
+
+    /// Attempts to authenticate a leaf of the Merkle tree.
+    /// On Success: TryAuthSuccess is returned in the union.
+    /// On Authentication Failure: TryAuthFailed is returned in the union.
+    /// On Rate Limited Error: TryAuthRateLimited is returned in the union.
+    TryAuth(struct {
+        params TryAuthParams;
+    }) -> (struct {
+        result TryAuthResponse;
+    }) error PinWeaverError;
+};
