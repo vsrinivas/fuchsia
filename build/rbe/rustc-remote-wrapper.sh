@@ -53,6 +53,7 @@ Options:
   --fsatrace:
       for --local execution: record files accessed at \$output.fsatrace.
       for remote execution: record files accessed at \$output.remote-fsatrace.
+      This will also trace the depfile generation step.
 
   --compare: In this mode, build locally and remotely (sequentially) and
       compare the outputs, failing if there are any differences.
@@ -527,16 +528,20 @@ trace_depfile_scanning_prefix=(
 "${dep_only_command[@]}" || {
   status=$?
   echo "Depfile generation failed.  Aborting."
+  echo "Re-run with --verbose or --fsatrace for more details."
 
-  # If depfile generation fails, re-run it with tracing to examine
-  # the files it accessed.
-  "${trace_depfile_scanning_prefix[@]}" "${dep_only_command[@]}" > /dev/null 2>&1
-  echo "File access trace [$depfile_trace]:"
-  cat "$depfile_trace"
-  echo
+  # If depfile generation fails, and tracing is requested,
+  # re-run it with tracing to examine the files it accessed.
+  test "$trace" = 0 || {
+    "${trace_depfile_scanning_prefix[@]}" "${dep_only_command[@]}" > /dev/null 2>&1
+    echo "File access trace [$depfile_trace]:"
+    cat "$depfile_trace"
+    echo
+  }
 
-  verbose=1
+  # Show the dep-info command only when --verbose is requested.
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
+
   exit "$status"
 }
 
