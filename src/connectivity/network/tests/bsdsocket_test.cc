@@ -22,6 +22,7 @@
 #include <array>
 #include <future>
 #include <latch>
+#include <random>
 #include <thread>
 
 #include <fbl/unique_fd.h>
@@ -2992,20 +2993,44 @@ class IOMethod {
   explicit IOMethod(enum Op op) : op(op) {}
   enum Op Op() const { return op; }
 
-  ssize_t executeIO(int fd, char* buf, size_t len) const {
-    struct iovec iov[] = {{
-        .iov_base = buf,
-        .iov_len = len,
-    }};
-    struct msghdr msg = {
-        .msg_iov = iov,
-        .msg_iovlen = std::size(iov),
+  ssize_t executeIO(const int fd, char* const buf, const size_t len) const {
+    // Vectorize the provided buffer into multiple differently-sized iovecs.
+    std::vector<struct iovec> iov;
+    {
+      char* iov_start = buf;
+      size_t len_remaining = len;
+      while (len_remaining != 0) {
+        const size_t next_len = (len_remaining + 1) / 2;
+        iov.push_back({
+            .iov_base = iov_start,
+            .iov_len = next_len,
+        });
+        len_remaining -= next_len;
+        iov_start = iov_start != nullptr ? iov_start + next_len : nullptr;
+      }
+
+      std::uniform_int_distribution<size_t> distr(0, iov.size());
+      int seed = testing::UnitTest::GetInstance()->random_seed();
+      std::default_random_engine rd(seed);
+      iov.insert(iov.begin() + distr(rd), {
+                                              .iov_base = buf,
+                                              .iov_len = 0,
+                                          });
+    }
+
+    msghdr msg = {
+        .msg_iov = iov.data(),
+        // Linux defines `msg_iovlen` as size_t, out of compliance with
+        // with POSIX, whereas Fuchsia defines it as int. Bridge the
+        // divide using decltype.
+        .msg_iovlen = static_cast<decltype(msg.msg_iovlen)>(iov.size()),
     };
+
     switch (op) {
       case Op::READ:
         return read(fd, buf, len);
       case Op::READV:
-        return readv(fd, iov, std::size(iov));
+        return readv(fd, iov.data(), static_cast<int>(iov.size()));
       case Op::RECV:
         return recv(fd, buf, len, 0);
       case Op::RECVFROM:
@@ -3015,7 +3040,7 @@ class IOMethod {
       case Op::WRITE:
         return write(fd, buf, len);
       case Op::WRITEV:
-        return writev(fd, iov, std::size(iov));
+        return writev(fd, iov.data(), static_cast<int>(iov.size()));
       case Op::SEND:
         return send(fd, buf, len, 0);
       case Op::SENDTO:
