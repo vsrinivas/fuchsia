@@ -230,6 +230,16 @@ fn assert_artifacts(
     expected_artifacts: &ArtifactMetadataToAssertionMap,
     entity_context: EntityContext<'_>,
 ) {
+    // TODO(satsukiu): add options so that the test author can explicitly declare whether
+    // artifacts should be an exact match, should contain (and may contain more) artifacts,
+    // or any number of artifacts is accesptable.
+    // This skips artifact assertion for the typical case where verifying artifacts isn't
+    // necessary and allows the author to avoid listing out every artifact that is generated
+    // by the test.
+    if expected_artifacts.is_empty() {
+        return;
+    }
+
     let actual_artifacts_by_metadata: HashMap<ArtifactMetadataV0, PathBuf> =
         actual_artifacts.iter().map(|(key, value)| (value.clone(), key.clone())).collect();
     // For now, artifact metadata should be unique for each artifact.
@@ -729,7 +739,11 @@ mod test {
                 start_time: None,
                 duration_milliseconds: None,
             },
-            &ExpectedTestRun::new(Outcome::Failed),
+            &ExpectedTestRun::new(Outcome::Failed).with_artifact(
+                ArtifactType::Stderr,
+                "stderr.txt".into(),
+                "",
+            ),
         );
     }
 
@@ -1087,19 +1101,25 @@ mod test {
         let dir = make_tempdir(|path| {
             std::fs::create_dir(path.join("a")).unwrap();
             std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+            std::fs::write(path.join("a/c.txt"), "hello").unwrap();
         });
         assert_run_result(
             dir.path(),
             &TestRunResult::V0 {
                 artifacts: hashmap! {
-                    "a/b.txt".into() => ArtifactType::Syslog.into(),
+                    "a/b.txt".into() => ArtifactType::Stdout.into(),
+                    "a/c.txt".into() => ArtifactType::Stderr.into(),
                 },
                 outcome: Outcome::Passed,
                 suites: vec![],
                 start_time: None,
                 duration_milliseconds: None,
             },
-            &ExpectedTestRun::new(Outcome::Passed),
+            &ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                ArtifactType::Stderr,
+                "c.txt".into(),
+                "hello",
+            ),
         );
     }
 
@@ -1179,6 +1199,28 @@ mod test {
                 Option::<&str>::None,
                 ExpectedDirectory::new(),
             ),
+        );
+    }
+
+    #[test]
+    fn assert_artifacts_not_checked_if_unspecified() {
+        let dir = make_tempdir(|path| {
+            std::fs::create_dir(path.join("a")).unwrap();
+            std::fs::create_dir(path.join("a/b")).unwrap();
+            std::fs::write(path.join("a/b/c.txt"), "unexpected file").unwrap();
+        });
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {
+                    "a/b".into() => ArtifactType::Custom.into()
+                },
+                outcome: Outcome::Passed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed),
         );
     }
 }
