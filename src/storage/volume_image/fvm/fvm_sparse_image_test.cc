@@ -1492,7 +1492,7 @@ TEST(ConvertToFvmMetadataTest, WithsMultiplePartitionsAndSlicesIsOk) {
     entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
     entry.descriptor.flags = 0;
     // Shifted so partition 1 has the ith value for first bit.
-    entry.descriptor.type[0] = i + 1;
+    entry.descriptor.type[0] = static_cast<uint8_t>(i + 1);
 
     memcpy(entry.descriptor.name, get_expected_partition_name(i).data(),
            get_expected_partition_name(i).size());

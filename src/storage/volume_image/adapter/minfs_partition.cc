@@ -193,13 +193,15 @@ fpromise::result<Partition, std::string> CreateMinfsFvmPartition(
   auto& patched_superblock = patched_superblock_reader->superblock();
   patched_superblock = superblock;
 
-  patched_superblock.slice_size = fvm_options.slice_size;
+  patched_superblock.slice_size = safemath::checked_cast<uint32_t>(fvm_options.slice_size);
   patched_superblock.flags |= minfs::kMinfsFlagFVM;
 
-  patched_superblock.ibm_slices = get_slice_count(inode_bitmap_mapping);
-  patched_superblock.abm_slices = get_slice_count(data_bitmap_mapping);
-  patched_superblock.ino_slices = get_slice_count(inode_mapping);
-  patched_superblock.dat_slices = get_slice_count(data_mapping);
+  patched_superblock.ibm_slices =
+      safemath::checked_cast<uint32_t>(get_slice_count(inode_bitmap_mapping));
+  patched_superblock.abm_slices =
+      safemath::checked_cast<uint32_t>(get_slice_count(data_bitmap_mapping));
+  patched_superblock.ino_slices = safemath::checked_cast<uint32_t>(get_slice_count(inode_mapping));
+  patched_superblock.dat_slices = safemath::checked_cast<uint32_t>(get_slice_count(data_mapping));
 
   patched_superblock.inode_count = safemath::checked_cast<uint32_t>(
       get_slice_count(inode_mapping) * fvm_options.slice_size / minfs::kMinfsInodeSize);
@@ -218,7 +220,8 @@ fpromise::result<Partition, std::string> CreateMinfsFvmPartition(
   integrity_mapping.size = std::max(
       integrity_mapping.count,
       static_cast<uint64_t>(limits.GetRecommendedIntegrityBlocks()) * minfs::kMinfsBlockSize);
-  patched_superblock.integrity_slices = get_slice_count(integrity_mapping);
+  patched_superblock.integrity_slices =
+      safemath::checked_cast<uint32_t>(get_slice_count(integrity_mapping));
 
   minfs::UpdateChecksum(&patched_superblock);
 

@@ -86,7 +86,7 @@ FvmOptions MakeOptions() {
   return kOptions;
 }
 
-fvm::VPartitionEntry MakePartitionEntry(const std::string& name, uint64_t slice_count) {
+fvm::VPartitionEntry MakePartitionEntry(const std::string& name, uint32_t slice_count) {
   return fvm::VPartitionEntry(fvm::kPlaceHolderInstanceGuid.data(),
                               fvm::kPlaceHolderInstanceGuid.data(), slice_count, name);
 }
@@ -129,7 +129,7 @@ TEST(FvmUnpackTest, BasicSuccess) {
                                             metadata.Get()->size()));
   for (uint64_t i = 0; i < slices.size(); ++i) {
     // These are 1 indexed inside of FVM.
-    SetSlice(metadata, i + 1, &block, i);
+    SetSlice(metadata, i + 1, &block, static_cast<uint8_t>(i));
   }
 
   std::vector<std::unique_ptr<Writer>> parts(3);
@@ -167,7 +167,7 @@ TEST(FvmUnpackTest, SkipUnlistedPartition) {
                                             metadata.Get()->size()));
   for (uint64_t i = 0; i < slices.size(); ++i) {
     // These are 1 indexed inside of FVM.
-    SetSlice(metadata, i + 1, &block, i);
+    SetSlice(metadata, i + 1, &block, static_cast<uint8_t>(i));
   }
 
   std::vector<std::unique_ptr<Writer>> parts(2);

@@ -20,7 +20,7 @@ zx::status<> WaitForRamctl(zx::duration time) {
   return zx::ok();
 }
 
-zx::status<RamDisk> RamDisk::Create(int block_size, int block_count,
+zx::status<RamDisk> RamDisk::Create(int block_size, uint64_t block_count,
                                     const RamDisk::Options& options) {
   auto status = WaitForRamctl();
   if (status.is_error()) {

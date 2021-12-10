@@ -262,10 +262,12 @@ fpromise::result<Partition, std::string> CreateBlobfsFvmPartition(
   patched_superblock.data_block_count =
       get_slice_count(data_mapping) * fvm_options.slice_size / blobfs::kBlobfsBlockSize;
   patched_superblock.slice_size = fvm_options.slice_size;
-  patched_superblock.abm_slices = get_slice_count(block_map_mapping);
-  patched_superblock.ino_slices = get_slice_count(inode_mapping);
-  patched_superblock.dat_slices = get_slice_count(data_mapping);
-  patched_superblock.journal_slices = get_slice_count(journal_mapping);
+  patched_superblock.abm_slices =
+      safemath::checked_cast<uint32_t>(get_slice_count(block_map_mapping));
+  patched_superblock.ino_slices = safemath::checked_cast<uint32_t>(get_slice_count(inode_mapping));
+  patched_superblock.dat_slices = safemath::checked_cast<uint32_t>(get_slice_count(data_mapping));
+  patched_superblock.journal_slices =
+      safemath::checked_cast<uint32_t>(get_slice_count(journal_mapping));
 
   auto reader_with_backup_superblock =
       std::make_unique<BackupSuperblockReader>(std::move(patched_superblock_reader));

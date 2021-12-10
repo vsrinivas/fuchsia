@@ -108,7 +108,7 @@ constexpr std::array<uint8_t, N> MakeData() {
   std::array<uint8_t, N> data = {};
 
   for (size_t i = 0; i < data.size(); ++i) {
-    data[i] = i % 256;
+    data[i] = static_cast<uint8_t>(i);  // Truncate to low 8 bits.
   }
 
   return data;

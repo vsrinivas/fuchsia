@@ -115,9 +115,6 @@ source_set("ftl-test") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("ftl-volume-extractor") {
@@ -161,9 +158,6 @@ source_set("ftl-integration-test") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/ftl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {

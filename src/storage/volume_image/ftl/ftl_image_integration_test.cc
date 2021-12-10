@@ -81,7 +81,7 @@ class FakeContentReader final : public Reader {
   fpromise::result<void, std::string> Read(uint64_t offset,
                                            cpp20::span<uint8_t> buffer) const final {
     // Calculate the block the offset is in.
-    uint32_t first_block = GetBlockFromBytes(offset, kBlockSize);
+    uint32_t first_block = static_cast<uint32_t>(GetBlockFromBytes(offset, kBlockSize));
     uint64_t offset_from_first_block = GetOffsetFromBlockStart(offset, kBlockSize);
     uint64_t read_bytes = 0;
     auto first_block_view = buffer.subspan(0, kBlockSize - offset_from_first_block);
@@ -95,7 +95,7 @@ class FakeContentReader final : public Reader {
          ++current_block) {
       size_t length = std::min(kBlockSize, buffer.size() - read_bytes);
       auto block_view = buffer.subspan(read_bytes, length);
-      FillBlock(current_block, 0, block_view);
+      FillBlock(static_cast<uint32_t>(current_block), 0, block_view);
       read_bytes += block_view.size();
     }
 
@@ -111,7 +111,7 @@ class InMemoryWriter final : public Writer {
                                             cpp20::span<const uint8_t> buffer) final {
     // Calculate page number based on adjusted offset.
     uint64_t adjusted_page_size = RawNandImageGetAdjustedPageSize(raw_nand_->options);
-    uint64_t page_number = offset / adjusted_page_size;
+    uint32_t page_number = static_cast<uint32_t>(offset / adjusted_page_size);
     // Check if its OOB or page data based on the offset.
     if (offset % adjusted_page_size == 0) {
       auto page_view = buffer.subspan(0, raw_nand_->options.page_size);
@@ -251,7 +251,7 @@ class InMemoryWriterWithHeader : public Writer {
   fpromise::result<void, std::string> Write(uint64_t offset,
                                             cpp20::span<const uint8_t> buffer) final {
     if (offset < sizeof(RawNandImageHeader)) {
-      uint32_t leading_header_bytes =
+      size_t leading_header_bytes =
           std::min(static_cast<size_t>(sizeof(RawNandImageHeader) - offset), buffer.size());
       memcpy(reinterpret_cast<uint8_t*>(&header_) + offset, buffer.data(), leading_header_bytes);
       if (leading_header_bytes == buffer.size()) {

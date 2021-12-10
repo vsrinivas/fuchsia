@@ -162,7 +162,7 @@ fvm::VPartitionEntry MakePartitionEntry(std::string_view name, uint64_t slice_co
   memcpy(entry.unsafe_name, name.data(), name.size());
   memcpy(entry.guid, fvm::kPlaceHolderInstanceGuid.data(), fvm::kPlaceHolderInstanceGuid.size());
   memcpy(entry.type, fvm::kPlaceHolderInstanceGuid.data(), fvm::kPlaceHolderInstanceGuid.size());
-  entry.slices = slice_count;
+  entry.slices = static_cast<uint32_t>(slice_count);
   entry.flags = 0;
   return entry;
 }
@@ -240,7 +240,7 @@ fpromise::result<void, std::string> ValidFvmRead(const fvm::Metadata& metadata,
       offset < primary_metadata_offset + header.GetMetadataAllocatedBytes()) {
     uint32_t buffer_offset = 0;
     if (offset < primary_metadata_offset) {
-      buffer_offset = primary_metadata_offset - offset;
+      buffer_offset = static_cast<uint32_t>(primary_metadata_offset - offset);
     }
     StreamContents(offset, AsSpan(metadata), read_buffer.subspan(buffer_offset));
     return fpromise::ok();
@@ -252,7 +252,7 @@ fpromise::result<void, std::string> ValidFvmRead(const fvm::Metadata& metadata,
       offset < secondary_metadata_offset + header.GetMetadataAllocatedBytes()) {
     uint32_t buffer_offset = 0;
     if (offset < secondary_metadata_offset) {
-      buffer_offset = secondary_metadata_offset - offset;
+      buffer_offset = static_cast<uint32_t>(secondary_metadata_offset - offset);
     }
     StreamContents(offset, AsSpan(metadata), read_buffer.subspan(buffer_offset));
     return fpromise::ok();

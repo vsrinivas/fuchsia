@@ -45,9 +45,9 @@ class RamRawNandImageWriter : public Writer {
                                             cpp20::span<const uint8_t> data) final {
     uint32_t data_offset = 0;
     if (offset < sizeof(RawNandImageHeader)) {
-      data_offset = sizeof(RawNandImageHeader) - offset;
+      data_offset = static_cast<uint32_t>(sizeof(RawNandImageHeader) - offset);
       if (data.size() < data_offset) {
-        data_offset = data.size();
+        data_offset = static_cast<uint32_t>(data.size());
       }
       auto header_data = data.subspan(offset, data_offset);
       memcpy(reinterpret_cast<uint8_t*>(&header_) + offset, header_data.data(), header_data.size());
@@ -60,7 +60,8 @@ class RamRawNandImageWriter : public Writer {
 
     uint64_t image_offset = offset - sizeof(RawNandImageHeader);
     uint64_t image_page_offset = image_offset % RawNandImageGetAdjustedPageSize(options_);
-    uint64_t image_page_number = image_offset / RawNandImageGetAdjustedPageSize(options_);
+    uint32_t image_page_number =
+        static_cast<uint32_t>(image_offset / RawNandImageGetAdjustedPageSize(options_));
 
     // Its a page write.
     if (image_page_offset == 0) {
@@ -198,8 +199,8 @@ TEST(FtlRawNandImageWriterTest, WriteAtAlignedOffsetWithWrongBufferSizeIsError) 
 
 // Fills |buffer| with a sequence starting at shift up to upper limit, and then jumps back to zero.
 void FillBuffer(cpp20::span<uint8_t> buffer, uint64_t shift) {
-  for (auto& b : buffer) {
-    b = shift;
+  for (uint8_t& b : buffer) {
+    b = static_cast<uint8_t>(shift);
     shift = (shift + 1) % std::numeric_limits<uint8_t>::max();
   }
 }

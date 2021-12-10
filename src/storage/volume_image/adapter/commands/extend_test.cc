@@ -184,7 +184,7 @@ TEST(ExtendCommandTest, FitWithSmallerLengthKeepsImageSize) {
   ASSERT_TRUE(image_size_or.is_ok()) << image_size_or.error();
 
   // A smaller length should default to to image_size.
-  params.length = 0.5 * image_size_or.value();
+  params.length = image_size_or.value() / 2;
 
   auto extend_or = Extend(params);
   ASSERT_TRUE(extend_or.is_ok()) << extend_or.error();
@@ -231,7 +231,7 @@ TEST(ExtendCommandTest, FitAndTrimWithSmallerLengthKeepsImageSize) {
   ASSERT_TRUE(image_size_or.is_ok()) << image_size_or.error();
 
   // A smaller length should default to to image_size.
-  params.length = 0.5 * image_size_or.value();
+  params.length = image_size_or.value() / 2;
 
   auto extend_or = Extend(params);
   ASSERT_TRUE(extend_or.is_ok()) << extend_or.error();

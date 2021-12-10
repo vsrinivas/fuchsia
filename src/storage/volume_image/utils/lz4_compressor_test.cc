@@ -308,7 +308,7 @@ TEST(Lz4CompressorTest, CompressedDataMatchesUncompressedDataWhenDecompressed) {
   // Fill with pseudo-random data.
   unsigned int seed = testing::UnitTest::GetInstance()->random_seed();
   for (size_t i = 0; i < kUncompressedSize; ++i) {
-    uncompressed_data[i] = (rand_r(&seed) + i) % 256;
+    uncompressed_data[i] = static_cast<uint8_t>((rand_r(&seed) + i));  // Truncate to low 8 bits.
   }
 
   options.schema = CompressionSchema::kLz4;

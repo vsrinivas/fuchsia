@@ -25,9 +25,6 @@ source_set("blobfs-partition") {
     "//src/storage/fvm",
     "//src/storage/volume_image/utils:block-utils",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("minfs-partition") {
@@ -45,9 +42,6 @@ source_set("minfs-partition") {
     "//src/storage/minfs",
     "//src/storage/volume_image/utils:block-utils",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 source_set("empty-partition") {
@@ -350,9 +344,6 @@ source_set("adapter-tests") {
   if (is_host) {
     deps += [ ":host-test-images" ]
   }
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("adapter-integration-test") {

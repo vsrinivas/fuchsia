@@ -6,8 +6,8 @@
 
 #include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
+#include <stdint.h>
 
-#include <cstdint>
 #include <iterator>
 #include <string>
 #include <variant>
@@ -15,6 +15,7 @@
 #include <fbl/algorithm.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/ftl/ftl_image_internal.h"
@@ -71,15 +72,16 @@ void VisitBlocksOnBuffer(
   // Fill first block, might not be aligned.
   auto first_block_view =
       buffer.subspan(0, std::min(buffer.size(), block_size - offset_from_start));
-  visitor(block_start, first_block_view);
+  visitor(safemath::checked_cast<uint32_t>(block_start), first_block_view);
 
   // Fill all remaning blocks are aligned from this point of view.
   for (size_t i = 0; i < block_count - 1; ++i) {
     uint64_t buffer_offset = first_block_view.size() + i * block_size;
-    uint32_t remaining_bytes = buffer.size() - buffer_offset - i * block_size;
+    uint32_t remaining_bytes =
+        safemath::checked_cast<uint32_t>(buffer.size() - buffer_offset - i * block_size);
 
     auto aligned_block_view = buffer.subspan(buffer_offset, std::min(remaining_bytes, block_size));
-    visitor(block_start + i, aligned_block_view);
+    visitor(safemath::checked_cast<uint32_t>(block_start + i), aligned_block_view);
   }
 }
 
@@ -334,7 +336,7 @@ TEST(FtlImageTest, FtlImageWriteWithMultipleAlignedMappingsIsOk) {
       {.source = 80, .target = 80, .count = 16},
   };
 
-  uint32_t adjusted_page_size = RawNandImageGetAdjustedPageSize(options);
+  uint64_t adjusted_page_size = RawNandImageGetAdjustedPageSize(options);
 
   // Two pages, 4 mappings per page. Two extra pages set max value(-1).
   std::vector<MapPage> map_pages = {
@@ -506,7 +508,7 @@ TEST(FtlImageTest, FtlImageWriteWithAMultiplePageUnalignedAndMultipleMappingsIsO
       {.source = 80, .target = 81, .count = 9},
   };
 
-  uint32_t adjusted_page_size = RawNandImageGetAdjustedPageSize(options);
+  uint64_t adjusted_page_size = RawNandImageGetAdjustedPageSize(options);
 
   // Two pages, 4 mappings per page. Two extra pages set max value(-1).
   std::vector<MapPage> map_pages = {
@@ -573,7 +575,7 @@ TEST(FtlImageTest, FtlImageWriteWithAMultiplePagesAndMultipleMappingsIsOk) {
       {.source = 80, .target = 81, .count = 15},
   };
 
-  uint32_t adjusted_page_size = RawNandImageGetAdjustedPageSize(options);
+  uint64_t adjusted_page_size = RawNandImageGetAdjustedPageSize(options);
 
   // Two pages, 4 mappings per page. Two extra pages set max value(-1).
   std::vector<MapPage> map_pages = {

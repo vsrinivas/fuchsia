@@ -16,6 +16,7 @@
 #include <string>
 
 #include <fbl/algorithm.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
@@ -289,7 +290,8 @@ fpromise::result<PartitionEntry, std::string> GeneratePartitionEntry(uint64_t sl
   memcpy(partition_entry.descriptor.type, partition.volume().type.data(),
          partition.volume().type.size());
   // TODO(gevalentino): Propagate instance guid, needs support from the sparse format.
-  partition_entry.descriptor.extent_count = partition.address().mappings.size();
+  partition_entry.descriptor.extent_count =
+      safemath::checked_cast<uint32_t>(partition.address().mappings.size());
   partition_entry.descriptor.flags = fvm_sparse_internal::GetPartitionFlags(partition);
 
   for (const auto& mapping : partition.address().mappings) {
@@ -542,7 +544,7 @@ fpromise::result<fvm::Metadata, std::string> ConvertToFvmMetadata(
     // Currently non of the sparse partition flags propagate anything to VPartition::flags.
     // TODO(gevalentino): hide this behind an API, so we can have a single point of translation.
     vpartition_entry.flags = 0;
-    vpartition_entry.slices = slice_count;
+    vpartition_entry.slices = safemath::checked_cast<uint32_t>(slice_count);
     vpartition_entries.push_back(vpartition_entry);
     current_vpartition++;
   }

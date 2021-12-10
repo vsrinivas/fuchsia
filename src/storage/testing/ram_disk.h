@@ -29,7 +29,7 @@ class RamDisk {
   };
 
   // Creates a ram-disk with |block_count| blocks of |block_size| bytes.
-  static zx::status<RamDisk> Create(int block_size, int block_count,
+  static zx::status<RamDisk> Create(int block_size, uint64_t block_count,
                                     const Options& options = Options{});
 
   // Creates a ram-disk with the given VMO.  If block_size is zero, a default block size is used.

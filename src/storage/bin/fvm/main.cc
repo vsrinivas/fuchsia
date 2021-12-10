@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <lib/fit/defer.h>
 #include <lib/stdcompat/span.h>
 #include <unistd.h>
@@ -447,8 +448,8 @@ int main(int argc, char** argv) {
     }
     auto partitions = partitions_or.take_value();
 
-    int expected_data_length = 0;
-    int total_size = sparse_image_reader_or.value().length();
+    uint64_t expected_data_length = 0;
+    uint64_t total_size = sparse_image_reader_or.value().length();
     for (const auto& partition : partitions) {
       for (const auto& extent : partition.extents) {
         expected_data_length += extent.extent_length;
@@ -487,7 +488,8 @@ int main(int argc, char** argv) {
     }
 
     if (expected_data_length > total_size) {
-      fprintf(stderr, "Extent accumulated length is %d, uncompressed data is %d\n",
+      fprintf(stderr,
+              "Extent accumulated length is %" PRIu64 ", uncompressed data is %" PRIu64 "\n",
               expected_data_length, total_size);
       return EXIT_FAILURE;
     }
@@ -530,7 +532,9 @@ int main(int argc, char** argv) {
       return EXIT_FAILURE;
     }
 
-    options.page_count = block_count * options.pages_per_block;
+    options.page_count = safemath::CheckMul<uint32_t>(safemath::checked_cast<uint32_t>(block_count),
+                                                      options.pages_per_block)
+                             .ValueOrDie();
 
     auto sparse_image_reader_or = storage::volume_image::FdReader::Create(input_path);
     if (sparse_image_reader_or.is_error()) {

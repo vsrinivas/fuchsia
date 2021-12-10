@@ -109,8 +109,8 @@ class PageWriter final : public Writer {
       return fpromise::error("PageWriter write failed: Bad offset.");
     }
 
-    uint8_t delta = offset - block_start_ - pages_.size();
-    if (delta < 0) {
+    ssize_t delta = static_cast<ssize_t>(offset) - block_start_ - pages_.size();
+    if (delta > 0) {
       std::fill_n(std::back_inserter(pages_), delta, 0xFF);
     }
 
@@ -127,7 +127,7 @@ class PageWriter final : public Writer {
 
 std::vector<uint32_t> GetMappingsFromPage(cpp20::span<const uint8_t> contents,
                                           const RawNandOptions& options) {
-  uint32_t mappings_per_page = options.page_size / sizeof(uint32_t);
+  uint32_t mappings_per_page = static_cast<uint32_t>(options.page_size / sizeof(uint32_t));
   std::vector<uint32_t> actual_mappings;
   for (uint32_t i = 0; i < mappings_per_page; ++i) {
     size_t offset = i * 4;

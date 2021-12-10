@@ -17,6 +17,7 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/metadata.h"
@@ -194,7 +195,7 @@ fpromise::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& write
         slices.emplace_back(current_vpartition, start_slice + vslice_offset);
       }
     }
-    vpartition.slices = partition_slices;
+    vpartition.slices = safemath::checked_cast<uint32_t>(partition_slices);
     vpartitions.push_back(vpartition);
     current_vpartition++;
   }

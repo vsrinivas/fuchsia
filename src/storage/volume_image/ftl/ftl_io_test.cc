@@ -136,7 +136,8 @@ TEST(FtlHandleWriterTest, ContentsAreWrittenSinglePageAtATimeCorrectly) {
   actual_data.resize(handle.instance().page_size(), 0);
 
   for (size_t i = 0; i < kPageCount; ++i) {
-    ASSERT_EQ(handle.volume().Read(kPageOffset + i, 1, actual_data.data()), ZX_OK);
+    ASSERT_EQ(handle.volume().Read(static_cast<uint32_t>(kPageOffset + i), 1, actual_data.data()),
+              ZX_OK);
 
     EXPECT_TRUE(memcmp(actual_data.data(), my_data.data() + (i * handle.instance().page_size()),
                        handle.instance().page_size()) == 0)
