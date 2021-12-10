@@ -4,9 +4,9 @@
 
 #include "src/bringup/bin/netsvc/netifc.h"
 
-#include <assert.h>
 #include <dirent.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -66,8 +66,6 @@ static void* iobuf;
 #define ETH_BUFFER_RX 2u      // in rx ring
 #define ETH_BUFFER_CLIENT 3u  // in use by stack
 
-typedef struct eth_buffer eth_buffer_t;
-
 struct eth_buffer {
   uint64_t magic;
   eth_buffer_t* next;
@@ -76,39 +74,38 @@ struct eth_buffer {
   uint32_t reserved;
 };
 
-static_assert(sizeof(eth_buffer_t) == 32, "");
+static_assert(sizeof(eth_buffer_t) == 32);
 
 static eth_buffer_t* eth_buffer_base;
 static size_t eth_buffer_count;
 static fuchsia_hardware_ethernet_DeviceStatus last_dev_status = 0;
 
-static int _check_ethbuf(eth_buffer_t* ethbuf, uint32_t state) {
-  if (((uintptr_t)ethbuf) & 31) {
-    printf("ethbuf %p misaligned\n", ethbuf);
-    return -1;
-  }
-  if ((ethbuf < eth_buffer_base) || (ethbuf >= (eth_buffer_base + eth_buffer_count))) {
-    printf("ethbuf %p outside of arena\n", ethbuf);
-    return -1;
-  }
-  if (ethbuf->magic != ETH_BUFFER_MAGIC) {
-    printf("ethbuf %p bad magic\n", ethbuf);
-    return -1;
-  }
-  if (ethbuf->state != state) {
-    printf("ethbuf %p incorrect state (%u != %u)\n", ethbuf, ethbuf->state, state);
-    return -1;
-  }
-  return 0;
-}
-
 static void check_ethbuf(eth_buffer_t* ethbuf, uint32_t state) {
-  if (_check_ethbuf(ethbuf, state)) {
+  int check = [ethbuf, state]() {
+    if (reinterpret_cast<uintptr_t>(ethbuf) & 31) {
+      printf("ethbuf %p misaligned\n", ethbuf);
+      return -1;
+    }
+    if ((ethbuf < eth_buffer_base) || (ethbuf >= (eth_buffer_base + eth_buffer_count))) {
+      printf("ethbuf %p outside of arena\n", ethbuf);
+      return -1;
+    }
+    if (ethbuf->magic != ETH_BUFFER_MAGIC) {
+      printf("ethbuf %p bad magic\n", ethbuf);
+      return -1;
+    }
+    if (ethbuf->state != state) {
+      printf("ethbuf %p incorrect state (%u != %u)\n", ethbuf, ethbuf->state, state);
+      return -1;
+    }
+    return 0;
+  }();
+  if (check) {
     __builtin_trap();
   }
 }
 
-static eth_buffer_t* eth_buffers = NULL;
+static eth_buffer_t* eth_buffers = nullptr;
 
 static void eth_put_buffer_locked(eth_buffer_t* buf, uint32_t state) __TA_REQUIRES(eth_lock) {
   check_ethbuf(buf, state);
@@ -124,7 +121,7 @@ void eth_put_buffer(eth_buffer_t* ethbuf) {
 }
 
 static void tx_complete(void* ctx, void* cookie) __TA_REQUIRES(eth_lock) {
-  eth_put_buffer_locked(cookie, ETH_BUFFER_TX);
+  eth_put_buffer_locked(static_cast<eth_buffer_t*>(cookie), ETH_BUFFER_TX);
 }
 
 static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** out,
@@ -133,10 +130,10 @@ static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** 
   if (sz > NET_BUFFERSZ) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (eth_buffers == NULL) {
-    while (1) {
-      eth_complete_tx(g_eth, NULL, tx_complete);
-      if (eth_buffers != NULL) {
+  if (eth_buffers == nullptr) {
+    for (;;) {
+      eth_complete_tx(g_eth, nullptr, tx_complete);
+      if (eth_buffers != nullptr) {
         break;
       }
       if (!block) {
@@ -158,7 +155,7 @@ static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** 
   }
   buf = eth_buffers;
   eth_buffers = buf->next;
-  buf->next = NULL;
+  buf->next = nullptr;
 
   check_ethbuf(buf, ETH_BUFFER_FREE);
 
@@ -191,7 +188,7 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
   }
 #endif
 
-  if (g_eth == NULL) {
+  if (g_eth == nullptr) {
     printf("eth_fifo_send: not connected\n");
     eth_put_buffer_locked(ethbuf, ETH_BUFFER_CLIENT);
     status = ZX_ERR_ADDRESS_UNREACHABLE;
@@ -199,7 +196,7 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
   }
 
   ethbuf->state = ETH_BUFFER_TX;
-  status = eth_queue_tx(g_eth, ethbuf, ethbuf->data + skip, len, 0);
+  status = eth_queue_tx(g_eth, ethbuf, static_cast<uint8_t*>(ethbuf->data) + skip, len, 0);
   if (status < 0) {
     printf("eth_fifo_send: queue tx failed: %d\n", status);
     eth_put_buffer_locked(ethbuf, ETH_BUFFER_TX);
@@ -216,59 +213,75 @@ fail:
 
 int eth_add_mcast_filter(const mac_addr_t* addr) { return 0; }
 
-int netifc_open(const char* interface) {
-  zx_status_t status = ZX_ERR_INTERNAL;
+// TODO(https://fxbug.dev/89490): Re-enable thread safety analysis.
+int netifc_open(const char* interface) __TA_NO_THREAD_SAFETY_ANALYSIS {
   mtx_lock(&eth_lock);
+
+  auto defer_cleanup_netsvc = fit::defer([]() __TA_NO_THREAD_SAFETY_ANALYSIS {
+    zx_handle_close(g_netsvc);
+    g_netsvc = ZX_HANDLE_INVALID;
+    mtx_unlock(&eth_lock);
+  });
   // TODO: parameterize netsvc ethdir as well?
   if (netifc_discover("/dev/class/ethernet", interface, &g_netsvc, g_netmac)) {
-    goto fail_close_svc;
+    return -1;
   }
 
   // we only do this the very first time
-  if (eth_buffer_base == NULL) {
-    eth_buffer_base = memalign(sizeof(eth_buffer_t), 2 * NET_BUFFERS * sizeof(eth_buffer_t));
-    if (eth_buffer_base == NULL) {
-      goto fail_close_svc;
+  if (eth_buffer_base == nullptr) {
+    eth_buffer_base = static_cast<eth_buffer*>(
+        memalign(sizeof(eth_buffer_t), 2ul * NET_BUFFERS * sizeof(eth_buffer_t)));
+    if (eth_buffer_base == nullptr) {
+      return -1;
     }
-    eth_buffer_count = 2 * NET_BUFFERS;
+    eth_buffer_count = 2ul * NET_BUFFERS;
   }
 
   // we only do this the very first time
-  if (iobuf == NULL) {
+  if (iobuf == nullptr) {
     // allocate shareable ethernet buffer data heap
-    size_t iosize = 2 * NET_BUFFERS * NET_BUFFERSZ;
-    if ((status = zx_vmo_create(iosize, 0, &iovmo)) < 0) {
-      goto fail_close_svc;
+    size_t iosize = 2ul * NET_BUFFERS * NET_BUFFERSZ;
+    if (zx_status_t status = zx_vmo_create(iosize, 0, &iovmo); status != ZX_OK) {
+      return status;
     }
     zx_object_set_property(iovmo, ZX_PROP_NAME, "eth-buffers", 11);
-    if ((status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, iovmo, 0,
-                              iosize, (uintptr_t*)&iobuf)) < 0) {
+    if (zx_status_t status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0,
+                                         iovmo, 0, iosize, reinterpret_cast<zx_vaddr_t*>(&iobuf));
+        status != ZX_OK) {
       zx_handle_close(iovmo);
       iovmo = ZX_HANDLE_INVALID;
-      goto fail_close_svc;
+      return status;
     }
     printf("netifc: create %zu eth buffers\n", eth_buffer_count);
     // assign data chunks to ethbufs
-    for (unsigned n = 0; n < eth_buffer_count; n++) {
+    for (size_t n = 0; n < eth_buffer_count; n++) {
       eth_buffer_base[n].magic = ETH_BUFFER_MAGIC;
-      eth_buffer_base[n].data = iobuf + n * NET_BUFFERSZ;
+      eth_buffer_base[n].data = static_cast<uint8_t*>(iobuf) + (n * NET_BUFFERSZ);
       eth_buffer_base[n].state = ETH_BUFFER_FREE;
       eth_buffer_base[n].reserved = 0;
       eth_put_buffer_locked(eth_buffer_base + n, ETH_BUFFER_FREE);
     }
   }
 
-  status = eth_create(g_netsvc, iovmo, iobuf, &g_eth);
-  if (status < 0) {
-    printf("eth_create() failed: %d\n", status);
-    goto fail_close_svc;
+  if (zx_status_t status = eth_create(g_netsvc, iovmo, iobuf, &g_eth); status != ZX_OK) {
+    printf("eth_create() failed: %s\n", zx_status_get_string(status));
+    return status;
   }
 
-  zx_status_t call_status = ZX_OK;
-  status = fuchsia_hardware_ethernet_DeviceStart(g_netsvc, &call_status);
-  if (status != ZX_OK || call_status != ZX_OK) {
-    printf("netifc: ethernet_impl_start(): %d, %d\n", status, call_status);
-    goto fail_destroy_client;
+  auto defer_destroy_client = fit::defer([]() {
+    eth_destroy(g_eth);
+    g_eth = nullptr;
+  });
+  {
+    zx_status_t call_status;
+    if (zx_status_t status = fuchsia_hardware_ethernet_DeviceStart(g_netsvc, &call_status);
+        status != ZX_OK) {
+      printf("netifc: ethernet_impl_start(): %s\n", zx_status_get_string(status));
+      return status;
+    }
+    if (call_status != ZX_OK) {
+      printf("netifc: ethernet_impl_start() returned: %s\n", zx_status_get_string(call_status));
+    }
   }
 
   ip6_init(g_netmac, false);
@@ -284,23 +297,11 @@ int netifc_open(const char* interface) {
     eth_queue_rx(g_eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
   }
 
+  defer_cleanup_netsvc.cancel();
+  defer_destroy_client.cancel();
+
   mtx_unlock(&eth_lock);
   return ZX_OK;
-
-fail_destroy_client:
-  eth_destroy(g_eth);
-  g_eth = NULL;
-fail_close_svc:
-  zx_handle_close(g_netsvc);
-  g_netsvc = ZX_HANDLE_INVALID;
-  mtx_unlock(&eth_lock);
-  if (status) {
-    return status;
-  } else if (call_status) {
-    return call_status;
-  } else {
-    return -1;
-  }
 }
 
 void netifc_close(void) {
@@ -309,9 +310,9 @@ void netifc_close(void) {
     zx_handle_close(g_netsvc);
     g_netsvc = ZX_HANDLE_INVALID;
   }
-  if (g_eth != NULL) {
+  if (g_eth != nullptr) {
     eth_destroy(g_eth);
-    g_eth = NULL;
+    g_eth = nullptr;
   }
   unsigned count = 0;
   for (unsigned n = 0; n < eth_buffer_count; n++) {
@@ -338,7 +339,7 @@ void netifc_close(void) {
 }
 
 static void rx_complete(void* ctx, void* cookie, size_t len, uint32_t flags) {
-  eth_buffer_t* ethbuf = cookie;
+  eth_buffer_t* ethbuf = static_cast<eth_buffer_t*>(cookie);
   check_ethbuf(ethbuf, ETH_BUFFER_RX);
   netifc_recv(ethbuf->data, len);
   eth_queue_rx(g_eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
@@ -347,7 +348,7 @@ static void rx_complete(void* ctx, void* cookie, size_t len, uint32_t flags) {
 int netifc_poll(zx_time_t deadline) {
   // Handle any completed rx packets
   zx_status_t status;
-  if ((status = eth_complete_rx(g_eth, NULL, rx_complete)) < 0) {
+  if ((status = eth_complete_rx(g_eth, nullptr, rx_complete)) < 0) {
     printf("netifc: eth rx failed: %d\n", status);
     return -1;
   }

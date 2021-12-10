@@ -12,14 +12,12 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
-typedef struct mac_addr mac_addr_t;
-typedef union ip6_addr ip6_addr_t;
-typedef struct ip6_hdr ip6_hdr_t;
-typedef struct udp_hdr udp_hdr_t;
-typedef struct icmp6_hdr icmp6_hdr_t;
-typedef struct ndp_n_hdr ndp_n_hdr_t;
+using mac_addr_t = struct mac_addr;
+using ip6_addr_t = union ip6_addr;
+using ip6_hdr_t = struct ip6_hdr;
+using udp_hdr_t = struct udp_hdr;
+using icmp6_hdr_t = struct icmp6_hdr;
+using ndp_n_hdr_t = struct ndp_n_hdr;
 
 #define ETH_ADDR_LEN 6
 #define ETH_HDR_LEN 14
@@ -128,7 +126,7 @@ struct ndp_n_hdr {
 void ip6_init(void* macaddr, bool quiet);
 void eth_recv(void* data, size_t len);
 
-typedef struct eth_buffer eth_buffer_t;
+using eth_buffer_t = struct eth_buffer;
 
 // provided by interface driver
 zx_status_t eth_get_buffer(size_t len, void** data, eth_buffer_t** out, bool block);
@@ -177,7 +175,5 @@ void send_router_advertisement(void);
 // network stack via eth_send() or, in the event of an error, release
 // via eth_put_buffer().
 //
-
-__END_CDECLS
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_INET6_H_

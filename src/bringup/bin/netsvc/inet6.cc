@@ -5,7 +5,6 @@
 #include "src/bringup/bin/netsvc/inet6.h"
 
 #include <arpa/inet.h>
-#include <assert.h>
 #include <lib/zircon-internal/fnv1hash.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -113,16 +112,16 @@ static ip6_addr_t snm_ip6_addr;
 // cache for the last source addresses we've seen
 #define MAC_TBL_BUCKETS 256
 #define MAC_TBL_ENTRIES 5
-typedef struct ip6_to_mac {
+struct ip6_to_mac_t {
   zx_time_t last_used;  // A value of 0 indicates "unused"
   ip6_addr_t ip6;
   mac_addr_t mac;
-} ip6_to_mac_t;
+};
 static ip6_to_mac_t mac_lookup_tbl[MAC_TBL_BUCKETS][MAC_TBL_ENTRIES];
 static mtx_t mac_cache_lock = {};
 
 // Clear all entries
-static void mac_cache_init(void) {
+static void mac_cache_init() {
   size_t bucket_ndx;
   size_t entry_ndx;
   mtx_lock(&mac_cache_lock);
@@ -205,18 +204,18 @@ static int resolve_ip6(mac_addr_t* _mac, const ip6_addr_t* _ip) {
   return mac_cache_lookup(_mac, _ip);
 }
 
-typedef struct {
+struct ip6_pkt_t {
   uint8_t eth[16];
   ip6_hdr_t ip6;
   uint8_t data[0];
-} ip6_pkt_t;
+};
 
-typedef struct {
+struct udp_pkt_t {
   uint8_t eth[16];
   ip6_hdr_t ip6;
   udp_hdr_t udp;
   uint8_t data[0];
-} udp_pkt_t;
+};
 
 static int ip6_setup(ip6_pkt_t* p, const ip6_addr_t* saddr, const ip6_addr_t* daddr, size_t length,
                      uint8_t type) {
@@ -251,14 +250,14 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   size_t length = dlen + UDP_HDR_LEN;
   udp_pkt_t* p;
   eth_buffer_t* ethbuf;
-  zx_status_t status = eth_get_buffer(ETH_MTU + 2, (void**)&p, &ethbuf, block);
+  zx_status_t status = eth_get_buffer(ETH_MTU + 2, reinterpret_cast<void**>(&p), &ethbuf, block);
   if (status != ZX_OK) {
     return status;
   }
 
   const bool ula = (*daddr).u8[0] == ula_ip6_addr.u8[0];
   const ip6_addr_t* const saddr = ula ? &ula_ip6_addr : &ll_ip6_addr;
-  if (ip6_setup((void*)p, saddr, daddr, length, HDR_UDP)) {
+  if (ip6_setup(reinterpret_cast<ip6_pkt_t*>(p), saddr, daddr, length, HDR_UDP)) {
     eth_put_buffer(ethbuf);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -284,7 +283,7 @@ static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t*
   ip6_pkt_t* p;
   icmp6_hdr_t* icmp;
 
-  zx_status_t status = eth_get_buffer(ETH_MTU + 2, (void**)&p, &ethbuf, block);
+  zx_status_t status = eth_get_buffer(ETH_MTU + 2, reinterpret_cast<void**>(&p), &ethbuf, block);
   if (status != ZX_OK) {
     return status;
   }
@@ -293,7 +292,7 @@ static zx_status_t icmp6_send(const void* data, size_t length, const ip6_addr_t*
     return ZX_ERR_INVALID_ARGS;
   }
 
-  icmp = (void*)p->data;
+  icmp = reinterpret_cast<icmp6_hdr_t*>(p->data);
   memcpy(icmp, data, length);
   icmp->checksum = ip6_checksum(&p->ip6, HDR_ICMP6, length);
   return eth_send(ethbuf, 2, ETH_HDR_LEN + IP6_HDR_LEN + length);
@@ -350,8 +349,7 @@ void send_router_advertisement() {
 
   // We need to send this on the link-local address because nothing is talking
   // to the ula address yet.
-  zx_status_t status =
-      icmp6_send(&msg, sizeof(msg), (void*)&ll_ip6_addr, (void*)&ip6_ll_all_nodes, false);
+  zx_status_t status = icmp6_send(&msg, sizeof(msg), &ll_ip6_addr, &ip6_ll_all_nodes, false);
   if (status == ZX_ERR_SHOULD_WAIT) {
     printf("inet6: No buffers available, dropping RA\n");
   } else if (status < 0) {
@@ -359,8 +357,8 @@ void send_router_advertisement() {
   }
 }
 
-void _udp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
-  udp_hdr_t* udp = _data;
+void udp6_recv_internal(ip6_hdr_t* ip, void* _data, size_t len) {
+  udp_hdr_t* udp = static_cast<udp_hdr_t*>(_data);
   uint16_t sum, n;
 
   if (unlikely(len < UDP_HDR_LEN)) {
@@ -391,12 +389,12 @@ void _udp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
   }
   len = n - UDP_HDR_LEN;
 
-  udp6_recv((uint8_t*)_data + UDP_HDR_LEN, len, (void*)&ip->dst, ntohs(udp->dst_port),
-            (void*)&ip->src, ntohs(udp->src_port));
+  udp6_recv(static_cast<uint8_t*>(_data) + UDP_HDR_LEN, len, &ip->dst, ntohs(udp->dst_port),
+            &ip->src, ntohs(udp->src_port));
 }
 
 void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
-  icmp6_hdr_t* icmp = _data;
+  icmp6_hdr_t* icmp = static_cast<icmp6_hdr_t*>(_data);
   uint16_t sum;
 
   if (unlikely(icmp->checksum == 0)) {
@@ -414,7 +412,7 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
 
   zx_status_t status;
   if (icmp->type == ICMP6_NDP_N_SOLICIT) {
-    ndp_n_hdr_t* ndp = _data;
+    ndp_n_hdr_t* ndp = static_cast<ndp_n_hdr_t*>(_data);
     struct {
       ndp_n_hdr_t hdr;
       uint8_t opt[8];
@@ -431,9 +429,11 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
 
     // Ignore the neighbor solicitation if it is targetting another node, as per
     // RFC 4861 section 7.2.3.
-    if (!ip6_addr_eq((ip6_addr_t*)ndp->target, &ll_ip6_addr) &&
-        !ip6_addr_eq((ip6_addr_t*)ndp->target, &ula_ip6_addr)) {
-      return;
+    {
+      ip6_addr_t* ndp_target = reinterpret_cast<ip6_addr_t*>(ndp->target);
+      if (!ip6_addr_eq(ndp_target, &ll_ip6_addr) && !ip6_addr_eq(ndp_target, &ula_ip6_addr)) {
+        return;
+      }
     }
 
     msg.hdr.type = ICMP6_NDP_N_ADVERTISE;
@@ -450,11 +450,11 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
     const bool ula = ndp->target[0] == ula_ip6_addr.u8[0];
     const ip6_addr_t* const saddr = ula ? &ula_ip6_addr : &ll_ip6_addr;
 
-    status = icmp6_send(&msg, sizeof(msg), saddr, (void*)&ip->src, false);
+    status = icmp6_send(&msg, sizeof(msg), saddr, &ip->src, false);
   } else if (icmp->type == ICMP6_ECHO_REQUEST) {
     icmp->checksum = 0;
     icmp->type = ICMP6_ECHO_REPLY;
-    status = icmp6_send(_data, len, (void*)&ip->dst, (void*)&ip->src, false);
+    status = icmp6_send(_data, len, &ip->dst, &ip->src, false);
   } else {
     // Ignore
     return;
@@ -483,9 +483,9 @@ static void mac_cache_save(mac_addr_t* mac, ip6_addr_t* ip) {
       break;
     }
 
-    if (!memcmp(ip, &entry->ip6, sizeof(ip6_addr_t))) {
+    if (memcmp(ip, &entry->ip6, sizeof(ip6_addr_t)) == 0) {
       // Match found
-      if (memcmp(mac, &entry->mac, sizeof(mac_addr_t))) {
+      if (memcmp(mac, &entry->mac, sizeof(mac_addr_t)) != 0) {
         // If mac has changed, update it
         memcpy(&entry->mac, mac, sizeof(mac_addr_t));
       }
@@ -508,7 +508,7 @@ done:
 }
 
 void eth_recv(void* _data, size_t len) {
-  uint8_t* data = _data;
+  uint8_t* data = static_cast<uint8_t*>(_data);
   ip6_hdr_t* ip;
   uint32_t n;
 
@@ -521,7 +521,7 @@ void eth_recv(void* _data, size_t len) {
   if (data[13] != (ETH_IP6 & 0xFF))
     return;
 
-  ip = (void*)(data + ETH_HDR_LEN);
+  ip = reinterpret_cast<ip6_hdr_t*>(data + ETH_HDR_LEN);
   data += (ETH_HDR_LEN + IP6_HDR_LEN);
   len -= (ETH_HDR_LEN + IP6_HDR_LEN);
 
@@ -547,14 +547,15 @@ void eth_recv(void* _data, size_t len) {
   }
 
   // stash the sender's info to simplify replies
-  mac_cache_save((void*)_data + 6, &ip->src);
+  mac_addr* mac = reinterpret_cast<mac_addr*>(static_cast<uint8_t*>(_data) + ETH_ADDR_LEN);
+  mac_cache_save(mac, &ip->src);
 
   switch (ip->next_header) {
     case HDR_ICMP6:
       icmp6_recv(ip, data, len);
       break;
     case HDR_UDP:
-      _udp6_recv(ip, data, len);
+      udp6_recv_internal(ip, data, len);
       break;
     default:
       // do nothing

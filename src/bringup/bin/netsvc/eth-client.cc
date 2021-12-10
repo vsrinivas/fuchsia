@@ -5,10 +5,8 @@
 #include "src/bringup/bin/netsvc/eth-client.h"
 
 #include <fuchsia/hardware/ethernet/c/fidl.h>
-#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <zircon/device/ethernet.h>
 #include <zircon/syscalls.h>
 
@@ -27,9 +25,9 @@ void eth_destroy(eth_client_t* eth) {
 }
 
 zx_status_t eth_create(zx_handle_t svc, zx_handle_t io_vmo, void* io_mem, eth_client_t** out) {
-  eth_client_t* eth;
+  eth_client_t* eth = static_cast<eth_client*>(calloc(1, sizeof(*eth)));
 
-  if ((eth = calloc(1, sizeof(*eth))) == NULL) {
+  if (eth == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -79,26 +77,28 @@ fail:
 zx_status_t eth_queue_tx(eth_client_t* eth, void* cookie, void* data, size_t len,
                          uint32_t options) {
   eth_fifo_entry_t e = {
-      .offset = data - eth->iobuf,
-      .length = len,
-      .flags = options,
-      .cookie = (uint64_t)cookie,
+      .offset = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(data) -
+                                      reinterpret_cast<uintptr_t>(eth->iobuf)),
+      .length = static_cast<uint16_t>(len),
+      .flags = static_cast<uint16_t>(options),
+      .cookie = reinterpret_cast<uint64_t>(cookie),
   };
   IORING_TRACE("eth:tx+ c=0x%08lx o=%u l=%u f=%u\n", e.cookie, e.offset, e.length, e.flags);
 
-  return zx_fifo_write(eth->tx_fifo, sizeof(e), &e, 1, NULL);
+  return zx_fifo_write(eth->tx_fifo, sizeof(e), &e, 1, nullptr);
 }
 
 zx_status_t eth_queue_rx(eth_client_t* eth, void* cookie, void* data, size_t len,
                          uint32_t options) {
   eth_fifo_entry_t e = {
-      .offset = data - eth->iobuf,
-      .length = len,
-      .flags = options,
-      .cookie = (uint64_t)cookie,
+      .offset = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(data) -
+                                      reinterpret_cast<uintptr_t>(eth->iobuf)),
+      .length = static_cast<uint16_t>(len),
+      .flags = static_cast<uint16_t>(options),
+      .cookie = reinterpret_cast<uint64_t>(cookie),
   };
   IORING_TRACE("eth:rx+ c=0x%08lx o=%u l=%u f=%u\n", e.cookie, e.offset, e.length, e.flags);
-  return zx_fifo_write(eth->rx_fifo, sizeof(e), &e, 1, NULL);
+  return zx_fifo_write(eth->rx_fifo, sizeof(e), &e, 1, nullptr);
 }
 
 zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx, void (*func)(void* ctx, void* cookie)) {
@@ -109,14 +109,13 @@ zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx, void (*func)(void* ctx
       0) {
     if (status == ZX_ERR_SHOULD_WAIT) {
       return ZX_OK;
-    } else {
-      return status;
     }
+    return status;
   }
 
   for (eth_fifo_entry_t* e = entries; count-- > 0; e++) {
     IORING_TRACE("eth:tx- c=0x%08lx o=%u l=%u f=%u\n", e->cookie, e->offset, e->length, e->flags);
-    func(ctx, (void*)e->cookie);
+    func(ctx, reinterpret_cast<void*>(e->cookie));
   }
   return ZX_OK;
 }
@@ -130,14 +129,13 @@ zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
       0) {
     if (status == ZX_ERR_SHOULD_WAIT) {
       return ZX_OK;
-    } else {
-      return status;
     }
+    return status;
   }
 
   for (eth_fifo_entry_t* e = entries; count-- > 0; e++) {
     IORING_TRACE("eth:rx- c=0x%08lx o=%u l=%u f=%u\n", e->cookie, e->offset, e->length, e->flags);
-    func(ctx, (void*)e->cookie, e->length, e->flags);
+    func(ctx, reinterpret_cast<void*>(e->cookie), e->length, e->flags);
   }
   return ZX_OK;
 }

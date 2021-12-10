@@ -8,7 +8,7 @@
 
 static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   uint32_t sum = _sum;
-  const uint16_t* data = _data;
+  const uint16_t* data = static_cast<const uint16_t*>(_data);
   while (len > 1) {
     sum += *data++;
     len -= 2;
@@ -33,7 +33,6 @@ unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length) {
   // 0 is illegal, so 0xffff remains 0xffff
   if (sum != 0xffff) {
     return ~sum;
-  } else {
-    return sum;
   }
+  return sum;
 }

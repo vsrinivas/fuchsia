@@ -192,11 +192,11 @@ fuchsia_test_package("tests") {
 # NB: These sources were historically part of a zircon library called inet6.
 source_set("inet6") {
   sources = [
-    "checksum.c",
-    "eth-client.c",
-    "inet6.c",
+    "checksum.cc",
+    "eth-client.cc",
+    "inet6.cc",
     "inet6.h",
-    "netifc.c",
+    "netifc.cc",
     "netifc.h",
   ]
   deps = [
@@ -204,6 +204,7 @@ source_set("inet6") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//zircon/system/ulib/zircon-internal",
   ]
   visibility = [ ":*" ]

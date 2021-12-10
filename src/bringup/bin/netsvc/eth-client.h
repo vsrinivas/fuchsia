@@ -8,15 +8,13 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
-typedef struct eth_client {
+using eth_client_t = struct eth_client {
   zx_handle_t tx_fifo;
   zx_handle_t rx_fifo;
   uint32_t tx_size;
   uint32_t rx_size;
   void* iobuf;
-} eth_client_t;
+};
 
 zx_status_t eth_create(zx_handle_t svc, zx_handle_t io_vmo, void* io_mem, eth_client_t** out);
 
@@ -40,7 +38,5 @@ zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
 // ZX_ERR_TIMED_OUT - deadline lapsed.
 // ZX_OK - completed packets are available
 zx_status_t eth_wait_rx(eth_client_t* eth, zx_time_t deadline);
-
-__END_CDECLS
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_ETH_CLIENT_H_

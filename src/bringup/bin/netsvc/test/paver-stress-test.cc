@@ -6,7 +6,6 @@
 #include "src/bringup/bin/netsvc/netsvc.h"
 #include "src/bringup/bin/netsvc/test/paver-test-common.h"
 
-extern "C" {
 void update_timeouts() {}
 bool netbootloader() { return false; }
 bool all_features() { return true; }
@@ -18,7 +17,6 @@ void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
 
 void netifc_recv(void* data, size_t len) {}
 bool netifc_send_pending() { return false; }
-}
 
 // TODO(fxbug.dev/84697) Re-enable once FIDL wire format migration is complete.
 #if !__has_feature(address_sanitizer)
@@ -52,4 +50,4 @@ TEST_F(PaverTest, WriteFvmManyLargeWrites) {
   ASSERT_EQ(fake_svc_.fake_paver().GetCommandTrace(), std::vector<Command>{Command::kWriteVolumes});
 }
 
-#endif // !__has_feature(address_sanitizer)
+#endif  // !__has_feature(address_sanitizer)

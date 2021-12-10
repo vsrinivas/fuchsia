@@ -9,8 +9,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 // setup networking
 // if interface != NULL, only use the given topological path for networking
 int netifc_open(const char* interface);
@@ -19,16 +17,14 @@ int netifc_open(const char* interface);
 int netifc_poll(zx_time_t deadline);
 
 // return nonzero if interface exists
-int netifc_active(void);
+int netifc_active();
 
 // shut down networking
-void netifc_close(void);
+void netifc_close();
 
 void netifc_recv(void* data, size_t len);
 
 // send out next pending packet, and return value indicating if more are available to send
-bool netifc_send_pending(void);
-
-__END_CDECLS
+bool netifc_send_pending();
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_NETIFC_H_
