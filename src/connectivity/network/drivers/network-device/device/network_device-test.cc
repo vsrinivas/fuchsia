@@ -1316,7 +1316,7 @@ TEST_F(NetworkDeviceTest, SessionNameRespectsStringView) {
       handles_ = nullptr;
       return t;
     }
-    zx_status_t Reply(fidl::OutgoingMessage* m) override {
+    zx_status_t Reply(fidl::OutgoingMessage* m, const fidl::WriteOptions&) override {
       fidl::OutgoingMessage& message = *m;
       // We have to store the handles as if the message was sent, since the
       // channel that encodes the lifetime of the created session is somewhere

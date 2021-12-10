@@ -140,7 +140,7 @@ class ::fidl::WireServer<::fidl_test_handles::SomeProtocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      const internal::IncomingTransportContext* transport_context) final;
+      internal::IncomingTransportContext* transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -158,7 +158,7 @@ class ::fidl::internal::WireClientImpl<::fidl_test_handles::SomeProtocol> final
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-      const internal::IncomingTransportContext* transport_context) override;
+      internal::IncomingTransportContext* transport_context) override;
 };
 namespace fidl {
 #endif  // __Fuchsia__

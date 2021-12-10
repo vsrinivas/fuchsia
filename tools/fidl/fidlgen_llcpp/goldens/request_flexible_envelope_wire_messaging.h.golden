@@ -787,7 +787,7 @@ class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
  private:
   void dispatch_message(
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-      const internal::IncomingTransportContext* transport_context) final;
+      internal::IncomingTransportContext* transport_context) final;
 };
 #endif  // __Fuchsia__
 
@@ -889,7 +889,7 @@ class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& msg,
-      const internal::IncomingTransportContext* transport_context) override;
+      internal::IncomingTransportContext* transport_context) override;
 };
 #endif  // __Fuchsia__
 
@@ -909,7 +909,7 @@ class ::fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
       ::fidl::IncomingMessage&& msg,
-      const internal::IncomingTransportContext* transport_context) override;
+      internal::IncomingTransportContext* transport_context) override;
 };
 #endif  // __Fuchsia__
 
@@ -1012,7 +1012,7 @@ class ::fidl::internal::WireClientImpl<
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       ::fidl::IncomingMessage& msg,
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-      const internal::IncomingTransportContext* transport_context) override;
+      internal::IncomingTransportContext* transport_context) override;
 };
 #endif  // __Fuchsia__
 

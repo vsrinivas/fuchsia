@@ -45,7 +45,8 @@ class RewriteTransaction : public fidl::Transaction {
     ZX_ASSERT_MSG(false, "Transaction::Close called with epitaph %d", epitaph);
   }
 
-  zx_status_t Reply(fidl::OutgoingMessage* indicator_msg) override {
+  zx_status_t Reply(fidl::OutgoingMessage* indicator_msg,
+                    const fidl::WriteOptions& write_options) override {
     ZX_ASSERT(txid_ != 0);
     auto indicator_msg_bytes = indicator_msg->CopyBytes();
     ZX_ASSERT(

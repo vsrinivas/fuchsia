@@ -640,12 +640,10 @@ class UnownedEncodedMessage final {
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
-#ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportObject>
+  void Write(TransportObject&& client, const WriteOptions& options = {}) {
+    message_.Write(std::forward<TransportObject>(client), options);
   }
-#endif
 
  private:
   static constexpr uint32_t kNumHandles =
@@ -685,12 +683,10 @@ class OwnedEncodedMessage final {
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
-#ifdef __Fuchsia__
   template <typename TransportObject>
-  void Write(TransportObject&& client) {
-    message_.Write(std::forward<TransportObject>(client));
+  void Write(TransportObject&& client, const WriteOptions& options = {}) {
+    message_.Write(std::forward<TransportObject>(client), options);
   }
-#endif
 
  private:
   ::fidl::internal::OutgoingMessageBuffer<FidlType> backing_buffer_;

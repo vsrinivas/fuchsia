@@ -125,7 +125,7 @@ class DdkTransaction : public fidl::Transaction {
   fidl_txn_t* fidl_txn() { return connection_.Txn(); }
 
  protected:
-  zx_status_t Reply(fidl::OutgoingMessage* message) final {
+  zx_status_t Reply(fidl::OutgoingMessage* message, const fidl::WriteOptions& write_options) final {
     if (closed_) {
       return ZX_ERR_CANCELED;
     }

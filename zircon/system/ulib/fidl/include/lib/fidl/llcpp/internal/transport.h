@@ -31,14 +31,14 @@ struct IncomingTransportContext;
 // Options passed from the user-facing write API to transport write().
 struct WriteOptions {
   // Transport specific context.
-  const internal::OutgoingTransportContext* outgoing_transport_context;
+  internal::OutgoingTransportContext* outgoing_transport_context;
 };
 
 // Options passed from the user-facing read API to transport read().
 struct ReadOptions {
   bool discardable = false;
   // Transport specific context populated by read.
-  internal::IncomingTransportContext* out_incoming_transport_context;
+  internal::IncomingTransportContext** out_incoming_transport_context;
 };
 
 // Options passed from the user-facing call API to transport call().
@@ -46,9 +46,9 @@ struct CallOptions {
   zx_time_t deadline = ZX_TIME_INFINITE;
 
   // Transport specific context.
-  const internal::OutgoingTransportContext* outgoing_transport_context;
+  internal::OutgoingTransportContext* outgoing_transport_context;
   // Transport specific context populated by call.
-  internal::IncomingTransportContext* out_incoming_transport_context;
+  internal::IncomingTransportContext** out_incoming_transport_context;
 };
 
 class IncomingMessage;
@@ -108,7 +108,7 @@ struct TransportWaiter {
 // This avoids heap allocation while using a virtual waiter interface.
 // |kCapacity| must be larger than the sizes of all of the individual transport waiters.
 class AnyTransportWaiter {
-  static constexpr size_t kCapacity = 128ull;
+  static constexpr size_t kCapacity = 256ull;
   static constexpr size_t kAlignment = 16ull;
 
  public:
@@ -150,8 +150,8 @@ class AnyTransportWaiter {
 };
 
 // Function receiving notification of successful waits on a TransportWaiter.
-using TransportWaitSuccessHandler = fit::inline_function<void(
-    fidl::IncomingMessage&, const IncomingTransportContext* transport_context)>;
+using TransportWaitSuccessHandler =
+    fit::inline_function<void(fidl::IncomingMessage&, IncomingTransportContext* transport_context)>;
 
 // Function receiving notification of failing waits on a TransportWaiter.
 using TransportWaitFailureHandler = fit::inline_function<void(UnbindInfo)>;

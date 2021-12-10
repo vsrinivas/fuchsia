@@ -42,7 +42,7 @@ class ChannelTransaction final : public Transaction {
     return *this;
   }
 
-  zx_status_t Reply(fidl::OutgoingMessage* message) final;
+  zx_status_t Reply(fidl::OutgoingMessage* message, const fidl::WriteOptions& write_options) final;
 
   void Close(zx_status_t epitaph) final;
 

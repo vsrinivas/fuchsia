@@ -134,7 +134,7 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
 
   // Common message handling entrypoint shared by both client and server bindings.
   void MessageHandler(fidl::IncomingMessage& msg,
-                      const internal::IncomingTransportContext* transport_context)
+                      internal::IncomingTransportContext* transport_context)
       __TA_EXCLUDES(thread_checker_) __TA_EXCLUDES(lock_);
 
   void WaitFailureHandler(UnbindInfo info) __TA_EXCLUDES(thread_checker_) __TA_EXCLUDES(lock_);
@@ -165,8 +165,7 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   // this |AsyncBinding| object and so must not access its state.
   virtual std::optional<DispatchError> Dispatch(
       fidl::IncomingMessage& msg, bool* next_wait_begun_early,
-      const internal::IncomingTransportContext* transport_context)
-      __TA_REQUIRES(thread_checker_) = 0;
+      internal::IncomingTransportContext* transport_context) __TA_REQUIRES(thread_checker_) = 0;
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
@@ -349,7 +348,7 @@ class AsyncServerBinding : public AsyncBinding {
 
   std::optional<DispatchError> Dispatch(
       fidl::IncomingMessage& msg, bool* next_wait_begun_early,
-      const internal::IncomingTransportContext* transport_context) override;
+      internal::IncomingTransportContext* transport_context) override;
 
   // Start closing the server connection with an |epitaph|.
   void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph) {
@@ -415,7 +414,7 @@ class AsyncClientBinding final : public AsyncBinding {
 
   std::optional<DispatchError> Dispatch(
       fidl::IncomingMessage& msg, bool* binding_released,
-      const internal::IncomingTransportContext* transport_context) override;
+      internal::IncomingTransportContext* transport_context) override;
 
   void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
 

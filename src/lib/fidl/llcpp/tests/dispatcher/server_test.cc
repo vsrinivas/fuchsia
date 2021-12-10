@@ -61,7 +61,7 @@ class ::fidl::WireServer<fidl_test::TestProtocol>
 
  private:
   void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-                        const internal::IncomingTransportContext* transport_context) final {
+                        internal::IncomingTransportContext* transport_context) final {
     std::move(msg).CloseHandles();
     txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal(), ::fidl::ErrorOrigin::kReceive);
   }
@@ -146,7 +146,9 @@ TEST(TryDispatchTestCase, MessageStatusNotOk) {
 
    private:
     std::unique_ptr<Transaction> TakeOwnership() final { ZX_PANIC("Not used"); }
-    zx_status_t Reply(fidl::OutgoingMessage* message) final { ZX_PANIC("Not used"); }
+    zx_status_t Reply(fidl::OutgoingMessage* message, const fidl::WriteOptions&) final {
+      ZX_PANIC("Not used");
+    }
     void Close(zx_status_t epitaph) final { ZX_PANIC("Not used"); }
     void InternalError(fidl::UnbindInfo error, fidl::ErrorOrigin origin) final {
       EXPECT_FALSE(errored_);

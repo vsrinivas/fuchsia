@@ -44,7 +44,7 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
   {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
   void dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    const internal::IncomingTransportContext* transport_context) final;
+    internal::IncomingTransportContext* transport_context) final;
 };
 {{- end }}
 

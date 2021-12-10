@@ -102,7 +102,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Parent>::
     DispatchEvent(fidl::IncomingMessage& msg,
                   ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-                  const internal::IncomingTransportContext* transport_context) {
+                  internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -155,7 +155,7 @@ void fidl::internal::WireServerDispatcher<
 void fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        const ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_inheritancewithrecursivedecl::Parent>::Dispatch(this,
                                                                   std::move(
@@ -371,7 +371,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_inheritancewithrecursivedecl::Child>::
     DispatchEvent(fidl::IncomingMessage& msg,
                   ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-                  const internal::IncomingTransportContext* transport_context) {
+                  internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -444,7 +444,7 @@ void fidl::internal::WireServerDispatcher<
 void fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        const ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_inheritancewithrecursivedecl::Child>::Dispatch(this,
                                                                  std::move(msg),

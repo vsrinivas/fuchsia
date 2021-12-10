@@ -58,7 +58,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_doccomments::Interface>::DispatchEvent(
         fidl::IncomingMessage& msg,
         ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-        const internal::IncomingTransportContext* transport_context) {
+        internal::IncomingTransportContext* transport_context) {
   auto* event_handler = static_cast<
       ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>*>(
       maybe_event_handler);
@@ -182,7 +182,7 @@ void fidl::internal::WireServerDispatcher<::fidl_test_doccomments::Interface>::
 }
 void fidl::WireServer<::fidl_test_doccomments::Interface>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    const ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_doccomments::Interface>::Dispatch(this, std::move(msg), txn);
 }

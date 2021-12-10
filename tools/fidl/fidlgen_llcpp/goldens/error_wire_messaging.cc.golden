@@ -89,7 +89,7 @@ namespace fidl_test_error {
 ::cpp17::optional<::fidl::UnbindInfo>
 fidl::WireResponseContext<::fidl_test_error::Example::Foo>::OnRawResult(
     ::fidl::IncomingMessage&& msg,
-    const internal::IncomingTransportContext* transport_context) {
+    internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<::fidl_test_error::Example::Foo> result{
         msg.error()};
@@ -216,7 +216,7 @@ std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_error::Example>::DispatchEvent(
     fidl::IncomingMessage& msg,
     ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-    const internal::IncomingTransportContext* transport_context) {
+    internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -263,7 +263,7 @@ void fidl::internal::WireServerDispatcher<::fidl_test_error::Example>::Dispatch(
 }
 void fidl::WireServer<::fidl_test_error::Example>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    const ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<::fidl_test_error::Example>::Dispatch(
       this, std::move(msg), txn);
 }

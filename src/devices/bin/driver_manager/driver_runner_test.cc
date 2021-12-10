@@ -175,7 +175,8 @@ class TestTransaction : public fidl::Transaction {
     return nullptr;
   }
 
-  zx_status_t Reply(fidl::OutgoingMessage* message) override {
+  zx_status_t Reply(fidl::OutgoingMessage* message,
+                    const fidl::WriteOptions& write_options) override {
     EXPECT_TRUE(false);
     return ZX_OK;
   }

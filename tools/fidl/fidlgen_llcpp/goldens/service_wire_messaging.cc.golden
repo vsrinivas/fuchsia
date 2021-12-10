@@ -51,7 +51,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_service::SecondProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,
         ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-        const internal::IncomingTransportContext* transport_context) {
+        internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -96,7 +96,7 @@ void fidl::internal::WireServerDispatcher<::fidl_test_service::SecondProtocol>::
 }
 void fidl::WireServer<::fidl_test_service::SecondProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    const ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_service::SecondProtocol>::Dispatch(this, std::move(msg), txn);
 }
@@ -159,7 +159,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
     WireClientImpl<::fidl_test_service::FirstProtocol>::DispatchEvent(
         fidl::IncomingMessage& msg,
         ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-        const internal::IncomingTransportContext* transport_context) {
+        internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -203,7 +203,7 @@ void fidl::internal::WireServerDispatcher<::fidl_test_service::FirstProtocol>::
 }
 void fidl::WireServer<::fidl_test_service::FirstProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    const ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_service::FirstProtocol>::Dispatch(this, std::move(msg), txn);
 }

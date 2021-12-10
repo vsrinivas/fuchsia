@@ -218,7 +218,7 @@ namespace fidl_test_requestflexibleenvelope {
 fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::Protocol::
                               RequestStrictResponseFlexible>::
     OnRawResult(::fidl::IncomingMessage&& msg,
-                const internal::IncomingTransportContext* transport_context) {
+                internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
                                   RequestStrictResponseFlexible>
@@ -255,7 +255,7 @@ fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::Protocol::
 fidl::WireResponseContext<::fidl_test_requestflexibleenvelope::Protocol::
                               RequestFlexibleResponseStrict>::
     OnRawResult(::fidl::IncomingMessage&& msg,
-                const internal::IncomingTransportContext* transport_context) {
+                internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
                                   RequestFlexibleResponseStrict>
@@ -570,7 +570,7 @@ std::optional<::fidl::UnbindInfo>
 fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
     DispatchEvent(fidl::IncomingMessage& msg,
                   ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-                  const internal::IncomingTransportContext* transport_context) {
+                  internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -646,7 +646,7 @@ void fidl::internal::WireServerDispatcher<
 void fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        const ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_requestflexibleenvelope::Protocol>::Dispatch(this,
                                                                std::move(msg),

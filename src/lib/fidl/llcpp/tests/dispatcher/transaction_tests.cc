@@ -24,7 +24,8 @@ class Transaction : public fidl::Transaction {
 
   std::unique_ptr<fidl::Transaction> TakeOwnership() override { ZX_ASSERT(false); }
 
-  zx_status_t Reply(fidl::OutgoingMessage* message) override {
+  zx_status_t Reply(fidl::OutgoingMessage* message,
+                    const fidl::WriteOptions& write_options) override {
     if (wait_ && signal_) {
       sync_completion_signal(signal_);
       sync_completion_wait(wait_, ZX_TIME_INFINITE);

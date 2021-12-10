@@ -114,7 +114,7 @@ namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 ::cpp17::optional<::fidl::UnbindInfo> fidl::WireResponseContext<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::
     OnRawResult(::fidl::IncomingMessage&& msg,
-                const internal::IncomingTransportContext* transport_context) {
+                internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     ::fidl::WireUnownedResult<
         ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>
@@ -274,7 +274,7 @@ std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     DispatchEvent(fidl::IncomingMessage& msg,
                   ::fidl::internal::AsyncEventHandler* maybe_event_handler,
-                  const internal::IncomingTransportContext* transport_context) {
+                  internal::IncomingTransportContext* transport_context) {
   return ::fidl::UnbindInfo::UnknownOrdinal();
 }
 #endif  // __Fuchsia__
@@ -328,7 +328,7 @@ void fidl::WireServer<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
     dispatch_message(
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-        const ::fidl::internal::IncomingTransportContext* transport_context) {
+        ::fidl::internal::IncomingTransportContext* transport_context) {
   ::fidl::internal::WireServerDispatcher<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
       Dispatch(this, std::move(msg), txn);

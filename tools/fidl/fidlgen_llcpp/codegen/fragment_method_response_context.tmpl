@@ -17,7 +17,7 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
  private:
   ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
     ::fidl::IncomingMessage&& msg,
-    const internal::IncomingTransportContext* transport_context) override;
+    internal::IncomingTransportContext* transport_context) override;
 };
 {{- EndifFuchsia }}
 {{- end }}
@@ -33,7 +33,7 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
 ::cpp17::optional<::fidl::UnbindInfo>
 {{ .WireResponseContext.NoLeading }}::OnRawResult(
     ::fidl::IncomingMessage&& msg,
-    const internal::IncomingTransportContext* transport_context) {
+    internal::IncomingTransportContext* transport_context) {
   if (unlikely(!msg.ok())) {
     {{ .WireUnownedResult }} result{msg.error()};
     OnResult(result);

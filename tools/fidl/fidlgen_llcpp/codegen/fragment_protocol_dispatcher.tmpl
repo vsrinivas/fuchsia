@@ -65,7 +65,7 @@ void {{ .WireServerDispatcher.NoLeading }}::Dispatch(
 {{- EnsureNamespace "" }}
 void {{ .WireServer.NoLeading }}::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
-    const ::fidl::internal::IncomingTransportContext* transport_context) {
+    ::fidl::internal::IncomingTransportContext* transport_context) {
   {{ .WireServerDispatcher }}::Dispatch(this, std::move(msg), txn);
 }
 {{- EndifFuchsia -}}
