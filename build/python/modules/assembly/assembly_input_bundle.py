@@ -16,7 +16,7 @@ from depfile.depfile import FilePath
 
 from .image_assembly_config import ImageAssemblyConfig
 from .common import FileEntry
-from .utils import set_if_named_member_not_empty, set_named_member_if_present
+from .utils import set_named_member_if_present
 
 __all__ = ["AssemblyInputBundle", "ConfigDataEntries"]
 
@@ -91,7 +91,8 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         """Dump the object out as a dict."""
         result = super().to_dict()
         config_data = {}
-        for (package, entries) in self.config_data.items():
+        for package in sorted(self.config_data.keys()):
+            entries = self.config_data[package]
             config_data[package] = [
                 entry.to_dict() for entry in sorted(entries)
             ]

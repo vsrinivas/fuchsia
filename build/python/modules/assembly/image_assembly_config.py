@@ -31,7 +31,7 @@ class KernelInfo:
         """
         result = cls()
         set_named_member_if_present(result, 'path', entry)
-        set_named_member_if_present(result, 'args', entry)
+        set_named_member_if_present(result, 'args', entry, transform=set)
         set_named_member_if_present(result, 'clock_backstop', entry)
         return result
 
@@ -95,9 +95,8 @@ class ImageAssemblyConfig:
             result,
             "bootfs_files",
             dict,
-            transform=FileEntry.from_dict,
-            transform_items=True)
-
+            transform=lambda items: set(
+                [FileEntry.from_dict(item) for item in items]))
         return result
 
     @classmethod
@@ -119,7 +118,7 @@ class ImageAssemblyConfig:
         set_if_not_empty(
             result,
             "bootfs_files",
-            self.bootfs_files,
+            sorted(self.bootfs_files),
             transform=FileEntry.to_dict)
         return result
 
