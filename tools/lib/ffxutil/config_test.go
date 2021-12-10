@@ -32,6 +32,9 @@ func TestFFXConfig(t *testing.T) {
 		"test": map[string][]string{
 			"output_path": {filepath.Join(tmpDir, "saved_test_runs")},
 		},
+		"fastboot": map[string]map[string]bool{
+			"usb": {"disabled": true},
+		},
 		"key": "value",
 	}
 	if diff := cmp.Diff(expectedConfig, config.config); diff != "" {

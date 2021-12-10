@@ -41,6 +41,7 @@ func NewIsolatedFFXConfig(dir string) *FFXConfig {
 	config.Set("overnet", map[string]string{"socket": socketPath})
 	config.Set("log", map[string][]string{"dir": {filepath.Join(dir, "logs")}})
 	config.Set("test", map[string][]string{"output_path": {filepath.Join(dir, "saved_test_runs")}})
+	config.Set("fastboot", map[string]map[string]bool{"usb": {"disabled": true}})
 	return config
 }
 
