@@ -4,6 +4,8 @@
 
 #include "pty-server.h"
 
+#include <fidl/fuchsia.hardware.pty/cpp/wire_types.h>
+
 #include "pty-client-vnode.h"
 #include "pty-client.h"
 
@@ -272,4 +274,12 @@ uint32_t PtyServer::DrainEvents() {
   }
   control_->DeAssertEventSignal();
   return events;
+}
+
+void PtyServer::set_window_size(WindowSize size) {
+  size_ = size;
+  events_ |= fuchsia_hardware_pty::wire::kEventWindowSize;
+  if (control_) {
+    control_->AssertEventSignal();
+  }
 }

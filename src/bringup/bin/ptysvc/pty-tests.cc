@@ -582,6 +582,41 @@ TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
   }
 }
 
+TEST_F(PtyTestCase, SetWindowSizeSendsEvent) {
+  Connection server{take_server()};
+  Connection control_client;
+  ASSERT_OK(OpenClient(&server, 0, &control_client));
+
+  zx::eventpair control_event = GetEvent(&control_client);
+
+  // No events yet
+  ASSERT_STATUS(
+      control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time{}, nullptr),
+      ZX_ERR_TIMED_OUT);
+  {
+    auto result = control_client->ReadEvents();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->events, 0);
+  }
+
+  // SetWindowSize which should trigger an event
+  {
+    auto result = server->SetWindowSize({.width = 123, .height = 45});
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+  }
+
+  ASSERT_OK(control_event.wait_one(fuchsia_hardware_pty::wire::kSignalEvent, zx::time::infinite(),
+                                   nullptr));
+  {
+    auto result = control_client->ReadEvents();
+    ASSERT_OK(result.status());
+    ASSERT_OK(result->status);
+    ASSERT_EQ(result->events, fuchsia_hardware_pty::wire::kEventWindowSize);
+  }
+}
+
 TEST_F(PtyTestCase, NonControllingClientOpenClient) {
   Connection server{take_server()};
   Connection client;

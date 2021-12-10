@@ -68,7 +68,7 @@ class PtyServer : public fbl::RefCounted<PtyServer> {
   zx_status_t MakeActive(uint32_t id);
 
   WindowSize window_size() { return size_; }
-  void set_window_size(WindowSize size) { size_ = size; }
+  void set_window_size(WindowSize size);
 
   [[nodiscard]] bool is_active(const PtyClient* client) const { return active_.get() == client; }
 

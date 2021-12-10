@@ -41,8 +41,9 @@ protocol/member fuchsia.hardware.pty/Device.WriteAt2(vector<uint8>:8192 data,uin
 protocol fuchsia.hardware.pty/Device
 const fuchsia.hardware.pty/EVENT_HANGUP uint32 1
 const fuchsia.hardware.pty/EVENT_INTERRUPT uint32 2
-const fuchsia.hardware.pty/EVENT_MASK uint32 7
+const fuchsia.hardware.pty/EVENT_MASK uint32 15
 const fuchsia.hardware.pty/EVENT_SUSPEND uint32 4
+const fuchsia.hardware.pty/EVENT_WINDOW_SIZE uint32 8
 const fuchsia.hardware.pty/FEATURE_RAW uint32 1
 const fuchsia.hardware.pty/SIGNAL_EVENT uint32 33554432
 struct/member fuchsia.hardware.pty/WindowSize.height uint32

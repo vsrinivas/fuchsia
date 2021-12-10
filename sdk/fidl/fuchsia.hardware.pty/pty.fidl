@@ -30,11 +30,14 @@ const EVENT_HANGUP uint32 = 1;
 const EVENT_INTERRUPT uint32 = 2;
 /// The terminal received a ^Z control character.
 const EVENT_SUSPEND uint32 = 4;
+/// The terminal window has resized.
+const EVENT_WINDOW_SIZE uint32 = 8;
+
 /// All events
-const EVENT_MASK uint32 = 7;
+const EVENT_MASK uint32 = 15;
 
 /// When an event is pending, this signal is asserted on the Controlling PTY.
-const SIGNAL_EVENT uint32 = 0x02000000; // DEVICE_SIGNAL_OOB
+const SIGNAL_EVENT uint32 = fuchsia.io.DEVICE_SIGNAL_OOB;
 @discoverable
 protocol Device {
     // Compose from fuchsia.io.File so we can support Read/Write and export

@@ -222,6 +222,10 @@ TEST(PtyTests, pty_test) {
   ASSERT_OK(ws_result2->status);
   ASSERT_EQ(ws_result2->size.width, 80u, "%s", strerror(errno));
   ASSERT_EQ(ws_result2->size.height, 25u, "%s", strerror(errno));
+  auto ws_result3 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
+  ASSERT_OK(ws_result3.status());
+  ASSERT_OK(ws_result3->status);
+  ASSERT_EQ(ws_result3->events, fpty::wire::kEventWindowSize);
 
   // verify that we don't get events for special chars in raw mode
   auto result6 =
