@@ -243,7 +243,6 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
           } else {
             pmm_free_page(page);
           }
-          pmm_free_page(page);
           // Either this thread made it FREE, or this thread waited for it to be FREE.
           DEBUG_ASSERT(page->is_free());
           // The page has been replaced with a different page that doesn't have loan_cancelled set.
