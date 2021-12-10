@@ -145,6 +145,9 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
   prep.Init(handoff_item->payload);
 
   prep.SummarizeMiscZbiItems(boot.DataZbi().storage());
+
+  prep.SetInstrumentation();
+
   gBootTimes.SampleNow(PhysBootTimes::kZbiDone);
 
   // Now that all time samples have been collected, copy gBootTimes into the

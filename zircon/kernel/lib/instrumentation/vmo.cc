@@ -112,15 +112,19 @@ zx_status_t InstrumentationData::GetVmos(Handle* handles[]) {
   // compiler to check that every enum case is handled.
   constexpr auto get_getter = [](Vmo idx) -> InstrumentationDataVmo (*)() {
     switch (idx) {
-      case kLlvmProfileVmo:
-        return LlvmProfileGetVmo;
+      case kPhysSymbolizerVmo:
+        return PhysSymbolizerVmo;
+      case kPhysLlvmProfdataVmo:
+        return PhysLlvmProfdataVmo;
+      case kLlvmProfdataVmo:
+        return LlvmProfdataVmo;
       case kSancovVmo:
         return SancovGetPcVmo;
       case kSancovCountsVmo:
         return SancovGetCountsVmo;
 
         // The symbolizer file is done separately below since it must be last.
-      case kSymbolizer:
+      case kSymbolizerVmo:
       case kVmoCount:
         break;
     }
@@ -131,8 +135,10 @@ zx_status_t InstrumentationData::GetVmos(Handle* handles[]) {
     if (auto getter = get_getter(static_cast<Vmo>(idx))) {
       InstrumentationDataVmo data = getter();
       if (data.handle) {
-        PrintDumpfile(data, {stdout, symbolizer.stream()});
-        have_data = true;
+        if (!data.sink_name.empty()) {
+          PrintDumpfile(data, {stdout, symbolizer.stream()});
+          have_data = true;
+        }
         handles[idx] = data.handle;
       } else {
         handles[idx] = get_stub_vmo();
@@ -140,7 +146,7 @@ zx_status_t InstrumentationData::GetVmos(Handle* handles[]) {
     }
   };
 
-  handles[kSymbolizer] = have_data ? ktl::move(symbolizer).Finish() : get_stub_vmo();
+  handles[kSymbolizerVmo] = have_data ? ktl::move(symbolizer).Finish() : get_stub_vmo();
 
   return ZX_OK;
 }

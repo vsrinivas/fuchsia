@@ -28,10 +28,14 @@ struct InstrumentationDataVmo {
 };
 
 // profile.cc
-InstrumentationDataVmo LlvmProfileGetVmo();
+InstrumentationDataVmo LlvmProfdataVmo();
 
 // sancov.cc
 InstrumentationDataVmo SancovGetPcVmo();
 InstrumentationDataVmo SancovGetCountsVmo();
+
+// phys.cc
+InstrumentationDataVmo PhysSymbolizerVmo();
+InstrumentationDataVmo PhysLlvmProfdataVmo();
 
 #endif  // ZIRCON_KERNEL_LIB_INSTRUMENTATION_PRIVATE_H_

@@ -58,6 +58,14 @@ class PhysBootTimes {
   arch::EarlyTicks timestamps_[kCount] = {};
 };
 
+// This is instrumentation data (if any) about physboot itself.  The data
+// handed off may be updated in place by physboot's instrumented code.
+struct PhysInstrumentationData {
+  PhysHandoffTemporaryString symbolizer_log;
+  PhysHandoffTemporarySpan<const ktl::byte> llvm_profdata;
+};
+static_assert(ktl::is_default_constructible_v<PhysInstrumentationData>);
+
 // This holds (or points to) everything that is handed off from physboot to the
 // kernel proper at boot time.
 struct PhysHandoff {
@@ -72,6 +80,8 @@ struct PhysHandoff {
 
   PhysBootTimes times;
   static_assert(ktl::is_default_constructible_v<PhysBootTimes>);
+
+  PhysInstrumentationData instrumentation;
 
   // Physical address of the data ZBI.
   uint64_t zbi = 0;

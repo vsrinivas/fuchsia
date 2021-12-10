@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <ktl/byte.h>
 #include <ktl/optional.h>
+#include <ktl/span.h>
 #include <ktl/string_view.h>
 #include <phys/main.h>
 
@@ -41,11 +43,14 @@ class Symbolize {
   // Return the hex string for the program's own build ID.
   ktl::string_view BuildIdString();
 
+  // Return the raw bytes for the program's own build ID.
+  ktl::span<const ktl::byte> BuildId() const;
+
   // Print the contextual markup elements describing this phys executable.
-  PHYS_SINGLETHREAD void ContextAlways();
+  void ContextAlways();
 
   // Same, but idempotent: the first call prints and others do nothing.
-  PHYS_SINGLETHREAD void Context();
+  void Context();
 
   // Print the presentation markup element for one frame of a backtrace.
   void BackTraceFrame(unsigned int n, uintptr_t pc, bool interrupt = false);
@@ -67,7 +72,8 @@ class Symbolize {
 
   // Print the trigger markup element for a dumpfile.
   // TODO(mcgrathr): corresponds to a ZBI item
-  PHYS_SINGLETHREAD void DumpFile(ktl::string_view type, ktl::string_view name);
+  void DumpFile(ktl::string_view type, ktl::string_view name, ktl::string_view desc,
+                size_t size_bytes);
 
   // Dump some stack up to the SP.
   PHYS_SINGLETHREAD void PrintStack(uintptr_t sp,

@@ -372,6 +372,8 @@ if (toolchain_environment == "kernel.phys" ||
     public_deps = [ ":handoff-prep.h" ]
     deps = [
       ":handoff",
+      ":symbolize",
+      "//src/lib/llvm-profdata",
       "//zircon/kernel/arch/$zircon_cpu/phys:arch-handoff-prep",
       "//zircon/system/ulib/zbitl",
     ]

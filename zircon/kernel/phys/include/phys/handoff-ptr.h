@@ -11,6 +11,7 @@
 
 #include <ktl/algorithm.h>
 #include <ktl/span.h>
+#include <ktl/string_view.h>
 
 // PhysHandoffPtr provides a "smart pointer" style API for pointers handed off
 // from physboot to the kernel proper.  A handoff pointer is only ever created
@@ -105,7 +106,6 @@ class PhysHandoffPtr {
   T& operator*() const { return *get(); }
 
   T* operator->() const { return get(); }
-
 #endif  // _KERNEL
 
  private:
@@ -116,16 +116,80 @@ class PhysHandoffPtr {
   typename Traits::ExportType ptr_{};
 };
 
+// PhysHandoffSpan<T> is to ktl::span<T> as PhysHandoffPtr<T> is to T*.
+// It has get() and release() methods that return ktl::span<T>.
+
+template <typename T, PhysHandoffPtrEncoding Encoding, PhysHandoffPtrLifetime Lifetime>
+class PhysHandoffSpan {
+ public:
+  PhysHandoffSpan() = default;
+  PhysHandoffSpan(const PhysHandoffSpan&) = default;
+
+  PhysHandoffSpan(PhysHandoffPtr<T, Encoding, Lifetime> ptr, size_t size)
+      : ptr_(ptr), size_(size) {}
+
+#ifdef _KERNEL
+  ktl::span<T> get() const { return {ptr_.get(), size_}; }
+
+  ktl::span<T> release() { return {ptr_.release(), size_}; }
+#endif
+
+ private:
+  friend class HandoffPrep;
+
+  PhysHandoffPtr<T, Encoding, Lifetime> ptr_;
+  size_t size_ = 0;
+};
+
+// PhysHandoffString is stored just the same as PhysHandoffSpan<const char>,
+// but its get() and release() methods yield ktl::string_view.
+template <PhysHandoffPtrEncoding Encoding, PhysHandoffPtrLifetime Lifetime>
+class PhysHandoffString : public PhysHandoffSpan<const char, Encoding, Lifetime> {
+ public:
+  using Base = PhysHandoffSpan<const char, Encoding, Lifetime>;
+
+  PhysHandoffString() = default;
+  PhysHandoffString(const PhysHandoffString&) = default;
+
+#ifdef _KERNEL
+  ktl::string_view get() const {
+    ktl::span str = Base::get();
+    return {str.data(), str.size()};
+  }
+
+  ktl::string_view release() {
+    ktl::span str = Base::release();
+    return {str.data(), str.size()};
+  }
+#endif
+};
+
 // Convenience aliases used in the PhysHandoff declaration.
 
 template <typename T>
 using PhysHandoffTemporaryPtr =
     PhysHandoffPtr<T, PhysHandoffPtrEncoding::PhysAddr, PhysHandoffPtrLifetime::Temporary>;
 
+template <typename T>
+using PhysHandoffTemporarySpan =
+    PhysHandoffSpan<T, PhysHandoffPtrEncoding::PhysAddr, PhysHandoffPtrLifetime::Temporary>;
+
+using PhysHandoffTemporaryString =
+    PhysHandoffString<PhysHandoffPtrEncoding::PhysAddr, PhysHandoffPtrLifetime::Temporary>;
+
 // TODO(fxbug.dev/84107): permanent handoff pointers are not yet available
 // template <typename T>
 // using PhysHandoffPermanentPtr =
 //     PhysHandoffPtr<T, PhysHandoffPtrEncoding::KernelVirtualPtr,
 //     PhysHandoffPtrLifetime::Permanent>;
+//
+// template <typename T>
+// using PhysHandoffPermanentSpan =
+//     PhysHandoffSpan<T, PhysHandoffPtrEncoding::KernelVirtualPtr,
+//     PhysHandoffPtrLifetime::Permanent>;
+//
+// using PhysHandoffPermanentString =
+//    PhysHandoffString<PhysHandoffPtrEncoding::KernelVirtualPtr,
+//    PhysHandoffPtrLifetime::Permanent>;
 
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_HANDOFF_PTR_H_

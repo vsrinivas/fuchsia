@@ -14,6 +14,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <ktl/byte.h>
+#include <ktl/initializer_list.h>
 #include <ktl/move.h>
 #include <ktl/span.h>
 #include <phys/handoff-ptr.h>
@@ -46,13 +47,37 @@ class HandoffPrep {
     return ptr;
   }
 
+  // Similar but for new T[n] using spans instead of pointers.
+  template <typename T>
+  ktl::span<T> New(PhysHandoffTemporarySpan<const T>& handoff_span, fbl::AllocChecker& ac,
+                   size_t n) {
+    T* ptr = new (allocator(), ac) T[n];
+    if (ptr) {
+      void* generic_ptr = static_cast<void*>(ptr);
+      handoff_span.ptr_.ptr_ = reinterpret_cast<uintptr_t>(generic_ptr);
+      handoff_span.size_ = n;
+      return {ptr, n};
+    }
+    return {};
+  }
+
   // Summarizes the provided data ZBI's miscellaneous simple items for the
   // kernel, filling in corresponding handoff()->item fields.
   void SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi);
 
+  // Add physboot's own instrumentation data to the handoff.  After this, the
+  // live instrumented physboot code is updating the handoff data directly up
+  // through the very last compiled basic block that jumps into the kernel.
+  void SetInstrumentation();
+
  private:
   using AllocateFunction = trivial_allocator::SingleHeapAllocator;
   using Allocator = trivial_allocator::BasicLeakyAllocator<AllocateFunction>;
+
+  struct Debugdata {
+    ktl::string_view announce, sink_name, vmo_name;
+    size_t size_bytes = 0;
+  };
 
   // TODO(fxbug.dev/84107): Later this will just return
   // gPhysNew<memalloc::Type::kPhysHandoff>.
@@ -61,6 +86,8 @@ class HandoffPrep {
   // The arch-specific protocol for a given item.
   // Defined in //zircon/kernel/arch/$cpu/phys/arch-handoff-prep-zbi.cc.
   void ArchSummarizeMiscZbiItem(const zbi_header_t& header, ktl::span<const ktl::byte> payload);
+
+  void SetSymbolizerLog(ktl::initializer_list<Debugdata> dumps);
 
   Allocator allocator_;
   PhysHandoff* handoff_ = nullptr;

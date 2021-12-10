@@ -30,11 +30,16 @@ if (is_kernel) {
       "kernel-mapped-vmo.h",
       "private.h",
     ]
-    sources = [ "kernel-mapped-vmo.cc" ]
+    sources = [
+      "kernel-mapped-vmo.cc",
+      "phys.cc",
+    ]
     public_deps = [ "//zircon/kernel/vm:headers" ]
     deps = [
+      "//src/lib/llvm-profdata",
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/object",
+      "//zircon/kernel/phys:handoff",
     ]
   }
 

@@ -22,10 +22,12 @@ class InstrumentationData {
 
  private:
   enum Vmo : uint32_t {
-    kLlvmProfileVmo,
+    kSymbolizerVmo,
+    kPhysSymbolizerVmo,
+    kPhysLlvmProfdataVmo,
+    kLlvmProfdataVmo,
     kSancovVmo,
     kSancovCountsVmo,
-    kSymbolizer,  // Must be last.
     kVmoCount,
   };
 };

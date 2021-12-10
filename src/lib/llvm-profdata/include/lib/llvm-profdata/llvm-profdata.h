@@ -87,6 +87,9 @@ class LlvmProfdata {
   // protocol.
   static constexpr std::string_view kDataSinkName = "llvm-profile";
 
+  // This is a human-readable title used in log messages about the dump.
+  static constexpr std::string_view kAnnounce = "LLVM Profile";
+
  private:
   cpp20::span<std::byte> DoFixedData(cpp20::span<std::byte> data, bool match);
 

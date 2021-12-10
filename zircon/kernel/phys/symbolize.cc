@@ -116,6 +116,12 @@ void Symbolize::Printf(const char* fmt, ...) {
 
 ktl::string_view Symbolize::BuildIdString() { return BuildId::GetInstance().Print(); }
 
+ktl::span<const ktl::byte> Symbolize::BuildId() const {
+  const auto& id = BuildId::GetInstance();
+  return {reinterpret_cast<const ktl::byte*>(id.begin()),
+          reinterpret_cast<const ktl::byte*>(id.end())};
+}
+
 void Symbolize::PrintModule() {
   Printf("%s: {{{module:0:%s:elf:%V}}}\n", kProgramName_, kProgramName_,
          BuildId::GetInstance().Print());
@@ -147,9 +153,10 @@ void Symbolize::BackTraceFrame(unsigned int n, uintptr_t pc, bool interrupt) {
   Printf("%s: {{{bt:%u:%#zx:%s}}}\n", kProgramName_, n, pc, kind);
 }
 
-void Symbolize::DumpFile(ktl::string_view type, ktl::string_view name) {
+void Symbolize::DumpFile(ktl::string_view type, ktl::string_view name, ktl::string_view desc,
+                         size_t size_bytes) {
   Context();
-  Printf("%s: {{{dumpfile:%V:%V}}}\n", kProgramName_, type, name);
+  Printf("%s: %V: {{{dumpfile:%V:%V}}} %zu bytes\n", kProgramName_, desc, type, name, size_bytes);
 }
 
 void Symbolize::PrintBacktraces(const FramePointer& frame_pointers,

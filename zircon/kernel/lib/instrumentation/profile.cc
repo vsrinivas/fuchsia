@@ -29,7 +29,7 @@ KernelMappedVmo gProfdataCounters;
 
 }  // namespace
 
-InstrumentationDataVmo LlvmProfileGetVmo() {
+InstrumentationDataVmo LlvmProfdataVmo() {
   LlvmProfdata profdata;
   profdata.Init(ElfBuildId());
   if (profdata.size_bytes() == 0) {
@@ -82,8 +82,8 @@ InstrumentationDataVmo LlvmProfileGetVmo() {
   LlvmProfdata::UseCounters(counters);
 
   return {
-      .announce = "LLVM Profile",
-      .sink_name = "llvm-profdata",
+      .announce = LlvmProfdata::kAnnounce,
+      .sink_name = LlvmProfdata::kDataSinkName,
       .handle = gProfdataCounters.Publish(kVmoName, profdata.size_bytes()),
   };
 }
