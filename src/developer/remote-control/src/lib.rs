@@ -518,7 +518,7 @@ mod tests {
                                             fnet_interfaces::Properties {
                                                 id: Some(1),
                                                 addresses: Some(
-                                                    std::array::IntoIter::new([
+                                                    IntoIterator::into_iter([
                                                         fnet::Subnet {
                                                             addr: fnet::IpAddress::Ipv4(
                                                                 fnet::Ipv4Address {

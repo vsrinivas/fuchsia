@@ -1740,7 +1740,7 @@ pub mod tests {
         server: &Server<DS>,
     ) -> Message {
         let mut msg = new_server_message(message_type, client_message, server);
-        msg.options.extend(std::array::IntoIter::new([
+        msg.options.extend(IntoIterator::into_iter([
             DhcpOption::IpAddressLeaseTime(100),
             DhcpOption::RenewalTimeValue(50),
             DhcpOption::RebindingTimeValue(75),
@@ -3114,8 +3114,7 @@ pub mod tests {
         let () = time_source.move_forward(Duration::from_secs(1));
         let () = server.release_expired_leases().expect("failed to release expired leases");
 
-        let client_ips: BTreeSet<_> =
-            std::array::IntoIter::new([client_1_ip, client_2_ip, client_3_ip]).collect();
+        let client_ips: BTreeSet<_> = [client_1_ip, client_2_ip, client_3_ip].into();
         matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_1_ip);
         matches::assert_matches!(server.records.get(&client_2_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_2_ip);
         matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_3_ip);
@@ -3180,7 +3179,7 @@ pub mod tests {
         matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_3_ip);
         assert_eq!(
             server.pool.available().collect::<HashSet<_>>(),
-            std::array::IntoIter::new([client_1_ip, client_2_ip, client_3_ip]).collect(),
+            [client_1_ip, client_2_ip, client_3_ip].into(),
         );
         assert!(server.pool.allocated.is_empty(), "{:?}", server.pool.allocated);
         // Delete actions occur in non-deterministic (HashMap iteration) order, so we must not
@@ -3246,8 +3245,7 @@ pub mod tests {
         let () = time_source.move_forward(Duration::from_secs(1));
         let () = server.release_expired_leases().expect("failed to release expired leases");
 
-        let client_ips: BTreeSet<_> =
-            std::array::IntoIter::new([client_1_ip, client_3_ip]).collect();
+        let client_ips: BTreeSet<_> = [client_1_ip, client_3_ip].into();
         matches::assert_matches!(server.records.get(&client_1_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_1_ip);
         matches::assert_matches!(server.records.get(&client_2_id), Some(LeaseRecord {current: None, previous: Some(ip), ..}) if *ip == client_2_ip);
         matches::assert_matches!(server.records.get(&client_3_id), Some(LeaseRecord {current: Some(ip), previous: None, ..}) if *ip == client_3_ip);
@@ -3870,7 +3868,7 @@ pub mod tests {
             .allocate_addr(client)
             .unwrap_or_else(|err| panic!("allocate_addr({}) failed: {:?}", client, err));
         let client_id = ClientIdentifier::from(random_mac_generator());
-        server.records = std::array::IntoIter::new([(
+        server.records = [(
             client_id.clone(),
             LeaseRecord {
                 current: Some(client),
@@ -3879,8 +3877,8 @@ pub mod tests {
                 lease_start_epoch_seconds: 0,
                 lease_length_seconds: 42,
             },
-        )])
-        .collect();
+        )]
+        .into();
         let () = server.dispatch_clear_leases().expect("dispatch_clear_leases() failed");
         let empty_map = HashMap::new();
         assert_eq!(empty_map, server.records);

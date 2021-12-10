@@ -2427,7 +2427,7 @@ mod tests {
     #[test]
     fn send_information_request_and_receive_reply() {
         // Try to start information request with different list of requested options.
-        for options in std::array::IntoIter::new([
+        for options in IntoIterator::into_iter([
             Vec::new(),
             vec![v6::OptionCode::DnsServers],
             vec![v6::OptionCode::DnsServers, v6::OptionCode::DomainList],
@@ -4067,7 +4067,7 @@ mod tests {
         assert!(client.handle_message_receive(msg).is_empty());
 
         // Messages with unsupported/unexpected types are discarded.
-        for msg_type in std::array::IntoIter::new([
+        for msg_type in IntoIterator::into_iter([
             v6::MessageType::Solicit,
             v6::MessageType::Advertise,
             v6::MessageType::Request,
