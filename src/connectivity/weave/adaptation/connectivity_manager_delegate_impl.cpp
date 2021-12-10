@@ -317,13 +317,18 @@ void ConnectivityManagerDelegateImpl::OnInterfaceEvent(fuchsia::net::interfaces:
           [](intptr_t) { Warm::WiFiInterfaceStateChange(Warm::kInterfaceStateUp); }, 0);
     }
 
+    // The thread interface ID is recorded, but WARM is explicitly not signaled.
+    // This is deferred to the ThreadStackManager, which notifies WARM when the
+    // fuchsia.lowpan.device FIDL service reports that a new device was added.
+    // This distinction is required as LoWPAN may create a network device and
+    // trigger this interface update before it registers the LoWPAN device for
+    // it's clients, resulting in an inconsistent state where WARM believes the
+    // interface is up, but LoWPAN claims it is unaware of the device.
     if (thread_interface_id_ == 0 && properties.has_name() &&
         properties.name() == ThreadStackMgrImpl().GetInterfaceName()) {
       thread_interface_id_ = properties.id();
       FX_LOGS(INFO) << "Identifying interface \"" << properties.name()
                     << "\" as the Thread interface.";
-      PlatformMgr().ScheduleWork(
-          [](intptr_t) { Warm::ThreadInterfaceStateChange(Warm::kInterfaceStateUp); }, 0);
     }
   } else if (event.is_removed()) {
     routable_v4_interfaces.erase(event.removed());
@@ -340,11 +345,9 @@ void ConnectivityManagerDelegateImpl::OnInterfaceEvent(fuchsia::net::interfaces:
           },
           reinterpret_cast<intptr_t>(this));
     } else if (event.removed() == thread_interface_id_) {
-      FX_LOGS(INFO) << "Thread iface removed, informing WARM of Thread down.";
       PlatformMgr().ScheduleWork(
           [](intptr_t context) {
             auto self = reinterpret_cast<ConnectivityManagerDelegateImpl*>(context);
-            Warm::ThreadInterfaceStateChange(Warm::kInterfaceStateDown);
             self->thread_interface_id_ = 0;
           },
           reinterpret_cast<intptr_t>(this));
@@ -374,7 +377,8 @@ ThreadMode ConnectivityManagerDelegateImpl::GetThreadMode() {
     return kThreadMode_NotSupported;
   }
 
-  return ((ThreadStackMgrImpl()._IsThreadEnabled()) ? (kThreadMode_Enabled) : (kThreadMode_Disabled));
+  return ((ThreadStackMgrImpl()._IsThreadEnabled()) ? (kThreadMode_Enabled)
+                                                    : (kThreadMode_Disabled));
 }
 
 }  // namespace DeviceLayer
