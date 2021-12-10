@@ -65,7 +65,6 @@ dart_library("client") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input3",
     "//third_party/dart-pkg/pub/archive",
-    "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/image",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/meta",
@@ -100,6 +99,7 @@ dart_test("sl4f_client_tests") {
     "update_test.dart",
     "virtual_camera_test.dart",
     "webdriver_from_existing_chromedriver_test.dart",
+    "webdriver_single_test.dart",
     "webdriver_test.dart",
   ]
 

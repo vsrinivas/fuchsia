@@ -5,6 +5,8 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
+import 'dart:io';
+
 import 'package:mockito/mockito.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
@@ -21,6 +23,35 @@ class MockWebDriverHelper extends Mock implements WebDriverHelper {}
 class MockWebDriver extends Mock implements WebDriver {}
 
 class MockWindow extends Mock implements Window {}
+
+class MockTcpProxyController extends Mock implements TcpProxyController {}
+
+class MockHttpClient extends Mock implements HttpClient {}
+
+class MockHttpClientRequest extends Mock implements HttpClientRequest {
+  final bool _success;
+
+  MockHttpClientRequest({bool success})
+      : headers = MockHttpHeaders(),
+        _success = success ?? true;
+
+  @override
+  final HttpHeaders headers;
+
+  @override
+  Future<HttpClientResponse> close() async {
+    if (!_success) {
+      throw MockHttpException();
+    }
+    return MockHttpClientResponse();
+  }
+}
+
+class MockHttpClientResponse extends Mock implements HttpClientResponse {}
+
+class MockHttpHeaders extends Mock implements HttpHeaders {}
+
+class MockHttpException implements Exception {}
 
 const String testDutAddress = '192.168.1.1';
 
@@ -102,7 +133,8 @@ void main(List<String> args) {
 
   test('webDriversForHost no contexts', () async {
     mockAvailableWebDrivers(webDriverHelper, sl4f, portForwarder, {});
-    var webDrivers = await webDriverConnector.webDriversForHost('www.test.com');
+    final webDrivers =
+        await webDriverConnector.webDriversForHost('www.test.com');
     expect(webDrivers.length, 0);
   });
 
@@ -125,6 +157,59 @@ void main(List<String> args) {
           WebDriverConnector('/path/chromedriver', mockSl4f);
       expect(webdriverConnector.portForwarder, isA<SshPortForwarder>());
     }
+  });
+
+  test('TcpPortForwarder with proxyPort', () {
+    when(sl4f.proxy).thenReturn(MockTcpProxyController());
+
+    final forwarder = TcpPortForwarder(sl4f);
+    expect(forwarder.proxyControl, sl4f.proxy);
+
+    final forwarderWithProxyPort = TcpPortForwarder(sl4f, proxyPort: 1234);
+    expect(forwarderWithProxyPort.proxyControl.proxyPorts, [1234]);
+  });
+
+  test('TcpPortForwarder with hostPort and targetHost', () async {
+    final proxyController = MockTcpProxyController();
+    when(proxyController.openProxy(8000)).thenAnswer((_) => Future.value(8001));
+    when(sl4f.proxy).thenReturn(proxyController);
+    when(sl4f.target).thenReturn('127.0.0.1');
+
+    var forwarder = TcpPortForwarder(sl4f);
+    var hostAndPort = await forwarder.forwardPort(8000);
+    expect(hostAndPort.host, '127.0.0.1');
+    expect(hostAndPort.port, 8001);
+
+    forwarder = TcpPortForwarder(sl4f, hostPort: 1234);
+    hostAndPort = await forwarder.forwardPort(8000);
+    expect(hostAndPort.host, '127.0.0.1');
+    expect(hostAndPort.port, 1234);
+
+    forwarder = TcpPortForwarder(sl4f, hostPort: 1234, targetHost: 'localhost');
+    hostAndPort = await forwarder.forwardPort(8000);
+    expect(hostAndPort.host, 'localhost');
+    expect(hostAndPort.port, 1234);
+  });
+
+  test('WebDriverHelper.createAsyncDriver uses custom HttpClient', () async {
+    final mockClient = MockHttpClient();
+    // Make sure the debugger is reachable so [createDriver] will be called.
+    when(mockClient.getUrl(any))
+        .thenAnswer((_) => Future.value(MockHttpClientRequest()));
+    // This is from within [createDriver]. It's tricky to mock the happy path
+    // completely, but we only need to verify this client is used.
+    when(mockClient.postUrl(any))
+        .thenAnswer((_) => Future.value(MockHttpClientRequest(success: false)));
+
+    final webDriverHelper = WebDriverHelper(httpClient: mockClient);
+    await expectLater(
+        webDriverHelper.createAsyncDriver(HostAndPort('127.0.0.1', 8000),
+            Uri.parse('http://127.0.0.1:1234/wd/hub/')),
+        throwsA(isA<MockHttpException>()));
+    verifyInOrder([
+      mockClient.getUrl(Uri.parse('http://127.0.0.1:8000/')),
+      mockClient.postUrl(Uri.parse('http://127.0.0.1:1234/wd/hub/session')),
+    ]);
   });
 }
 
