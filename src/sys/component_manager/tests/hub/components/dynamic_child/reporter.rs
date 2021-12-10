@@ -130,7 +130,5 @@ async fn main() {
         .expect_match::<Purged>(&mut event_stream)
         .await;
 
-    expect_dir_listing("/hub/children", vec![]).await;
-
     event.resume().await.unwrap();
 }
