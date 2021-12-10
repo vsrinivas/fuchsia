@@ -260,6 +260,9 @@ log "Discovery..."
 
 # State is used to prevent too much output
 state="discover"
+
+# Keep track if we reported any discovery failures
+reported_discovery_failed=0
 while true; do
   if [[ -n "${background_pid}" ]]; then
     if ! kill -0 "${background_pid}" 2> /dev/null; then
@@ -275,14 +278,30 @@ while true; do
     clear-target-addr
     with-pinned-target fx-command-run shell exit 2>/dev/null
     ping_result=$?
+
+    if [[ "$ping_result" == 0 ]]; then
+      log "Device up"
+      reported_discovery_failed=0
+      state="config"
+    elif [[ "$reported_discovery_failed" == 0 ]]; then
+      reported_discovery_failed=1
+
+      # Log if we don't know the device's address yet, or if we don't have a device configured.
+      device_addr="$(get-fuchsia-device-addr 2>/dev/null)"
+      if [[ -z "$device_addr" ]]; then
+        device_name="$(get-device-name 2>/dev/null)"
+        if [[ -n "${device_name}" ]]; then
+          log "Trying to resolve '${device_name}'..."
+        else
+          log "Either no device or multiple devices are discoverable. Run 'fx list-devices' and if necessary run 'fx set-device'."
+        fi
+      else
+        log "Trying to connect to ${device_addr}..."
+      fi
+    fi
   else
     with-pinned-target fx-command-run shell -O check > /dev/null 2>&1
     ping_result=$?
-  fi
-
-  if [[ "$state" == "discover" && "$ping_result" == 0 ]]; then
-    log "Device up"
-    state="config"
   fi
 
   if [[ "$state" == "config" ]]; then
