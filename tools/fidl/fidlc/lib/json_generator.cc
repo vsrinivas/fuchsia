@@ -982,7 +982,12 @@ namespace {
 // TODO(fxbug.dev/88344): Also add support for non-composed named payload definitions, like:
 //  Foo(external.Bar) -> (external.Baz);
 std::vector<const flat::Struct*> ExternalStructs(const flat::Library* library) {
-  std::set<const flat::Struct*> external_structs;
+  // Use the comparator below to ensure deterministic output when this set is converted into a
+  // vector at the end of this function.
+  auto ordering = [](const flat::Struct* a, const flat::Struct* b) {
+    return (a == nullptr ? "" : a->name.decl_name()) < (b == nullptr ? "" : b->name.decl_name());
+  };
+  std::set<const flat::Struct*, decltype(ordering)> external_structs(ordering);
 
   for (const auto& protocol : library->protocol_declarations_) {
     for (const auto method_with_info : protocol->all_methods) {
