@@ -95,14 +95,14 @@ void main(List args) async {
       }
 
       // Get the data directory for the account.
-      log.info('Getting data directory for account: ${accountIds.first}');
+      log.info('Getting data directory for account');
       final directory = ChannelPair();
       await account.getDataDirectory(InterfaceRequest(directory.second));
 
-      // Add account directory to outgoing /svc and serve it.
+      // Add account directory to outgoing /out and serve it.
       ComponentContext.create().outgoing
-        ..addPublicDirectory(
-            kAccountDirectory, InterfaceRequest(directory.first))
+        ..addRemoteDirectory(
+            kAccountDirectory, directory.first)
         ..serveFromStartupInfo();
     }
     // ignore: avoid_catches_without_on_clauses
@@ -146,7 +146,11 @@ extension _ViewRefDuplicator on ViewRef {
 }
 
 extension _ServeDirectory on Outgoing {
-  int addPublicDirectory(String name, InterfaceRequest<Node> request) {
-    return publicDir().addNode(name, PseudoDir()..serve(request));
+  int addRemoteDirectory(String name, Channel? channel) {
+    if (channel == null) {
+      log.severe('Attempting to serve remote directory but got invalid channel');
+      return ZX.ERR_INVALID_ARGS;
+    }
+    return rootDir().addNode(name, RemoteDir(channel));
   }
 }
