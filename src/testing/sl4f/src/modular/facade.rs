@@ -1,35 +1,39 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::common_utils::{buffer, fidl::connect_in_paths};
-use crate::modular::types::{
-    BasemgrResult, KillBasemgrResult, LaunchModRequest, RestartSessionResult, StartBasemgrRequest,
-};
-use anyhow::{Context, Error};
-use fidl::endpoints::ProtocolMarker;
-use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_io as fio;
-use fidl_fuchsia_mem as fmem;
-use fidl_fuchsia_modular::{
-    AddMod, Intent, PuppetMasterMarker, PuppetMasterProxy, StoryCommand, StoryPuppetMasterMarker,
-    SurfaceArrangement, SurfaceDependency, SurfaceRelation,
-};
-use fidl_fuchsia_modular_internal as fmodular_internal;
-use fidl_fuchsia_modular_session as fmodular_session;
-use fidl_fuchsia_session as fsession;
-use fidl_fuchsia_sys as fsys;
-use fuchsia_async as fasync;
-use fuchsia_component::{client, fuchsia_single_component_package_url};
-use fuchsia_syslog::macros::*;
-use fuchsia_zircon as zx;
-use fuchsia_zircon::HandleBased;
-use futures::future;
-use futures::{StreamExt, TryFutureExt, TryStreamExt};
-use glob::glob;
-use serde_json::{from_value, Value};
-use vfs::{
-    directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::vmo::read_only_const,
-    pseudo_directory,
+use {
+    crate::common_utils::{buffer, fidl::connect_in_paths},
+    crate::modular::types::{
+        BasemgrResult, KillBasemgrResult, LaunchModRequest, RestartSessionResult,
+        StartBasemgrRequest,
+    },
+    anyhow::{format_err, Context, Error},
+    fidl::endpoints::{ProtocolMarker, ServerEnd},
+    fidl_fuchsia_io as fio, fidl_fuchsia_mem as fmem,
+    fidl_fuchsia_modular::{
+        AddMod, Intent, PuppetMasterMarker, PuppetMasterProxy, StoryCommand,
+        StoryPuppetMasterMarker, SurfaceArrangement, SurfaceDependency, SurfaceRelation,
+    },
+    fidl_fuchsia_modular_internal as fmodular_internal,
+    fidl_fuchsia_modular_session as fmodular_session, fidl_fuchsia_session as fsession,
+    fidl_fuchsia_sys as fsys, fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
+    fuchsia_component::{
+        client, client::connect_to_protocol, client::connect_to_protocol_at_path,
+        fuchsia_single_component_package_url,
+    },
+    fuchsia_syslog::macros::*,
+    fuchsia_zircon as zx,
+    fuchsia_zircon::HandleBased,
+    futures::future,
+    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    glob::glob,
+    lazy_static::lazy_static,
+    serde_json::{from_value, Value},
+    std::path::PathBuf,
+    vfs::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+        file::vmo::read_only_const, pseudo_directory,
+    },
 };
 
 /// Legacy component URL for basemgr.
@@ -41,18 +45,33 @@ const SESSIONCTL_GLOB: &str = "/hub/c/sessionmgr.cmx/*/out/debug/sessionctl";
 /// Glob pattern for the path to basemgr's debug service when basemgr is running as a legacy component.
 const BASEMGR_DEBUG_LEGACY_GLOB: &str = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
 
-/// Glob pattern for the path to basemgr's debug service when basemgr is running as a v2 session.
-const BASEMGR_DEBUG_SESSION_GLOB: &str = "/hub-v2/children/core/children/session-manager/children/\
-    session:session/exec/expose/fuchsia.modular.internal.BasemgrDebug";
-
-/// Glob pattern for the path to the `fuchsia.modular.session.Launcher service
-/// exposed by basemgr when running as a v2 session.
-const MODULAR_SESSION_LAUNCHER_GLOB: &str =
-    "/hub-v2/children/core/children/session-manager/children/\
-    session:session/exec/expose/fuchsia.modular.session.Launcher";
-
 // Maximum number of story commands to send to a single Enqueue call.
 const STORY_COMMAND_CHUNK_SIZE: usize = 32;
+
+lazy_static! {
+    /// Path to the session component hub directory, used when basemgr is running as a v2 session.
+    static ref SESSION_HUB_PATH: PathBuf =
+        PathBuf::from("/hub-v2/children/core/children/session-manager/children/session:session");
+
+    /// Path to the session Launcher protocol exposed by the session component.
+    ///
+    /// If this path exists, the session component exists, but may not be running.
+    static ref MODULAR_SESSION_LAUNCHER_PATH: PathBuf = SESSION_HUB_PATH
+        .join("resolved/expose")
+        .join(fmodular_session::LauncherMarker::NAME);
+
+    /// Path to basemgr's debug service exposed by a running session component.
+    ///
+    /// This is used to check if the session is both running and exposes the BasemgrDebug protocol.
+    static ref BASEMGR_DEBUG_SESSION_EXEC_PATH: PathBuf = SESSION_HUB_PATH
+        .join("exec/expose")
+        .join(fmodular_internal::BasemgrDebugMarker::NAME);
+
+    /// Path to the LifecycleController protocol used to resolve the session component.
+    static ref SESSION_LIFECYCLE_CONTROLLER_PATH: PathBuf = SESSION_HUB_PATH
+        .join("debug")
+        .join(fsys2::LifecycleControllerMarker::NAME);
+}
 
 enum BasemgrRuntimeState {
     // basemgr is running as a legacy component.
@@ -70,7 +89,7 @@ fn is_sessionmgr_running() -> bool {
 
 /// Returns the state of the currently running basemgr instance, or None if not running.
 fn get_basemgr_runtime_state() -> Option<BasemgrRuntimeState> {
-    if glob(BASEMGR_DEBUG_SESSION_GLOB).unwrap().find_map(Result::ok).is_some() {
+    if BASEMGR_DEBUG_SESSION_EXEC_PATH.exists() {
         return Some(BasemgrRuntimeState::V2Session);
     }
     if glob(BASEMGR_DEBUG_LEGACY_GLOB).unwrap().find_map(Result::ok).is_some() {
@@ -79,23 +98,46 @@ fn get_basemgr_runtime_state() -> Option<BasemgrRuntimeState> {
     None
 }
 
-/// Returns a BasemgrDebugProxy served by the currently running basemgr.
-fn connect_to_basemgr_debug() -> Result<Option<fmodular_internal::BasemgrDebugProxy>, Error> {
+/// Returns a BasemgrDebugProxy served by the currently running basemgr (v1 or session),
+/// or an Error if no session is running or the session does not expose this protocol.
+fn connect_to_basemgr_debug() -> Result<fmodular_internal::BasemgrDebugProxy, Error> {
     connect_in_paths::<fmodular_internal::BasemgrDebugMarker>(&[
-        BASEMGR_DEBUG_SESSION_GLOB,
+        BASEMGR_DEBUG_SESSION_EXEC_PATH.to_str().unwrap(),
         BASEMGR_DEBUG_LEGACY_GLOB,
-    ])
+    ])?
+    .ok_or_else(|| format_err!("Unable to connect to BasemgrDebug protocol"))
 }
 
-/// Returns a `fuchsia.modular.session.Launcher` served by the currently running session.
-fn connect_to_modular_session_launcher() -> Result<Option<fmodular_session::LauncherProxy>, Error> {
-    connect_in_paths::<fmodular_session::LauncherMarker>(&[MODULAR_SESSION_LAUNCHER_GLOB])
+/// Returns a `fuchsia.modular.session.Launcher` served by the currently running v2 session.
+async fn connect_to_modular_session_launcher() -> Result<fmodular_session::LauncherProxy, Error> {
+    // Ensure the session component is resolved before connecting to protocols in the
+    // hub `resolved` directory; otherwise, they may not exist.
+    resolve_session_component().await?;
+
+    connect_to_protocol_at_path::<fmodular_session::LauncherMarker>(
+        MODULAR_SESSION_LAUNCHER_PATH.to_str().unwrap(),
+    )
 }
 
 /// Returns a PuppetMasterProxy served by the currently running sessionmgr.
 fn connect_to_puppet_master() -> Result<Option<PuppetMasterProxy>, Error> {
     let glob_path = format!("{}/{}", SESSIONCTL_GLOB, PuppetMasterMarker::NAME);
     connect_in_paths::<PuppetMasterMarker>(&[&glob_path])
+}
+
+/// Resolves the session component.
+///
+/// Returns an error if the session component does not exist or it failed to resolve.
+async fn resolve_session_component() -> Result<(), Error> {
+    let lifecycle_controller = connect_to_protocol_at_path::<fsys2::LifecycleControllerMarker>(
+        SESSION_LIFECYCLE_CONTROLLER_PATH.to_str().unwrap(),
+    )
+    .context("failed to connect to LifecycleController")?;
+
+    lifecycle_controller
+        .resolve(".")
+        .await?
+        .map_err(|err| format_err!("Failed to resolve session component: {:?}", err))
 }
 
 /// Facade providing access to session testing interfaces.
@@ -108,7 +150,7 @@ pub struct ModularFacade {
 impl ModularFacade {
     pub fn new() -> ModularFacade {
         let sys_launcher = client::launcher().expect("failed to connect to fuchsia.sys.Launcher");
-        let session_launcher = client::connect_to_protocol::<fsession::LauncherMarker>()
+        let session_launcher = connect_to_protocol::<fsession::LauncherMarker>()
             .expect("failed to connect to fuchsia.session.Launcher");
         ModularFacade { sys_launcher, session_launcher }
     }
@@ -125,21 +167,17 @@ impl ModularFacade {
         if !is_sessionmgr_running() {
             return Ok(RestartSessionResult::NoSessionToRestart);
         }
-        let basemgr_debug = connect_to_basemgr_debug()?
-            .ok_or_else(|| format_err!("Unable to connect to BasemgrDebug protocol"))?;
-        basemgr_debug.restart_session().await?;
+        connect_to_basemgr_debug()?.restart_session().await?;
         Ok(RestartSessionResult::Success)
     }
 
     /// Facade to kill basemgr from Sl4f
     pub async fn kill_basemgr(&self) -> Result<KillBasemgrResult, Error> {
-        match connect_to_basemgr_debug()? {
-            Some(basemgr_debug) => {
-                basemgr_debug.shutdown()?;
-                Ok(KillBasemgrResult::Success)
-            }
-            None => Ok(KillBasemgrResult::NoBasemgrToKill),
+        if get_basemgr_runtime_state().is_none() {
+            return Ok(KillBasemgrResult::NoBasemgrToKill);
         }
+        connect_to_basemgr_debug()?.shutdown()?;
+        Ok(KillBasemgrResult::Success)
     }
 
     /// Starts a Modular session, either as a v2 session or by launching basemgr
@@ -160,9 +198,7 @@ impl ModularFacade {
 
         // If basemgr is running, shut it down before starting a new one.
         if get_basemgr_runtime_state().is_some() {
-            connect_to_basemgr_debug()?
-                .ok_or_else(|| format_err!("Unable to connect to BasemgrDebug protocol"))?
-                .shutdown()?;
+            connect_to_basemgr_debug()?.shutdown()?;
         }
 
         if let Some(session_url) = req.session_url {
@@ -201,11 +237,7 @@ impl ModularFacade {
     async fn launch_sessionmgr(&self, config: &str) -> Result<BasemgrResult, Error> {
         let mut config_buf: fmem::Buffer = buffer::try_from_bytes(config.as_bytes())?;
 
-        connect_to_modular_session_launcher()?
-            .ok_or_else(|| {
-                format_err!("Unable to connect to fuchsia.modular.session.Launcher protocol")
-            })?
-            .launch_sessionmgr(&mut config_buf)?;
+        connect_to_modular_session_launcher().await?.launch_sessionmgr(&mut config_buf)?;
 
         Ok(BasemgrResult::Success)
     }
@@ -484,7 +516,6 @@ mod tests {
         let ns = Arc::new(Mutex::new(NamespaceBinder::new(scope)));
 
         let (called_modular_launch_tx, mut called_modular_launch_rx) = mpsc::channel(0);
-
         let modular_session_launcher =
             vfs::service::host(move |mut stream: fmodular_session::LauncherRequestStream| {
                 let mut called_modular_launch_tx = called_modular_launch_tx.clone();
@@ -516,9 +547,30 @@ mod tests {
                 }
             });
 
+        let (called_resolve_tx, mut called_resolve_rx) = mpsc::channel(0);
+        let lifecycle_controller =
+            vfs::service::host(move |mut stream: fsys2::LifecycleControllerRequestStream| {
+                let mut called_resolve_tx = called_resolve_tx.clone();
+                async move {
+                    while let Ok(Some(request)) = stream.try_next().await {
+                        match request {
+                            fsys2::LifecycleControllerRequest::Resolve { moniker, responder } => {
+                                assert_eq!(moniker, ".");
+                                called_resolve_tx.try_send(()).expect("could not send on channel");
+                                let _ = responder.send(&mut Ok(()));
+                            }
+                            _ => {
+                                panic!("LifecycleController expects only Resolve calls");
+                            }
+                        }
+                    }
+                }
+            });
+
         let session_launcher = spawn_stream_handler(move |launcher_request| {
             let ns = ns.clone();
             let modular_session_launcher = modular_session_launcher.clone();
+            let lifecycle_controller = lifecycle_controller.clone();
             async move {
                 match launcher_request {
                     fsession::LauncherRequest::Launch { configuration, responder } => {
@@ -526,12 +578,27 @@ mod tests {
                         let session_url = configuration.session_url.unwrap();
                         assert!(session_url == TEST_SESSION_URL.to_string());
 
+                        // Serve the `fuchsia.sys2.LifecycleController` protocol that `start_basemgr`
+                        // uses to ensure the component is resolved before connecting to its
+                        // exposed `fuchsia.modular.session.Launcher` protocol.
+                        // This is served here to simulate the session starting.
+                        ns.lock()
+                            .unwrap()
+                            .bind_at_path(
+                                SESSION_LIFECYCLE_CONTROLLER_PATH.to_str().unwrap(),
+                                lifecycle_controller,
+                            )
+                            .expect("failed to bind LifecycleController");
+
                         // Serve the `fuchsia.modular.session.Launcher` protocol that `start_basemgr`
                         // should use to launch sessionmgr, instead of launching basemgr as a legacy component.
                         // This is served here to simulate the session starting.
                         ns.lock()
                             .unwrap()
-                            .bind_at_path(MODULAR_SESSION_LAUNCHER_GLOB, modular_session_launcher)
+                            .bind_at_path(
+                                MODULAR_SESSION_LAUNCHER_PATH.to_str().unwrap(),
+                                modular_session_launcher,
+                            )
                             .expect("failed to bind modular session Launcher");
 
                         SESSION_LAUNCH_CALL_COUNT.inc();
@@ -548,6 +615,9 @@ mod tests {
             "session_url": TEST_SESSION_URL
         });
         assert_matches!(facade.start_basemgr(start_basemgr_args).await, Ok(BasemgrResult::Success));
+
+        // The session component should have been resolved.
+        assert_eq!(called_resolve_rx.next().await, Some(()));
 
         // The session should have been launched.
         assert_eq!(SESSION_LAUNCH_CALL_COUNT.get(), 1);
@@ -597,7 +667,7 @@ mod tests {
                 panic!("fuchsia.modular.session.Launch should not be called because no config is provided");
             },
         );
-        ns.bind_at_path(MODULAR_SESSION_LAUNCHER_GLOB, modular_session_launcher)?;
+        ns.bind_at_path(MODULAR_SESSION_LAUNCHER_PATH.to_str().unwrap(), modular_session_launcher)?;
 
         let start_basemgr_args = json!({
             "session_url": TEST_SESSION_URL,
@@ -674,8 +744,8 @@ mod tests {
                 panic!("fuchsia.modular.session.Launch should not be called because no config is provided");
             },
         );
-        ns.bind_at_path(BASEMGR_DEBUG_SESSION_GLOB, basemgr_debug)?;
-        ns.bind_at_path(MODULAR_SESSION_LAUNCHER_GLOB, modular_session_launcher)?;
+        ns.bind_at_path(BASEMGR_DEBUG_SESSION_EXEC_PATH.to_str().unwrap(), basemgr_debug)?;
+        ns.bind_at_path(MODULAR_SESSION_LAUNCHER_PATH.to_str().unwrap(), modular_session_launcher)?;
 
         let start_basemgr_args = json!({
             "session_url": TEST_SESSION_URL,
@@ -748,7 +818,7 @@ mod tests {
         // Serve the `fuchsia.modular.internal.BasemgrDebug` protocol in the hub path
         // for the session. This simulates a running session.
         ns.bind_at_path(
-            BASEMGR_DEBUG_SESSION_GLOB,
+            BASEMGR_DEBUG_SESSION_EXEC_PATH.to_str().unwrap(),
             vfs::service::host(|_stream: fmodular_internal::BasemgrDebugRequestStream| async {
                 panic!("ModularFacade.is_basemgr_running should not connect to BasemgrDebug");
             }),
