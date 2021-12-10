@@ -8,8 +8,8 @@ use {
     ffx_component::connect_to_lifecycle_controller,
     ffx_component_destroy_args::DestroyComponentCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_developer_remotecontrol as rc,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
 };
 
@@ -48,7 +48,7 @@ async fn destroy_impl<W: std::io::Write>(
     writeln!(writer, "Destroying component instance...")?;
 
     let mut child =
-        fsys::ChildRef { name: name.to_string(), collection: Some(collection.to_string()) };
+        fdecl::ChildRef { name: name.to_string(), collection: Some(collection.to_string()) };
 
     // LifecycleController accepts PartialRelativeMonikers only
     let parent_moniker = format!(".{}", parent.to_string_without_instances());

@@ -8,8 +8,8 @@ use {
     ffx_component::{connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
     ffx_component_run_args::RunComponentCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_developer_remotecontrol as rc,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
 };
 
@@ -45,13 +45,13 @@ async fn run_impl<W: std::io::Write>(
     writeln!(writer, "URL: {}", url)?;
     writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Creating component instance...")?;
-    let mut collection = fsys::CollectionRef { name: COLLECTION_NAME.to_string() };
-    let decl = fsys::ChildDecl {
+    let mut collection = fdecl::CollectionRef { name: COLLECTION_NAME.to_string() };
+    let decl = fdecl::Child {
         name: Some(name.clone()),
         url: Some(url.clone()),
-        startup: Some(fsys::StartupMode::Lazy),
+        startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
-        ..fsys::ChildDecl::EMPTY
+        ..fdecl::Child::EMPTY
     };
     let create_result = lifecycle_controller
         .create_child("./core", &mut collection, decl.clone(), fcomponent::CreateChildArgs::EMPTY)
@@ -63,7 +63,7 @@ async fn run_impl<W: std::io::Write>(
             if recreate {
                 // This component already exists, but the user has asked it to be recreated.
                 let mut child =
-                    fsys::ChildRef { name, collection: Some(COLLECTION_NAME.to_string()) };
+                    fdecl::ChildRef { name, collection: Some(COLLECTION_NAME.to_string()) };
 
                 writeln!(writer, "Component instance already exists. Destroying...")?;
                 let destroy_result =

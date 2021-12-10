@@ -8,8 +8,8 @@ use {
     ffx_component::{connect_to_lifecycle_controller, verify_fuchsia_pkg_cm_url},
     ffx_component_create_args::CreateComponentCommand,
     ffx_core::ffx_plugin,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_developer_remotecontrol as rc,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
 };
 
@@ -48,13 +48,13 @@ async fn create_impl<W: std::io::Write>(
     writeln!(writer, "Moniker: {}", moniker)?;
     writeln!(writer, "Creating component instance...")?;
 
-    let mut collection = fsys::CollectionRef { name: collection.to_string() };
-    let decl = fsys::ChildDecl {
+    let mut collection = fdecl::CollectionRef { name: collection.to_string() };
+    let decl = fdecl::Child {
         name: Some(name.to_string()),
         url: Some(url.clone()),
-        startup: Some(fsys::StartupMode::Lazy),
+        startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
-        ..fsys::ChildDecl::EMPTY
+        ..fdecl::Child::EMPTY
     };
     // LifecycleController accepts PartialRelativeMonikers only
     let parent_moniker = format!(".{}", parent.to_string_without_instances());

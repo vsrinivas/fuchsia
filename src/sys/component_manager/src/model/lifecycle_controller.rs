@@ -10,7 +10,6 @@ use {
         model::Model,
     },
     ::routing::error::ComponentInstanceError,
-    cm_util::convert::{child_decl_to_fdecl, child_ref_to_fdecl, collection_ref_to_fdecl},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_sys2 as fsys,
     futures::prelude::*,
@@ -167,14 +166,7 @@ impl LifecycleController {
                     args,
                     responder,
                 } => {
-                    let mut res = self
-                        .create_child(
-                            parent_moniker,
-                            collection_ref_to_fdecl(collection),
-                            child_decl_to_fdecl(decl),
-                            args,
-                        )
-                        .await;
+                    let mut res = self.create_child(parent_moniker, collection, decl, args).await;
                     let _ = responder.send(&mut res);
                 }
                 fsys::LifecycleControllerRequest::DestroyChild {
@@ -182,8 +174,7 @@ impl LifecycleController {
                     child,
                     responder,
                 } => {
-                    let mut res =
-                        self.destroy_child(parent_moniker, child_ref_to_fdecl(child)).await;
+                    let mut res = self.destroy_child(parent_moniker, child).await;
                     let _ = responder.send(&mut res);
                 }
             }
