@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fdio/namespace.h>
@@ -35,9 +36,9 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
   ZX_DEBUG_ASSERT(out_fs != nullptr);
   ZX_DEBUG_ASSERT(out_root != nullptr);
 
-  zx::channel client, server;
-  if (zx_status_t status = zx::channel::create(0, &client, &server); status != ZX_OK) {
-    return status;
+  auto fs_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (!fs_endpoints.is_ok()) {
+    return fs_endpoints.status_value();
   }
 
   std::unique_ptr<memfs::Vfs> vfs;
@@ -47,13 +48,14 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
   }
 
   std::unique_ptr<memfs_filesystem_t> fs = std::make_unique<memfs_filesystem_t>(std::move(vfs));
-  if (zx_status_t status = fs->vfs->ServeDirectory(std::move(root), std::move(server));
+  if (zx_status_t status =
+          fs->vfs->ServeDirectory(std::move(root), std::move(fs_endpoints->server));
       status != ZX_OK) {
     return status;
   }
 
   *out_fs = fs.release();
-  *out_root = client.release();
+  *out_root = fs_endpoints->client.TakeHandle().release();
   return ZX_OK;
 }
 
