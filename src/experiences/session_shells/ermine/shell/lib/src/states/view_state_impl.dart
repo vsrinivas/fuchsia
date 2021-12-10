@@ -131,7 +131,7 @@ class ViewStateImpl with Disposable implements ViewState {
     int retry = _kMaxRetries,
     Duration backOff = _kBackoffDuration,
   }) {
-    if (loaded && !visible) {
+    if (!viewConnection.useFlatland && (loaded && !visible)) {
       // Reset connected flag to retry setFocus on next viewStateChanged.
       _connected.value = false;
     } else {
