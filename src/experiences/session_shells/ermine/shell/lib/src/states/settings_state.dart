@@ -83,6 +83,7 @@ abstract class SettingsState implements TaskService {
   NetworkInformation get targetNetwork;
   List<NetworkInformation> get savedNetworks;
   TextEditingController get networkPasswordTextController;
+  String get currentNetwork;
 
   factory SettingsState.from({required ShortcutsService shortcutsService}) {
     return SettingsStateImpl(

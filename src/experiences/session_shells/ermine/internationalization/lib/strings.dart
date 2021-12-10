@@ -1099,6 +1099,11 @@ class Strings {
         desc: 'The prompt text to connected to selected network.',
         args: [network],
       );
+  static String get connected => Intl.message(
+        'Connected',
+        name: 'connected',
+        desc: 'The label for "Connected" text field.',
+      );
 
   /// Lookup message given it's name.
   static String? lookup(String name) {

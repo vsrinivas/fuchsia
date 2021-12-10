@@ -180,6 +180,11 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   final List<NetworkInformation> savedNetworks =
       ObservableList<NetworkInformation>();
 
+  @override
+  String get currentNetwork => _currentNetwork.value;
+  set currentNetwork(String value) => _currentNetwork.value = value;
+  final Observable<String> _currentNetwork = ''.asObservable();
+
   final List<String> _timezones;
 
   @override
@@ -317,6 +322,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
           ..clear()
           ..addAll(wifiService.savedNetworks)
           ..removeWhere((network) => network.name.isEmpty);
+        currentNetwork = wifiService.currentNetwork;
       });
     };
   }

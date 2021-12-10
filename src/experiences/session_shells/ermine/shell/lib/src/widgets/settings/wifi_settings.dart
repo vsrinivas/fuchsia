@@ -74,6 +74,9 @@ class WiFiSettings extends StatelessWidget {
                               onSelected: state.removeNetwork,
                               tooltip: Strings.forget,
                             ),
+                            subtitle: networkName == state.currentNetwork
+                                ? Text(Strings.connected)
+                                : null,
                           );
                         }),
                     Padding(
