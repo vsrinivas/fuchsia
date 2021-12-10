@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "payload-streamer.h"
+#include "src/bringup/bin/netsvc/payload-streamer.h"
 
 #include <lib/async/default.h>
 #include <lib/fidl-async/cpp/bind.h>
-
-#include "zircon/errors.h"
+#include <zircon/errors.h>
 
 namespace netsvc {
 

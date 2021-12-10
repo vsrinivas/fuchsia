@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "debuglog.h"
+#include "src/bringup/bin/netsvc/debuglog.h"
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <inttypes.h>
@@ -15,8 +15,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-#include "netsvc.h"
-#include "tftp.h"
+#include "src/bringup/bin/netsvc/netsvc.h"
+#include "src/bringup/bin/netsvc/tftp.h"
 
 #define MAX_LOG_LINE (ZX_LOG_RECORD_MAX + 32)
 

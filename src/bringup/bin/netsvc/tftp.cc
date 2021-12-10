@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "tftp.h"
+#include "src/bringup/bin/netsvc/tftp.h"
 
 #include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
@@ -13,9 +13,9 @@
 
 #include <tftp/tftp.h>
 
-#include "file-api.h"
-#include "inet6.h"
-#include "netsvc.h"
+#include "src/bringup/bin/netsvc/file-api.h"
+#include "src/bringup/bin/netsvc/inet6.h"
+#include "src/bringup/bin/netsvc/netsvc.h"
 
 #define SCRATCHSZ 2048
 

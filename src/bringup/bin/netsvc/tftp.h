@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_TFTP_H_
 #define SRC_BRINGUP_BIN_NETSVC_TFTP_H_
 
-#include "inet6.h"
+#include "src/bringup/bin/netsvc/inet6.h"
 
 #define TFTP_TIMEOUT_SECS 1
 

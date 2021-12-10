@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inet6.h"
+#include "src/bringup/bin/netsvc/inet6.h"
 
 #include <arpa/inet.h>
 #include <assert.h>
@@ -13,7 +13,7 @@
 #include <threads.h>
 #include <zircon/syscalls.h>
 
-#include "netifc-discover.h"
+#include "src/bringup/bin/netsvc/netifc-discover.h"
 
 #define REPORT_BAD_PACKETS 0
 

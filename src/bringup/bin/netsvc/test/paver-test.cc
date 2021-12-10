@@ -8,7 +8,7 @@
 #include <string>
 #include <string_view>
 
-#include "paver-test-common.h"
+#include "src/bringup/bin/netsvc/test/paver-test-common.h"
 
 namespace {
 

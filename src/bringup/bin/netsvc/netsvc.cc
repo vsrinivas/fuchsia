@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "netsvc.h"
+#include "src/bringup/bin/netsvc/netsvc.h"
 
 #include <fcntl.h>
 #include <lib/fdio/cpp/caller.h>
@@ -20,13 +20,13 @@
 
 #include <fbl/unique_fd.h>
 
-#include "args.h"
-#include "debuglog.h"
-#include "inet6.h"
-#include "netboot.h"
-#include "netifc.h"
+#include "src/bringup/bin/netsvc/args.h"
+#include "src/bringup/bin/netsvc/debuglog.h"
+#include "src/bringup/bin/netsvc/inet6.h"
+#include "src/bringup/bin/netsvc/netboot.h"
+#include "src/bringup/bin/netsvc/netifc.h"
+#include "src/bringup/bin/netsvc/tftp.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
-#include "tftp.h"
 
 #ifndef ENABLE_SLAAC
 // SLAAC RA's are disabled by default as they intefere with tests in environments where there are

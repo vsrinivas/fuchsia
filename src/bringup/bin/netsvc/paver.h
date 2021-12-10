@@ -22,7 +22,7 @@
 #include <fbl/unique_fd.h>
 #include <tftp/tftp.h>
 
-#include "tftp.h"
+#include "src/bringup/bin/netsvc/tftp.h"
 
 namespace netsvc {
 

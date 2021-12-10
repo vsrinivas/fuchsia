@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "zbi.h"
+#include "src/bringup/bin/netsvc/zbi.h"
 
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "netcp.h"
+#include "src/bringup/bin/netsvc/netcp.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -15,9 +15,6 @@
 #include <zircon/boot/netboot.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
-
-#include "inet6.h"
-#include "netifc.h"
 
 namespace {
 

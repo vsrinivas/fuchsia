@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "file-api.h"
+#include "src/bringup/bin/netsvc/file-api.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <zircon/boot/netboot.h>
 
-#include "board-info.h"
+#include "src/bringup/bin/netsvc/board-info.h"
 
 namespace netsvc {
 namespace {

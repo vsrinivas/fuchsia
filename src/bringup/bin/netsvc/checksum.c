@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 
-#include "inet6.h"
+#include "src/bringup/bin/netsvc/inet6.h"
 
 static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   uint32_t sum = _sum;

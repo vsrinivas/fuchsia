@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "netboot.h"
+#include "src/bringup/bin/netsvc/netboot.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -19,11 +19,11 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include "inet6.h"
-#include "netcp.h"
-#include "netsvc.h"
-#include "paver.h"
-#include "zbi.h"
+#include "src/bringup/bin/netsvc/inet6.h"
+#include "src/bringup/bin/netsvc/netcp.h"
+#include "src/bringup/bin/netsvc/netsvc.h"
+#include "src/bringup/bin/netsvc/paver.h"
+#include "src/bringup/bin/netsvc/zbi.h"
 
 static uint32_t last_cookie = 0;
 static uint32_t last_cmd = 0;

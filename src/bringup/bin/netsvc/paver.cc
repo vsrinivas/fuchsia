@@ -2,26 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "paver.h"
+#include "src/bringup/bin/netsvc/paver.h"
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
 #include <zircon/boot/netboot.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <algorithm>
 #include <string_view>
 
-#include "lib/async-loop/loop.h"
-#include "lib/fdio/cpp/caller.h"
-#include "payload-streamer.h"
-#include "zircon/errors.h"
+#include "src/bringup/bin/netsvc/payload-streamer.h"
 
 namespace netsvc {
 

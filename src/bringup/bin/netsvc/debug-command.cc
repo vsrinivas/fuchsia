@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <zircon/processargs.h>
 
-#include "netboot.h"
+#include "src/bringup/bin/netsvc/netboot.h"
 
 static void run_program(const char* progname, const char** argv, zx_handle_t h) {
   zx::debuglog logger;

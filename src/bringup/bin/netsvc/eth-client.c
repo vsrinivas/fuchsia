@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "eth-client.h"
+#include "src/bringup/bin/netsvc/eth-client.h"
 
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <limits.h>

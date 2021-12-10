@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "netifc.h"
+#include "src/bringup/bin/netsvc/netifc.h"
 
 #include <assert.h>
 #include <dirent.h>
@@ -16,9 +16,9 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-#include "eth-client.h"
-#include "inet6.h"
-#include "netifc-discover.h"
+#include "src/bringup/bin/netsvc/eth-client.h"
+#include "src/bringup/bin/netsvc/inet6.h"
+#include "src/bringup/bin/netsvc/netifc-discover.h"
 
 #define ALIGN(n, a) (((n) + ((a)-1)) & ~((a)-1))
 // if nonzero, drop 1 in DROP_PACKETS packets at random

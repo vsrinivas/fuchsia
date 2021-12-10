@@ -10,8 +10,8 @@
 
 #include <tftp/tftp.h>
 
-#include "netcp.h"
-#include "paver.h"
+#include "src/bringup/bin/netsvc/netcp.h"
+#include "src/bringup/bin/netsvc/paver.h"
 
 namespace netsvc {
 

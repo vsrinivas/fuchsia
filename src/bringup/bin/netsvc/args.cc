@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "args.h"
+#include "src/bringup/bin/netsvc/args.h"
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/service/llcpp/service.h>
