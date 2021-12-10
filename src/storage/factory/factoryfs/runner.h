@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_FACTORY_FACTORYFS_RUNNER_H_
 #define SRC_STORAGE_FACTORY_FACTORYFS_RUNNER_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
@@ -45,7 +46,7 @@ class Runner : public fs::ManagedVfs {
 
   // Serves the root directory of the filesystem using |root| as the server-end
   // of an IPC connection.
-  zx_status_t ServeRoot(zx::channel root, ServeLayout layout);
+  zx_status_t ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout);
 
  private:
   explicit Runner(async::Loop* loop);

@@ -47,13 +47,13 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, factoryfs::MountOptions* 
     return ZX_ERR_BAD_STATE;
   }
 
-  zx::channel export_root;
+  fidl::ServerEnd<fuchsia_io::Directory> export_root;
   factoryfs::ServeLayout layout;
   if (outgoing_server.is_valid()) {
-    export_root = std::move(outgoing_server);
+    export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(outgoing_server));
     layout = factoryfs::ServeLayout::kExportDirectory;
   } else if (root_server.is_valid()) {
-    export_root = std::move(root_server);
+    export_root = fidl::ServerEnd<fuchsia_io::Directory>(std::move(root_server));
     layout = factoryfs::ServeLayout::kDataRootOnly;
   } else {
     // neither provided or we can't access them for some reason.

@@ -14,8 +14,8 @@
 
 namespace factoryfs {
 
-zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options, zx::channel root,
-                  ServeLayout layout) {
+zx_status_t Mount(std::unique_ptr<BlockDevice> device, MountOptions* options,
+                  fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio provider(loop.dispatcher());
 

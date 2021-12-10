@@ -47,7 +47,7 @@ zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() {
   return factoryfs_->GetFilesystemInfo();
 }
 
-zx_status_t Runner::ServeRoot(zx::channel root, ServeLayout layout) {
+zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root, ServeLayout layout) {
   fbl::RefPtr<fs::Vnode> vn;
   zx_status_t status = factoryfs_->OpenRootNode(&vn);
   if (status != ZX_OK) {
