@@ -11,7 +11,7 @@ use crate::generate_rust_test::{RustTestCode, RustTestCodeGenerator};
 use crate::test_code::{CodeGenerator, TestCodeBuilder};
 
 use anyhow::{format_err, Result};
-use fidl_fuchsia_sys2::*;
+use fidl_fuchsia_component_decl::*;
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs::File;
@@ -68,7 +68,7 @@ fn main() -> Result<()> {
 }
 
 fn write_cpp(
-    cm_decl: &ComponentDecl,
+    cm_decl: &Component,
     component_name: &str,
     component_url: &str,
     output_file_name: &str,
@@ -142,7 +142,7 @@ fn write_cpp(
 }
 
 fn write_rust(
-    cm_decl: &ComponentDecl,
+    cm_decl: &Component,
     component_name: &str,
     component_url: &str,
     output_file_name: &str,
@@ -218,7 +218,7 @@ fn write_rust(
 
 // Update TestCodeBuilder based on 'use' declarations in the .cm file
 fn update_code_for_use_declaration(
-    uses: &Vec<UseDecl>,
+    uses: &Vec<Use>,
     code: &mut dyn TestCodeBuilder,
     gen_mocks: bool,
     cpp: bool,
@@ -228,7 +228,7 @@ fn update_code_for_use_declaration(
 
     for i in 0..uses.len() {
         match &uses[i] {
-            UseDecl::Protocol(decl) => {
+            Use::Protocol(decl) => {
                 if let Some(protocol) = &decl.source_name {
                     if TEST_REALM_CAPABILITIES.into_iter().any(|v| v == &protocol) {
                         code.add_protocol(protocol, "root", vec!["self".to_string()]);
@@ -263,7 +263,7 @@ fn update_code_for_use_declaration(
                 }
             }
             // Note: example outputs from parsing cm: http://go/paste/5523376119480320?raw
-            UseDecl::Directory(decl) => {
+            Use::Directory(decl) => {
                 code.add_directory(
                     decl.source_name
                         .as_ref()
@@ -274,7 +274,7 @@ fn update_code_for_use_declaration(
                     vec!["self".to_string()],
                 );
             }
-            UseDecl::Storage(decl) => {
+            Use::Storage(decl) => {
                 code.add_storage(
                     decl.source_name
                         .as_ref()
@@ -315,7 +315,7 @@ fn update_code_for_use_declaration(
 
 // Update TestCodeBuilder based on 'expose' declarations in the .cm file
 fn update_code_for_expose_declaration(
-    exposes: &Vec<ExposeDecl>,
+    exposes: &Vec<Expose>,
     code: &mut dyn TestCodeBuilder,
     cpp: bool,
 ) -> Result<()> {
@@ -323,7 +323,7 @@ fn update_code_for_expose_declaration(
 
     for i in 0..exposes.len() {
         match &exposes[i] {
-            ExposeDecl::Protocol(decl) => {
+            Expose::Protocol(decl) => {
                 if let Some(protocol) = &decl.source_name {
                     code.add_protocol(protocol, "self", vec!["root".to_string()]);
                     if cpp {
@@ -495,18 +495,18 @@ mod test {
 
     #[test]
     fn test_cpp_update_code_for_use_declaration() -> Result<()> {
-        let use_protocol_1 = UseDecl::Protocol(UseProtocolDecl {
+        let use_protocol_1 = Use::Protocol(UseProtocol {
             source_name: Some("fuchsia.diagnostics.ArchiveAccessor".to_string()),
-            ..UseProtocolDecl::EMPTY
+            ..UseProtocol::EMPTY
         });
-        let use_protocol_2 = UseDecl::Protocol(UseProtocolDecl {
+        let use_protocol_2 = Use::Protocol(UseProtocol {
             source_name: Some("fuchsia.metrics.MetricEventLoggerFactory".to_string()),
-            ..UseProtocolDecl::EMPTY
+            ..UseProtocol::EMPTY
         });
-        let use_dir = UseDecl::Directory(UseDirectoryDecl {
+        let use_dir = Use::Directory(UseDirectory {
             source_name: Some("config-data".to_string()),
             target_path: Some("/config/data".to_string()),
-            ..UseDirectoryDecl::EMPTY
+            ..UseDirectory::EMPTY
         });
         let component_name = "foo_bar";
         let uses = vec![use_protocol_1, use_protocol_2, use_dir];
@@ -552,18 +552,18 @@ mod test {
 
     #[test]
     fn test_rust_update_code_for_use_declaration() -> Result<()> {
-        let use_protocol_1 = UseDecl::Protocol(UseProtocolDecl {
+        let use_protocol_1 = Use::Protocol(UseProtocol {
             source_name: Some("fuchsia.diagnostics.ArchiveAccessor".to_string()),
-            ..UseProtocolDecl::EMPTY
+            ..UseProtocol::EMPTY
         });
-        let use_protocol_2 = UseDecl::Protocol(UseProtocolDecl {
+        let use_protocol_2 = Use::Protocol(UseProtocol {
             source_name: Some("fuchsia.metrics.MetricEventLoggerFactory".to_string()),
-            ..UseProtocolDecl::EMPTY
+            ..UseProtocol::EMPTY
         });
-        let use_dir = UseDecl::Directory(UseDirectoryDecl {
+        let use_dir = Use::Directory(UseDirectory {
             source_name: Some("config-data".to_string()),
             target_path: Some("/config/data".to_string()),
-            ..UseDirectoryDecl::EMPTY
+            ..UseDirectory::EMPTY
         });
         let component_name = "foo_bar";
         let uses = vec![use_protocol_1, use_protocol_2, use_dir];
@@ -636,7 +636,7 @@ use fuchsia_component::server::*;"#;
             Case { name: "rust w/o mocks", cpp: false, generate_mocks: false },
         ] {
             let code = &mut CppTestCode::new("test");
-            let decl = ComponentDecl { ..ComponentDecl::EMPTY };
+            let decl = Component { ..Component::EMPTY };
             update_code_for_use_declaration(
                 &decl.uses.as_ref().unwrap_or(&Vec::new()),
                 code,

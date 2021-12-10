@@ -13,7 +13,7 @@ if (is_host) {
     with_unit_tests = true
     test_environments = [ host_env ]
     deps = [
-      "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
       "//src/lib/fidl/rust/fidl",
       "//src/sys/lib/cm_rust",
       "//third_party/rust_crates:anyhow",

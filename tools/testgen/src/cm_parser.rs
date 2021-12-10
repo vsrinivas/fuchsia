@@ -4,13 +4,13 @@
 
 use anyhow::Result;
 use fidl::encoding::decode_persistent;
-use fidl_fuchsia_sys2::*;
+use fidl_fuchsia_component_decl::*;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
 
 /// Parses a compiled .cm file.
-pub fn read_cm(file: &str) -> Result<ComponentDecl> {
+pub fn read_cm(file: &str) -> Result<Component> {
     let mut buffer = Vec::new();
     let path = PathBuf::from(file);
     File::open(&path)?.read_to_end(&mut buffer)?;
