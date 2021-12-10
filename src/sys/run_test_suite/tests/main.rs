@@ -1006,10 +1006,10 @@ async fn test_logging_component() {
         run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] DEBUG: Logging initialized\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] DEBUG: my debug message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] INFO: my info message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] WARN: my warn message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: Logging initialized\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: my debug message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] INFO: my info message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message\n\
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
@@ -1028,8 +1028,8 @@ async fn test_logging_component_min_severity() {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] INFO: my info message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,logging_test] WARN: my warn message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] INFO: my info message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message\n\
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
@@ -1124,10 +1124,10 @@ async fn test_max_severity(max_severity: Severity) {
         run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] DEBUG: Logging initialized\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] INFO: my info message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] DEBUG: Logging initialized\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] INFO: my info message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message\n\
 [PASSED]	log_and_exit
 ";
 
@@ -1146,8 +1146,8 @@ async fn test_max_severity(max_severity: Severity) {
             assert_eq!(
                 logs,
                 vec![
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message".to_owned(),
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message".to_owned(),
                 ]
             );
         }
@@ -1156,7 +1156,7 @@ async fn test_max_severity(max_severity: Severity) {
             assert_eq!(
                 run_result.restricted_logs.into_iter().map(sanitize_log_for_comparison).collect::<Vec<_>>(),
                 vec![
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message".to_owned(),
                 ]
             );
         }
@@ -1269,10 +1269,10 @@ async fn test_syslog_to_directory() {
 
     assert_eq!(outcome, Outcome::Failed);
 
-    const EXPECTED_SYSLOG: &str =  "[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] DEBUG: Logging initialized\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] INFO: my info message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] WARN: my warn message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit_test,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message\n\
+    const EXPECTED_SYSLOG: &str =  "[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] DEBUG: Logging initialized\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] INFO: my info message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message\n\
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message\n\
 ";
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed);
     let expected_test_suites = vec![ExpectedSuite::new(
@@ -1290,7 +1290,7 @@ async fn test_syslog_to_directory() {
         assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
     })
     .with_matching_artifact(directory::ArtifactType::RestrictedLog, "restricted_logs.txt".into(), |actual| {
-        assert!(actual.contains("ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(23)] my error message"))
+        assert!(actual.contains("ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message"))
     })
     .with_any_start_time()
     .with_any_run_duration()];

@@ -14,6 +14,7 @@
 
 #![deny(missing_docs)]
 
+pub use fidl_fuchsia_diagnostics::{Interest, Severity};
 pub use fuchsia_macro::{component, test};
 use std::future::Future;
 
@@ -29,10 +30,11 @@ mod host;
 pub fn init_logging_for_component_with_executor<'a, R>(
     func: impl FnOnce() -> R + 'a,
     _logging_tags: &'a [&'static str],
+    _interest: fidl_fuchsia_diagnostics::Interest,
 ) -> impl FnOnce() -> R + 'a {
     move || {
         #[cfg(target_os = "fuchsia")]
-        diagnostics_log::init!(_logging_tags);
+        diagnostics_log::init!(_logging_tags, _interest);
         #[cfg(not(target_os = "fuchsia"))]
         crate::host::logger::init();
 
@@ -45,10 +47,11 @@ pub fn init_logging_for_component_with_executor<'a, R>(
 pub fn init_logging_for_component_with_threads<'a, R>(
     func: impl FnOnce() -> R + 'a,
     _logging_tags: &'a [&'static str],
+    _interest: fidl_fuchsia_diagnostics::Interest,
 ) -> impl FnOnce() -> R + 'a {
     move || {
         #[cfg(target_os = "fuchsia")]
-        let _guard = init_logging_with_threads(_logging_tags.to_vec());
+        let _guard = init_logging_with_threads(_logging_tags.to_vec(), _interest);
         #[cfg(not(target_os = "fuchsia"))]
         crate::host::logger::init();
 
@@ -62,13 +65,14 @@ pub fn init_logging_for_test_with_executor<'a, R>(
     func: impl Fn(usize) -> R + 'a,
     _name: &'static str,
     _logging_tags: &'a [&'static str],
+    _interest: fidl_fuchsia_diagnostics::Interest,
 ) -> impl Fn(usize) -> R + 'a {
     move |n| {
         #[cfg(target_os = "fuchsia")]
         {
             let mut tags = vec![_name];
             tags.extend_from_slice(_logging_tags);
-            diagnostics_log::init!(tags.as_slice());
+            diagnostics_log::init!(tags.as_slice(), _interest.clone());
         }
         #[cfg(not(target_os = "fuchsia"))]
         crate::host::logger::init();
@@ -83,13 +87,14 @@ pub fn init_logging_for_test_with_threads<'a, R>(
     func: impl Fn(usize) -> R + 'a,
     _name: &'static str,
     _logging_tags: &'a [&'static str],
+    _interest: fidl_fuchsia_diagnostics::Interest,
 ) -> impl Fn(usize) -> R + 'a {
     move |n| {
         #[cfg(target_os = "fuchsia")]
         let _guard = {
             let mut tags = vec![_name];
             tags.extend_from_slice(_logging_tags.clone());
-            init_logging_with_threads(tags)
+            init_logging_with_threads(tags, _interest.clone())
         };
         #[cfg(not(target_os = "fuchsia"))]
         crate::host::logger::init();
@@ -101,7 +106,10 @@ pub fn init_logging_for_test_with_threads<'a, R>(
 /// Initializes logging on a background thread, returning a guard which cancels interest listening
 /// when dropped.
 #[cfg(target_os = "fuchsia")]
-fn init_logging_with_threads(tags: Vec<&'static str>) -> impl Drop {
+fn init_logging_with_threads(
+    tags: Vec<&'static str>,
+    interest: fidl_fuchsia_diagnostics::Interest,
+) -> impl Drop {
     struct AbortAndJoinOnDrop(futures::future::AbortHandle, Option<std::thread::JoinHandle<()>>);
     impl Drop for AbortAndJoinOnDrop {
         fn drop(&mut self) {
@@ -116,6 +124,7 @@ fn init_logging_with_threads(tags: Vec<&'static str>) -> impl Drop {
         let on_interest_changes =
             diagnostics_log::init_publishing(diagnostics_log::PublishOptions {
                 tags: Some(tags.as_slice()),
+                interest,
                 ..Default::default()
             })
             .unwrap();

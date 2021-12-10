@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_diagnostics::Severity,
     proc_macro::TokenStream,
     quote::{quote, quote_spanned, TokenStreamExt},
     syn::{
@@ -81,6 +82,7 @@ struct Transformer {
     block: Box<Block>,
     logging: bool,
     logging_tags: LoggingTags,
+    interest: Interest,
     add_test_attr: bool,
 }
 
@@ -89,6 +91,7 @@ struct Args {
     allow_stalls: bool,
     logging: bool,
     logging_tags: LoggingTags,
+    interest: Interest,
     add_test_attr: bool,
 }
 
@@ -117,6 +120,78 @@ impl Parse for LoggingTags {
             input.parse::<Token![,]>()?;
         }
         Ok(Self { tags })
+    }
+}
+
+#[derive(Default)]
+struct Interest {
+    min_severity: Option<Severity>,
+}
+
+impl Parse for Interest {
+    fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
+        let str_token = input.parse::<LitStr>()?;
+        let min_severity = match str_token.value().to_lowercase().as_str() {
+            "trace" => Severity::Trace,
+            "debug" => Severity::Debug,
+            "info" => Severity::Info,
+            "warn" => Severity::Warn,
+            "error" => Severity::Error,
+            "fatal" => Severity::Fatal,
+            other => {
+                return Err(syn::Error::new(
+                    str_token.span(),
+                    format!("invalid severity: {}", other),
+                ))
+            }
+        };
+        Ok(Interest { min_severity: Some(min_severity) })
+    }
+}
+
+impl quote::ToTokens for Interest {
+    fn to_tokens(&self, tokens: &mut proc_macro2::TokenStream) {
+        tokens.extend(match self.min_severity {
+            None => quote! { ::fuchsia::Interest::EMPTY },
+            Some(severity) => match severity {
+                Severity::Trace => quote! {
+                    ::fuchsia::Interest {
+                        min_severity: Some(::fuchsia::Severity::Trace),
+                        ..::fuchsia::Interest::EMPTY
+                    }
+                },
+                Severity::Debug => quote! {
+                    ::fuchsia::Interest {
+                        min_severity: Some(::fuchsia::Severity::Debug),
+                        ..::fuchsia::Interest::EMPTY
+                    }
+                },
+                Severity::Info => quote! {
+                    ::fuchsia::Interest {
+                        min_severity: Some(::fuchsia::Severity::Info),
+                        ..::fuchsia::Interest::EMPTY
+                    }
+                },
+                Severity::Warn => quote! {
+                    ::fuchsia::Interest {
+                        min_severity: Some(::fuchsia::Severity::Warn),
+                        ..::fuchsia::Interest::EMPTY
+                    }
+                },
+                Severity::Error => quote! {
+                    ::fuchsia::Interest {
+                        min_severity: Some(::fuchsia::Severity::Error),
+                        ..::fuchsia::Interest::EMPTY
+                    }
+                },
+                Severity::Fatal => quote! {
+                    ::fuchsia::Interest {
+                        min_severity: Some(::fuchsia::Severity::Fatal),
+                        ..::fuchsia::Interest::EMPTY
+                    }
+                },
+            },
+        });
     }
 }
 
@@ -149,6 +224,11 @@ fn get_logging_tags(p: &ParseStream<'_>) -> syn::Result<LoggingTags> {
     Ok(logging_tags)
 }
 
+fn get_interest_arg(input: &ParseStream<'_>) -> syn::Result<Interest> {
+    input.parse::<Token![=]>()?;
+    input.parse::<Interest>()
+}
+
 impl Parse for Args {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut args = Self {
@@ -156,6 +236,7 @@ impl Parse for Args {
             allow_stalls: true,
             logging: true,
             logging_tags: LoggingTags::default(),
+            interest: Interest::default(),
             add_test_attr: true,
         };
 
@@ -170,6 +251,7 @@ impl Parse for Args {
                 "allow_stalls" => args.allow_stalls = get_bool_arg(&input, true)?,
                 "logging" => args.logging = get_bool_arg(&input, true)?,
                 "logging_tags" => args.logging_tags = get_logging_tags(&input)?,
+                "logging_minimum_severity" => args.interest = get_interest_arg(&input)?,
                 "add_test_attr" => args.add_test_attr = get_bool_arg(&input, true)?,
                 x => return err(format!("unknown argument: {}", x)),
             }
@@ -221,6 +303,7 @@ impl Transformer {
             block,
             logging: args.logging,
             logging_tags: args.logging_tags,
+            interest: args.interest,
             add_test_attr: args.add_test_attr,
         })
     }
@@ -237,6 +320,7 @@ impl Finish for Transformer {
         let block = self.block;
         let inputs = self.sig.inputs;
         let logging_tags = self.logging_tags;
+        let interest = self.interest;
 
         let mut func_attrs = Vec::new();
 
@@ -247,21 +331,25 @@ impl Finish for Transformer {
             let test_name = LitStr::new(&format!("{}", ident), ident.span());
             if self.executor.is_some() {
                 quote! {
-                    ::fuchsia::init_logging_for_test_with_executor(func, #test_name, &[#logging_tags])
+                    ::fuchsia::init_logging_for_test_with_executor(
+                        func, #test_name, &[#logging_tags], #interest)
                 }
             } else {
                 quote! {
-                    ::fuchsia::init_logging_for_test_with_threads(func, #test_name, &[#logging_tags])
+                    ::fuchsia::init_logging_for_test_with_threads(
+                        func, #test_name, &[#logging_tags], #interest)
                 }
             }
         } else {
             if self.executor.is_some() {
                 quote! {
-                    ::fuchsia::init_logging_for_component_with_executor(func, &[#logging_tags])
+                    ::fuchsia::init_logging_for_component_with_executor(
+                        func, &[#logging_tags], #interest)
                 }
             } else {
                 quote! {
-                    ::fuchsia::init_logging_for_component_with_threads(func, &[#logging_tags])
+                    ::fuchsia::init_logging_for_component_with_threads(
+                        func, &[#logging_tags], #interest)
                 }
             }
         };
@@ -340,6 +428,8 @@ impl<R: Finish, E: Finish> Finish for Result<R, E> {
 ///  - `logging` - boolean toggle for whether to initialize logging (or not). Default true.
 ///                This currently does nothing on host. On Fuchsia fuchsia-syslog is used.
 ///  - `logging_tags` - optional list of string to be used as tags for logs. Default: None.
+///  - `logging_minimum_severity` - optional minimum severity to be set for logs. Default: None,
+///                                 the logging library will choose it (typically `info`).
 ///
 /// The main function can return either () or a Result<(), E> where E is an error type.
 /// If the main function takes an argument, it's expected that argument implement
@@ -361,6 +451,8 @@ pub fn component(args: TokenStream, input: TokenStream) -> TokenStream {
 ///  - `logging`       - boolean toggle for whether to initialize logging (or not). Default true.
 ///                      This currently does nothing on host. On Fuchsia fuchsia-syslog is used.
 ///  - `logging_tags` - optional list of string to be used as tags for logs. Default: None.
+///  - `logging_minimum_severity` - optional minimum severity to be set for logs. Default: None,
+///                                 the logging library will choose it (typically `info`).
 ///  - `allow_stalls`  - boolean toggle for whether the async test is allowed to stall during
 ///                      execution (if true), or whether the function must complete without pausing
 ///                      (if false).

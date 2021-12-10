@@ -36,6 +36,9 @@ mod test {
     #[fuchsia::test(logging_tags = [])]
     async fn empty_test_with_empty_logging_tags() {}
 
+    #[fuchsia::test(logging_minimum_severity = "warn")]
+    async fn empty_test_with_minimum_severity() {}
+
     #[allow(dead_code)]
     #[fuchsia::test(add_test_attr = false)]
     fn empty_test_without_add_test_attr() {
@@ -210,6 +213,16 @@ mod test {
     #[fuchsia::component(logging_tags = ["foo", "bar"])]
     #[test]
     async fn component_with_logging_tags() -> Result<(), Error> {
+        Ok(())
+    }
+
+    // TODO(fxbug.dev/81029): We combine #[fuchsia::component] and #[test] here as a kludge to
+    // enable testing of the fuchsia::component code in a unit test.
+    // Real users of the fuchsia library should not do this, and the ability to do so is not
+    // guaranteed to be present in the future.
+    #[fuchsia::component(logging_minimum_severity = "error")]
+    #[test]
+    async fn component_with_minimum_severity() -> Result<(), Error> {
         Ok(())
     }
 

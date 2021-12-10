@@ -2,21 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    diagnostics_log::{self, Interest, Severity},
-    tracing,
-};
-
-// TODO(fxbug.dev/82789): use fuchsia crate to init logging when it supports setting a minimum
-// log severity.
-#[fuchsia::test(logging = false)]
+#[fuchsia::test(
+    logging_tags = ["logging_test"],
+    logging_minimum_severity = "debug"
+)]
 async fn log_and_exit() {
-    let _ = diagnostics_log::init_publishing(diagnostics_log::PublishOptions {
-        tags: Some(&["log_and_exit_test", "logging_test"]),
-        interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
-        ..Default::default()
-    })
-    .unwrap();
     tracing::debug!("my debug message");
     tracing::info!("my info message");
     tracing::warn!("my warn message");

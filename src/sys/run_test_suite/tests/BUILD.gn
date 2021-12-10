@@ -35,7 +35,6 @@ rustc_test("error_logging_test_bin") {
   source_root = "error_logging_test.rs"
   name = "error_logging_test"
   deps = [
-    "//src/lib/diagnostics/log/rust",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:tracing",
   ]
@@ -46,7 +45,6 @@ rustc_test("logging_test_bin") {
   source_root = "logging_test.rs"
   name = "logging_test"
   deps = [
-    "//src/lib/diagnostics/log/rust",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:tracing",
   ]

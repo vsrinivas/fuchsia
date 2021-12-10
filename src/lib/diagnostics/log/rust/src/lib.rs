@@ -50,6 +50,17 @@ macro_rules! init {
         )
         .detach()
     };
+    ($tags:expr, $interest:expr) => {
+        fuchsia_async::Task::spawn(
+            $crate::init_publishing($crate::PublishOptions {
+                tags: Some($tags),
+                interest: $interest,
+                ..Default::default()
+            })
+            .unwrap(),
+        )
+        .detach()
+    };
 }
 
 /// Callback for interest listeners
