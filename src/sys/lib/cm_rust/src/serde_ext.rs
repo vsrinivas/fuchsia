@@ -6,7 +6,7 @@
 
 use {
     crate::{CapabilityPath, DictionaryValue},
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
     serde::{
         de::{self, Visitor},
         Deserialize, Deserializer, Serialize, Serializer,
@@ -16,7 +16,7 @@ use {
 
 /// Reflect fidl_fuchsia_sys2::StorageId for serialization/deserialization.
 #[derive(Serialize, Deserialize)]
-#[serde(remote = "fsys::StorageId")]
+#[serde(remote = "fdecl::StorageId")]
 pub enum StorageId {
     StaticInstanceId = 1,
     StaticInstanceIdOrMoniker = 2,

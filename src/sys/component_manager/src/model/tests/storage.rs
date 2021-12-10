@@ -15,7 +15,7 @@ use {
     cm_rust::*,
     cm_rust_testing::*,
     component_id_index::gen_instance_id,
-    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase},
     routing::{error::RoutingError, RouteRequest},
     std::{convert::TryInto, path::PathBuf},
@@ -144,14 +144,14 @@ async fn use_in_collection_from_parent() {
                     backing_dir: "minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Parent,
                     subdir: Some(PathBuf::from("data")),
-                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .storage(StorageDecl {
                     name: "cache".into(),
                     backing_dir: "minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Parent,
                     subdir: Some(PathBuf::from("cache")),
-                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .add_transient_collection("coll")
                 .build(),
@@ -177,7 +177,7 @@ async fn use_in_collection_from_parent() {
         ChildDecl {
             name: "c".into(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -294,14 +294,14 @@ async fn use_in_collection_from_grandparent() {
                     backing_dir: "minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: Some(PathBuf::from("data")),
-                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .storage(StorageDecl {
                     name: "cache".into(),
                     backing_dir: "minfs".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: Some(PathBuf::from("cache")),
-                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .build(),
         ),
@@ -350,7 +350,7 @@ async fn use_in_collection_from_grandparent() {
         ChildDecl {
             name: "c".into(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -507,7 +507,7 @@ async fn use_restricted_storage_start_failure() {
                     backing_dir: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
-                    storage_id: fsys::StorageId::StaticInstanceId,
+                    storage_id: fdecl::StorageId::StaticInstanceId,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
@@ -611,7 +611,7 @@ async fn use_restricted_storage_open_failure() {
                     backing_dir: "data".try_into().unwrap(),
                     source: StorageDirectorySource::Self_,
                     subdir: None,
-                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                 })
                 .offer(OfferDecl::Storage(OfferStorageDecl {
                     source: OfferSource::Self_,
@@ -672,7 +672,7 @@ async fn use_restricted_storage_open_failure() {
         for cap in resolved_state.decl_as_mut().capabilities.iter_mut() {
             match cap {
                 CapabilityDecl::Storage(storage_decl) => {
-                    storage_decl.storage_id = fsys::StorageId::StaticInstanceId;
+                    storage_decl.storage_id = fdecl::StorageId::StaticInstanceId;
                 }
                 _ => {}
             }

@@ -10,7 +10,7 @@ use {
     cm_rust::*,
     cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
     component_id_index::gen_instance_id,
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_component_decl as fdecl, fuchsia_zircon_status as zx_status,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, PartialAbsoluteMoniker,
         RelativeMoniker, RelativeMonikerBase,
@@ -57,7 +57,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "tmp".try_into().unwrap(),
                         source: StorageDirectorySource::Parent,
                         subdir: Some(PathBuf::from("cache")),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -127,7 +127,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "data".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -188,7 +188,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "data".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: Some(PathBuf::from("cache")),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -249,7 +249,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "data".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -326,7 +326,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Parent,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -404,7 +404,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Parent,
                         subdir: Some("subdir_2".into()),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -488,7 +488,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Parent,
                         subdir: Some("bar".try_into().unwrap()),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -551,7 +551,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "data-root".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -613,7 +613,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Child("b".to_string()),
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
@@ -688,7 +688,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Child("b".to_string()),
                         subdir: Some("subdir_2".into()),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
@@ -772,14 +772,14 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Child("b".to_string()),
                         subdir: Some(PathBuf::from("data")),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .storage(StorageDecl {
                         name: "cache".into(),
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Child("b".to_string()),
                         subdir: Some(PathBuf::from("cache")),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
@@ -944,7 +944,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "data".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -1051,7 +1051,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -1128,7 +1128,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "minfs".try_into().unwrap(),
                         source: StorageDirectorySource::Parent,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -1184,7 +1184,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "tmp".try_into().unwrap(),
                         source: StorageDirectorySource::Parent,
                         subdir: Some(PathBuf::from("cache")),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),
@@ -1276,7 +1276,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageTest<T> {
                         backing_dir: "data".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .build(),
             ),

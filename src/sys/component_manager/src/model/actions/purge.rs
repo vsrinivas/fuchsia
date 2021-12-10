@@ -138,7 +138,7 @@ pub mod tests {
         },
         cm_rust::EventMode,
         cm_rust_testing::ComponentDeclBuilder,
-        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::{join, FutureExt},
         matches::assert_matches,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, PartialChildMoniker},
@@ -429,7 +429,7 @@ pub mod tests {
             let child = cm_rust::ChildDecl {
                 name: format!("a"),
                 url: format!("test:///a"),
-                startup: fsys::StartupMode::Lazy,
+                startup: fdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             };

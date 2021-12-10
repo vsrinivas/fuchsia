@@ -11,7 +11,7 @@ mod tests {
         },
         cm_rust_testing::{ComponentDeclBuilder, DirectoryDeclBuilder},
         component_id_index::gen_instance_id,
-        fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
+        fidl_fuchsia_component_decl as fdecl, fuchsia_zircon_status as zx_status,
         moniker::{
             AbsoluteMonikerBase, PartialAbsoluteMoniker, RelativeMoniker, RelativeMonikerBase,
         },
@@ -184,7 +184,7 @@ mod tests {
                         backing_dir: "data".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceId,
+                        storage_id: fdecl::StorageId::StaticInstanceId,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,

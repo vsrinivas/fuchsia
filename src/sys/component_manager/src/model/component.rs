@@ -323,9 +323,9 @@ pub struct ComponentInstance {
     /// The component's URL.
     pub component_url: String,
     /// The mode of startup (lazy or eager).
-    pub startup: fsys::StartupMode,
+    pub startup: fdecl::StartupMode,
     /// The policy to apply if the component terminates.
-    pub on_terminate: fsys::OnTerminate,
+    pub on_terminate: fdecl::OnTerminate,
     /// The parent instance. Either a component instance or component manager's instance.
     pub parent: WeakExtendedInstance,
     /// The absolute moniker of this instance.
@@ -363,8 +363,8 @@ impl ComponentInstance {
             Arc::new(environment),
             AbsoluteMoniker::root(),
             component_url,
-            fsys::StartupMode::Lazy,
-            fsys::OnTerminate::None,
+            fdecl::StartupMode::Lazy,
+            fdecl::OnTerminate::None,
             WeakModelContext::new(context),
             WeakExtendedInstance::AboveRoot(component_manager_instance),
             Arc::new(Hooks::new(None)),
@@ -377,8 +377,8 @@ impl ComponentInstance {
         environment: Arc<Environment>,
         abs_moniker: AbsoluteMoniker,
         component_url: String,
-        startup: fsys::StartupMode,
-        on_terminate: fsys::OnTerminate,
+        startup: fdecl::StartupMode,
+        on_terminate: fdecl::OnTerminate,
         context: WeakModelContext,
         parent: WeakExtendedInstance,
         hooks: Arc<Hooks>,
@@ -537,11 +537,11 @@ impl ComponentInstance {
         collection_name: String,
         child_decl: &ChildDecl,
         child_args: fcomponent::CreateChildArgs,
-    ) -> Result<fsys::Durability, ModelError> {
+    ) -> Result<fdecl::Durability, ModelError> {
         let res = {
             match child_decl.startup {
-                fsys::StartupMode::Lazy => {}
-                fsys::StartupMode::Eager => {
+                fdecl::StartupMode::Lazy => {}
+                fdecl::StartupMode::Eager => {
                     return Err(ModelError::unsupported("Eager startup"));
                 }
             }
@@ -553,7 +553,7 @@ impl ComponentInstance {
                 .clone();
 
             if let Some(handles) = &child_args.numbered_handles {
-                if !handles.is_empty() && collection_decl.durability != fsys::Durability::SingleRun
+                if !handles.is_empty() && collection_decl.durability != fdecl::Durability::SingleRun
                 {
                     return Err(ModelError::unsupported(
                         "Numbered handles to child in a collection that is not SingleRun",
@@ -599,9 +599,9 @@ impl ComponentInstance {
             });
 
             match collection_decl.durability {
-                fsys::Durability::Transient => {}
-                fsys::Durability::SingleRun => {}
-                fsys::Durability::Persistent => {
+                fdecl::Durability::Transient => {}
+                fdecl::Durability::SingleRun => {}
+                fdecl::Durability::Persistent => {
                     return Err(ModelError::unsupported("Persistent durability"));
                 }
             };
@@ -705,7 +705,7 @@ impl ComponentInstance {
                             self.environment.stop_timeout()
                         );
                     }
-                    if !shut_down && self.on_terminate == fsys::OnTerminate::Reboot {
+                    if !shut_down && self.on_terminate == fdecl::OnTerminate::Reboot {
                         warn!(
                             "Component with on_terminate=REBOOT terminated: {}. \
                             Rebooting the system",
@@ -763,9 +763,9 @@ impl ComponentInstance {
                 .collections
                 .iter()
                 .filter_map(|c| match c.durability {
-                    fsys::Durability::SingleRun => Some(c.name.clone()),
-                    fsys::Durability::Persistent => None,
-                    fsys::Durability::Transient => None,
+                    fdecl::Durability::SingleRun => Some(c.name.clone()),
+                    fdecl::Durability::Persistent => None,
+                    fdecl::Durability::Transient => None,
                 })
                 .collect();
             single_run_colls
@@ -876,9 +876,9 @@ impl ComponentInstance {
                 .collections
                 .iter()
                 .filter_map(|c| match c.durability {
-                    fsys::Durability::Transient => Some(c.name.clone()),
-                    fsys::Durability::Persistent => None,
-                    fsys::Durability::SingleRun => Some(c.name.clone()),
+                    fdecl::Durability::Transient => Some(c.name.clone()),
+                    fdecl::Durability::Persistent => None,
+                    fdecl::Durability::SingleRun => Some(c.name.clone()),
                 })
                 .collect();
             let child_monikers: Vec<_> = state.all_children().keys().map(|m| m.clone()).collect();
@@ -978,8 +978,8 @@ impl ComponentInstance {
                 InstanceState::Resolved(ref s) => s
                     .live_children()
                     .filter_map(|(_, r)| match r.startup {
-                        fsys::StartupMode::Eager => Some(r.clone()),
-                        fsys::StartupMode::Lazy => None,
+                        fdecl::StartupMode::Eager => Some(r.clone()),
+                        fdecl::StartupMode::Lazy => None,
                     })
                     .collect(),
                 InstanceState::Purged => {
@@ -1500,7 +1500,7 @@ impl ResolvedInstanceState {
             component.abs_moniker.child(child_moniker.clone()),
             child.url.clone(),
             child.startup,
-            child.on_terminate.unwrap_or(fsys::OnTerminate::None),
+            child.on_terminate.unwrap_or(fdecl::OnTerminate::None),
             component.context.clone(),
             WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
             Arc::new(Hooks::new(Some(component.hooks.clone()))),

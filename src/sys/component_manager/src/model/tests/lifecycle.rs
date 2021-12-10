@@ -26,9 +26,9 @@ use {
     },
     cm_rust_testing::*,
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_component_runner as fcrunner,
-    fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fuchsia_async as fasync,
+    fuchsia_zircon as zx,
     futures::{future::pending, join, lock::Mutex, prelude::*},
     matches::assert_matches,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker},
@@ -303,7 +303,7 @@ async fn bind_eager_children_reentrant() {
                         ChildDeclBuilder::new()
                             .name("b")
                             .url("test:///b")
-                            .startup(fsys::StartupMode::Eager)
+                            .startup(fdecl::StartupMode::Eager)
                             .environment("env")
                             .build(),
                     )
@@ -313,7 +313,7 @@ async fn bind_eager_children_reentrant() {
                     })
                     .add_environment(
                         EnvironmentDeclBuilder::new()
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .name("env")
                             .add_runner(RunnerRegistration {
                                 source_name: "foo".into(),
@@ -465,7 +465,7 @@ async fn reboot_on_terminate_disabled() {
             ComponentDeclBuilder::new()
                 .add_child(
                     ChildDeclBuilder::new_lazy_child("system")
-                        .on_terminate(fsys::OnTerminate::Reboot)
+                        .on_terminate(fdecl::OnTerminate::Reboot)
                         .build(),
                 )
                 .build(),
@@ -494,7 +494,7 @@ async fn reboot_on_terminate_disallowed() {
             ComponentDeclBuilder::new()
                 .add_child(
                     ChildDeclBuilder::new_lazy_child("system")
-                        .on_terminate(fsys::OnTerminate::Reboot)
+                        .on_terminate(fdecl::OnTerminate::Reboot)
                         .build(),
                 )
                 .build(),
@@ -527,7 +527,7 @@ async fn on_terminate_stop_triggers_reboot() {
             ComponentDeclBuilder::new()
                 .add_child(
                     ChildDeclBuilder::new_lazy_child("system")
-                        .on_terminate(fsys::OnTerminate::Reboot)
+                        .on_terminate(fdecl::OnTerminate::Reboot)
                         .build(),
                 )
                 .protocol(
@@ -584,7 +584,7 @@ async fn on_terminate_exit_triggers_reboot() {
             ComponentDeclBuilder::new()
                 .add_child(
                     ChildDeclBuilder::new_lazy_child("system")
-                        .on_terminate(fsys::OnTerminate::Reboot)
+                        .on_terminate(fdecl::OnTerminate::Reboot)
                         .build(),
                 )
                 .protocol(
@@ -637,7 +637,7 @@ async fn reboot_shutdown_does_not_trigger_reboot() {
             ComponentDeclBuilder::new()
                 .add_child(
                     ChildDeclBuilder::new_lazy_child("system")
-                        .on_terminate(fsys::OnTerminate::Reboot)
+                        .on_terminate(fdecl::OnTerminate::Reboot)
                         .build(),
                 )
                 .protocol(
@@ -688,7 +688,7 @@ async fn on_terminate_with_missing_reboot_protocol_panics() {
             ComponentDeclBuilder::new()
                 .add_child(
                     ChildDeclBuilder::new_lazy_child("system")
-                        .on_terminate(fsys::OnTerminate::Reboot)
+                        .on_terminate(fdecl::OnTerminate::Reboot)
                         .build(),
                 )
                 .protocol(
@@ -735,7 +735,7 @@ async fn on_terminate_with_failed_reboot_panics() {
             ComponentDeclBuilder::new()
                 .add_child(
                     ChildDeclBuilder::new_lazy_child("system")
-                        .on_terminate(fsys::OnTerminate::Reboot)
+                        .on_terminate(fdecl::OnTerminate::Reboot)
                         .build(),
                 )
                 .protocol(

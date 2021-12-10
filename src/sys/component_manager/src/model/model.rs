@@ -123,7 +123,7 @@ pub mod tests {
             model::testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
         },
         cm_rust_testing::ComponentDeclBuilder,
-        fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_component_decl as fdecl,
     };
 
     #[fuchsia::test]
@@ -134,7 +134,7 @@ pub mod tests {
                 .add_child(cm_rust::ChildDecl {
                     name: "bad-scheme".to_string(),
                     url: "bad-scheme://sdf".to_string(),
-                    startup: fsys::StartupMode::Eager,
+                    startup: fdecl::StartupMode::Eager,
                     environment: None,
                     on_terminate: None,
                 })
@@ -159,7 +159,7 @@ pub mod tests {
                 .add_child(cm_rust::ChildDecl {
                     name: "bad-scheme".to_string(),
                     url: "bad-scheme://sdf".to_string(),
-                    startup: fsys::StartupMode::Eager,
+                    startup: fdecl::StartupMode::Eager,
                     environment: None,
                     on_terminate: None,
                 })

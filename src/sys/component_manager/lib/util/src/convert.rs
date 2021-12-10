@@ -6,12 +6,12 @@
 /// namespace.
 use {fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_sys2 as fsys};
 
-// Temporary mappings until migration from fuchsia.sys2 -> fuchsia.component is complete.
+// Temporary mappings until migration from fuchsia.component.decl -> fuchsia.sys2 is complete.
 #[macro_export]
-macro_rules! enum_to_fsys {
+macro_rules! enum_to_fdecl {
     ($label:ident, $a:ty , $b:ty, $($id: ident),*) => {
         paste::paste! {
-            pub fn [<$label _ to _ fsys>](input: $a) -> $b {
+            pub fn [<$label _ to _ fdecl>](input: $a) -> $b {
                 match input {
                     $( <$a>::$id => <$b>::$id, )*
                 }
@@ -20,29 +20,29 @@ macro_rules! enum_to_fsys {
     };
 }
 
-// Generates `startup_mode_to_fsys`.
-enum_to_fsys!(startup_mode, fdecl::StartupMode, fsys::StartupMode, Lazy, Eager);
+// Generates `startup_mode_to_fdecl`.
+enum_to_fdecl!(startup_mode, fsys::StartupMode, fdecl::StartupMode, Lazy, Eager);
 
-// Generates `on_terminate_to_fsys`.
-enum_to_fsys!(on_terminate, fdecl::OnTerminate, fsys::OnTerminate, None, Reboot);
+// Generates `on_terminate_to_fdecl`.
+enum_to_fdecl!(on_terminate, fsys::OnTerminate, fdecl::OnTerminate, None, Reboot);
 
-pub fn child_decl_to_fsys(input: fdecl::Child) -> fsys::ChildDecl {
-    fsys::ChildDecl {
+pub fn child_decl_to_fdecl(input: fsys::ChildDecl) -> fdecl::Child {
+    fdecl::Child {
         name: input.name,
         url: input.url,
-        startup: input.startup.map(startup_mode_to_fsys),
+        startup: input.startup.map(startup_mode_to_fdecl),
         environment: input.environment,
-        on_terminate: input.on_terminate.map(on_terminate_to_fsys),
-        ..fsys::ChildDecl::EMPTY
+        on_terminate: input.on_terminate.map(on_terminate_to_fdecl),
+        ..fdecl::Child::EMPTY
     }
 }
 
-pub fn collection_ref_to_fsys(input: fdecl::CollectionRef) -> fsys::CollectionRef {
-    fsys::CollectionRef { name: input.name }
+pub fn collection_ref_to_fdecl(input: fsys::CollectionRef) -> fdecl::CollectionRef {
+    fdecl::CollectionRef { name: input.name }
 }
 
-pub fn child_ref_to_fsys(input: fdecl::ChildRef) -> fsys::ChildRef {
-    fsys::ChildRef { name: input.name, collection: input.collection }
+pub fn child_ref_to_fdecl(input: fsys::ChildRef) -> fdecl::ChildRef {
+    fdecl::ChildRef { name: input.name, collection: input.collection }
 }
 
 // To seamlessly map between

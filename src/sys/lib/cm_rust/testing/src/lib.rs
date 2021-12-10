@@ -5,7 +5,8 @@
 use {
     anyhow::{Context, Error},
     cm_rust::{ComponentDecl, FidlIntoNative},
-    cml, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    cml, fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
+    fidl_fuchsia_io2 as fio2,
     routing::rights::READ_RIGHTS,
     serde_json,
 };
@@ -70,7 +71,7 @@ impl ComponentDeclBuilder {
             ChildDeclBuilder::new()
                 .name(name)
                 .url(&format!("test:///{}", name))
-                .startup(fsys::StartupMode::Eager),
+                .startup(fdecl::StartupMode::Eager),
         )
     }
 
@@ -176,7 +177,7 @@ impl ChildDeclBuilder {
         ChildDeclBuilder(cm_rust::ChildDecl {
             name: String::new(),
             url: String::new(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         })
@@ -184,7 +185,7 @@ impl ChildDeclBuilder {
 
     /// Creates a new builder initialized with a lazy child.
     pub fn new_lazy_child(name: &str) -> Self {
-        Self::new().name(name).url(&format!("test:///{}", name)).startup(fsys::StartupMode::Lazy)
+        Self::new().name(name).url(&format!("test:///{}", name)).startup(fdecl::StartupMode::Lazy)
     }
 
     /// Sets the ChildDecl's name.
@@ -200,13 +201,13 @@ impl ChildDeclBuilder {
     }
 
     /// Sets the ChildDecl's startup mode.
-    pub fn startup(mut self, startup: fsys::StartupMode) -> Self {
+    pub fn startup(mut self, startup: fdecl::StartupMode) -> Self {
         self.0.startup = startup;
         self
     }
 
     /// Sets the ChildDecl's on_terminate action.
-    pub fn on_terminate(mut self, on_terminate: fsys::OnTerminate) -> Self {
+    pub fn on_terminate(mut self, on_terminate: fdecl::OnTerminate) -> Self {
         self.0.on_terminate = Some(on_terminate);
         self
     }
@@ -238,7 +239,7 @@ impl CollectionDeclBuilder {
     pub fn new() -> Self {
         CollectionDeclBuilder(cm_rust::CollectionDecl {
             name: String::new(),
-            durability: fsys::Durability::Transient,
+            durability: fdecl::Durability::Transient,
             allowed_offers: cm_types::AllowedOffers::StaticOnly,
             environment: None,
         })
@@ -246,12 +247,12 @@ impl CollectionDeclBuilder {
 
     /// Creates a new builder initialized with a transient collection.
     pub fn new_transient_collection(name: &str) -> Self {
-        Self::new().name(name).durability(fsys::Durability::Transient)
+        Self::new().name(name).durability(fdecl::Durability::Transient)
     }
 
     /// Creates a new builder initialized with a single run collection.
     pub fn new_single_run_collection(name: &str) -> Self {
-        Self::new().name(name).durability(fsys::Durability::SingleRun)
+        Self::new().name(name).durability(fdecl::Durability::SingleRun)
     }
 
     /// Sets the CollectionDecl's name.
@@ -261,7 +262,7 @@ impl CollectionDeclBuilder {
     }
 
     /// Sets the CollectionDecl's durability
-    pub fn durability(mut self, durability: fsys::Durability) -> Self {
+    pub fn durability(mut self, durability: fdecl::Durability) -> Self {
         self.0.durability = durability;
         self
     }
@@ -300,7 +301,7 @@ impl EnvironmentDeclBuilder {
     pub fn new() -> Self {
         EnvironmentDeclBuilder(cm_rust::EnvironmentDecl {
             name: String::new(),
-            extends: fsys::EnvironmentExtends::None,
+            extends: fdecl::EnvironmentExtends::None,
             runners: vec![],
             resolvers: vec![],
             debug_capabilities: vec![],
@@ -315,7 +316,7 @@ impl EnvironmentDeclBuilder {
     }
 
     /// Sets whether the environment extends from its realm.
-    pub fn extends(mut self, extends: fsys::EnvironmentExtends) -> Self {
+    pub fn extends(mut self, extends: fdecl::EnvironmentExtends) -> Self {
         self.0.extends = extends;
         self
     }

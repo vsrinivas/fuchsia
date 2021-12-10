@@ -10,7 +10,9 @@ use {
         model::Model,
     },
     ::routing::error::ComponentInstanceError,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
+    cm_util::convert::{child_decl_to_fdecl, child_ref_to_fdecl, collection_ref_to_fdecl},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_sys2 as fsys,
     futures::prelude::*,
     log::*,
     moniker::{
@@ -123,8 +125,8 @@ impl LifecycleController {
     async fn create_child(
         &self,
         parent_moniker: String,
-        collection: fsys::CollectionRef,
-        child_decl: fsys::ChildDecl,
+        collection: fdecl::CollectionRef,
+        child_decl: fdecl::Child,
         child_args: fcomponent::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
         let parent_component = self.resolve_component(&parent_moniker).await?;
@@ -136,7 +138,7 @@ impl LifecycleController {
     async fn destroy_child(
         &self,
         parent_moniker: String,
-        child: fsys::ChildRef,
+        child: fdecl::ChildRef,
     ) -> Result<(), fcomponent::Error> {
         let parent_component = self.resolve_component(&parent_moniker).await?;
         let parent_component = WeakComponentInstance::new(&parent_component);
@@ -165,7 +167,14 @@ impl LifecycleController {
                     args,
                     responder,
                 } => {
-                    let mut res = self.create_child(parent_moniker, collection, decl, args).await;
+                    let mut res = self
+                        .create_child(
+                            parent_moniker,
+                            collection_ref_to_fdecl(collection),
+                            child_decl_to_fdecl(decl),
+                            args,
+                        )
+                        .await;
                     let _ = responder.send(&mut res);
                 }
                 fsys::LifecycleControllerRequest::DestroyChild {
@@ -173,7 +182,8 @@ impl LifecycleController {
                     child,
                     responder,
                 } => {
-                    let mut res = self.destroy_child(parent_moniker, child).await;
+                    let mut res =
+                        self.destroy_child(parent_moniker, child_ref_to_fdecl(child)).await;
                     let _ = responder.send(&mut res);
                 }
             }
@@ -188,7 +198,7 @@ mod tests {
         crate::model::testing::test_helpers::{TestEnvironmentBuilder, TestModelResult},
         cm_rust_testing::ComponentDeclBuilder,
         fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+        fidl_fuchsia_component_decl as fdecl, fuchsia_async as fasync,
         std::sync::Arc,
     };
 
@@ -201,14 +211,14 @@ mod tests {
                     .add_child(cm_rust::ChildDecl {
                         name: "a".to_string(),
                         url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Eager,
+                        startup: fdecl::StartupMode::Eager,
                         environment: None,
                         on_terminate: None,
                     })
                     .add_child(cm_rust::ChildDecl {
                         name: "cant-resolve".to_string(),
                         url: "cant-resolve://cant-resolve".to_string(),
-                        startup: fsys::StartupMode::Eager,
+                        startup: fdecl::StartupMode::Eager,
                         environment: None,
                         on_terminate: None,
                     })
@@ -220,7 +230,7 @@ mod tests {
                     .add_child(cm_rust::ChildDecl {
                         name: "b".to_string(),
                         url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Eager,
+                        startup: fdecl::StartupMode::Eager,
                         environment: None,
                         on_terminate: None,
                     })

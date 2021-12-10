@@ -33,7 +33,7 @@ use {
         OPEN_FLAG_CREATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
     fidl_fuchsia_logger::{LogSinkMarker, LogSinkRequestStream},
-    fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
+    files_async, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
@@ -167,7 +167,7 @@ pub async fn get_live_child<'a>(
     }
 }
 
-/// Create a fsys::OfferRunnerDecl offering the given cap from the parent to the given child
+/// Create a cm_rust::OfferRunnerDecl offering the given cap from the parent to the given child
 /// component.
 pub fn offer_runner_cap_to_child(runner_cap: &str, child: &str) -> cm_rust::OfferDecl {
     cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
@@ -178,7 +178,7 @@ pub fn offer_runner_cap_to_child(runner_cap: &str, child: &str) -> cm_rust::Offe
     })
 }
 
-/// Create a fsys::OfferRunnerDecl offering the given cap from the parent to the given child
+/// Create a cm_rust::OfferRunnerDecl offering the given cap from the parent to the given child
 /// collection.
 pub fn offer_runner_cap_to_collection(runner_cap: &str, child: &str) -> cm_rust::OfferDecl {
     cm_rust::OfferDecl::Runner(cm_rust::OfferRunnerDecl {
@@ -467,7 +467,7 @@ impl ActionsTest {
         let child_decl = ChildDecl {
             name: name.to_string(),
             url: format!("test:///{}", name),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         }

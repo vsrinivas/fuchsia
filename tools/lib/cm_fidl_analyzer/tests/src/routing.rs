@@ -27,8 +27,8 @@ use {
         ProtocolDeclBuilder,
     },
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
+    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
     matches::assert_matches,
     moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
     routing::{
@@ -679,7 +679,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "elf".into(),
                                 source: RegistrationSource::Self_,
@@ -700,7 +700,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .build(),
                     )
                     .build(),
@@ -739,7 +739,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "elf".into(),
                                 source: RegistrationSource::Self_,
@@ -800,7 +800,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_resolver(ResolverRegistration {
                                 resolver: "base".into(),
                                 source: RegistrationSource::Self_,
@@ -849,7 +849,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("b_env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_resolver(ResolverRegistration {
                                 resolver: "base".into(),
                                 source: RegistrationSource::Self_,
@@ -869,7 +869,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("c_env")
-                            .extends(fsys::EnvironmentExtends::None),
+                            .extends(fdecl::EnvironmentExtends::None),
                     )
                     .build(),
             ),
@@ -1219,7 +1219,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(runner_reg.clone())
                             .build(),
                     )
@@ -1285,7 +1285,7 @@ mod tests {
             backing_dir: "data".try_into().unwrap(),
             source: StorageDirectorySource::Self_,
             subdir: None,
-            storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+            storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
         };
         let offer_storage_decl = OfferDecl::Storage(OfferStorageDecl {
             source: OfferSource::Self_,
@@ -1561,7 +1561,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_resolver(registration_decl.clone()),
                     )
                     .build(),
@@ -1639,7 +1639,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_resolver(registration_decl.clone()),
                     )
                     .resolver(resolver_decl.clone())
@@ -1758,7 +1758,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_resolver(resolver_registration.clone()),
                     )
                     .resolver(resolver_decl.clone())
@@ -1916,7 +1916,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_resolver(resolver_registration_decl.clone())
                             .add_runner(runner_registration_decl.clone()),
                     )

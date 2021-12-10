@@ -826,7 +826,7 @@ mod tests {
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
         },
-        fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_component_decl as fdecl,
         moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialChildMoniker},
         std::collections::HashMap,
         std::{convert::TryFrom, sync::Weak},
@@ -868,7 +868,7 @@ mod tests {
             children: vec![ChildDecl {
                 name: "childA".to_string(),
                 url: "ignored:///child".to_string(),
-                startup: fsys::StartupMode::Lazy,
+                startup: fdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             }],
@@ -895,7 +895,7 @@ mod tests {
             children: vec![ChildDecl {
                 name: "childA".to_string(),
                 url: "ignored:///child".to_string(),
-                startup: fsys::StartupMode::Lazy,
+                startup: fdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             }],
@@ -920,7 +920,7 @@ mod tests {
             children: vec![ChildDecl {
                 name: "childA".to_string(),
                 url: "ignored:///child".to_string(),
-                startup: fsys::StartupMode::Lazy,
+                startup: fdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             }],
@@ -938,14 +938,14 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1378,14 +1378,14 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1430,14 +1430,14 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1491,21 +1491,21 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_c = ChildDecl {
             name: "childC".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1558,21 +1558,21 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_c = ChildDecl {
             name: "childC".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1632,21 +1632,21 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_c = ChildDecl {
             name: "childC".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1707,35 +1707,35 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_c = ChildDecl {
             name: "childC".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_d = ChildDecl {
             name: "childD".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_e = ChildDecl {
             name: "childE".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1828,7 +1828,7 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1854,7 +1854,7 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
@@ -1887,7 +1887,7 @@ mod tests {
             children: vec![ChildDecl {
                 name: "childA".to_string(),
                 url: "ignored:///child".to_string(),
-                startup: fsys::StartupMode::Lazy,
+                startup: fdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             }],
@@ -1920,14 +1920,14 @@ mod tests {
                 ChildDecl {
                     name: "childA".to_string(),
                     url: "ignored:///child".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fdecl::StartupMode::Lazy,
                     environment: None,
                     on_terminate: None,
                 },
                 ChildDecl {
                     name: "childB".to_string(),
                     url: "ignored:///child".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fdecl::StartupMode::Lazy,
                     environment: None,
                     on_terminate: None,
                 },
@@ -1959,14 +1959,14 @@ mod tests {
                     source: StorageDirectorySource::Child("childB".to_string()),
                     backing_dir: "directory".into(),
                     subdir: None,
-                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                 }),
                 CapabilityDecl::Storage(StorageDecl {
                     name: "pdata".into(),
                     source: StorageDirectorySource::Parent,
                     backing_dir: "directory".into(),
                     subdir: None,
-                    storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                    storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                 }),
             ],
             offers: vec![
@@ -1987,14 +1987,14 @@ mod tests {
                 ChildDecl {
                     name: "childA".to_string(),
                     url: "ignored:///child".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fdecl::StartupMode::Lazy,
                     environment: None,
                     on_terminate: None,
                 },
                 ChildDecl {
                     name: "childB".to_string(),
                     url: "ignored:///child".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fdecl::StartupMode::Lazy,
                     environment: None,
                     on_terminate: None,
                 },
@@ -2031,7 +2031,7 @@ mod tests {
             children: vec![ChildDecl {
                 name: "childA".to_string(),
                 url: "ignored:///child".to_string(),
-                startup: fsys::StartupMode::Lazy,
+                startup: fdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             }],
@@ -2064,14 +2064,14 @@ mod tests {
                 ChildDecl {
                     name: "childA".to_string(),
                     url: "ignored:///child".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fdecl::StartupMode::Lazy,
                     environment: None,
                     on_terminate: None,
                 },
                 ChildDecl {
                     name: "childB".to_string(),
                     url: "ignored:///child".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fdecl::StartupMode::Lazy,
                     environment: None,
                     on_terminate: None,
                 },
@@ -2106,14 +2106,14 @@ mod tests {
         let child_a = ChildDecl {
             name: "childA".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };
         let child_b = ChildDecl {
             name: "childB".to_string(),
             url: "ignored:///child".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         };

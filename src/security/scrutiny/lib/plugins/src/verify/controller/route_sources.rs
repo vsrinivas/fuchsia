@@ -623,7 +623,7 @@ mod tests {
             OfferDirectoryDecl, OfferSource, OfferTarget, ProgramDecl, UseDirectoryDecl, UseSource,
             UseStorageDecl,
         },
-        fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+        fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
         maplit::{hashmap, hashset},
         routing::{
             component_id_index::ComponentIdIndex, config::RuntimeConfig,
@@ -811,14 +811,14 @@ mod tests {
                     ChildDecl{
                         name: "two_dir_user".to_string(),
                         url: two_dir_user_url.clone(),
-                        startup: fsys::StartupMode::Lazy,
+                        startup: fdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
                     ChildDecl{
                         name: "one_dir_provider".to_string(),
                         url: one_dir_provider_url.clone(),
-                        startup: fsys::StartupMode::Lazy,
+                        startup: fdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },

@@ -24,8 +24,8 @@ use {
         ProtocolDeclBuilder, TEST_RUNNER_NAME,
     },
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon_status as zx,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_data as fdata, fuchsia_zircon_status as zx,
     maplit::hashmap,
     matches::assert_matches,
     moniker::{
@@ -3808,7 +3808,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env_a")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_debug_registration(cm_rust::DebugRegistration::Protocol(
                                 cm_rust::DebugProtocolRegistration {
                                     source_name: "svc_allowed".into(),
@@ -3920,7 +3920,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env_b")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_debug_registration(cm_rust::DebugRegistration::Protocol(
                                 cm_rust::DebugProtocolRegistration {
                                     source_name: "svc_allowed".into(),
@@ -4034,7 +4034,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env_b")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_debug_registration(cm_rust::DebugRegistration::Protocol(
                                 cm_rust::DebugProtocolRegistration {
                                     source_name: "svc_allowed".into(),
@@ -4163,7 +4163,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env_b")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_debug_registration(cm_rust::DebugRegistration::Protocol(
                                 cm_rust::DebugProtocolRegistration {
                                     source_name: "svc_allowed".into(),
@@ -4474,7 +4474,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "elf".into(),
                                 source: RegistrationSource::Self_,
@@ -4553,7 +4553,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "dwarf".into(),
                                 source: RegistrationSource::Parent,
@@ -4610,7 +4610,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "dwarf".into(),
                                 source: RegistrationSource::Child("b".into()),
@@ -4684,7 +4684,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "elf".into(),
                                 source: RegistrationSource::Self_,
@@ -4705,7 +4705,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .build(),
                     )
                     .build(),
@@ -4756,7 +4756,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "elf".into(),
                                 source: RegistrationSource::Self_,
@@ -4807,7 +4807,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "elf".into(),
                                 source: RegistrationSource::Parent,
@@ -4897,7 +4897,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name("env")
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_runner(RunnerRegistration {
                                 source_name: "elf".into(),
                                 source: RegistrationSource::Parent,

@@ -14,7 +14,7 @@ use {
     },
     async_trait::async_trait,
     cm_rust::EnvironmentDecl,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl,
     std::{
         sync::{Arc, Weak},
         time::Duration,
@@ -90,8 +90,8 @@ impl Environment {
             stop_timeout: match env_decl.stop_timeout_ms {
                 Some(timeout) => Duration::from_millis(timeout.into()),
                 None => match env_decl.extends {
-                    fsys::EnvironmentExtends::Realm => parent.environment.stop_timeout(),
-                    fsys::EnvironmentExtends::None => {
+                    fdecl::EnvironmentExtends::Realm => parent.environment.stop_timeout(),
+                    fdecl::EnvironmentExtends::None => {
                         panic!("EnvironmentDecl is missing stop_timeout");
                     }
                 },
@@ -201,7 +201,7 @@ mod tests {
             &component,
             &EnvironmentDeclBuilder::new()
                 .name("env")
-                .extends(fsys::EnvironmentExtends::None)
+                .extends(fdecl::EnvironmentExtends::None)
                 .stop_timeout(1234)
                 .build(),
         );
@@ -211,7 +211,7 @@ mod tests {
             &component,
             &EnvironmentDeclBuilder::new()
                 .name("env")
-                .extends(fsys::EnvironmentExtends::Realm)
+                .extends(fdecl::EnvironmentExtends::Realm)
                 .build(),
         );
         assert_matches!(environment.parent, WeakExtendedInstance::Component(_));
@@ -220,7 +220,7 @@ mod tests {
             &component,
             &EnvironmentDeclBuilder::new()
                 .name("env")
-                .extends(fsys::EnvironmentExtends::None)
+                .extends(fdecl::EnvironmentExtends::None)
                 .stop_timeout(1234)
                 .add_debug_registration(cm_rust::DebugRegistration::Protocol(
                     cm_rust::DebugProtocolRegistration {
@@ -272,7 +272,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_a")
-                        .extends(fsys::EnvironmentExtends::Realm),
+                        .extends(fdecl::EnvironmentExtends::Realm),
                 )
                 .build(),
         );
@@ -283,7 +283,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_b")
-                        .extends(fsys::EnvironmentExtends::Realm),
+                        .extends(fdecl::EnvironmentExtends::Realm),
                 )
                 .build(),
         );
@@ -350,7 +350,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_a")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source: RegistrationSource::Parent,
                             source_name: "test-src".into(),
@@ -373,7 +373,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_b")
-                        .extends(fsys::EnvironmentExtends::Realm),
+                        .extends(fdecl::EnvironmentExtends::Realm),
                 )
                 .build(),
         );
@@ -441,7 +441,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_a")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source: RegistrationSource::Parent,
                             source_name: "test-src".into(),
@@ -466,7 +466,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_b")
-                        .extends(fsys::EnvironmentExtends::Realm),
+                        .extends(fdecl::EnvironmentExtends::Realm),
                 )
                 .build(),
         );
@@ -549,7 +549,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_a")
-                        .extends(fsys::EnvironmentExtends::Realm),
+                        .extends(fdecl::EnvironmentExtends::Realm),
                 )
                 .build(),
         );
@@ -609,7 +609,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_a")
-                        .extends(fsys::EnvironmentExtends::Realm),
+                        .extends(fdecl::EnvironmentExtends::Realm),
                 )
                 .build(),
         );
@@ -620,7 +620,7 @@ mod tests {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env_b")
-                        .extends(fsys::EnvironmentExtends::None)
+                        .extends(fdecl::EnvironmentExtends::None)
                         .stop_timeout(1234),
                 )
                 .build(),

@@ -122,9 +122,9 @@ mod tests {
             UseDirectoryDecl, UseProtocolDecl, UseSource,
         },
         fidl::encoding::encode_persistent,
+        fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
         fidl_fuchsia_io2::Operations,
-        fidl_fuchsia_sys2 as fsys2,
         maplit::hashset,
         moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
         routing::{
@@ -146,7 +146,7 @@ mod tests {
         ChildDecl {
             name,
             url,
-            startup: fsys2::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         }
@@ -258,7 +258,7 @@ mod tests {
     }
 
     fn make_v2_manifest(component_id: i32, decl: ComponentDecl) -> Result<Manifest> {
-        let mut decl_fidl: fsys2::ComponentDecl = decl.native_into_fidl();
+        let mut decl_fidl: fdecl::Component = decl.native_into_fidl();
         let decl_base64 = base64::encode(&encode_persistent(&mut decl_fidl)?);
         Ok(Manifest { component_id, manifest: ManifestData::Version2(decl_base64), uses: vec![] })
     }

@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_component_test as ftest,
     fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_sys2 as fsys,
     fuchsia_component::server as fserver,
     fuchsia_zircon_status as zx_status,
     futures::{future::BoxFuture, join, lock::Mutex, FutureExt, StreamExt, TryStreamExt},
@@ -497,14 +496,14 @@ impl RealmNodeState {
             name: child_name,
             url: child_url,
             startup: match child_options.startup {
-                Some(fcdecl::StartupMode::Lazy) => fsys::StartupMode::Lazy,
-                Some(fcdecl::StartupMode::Eager) => fsys::StartupMode::Eager,
-                None => fsys::StartupMode::Lazy,
+                Some(fcdecl::StartupMode::Lazy) => fcdecl::StartupMode::Lazy,
+                Some(fcdecl::StartupMode::Eager) => fcdecl::StartupMode::Eager,
+                None => fcdecl::StartupMode::Lazy,
             },
             environment: child_options.environment,
             on_terminate: match child_options.on_terminate {
-                Some(fcdecl::OnTerminate::None) => Some(fsys::OnTerminate::None),
-                Some(fcdecl::OnTerminate::Reboot) => Some(fsys::OnTerminate::Reboot),
+                Some(fcdecl::OnTerminate::None) => Some(fcdecl::OnTerminate::None),
+                Some(fcdecl::OnTerminate::Reboot) => Some(fcdecl::OnTerminate::Reboot),
                 None => None,
             },
         });
@@ -652,13 +651,13 @@ impl RealmNode2 {
                         RealmNode2::load_from_pkg(child.url, Clone::clone(&test_pkg_dir)).await?;
                     let child_options = ftest::ChildOptions {
                         startup: match child.startup {
-                            fsys::StartupMode::Lazy => Some(fcdecl::StartupMode::Lazy),
-                            fsys::StartupMode::Eager => Some(fcdecl::StartupMode::Eager),
+                            fcdecl::StartupMode::Lazy => Some(fcdecl::StartupMode::Lazy),
+                            fcdecl::StartupMode::Eager => Some(fcdecl::StartupMode::Eager),
                         },
                         environment: child.environment,
                         on_terminate: match child.on_terminate {
-                            Some(fsys::OnTerminate::None) => Some(fcdecl::OnTerminate::None),
-                            Some(fsys::OnTerminate::Reboot) => Some(fcdecl::OnTerminate::Reboot),
+                            Some(fcdecl::OnTerminate::None) => Some(fcdecl::OnTerminate::None),
+                            Some(fcdecl::OnTerminate::Reboot) => Some(fcdecl::OnTerminate::Reboot),
                             None => None,
                         },
                         ..ftest::ChildOptions::EMPTY
@@ -1360,7 +1359,8 @@ impl RealmNode {
     /// point. These decls are re-validated (without filtering out errors) during `commit()`.
     /// `moniker` is used for error reporting.
     fn validate(&self, moniker: &Moniker) -> Result<(), Error> {
-        if let Err(mut e) = cm_fidl_validator::fsys::validate(&self.decl.clone().native_into_fidl())
+        if let Err(mut e) =
+            cm_fidl_validator::fdecl::validate(&self.decl.clone().native_into_fidl())
         {
             e.errs = e
                 .errs
@@ -1484,7 +1484,7 @@ impl RealmNode {
                 parent_node.decl.children.push(cm_rust::ChildDecl {
                     name: child_name,
                     url,
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fcdecl::StartupMode::Lazy,
                     environment: None,
                     on_terminate: None,
                 });
@@ -1611,7 +1611,7 @@ impl RealmNode {
             for child in child_decls_to_load {
                 let child_node = current_node.child_create_if_missing(&child.name);
                 let child_moniker = current_moniker.child(child.name.clone());
-                if child.startup == fsys::StartupMode::Eager {
+                if child.startup == fcdecl::StartupMode::Eager {
                     child_node.eager = true;
                 }
                 child_node.environment = child.environment;
@@ -1650,7 +1650,7 @@ impl RealmNode {
         if let Some(child_decl) =
             parent_node.decl.children.iter_mut().find(|c| &c.name == moniker.child_name().unwrap())
         {
-            child_decl.startup = fsys::StartupMode::Eager;
+            child_decl.startup = fcdecl::StartupMode::Eager;
         }
         for ancestor in moniker.ancestry() {
             let ancestor_node = self.get_node_mut(&ancestor, GetBehavior::ErrorIfMissing)?;
@@ -2043,7 +2043,7 @@ impl RealmNode {
                 new_path.push(name.clone());
 
                 let startup =
-                    if node.eager { fsys::StartupMode::Eager } else { fsys::StartupMode::Lazy };
+                    if node.eager { fcdecl::StartupMode::Eager } else { fcdecl::StartupMode::Lazy };
                 let environment = node.environment.clone();
                 let url = node.commit(registry.clone(), new_path, package_dir.clone()).await?;
                 self.decl.children.push(cm_rust::ChildDecl {
@@ -2497,15 +2497,15 @@ mod tests {
                         Some(child_tree) => {
                             let child_options = ftest::ChildOptions {
                                 startup: match child.startup {
-                                    fsys::StartupMode::Eager => Some(fcdecl::StartupMode::Eager),
-                                    fsys::StartupMode::Lazy => None,
+                                    fcdecl::StartupMode::Eager => Some(fcdecl::StartupMode::Eager),
+                                    fcdecl::StartupMode::Lazy => None,
                                 },
                                 environment: child.environment,
                                 on_terminate: match child.on_terminate {
-                                    Some(fsys::OnTerminate::None) => {
+                                    Some(fcdecl::OnTerminate::None) => {
                                         Some(fcdecl::OnTerminate::None)
                                     }
-                                    Some(fsys::OnTerminate::Reboot) => {
+                                    Some(fcdecl::OnTerminate::Reboot) => {
                                         Some(fcdecl::OnTerminate::Reboot)
                                     }
                                     None => None,
@@ -2765,7 +2765,7 @@ mod tests {
                 children: vec![cm_rust::ChildDecl {
                     name: "a".to_string(),
                     url: "test://a".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fcdecl::StartupMode::Lazy,
                     on_terminate: None,
                     environment: None,
                 }],
@@ -2822,7 +2822,7 @@ mod tests {
                 children: vec![cm_rust::ChildDecl {
                     name: "a".to_string(),
                     url: "test://a".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fcdecl::StartupMode::Lazy,
                     on_terminate: None,
                     environment: None,
                 }],
@@ -2931,7 +2931,7 @@ mod tests {
                 })],
                 environments: vec![cm_rust::EnvironmentDecl {
                     name: "new-env".to_string(),
-                    extends: fsys::EnvironmentExtends::None,
+                    extends: fcdecl::EnvironmentExtends::None,
                     resolvers: vec![cm_rust::ResolverRegistration {
                         resolver: "test".try_into().unwrap(),
                         source: cm_rust::RegistrationSource::Parent,
@@ -3087,7 +3087,7 @@ mod tests {
                 children: vec![cm_rust::ChildDecl {
                     name: "a".to_string(),
                     url: "test:///a".to_string(),
-                    startup: fsys::StartupMode::Lazy,
+                    startup: fcdecl::StartupMode::Lazy,
                     on_terminate: None,
                     environment: None,
                 }],
@@ -3255,7 +3255,7 @@ mod tests {
                         children: vec![cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "test:///b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
+                            startup: fcdecl::StartupMode::Lazy,
                             on_terminate: None,
                             environment: None,
                         }],
@@ -3594,14 +3594,14 @@ mod tests {
                     cm_rust::ChildDecl {
                         name: "a".to_string(),
                         url: "test:///a".to_string(),
-                        startup: fsys::StartupMode::Lazy,
+                        startup: fcdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
                     cm_rust::ChildDecl {
                         name: "b".to_string(),
                         url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
+                        startup: fcdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
@@ -3710,14 +3710,14 @@ mod tests {
                     cm_rust::ChildDecl {
                         name: "b".to_string(),
                         url: "test:///b".to_string(),
-                        startup: fsys::StartupMode::Lazy,
+                        startup: fcdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
                     cm_rust::ChildDecl {
                         name: "c".to_string(),
                         url: "test:///c".to_string(),
-                        startup: fsys::StartupMode::Lazy,
+                        startup: fcdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
@@ -3836,14 +3836,14 @@ mod tests {
                     cm_rust::ChildDecl {
                         name: "b".to_owned(),
                         url: "test:///b".to_owned(),
-                        startup: fsys::StartupMode::Lazy,
+                        startup: fcdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
                     cm_rust::ChildDecl {
                         name: "c".to_owned(),
                         url: "test:///c".to_owned(),
-                        startup: fsys::StartupMode::Lazy,
+                        startup: fcdecl::StartupMode::Lazy,
                         on_terminate: None,
                         environment: None,
                     },
@@ -3954,7 +3954,7 @@ mod tests {
                         children: vec![cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "test:///b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
+                            startup: fcdecl::StartupMode::Lazy,
                             on_terminate: None,
                             environment: None,
                         }],
@@ -4322,7 +4322,7 @@ mod tests {
         a_decl.children.push(cm_rust::ChildDecl {
             name: "b".to_string(),
             url: "fuchsia-pkg://b".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fcdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         });
@@ -4362,7 +4362,7 @@ mod tests {
             children: vec![cm_rust::ChildDecl {
                 name: "b".to_string(),
                 url: "fuchsia-pkg://b".to_string(),
-                startup: fsys::StartupMode::Lazy,
+                startup: fcdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             }],
@@ -4428,7 +4428,7 @@ mod tests {
             children: vec![cm_rust::ChildDecl {
                 name: "c".to_string(),
                 url: "fuchsia-pkg://c".to_string(),
-                startup: fsys::StartupMode::Lazy,
+                startup: fcdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             }],
@@ -4470,7 +4470,7 @@ mod tests {
             vec![cm_rust::ChildDecl {
                 name: "c".to_string(),
                 url: "fuchsia-pkg://c".to_string(),
-                startup: fsys::StartupMode::Eager,
+                startup: fcdecl::StartupMode::Eager,
                 environment: None,
                 on_terminate: None,
             }]
@@ -4933,14 +4933,14 @@ mod tests {
                         cm_rust::ChildDecl {
                             name: "a".to_string(),
                             url: "fuchsia-pkg://a".to_string(),
-                            startup: fsys::StartupMode::Lazy,
+                            startup: fcdecl::StartupMode::Lazy,
                             environment: None,
                             on_terminate: None,
                         },
                         cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://b".to_string(),
-                            startup: fsys::StartupMode::Eager,
+                            startup: fcdecl::StartupMode::Eager,
                             environment: None,
                             on_terminate: None,
                         },
@@ -5105,7 +5105,7 @@ mod tests {
                         children: vec![cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
+                            startup: fcdecl::StartupMode::Lazy,
                             environment: None,
                             on_terminate: None,
                         }],
@@ -5192,14 +5192,14 @@ mod tests {
                             cm_rust::ChildDecl {
                                 name: "a".to_string(),
                                 url: "fuchsia-pkg://a".to_string(),
-                                startup: fsys::StartupMode::Lazy,
+                                startup: fcdecl::StartupMode::Lazy,
                                 environment: None,
                                 on_terminate: None,
                             },
                             cm_rust::ChildDecl {
                                 name: "c".to_string(),
                                 url: "fuchsia-pkg://c".to_string(),
-                                startup: fsys::StartupMode::Eager,
+                                startup: fcdecl::StartupMode::Eager,
                                 environment: None,
                                 on_terminate: None,
                             },
@@ -5331,21 +5331,21 @@ mod tests {
                         cm_rust::ChildDecl {
                             name: "a".to_string(),
                             url: "fuchsia-pkg://a".to_string(),
-                            startup: fsys::StartupMode::Eager,
+                            startup: fcdecl::StartupMode::Eager,
                             environment: None,
                             on_terminate: None,
                         },
                         cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
+                            startup: fcdecl::StartupMode::Lazy,
                             environment: None,
                             on_terminate: None,
                         },
                         cm_rust::ChildDecl {
                             name: "c".to_string(),
                             url: "fuchsia-pkg://c".to_string(),
-                            startup: fsys::StartupMode::Eager,
+                            startup: fcdecl::StartupMode::Eager,
                             environment: None,
                             on_terminate: None,
                         },
@@ -5454,7 +5454,7 @@ mod tests {
                         children: vec![cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://a-b".to_string(),
-                            startup: fsys::StartupMode::Lazy,
+                            startup: fcdecl::StartupMode::Lazy,
                             environment: None,
                             on_terminate: None,
                         }],
@@ -5571,7 +5571,7 @@ mod tests {
                         children: vec![cm_rust::ChildDecl {
                             name: "b".to_string(),
                             url: "fuchsia-pkg://b".to_string(),
-                            startup: fsys::StartupMode::Eager,
+                            startup: fcdecl::StartupMode::Eager,
                             environment: None,
                             on_terminate: None,
                         }],

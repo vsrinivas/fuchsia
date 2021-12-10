@@ -45,7 +45,7 @@ use {
         RunnerRegistration, ServiceDecl, SourceName, StorageDecl, StorageDirectorySource, UseDecl,
         UseDirectoryDecl, UseEventDecl, UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
     },
-    fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io2 as fio2,
     from_enum::FromEnum,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker, PartialChildMoniker,
@@ -620,7 +620,7 @@ where
         _ => unreachable!("unexpected storage source"),
     };
 
-    if storage_decl.storage_id == fsys::StorageId::StaticInstanceId
+    if storage_decl.storage_id == fdecl::StorageId::StaticInstanceId
         && instance
             .try_get_component_id_index()?
             .look_up_moniker(&instance.abs_moniker().to_partial())

@@ -16,9 +16,9 @@ use {
     async_trait::async_trait,
     cm_runner::Runner,
     fidl::endpoints::{self, Proxy, ServerEnd},
-    fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     log::*,
     moniker::{AbsoluteMonikerBase, PartialAbsoluteMoniker},
     std::sync::Arc,
@@ -228,10 +228,10 @@ async fn make_execution_runtime(
     ModelError,
 > {
     match component.on_terminate {
-        fsys::OnTerminate::Reboot => {
+        fdecl::OnTerminate::Reboot => {
             checker.reboot_on_terminate_allowed(&component.abs_moniker.to_partial())?;
         }
-        fsys::OnTerminate::None => {}
+        fdecl::OnTerminate::None => {}
     }
 
     // Create incoming/outgoing directories, and populate them.

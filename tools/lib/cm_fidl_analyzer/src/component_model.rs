@@ -826,6 +826,7 @@ mod tests {
             UseProtocolDecl, UseSource,
         },
         cm_rust_testing::{ChildDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder},
+        fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_component_internal as component_internal,
         routing::{
             component_instance::WeakExtendedInstanceInterface, environment::EnvironmentInterface,
@@ -1083,7 +1084,7 @@ mod tests {
                     .add_environment(
                         EnvironmentDeclBuilder::new()
                             .name(child_env_name)
-                            .extends(fsys::EnvironmentExtends::Realm)
+                            .extends(fdecl::EnvironmentExtends::Realm)
                             .add_resolver(child_resolver_registration.clone())
                             .add_runner(child_runner_registration.clone())
                             .build(),

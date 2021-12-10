@@ -435,7 +435,7 @@ async fn use_in_collection() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -447,7 +447,7 @@ async fn use_in_collection() {
         ChildDecl {
             name: "d".to_string(),
             url: "test:///d".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -536,7 +536,7 @@ async fn use_in_collection_not_offered() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -629,7 +629,7 @@ async fn dynamic_offer_from_parent() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -651,7 +651,7 @@ async fn dynamic_offer_from_parent() {
         ChildDecl {
             name: "d".to_string(),
             url: "test:///d".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -729,7 +729,7 @@ async fn dynamic_offer_siblings_same_collection() {
         ChildDecl {
             name: "b".to_string(),
             url: "test:///b".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -741,7 +741,7 @@ async fn dynamic_offer_siblings_same_collection() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -827,7 +827,7 @@ async fn dynamic_offer_siblings_cross_collection() {
         ChildDecl {
             name: "b".to_string(),
             url: "test:///b".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -839,7 +839,7 @@ async fn dynamic_offer_siblings_cross_collection() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -922,7 +922,7 @@ async fn dynamic_offer_destroyed_on_source_destruction() {
         ChildDecl {
             name: "b".to_string(),
             url: "test:///b".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -934,7 +934,7 @@ async fn dynamic_offer_destroyed_on_source_destruction() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -966,7 +966,7 @@ async fn dynamic_offer_destroyed_on_source_destruction() {
         ChildDecl {
             name: "b".to_string(),
             url: "test:///b".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -1044,7 +1044,7 @@ async fn dynamic_offer_destroyed_on_target_destruction() {
         ChildDecl {
             name: "b".to_string(),
             url: "test:///b".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -1056,7 +1056,7 @@ async fn dynamic_offer_destroyed_on_target_destruction() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -1084,7 +1084,7 @@ async fn dynamic_offer_destroyed_on_target_destruction() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -1173,7 +1173,7 @@ async fn dynamic_offer_to_static_offer() {
         ChildDecl {
             name: "c".to_string(),
             url: "test:///c".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -1254,7 +1254,7 @@ async fn use_runner_from_parent_environment() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source_name: "elf".into(),
                             source: RegistrationSource::Self_,
@@ -1316,7 +1316,7 @@ async fn use_runner_from_environment_in_collection() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source_name: "elf".into(),
                             source: RegistrationSource::Self_,
@@ -1354,7 +1354,7 @@ async fn use_runner_from_environment_in_collection() {
             ChildDecl {
                 name: "b".to_string(),
                 url: "test:///b".to_string(),
-                startup: fsys::StartupMode::Lazy,
+                startup: fdecl::StartupMode::Lazy,
                 environment: None,
                 on_terminate: None,
             },
@@ -1412,7 +1412,7 @@ async fn use_runner_from_grandparent_environment() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source_name: "dwarf".into(),
                             source: RegistrationSource::Parent,
@@ -1467,7 +1467,7 @@ async fn use_runner_from_sibling_environment() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source_name: "dwarf".into(),
                             source: RegistrationSource::Child("b".to_string()),
@@ -1539,7 +1539,7 @@ async fn use_runner_from_inherited_environment() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source_name: "elf".into(),
                             source: RegistrationSource::Self_,
@@ -1560,7 +1560,7 @@ async fn use_runner_from_inherited_environment() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .build(),
                 )
                 .build(),
@@ -1610,7 +1610,7 @@ async fn use_runner_from_environment_failed() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source_name: "runner".into(),
                             source: RegistrationSource::Self_,
@@ -1764,7 +1764,7 @@ async fn use_runner_from_environment_not_found() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_runner(RunnerRegistration {
                             source_name: "elf".into(),
                             source: RegistrationSource::Self_,
@@ -1871,7 +1871,7 @@ async fn use_with_destroyed_parent() {
         ChildDecl {
             name: "b".to_string(),
             url: "test:///b".to_string(),
-            startup: fsys::StartupMode::Lazy,
+            startup: fdecl::StartupMode::Lazy,
             environment: None,
             on_terminate: None,
         },
@@ -1990,7 +1990,7 @@ async fn use_resolver_from_parent_environment() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_resolver(ResolverRegistration {
                             resolver: "base".into(),
                             source: RegistrationSource::Child("c".to_string()),
@@ -2077,7 +2077,7 @@ async fn use_resolver_from_grandparent_environment() {
                 .add_environment(
                     EnvironmentDeclBuilder::new()
                         .name("env")
-                        .extends(fsys::EnvironmentExtends::Realm)
+                        .extends(fdecl::EnvironmentExtends::Realm)
                         .add_resolver(ResolverRegistration {
                             resolver: "base".into(),
                             source: RegistrationSource::Self_,
@@ -2160,7 +2160,7 @@ async fn resolver_is_not_available() {
             .add_environment(
                 EnvironmentDeclBuilder::new()
                     .name("env")
-                    .extends(fsys::EnvironmentExtends::Realm)
+                    .extends(fdecl::EnvironmentExtends::Realm)
                     .add_resolver(ResolverRegistration {
                         resolver: "base".into(),
                         source: RegistrationSource::Self_,
@@ -2243,7 +2243,7 @@ async fn resolver_component_decl_is_validated() {
             .add_environment(
                 EnvironmentDeclBuilder::new()
                     .name("env")
-                    .extends(fsys::EnvironmentExtends::Realm)
+                    .extends(fdecl::EnvironmentExtends::Realm)
                     .add_resolver(ResolverRegistration {
                         resolver: "base".into(),
                         source: RegistrationSource::Self_,

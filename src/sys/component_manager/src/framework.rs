@@ -22,14 +22,11 @@ use {
     cm_fidl_validator,
     cm_rust::{CapabilityName, FidlIntoNative},
     cm_task_scope::TaskScope,
-    cm_util::{
-        channel,
-        convert::{child_decl_to_fsys, child_ref_to_fsys, collection_ref_to_fsys},
-    },
+    cm_util::channel,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
     log::*,
@@ -142,20 +139,12 @@ impl RealmCapabilityHost {
     ) -> Result<(), fidl::Error> {
         match request {
             fcomponent::RealmRequest::CreateChild { responder, collection, decl, args } => {
-                let mut res = async {
-                    Self::create_child(
-                        component,
-                        collection_ref_to_fsys(collection),
-                        child_decl_to_fsys(decl),
-                        args,
-                    )
-                    .await
-                }
-                .await;
+                let mut res =
+                    async { Self::create_child(component, collection, decl, args).await }.await;
                 responder.send(&mut res)?;
             }
             fcomponent::RealmRequest::DestroyChild { responder, child } => {
-                let mut res = Self::destroy_child(component, child_ref_to_fsys(child)).await;
+                let mut res = Self::destroy_child(component, child).await;
                 responder.send(&mut res)?;
             }
             fcomponent::RealmRequest::ListChildren { responder, collection, iter } => {
@@ -169,8 +158,7 @@ impl RealmCapabilityHost {
                 responder.send(&mut res)?;
             }
             fcomponent::RealmRequest::OpenExposedDir { responder, child, exposed_dir } => {
-                let mut res =
-                    Self::open_exposed_dir(component, child_ref_to_fsys(child), exposed_dir).await;
+                let mut res = Self::open_exposed_dir(component, child, exposed_dir).await;
                 responder.send(&mut res)?;
             }
         }
@@ -179,12 +167,12 @@ impl RealmCapabilityHost {
 
     pub async fn create_child(
         component: &WeakComponentInstance,
-        collection: fsys::CollectionRef,
-        child_decl: fsys::ChildDecl,
+        collection: fdecl::CollectionRef,
+        child_decl: fdecl::Child,
         child_args: fcomponent::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
-        cm_fidl_validator::fsys::validate_child(&child_decl).map_err(|e| {
+        cm_fidl_validator::fdecl::validate_child(&child_decl).map_err(|e| {
             debug!("validate_child() failed: {}", e);
             fcomponent::Error::InvalidArguments
         })?;
@@ -193,11 +181,11 @@ impl RealmCapabilityHost {
         }
         let child_decl = child_decl.fidl_into_native();
         match component.add_dynamic_child(collection.name.clone(), &child_decl, child_args).await {
-            Ok(fsys::Durability::SingleRun) => {
+            Ok(fdecl::Durability::SingleRun) => {
                 // Creating a child in a `SingleRun` collection automatically starts it, so
                 // start the component.
                 let child_ref =
-                    fsys::ChildRef { name: child_decl.name, collection: Some(collection.name) };
+                    fdecl::ChildRef { name: child_decl.name, collection: Some(collection.name) };
                 let (_client_end, server_end) =
                     fidl::endpoints::create_endpoints::<DirectoryMarker>().unwrap();
                 let weak_component = WeakComponentInstance::new(&component);
@@ -220,7 +208,7 @@ impl RealmCapabilityHost {
 
     async fn bind_child(
         component: &WeakComponentInstance,
-        child: fsys::ChildRef,
+        child: fdecl::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
     ) -> Result<(), fcomponent::Error> {
         match Self::get_child(component, child.clone()).await? {
@@ -275,7 +263,7 @@ impl RealmCapabilityHost {
 
     async fn open_exposed_dir(
         component: &WeakComponentInstance,
-        child: fsys::ChildRef,
+        child: fdecl::ChildRef,
         exposed_dir: ServerEnd<DirectoryMarker>,
     ) -> Result<(), fcomponent::Error> {
         match Self::get_child(component, child.clone()).await? {
@@ -303,7 +291,7 @@ impl RealmCapabilityHost {
 
     pub async fn destroy_child(
         component: &WeakComponentInstance,
-        child: fsys::ChildRef,
+        child: fdecl::ChildRef,
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         child.collection.as_ref().ok_or(fcomponent::Error::InvalidArguments)?;
@@ -344,7 +332,7 @@ impl RealmCapabilityHost {
 
     async fn get_child(
         parent: &WeakComponentInstance,
-        child: fsys::ChildRef,
+        child: fdecl::ChildRef,
     ) -> Result<Option<Arc<ComponentInstance>>, fcomponent::Error> {
         let parent = parent.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
         let state = parent.lock_resolved_state().await.map_err(|e| match e {
@@ -635,7 +623,7 @@ mod tests {
                         .add_collection(
                             CollectionDeclBuilder::new()
                                 .name("pcoll")
-                                .durability(fsys::Durability::Persistent)
+                                .durability(fdecl::Durability::Persistent)
                                 .build(),
                         )
                         .build(),

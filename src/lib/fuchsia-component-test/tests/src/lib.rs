@@ -8,7 +8,7 @@ use {
     fidl::endpoints::ProtocolMarker,
     fidl_fidl_examples_routing_echo::{self as fecho, EchoMarker as EchoClientStatsMarker},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fcdecl,
-    fidl_fuchsia_data as fdata, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_data as fdata, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::{
         mock::MockHandles, ChildOptions, Moniker, RealmBuilder, RouteBuilder, RouteEndpoint,
@@ -369,7 +369,7 @@ async fn mock_component_with_a_relative_dynamic_child() -> Result<(), Error> {
     let mut echo_client_decl = builder.get_decl("echo-client").await?;
     echo_client_decl.collections.push(cm_rust::CollectionDecl {
         name: collection_name.clone(),
-        durability: fsys::Durability::Transient,
+        durability: fcdecl::Durability::Transient,
         allowed_offers: cm_types::AllowedOffers::StaticOnly,
         environment: None,
     });

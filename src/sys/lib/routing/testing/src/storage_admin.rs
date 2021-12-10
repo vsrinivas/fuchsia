@@ -6,7 +6,7 @@ use {
     crate::{CheckUse, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder},
     cm_rust::*,
     cm_rust_testing::*,
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl,
     moniker::{RelativeMoniker, RelativeMonikerBase},
     routing::rights::{READ_RIGHTS, WRITE_RIGHTS},
     std::{
@@ -50,7 +50,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
@@ -147,7 +147,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "data".try_into().unwrap(),
                         source: StorageDirectorySource::Parent,
                         subdir: Some(PathBuf::from("bar")),
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Capability("storage".into()),
@@ -240,7 +240,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
@@ -304,7 +304,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
@@ -372,7 +372,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
@@ -439,7 +439,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Capability("unrelated.protocol".into()),
@@ -533,7 +533,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .protocol(ProtocolDeclBuilder::new("unrelated.protocol").build())
                     .offer(OfferDecl::Storage(OfferStorageDecl {
@@ -600,7 +600,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,
@@ -665,7 +665,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Protocol(OfferProtocolDecl {
                         source: OfferSource::Capability("data".into()),
@@ -758,7 +758,7 @@ impl<T: RoutingTestModelBuilder> CommonStorageAdminTest<T> {
                         backing_dir: "tmpfs".try_into().unwrap(),
                         source: StorageDirectorySource::Self_,
                         subdir: None,
-                        storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+                        storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                     })
                     .offer(OfferDecl::Storage(OfferStorageDecl {
                         source: OfferSource::Self_,

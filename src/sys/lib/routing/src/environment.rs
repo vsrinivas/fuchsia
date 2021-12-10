@@ -12,7 +12,7 @@ use {
     cm_rust::{
         CapabilityName, RegistrationDeclCommon, RegistrationSource, RunnerRegistration, SourceName,
     },
-    fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl,
     moniker::AbsoluteMonikerBase,
     std::{collections::HashMap, sync::Arc},
     url::Url,
@@ -107,11 +107,11 @@ pub enum EnvironmentExtends {
     None,
 }
 
-impl From<fsys::EnvironmentExtends> for EnvironmentExtends {
-    fn from(e: fsys::EnvironmentExtends) -> Self {
+impl From<fdecl::EnvironmentExtends> for EnvironmentExtends {
+    fn from(e: fdecl::EnvironmentExtends) -> Self {
         match e {
-            fsys::EnvironmentExtends::Realm => Self::Realm,
-            fsys::EnvironmentExtends::None => Self::None,
+            fdecl::EnvironmentExtends::Realm => Self::Realm,
+            fdecl::EnvironmentExtends::None => Self::None,
         }
     }
 }
