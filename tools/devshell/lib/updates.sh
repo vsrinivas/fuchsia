@@ -27,14 +27,33 @@ function check-for-package-server {
       fi
     fi
   else
+    local ffx_addr=$(ffx-repository-server-address)
+    local err=$?
+    if [[ $err -ne 0 ]]; then
+      return $err
+    fi
+
+    if [[ -z "$ffx_addr" ]]; then
+      fx-error "repository server is currently disabled. to re-enable, run:"
+      fx-error "$ ffx config set repository.server.listen \"[::]:8083\" && ffx doctor --restart-daemon"
+      return 1
+    fi
+
+    if [[ $ffx_addr =~ .*:([0-9]+) ]]; then
+      local ffx_port="${BASH_REMATCH[1]}"
+    else
+      fx-error "could not parse ip and port from ffx server address: $actual_addr"
+      return 1
+    fi
+
     if [[ "$(uname -s)" == "Darwin" ]]; then
-      if ! netstat -anp tcp | awk '{print $4}' | grep "\.8085$" > /dev/null; then
+      if ! netstat -anp tcp | awk '{print $4}' | grep "\.${ffx_port}$" > /dev/null; then
         fx-error "It looks like the ffx package server is not running."
         fx-error "You probably need to run \"fx add-update-source\""
         return 1
       fi
     else
-      if ! ss -f inet -f inet6 -an | awk '{print $5}' | grep ":8085$" > /dev/null; then
+      if ! ss -f inet -f inet6 -an | awk '{print $5}' | grep ":${ffx_port}$" > /dev/null; then
         fx-error "It looks like the ffx package server is not running."
         fx-error "You probably need to run \"fx add-update-source\""
         return 1
