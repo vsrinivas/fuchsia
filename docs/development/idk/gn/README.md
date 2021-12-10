@@ -82,9 +82,9 @@ and run: `gsutil ls gs://fuchsia/development/$(gsutil cat gs://fuchsia/developme
 1. To publish your packages open another another terminal window and run:
 
    ```shell
-   third_party/fuchsia-sdk/bin/fpublish.sh out/generic-x64/hello_far.far
-   third_party/fuchsia-sdk/bin/fpublish.sh out/generic-x64/rot13_server.far
-   third_party/fuchsia-sdk/bin/fpublish.sh out/generic-x64/rot13_client.far
+   third_party/fuchsia-sdk/tools/x64/fpublish out/generic-x64/hello_far.far
+   third_party/fuchsia-sdk/tools/x64/fpublish out/generic-x64/rot13_server.far
+   third_party/fuchsia-sdk/tools/x64/fpublish out/generic-x64/rot13_client.far
    ```
 
 1. Run the sample components on your Fuchsia device:
