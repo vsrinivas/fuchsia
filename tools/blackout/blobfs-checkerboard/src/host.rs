@@ -17,3 +17,26 @@ fn main() -> Result<(), Error> {
     .run()?;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use {
+        blackout_host::{integration, Test},
+        std::time::Duration,
+    };
+
+    #[test]
+    fn integration() {
+        Test::new_component(
+            "blackout-blobfs-checkerboard-target",
+            "blackout-blobfs-checkerboard-target-component",
+        )
+        .add_options(integration::options())
+        .setup_step()
+        .load_step(Duration::from_secs(30))
+        .reboot_step()
+        .verify_step(20, Duration::from_secs(15))
+        .run()
+        .expect("test failure");
+    }
+}

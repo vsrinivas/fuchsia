@@ -13,7 +13,6 @@ group("test") {
     ":blobfs-unittest-package",
     ":blobfs_host($host_toolchain)",
     "integration:tests",
-    "load_generator",
   ]
 }
 

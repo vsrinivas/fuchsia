@@ -6,7 +6,6 @@ group("all") {
   testonly = true
   public_deps = [
     "blobfs-checkerboard",
-    "blobfs-fsck-soft",
     "minfs-fsck",
   ]
 }
@@ -16,7 +15,6 @@ group("tests") {
   public_deps = [
     "blackout-host:tests",
     "blackout-target:tests",
-    "blobfs-fsck-soft:tests",
   ]
 }
 
@@ -25,5 +23,5 @@ group("tests") {
 # conditions in CI as opposed to for every change in CQ or being run locally.
 group("integration") {
   testonly = true
-  public_deps = [ "blobfs-fsck-soft:integration" ]
+  public_deps = [ "blobfs-checkerboard:integration" ]
 }

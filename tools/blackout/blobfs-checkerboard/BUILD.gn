@@ -17,6 +17,19 @@ if (is_host) {
     ]
     source_root = "src/host.rs"
     sources = [ "src/host.rs" ]
+
+    with_unit_tests = true
+    test_environments = [
+      {
+        dimensions = {
+          testbed = "pwr_sherlock"
+          pool = "fuchsia.tests.power-failure"
+          device_type = "Sherlock"
+        }
+        tags = [ "power-failure-sherlock" ]
+        netboot = true
+      },
+    ]
   }
 }
 
@@ -59,5 +72,14 @@ group("blobfs-checkerboard") {
   public_deps = [
     ":blackout-blobfs-checkerboard-host($host_toolchain)",
     ":blackout-blobfs-checkerboard-target",
+  ]
+}
+
+group("integration") {
+  testonly = true
+  public_deps = [
+    ":blackout-blobfs-checkerboard-host_test($host_toolchain)",
+    ":blackout-blobfs-checkerboard-target",
+    "//garnet/packages/prod:run",
   ]
 }
