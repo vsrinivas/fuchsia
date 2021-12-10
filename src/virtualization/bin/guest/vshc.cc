@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
+#include <lib/fdio/fd.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <poll.h>
@@ -26,20 +27,35 @@
 
 namespace fpty = fuchsia_hardware_pty;
 
+std::optional<fpty::wire::WindowSize> get_window_size(zx::unowned_channel pty) {
+  auto result = fidl::WireCall<fpty::Device>(pty)->GetWindowSize();
+
+  if (!result.ok()) {
+    std::cerr << "Call to GetWindowSize failed: " << result << std::endl;
+    return std::nullopt;
+  }
+
+  if (result->status != ZX_OK) {
+    std::cerr << "GetWindowSize returned with status: " << result->status << std::endl;
+    return std::nullopt;
+  }
+
+  return result->size;
+}
+
 std::pair<int, int> init_tty() {
   int cols = 80;
   int rows = 24;
 
   if (isatty(STDIN_FILENO)) {
     fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-    auto wsz = fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                   ->GetWindowSize();
+    auto wsz = get_window_size(zx::unowned_channel(fdio_unsafe_borrow_channel(io)));
 
-    if (wsz.status() != ZX_OK || wsz->status != ZX_OK) {
+    if (!wsz) {
       std::cerr << "Warning: Unable to determine shell geometry, defaulting to 80x24.\n";
     } else {
-      cols = wsz->size.width;
-      rows = wsz->size.height;
+      cols = wsz->width;
+      rows = wsz->height;
     }
 
     // Enable raw mode on tty so that inputs such as ctrl-c are passed on
@@ -86,9 +102,35 @@ class ConsoleIn {
       return false;
     }
 
+    // If stdin is a tty then set up a handler for OOB events.
+    if (isatty(STDIN_FILENO)) {
+      auto io = fdio_unsafe_fd_to_io(STDIN_FILENO);
+      auto result =
+          fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
+              ->Describe();
+      fdio_unsafe_release(io);
+
+      if (!result.ok()) {
+        std::cerr << "Unable to get stdin channel description: " << result << std::endl;
+        return false;
+      }
+      auto& info = result->info;
+      FX_DCHECK(info.is_tty()) << "stdin expected to be a tty";
+
+      events_ = std::move(info.mutable_tty().event);
+      pty_event_waiter_.set_object(events_.get());
+      pty_event_waiter_.set_trigger(fpty::wire::kSignalEvent);
+      auto status = pty_event_waiter_.Begin(loop_->dispatcher());
+      if (status != ZX_OK) {
+        std::cerr << "Unable to start the pty event waiter due to: " << status << std::endl;
+        return false;
+      }
+    }
+
     return true;
   }
 
+ private:
   void HandleStdin(zx_status_t status, uint32_t events) {
     if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
       loop_->Shutdown();
@@ -109,10 +151,57 @@ class ConsoleIn {
     fd_waiter_.Wait(fit::bind_member(this, &ConsoleIn::HandleStdin), STDIN_FILENO, POLLIN);
   }
 
- private:
+  void HandleEvents(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                    const zx_packet_signal_t* signal) {
+    if (status != ZX_OK && status != ZX_ERR_SHOULD_WAIT) {
+      loop_->Shutdown();
+      loop_->Quit();
+      return;
+    }
+
+    FX_DCHECK(signal->observed & fpty::wire::kSignalEvent)
+        << "Did not receive expected signal. Received: " << signal->observed;
+
+    // Even if we exit early due to error still want to queue up the next instance of the handler.
+    auto queue_next = fit::defer([wait, dispatcher] { wait->Begin(dispatcher); });
+
+    // Get the channel backing stdin to use its pty.Device interface.
+    fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
+    zx::unowned_channel pty{fdio_unsafe_borrow_channel(io)};
+    auto cleanup = fit::defer([io] { fdio_unsafe_release(io); });
+
+    auto result = fidl::WireCall<fpty::Device>(pty)->ReadEvents();
+    if (!result.ok()) {
+      std::cerr << "Call to ReadEvents failed: " << result << std::endl;
+      return;
+    }
+    if (result->status != ZX_OK) {
+      std::cerr << "ReadEvents returned with status " << result->status << std::endl;
+      return;
+    }
+
+    if (result->events & fpty::wire::kEventWindowSize) {
+      auto ws = get_window_size(std::move(pty));
+      if (!ws) {
+        return;
+      }
+
+      vm_tools::vsh::GuestMessage msg_out;
+      msg_out.mutable_resize_message()->set_rows(ws->height);
+      msg_out.mutable_resize_message()->set_cols(ws->width);
+      if (!vsh::SendMessage(*sink_, msg_out)) {
+        std::cerr << "Failed to update window size.\n";
+      }
+    } else {
+      // Leaving other events unhandled for now.
+    }
+  }
+
   async::Loop* loop_;
   zx::unowned_socket sink_;
   fsl::FDWaiter fd_waiter_;
+  zx::eventpair events_{ZX_HANDLE_INVALID};
+  async::WaitMethod<ConsoleIn, &ConsoleIn::HandleEvents> pty_event_waiter_{this};
 };
 
 class ConsoleOut {
