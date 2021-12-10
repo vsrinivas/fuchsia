@@ -383,23 +383,25 @@ mod tests {
         0x10,
     ];
 
-    #[test]
-    fn create_get_path_destroy() {
+    const WAIT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
+
+    #[fasync::run_singlethreaded(test)]
+    async fn create_get_path_destroy() {
+        wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
+            .expect("ramctl did not appear");
         // just make sure all the functions are hooked up properly.
-        let devmgr = open_isolated_devmgr().expect("failed to open isolated devmgr");
-        let ramdisk = RamdiskClient::builder(512, 2048)
-            .dev_root(devmgr)
-            .build()
-            .expect("failed to create ramdisk");
+        let ramdisk = RamdiskClient::builder(512, 2048).build().expect("failed to create ramdisk");
         let _path = ramdisk.get_path();
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    #[test]
-    fn create_with_dev_root_and_guid_get_path_destroy() {
-        let devmgr = open_isolated_devmgr().expect("failed to open isolated devmgr");
+    #[fasync::run_singlethreaded(test)]
+    async fn create_with_dev_root_and_guid_get_path_destroy() {
+        wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
+            .expect("ramctl did not appear");
+        let devroot = std::fs::File::open("/dev").unwrap();
         let ramdisk = RamdiskClient::builder(512, 2048)
-            .dev_root(devmgr)
+            .dev_root(devroot)
             .guid(TEST_GUID)
             .build()
             .expect("failed to create ramdisk");
@@ -407,11 +409,11 @@ mod tests {
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    #[test]
-    fn create_with_guid_get_path_destroy() {
-        let devmgr = open_isolated_devmgr().expect("failed to open isolated devmgr");
+    #[fasync::run_singlethreaded(test)]
+    async fn create_with_guid_get_path_destroy() {
+        wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
+            .expect("ramctl did not appear");
         let ramdisk = RamdiskClient::builder(512, 2048)
-            .dev_root(devmgr)
             .guid(TEST_GUID)
             .build()
             .expect("failed to create ramdisk");
@@ -419,16 +421,20 @@ mod tests {
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
-    #[test]
-    fn create_open_destroy() {
-        let ramdisk = RamdiskClient::builder(512, 2048).isolated_dev_root().build().unwrap();
+    #[fasync::run_singlethreaded(test)]
+    async fn create_open_destroy() {
+        wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
+            .expect("ramctl did not appear");
+        let ramdisk = RamdiskClient::create(512, 2048).unwrap();
         assert_matches!(ramdisk.open(), Ok(_));
         assert_eq!(ramdisk.destroy(), Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn create_describe_destroy() {
-        let ramdisk = RamdiskClient::builder(512, 2048).isolated_dev_root().build().unwrap();
+        wait_for_device("/dev/sys/platform/00:00:2d/ramctl", WAIT_TIMEOUT)
+            .expect("ramctl did not appear");
+        let ramdisk = RamdiskClient::create(512, 2048).unwrap();
         let device = ramdisk.open().unwrap();
 
         // ask it to describe itself using the Node interface

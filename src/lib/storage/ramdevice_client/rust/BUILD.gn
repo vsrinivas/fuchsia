@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
+import("//src/storage/testing/driver_test_realm.gni")
 
 group("rust") {
   public_deps = [ ":ramdevice_client" ]
@@ -31,18 +32,12 @@ rustc_library("ramdevice_client") {
   ]
 }
 
-fuchsia_component("ramdevice-client-tests") {
-  testonly = true
-  manifest = "meta/ramdevice_client_lib_test.cmx"
-  deps = [
-    ":ramdevice_client_test",
-    ":ramdisk-isolated-devmgr-component",
-  ]
+storage_driver_test_realm_v2_component("ramdevice-client-test-component") {
+  deps = [ ":ramdevice_client_test" ]
 }
 
-fuchsia_test_package("ramdevice-client-tests-package") {
-  package_name = "ramdevice-client-tests"
-  test_components = [ ":ramdevice-client-tests" ]
+fuchsia_test_package("ramdevice-client-tests") {
+  test_components = [ ":ramdevice-client-test-component" ]
 }
 
 # Test component that exposes a /dev filesystem containing ramdisk support as
@@ -73,5 +68,5 @@ fuchsia_package("ramdisk-isolated-devmgr") {
 
 group("tests") {
   testonly = true
-  deps = [ ":ramdevice-client-tests-package" ]
+  deps = [ ":ramdevice-client-tests" ]
 }
