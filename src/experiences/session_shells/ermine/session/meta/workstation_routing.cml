@@ -42,6 +42,10 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
+
+                // Scene manager reads the keyboard configuration on behalf
+                // of the input pipeline library.
+                "fuchsia.settings.Keyboard",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
