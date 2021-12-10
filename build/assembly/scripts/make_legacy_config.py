@@ -14,9 +14,10 @@ import os
 import pathlib
 import shutil
 import sys
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, Iterable, List, Set, Tuple
 
-from assembly import fast_copy, AssemblyInputBundle, ConfigDataEntries, ImageAssemblyConfig, FileEntry, FilePath
+from assembly import fast_copy, AssemblyInputBundle, ConfigDataEntries, ImageAssemblyConfig
+from assembly import FileEntry, FilePath
 from depfile import DepFile
 
 # Some type annotations for clarity
@@ -24,6 +25,7 @@ PackageManifestList = List[FilePath]
 Merkle = str
 BlobList = List[Tuple[Merkle, FilePath]]
 FileEntryList = List[FileEntry]
+FileEntrySet = Set[FileEntry]
 DepSet = Set[FilePath]
 
 
@@ -67,7 +69,7 @@ def copy_to_assembly_input_bundle(
     result.base.update(base_pkgs)
 
     # Strip any base pkgs from the cache set
-    config.cache_pkgs = config.cache.difference(config.base)
+    config.cache = config.cache.difference(config.base)
 
     # Copy the manifests for the cache package set into the assembly bundle
     (cache_pkgs, cache_blobs,
@@ -99,7 +101,7 @@ def copy_to_assembly_input_bundle(
     result.bootfs_files.update(bootfs)
 
     # Rebase the path to the kernel into the out-of-tree layout
-    kernel_src_path = config.kernel.path
+    kernel_src_path: Any = config.kernel.path
     kernel_filename = os.path.basename(kernel_src_path)
     kernel_dst_path = os.path.join("kernel", kernel_filename)
     result.kernel.path = kernel_dst_path
@@ -128,25 +130,27 @@ def copy_packages(
     """
     package_manifests = getattr(config, set_name)
 
+    # Resultant paths to package manifests
+    packages = []
+
+    # All of the blobs to copy, deduplicated by merkle, and validated for
+    # conflicting sources.
+    blobs: BlobList = []
+
+    # The deps touched by this function.
+    deps: DepSet = set()
+
     # Bail early if empty
     if len(package_manifests) == 0:
-        return ([], [])
+        return (packages, blobs, deps)
 
     # Create the directory for the packages, now that we know it will exist
     packages_dir = os.path.join("packages", set_name)
     os.makedirs(os.path.join(outdir, packages_dir), exist_ok=True)
 
-    # All of the blobs to copy, deduplicated by merkle, and validated for
-    # conflicting sources.
-    blobs: BlobList = []
-    deps: DepSet = set()
-
-    # Resultant paths to package manifests
-    packages = []
-
     # Open each manifest, record the blobs, and then copy it to its destination,
     # sorted by path to the package manifest.
-    for package_manifest_path in sorted(list(package_manifests)):
+    for package_manifest_path in sorted(package_manifests):
         with open(package_manifest_path, 'r') as file:
             manifest = json.load(file)
             package_name = manifest["package"]["name"]
@@ -176,11 +180,11 @@ def copy_packages(
 
 
 def copy_blobs(blobs: Dict[Merkle, FilePath], outdir: FilePath) -> DepSet:
+    deps: DepSet = set()
+
     # Bail early if empty
     if len(blobs) == 0:
-        return
-
-    deps: DepSet = set()
+        return deps
 
     # Create the directory for the blobs, now that we know it will exist.
     blobs_dir = os.path.join(outdir, "blobs")
@@ -195,7 +199,7 @@ def copy_blobs(blobs: Dict[Merkle, FilePath], outdir: FilePath) -> DepSet:
     return deps
 
 
-def copy_file_entries(entries: FileEntryList, outdir: FilePath,
+def copy_file_entries(entries: FileEntrySet, outdir: FilePath,
                       set_name: str) -> Tuple[FileEntryList, DepSet]:
     results: FileEntryList = []
     deps: DepSet = set()
@@ -228,7 +232,7 @@ def copy_file_entries(entries: FileEntryList, outdir: FilePath,
 
 
 def copy_config_data_entries(
-        entries: List[FileEntry],
+        entries: FileEntryList,
         outdir: FilePath) -> Tuple[ConfigDataEntries, DepSet]:
     """
     Take a list of entries for the config_data package, copy them into the
@@ -291,6 +295,7 @@ def main():
         "--subtract", default=[], nargs="*", type=argparse.FileType('r'))
     parser.add_argument("--outdir", required=True)
     parser.add_argument("--depfile", type=argparse.FileType('w'))
+    parser.add_argument("--export-manifest", type=argparse.FileType('w'))
     args = parser.parse_args()
 
     # Read in the legacy config and the others to subtract from it
@@ -308,18 +313,30 @@ def main():
         for entry in json.load(args.config_data_entries)
     ]
 
-    dep_file = DepFile(os.path.join(args.outdir, "assembly_config.json"))
+    assembly_config_manifest_path = os.path.join(
+        args.outdir, "assembly_config.json")
+
+    dep_file = DepFile(assembly_config_manifest_path)
 
     # Copy the remaining contents to the out-of-tree Assembly Input Bundle layout
     (assembly_input_bundle, deps) = copy_to_assembly_input_bundle(
         legacy, config_data_entries, args.outdir)
     dep_file.update(deps)
 
-    # Write out the resultant config into the outdir of the out-of-tree layout
-    with open(os.path.join(args.outdir, "assembly_config.json"),
-              'w') as outfile:
+    # Write out the resultant config into the outdir of the out-of-tree layout.
+    # the copy_set paths are all relative to cwd, so use the full cwd to the
+    # file as the dest_path, which will be rebased when generating the fini
+    # manifest later.
+    with open(assembly_config_manifest_path, 'w') as outfile:
         assembly_input_bundle.write_to(outfile)
 
+    # Write out a fini manifest of the files that have been copied, to create a
+    # package or archive that contains all of the files in the bundle.
+    if args.export_manifest is not None:
+        assembly_input_bundle.write_fini_manifest(
+            args.export_manifest, base_dir=args.outdir)
+
+    # Write out a depfile.
     if args.depfile is not None:
         dep_file.write_to(args.depfile)
 

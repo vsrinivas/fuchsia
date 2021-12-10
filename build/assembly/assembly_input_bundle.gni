@@ -1,0 +1,168 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/python/python_action.gni")
+import("//src/sys/pkg/bin/pm/pm.gni")
+
+# Creates a Fuchsia Package for an Assembly Input Bundle.  For the format
+# of the created package, see the AssemblyInputBundle documentation at:
+#  //build/python/modules/assembly/assembly_input_bundle.py
+#
+# Parameters
+#
+#   manifest
+#     [path] The path to the FINI manifest created by the assembly input bundle
+#
+#   package_name (optional; default: target_name)
+#     [string] The name of the package, if not $target_name
+#
+# GN usual meanings
+#   deps, testonly, visibility
+#
+template("assembly_input_bundle_package") {
+  assert(defined(invoker.manifest),
+         "A manifest path must be specified: " +
+             get_label_info(target_name, "label_with_toolchain"))
+
+  labels = {
+    package_manifest_creation = "${target_name}.creation_manifest.fini"
+    package = target_name
+  }
+
+  files = {
+    package_outdir = "$target_out_dir/$target_name"
+    meta_package_file = "$package_outdir/meta_package"
+    creation_manifest = "$package_outdir/creation_manifest.fini"
+  }
+
+  # Build a package CreationManifest that includes the contents in
+  # |invoker.manifest| and a generated meta/package file.
+  python_action(labels.package_manifest_creation) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    visibility = [ ":${labels.package}" ]
+    binary_label = "scripts:assembly_input_bundle_tool"
+    inputs = [ invoker.manifest ]
+    outputs = [
+      files.creation_manifest,  # must be the first output, for passing to
+                                # pm_build
+      files.meta_package_file,
+    ]
+    args = [
+      "generate-package-creation-manifest",
+      "--name",
+      target_name,
+      "--contents-manifest",
+      rebase_path(invoker.manifest, root_build_dir),
+      "--meta-package",
+      rebase_path(files.meta_package_file, root_build_dir),
+      "--output",
+      rebase_path(files.creation_manifest, root_build_dir),
+    ]
+  }
+
+  pm_build(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "package_name",
+                             "testonly",
+                             "visibility",
+                           ])
+    manifest = ":${labels.package_manifest_creation}"
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # These are a bunch of barriers to make sure that if this target gets
+      # included anywhere, it's dependencies don't end up getting gathered
+      # in metadata walks.
+      distribution_entries_barrier = []
+      system_image_package_barrier = []
+      system_image_extra_package_manifest_barrier = []
+      test_component_manifest_barrier = []
+      test_component_manifest_program_barrier = []
+    }
+  }
+}
+
+# Creates an archive for the Fuchsia Package for an Assembly Input Bundle.
+#
+# This is a tgz that contains the entire contents of the AIB, including the
+# meta.far file as well.  See the AssemblyInputBundle documentation at:
+#  //build/python/modules/assembly/assembly_input_bundle.py
+#
+# Parameters
+#
+#   manifest
+#     [path] The path to the FINI manifest created for the
+#     assembly input bundle
+#
+#   meta_far
+#     [path] The path to the meta far created for the assembly input bundle's package
+#
+template("assembly_input_bundle_archive") {
+  assert(defined(invoker.manifest),
+         "A manifest path must be specified: " +
+             get_label_info(target_name, "label_with_toolchain"))
+
+  labels = {
+    tarmaker = "//build/tools/tarmaker($host_toolchain)"
+  }
+
+  files = {
+    tarmaker = host_out_dir + "/tarmaker"
+
+    archive = "${target_out_dir}/${target_name}"
+    archive_creation_manifest = "${archive}.creation_manifest.fini"
+    depfile = "${archive}.d"
+  }
+
+  python_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    binary_label = "//build/assembly/scripts:assembly_input_bundle_tool"
+    inputs = [ invoker.manifest ]
+    outputs = [
+      files.archive,
+      files.archive_creation_manifest,
+    ]
+    depfile = files.depfile
+    args = [
+      "generate-archive",
+      "--tarmaker",
+      rebase_path(files.tarmaker, root_build_dir),
+      "--contents-manifest",
+      rebase_path(invoker.manifest, root_build_dir),
+      "--meta-far",
+      rebase_path(invoker.meta_far, root_build_dir),
+      "--creation-manifest",
+      rebase_path(files.archive_creation_manifest, root_build_dir),
+      "--output",
+      rebase_path(files.archive, root_build_dir),
+      "--depfile",
+      rebase_path(files.depfile, root_build_dir),
+    ]
+    deps = [ labels.tarmaker ]
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    metadata = {
+      assembly_input_archives = [
+        {
+          path = rebase_path(files.archive, root_build_dir)
+          label = get_label_info(target_name, "label_with_toolchain")
+        },
+      ]
+    }
+  }
+}

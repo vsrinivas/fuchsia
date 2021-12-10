@@ -8,7 +8,7 @@ schema as `//src/developer/ffx/plugins/assembly`.
 """
 
 import json
-from typing import Dict, List, Set, Tuple
+from typing import Dict, Set, Union
 
 __all__ = ["ImageAssemblyConfig", "KernelInfo"]
 
@@ -21,9 +21,9 @@ class KernelInfo:
     """Information about the kernel"""
 
     def __init__(self) -> None:
-        self.path: FilePath = None
+        self.path: Union[FilePath, None] = None
         self.args: Set[str] = set()
-        self.clock_backstop: str = None
+        self.clock_backstop: Union[str, None] = None
 
     @classmethod
     def from_dict(cls, entry: Dict[str, str]) -> 'KernelInfo':
@@ -126,7 +126,7 @@ class ImageAssemblyConfig:
     def dump(self, fp) -> None:
         """Serialize to a file (JSON)
         """
-        json.dump(self.as_dict(), fp, indent=2)
+        json.dump(self.to_dict(), fp, indent=2)
 
     def intersection(
             self, other: 'ImageAssemblyConfig') -> 'ImageAssemblyConfig':

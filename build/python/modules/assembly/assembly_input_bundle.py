@@ -9,7 +9,10 @@ delivery system itself.
 
 """
 import json
-from typing import Dict, List, Set
+import os
+from typing import Dict, List, Set, TextIO
+
+from depfile.depfile import FilePath
 
 from .image_assembly_config import ImageAssemblyConfig
 from .common import FileEntry
@@ -99,3 +102,57 @@ class AssemblyInputBundle(ImageAssemblyConfig):
     def write_to(self, file) -> None:
         """Write to a file (JSON format)"""
         json.dump(self.to_dict(), file, indent=2)
+
+    def all_file_paths(self) -> List[FilePath]:
+        """Return a list of all files that are referenced by this AssemblyInputBundle.
+        """
+        file_paths = []
+        file_paths.extend(self.base)
+        file_paths.extend(self.cache)
+        file_paths.extend(self.system)
+        file_paths.extend([entry.source for entry in self.bootfs_files])
+        if self.kernel.path is not None:
+            file_paths.append(self.kernel.path)
+        for entries in self.config_data.values():
+            file_paths.extend([entry.source for entry in entries])
+        return file_paths
+
+    def write_fini_manifest(
+            self,
+            file: TextIO,
+            base_dir: FilePath = None,
+            rebase: FilePath = None) -> None:
+        """Write a fini-style manifest of all files in the AssemblyInputBundle
+        to the given |file|.
+
+        fini manifests are in the format::
+
+          destination/path=path/to/source/file
+
+        As all file paths in the AssemblyInputBundle are relative to the root of
+        the bundle, `destination/path` is the existing path.  However, the path
+        to the source file cannot be known (absolutely) without additional
+        information.
+
+        Arguments:
+        - file -- The |TextIO| file to write to.
+        - base_dir -- The folder to assume that file paths are relative from.
+        - rebase -- The folder to make the source paths relative to, if `base_dir` is also provided.
+          By default this is the cwd.
+
+        If `base_dir` is given, it's used to construct the path to the source files, if not, the cwd
+        is assumed to be the path the files are from.
+
+        If `rebase` is also given, the path to the source files are then made relative to it.
+        """
+        file_paths = self.all_file_paths()
+        if base_dir is not None:
+            file_path_entries = [
+                FileEntry(
+                    path, os.path.relpath(os.path.join(base_dir, path), rebase))
+                for path in file_paths
+            ]
+        else:
+            file_path_entries = [FileEntry(path, path) for path in file_paths]
+
+        FileEntry.write_fini_manifest(file_path_entries, file)

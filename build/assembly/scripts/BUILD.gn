@@ -1,0 +1,20 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_binary.gni")
+
+assert(is_host, "Only include assembly build scripts via the host toolchain")
+
+python_binary("make_legacy_config") {
+  main_source = "make_legacy_config.py"
+  deps = [
+    "//build/python/modules/assembly",
+    "//build/python/modules/depfile",
+  ]
+}
+
+python_binary("assembly_input_bundle_tool") {
+  main_source = "assembly_input_bundle_tool.py"
+  deps = [ "//build/python/modules/depfile" ]
+}
