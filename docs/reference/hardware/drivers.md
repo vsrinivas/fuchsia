@@ -29,9 +29,9 @@ drivers, see [Deprecated drivers](/docs/reference/hardware/driver-epitaphs.md).
     {%- endfor %}
     {%- if found %}
       <div class="checkbox-div">
-        <input type="checkbox" value="area-{{ area|replace(" ", "-") }}"
-        id="checkbox-reset-{{ area|replace(" ", "-") }}">
-        <label for="checkbox-reset-{{ area|replace(" ", "-") }}">{{ area }}</label>
+        <input type="checkbox" value="area-{{ area|lower|replace(' ','-')|replace('.','-') }}"
+        id="checkbox-reset-{{ area|lower|replace(' ','-')|replace('.','-') }}">
+        <label for="checkbox-reset-{{ area|lower|replace(' ','-')|replace('.','-') }}">{{ area }}</label>
       </div>
     {%- endif %}
   {%- endfor %}

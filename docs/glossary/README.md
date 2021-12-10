@@ -26,8 +26,8 @@ To add a glossary definition, see [Adding glossary entries](/docs/contribute/doc
     {%- endfor %}
     {%- if found %}
       <div class="checkbox-div">
-        <input type="checkbox" id="checkbox-reset-{{ area }}">
-        <label for="checkbox-reset-{{ area }}">{{ area }}</label>
+        <input type="checkbox" id="checkbox-reset-{{ area|lower|replace(' ','-')|replace('.','-') }}">
+        <label for="checkbox-reset-{{ area|lower|replace(' ','-')|replace('.','-') }}">{{ area }}</label>
       </div>
     {%- endif %}
   {%- endfor %}
