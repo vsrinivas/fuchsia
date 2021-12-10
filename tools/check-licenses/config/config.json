@@ -180,6 +180,9 @@
       "third_party/spirv-headers",
       "third_party/spirv-tools"
     ],
+    "libpng2.lic": [
+      "third_party/libpng"
+    ],
     "llvm_project3.lic": [
       "prebuilt/third_party/flutter",
       "third_party/scudo"
