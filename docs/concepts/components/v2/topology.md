@@ -2,8 +2,9 @@
 
 <<../_v2_banner.md>>
 
-The _component topology_ is a general concept that expresses the set of
-relationships between [component instances](#component-instances).
+The _[component topology][glossary.component topology]_ is a general concept
+that expresses the set of relationships between
+[component instances](#component-instances).
 
 These relationships are the following:
 
@@ -121,6 +122,7 @@ information.
 
 [glossary.component]: /docs/glossary/README.md#component
 [glossary.component instance tree]: /docs/glossary/README.md#component-instance-tree
+[glossary.component topology]: /docs/glossary#component-topology
 [doc-collections]: /docs/concepts/components/v2/realms.md#collections
 [doc-environments]: /docs/concepts/components/v2/environments.md
 [doc-expose]: https://fuchsia.dev/reference/cml#expose

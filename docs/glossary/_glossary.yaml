@@ -39,7 +39,7 @@
   Agents are always a singleton within a session, and provide services to other components.</p>"
   see_also: ["<a href=\"/docs/concepts/modular/agent.md\">Agents</a>"]
   related_guides: [""]
-  area: ["Session", "Components"]
+  area: ["Session", "Component Framework"]
 
 - term: "Appmgr"
   short_description: "Launches v1 components and manages the namespaces in which those components run."
@@ -49,7 +49,7 @@
   as a <a href=\"/docs/glossary#components-v2\">v2 component</a>."
   see_also: [""]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Banjo"
   short_description: "Language for definition protocols that communicate between drivers."
@@ -70,7 +70,7 @@
   component instance. This is the most common reason for a component to start."
   see_also: [""]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "bootfs"
   short_description: "The boot filesystem that contains the files needed early in the boot process."
@@ -114,7 +114,7 @@
   instance’s <a href=\"/docs/glossary#namespace\">namespace</a>."
   see_also: ["<a href=\"/docs/concepts/testing/testing_isolated_cache_storage.md\">Testing isolated cache storage</a>"]
   related_guides: [""]
-  area: ["System", "Components"]
+  area: ["System", "Component Framework"]
 
 - term: "Capability"
   short_description: "A value that combines an object reference and a set of rights."
@@ -124,7 +124,7 @@
   for a capability."
   see_also: ["<a href=\"/docs/glossary#capability-routing\">Capability routing</a>"]
   related_guides: [""]
-  area: ["System", "Components"]
+  area: ["System", "Component Framework"]
 
 - term: "Capability routing"
   short_description: "A way for one component instance to give capabilities to another component
@@ -138,7 +138,7 @@
   <a href=\"/docs/glossary#storage-capability\">storage capabilities</a>."
   see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>"]
   related_guides: [""]
-  area: ["System", "Components"]
+  area: ["System", "Component Framework"]
 
 - term: "Channel"
   short_description: "An IPC primitive provided by Zircon."
@@ -159,7 +159,7 @@
   see_also: ["<a href=\"/docs/glossary#component\">Component</a>",
              "<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component"
   short_description: "Components are the common abstraction that defines how all software
@@ -169,7 +169,7 @@
   and executed on a Fuchsia system."
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component collection"
   short_description: "A node in the component instance tree whose
@@ -180,7 +180,7 @@
   <a href=\"/docs/glossary#component-manifest\">component manifest</a>."
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component declaration"
   short_description: "A FIDL table that includes information about a component."
@@ -193,7 +193,7 @@
   <a href=\"/docs/glossary#component-manifest-facet\">facets</a>."
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component framework"
   short_description: "An application framework for declaring and managing
@@ -202,7 +202,7 @@
   full_description: ""
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component instance"
   short_description: "One of possibly many instances of a particular
@@ -210,7 +210,7 @@
   full_description: ""
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component instance tree"
   short_description: "A tree structure that represents the runtime state of parent-child relationships
@@ -225,7 +225,7 @@
   their parents or offer to other children."
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component manager"
   short_description: "A system service that lets
@@ -240,7 +240,7 @@
   <a href=\"/docs/glossary#components-v2\">components v2</a> runtime."
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component manifest"
   short_description: "A binary file ending in <code>.cm</code> that encodes a
@@ -253,7 +253,7 @@
   <a href=\"/docs/glossary#component-manifest-source\">component manifest source</a> file."
   see_also: ["<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component manifest source"
   short_description: "A JSON5 file ending with a <code>.cml</code> extension
@@ -271,7 +271,7 @@
   see_also: ["<a href=\"/docs/concepts/components/v1/component_manifests.md\">Legacy component manifests</a>",
              "<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component manifest facet"
   short_description: "Additional component manifest metadata."
@@ -281,7 +281,7 @@
   see_also: ["<a href=\"/docs/concepts/components/v1/component_manifests.md\">Legacy component manifests</a>",
              "<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Component instance identifier"
   short_description: "A unique, stable identifer for a component instance."
@@ -293,7 +293,17 @@
    <a href=\"/docs/development/components/component_id_index.md\">component ID index</a>.</p>"
   see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
+
+- term: "Component topology"
+  short_description: "Collective term for the component instance tree and the capability routes over that tree."
+  full_description: "The component topology describes the set of relationships between component instances in a
+  Fuchsia system. It consists of the parent-child relationships of the
+  <a href=\"/docs/glossary#component-instance-tree\">component instance tree</a> as well as the
+  <a href=\"/docs/glossary#capability-routing\">capability routes</a> over that tree."
+  see_also: ["<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
+  related_guides: [""]
+  area: ["Component Framework"]
 
 - term: "Component URL"
   short_description: "URL that identifies a component."
@@ -302,7 +312,7 @@
   <code>fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm</code>."
   see_also: [<a href=\"/docs/glossary#fuchsia-pkg-url\">fuchsia-pkg URL</a>]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Components v1"
   short_description: "The legacy component architecture of Fuchsia."
@@ -315,7 +325,7 @@
   <a href=\"/sdk/lib/sys\">libsys</a> and <a href=\"/sdk/lib/svc\">libsvc</a>."
   see_also: ["<a href=\"/docs/glossary#components-v2\">Components v2</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Components v2"
   short_description: "The modern component architecture of Fuchsia."
@@ -327,7 +337,7 @@
   and build-time tools such as <a href=\"/docs/reference/tools/sdk/cmc\">cmc</a>."
   see_also: ["<a href=\"/docs/glossary#components-v1\">Components v1</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Concurrent device driver"
   short_description: "A
@@ -369,7 +379,7 @@
   <a href=\"/docs/glossary#namespace\">namespace</a>."
   see_also: [""]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Directory capability"
   short_description: "A
@@ -388,7 +398,7 @@
   directory capability then they will have access to the same underlying filesystem directory."
   see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>"]
   related_guides: [""]
-  area: ["System", "Components"]
+  area: ["System", "Component Framework"]
 
 - term: "Driver"
   short_description: "A driver is a dynamic shared library that
@@ -431,7 +441,7 @@
   see_also: ["<a href=\"/docs/concepts/session/element.md\">Elements</a>",
              "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
   related_guides: [""]
-  area: ["Session", "Components"]
+  area: ["Session", "Component Framework"]
 
 - term: "Element annotation"
   short_description: "A collection of named attributes associated with an
@@ -444,7 +454,7 @@
   see_also: ["<a href=\"/docs/concepts/session/element.md\">Elements</a>",
              "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
   related_guides: [""]
-  area: ["Session", "Components", "FIDL"]
+  area: ["Session", "Component Framework", "FIDL"]
 
 - term: "Element manager"
   short_description: " A protocol used to grant <a href=\"/docs/glossary#session\">session</a>
@@ -459,7 +469,7 @@
              "<a href=\"/docs/glossary#session-framework\">Session framework</a>",
              "<a href=\"/docs/concepts/session/element.md\">Elements</a>"]
   related_guides: [""]
-  area: ["Session", "Components", "FIDL"]
+  area: ["Session", "Component Framework", "FIDL"]
 
 - term: "Element proposer"
   short_description: "A way to refer to any <a href=\"/docs/glossary#component\">component</a>
@@ -471,7 +481,7 @@
   see_also: ["<a href=\"/docs/glossary#session-framework\">Session framework</a>",
              "<a href=\"/docs/concepts/session/element.md\">Elements</a>"]
   related_guides: [""]
-  area: ["Session", "Components"]
+  area: ["Session", "Component Framework"]
 
 - term: "Environment"
   short_description: "A container for a set of components."
@@ -480,7 +490,7 @@
   (a subset of) the environment's services."
   see_also: [""]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Escher"
   short_description: "Graphics library for compositing user interface content."
@@ -503,7 +513,7 @@
   it themselves in order to avoid dependency cycles."
   see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>"]
   related_guides: [""]
-  area: ["System", "Components"]
+  area: ["System", "Component Framework"]
 
 - term: "Exposed directory"
   short_description: "A file system directory that contains the set of
@@ -515,7 +525,7 @@
   see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>",
              "<a href=\"/docs/glossary#outgoing-directory\">Outgoing directory</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "FAR"
   short_description: "The Fuchsia Archive Format is a container for files to be used by Zircon and
@@ -615,7 +625,7 @@
   <code>fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx</code>."
   see_also: ["<a href=\"/docs/concepts/packages/package_url.md\">Fuchsia package URLs</a>"]
   related_guides: [""]
-  area: ["Components", "System"]
+  area: ["Component Framework", "System"]
 
 - term: "Fuchsia IDK"
   short_description: "The Fuchsia IDK (integrator development kit) is a collection of libraries and
@@ -678,7 +688,7 @@ environment to form a full SDK."
              "<a href=\"/docs/glossary#session-framework\">Session framework</a>",
              "<a href=\"/docs/concepts/session/graphical_presenter.md\">Graphical Presenter component role</a>"]
   related_guides: [""]
-  area: ["General", "Graphics", "FIDL", "Components", "Session", "Flutter"]
+  area: ["General", "Graphics", "FIDL", "Component Framework", "Session", "Flutter"]
 
 - term: "Handle"
   short_description: "A Handle is how a userspace process refers to a
@@ -710,7 +720,7 @@ environment to form a full SDK."
   full_description: ""
   see_also: ["<a href=\"/docs/concepts/components/v2/hub.md\">Hub</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "In-tree"
   short_description: "Relating to or describing an action to be performed inside a Fuchsia checkout."
@@ -873,7 +883,7 @@ environment to form a full SDK."
   <a href=\"/docs/glossary#component-instance-tree\">component instance tree</a>.</p>"
   see_also: ["<a href=\"/docs/concepts/components/v2/monikers.md\">Monikers</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Musl"
   short_description: "Fuchsia's standard C library (libc) is based on Musl Libc."
@@ -917,7 +927,7 @@ environment to form a full SDK."
   to it to one of its children (other than the child that exposed it)."
   see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>"]
   related_guides: [""]
-  area: ["System", "Components"]
+  area: ["System", "Component Framework"]
 
 - term: "OpaqueTest"
   short_description: "A Rust client-side library that sets up hermetic tests for a v2
@@ -925,7 +935,7 @@ environment to form a full SDK."
   full_description: ""
   see_also: [""]
   related_guides: ["<a href=\"/docs/concepts/components/v2/opaque_test.md\">Hermetic testing using OpaqueTest</a>"]
-  area: ["Components", "Testing"]
+  area: ["Component Framework", "Testing"]
 
 - term: "Out-of-tree"
   short_description: "Relating to or describing an action that can be done outside of a Fuchsia checkout."
@@ -947,7 +957,7 @@ environment to form a full SDK."
   see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>",
              "<a href=\"/docs/glossary#exposed-directory\">Exposed directory</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "OTA"
   short_description: "Over-the-air update."
@@ -967,7 +977,7 @@ environment to form a full SDK."
   <a href=\"/docs/glossary#fuchsia-pkg-url\">fuchsia-pkg URL</a>."
   see_also: [""]
   related_guides: [""]
-  area: ["System", "Components"]
+  area: ["System", "Component Framework"]
 
 - term: "Parent component instance"
   short_description: "A parent component instance is a component instance that
@@ -977,7 +987,7 @@ environment to form a full SDK."
   see_also: ["<a href=\"/docs/glossary#component\">",
              "<a href=\"/docs/concepts/components/v2/introduction.md\">Components</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Paver"
   short_description: "A tool in Zircon that installs partition images to internal storage of a
@@ -1035,7 +1045,7 @@ environment to form a full SDK."
   components as a <a href=\"/docs/glossary#protocol-capability\">protocol capability</a>.</p>"
   see_also: ["<a href=\"/docs/glossary#protocol-capability\">Protocol capability</a>"]
   related_guides: ["<a href=\"/docs/concepts/fidl/protocols.md\">FIDL protocols</a>"]
-  area: ["Components", "FIDL"]
+  area: ["Component Framework", "FIDL"]
 
 - term: "Protocol capability"
   short_description: "A <a href=\"/docs/glossary#capability\">capability</a> that permits
@@ -1050,7 +1060,7 @@ environment to form a full SDK."
   see_also: ["<a href=\"/docs/glossary#capability-routing\">Capability routing</a>",
              "<a href=\"/docs/glossary#components-v2\">Components v2</a>"]
   related_guides: ["<a href=\"/docs/concepts/components/v2/capabilities/protocol.md\">Protocol capabilities</a>"]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Realm"
   short_description: "In <a href=\"/docs/glossary#components-v1\">Components v1</a>, realm
@@ -1061,7 +1071,7 @@ environment to form a full SDK."
   full_description: ""
   see_also: ["<a href=\"/docs/concepts/components/v2/realms.md\">Realms</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Runner"
   short_description: "A <a href=\"/docs/glossary#component\">component</a> that provides a
@@ -1077,7 +1087,7 @@ environment to form a full SDK."
   see_also: ["<a href=\"/docs/concepts/components/v2/elf_runner.md\">ELF runner</a>",
              "<a href=\"/docs/concepts/components/v2/capabilities/runners.md\">Component runner</a>"]
   related_guides: [""]
-  area: ["Components", "System"]
+  area: ["Component Framework", "System"]
 
 - term: "Scenic"
   short_description: "A system service that composes graphical objects from multiple
@@ -1105,7 +1115,7 @@ environment to form a full SDK."
   <a href=\"/docs/glossary#service-capability\">service capability</a>."
   see_also: ["<a href=\"/docs/glossary#service-capability\">Service capability</a>"]
   related_guides: ["<a href=\"/docs/concepts/fidl/services.md\">FIDL services</a>"]
-  area: ["Components", "FIDL"]
+  area: ["Component Framework", "FIDL"]
 
 - term: "Service capability"
   short_description: "A <a href=\"/docs/glossary#capability\">capability</a> that permits
@@ -1120,7 +1130,7 @@ environment to form a full SDK."
   see_also: ["<a href=\"/docs/glossary#capability-routing\">Capability routing</a>",
              "<a href=\"/docs/glossary#components-v2\">Components v2</a>"]
   related_guides: ["<a href=\"/docs/concepts/components/v2/capabilities/service.md\">Service capabilities</a>"]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Session"
   short_description: "A session is a component that encapsulates a product’s user
@@ -1134,7 +1144,7 @@ environment to form a full SDK."
   see_also: ["<a href=\"/docs/glossary#component\">Component</a>",
              "<a href=\"/docs/glossary#session-framework\">Session framework</a>"]
   related_guides: [""]
-  area: ["Session", "Components"]
+  area: ["Session", "Component Framework"]
 
 - term: "Session framework"
   short_description: "A framework for building products on Fuchsia."
@@ -1201,7 +1211,7 @@ environment to form a full SDK."
   full_description: ""
   see_also: ["<a href=\"/docs/concepts/components/v2/realms.md\">Realms</a>"]
   related_guides: [""]
-  area: ["Components"]
+  area: ["Component Framework"]
 
 - term: "Thread"
   short_description: "A <a href=\"/docs/glossary#kernel-object\">kernel object</a> that
@@ -1220,7 +1230,7 @@ environment to form a full SDK."
   to it by its parent."
   see_also: ["<a href=\"/docs/glossary#capability\">Capability</a>"]
   related_guides: [""]
-  area: ["System", "Components"]
+  area: ["System", "Component Framework"]
 
 - term: "userboot"
   short_description: "The first process started by the Zircon kernel."

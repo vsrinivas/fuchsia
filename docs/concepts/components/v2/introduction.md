@@ -145,8 +145,8 @@ A _[moniker][glossary.moniker]_ is a topological path that identifies a specific
 component instance within a component instance tree. You will often see
 monikers represented as POSIX-like path strings.
 
-_Component topology_ is the term for the component instance tree and the
-collective capability routes over that tree.
+_[Component topology][glossary.component-topology]_ is the term for the
+component instance tree and the collective capability routes over that tree.
 
 Further reading:
 
@@ -191,6 +191,7 @@ Further reading:
 [glossary.component-manifest]: /docs/glossary#component-manifest
 [glossary.component-url]: /docs/glossary#component-url
 [glossary.component-instance-tree]: /docs/glossary#component-instance-tree
+[glossary.component-topology]: /docs/glossary#component-topology
 [glossary.namespace]: /docs/glossary#namespace
 [glossary.component-declaration]: /docs/glossary#component-declaration
 [glossary.kernel-object]: /docs/glossary#kernel-object
