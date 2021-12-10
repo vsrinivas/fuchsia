@@ -792,49 +792,72 @@ zx_status_t VmAddressRegion::RangeOpInternal(RangeOpType op, vaddr_t base, size_
       return process_range(
           [page_request, next_offset](VmMapping* mapping, size_t mapping_offset, size_t size) {
             AssertHeld(mapping->lock_ref());
+            VmObjectPaged* vmop = static_cast<VmObjectPaged*>(mapping->vmo_locked().get());
             // Return early if this doesn't map a user pager backed VMO.
-            if (!mapping->vmo_locked()->is_user_pager_backed()) {
+            if (!vmop->is_user_pager_backed()) {
               return ZX_OK;
             }
 
             vaddr_t start_offset = mapping->base() + mapping_offset;
+            vaddr_t orig_start_offset = start_offset;
             vaddr_t end_offset = start_offset + size;
-            while (start_offset < end_offset) {
-              // Simulate a read fault. We do not want to fork pages in clones.
-              zx_status_t status = mapping->PageFaultWithVmoCallback(
-                  start_offset, VMM_PF_FLAG_SW_FAULT, page_request,
-                  // Callback to invoke while holding the VMO lock in case of successful page
-                  // lookup. We want to set the hint on the page while the VMO is locked so that the
-                  // page does not get evicted from under us.
-                  [](VmObject* vmo_locked, vm_page_t* page) {
-                    if (!vmo_locked->is_paged()) {
-                      return;
-                    }
-                    auto vmop = static_cast<VmObjectPaged*>(vmo_locked);
-                    AssertHeld(vmop->lock_ref());
-
-                    vmop->HintAlwaysNeedLocked(page);
-                  });
-
-              if (status == ZX_ERR_SHOULD_WAIT) {
-                // Return from RangeOpInternal so that the caller can wait on the page request with
-                // the aspace lock dropped. We will continue from the stashed start_offset when we
-                // resume after dropping the aspace lock, instead of restarting traversal from the
-                // top gain, so we risk missing any mappings for smaller addresses that might have
-                // been created in the interim. This is fine as we don't provide strong semantics
-                // with hinting, and so the behavior with concurrent aspace modification is not
-                // defined. Presumably any pages the user wanted to apply hints to would have been
-                // created prior to calling op_range anyway, so perhaps it's okay to miss these
-                // racing maps in practice. We make the choice to continue where we left off to
-                // allow forward progress without the risk of livelock.
-                *next_offset = start_offset;
-                return status;
+            auto map_range = fit::defer([mapping, orig_start_offset, &start_offset] {
+              uint64_t size = start_offset - orig_start_offset;
+              if (size == 0) {
+                return;
               }
-
-              // Can't really do anything in case an error is encountered while faulting the page.
-              // Simply ignore it and move on to the next page. Hints are best effort anyway.
-              start_offset += PAGE_SIZE;
-            }
+              AssertHeld(mapping->aspace_->lock_);
+              // Ignore any failure.  If the pages aren't already present, don't try to force them
+              // to be present, since we'd then need to pass page_request to MapRangeLocked(); We
+              // can avoid that by leaning on hints being best effort.
+              mapping->MapRangeLocked(
+                  mapping->object_offset_locked() + (orig_start_offset - mapping->base()), size,
+                  /*commit=*/false);
+            });
+            {  // scope guard
+              Guard<Mutex> guard{vmop->lock()};
+              // AlwaysNeed isn't particularly performance sensitive, so we can process one page at
+              // a time for now.
+              for (; start_offset < end_offset; start_offset += PAGE_SIZE) {
+                __UNINITIALIZED VmObject::LookupInfo lookup_info;
+                zx_status_t status = vmop->LookupPagesLocked(
+                    mapping->object_offset_locked() + (start_offset - mapping->base()),
+                    VMM_PF_FLAG_SW_FAULT, VmObject::DirtyTrackingAction::None,
+                    /*max_out_pages=*/1, nullptr, page_request, &lookup_info);
+                if (status == ZX_ERR_SHOULD_WAIT) {
+                  // Return from RangeOpInternal so that the caller can wait on the page request
+                  // with the aspace lock dropped. We will continue from the stashed start_offset
+                  // when we resume after dropping the aspace lock, instead of restarting traversal
+                  // from the top again, so we risk missing any mappings for smaller addresses that
+                  // might have been created in the interim. This is fine as we don't provide strong
+                  // semantics with hinting, and so the behavior with concurrent aspace modification
+                  // is not defined. Presumably any pages the user wanted to apply hints to would
+                  // have been created prior to calling op_range anyway, so perhaps it's okay to
+                  // miss these racing maps in practice. We make the choice to continue where we
+                  // left off to allow forward progress without the risk of livelock.
+                  *next_offset = start_offset;
+                  // ~map_range maps before returning
+                  return status;
+                }
+                if (status != ZX_OK) {
+                  // Can't really do anything in case an error is encountered while faulting the
+                  // page. Simply ignore it and move on to the next page. Hints are best effort
+                  // anyway.
+                  continue;
+                }
+                DEBUG_ASSERT(lookup_info.num_pages == 1);
+                vm_page_t* page = paddr_to_vm_page(lookup_info.paddrs[0]);
+                DEBUG_ASSERT(page);
+                // We know the page hasn't been evicted since being brought in by LookupPagesLocked
+                // because we've been holding the vmop->lock() continuously.  So it's safe to hint
+                // on this page.  After the hint has been set, it's fine if the page gets evicted or
+                // replaced before mapping->MapRangeLocked, since MapRangeLocked will look up again,
+                // and will be ok with a different or missing page (and won't try to commit the page
+                // again).
+                vmop->HintAlwaysNeedLocked(page);
+              }
+            }  // ~guard
+            // ~map_range maps before returning
             return ZX_OK;
           });
 
