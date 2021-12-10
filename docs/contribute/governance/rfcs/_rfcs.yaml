@@ -1863,3 +1863,17 @@
   reviewers: ['maniscalco@google.com', 'shayba@google.com', 'dangyi@google.com', 'cpu@google.com', 'travisg@google.com', 'mvanotti@google.com', 'mcgrathr@google.com']
   submitted: '2021-11-30'
   reviewed: '2021-11-30'
+
+- name: 'RFC-0144'
+  title: 'Size Check Tool'
+  short_description: 'Proposes a rewrite of size_checker.go to create a more cohesive in-tree and out-of-tree developer experience.'
+  authors: ['awolter@google.com']
+  file: '0144_size_check_tool.md'
+  area: ['Developer']
+  issue: ['85371']
+  gerrit_change_id: ['609963']
+  status: 'Accepted'
+  reviewers: ['sebmarchand@google.com', 'amituttam@google.com', 'samans@google.com', 'atyfto@google.com', 'rohpavone@google.com', 'hjfreyer@google.com']
+  submitted: '2021-11-22'
+  reviewed: '2021-12-10'
+

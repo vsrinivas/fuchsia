@@ -299,3 +299,6 @@ toc:
   path: /docs/contribute/governance/rfcs/0142_zx_thread_legacy_yield.md
 - title: "RFC-0143: Userspace Top-Byte-Ignore"
   path: /docs/contribute/governance/rfcs/0143_userspace_top_byte_ignore.md
+- title: "RFC-0144: Size Check Tool"
+  path: /docs/contribute/governance/rfcs/0144_size_check_tool.md
+
