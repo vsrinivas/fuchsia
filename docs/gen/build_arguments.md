@@ -54,7 +54,7 @@ Set to true to enable legacy data partition names.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/generated_fshost_config.gni:37
+From //src/storage/fshost/generated_fshost_config.gni:41
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -663,6 +663,14 @@ Generate a UEFI disk image
 **Current value (from the default):** `false`
 
 From //build/images/args.gni:26
+
+### bundle_fxfs
+Whether to bundle fxfs with the build.  This doesn't enable fxfs in any way, it simply includes
+the binary in the build with fshost.  Use data_filesystem_format to enable fxfs.
+
+**Current value (from the default):** `false`
+
+From //src/storage/fshost/generated_fshost_config.gni:38
 
 ### cache_package_labels
 If you add package labels to this variable, the packages will be included
@@ -1462,7 +1470,7 @@ Make fshost watch for NAND devices.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:40
+From //src/storage/fshost/generated_fshost_config.gni:44
 
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
