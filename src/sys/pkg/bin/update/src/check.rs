@@ -3,45 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::args,
+    crate::{args, monitor_state::monitor_state},
     anyhow::{Context, Error},
-    fidl_fuchsia_update::{
-        CheckOptions, Initiator, ManagerMarker, ManagerProxy, MonitorMarker, MonitorRequest,
-        MonitorRequestStream,
-    },
-    fidl_fuchsia_update_ext::State,
+    fidl_fuchsia_update::{CheckOptions, Initiator, ManagerMarker, ManagerProxy, MonitorMarker},
     fuchsia_component::client::connect_to_protocol,
-    futures::prelude::*,
 };
 
 pub async fn handle_check_now_cmd(cmd: args::CheckNow) -> Result<(), Error> {
     let update_manager =
         connect_to_protocol::<ManagerMarker>().context("Failed to connect to update manager")?;
     handle_check_now_cmd_impl(cmd, &update_manager).await
-}
-
-fn print_state(state: &State) {
-    println!("State: {:?}", state);
-}
-
-async fn monitor_state(mut stream: MonitorRequestStream) -> Result<(), Error> {
-    while let Some(event) = stream.try_next().await? {
-        match event {
-            MonitorRequest::OnState { state, responder } => {
-                responder.send()?;
-
-                let state = State::from(state);
-
-                // Exit if we encounter an error during an update.
-                if state.is_error() {
-                    anyhow::bail!("Update failed: {:?}", state)
-                } else {
-                    print_state(&state);
-                }
-            }
-        }
-    }
-    Ok(())
 }
 
 async fn handle_check_now_cmd_impl(

@@ -43,6 +43,8 @@ rustc_library("lib") {
     "src/commit.rs",
     "src/install.rs",
     "src/main.rs",
+    "src/monitor_state.rs",
+    "src/monitor_updates.rs",
     "src/revert.rs",
   ]
 

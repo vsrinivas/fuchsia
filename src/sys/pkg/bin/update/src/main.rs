@@ -9,6 +9,8 @@ mod channel;
 mod check;
 mod commit;
 mod install;
+mod monitor_state;
+mod monitor_updates;
 mod revert;
 
 async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
@@ -18,6 +20,9 @@ async fn handle_cmd(cmd: args::Command) -> Result<(), Error> {
         }
         args::Command::CheckNow(check_now) => {
             crate::check::handle_check_now_cmd(check_now).await?;
+        }
+        args::Command::MonitorUpdates(_) => {
+            crate::monitor_updates::handle_monitor_updates_cmd().await?;
         }
         args::Command::ForceInstall(args) => {
             crate::install::handle_force_install(

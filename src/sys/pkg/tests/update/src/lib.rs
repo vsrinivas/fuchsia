@@ -12,13 +12,13 @@ use {
     },
     fidl_fuchsia_update_installer as fidl_installer,
     fidl_fuchsia_update_installer_ext::{self as installer},
-    fuchsia_async as fasync,
+    fuchsia_async::{self as fasync, TimeoutExt as _},
     fuchsia_component::{
-        client::{AppBuilder, Output},
+        client::{AppBuilder, ExitStatus, Output, Stdio},
         server::{NestedEnvironment, ServiceFs},
     },
     fuchsia_zircon::{self as zx, EventPair, HandleBased, Peered},
-    futures::prelude::*,
+    futures::{channel::mpsc, lock::Mutex as AsyncMutex, prelude::*},
     matches::assert_matches,
     mock_installer::{
         CapturedRebootControllerRequest, CapturedUpdateInstallerRequest, MockUpdateInstallerService,
@@ -27,8 +27,10 @@ use {
     mock_reboot::{MockRebootService, RebootReason},
     parking_lot::Mutex,
     pretty_assertions::assert_eq,
-    std::sync::Arc,
+    std::{sync::Arc, time::Duration},
 };
+
+const UPDATE_CMX: &str = "fuchsia-pkg://fuchsia.com/update-integration-tests#meta/update.cmx";
 
 async fn run_commit_status_provider_service(
     mut stream: fidl_update::CommitStatusProviderRequestStream,
@@ -44,6 +46,7 @@ async fn run_commit_status_provider_service(
 #[derive(Default)]
 struct TestEnvBuilder {
     manager_states: Vec<State>,
+    manager_states_receiver: Option<mpsc::Receiver<Vec<State>>>,
     installer_states: Vec<installer::State>,
     commit_status_provider_response: Option<EventPair>,
     paver_service: Option<MockPaverService>,
@@ -53,6 +56,10 @@ struct TestEnvBuilder {
 impl TestEnvBuilder {
     fn manager_states(self, manager_states: Vec<State>) -> Self {
         Self { manager_states, ..self }
+    }
+
+    fn manager_states_receiver(self, manager_states_receiver: mpsc::Receiver<Vec<State>>) -> Self {
+        Self { manager_states_receiver: Some(manager_states_receiver), ..self }
     }
 
     fn installer_states(self, installer_states: Vec<installer::State>) -> Self {
@@ -74,7 +81,19 @@ impl TestEnvBuilder {
     fn build(self) -> TestEnv {
         let mut fs = ServiceFs::new();
 
-        let update_manager = Arc::new(MockUpdateManagerService::new(self.manager_states));
+        let manager_states_receiver = match self.manager_states_receiver {
+            Some(states_receiver) => states_receiver,
+            None => {
+                let (mut sender, receiver) = mpsc::channel(0);
+                let manager_states = self.manager_states;
+                fasync::Task::spawn(async move {
+                    sender.send(manager_states).await.unwrap();
+                })
+                .detach();
+                receiver
+            }
+        };
+        let update_manager = Arc::new(MockUpdateManagerService::new(manager_states_receiver));
         let update_manager_clone = Arc::clone(&update_manager);
         fs.add_fidl_service(move |stream| {
             fasync::Task::spawn(Arc::clone(&update_manager_clone).run_service(stream)).detach()
@@ -152,9 +171,7 @@ impl TestEnv {
 
     async fn run_update<'a>(&'a self, args: Vec<&'a str>) -> Output {
         let launcher = self.launcher();
-        let update =
-            AppBuilder::new("fuchsia-pkg://fuchsia.com/update-integration-tests#meta/update.cmx")
-                .args(args);
+        let update = AppBuilder::new(UPDATE_CMX).args(args);
         let output = update
             .output(launcher)
             .expect("update to launch")
@@ -162,6 +179,22 @@ impl TestEnv {
             .expect("no errors while waiting for exit");
         assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
         output
+    }
+
+    async fn run_update_async_output<'a>(
+        &'a self,
+        args: Vec<&'a str>,
+    ) -> (fasync::Task<Result<ExitStatus, anyhow::Error>>, fasync::Socket, fasync::Socket) {
+        let launcher = self.launcher();
+        let mut app = AppBuilder::new(UPDATE_CMX)
+            .args(args)
+            .stdout(Stdio::MakePipe)
+            .stderr(Stdio::MakePipe)
+            .spawn(launcher)
+            .expect("update to launch");
+        let stdout = app.take_stdout().unwrap();
+        let stderr = app.take_stderr().unwrap();
+        (fasync::Task::spawn(app.wait()), stdout, stderr)
     }
 
     fn assert_update_manager_called_with(&self, expected_args: Vec<CapturedUpdateManagerRequest>) {
@@ -192,14 +225,18 @@ enum CapturedUpdateManagerRequest {
 impl Eq for CapturedUpdateManagerRequest {}
 
 struct MockUpdateManagerService {
-    states: Vec<State>,
+    states_receiver: AsyncMutex<mpsc::Receiver<Vec<State>>>,
     captured_args: Mutex<Vec<CapturedUpdateManagerRequest>>,
     check_now_response: Mutex<Result<(), fidl_update::CheckNotStartedReason>>,
 }
 
 impl MockUpdateManagerService {
-    fn new(states: Vec<State>) -> Self {
-        Self { states, captured_args: Mutex::new(vec![]), check_now_response: Mutex::new(Ok(())) }
+    fn new(states_receiver: mpsc::Receiver<Vec<State>>) -> Self {
+        Self {
+            states_receiver: AsyncMutex::new(states_receiver),
+            captured_args: Mutex::new(vec![]),
+            check_now_response: Mutex::new(Ok(())),
+        }
     }
     async fn run_service(self: Arc<Self>, mut stream: fidl_update::ManagerRequestStream) {
         while let Some(req) = stream.try_next().await.unwrap() {
@@ -213,7 +250,9 @@ impl MockUpdateManagerService {
                         let proxy = fidl_update::MonitorProxy::new(
                             fasync::Channel::from_channel(monitor.into_channel()).unwrap(),
                         );
-                        fasync::Task::spawn(Self::send_states(proxy, self.states.clone())).detach();
+                        let mut receiver = self.states_receiver.lock().await;
+                        let states = receiver.next().await.unwrap();
+                        fasync::Task::spawn(Self::send_states(proxy, states)).detach();
                     }
                     responder.send(&mut *self.check_now_response.lock()).unwrap();
                 }
@@ -223,17 +262,26 @@ impl MockUpdateManagerService {
                 }
 
                 fidl_update::ManagerRequest::MonitorAllUpdateChecks {
-                    attempts_monitor: _,
+                    attempts_monitor,
                     control_handle: _,
                 } => {
-                    panic!("MonitorAllUpdateChecks not yet implemented!");
+                    let proxy = attempts_monitor.into_proxy().unwrap();
+                    let mut receiver = self.states_receiver.lock().await;
+                    while let Some(states) = receiver.next().await {
+                        let (monitor, server_end) =
+                            fidl::endpoints::create_proxy::<fidl_update::MonitorMarker>().unwrap();
+                        let mut options = fidl_update::AttemptOptions::EMPTY;
+                        options.initiator = Some(fidl_update::Initiator::Service);
+                        proxy.on_start(options, server_end).await.unwrap();
+                        Self::send_states(monitor, states).await;
+                    }
                 }
             }
         }
     }
 
     async fn send_states(monitor: fidl_update::MonitorProxy, states: Vec<State>) {
-        for state in states.into_iter() {
+        for state in states {
             monitor.on_state(&mut state.into()).await.unwrap();
         }
     }
@@ -246,6 +294,21 @@ fn assert_output(output: &Output, expected_stdout: &str, expected_stderr: &str, 
     let actual_stderr = std::str::from_utf8(&output.stderr).unwrap();
     assert_eq!(actual_stderr, expected_stderr);
     assert_eq!(output.exit_status.code(), exit_code, "stdout: {}", actual_stdout);
+}
+
+async fn assert_async_output(socket: &mut fasync::Socket, expected_output: &str) {
+    let mut actual_output = vec![0; expected_output.len()];
+    socket
+        .read_exact(&mut actual_output[..])
+        .on_timeout(Duration::from_secs(1), || panic!("reading output timed out"))
+        .await
+        .unwrap();
+    let actual_output = std::str::from_utf8(&actual_output).unwrap();
+    assert_eq!(actual_output, expected_output);
+}
+
+fn assert_async_output_not_ready(socket: &mut fasync::Socket) {
+    assert_matches!(socket.read(&mut [0; 1]).now_or_never(), None);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -590,6 +653,72 @@ async fn check_now_monitor_error_installing() {
         },
         monitor_present: true,
     }]);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn monitor_all_update_checks() {
+    let (mut sender, receiver) = mpsc::channel(0);
+    let env = TestEnv::builder().manager_states_receiver(receiver).build();
+    let (update, mut stdout, mut stderr) =
+        env.run_update_async_output(vec!["monitor-updates"]).await;
+
+    assert_async_output_not_ready(&mut stdout);
+    assert_async_output_not_ready(&mut stderr);
+
+    sender.send(vec![State::CheckingForUpdates, State::NoUpdateAvailable]).await.unwrap();
+    assert_async_output(
+        &mut stdout,
+        "Service started an update attempt\n\
+         State: CheckingForUpdates\n\
+         State: NoUpdateAvailable\n",
+    )
+    .await;
+
+    assert_async_output_not_ready(&mut stdout);
+    assert_async_output_not_ready(&mut stderr);
+
+    sender
+        .send(vec![
+            State::CheckingForUpdates,
+            State::InstallingUpdate(InstallingData {
+                update: Some(UpdateInfo {
+                    version_available: Some("fake-versions".into()),
+                    download_size: Some(4),
+                }),
+                installation_progress: Some(InstallationProgress {
+                    fraction_completed: Some(0.5f32),
+                }),
+            }),
+            State::InstallationError(InstallationErrorData {
+                update: Some(UpdateInfo {
+                    version_available: Some("fake-versions".into()),
+                    download_size: Some(4),
+                }),
+                installation_progress: Some(InstallationProgress {
+                    fraction_completed: Some(0.5f32),
+                }),
+            }),
+        ])
+        .await
+        .unwrap();
+    assert_async_output(
+        &mut stdout,
+        "Service started an update attempt\n\
+         State: CheckingForUpdates\n\
+         State: InstallingUpdate(InstallingData { update: Some(UpdateInfo { version_available: Some(\"fake-versions\"), download_size: Some(4) }), installation_progress: Some(InstallationProgress { fraction_completed: Some(0.5) }) })\n",
+    )
+    .await;
+    assert_async_output(
+        &mut stderr,
+        "Error: Update failed: InstallationError(InstallationErrorData { update: Some(UpdateInfo { version_available: Some(\"fake-versions\"), download_size: Some(4) }), installation_progress: Some(InstallationProgress { fraction_completed: Some(0.5) }) })\n",
+      )
+    .await;
+
+    assert_async_output_not_ready(&mut stdout);
+    assert_async_output_not_ready(&mut stderr);
+
+    drop(sender);
+    assert_eq!(update.await.unwrap().reason(), fidl_fuchsia_sys::TerminationReason::Exited);
 }
 
 #[fasync::run_singlethreaded(test)]

@@ -19,13 +19,13 @@ pub enum Command {
 
     // fuchsia.update Manager protocol:
     CheckNow(CheckNow),
+    MonitorUpdates(MonitorUpdates),
 
     // fuchsia.update.installer protocol:
     ForceInstall(ForceInstall),
 
     // fuchsia.update CommitStatusProvider protocol:
     WaitForCommit(WaitForCommit),
-
     Revert(Revert),
 }
 
@@ -85,6 +85,11 @@ pub struct CheckNow {
     #[argh(switch)]
     pub monitor: bool,
 }
+
+#[derive(Debug, Eq, FromArgs, PartialEq)]
+#[argh(subcommand, name = "monitor-updates")]
+/// Monitor all update checks.
+pub struct MonitorUpdates {}
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
 #[argh(subcommand, name = "force-install")]
@@ -268,5 +273,11 @@ mod tests {
     fn test_revert() {
         let update = Update::from_args(&["update"], &["revert"]).unwrap();
         assert_eq!(update, Update { cmd: Command::Revert(Revert {}) });
+    }
+
+    #[test]
+    fn test_monitor() {
+        let update = Update::from_args(&["update"], &["monitor-updates"]).unwrap();
+        assert_eq!(update, Update { cmd: Command::MonitorUpdates(MonitorUpdates {}) });
     }
 }
