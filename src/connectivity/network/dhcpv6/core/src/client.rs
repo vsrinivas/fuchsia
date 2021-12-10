@@ -245,7 +245,8 @@ impl InformationRequesting {
     ///
     /// [RFC 8415, Section 18.2.6]: https://tools.ietf.org/html/rfc8415#section-18.2.6
     fn retransmission_timeout<R: Rng>(&self, rng: &mut R) -> Duration {
-        retransmission_timeout(self.retrans_timeout, INITIAL_INFO_REQ_TIMEOUT, INFO_REQ_MAX_RT, rng)
+        let Self { retrans_timeout } = self;
+        retransmission_timeout(*retrans_timeout, INITIAL_INFO_REQ_TIMEOUT, INFO_REQ_MAX_RT, rng)
     }
 
     /// A helper function that returns a transition back to `InformationRequesting`, with actions
@@ -585,17 +586,17 @@ impl ServerDiscovery {
     /// specified in [RFC 8415, Section 18.2.1].
     ///
     /// [RFC 8415, Section 18.2.1]: https://datatracker.ietf.org/doc/html/rfc8415#section-18.2.1
-    fn retransmission_timeout<R: Rng>(&self, rng: &mut R) -> Duration {
-        let Self {
-            client_id: _,
-            configured_addresses: _,
-            first_solicit_time: _,
-            retrans_timeout,
-            solicit_max_rt,
-            collected_advertise: _,
-            collected_sol_max_rt: _,
-        } = self;
-        retransmission_timeout(*retrans_timeout, INITIAL_SOLICIT_TIMEOUT, *solicit_max_rt, rng)
+    fn retransmission_timeout<R: Rng>(
+        prev_retrans_timeout: Duration,
+        max_retrans_timeout: Duration,
+        rng: &mut R,
+    ) -> Duration {
+        retransmission_timeout(
+            prev_retrans_timeout,
+            INITIAL_SOLICIT_TIMEOUT,
+            max_retrans_timeout,
+            rng,
+        )
     }
 
     /// Returns a transition back to `ServerDiscovery`, with actions to send a
@@ -606,18 +607,27 @@ impl ServerDiscovery {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
     ) -> Transition {
-        let mut options = vec![v6::DhcpOption::ClientId(&self.client_id)];
+        let Self {
+            client_id,
+            configured_addresses,
+            first_solicit_time,
+            retrans_timeout,
+            solicit_max_rt,
+            collected_advertise,
+            collected_sol_max_rt,
+        } = self;
+        let mut options = vec![v6::DhcpOption::ClientId(&client_id)];
 
-        let elapsed_time = match self.first_solicit_time {
-            None => 0,
-            Some(first_solicit_time) => elapsed_time_in_centisecs(first_solicit_time),
+        let (start_time, elapsed_time) = match first_solicit_time {
+            None => (Instant::now(), 0),
+            Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time)),
         };
         options.push(v6::DhcpOption::ElapsedTime(elapsed_time));
 
         // TODO(https://fxbug.dev/86945): remove `address_hint` construction
         // once `IanaSerializer::new()` takes options by value.
         let mut address_hint = HashMap::new();
-        for (iaid, addr_opt) in &self.configured_addresses {
+        for (iaid, addr_opt) in &configured_addresses {
             let entry = address_hint.insert(
                 *iaid,
                 addr_opt.map(|addr| {
@@ -647,18 +657,18 @@ impl ServerDiscovery {
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
 
-        let retrans_timeout = self.retransmission_timeout(rng);
-        let first_solicit_time = Some(self.first_solicit_time.unwrap_or(Instant::now()));
+        let retrans_timeout =
+            ServerDiscovery::retransmission_timeout(retrans_timeout, solicit_max_rt, rng);
 
         Transition {
             state: ClientState::ServerDiscovery(ServerDiscovery {
-                client_id: self.client_id,
-                configured_addresses: self.configured_addresses,
-                first_solicit_time,
+                client_id,
+                configured_addresses,
+                first_solicit_time: Some(start_time),
                 retrans_timeout,
-                solicit_max_rt: self.solicit_max_rt,
-                collected_advertise: self.collected_advertise,
-                collected_sol_max_rt: self.collected_sol_max_rt,
+                solicit_max_rt,
+                collected_advertise,
+                collected_sol_max_rt,
             }),
             actions: vec![
                 Action::SendMessage(buf),
@@ -1349,24 +1359,35 @@ impl Requesting {
         options_to_request: &[v6::OptionCode],
         rng: &mut R,
     ) -> Transition {
-        if self.retrans_count != REQUEST_MAX_RC {
-            return self.send_and_schedule_retransmission(
+        let Self {
+            client_id,
+            configured_addresses,
+            server_id,
+            addresses_to_request,
+            mut collected_advertise,
+            first_request_time,
+            retrans_timeout,
+            retrans_count,
+            solicit_max_rt,
+        } = self;
+        if retrans_count != REQUEST_MAX_RC {
+            return Self {
+                client_id,
+                configured_addresses,
+                server_id,
+                addresses_to_request,
+                collected_advertise,
+                first_request_time,
+                retrans_timeout,
+                retrans_count,
+                solicit_max_rt,
+            }
+            .send_and_schedule_retransmission(
                 request_transaction_id,
                 options_to_request,
                 rng,
             );
         }
-        let Self {
-            client_id,
-            configured_addresses,
-            server_id: _,
-            addresses_to_request: _,
-            mut collected_advertise,
-            first_request_time: _,
-            retrans_timeout: _,
-            retrans_count: _,
-            solicit_max_rt,
-        } = self;
         if let Some(advertise) = collected_advertise.pop() {
             return Requesting::start(
                 client_id,
@@ -2157,7 +2178,8 @@ impl<R: Rng> ClientStateMachine<R> {
     }
 
     pub fn get_dns_servers(&self) -> Vec<Ipv6Addr> {
-        return self.state.as_ref().expect("state should not be empty").get_dns_servers();
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = self;
+        state.as_ref().expect("state should not be empty").get_dns_servers()
     }
 
     /// Handles a timeout event, dispatches based on timeout type.
@@ -2166,21 +2188,21 @@ impl<R: Rng> ClientStateMachine<R> {
     ///
     /// `handle_timeout` panics if current state is None.
     pub fn handle_timeout(&mut self, timeout_type: ClientTimerType) -> Actions {
-        let state = self.state.take().expect("state should not be empty");
-        let Transition { state, actions, transaction_id: new_transaction_id } = match timeout_type {
-            ClientTimerType::Retransmission => state.retransmission_timer_expired(
-                self.transaction_id,
-                &self.options_to_request,
-                &mut self.rng,
-            ),
-            ClientTimerType::Refresh => state.refresh_timer_expired(
-                self.transaction_id,
-                &self.options_to_request,
-                &mut self.rng,
-            ),
-        };
-        self.state = Some(state);
-        self.transaction_id = new_transaction_id.unwrap_or(self.transaction_id);
+        let ClientStateMachine { transaction_id, options_to_request, state, rng } = self;
+        let old_state = state.take().expect("state should not be empty");
+        let Transition { state: new_state, actions, transaction_id: new_transaction_id } =
+            match timeout_type {
+                ClientTimerType::Retransmission => old_state.retransmission_timer_expired(
+                    *transaction_id,
+                    &options_to_request,
+                    rng,
+                ),
+                ClientTimerType::Refresh => {
+                    old_state.refresh_timer_expired(*transaction_id, &options_to_request, rng)
+                }
+            };
+        *state = Some(new_state);
+        *transaction_id = new_transaction_id.unwrap_or(*transaction_id);
         actions
     }
 
@@ -2190,28 +2212,36 @@ impl<R: Rng> ClientStateMachine<R> {
     ///
     /// `handle_reply` panics if current state is None.
     pub fn handle_message_receive<B: ByteSlice>(&mut self, msg: v6::Message<'_, B>) -> Actions {
-        if msg.transaction_id() != &self.transaction_id {
+        let ClientStateMachine { transaction_id, options_to_request, state, rng } = self;
+        if msg.transaction_id() != transaction_id {
             Vec::new() // Ignore messages for other clients.
         } else {
             match msg.msg_type() {
                 v6::MessageType::Reply => {
-                    let Transition { state, actions, transaction_id: new_transaction_id } = self
-                        .state
-                        .take()
-                        .expect("state should not be empty")
-                        .reply_message_received(&self.options_to_request, &mut self.rng, msg);
-                    self.state = Some(state);
-                    self.transaction_id = new_transaction_id.unwrap_or(self.transaction_id);
+                    let Transition {
+                        state: new_state,
+                        actions,
+                        transaction_id: new_transaction_id,
+                    } = state.take().expect("state should not be empty").reply_message_received(
+                        &options_to_request,
+                        rng,
+                        msg,
+                    );
+                    *state = Some(new_state);
+                    *transaction_id = new_transaction_id.unwrap_or(*transaction_id);
                     actions
                 }
                 v6::MessageType::Advertise => {
-                    let Transition { state, actions, transaction_id: new_transaction_id } = self
-                        .state
+                    let Transition {
+                        state: new_state,
+                        actions,
+                        transaction_id: new_transaction_id,
+                    } = state
                         .take()
                         .expect("state should not be empty")
-                        .advertise_message_received(&self.options_to_request, &mut self.rng, msg);
-                    self.state = Some(state);
-                    self.transaction_id = new_transaction_id.unwrap_or(self.transaction_id);
+                        .advertise_message_received(&options_to_request, rng, msg);
+                    *state = Some(new_state);
+                    *transaction_id = new_transaction_id.unwrap_or(*transaction_id);
                     actions
                 }
                 v6::MessageType::Reconfigure => {
@@ -2438,8 +2468,10 @@ mod tests {
                 StepRng::new(std::u64::MAX / 2, 0),
             );
 
+            let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+                &client;
             assert_matches!(
-                client.state,
+                *state,
                 Some(ClientState::InformationRequesting(InformationRequesting {
                     retrans_timeout: INITIAL_INFO_REQ_TIMEOUT,
                 }))
@@ -2449,9 +2481,11 @@ mod tests {
             // retransmission timer.
             let want_options_array = [v6::DhcpOption::Oro(&options)];
             let want_options = if options.is_empty() { &[][..] } else { &want_options_array[..] };
+            let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+                &client;
             let builder = v6::MessageBuilder::new(
                 v6::MessageType::InformationRequest,
-                client.transaction_id,
+                *transaction_id,
                 want_options,
             );
             let mut want_buf = vec![0; builder.bytes_len()];
@@ -2475,17 +2509,19 @@ mod tests {
                 v6::DhcpOption::DnsServers(&dns_servers),
             ];
             let builder =
-                v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &options);
+                v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
             let mut buf = vec![0; builder.bytes_len()];
             let () = builder.serialize(&mut buf);
             let mut buf = &buf[..]; // Implements BufferView.
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
             let actions = client.handle_message_receive(msg);
+            let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+                client;
 
             {
                 assert_matches!(
-                    client.state,
+                    state,
                     Some(ClientState::InformationReceived(InformationReceived {dns_servers: d
                     })) if d == dns_servers.to_vec()
                 );
@@ -2533,7 +2569,9 @@ mod tests {
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &[]);
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &[]);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
@@ -2550,11 +2588,10 @@ mod tests {
 
         // Refresh should start another round of information request.
         let actions = client.handle_timeout(ClientTimerType::Refresh);
-        let builder = v6::MessageBuilder::new(
-            v6::MessageType::InformationRequest,
-            client.transaction_id,
-            &[],
-        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::InformationRequest, *transaction_id, &[]);
         let mut want_buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut want_buf);
         assert_eq!(
@@ -2771,8 +2808,10 @@ mod tests {
             v6::DhcpOption::Preference(42),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
         ];
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
         let builder =
-            v6::MessageBuilder::new(v6::MessageType::Advertise, client.transaction_id, &options);
+            v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
@@ -2793,8 +2832,10 @@ mod tests {
             v6::DhcpOption::Preference(255),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
         ];
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
         let builder =
-            v6::MessageBuilder::new(v6::MessageType::Advertise, client.transaction_id, &options);
+            v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
@@ -2939,8 +2980,9 @@ mod tests {
         };
         assert_eq!(testutil::msg_type(buf), v6::MessageType::Solicit);
         assert_eq!(*timeout, 2 * INITIAL_SOLICIT_TIMEOUT);
+        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         assert_matches!(
-            &client.state,
+            state,
             Some(ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
                 configured_addresses: _,
@@ -2964,7 +3006,7 @@ mod tests {
             v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
         ];
         let builder =
-            v6::MessageBuilder::new(v6::MessageType::Advertise, client.transaction_id, &options);
+            v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
@@ -4051,7 +4093,6 @@ mod tests {
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
         );
-        client.transaction_id = [1, 2, 3];
 
         let builder = v6::MessageBuilder::new(
             v6::MessageType::Reply,
@@ -4081,7 +4122,9 @@ mod tests {
             v6::MessageType::RelayForw,
             v6::MessageType::RelayRepl,
         ]) {
-            let builder = v6::MessageBuilder::new(msg_type, client.transaction_id, &[]);
+            let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+                &client;
+            let builder = v6::MessageBuilder::new(msg_type, *transaction_id, &[]);
             let mut buf = vec![0; builder.bytes_len()];
             let () = builder.serialize(&mut buf);
             let mut buf = &buf[..]; // Implements BufferView.
@@ -4101,14 +4144,15 @@ mod tests {
 
         // The client expects either a reply or retransmission timeout in the current state.
         assert_eq!(client.handle_timeout(ClientTimerType::Refresh)[..], []);
+        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         assert_matches!(
-            client.state,
+            *state,
             Some(ClientState::InformationRequesting(InformationRequesting {
                 retrans_timeout: INITIAL_INFO_REQ_TIMEOUT
             }))
         );
 
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, client.transaction_id, &[]);
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &[]);
         let mut buf = vec![0; builder.bytes_len()];
         let () = builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
@@ -4121,8 +4165,10 @@ mod tests {
                 Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
             ]
         );
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
         assert_matches!(
-            &client.state,
+            state,
             Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
         );
 
@@ -4132,15 +4178,19 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Extra replies received in information received state are ignored.
         assert_eq!(client.handle_message_receive(msg)[..], []);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
         assert_matches!(
-            &client.state,
+            state,
             Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
         );
 
         // Information received state should only respond to `Refresh` timer.
         assert_eq!(client.handle_timeout(ClientTimerType::Retransmission)[..], []);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
         assert_matches!(
-            &client.state,
+            state,
             Some(ClientState::InformationReceived(InformationReceived { dns_servers})) if dns_servers.is_empty()
         );
     }
