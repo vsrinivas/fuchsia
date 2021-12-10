@@ -198,9 +198,10 @@ source_set("block-watcher") {
     sources += [ "extract-metadata-noop.cc" ]
   }
 
-  if (data_filesystem_format == "fxfs") {
+  if (bundle_fxfs || data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs" ]
-  } else if (data_filesystem_format == "f2fs") {
+  }
+  if (data_filesystem_format == "f2fs") {
     deps += [ "//src/storage/bin/f2fs" ]
   }
 
@@ -239,7 +240,7 @@ executable("fshost") {
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 
-  if (data_filesystem_format == "fxfs") {
+  if (bundle_fxfs || data_filesystem_format == "fxfs") {
     deps += [ "//src/storage/fxfs-crypt" ]
   }
 
@@ -400,7 +401,7 @@ cmc_merge("test-fshost.cml") {
     "meta/base_fshost.cml",
     "meta/core_fshost.cml",
   ]
-  if (data_filesystem_format == "fxfs") {
+  if (bundle_fxfs || data_filesystem_format == "fxfs") {
     sources += [ "meta/fxfs_fshost.cml" ]
   }
 }
@@ -424,7 +425,7 @@ cmc_merge("test-fshost-no-watcher.cml") {
     "meta/core_fshost.cml",
     "meta/no_watcher.cml",
   ]
-  if (data_filesystem_format == "fxfs") {
+  if (bundle_fxfs || data_filesystem_format == "fxfs") {
     sources += [ "meta/fxfs_fshost.cml" ]
   }
 }
@@ -503,7 +504,7 @@ cmc_merge("fshost.cml") {
   if (!bootfs_only) {
     sources += [ "meta/core_fshost.cml" ]
   }
-  if (data_filesystem_format == "fxfs") {
+  if (bundle_fxfs || data_filesystem_format == "fxfs") {
     sources += [ "meta/fxfs_fshost.cml" ]
   }
 }

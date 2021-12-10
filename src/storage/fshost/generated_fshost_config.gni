@@ -33,6 +33,10 @@ declare_args() {
   # migrated in-place to the specified format when fshost mounts it.
   data_filesystem_format = "minfs"
 
+  # Whether to bundle fxfs with the build.  This doesn't enable fxfs in any way, it simply includes
+  # the binary in the build with fshost.  Use data_filesystem_format to enable fxfs.
+  bundle_fxfs = false
+
   # Set to true to enable legacy data partition names.
   allow_legacy_data_partition_names = true
 
