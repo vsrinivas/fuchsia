@@ -32,8 +32,21 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailResponseMessageTable;
-
 }  // namespace fidl_test_errorsyntax
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+    final {
+  static constexpr uint64_t value = 8210161374538322484lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+    final {
+  static constexpr uint64_t value = 7435809829353441431lu;
+};
+
+namespace fidl_test_errorsyntax {}  // namespace fidl_test_errorsyntax
 #ifdef __Fuchsia__
 
 template <>
@@ -879,50 +892,9 @@ static_assert(
         ::fidl::WireResponse<
             ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>,
         result) == 16);
+
+#ifdef __Fuchsia__
 }  // namespace fidl
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(::fidl::WireUnownedResult<
-                        ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
-                            ComposedCallWhichMayFail>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&
-          result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
@@ -1017,8 +989,10 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
       internal::IncomingTransportContext* transport_context) override;
 };
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the ExampleUseOfErrorSyntax protocol, and can send events in that protocol.

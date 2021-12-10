@@ -85,7 +85,14 @@ class WireUnownedResult;
 template <typename FidlMethod>
 using WireClientCallback = ::fit::callback<void(::fidl::WireUnownedResult<FidlMethod>&)>;
 
+#endif  // __Fuchsia__
+
 namespace internal {
+
+template <typename FidlMethod>
+struct WireOrdinal;
+
+#ifdef __Fuchsia__
 
 // WireWeakEventSender borrows the server endpoint from a binding object and
 // exposes methods for sending events.
@@ -134,7 +141,11 @@ struct WireMethodTypes {
 template <typename FidlMethod>
 using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
 
+#endif  // __Fuchsia__
+
 }  // namespace internal
+
+#ifdef __Fuchsia__
 
 enum class DispatchResult;
 

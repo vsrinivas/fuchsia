@@ -34,8 +34,15 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondResponseMessageTable;
-
 }  // namespace fidl_test_service
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_service::SecondProtocol::MethodOnSecond>
+    final {
+  static constexpr uint64_t value = 6118813307380259369lu;
+};
+
+namespace fidl_test_service {}  // namespace fidl_test_service
 #ifdef __Fuchsia__
 
 template <>
@@ -261,8 +268,15 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstResponseMessageTable;
-
 }  // namespace fidl_test_service
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_service::FirstProtocol::MethodOnFirst>
+    final {
+  static constexpr uint64_t value = 6590661047173168036lu;
+};
+
+namespace fidl_test_service {}  // namespace fidl_test_service
 #ifdef __Fuchsia__
 
 template <>

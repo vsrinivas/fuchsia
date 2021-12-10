@@ -26,8 +26,14 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_inheritance_superfooResponseMessageTable;
-
 }  // namespace fidl_test_inheritance
+template <>
+struct ::fidl::internal::WireOrdinal<::fidl_test_inheritance::Super::Foo>
+    final {
+  static constexpr uint64_t value = 4999045011615110827lu;
+};
+
+namespace fidl_test_inheritance {}  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
 
 template <>
@@ -394,8 +400,13 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_inheritance_subfooResponseMessageTable;
-
 }  // namespace fidl_test_inheritance
+template <>
+struct ::fidl::internal::WireOrdinal<::fidl_test_inheritance::Sub::Foo> final {
+  static constexpr uint64_t value = 4999045011615110827lu;
+};
+
+namespace fidl_test_inheritance {}  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
 
 template <>
@@ -800,28 +811,9 @@ static_assert(
     ::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>::PrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::fidl_test_inheritance::Sub::Foo>,
                        y) == 16);
+
+#ifdef __Fuchsia__
 }  // namespace fidl
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<::fidl_test_inheritance::Super::Foo>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>&
-          result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Super> final
     : public ::fidl::internal::ClientBase {
@@ -864,8 +856,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_inheritance::Super> final
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
       internal::IncomingTransportContext* transport_context) override;
 };
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Super protocol, and can send events in that protocol.
@@ -909,24 +903,6 @@ class ::fidl::internal::WireWeakEventSender<::fidl_test_inheritance::Super> {
                           ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<::fidl_test_inheritance::Sub::Foo>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
 };
 #endif  // __Fuchsia__
 

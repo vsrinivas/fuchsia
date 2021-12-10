@@ -52,8 +52,27 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_HandleRightsProtocolAnEventEventMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>
+    final {
+  static constexpr uint64_t value = 5073990954122988412lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
+    final {
+  static constexpr uint64_t value = 6841738779450413052lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::HandleRightsProtocol::AnEvent>
+    final {
+  static constexpr uint64_t value = 929632006073412977lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -708,8 +727,60 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
+    final {
+  static constexpr uint64_t value = 7699066378708085668lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponse>
+    final {
+  static constexpr uint64_t value = 4641225961522096302lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
+    final {
+  static constexpr uint64_t value = 4935493674668456948lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse>
+    final {
+  static constexpr uint64_t value = 8985942600963248509lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponse>
+    final {
+  static constexpr uint64_t value = 7344052883704365182lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponse>
+    final {
+  static constexpr uint64_t value = 2103802322332450033lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>
+    final {
+  static constexpr uint64_t value = 1323081535741489193lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>
+    final {
+  static constexpr uint64_t value = 1691906546593908418lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -2406,8 +2477,26 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalEventEventMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::Transitional::Request>
+    final {
+  static constexpr uint64_t value = 7121112290509197032lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::Transitional::OneWay>
+    final {
+  static constexpr uint64_t value = 1124136612964114085lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<::fidl_test_protocols::Transitional::Event>
+    final {
+  static constexpr uint64_t value = 6033576734966581606lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -2941,8 +3030,15 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_MethodWithUnionUnionMethodResponseMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::MethodWithUnion::UnionMethod>
+    final {
+  static constexpr uint64_t value = 6602599911470270762lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -3189,8 +3285,27 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>
+    final {
+  static constexpr uint64_t value = 6967495859718087341lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>
+    final {
+  static constexpr uint64_t value = 4493250268989071740lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
+    final {
+  static constexpr uint64_t value = 175407360796475740lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -4256,8 +4371,15 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ManyParametersFifteenResponseMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::ManyParameters::Fifteen>
+    final {
+  static constexpr uint64_t value = 2979943048488637411lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -4544,8 +4666,33 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxHandleInResultResponseMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
+    final {
+  static constexpr uint64_t value = 4000554951765344912lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+    final {
+  static constexpr uint64_t value = 3421672554503271630lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
+    final {
+  static constexpr uint64_t value = 627496610701472780lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
+    final {
+  static constexpr uint64_t value = 2147949819621101463lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -5867,8 +6014,15 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_DiscoverableProtocolMethodResponseMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::DiscoverableProtocol::Method>
+    final {
+  static constexpr uint64_t value = 16177161678225767lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -6126,8 +6280,39 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseMessageTable;
-
 }  // namespace fidl_test_protocols
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::ChannelProtocol::MethodA>
+    final {
+  static constexpr uint64_t value = 565531679656837166lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::ChannelProtocol::EventA>
+    final {
+  static constexpr uint64_t value = 5963604044179602938lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::ChannelProtocol::MethodB>
+    final {
+  static constexpr uint64_t value = 6746905632127147242lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::ChannelProtocol::TakeHandle>
+    final {
+  static constexpr uint64_t value = 875219241480379432lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocols::ChannelProtocol::MutateSocket>
+    final {
+  static constexpr uint64_t value = 9065806117349865322lu;
+};
+
+namespace fidl_test_protocols {}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
 template <>
@@ -8161,30 +8346,8 @@ static_assert(
              b) == 16);
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 }  // namespace fidl
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&
-          result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireClientImpl<
     ::fidl_test_protocols::HandleRightsProtocol>
@@ -8244,8 +8407,10 @@ class ::fidl::internal::WireClientImpl<
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
       internal::IncomingTransportContext* transport_context) override;
 };
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the HandleRightsProtocol protocol, and can send events in that protocol.
@@ -8301,86 +8466,6 @@ class ::fidl::internal::WireWeakEventSender<
                           ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        NoRequestEmptyResponse> : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(::fidl::WireUnownedResult<
-                        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            NoRequestEmptyResponse>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(::fidl::WireUnownedResult<
-                        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            NoRequestWithResponse>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        WithRequestEmptyResponse> : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(::fidl::WireUnownedResult<
-                        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestEmptyResponse>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithAndWithoutRequestResponse::
-        WithRequestWithResponse> : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(::fidl::WireUnownedResult<
-                        ::fidl_test_protocols::WithAndWithoutRequestResponse::
-                            WithRequestWithResponse>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
 };
 #endif  // __Fuchsia__
 
@@ -8643,25 +8728,6 @@ class ::fidl::internal::WireWeakEventSender<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResponseContext<::fidl_test_protocols::Transitional::Request>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>&
-          result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
     final : public ::fidl::internal::ClientBase {
  public:
@@ -8843,67 +8909,6 @@ class ::fidl::internal::WireWeakEventSender<
                           ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithProtocolEnds::ClientEnds>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithProtocolEnds::ServerEnds>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>&
-          result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
 };
 #endif  // __Fuchsia__
 
@@ -9170,88 +9175,6 @@ class ::fidl::internal::WireWeakEventSender<
 #ifdef __Fuchsia__
 
 template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>&
-          result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>&
-          result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::WithErrorSyntax::HandleInResult>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
     final : public ::fidl::internal::ClientBase {
  public:
@@ -9511,66 +9434,6 @@ class ::fidl::internal::WireWeakEventSender<
                           ::fidl::internal::ChannelTransport>;
 
   ::fidl::internal::WeakEventSenderInner inner_;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::ChannelProtocol::MethodB>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::ChannelProtocol::MethodB>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::ChannelProtocol::TakeHandle>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::ChannelProtocol::TakeHandle>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocols::ChannelProtocol::MutateSocket>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocols::ChannelProtocol::MutateSocket>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
 };
 #endif  // __Fuchsia__
 

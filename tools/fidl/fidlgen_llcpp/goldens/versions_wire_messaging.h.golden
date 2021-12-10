@@ -154,8 +154,14 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_versions_ProtocolFooResponseMessageTable;
-
 }  // namespace fidl_test_versions
+template <>
+struct ::fidl::internal::WireOrdinal<::fidl_test_versions::Protocol::Foo>
+    final {
+  static constexpr uint64_t value = 7892886356712658659lu;
+};
+
+namespace fidl_test_versions {}  // namespace fidl_test_versions
 #ifdef __Fuchsia__
 
 template <>

@@ -36,8 +36,27 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseMessageTable;
-
 }  // namespace fidl_test_emptystruct
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_emptystruct::EmptyProtocol::Send>
+    final {
+  static constexpr uint64_t value = 2183815705502904104lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_emptystruct::EmptyProtocol::Receive>
+    final {
+  static constexpr uint64_t value = 5025214662316626400lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+    final {
+  static constexpr uint64_t value = 6253929606062814577lu;
+};
+
+namespace fidl_test_emptystruct {}  // namespace fidl_test_emptystruct
 #ifdef __Fuchsia__
 
 template <>
@@ -664,29 +683,9 @@ static_assert(
     offsetof(::fidl::WireResponse<
                  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>,
              e) == 16);
+
+#ifdef __Fuchsia__
 }  // namespace fidl
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
     final : public ::fidl::internal::ClientBase {
@@ -745,8 +744,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
       internal::IncomingTransportContext* transport_context) override;
 };
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the EmptyProtocol protocol, and can send events in that protocol.

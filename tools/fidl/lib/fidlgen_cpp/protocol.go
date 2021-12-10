@@ -121,6 +121,7 @@ var (
 	WireCompleter       = internalNs.member("WireCompleter")
 	WireCompleterBase   = internalNs.member("WireCompleterBase")
 	WireMethodTypes     = internalNs.member("WireMethodTypes")
+	WireOrdinal         = internalNs.member("WireOrdinal")
 	WireRequestView     = internalNs.member("WireRequestView")
 )
 
@@ -325,6 +326,7 @@ type wireMethod struct {
 	WireCompleter        name
 	WireCompleterBase    name
 	WireMethodTypes      name
+	WireOrdinal          name
 	WireRequest          name
 	WireRequestView      name
 	WireRequestViewAlias name
@@ -341,6 +343,7 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 		WireCompleter:        WireCompleter.template(methodMarker),
 		WireCompleterBase:    WireCompleterBase.template(methodMarker),
 		WireMethodTypes:      WireMethodTypes.template(methodMarker),
+		WireOrdinal:          WireOrdinal.template(methodMarker),
 		WireRequest:          WireRequest.template(methodMarker),
 		WireRequestView:      WireRequestView.template(methodMarker),
 		WireRequestViewAlias: s.appendName("RequestView"),

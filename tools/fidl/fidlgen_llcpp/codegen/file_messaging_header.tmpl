@@ -54,10 +54,6 @@ fidl/{{ .LibraryDots }}/cpp/wire_messaging.h
   {{- end }}
 
   {{- range (call .ProtocolsForTransport "Channel") }}
-    {{- range .TwoWayMethods }}
-      {{ template "Method:ResponseContext:MessagingHeader" . }}
-    {{- end }}
-
     {{ template "Protocol:ClientImpl:MessagingHeader" . }}
 
     {{ template "Protocol:EventSender:MessagingHeader" . }}

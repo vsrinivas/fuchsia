@@ -159,6 +159,38 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   zx_txid_t txid_ = 0;      // Zircon txid of outstanding transaction.
 };
 
+}  // namespace internal
+
+template <typename FidlMethod>
+class WireResponseContext : public internal::ResponseContext {
+ public:
+  WireResponseContext()
+      : ::fidl::internal::ResponseContext(internal::WireOrdinal<FidlMethod>::value) {}
+
+  virtual void OnResult(::fidl::WireUnownedResult<FidlMethod>& result) = 0;
+
+ private:
+  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
+      ::fidl::IncomingMessage&& msg,
+      internal::IncomingTransportContext* transport_context) override {
+    if (unlikely(!msg.ok())) {
+      ::fidl::WireUnownedResult<FidlMethod> result{msg.error()};
+      OnResult(result);
+      return cpp17::nullopt;
+    }
+    ::fidl::DecodedMessage<::fidl::WireResponse<FidlMethod>> decoded{std::move(msg)};
+    ::fidl::Result maybe_error = decoded;
+    ::fidl::WireUnownedResult<FidlMethod> result{std::move(decoded)};
+    OnResult(result);
+    if (unlikely(!maybe_error.ok())) {
+      return ::fidl::UnbindInfo(maybe_error);
+    }
+    return cpp17::nullopt;
+  }
+};
+
+namespace internal {
+
 // Base LLCPP client class supporting use with a multithreaded asynchronous dispatcher, safe error
 // handling and teardown, and asynchronous transaction tracking. Users should not directly interact
 // with this class. |ClientBase| objects must be managed via std::shared_ptr.

@@ -44,8 +44,33 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildRequestResponseMessageTable;
-
 }  // namespace fidl_test_protocolrequest
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocolrequest::Parent::GetChild>
+    final {
+  static constexpr uint64_t value = 7929845654914578302lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocolrequest::Parent::GetChildRequest>
+    final {
+  static constexpr uint64_t value = 1819029190665166744lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocolrequest::Parent::TakeChild>
+    final {
+  static constexpr uint64_t value = 374110854839013230lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_protocolrequest::Parent::TakeChildRequest>
+    final {
+  static constexpr uint64_t value = 1574820689302890956lu;
+};
+
+namespace fidl_test_protocolrequest {}  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
 
 template <>
@@ -1204,48 +1229,8 @@ static_assert(
              r) == 16);
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
 }  // namespace fidl
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<::fidl_test_protocolrequest::Parent::GetChild>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<::fidl_test_protocolrequest::Parent::GetChild>&
-          result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_protocolrequest::Parent::GetChildRequest>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_protocolrequest::Parent::GetChildRequest>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
     final : public ::fidl::internal::ClientBase {
@@ -1341,8 +1326,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
       internal::IncomingTransportContext* transport_context) override;
 };
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Parent protocol, and can send events in that protocol.

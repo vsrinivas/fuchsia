@@ -30,8 +30,23 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseMessageTable;
-
 }  // namespace fidl_test_union
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_union::TestProtocol::
+        StrictXUnionHenceResponseMayBeStackAllocated>
+    final {
+  static constexpr uint64_t value = 8393311445612289086lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_union::TestProtocol::
+        FlexibleXUnionHenceResponseMustBeHeapAllocated>
+    final {
+  static constexpr uint64_t value = 6296412872266712530lu;
+};
+
+namespace fidl_test_union {}  // namespace fidl_test_union
 #ifdef __Fuchsia__
 
 template <>
@@ -859,53 +874,9 @@ static_assert(offsetof(::fidl::WireResponse<
                            ::fidl_test_union::TestProtocol::
                                FlexibleXUnionHenceResponseMustBeHeapAllocated>,
                        xu) == 16);
+
+#ifdef __Fuchsia__
 }  // namespace fidl
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_union::TestProtocol::
-        StrictXUnionHenceResponseMayBeStackAllocated>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_union::TestProtocol::
-              StrictXUnionHenceResponseMayBeStackAllocated>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_union::TestProtocol::
-        FlexibleXUnionHenceResponseMustBeHeapAllocated>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_union::TestProtocol::
-              FlexibleXUnionHenceResponseMustBeHeapAllocated>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
     : public ::fidl::internal::ClientBase {
@@ -1003,8 +974,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_union::TestProtocol> final
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
       internal::IncomingTransportContext* transport_context) override;
 };
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the TestProtocol protocol, and can send events in that protocol.

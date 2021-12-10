@@ -35,7 +35,6 @@ if (is_host) {
       "codegen/fragment_method_completer_base.tmpl",
       "codegen/fragment_method_request.tmpl",
       "codegen/fragment_method_response.tmpl",
-      "codegen/fragment_method_response_context.tmpl",
       "codegen/fragment_method_result.tmpl",
       "codegen/fragment_method_unownedresult.tmpl",
       "codegen/fragment_protocol.tmpl",

@@ -32,8 +32,20 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_doccomments_InterfaceOnEventEventMessageTable;
-
 }  // namespace fidl_test_doccomments
+template <>
+struct ::fidl::internal::WireOrdinal<::fidl_test_doccomments::Interface::Method>
+    final {
+  static constexpr uint64_t value = 6649887292072346213lu;
+};
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_doccomments::Interface::OnEvent>
+    final {
+  static constexpr uint64_t value = 3999525675942213370lu;
+};
+
+namespace fidl_test_doccomments {}  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__
 
 template <>

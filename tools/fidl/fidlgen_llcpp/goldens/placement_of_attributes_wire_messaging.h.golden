@@ -26,7 +26,15 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodResponseMessageTable;
+}  // namespace fidl_test_placementofattributes
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_placementofattributes::ExampleProtocol::Method>
+    final {
+  static constexpr uint64_t value = 2341079615635566980lu;
+};
 
+namespace fidl_test_placementofattributes {
 }  // namespace fidl_test_placementofattributes
 #ifdef __Fuchsia__
 

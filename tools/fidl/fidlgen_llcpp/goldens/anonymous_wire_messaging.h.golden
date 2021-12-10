@@ -24,8 +24,15 @@ __LOCAL extern "C" const fidl_type_t
 
 __LOCAL extern "C" const fidl_type_t
     fidl_test_anonymous_SomeProtocolSomeMethodResponseMessageTable;
-
 }  // namespace fidl_test_anonymous
+template <>
+struct ::fidl::internal::WireOrdinal<
+    ::fidl_test_anonymous::SomeProtocol::SomeMethod>
+    final {
+  static constexpr uint64_t value = 8941579241812366574lu;
+};
+
+namespace fidl_test_anonymous {}  // namespace fidl_test_anonymous
 #ifdef __Fuchsia__
 
 template <>
@@ -482,29 +489,9 @@ static_assert(
     offsetof(
         ::fidl::WireResponse<::fidl_test_anonymous::SomeProtocol::SomeMethod>,
         result) == 16);
+
+#ifdef __Fuchsia__
 }  // namespace fidl
-#ifdef __Fuchsia__
-
-template <>
-class ::fidl::WireResponseContext<
-    ::fidl_test_anonymous::SomeProtocol::SomeMethod>
-    : public ::fidl::internal::ResponseContext {
- public:
-  WireResponseContext();
-
-  virtual void OnResult(
-      ::fidl::WireUnownedResult<
-          ::fidl_test_anonymous::SomeProtocol::SomeMethod>& result) = 0;
-
- private:
-  ::cpp17::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
-      internal::IncomingTransportContext* transport_context) override;
-};
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
 template <>
 class ::fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>
     final : public ::fidl::internal::ClientBase {
@@ -559,8 +546,10 @@ class ::fidl::internal::WireClientImpl<::fidl_test_anonymous::SomeProtocol>
       ::fidl::internal::AsyncEventHandler* maybe_event_handler,
       internal::IncomingTransportContext* transport_context) override;
 };
+namespace fidl {
 #endif  // __Fuchsia__
 
+}  // namespace fidl
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the SomeProtocol protocol, and can send events in that protocol.

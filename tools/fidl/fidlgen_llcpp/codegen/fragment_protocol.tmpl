@@ -41,6 +41,13 @@ __LOCAL extern "C" const fidl_type_t {{ .Request.WireCodingTable.Name }};
 __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
   {{- end }}
 {{ "" }}
+
+{{- range .Methods }}
+{{- EnsureNamespace "" }}
+template<>
+struct {{ .WireOrdinal }} final { static constexpr uint64_t value = {{ .Ordinal }}lu; };
+{{- end }}
+
 {{ EnsureNamespace . }}
 
 {{- template "Protocol:Details:MessagingHeader" . }}
@@ -140,11 +147,6 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{ "" }}
 {{- end }}
 
-{{- range .ClientMethods }}
-  {{- if .HasResponse }}
-    {{- template "Method:ResponseContext:MessagingSource" . }}
-  {{- end }}
-{{- end }}
 {{ template "Protocol:ClientImpl:MessagingSource" . }}
 
 {{- if .Events }}
