@@ -122,11 +122,6 @@ test("fs-management-test") {
     "//zircon/third_party/uapp/fsck-msdosfs",
     "//zircon/third_party/uapp/mkfs-msdosfs",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fuchsia_component("fs-management-test-component") {
