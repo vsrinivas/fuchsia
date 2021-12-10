@@ -54,6 +54,7 @@ template("sdk") {
   archive_manifest_target_name = "${target_name}_archive_manifest"
   archive_target_name = "${target_name}_archive"
   fidl_json_target_name = "${target_name}_fidl_json"
+  export_target_name = "${target_name}_export"
 
   target_triple = target_cpu
   if (host_cpu == "x64") {
@@ -317,12 +318,6 @@ template("sdk") {
     }
   }
 
-  group(main_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-
-    public_deps = [ ":$archive_target_name" ]
-  }
-
   fidl_json_file = "$target_gen_dir/$sdk_name.fidl_json.txt"
 
   # Generate a helpful list of all of the JSON for the fidl in this SDK
@@ -335,7 +330,7 @@ template("sdk") {
 
   stamp_file = "$target_gen_dir/$target_name.exported"
 
-  action("${target_name}_export") {
+  action(export_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
     script = "//build/sdk/export_sdk.py"
@@ -357,5 +352,14 @@ template("sdk") {
     ]
 
     deps = [ ":$archive_manifest_target_name" ]
+  }
+
+  group(main_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    public_deps = [
+      ":$archive_target_name",
+      ":$export_target_name",
+    ]
   }
 }

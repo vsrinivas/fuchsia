@@ -53,9 +53,10 @@ def main():
     for dest, source in mappings:
         destination = os.path.join(args.out_dir, dest)
         make_dir(destination)
-        source = os.path.relpath(source)
-        shutil.copy2(source, destination)
-        sources.append(source)
+        # Absolute path needed to symlink correctly.
+        os.symlink(os.path.abspath(source), destination)
+        # Relative path required in depfile.
+        sources.append(os.path.relpath(source))
         destinations.append(destination)
 
     with open(args.stamp_file, 'w') as stamp_file:
