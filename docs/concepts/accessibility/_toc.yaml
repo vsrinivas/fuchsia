@@ -8,3 +8,5 @@
 toc:
 - title: "Accessibility Framework"
   path: /docs/concepts/accessibility/accessibility_framework.md
+- title: "Semantics"
+  path: /docs/concepts/accessibility/semantics.md
