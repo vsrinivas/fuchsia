@@ -274,8 +274,10 @@ static constexpr zbi_topology_node_t fallback_topology = {
                                                        .gic_id = 0,
                                                    }}}}};
 
-static void init_topology(const zbi_topology_node_t* nodes, size_t node_count) {
-  auto result = system_topology::Graph::InitializeSystemTopology(nodes, node_count);
+static void init_topology(uint level) {
+  ktl::span handoff = gPhysHandoff->cpu_topology.get();
+
+  auto result = system_topology::Graph::InitializeSystemTopology(handoff.data(), handoff.size());
   if (result != ZX_OK) {
     printf("Failed to initialize system topology! error: %d\n", result);
 
@@ -295,6 +297,8 @@ static void init_topology(const zbi_topology_node_t* nodes, size_t node_count) {
     }
   }
 }
+
+LK_INIT_HOOK(init_topology, init_topology, LK_INIT_LEVEL_VM)
 
 static void allocate_persistent_ram(paddr_t pa, size_t length) {
   // Figure out how to divide up our persistent RAM.  Right now there are
@@ -425,46 +429,6 @@ void ProcessZbiEarly() {
   }
 }
 
-// Called after the heap is up, but before multithreading.
-void ProcessZbiLate() {
-  auto mexec_data_image = GetMexecDataImage();
-
-  ktl::span<const ktl::byte> zbi = ZbiInPhysmap();
-  zbitl::View view(zbi);
-  for (auto [header, payload] : view) {
-    if (header->type == ZBI_TYPE_CPU_CONFIG || header->type == ZBI_TYPE_CPU_TOPOLOGY) {
-      auto table = zbitl::CpuTopologyTable::FromPayload(header->type, payload);
-      if (table.is_error()) {
-        printf("cannot parse CPU topology from ZBI: %.*s",
-               static_cast<int>(table.error_value().size()), table.error_value().data());
-        continue;
-      }
-
-      fbl::AllocChecker ac;
-      size_t count = table->size();
-      ktl::unique_ptr<zbi_topology_node_t[]> flat_table(new (&ac) zbi_topology_node_t[count]);
-      if (!ac.check()) {
-        panic("out of memory");
-      }
-
-      ktl::copy(table->begin(), table->end(), flat_table.get());
-
-      init_topology(flat_table.get(), count);
-
-      auto result = mexec_data_image.Append(*header, payload);
-      if (result.is_error()) {
-        printf("ProcessZbiEarly: failed to append CPU topology to mexec data ZBI: ");
-        zbitl::PrintViewError(result.error_value());
-      }
-    }
-  }
-
-  if (auto result = view.take_error(); result.is_error()) {
-    printf("ProcessZbiLate: encountered error iterating through data ZBI: ");
-    zbitl::PrintViewError(result.error_value());
-  }
-}
-
 void platform_early_init(void) {
   // initialize the boot memory reservation system
   boot_reserve_init();
@@ -534,11 +498,6 @@ void platform_early_init(void) {
 }
 
 void platform_prevm_init() {}
-
-// Called after the heap is up but before the system is multithreaded.
-void platform_init_pre_thread(uint init_level) { ProcessZbiLate(); }
-
-LK_INIT_HOOK(platform_init_pre_thread, platform_init_pre_thread, LK_INIT_LEVEL_VM)
 
 void platform_init(void) { topology_cpu_init(); }
 

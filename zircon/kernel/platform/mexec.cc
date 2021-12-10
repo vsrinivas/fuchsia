@@ -77,6 +77,16 @@ void ConstructMexecDataZbi(uint level) {
 
   ktl::visit(append_uart_item, gBootOptions->serial);
 
+  if (ktl::span topology = gPhysHandoff->cpu_topology.get(); !topology.empty()) {
+    auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_CPU_TOPOLOGY},
+                                         zbitl::AsBytes(topology));
+    if (result.is_error()) {
+      printf("mexec: could not append CPU topology: ");
+      zbitl::PrintViewError(result.error_value());
+      abort();
+    }
+  }
+
   if (gPhysHandoff->nvram) {
     auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_NVRAM},
                                          zbitl::AsBytes(gPhysHandoff->nvram.value()));
