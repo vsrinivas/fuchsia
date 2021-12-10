@@ -48,6 +48,6 @@ const List<LocalizationsDelegate> allLocalizationsDelegates = [
   // Delegate containing all app-level messages
   LocalizedModLocalizationsDelegate(),
   // Flutter-provided delegates for Flutter UI messages
-  GlobalMaterialLocalizations.delegate,
+  ...GlobalMaterialLocalizations.delegates,
   GlobalWidgetsLocalizations.delegate,
 ];

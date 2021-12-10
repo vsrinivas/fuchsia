@@ -72,7 +72,7 @@ class App extends StatelessWidget {
                   locale: locale,
                   localizationsDelegates: [
                     localizations.delegate(),
-                    GlobalMaterialLocalizations.delegate,
+                    ...GlobalMaterialLocalizations.delegates,
                     GlobalWidgetsLocalizations.delegate,
                   ],
                   supportedLocales: supported_locales.locales,
