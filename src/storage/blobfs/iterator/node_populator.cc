@@ -9,6 +9,8 @@
 
 #include <vector>
 
+#include <safemath/safe_conversions.h>
+
 #include "src/storage/blobfs/allocator/base_allocator.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/iterator/extent_iterator.h"
@@ -20,7 +22,7 @@ NodePopulator::NodePopulator(BaseAllocator* allocator, std::vector<ReservedExten
     : allocator_(allocator), extents_(std::move(extents)), nodes_(std::move(nodes)) {
   ZX_DEBUG_ASSERT(extents_.size() <= kMaxBlobExtents);
   ZX_DEBUG_ASSERT(nodes_.size() >=
-                  NodeCountForExtents(static_cast<ExtentCountType>(extents_.size())));
+                  NodeCountForExtents(safemath::checked_cast<ExtentCountType>(extents_.size())));
 }
 
 uint32_t NodePopulator::NodeCountForExtents(ExtentCountType extent_count) {

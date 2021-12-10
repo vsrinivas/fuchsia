@@ -71,7 +71,7 @@ class BaseAllocator : private ExtentReserver, private NodeReserverInterface, pub
   // blobfs::NodeReserverInterface interface.
   zx::status<ReservedNode> ReserveNode() override;
   void UnreserveNode(ReservedNode node) override;
-  uint32_t ReservedNodeCount() const override;
+  uint64_t ReservedNodeCount() const override;
 
   // Marks a reserved node by updating the node map to indicate it is an allocated inode.
   void MarkInodeAllocated(ReservedNode node);

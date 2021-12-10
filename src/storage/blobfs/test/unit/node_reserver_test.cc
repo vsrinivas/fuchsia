@@ -41,7 +41,7 @@ class FakeNodeReserver : public NodeReserverInterface {
     --reserved_node_count_;
   }
 
-  uint32_t ReservedNodeCount() const override { return reserved_node_count_; }
+  uint64_t ReservedNodeCount() const override { return reserved_node_count_; }
 
   bool IsNodeReserved(uint32_t node_index) { return node_bitmap_->IsBusy(node_index); }
 

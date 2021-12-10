@@ -13,6 +13,7 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <id_allocator/id_allocator.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/storage/blobfs/allocator/base_allocator.h"
 #include "src/storage/blobfs/common.h"
@@ -35,7 +36,8 @@ zx::status<std::unique_ptr<HostAllocator>> HostAllocator::Create(RawBitmap block
   auto host_allocator = std::unique_ptr<HostAllocator>(
       new HostAllocator(std::move(block_bitmap), node_map, std::move(node_bitmap)));
 
-  for (size_t i = 0; i < node_map.size(); ++i) {
+  uint32_t node_map_size = safemath::checked_cast<ExtentCountType>(node_map.size());
+  for (uint32_t i = 0; i < node_map_size; ++i) {
     if (node_map[i].header.IsAllocated()) {
       host_allocator->MarkNodeAllocated(i);
     }

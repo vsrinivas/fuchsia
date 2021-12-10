@@ -31,7 +31,8 @@ ByteCountType RoundUpToBlockMultiple(ByteCountType byte_count, BlockSizeType blo
 
 // Returns the minimum number of blocks required to hold |byte_count| bytes.
 BlockCountType BlocksRequiredForBytes(ByteCountType byte_count, BlockSizeType blobfs_block_size) {
-  return RoundUpToBlockMultiple(byte_count, blobfs_block_size) / blobfs_block_size;
+  return safemath::checked_cast<BlockCountType>(
+      RoundUpToBlockMultiple(byte_count, blobfs_block_size) / blobfs_block_size);
 }
 
 // Returns the maximum number of bytes that can fit in |block_count| blocks.

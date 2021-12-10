@@ -33,6 +33,7 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <cobalt-client/cpp/collector.h>
 #include <fbl/ref_ptr.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
@@ -580,7 +581,7 @@ zx_status_t Blobfs::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, s
 
   for (size_t i = c->index; i < info_.inode_count; ++i) {
     ZX_DEBUG_ASSERT(i < std::numeric_limits<uint32_t>::max());
-    uint32_t node_index = static_cast<uint32_t>(i);
+    uint32_t node_index = safemath::checked_cast<uint32_t>(i);
     if (GetNode(node_index)->header.IsAllocated() &&
         !GetNode(node_index)->header.IsExtentContainer()) {
       Digest digest(GetNode(node_index)->merkle_root_hash);
@@ -638,21 +639,24 @@ zx_status_t Blobfs::AddInodes(Allocator* allocator) {
     return status;
   }
 
-  const uint32_t kInodesPerSlice = static_cast<uint32_t>(info_.slice_size / kBlobfsInodeSize);
-  uint64_t inodes64 = (info_.ino_slices + static_cast<uint32_t>(length)) * kInodesPerSlice;
+  const uint32_t kInodesPerSlice =
+      safemath::checked_cast<uint32_t>(info_.slice_size / kBlobfsInodeSize);
+  uint64_t inodes64 =
+      (info_.ino_slices + safemath::checked_cast<uint32_t>(length)) * kInodesPerSlice;
   ZX_DEBUG_ASSERT(inodes64 <= std::numeric_limits<uint32_t>::max());
-  uint32_t inodes = static_cast<uint32_t>(inodes64);
+  uint32_t inodes = safemath::checked_cast<uint32_t>(inodes64);
   uint32_t inoblks = (inodes + kBlobfsInodesPerBlock - 1) / kBlobfsInodesPerBlock;
   ZX_DEBUG_ASSERT(info_.inode_count <= std::numeric_limits<uint32_t>::max());
-  uint32_t inoblks_old = (static_cast<uint32_t>(info_.inode_count) + kBlobfsInodesPerBlock - 1) /
-                         kBlobfsInodesPerBlock;
+  uint32_t inoblks_old =
+      (safemath::checked_cast<uint32_t>(info_.inode_count) + kBlobfsInodesPerBlock - 1) /
+      kBlobfsInodesPerBlock;
   ZX_DEBUG_ASSERT(inoblks_old <= inoblks);
 
   if (allocator->GrowNodeMap(inoblks * kBlobfsBlockSize) != ZX_OK) {
     return ZX_ERR_NO_SPACE;
   }
 
-  info_.ino_slices += static_cast<uint32_t>(length);
+  info_.ino_slices += safemath::checked_cast<uint32_t>(length);
   info_.inode_count = inodes;
 
   // Reset new inodes to 0, and update the info block.
@@ -695,7 +699,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
 
   uint64_t blocks64 = (info_.dat_slices + length) * blocks_per_slice;
   ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
-  uint32_t blocks = static_cast<uint32_t>(blocks64);
+  uint32_t blocks = safemath::checked_cast<uint32_t>(blocks64);
   uint32_t abmblks = (blocks + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
   uint64_t abmblks_old = (info_.data_block_count + kBlobfsBlockBits - 1) / kBlobfsBlockBits;
   ZX_DEBUG_ASSERT(abmblks_old <= abmblks);
@@ -719,7 +723,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   // Grow before shrinking to ensure the underlying storage is a multiple of kBlobfsBlockSize.
   block_map->Shrink(blocks);
 
-  info_.dat_slices += static_cast<uint32_t>(length);
+  info_.dat_slices += safemath::checked_cast<uint32_t>(length);
   info_.data_block_count = blocks;
 
   BlobTransaction transaction;

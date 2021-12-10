@@ -178,7 +178,7 @@ void BaseAllocator::UnreserveNode(ReservedNode node) {
   --reserved_node_count_;
 }
 
-uint32_t BaseAllocator::ReservedNodeCount() const { return reserved_node_count_; }
+uint64_t BaseAllocator::ReservedNodeCount() const { return reserved_node_count_; }
 
 bool BaseAllocator::CheckBlocksUnallocated(uint64_t start_block, uint64_t end_block) const {
   ZX_DEBUG_ASSERT(end_block > start_block);
@@ -268,7 +268,8 @@ bool BaseAllocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator res
         // prefix which is free from overlap.
         //
         // Take the most of the proposed allocation *before* the reservation.
-        Extent extent(start, static_cast<BlockCountType>(reserved_iterator->start() - start));
+        Extent extent(start,
+                      safemath::checked_cast<BlockCountType>(reserved_iterator->start() - start));
         ZX_DEBUG_ASSERT(
             block_bitmap_.Scan(extent.Start(), extent.Start() + extent.Length(), false));
         ZX_DEBUG_ASSERT(block_length > extent.Length());
@@ -341,7 +342,7 @@ zx_status_t BaseAllocator::FindBlocks(uint64_t start, uint64_t num_blocks,
     if (block_length != 0) {
       // The remainder of this window exists and does not collide with either the reservation map
       // nor the committed blocks.
-      Extent extent(start, static_cast<BlockCountType>(block_length));
+      Extent extent(start, safemath::checked_cast<BlockCountType>(block_length));
       ZX_DEBUG_ASSERT(block_bitmap_.Scan(extent.Start(), extent.Start() + extent.Length(), false));
       start += extent.Length();
       remaining_blocks -= extent.Length();

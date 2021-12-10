@@ -708,7 +708,8 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   }
 
   // Reserve the inode + extent containers to hold all of the extents.
-  uint32_t node_count = NodePopulator::NodeCountForExtents(extents.size());
+  uint32_t node_count =
+      NodePopulator::NodeCountForExtents(safemath::checked_cast<ExtentCountType>(extents.size()));
   std::vector<ReservedNode> nodes;
   if (zx_status_t status = allocator_->ReserveNodes(node_count, &nodes); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to reserve enough nodes: " << status;
@@ -860,8 +861,8 @@ bool Blobfs::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
   return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
 }
 
-zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_block,
-                                        uint64_t block_count, uint8_t* data) {
+zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint32_t start_block,
+                                        uint32_t block_count, uint8_t* data) {
   zx::status<AllocatedExtentIterator> extent_iterator_or =
       AllocatedExtentIterator::Create(GetNodeFinder(), node_index);
   if (extent_iterator_or.is_error()) {
@@ -987,10 +988,10 @@ zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
 uint32_t Blobfs::GetBlockSize() const { return Info().block_size; }
 
 fpromise::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
-  for (uint64_t inode_index = 0, allocated_nodes = 0;
+  for (uint32_t inode_index = 0, allocated_nodes = 0;
        inode_index < info_.inode_count && allocated_nodes < info_.alloc_inode_count;
        ++inode_index) {
-    auto inode = GetNode(inode_index);
+    auto inode = GetNode(safemath::checked_cast<uint32_t>(inode_index));
     if (inode.is_error()) {
       return fpromise::error("Failed to retrieve inode.");
     }
@@ -999,7 +1000,7 @@ fpromise::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
     }
 
     allocated_nodes++;
-    auto load_result = LoadDataAndVerifyBlob(inode_index);
+    auto load_result = LoadDataAndVerifyBlob(safemath::checked_cast<uint32_t>(inode_index));
     if (load_result.is_error()) {
       return load_result.take_error_result();
     }

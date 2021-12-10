@@ -10,6 +10,8 @@
 
 #include <algorithm>
 
+#include <safemath/safe_conversions.h>
+
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {
@@ -46,7 +48,7 @@ zx_status_t IterateToBlock(BlockIterator* iter, uint32_t block_num) {
   while (!iter->Done() && block_num > iter->BlockIndex()) {
     uint32_t out_length = 0;
     uint64_t out_start = 0;
-    auto blocks_to_iterate_over = static_cast<uint32_t>(block_num - iter->BlockIndex());
+    auto blocks_to_iterate_over = safemath::checked_cast<uint32_t>(block_num - iter->BlockIndex());
     zx_status_t status = iter->Next(blocks_to_iterate_over, &out_length, &out_start);
     if (status != ZX_OK) {
       return status;

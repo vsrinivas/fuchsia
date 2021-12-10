@@ -202,7 +202,7 @@ class Blobfs : public fbl::RefCounted<Blobfs> {
   zx::status<> ReadBlock(uint64_t block_number, void* data);
 
   // Read for inode |node_index| for |block_count| blocks from local |start_block| into |data|.
-  zx::status<> ReadBlocksForInode(uint32_t node_index, uint64_t start_block, uint64_t block_count,
+  zx::status<> ReadBlocksForInode(uint32_t node_index, uint32_t start_block, uint32_t block_count,
                                   uint8_t* data);
 
   // Write |block_count| blocks of |data| at block number starting at |start_block|.

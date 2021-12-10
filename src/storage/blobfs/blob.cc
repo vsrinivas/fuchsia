@@ -257,7 +257,7 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
                    << " vs " << kMaxBlobExtents << " max)";
     return ZX_ERR_BAD_STATE;
   }
-  const ExtentCountType extent_count = static_cast<ExtentCountType>(extents.size());
+  const ExtentCountType extent_count = safemath::checked_cast<ExtentCountType>(extents.size());
 
   // Reserve space for all additional nodes necessary to contain this blob. The inode has already
   // been reserved in Blob::PrepareWrite. Hence, we need to reserve one less node here.

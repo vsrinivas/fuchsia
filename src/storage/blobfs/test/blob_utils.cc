@@ -21,6 +21,7 @@
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/lib/digest/digest.h"
 #include "src/lib/digest/merkle-tree.h"
@@ -105,7 +106,7 @@ void VerifyContents(int fd, const uint8_t* data, size_t data_size) {
   // Cast |data_size| to ssize_t to match the return type of |read| and avoid narrowing conversion
   // warnings from mixing size_t and ssize_t.
   ZX_ASSERT(std::numeric_limits<ssize_t>::max() >= data_size);
-  ssize_t data_size_signed = static_cast<ssize_t>(data_size);
+  ssize_t data_size_signed = safemath::checked_cast<ssize_t>(data_size);
 
   constexpr ssize_t kBuffersize = 8192;
   std::unique_ptr<char[]> buffer(new char[kBuffersize]);

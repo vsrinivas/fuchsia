@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <safemath/safe_conversions.h>
+
 #include "src/lib/storage/vfs/cpp/trace.h"
 
 namespace blobfs {
@@ -63,9 +65,10 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
     return block_iter.take_error();
   }
 
-  auto start_block = static_cast<uint32_t>((info.layout->DataOffset() + offset) / kBlobfsBlockSize);
+  auto start_block =
+      safemath::checked_cast<uint32_t>((info.layout->DataOffset() + offset) / kBlobfsBlockSize);
   auto block_count =
-      static_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
+      safemath::checked_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
 
   TRACE_DURATION("blobfs", "StorageBackedTransferBuffer::Populate", "offset",
                  start_block * kBlobfsBlockSize, "length", block_count * kBlobfsBlockSize);

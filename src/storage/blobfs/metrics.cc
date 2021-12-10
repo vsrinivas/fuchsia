@@ -225,8 +225,10 @@ void BlobfsMetrics::IncrementPageIn(const fbl::String& merkle_hash, uint64_t off
   BlobPageInFrequencies& blob_frequencies = all_page_in_frequencies_[merkle_hash];
 
   // Calculate the start+end frame indexes to increment
-  uint32_t cur = fbl::round_down(offset, kBlobfsBlockSize) / kBlobfsBlockSize;
-  uint32_t end = fbl::round_up(offset + length, kBlobfsBlockSize) / kBlobfsBlockSize;
+  uint32_t cur =
+      static_cast<uint32_t>(fbl::round_down(offset, kBlobfsBlockSize) / kBlobfsBlockSize);
+  uint32_t end =
+      static_cast<uint32_t>(fbl::round_up(offset + length, kBlobfsBlockSize) / kBlobfsBlockSize);
 
   for (; cur < end; cur += 1) {
     if (blob_frequencies.offset_map.find(cur) == blob_frequencies.offset_map.end()) {

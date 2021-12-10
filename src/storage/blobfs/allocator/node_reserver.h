@@ -31,7 +31,7 @@ class NodeReserverInterface {
   virtual void UnreserveNode(ReservedNode node) = 0;
 
   // Returns the total number of reserved nodes.
-  virtual uint32_t ReservedNodeCount() const = 0;
+  virtual uint64_t ReservedNodeCount() const = 0;
 };
 
 // Wraps a node reservation in RAII to hold the reservation active, and release it when it goes out

@@ -9,6 +9,8 @@
 
 #include <type_traits>
 
+#include <safemath/safe_conversions.h>
+
 #include "src/storage/blobfs/format.h"
 
 namespace blobfs {
@@ -85,7 +87,7 @@ class BlobLayout {
   // blocks.
   virtual BlockCountType DataBlockOffset() const = 0;
   ByteCountType DataOffset() const {
-    return static_cast<ByteCountType>(DataBlockOffset()) * blobfs_block_size_;
+    return safemath::checked_cast<ByteCountType>(DataBlockOffset()) * blobfs_block_size_;
   }
 
   // The number of bytes required to store the Merkle tree.

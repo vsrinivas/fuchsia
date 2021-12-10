@@ -20,6 +20,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/macros.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 
@@ -276,7 +277,7 @@ class Extent {
   }
 
   BlockCountType Length() const {
-    return static_cast<BlockCountType>((data_ & kBlockCountMask) >> kBlockOffsetBits);
+    return safemath::checked_cast<BlockCountType>((data_ & kBlockCountMask) >> kBlockOffsetBits);
   }
 
   void SetLength(BlockCountType length) {
