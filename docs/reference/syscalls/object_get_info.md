@@ -347,12 +347,56 @@ typedef struct zx_info_thread_stats {
 
 Returns **ZX_ERR_BAD_STATE** if the thread has exited.
 
+### ZX_INFO_GUEST_STATS
+
+*handle* type: **Resource** (Specifically, the info resource)
+
+*buffer* type: `zx_info_guest_stats_t[1]`
+
+```
+// Each machine has its own format for the same ZX_INFO_GUEST_STATS topic.
+// In each build, zx_info_guest_stats_t is a typedef alias for the type.
+// Cross-tools can select the machine-specific type to use based on the
+// source of the data they are working with.
+typedef struct zx_arm64_info_guest_stats {
+    uint32_t cpu_number;
+    uint32_t flags;
+    uint64_t vm_entries;
+    uint64_t vm_exits;
+    uint64_t wfi_wfe_instructions;
+    uint64_t instruction_aborts;
+    uint64_t data_aborts;
+    uint64_t system_instructions;
+    uint64_t smc_instructions;
+    uint64_t interrupts;
+} zx_arm64_info_guest_stats_t;
+
+typedef struct zx_x86_64_info_guest_stats {
+    uint32_t cpu_number;
+    uint32_t flags;
+    uint64_t vm_entries;
+    uint64_t vm_exits;
+    uint64_t interrupts;
+    uint64_t interrupt_windows;
+    uint64_t cpuid_instructions;
+    uint64_t hlt_instructions;
+    uint64_t control_register_accesses;
+    uint64_t io_instructions;
+    uint64_t rdmsr_instructions;
+    uint64_t wrmsr_instructions;
+    uint64_t ept_violations;
+    uint64_t xsetbv_instructions;
+    uint64_t pause_instructions;
+    uint64_t vmcall_instructions;
+} zx_x86_64_info_guest_stats;
+```
+
 ### ZX_INFO_CPU_STATS
 
 Note: many values of this topic are being retired in favor of a different
 mechanism.
 
-*handle* type: **Resource** (Specifically, the root resource)
+*handle* type: **Resource** (Specifically, the info resource)
 
 *buffer* type: `zx_info_cpu_stats_t[1]`
 
@@ -790,7 +834,7 @@ the VMOs of arbitrary processes by koid.
 
 ### ZX_INFO_KMEM_STATS
 
-*handle* type: **Resource** (Specifically, the root resource)
+*handle* type: **Resource** (Specifically, the info resource)
 
 *buffer* type: `zx_info_kmem_stats_t[1]`
 
@@ -832,7 +876,7 @@ typedef struct zx_info_kmem_stats {
 
 ### ZX_INFO_KMEM_STATS_EXTENDED
 
-*handle* type: **Resource** (Specifically, the root resource)
+*handle* type: **Resource** (Specifically, the info resource)
 
 *buffer* type: `zx_info_kmem_stats_extended_t[1]`
 
@@ -925,9 +969,8 @@ The resource kind is one of
 *   **ZX_RSRC_KIND_MMIO**
 *   **ZX_RSRC_KIND_IOPORT**
 *   **ZX_RSRC_KIND_IRQ**
-*   **ZX_RSRC_KIND_HYPERVISOR**
-*   **ZX_RSRC_KIND_VMEX**
 *   **ZX_RSRC_KIND_SMC**
+*   **ZX_RSRC_KIND_SYSTEM**
 
 ### ZX_INFO_BTI
 
