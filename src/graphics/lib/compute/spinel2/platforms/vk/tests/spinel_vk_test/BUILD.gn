@@ -49,7 +49,7 @@ graphics_compute_unittests("spinel-vk-svg-unittests") {
   deps = [ ":spinel_vk_test_sources" ]
 }
 
-graphics_compute_unittests_package("spinel-vk-test") {
+graphics_compute_unittests_package("spinel2-vk-test") {
   testonly = true
   deps = [
     ":spinel-vk-api-unittests",  # basic API tests
@@ -61,11 +61,11 @@ graphics_compute_unittests_package("spinel-vk-test") {
   # Ensure that a host executable is built on Linux hosts
   #
   if (is_fuchsia && host_os == "linux") {
-    data_deps = [ ":spinel-vk-test($host_toolchain)" ]
+    data_deps = [ ":spinel2-vk-test($host_toolchain)" ]
   }
 }
 
 group("spinel_vk_test") {
   testonly = true
-  deps = [ ":spinel-vk-test" ]
+  deps = [ ":spinel2-vk-test" ]
 }
