@@ -308,7 +308,7 @@ In the previous output, there are three capability groups listed:
 * **Incoming Capabilities**: Capabilities that the component declares with
   `use`. These are provided to the component through its **namespace**.
 * **Outgoing Capabilities**: Capabilities the component has published to its
-  **outgoing directory** and is currently serving to others.
+  **outgoing directory**.
 * **Exposed Capabilities**: Capabilities the component declares with
   `expose`. These are the component's **exposed services**.
 
