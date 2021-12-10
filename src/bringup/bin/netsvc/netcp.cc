@@ -16,8 +16,8 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <inet6/inet6.h>
-#include <inet6/netifc.h>
+#include "inet6.h"
+#include "netifc.h"
 
 namespace {
 

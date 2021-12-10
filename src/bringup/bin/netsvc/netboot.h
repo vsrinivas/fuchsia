@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_NETBOOT_H_
 #define SRC_BRINGUP_BIN_NETSVC_NETBOOT_H_
 
-#include <inet6/inet6.h>
+#include "inet6.h"
 
 void netboot_advertise(const char* nodename);
 

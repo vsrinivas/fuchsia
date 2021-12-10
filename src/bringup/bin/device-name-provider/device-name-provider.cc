@@ -18,10 +18,9 @@
 
 #include <cerrno>
 
-#include <inet6/netifc-discover.h>
-
 #include "args.h"
 #include "name_tokens.h"
+#include "src/bringup/bin/netsvc/netifc-discover.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 
 // Copies a word from the wordlist starting at |dest| and then adds |sep| at the end.

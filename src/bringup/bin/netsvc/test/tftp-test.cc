@@ -4,11 +4,11 @@
 
 #include "src/bringup/bin/netsvc/tftp.h"
 
-#include <inet6/netifc.h>
 #include <zxtest/zxtest.h>
 
 #include "src/bringup/bin/netsvc/file-api.h"
 #include "src/bringup/bin/netsvc/netboot.h"
+#include "src/bringup/bin/netsvc/netifc.h"
 
 extern "C" {
 void update_timeouts() {}

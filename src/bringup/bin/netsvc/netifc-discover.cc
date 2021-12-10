@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "netifc-discover.h"
+
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
@@ -15,8 +17,6 @@
 #include <string.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
-
-#include <inet6/netifc-discover.h>
 
 typedef struct netifc_cb_ctx {
   const char* dirname;

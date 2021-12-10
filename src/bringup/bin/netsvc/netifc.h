@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef INET6_NETIFC_H_
-#define INET6_NETIFC_H_
+#ifndef SRC_BRINGUP_BIN_NETSVC_NETIFC_H_
+#define SRC_BRINGUP_BIN_NETSVC_NETIFC_H_
 
 #include <stdbool.h>
 #include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -30,4 +31,4 @@ bool netifc_send_pending(void);
 
 __END_CDECLS
 
-#endif  // INET6_NETIFC_H_
+#endif  // SRC_BRINGUP_BIN_NETSVC_NETIFC_H_

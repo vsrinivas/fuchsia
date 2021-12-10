@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "inet6.h"
+
 #include <arpa/inet.h>
 #include <assert.h>
 #include <lib/zircon-internal/fnv1hash.h>
@@ -11,8 +13,7 @@
 #include <threads.h>
 #include <zircon/syscalls.h>
 
-#include <inet6/inet6.h>
-#include <inet6/netifc-discover.h>
+#include "netifc-discover.h"
 
 #define REPORT_BAD_PACKETS 0
 
@@ -118,7 +119,7 @@ typedef struct ip6_to_mac {
   mac_addr_t mac;
 } ip6_to_mac_t;
 static ip6_to_mac_t mac_lookup_tbl[MAC_TBL_BUCKETS][MAC_TBL_ENTRIES];
-static mtx_t mac_cache_lock = MTX_INIT;
+static mtx_t mac_cache_lock = {};
 
 // Clear all entries
 static void mac_cache_init(void) {

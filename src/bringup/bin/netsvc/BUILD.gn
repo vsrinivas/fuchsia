@@ -39,6 +39,7 @@ executable("netsvc") {
   ]
   deps = [
     ":args",
+    ":inet6",
     ":netsvc_common",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
@@ -47,7 +48,6 @@ executable("netsvc") {
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/inet6",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/tftp",
@@ -101,10 +101,10 @@ source_set("netsvc_common") {
     "//zircon/system/ulib/zbitl",
   ]
   public_deps = [
+    ":inet6",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/inet6",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/tftp",
     "//zircon/system/ulib/zx",
@@ -187,4 +187,49 @@ fuchsia_test_package("tests") {
     ":netsvc-stress-test-component",
     ":netsvc-test-component",
   ]
+}
+
+# NB: These sources were historically part of a zircon library called inet6.
+source_set("inet6") {
+  sources = [
+    "checksum.c",
+    "eth-client.c",
+    "inet6.c",
+    "inet6.h",
+    "netifc.c",
+    "netifc.h",
+  ]
+  deps = [
+    ":netifc-discover",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+  visibility = [ ":*" ]
+
+  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+source_set("netifc-discover") {
+  sources = [
+    "netifc-discover.cc",
+    "netifc-discover.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c",
+    "//sdk/lib/fdio",
+  ]
+  visibility = [
+    ":*",
+    "//src/bringup/bin/device-name-provider:*",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }

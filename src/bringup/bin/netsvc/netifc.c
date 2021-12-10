@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "netifc.h"
+
 #include <assert.h>
 #include <dirent.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
@@ -14,11 +16,9 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
-#include <inet6/inet6.h>
-#include <inet6/netifc-discover.h>
-#include <inet6/netifc.h>
-
 #include "eth-client.h"
+#include "inet6.h"
+#include "netifc-discover.h"
 
 #define ALIGN(n, a) (((n) + ((a)-1)) & ~((a)-1))
 // if nonzero, drop 1 in DROP_PACKETS packets at random
@@ -48,7 +48,7 @@ static int txc;
 static int rxc;
 #endif
 
-static mtx_t eth_lock = MTX_INIT;
+static mtx_t eth_lock = {};
 static zx_handle_t g_netsvc = ZX_HANDLE_INVALID;
 static eth_client_t* g_eth;
 static uint8_t g_netmac[6];

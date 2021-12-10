@@ -11,10 +11,10 @@
 #include <cstddef>
 #include <cstdio>
 
-#include <inet6/inet6.h>
 #include <tftp/tftp.h>
 
 #include "file-api.h"
+#include "inet6.h"
 #include "netsvc.h"
 
 #define SCRATCHSZ 2048

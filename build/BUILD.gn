@@ -263,7 +263,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/hwreg/test/asm/*",
     "//zircon/system/ulib/id_allocator/*",
     "//zircon/system/ulib/image-format/*",
-    "//zircon/system/ulib/inet6/*",
     "//zircon/system/ulib/inspect/*",
     "//zircon/system/ulib/inspector/*",
     "//zircon/system/ulib/io-scheduler/*",

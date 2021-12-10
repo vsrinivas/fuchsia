@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef INET6_INET6_H_
-#define INET6_INET6_H_
+#ifndef SRC_BRINGUP_BIN_NETSVC_INET6_H_
+#define SRC_BRINGUP_BIN_NETSVC_INET6_H_
 
 #include <endian.h>
 #include <stdbool.h>
@@ -180,4 +180,4 @@ void send_router_advertisement(void);
 
 __END_CDECLS
 
-#endif  // INET6_INET6_H_
+#endif  // SRC_BRINGUP_BIN_NETSVC_INET6_H_

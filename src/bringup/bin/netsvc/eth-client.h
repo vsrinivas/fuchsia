@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_BIN_NETSVC_ETH_CLIENT_H_
+#define SRC_BRINGUP_BIN_NETSVC_ETH_CLIENT_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -41,3 +42,5 @@ zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
 zx_status_t eth_wait_rx(eth_client_t* eth, zx_time_t deadline);
 
 __END_CDECLS
+
+#endif  // SRC_BRINGUP_BIN_NETSVC_ETH_CLIENT_H_

@@ -19,12 +19,12 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
-#include <inet6/inet6.h>
-#include <inet6/netifc.h>
 
 #include "args.h"
 #include "debuglog.h"
+#include "inet6.h"
 #include "netboot.h"
+#include "netifc.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 #include "tftp.h"
 
