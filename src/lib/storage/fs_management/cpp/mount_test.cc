@@ -753,7 +753,8 @@ class PartitionOverFvmWithRamdiskFixture : public testing::Test {
     options.name = "my-fake-partition";
     options.type = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
 
-    auto partition_or = storage::CreateFvmPartition(ramdisk_path, slice_size, options);
+    auto partition_or =
+        storage::CreateFvmPartition(ramdisk_path, static_cast<int>(slice_size), options);
     ASSERT_TRUE(partition_or.is_ok()) << partition_or.status_string();
     partition_path_ = std::move(partition_or).value();
   }

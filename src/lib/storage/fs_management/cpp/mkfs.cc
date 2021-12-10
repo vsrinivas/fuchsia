@@ -95,7 +95,7 @@ zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOption
   }
   argv.push_back(device_path);
   argv.push_back(nullptr);
-  return cb(argv.size() - 1, argv.data(), NULL, NULL, 0);
+  return cb(static_cast<int>(argv.size() - 1), argv.data(), NULL, NULL, 0);
 }
 
 }  // namespace

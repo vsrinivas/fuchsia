@@ -328,7 +328,7 @@ int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
   // Here, we rely on request->name being a C-style string terminated by \x00,
   // but no greater than BLOCK_NAME_LEN. Instead, we should add a name_size
   // field to the alloc_req_t object to pass this explicitely.
-  uint32_t request_name_size = BLOCK_NAME_LEN;
+  size_t request_name_size = BLOCK_NAME_LEN;
   for (size_t i = 0; i < BLOCK_NAME_LEN; i++) {
     if (request->name[i] == 0) {
       request_name_size = i;
