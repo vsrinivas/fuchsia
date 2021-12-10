@@ -260,12 +260,11 @@ Incoming Capabilities (11):
   fuchsia.process.Launcher
   fuchsia.tracing.provider.Registry
   svc_blobfs
-Exposed Capabilities (22):
+Exposed Capabilities (21):
   bin
   blob
   build-info
   config-data
-  deprecated-misc-storage
   diagnostics
   durable
   factory
