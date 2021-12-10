@@ -1,0 +1,60 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+group("tests") {
+  testonly = true
+
+  # Ensure that this test is built for the host, and not for Fuchsia.
+  if (target_cpu == "x64") {
+    deps = [ ":coverage_tests($host_x64_toolchain)" ]
+  } else if (target_cpu == "arm64") {
+    deps = [ ":coverage_tests($host_arm64_toolchain)" ]
+  }
+}
+
+# Coverage test is compiled with coverage enabled.
+# It runs on the target, and generates an llvm-profile (.profraw file)
+# upon execution.
+executable("coverage_test_bin") {
+  sources = [ "coverage_test.cc" ]
+  testonly = true
+  cflags = [
+    "-fprofile-instr-generate",
+    "-fcoverage-mapping",
+  ]
+  ldflags = cflags
+}
+
+fuchsia_unittest_package("coverage_test_package") {
+  manifest = "meta/coverage_test.cml"
+  deps = [ ":coverage_test_bin" ]
+}
+
+if (is_host) {
+  go_library("lib") {
+    testonly = true
+
+    deps = [
+      "//tools/botanist:botanist_lib",
+      "//tools/testing/runtests",
+      "//tools/testing/testrunner:lib",
+    ]
+
+    sources = [ "launcher_test.go" ]
+  }
+
+  go_test("coverage_tests") {
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/tests/coverage" ]
+    deps = [ ":lib" ]
+    non_go_deps = [ ":coverage_test_package($target_toolchain)" ]
+
+    # Declare this test as a host-target interaction test, so that Fuchsia
+    # should be running in an emulator before this test starts on the host.
+    environments = [ emu_env ]
+  }
+}
