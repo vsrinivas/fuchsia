@@ -8,7 +8,7 @@ use fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream};
 use fuchsia_async as fasync;
 use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
 use futures::{channel::mpsc, SinkExt, TryStreamExt};
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 /// Serves the test Controller used for controlled shutdown of the archivist in v1 tests.
 pub async fn serve_test_controller(
@@ -46,7 +46,7 @@ pub fn serve_v2() -> (fasync::Task<()>, mpsc::Receiver<()>) {
         while let Some(LifecycleRequest::Stop { .. }) =
             req_stream.try_next().await.expect("Failure receiving lifecycle FIDL message")
         {
-            info!("Initiating shutdown.");
+            debug!("Initiating shutdown.");
             stop_sender.send(()).await.unwrap();
         }
     });
