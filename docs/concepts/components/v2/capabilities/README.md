@@ -100,7 +100,7 @@ The routing sequence is:
     `services`.
 -   `services` exposes `fuchsia.Echo` from its child `echo` to its parent,
     `shell`.
--   `system` offers `fuchsia.Echo` from its child `services` to its other child
+-   `shell` offers `fuchsia.Echo` from its child `services` to its other child
     `tools`.
 -   `tools` offers `fuchsia.Echo` from `parent` (i.e., its parent) to its child
     `echo_tool`.

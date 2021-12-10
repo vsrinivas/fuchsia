@@ -39,7 +39,7 @@ for an example - and below for definitions of 'dimension' and 'tags'
 
 ### Default Behavior
 
-If no environments are specified for a test, than default behavior is as
+If no environments are specified for a test, then default behavior is as
 follows:
 
 1.  `__is_fuchsia__`: test only runs in a QEMU instance running Fuchsia

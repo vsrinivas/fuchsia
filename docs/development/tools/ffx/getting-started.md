@@ -173,7 +173,7 @@ For example, the following command will display all services offered by
 [legacy components](/docs/glossary/README.md#components-v1):
 
 ```sh
-$ fx ffx component select moniker 'core/appmgr:out:*'`
+$ fx ffx component select moniker 'core/appmgr:out:*'
 
 core/appmgr
 |
