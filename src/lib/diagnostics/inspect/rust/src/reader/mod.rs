@@ -538,8 +538,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_data_tree, ArrayProperty, ExponentialHistogramParams, HistogramProperty,
-            Inspector, LinearHistogramParams, StringReference,
+            assert_data_tree, assert_json_diff, ArrayProperty, ExponentialHistogramParams,
+            HistogramProperty, Inspector, LinearHistogramParams, StringReference,
         },
         anyhow::Error,
         futures::prelude::*,
@@ -560,7 +560,7 @@ mod tests {
         root.record_bool(&longer_name_value, false);
 
         let result = read(&inspector).await.unwrap();
-        assert_data_tree!(result, root: {
+        assert_json_diff!(result, root: {
             abc: {
                 abc: 5i64,
             },
@@ -620,7 +620,7 @@ mod tests {
         node_block.array_set_string_slot(3, four_idx).unwrap();
 
         let result = read(&inspector).await.unwrap();
-        assert_data_tree!(result, root: {
+        assert_json_diff!(result, root: {
             padding: {
                 array: 0i64,
             },
@@ -677,7 +677,7 @@ mod tests {
         node_block.array_set_string_slot(3, four_idx).unwrap();
 
         let result = read(&inspector).await.unwrap();
-        assert_data_tree!(result, root: {
+        assert_json_diff!(result, root: {
             "padding": {
                 "array": 0i64,
             },
@@ -809,7 +809,7 @@ mod tests {
         let prop2 = node2.create_string("val", "test");
         let prop3 = node3.create_string("val", "test");
 
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -824,7 +824,7 @@ mod tests {
         );
 
         std::mem::drop(node3);
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -836,7 +836,7 @@ mod tests {
         );
 
         std::mem::drop(node2);
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -847,7 +847,7 @@ mod tests {
         // Recreate the nodes. Ensure that the old properties are not picked up.
         let node2 = node1.create_child("child2");
         let _node3 = node2.create_child("child3");
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -860,7 +860,7 @@ mod tests {
 
         // Delete out of order, leaving 3 dangling.
         std::mem::drop(node2);
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
                 child1: {
                     val: "test",
@@ -869,25 +869,25 @@ mod tests {
         );
 
         std::mem::drop(node1);
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
             }
         );
 
         std::mem::drop(prop3);
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
             }
         );
 
         std::mem::drop(prop2);
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
             }
         );
 
         std::mem::drop(prop1);
-        assert_data_tree!(inspector,
+        assert_json_diff!(inspector,
             root: {
             }
         );
@@ -925,7 +925,7 @@ mod tests {
             .expect("creating node hierarchy")
             .into();
 
-        assert_data_tree!(hierarchy, root: {
+        assert_json_diff!(hierarchy, root: {
             property: "\u{FFFD}ello world",
         });
     }
@@ -1014,7 +1014,7 @@ mod tests {
         });
 
         let hierarchy = read(&inspector).await?;
-        assert_data_tree!(hierarchy, root: {
+        assert_json_diff!(hierarchy, root: {
             int: 3i64,
             child: {
                 double: 1.5,
@@ -1044,14 +1044,14 @@ mod tests {
     #[fuchsia::test]
     fn test_matching_with_inspector() {
         let inspector = Inspector::new();
-        assert_data_tree!(inspector, root: {});
+        assert_json_diff!(inspector, root: {});
     }
 
     #[fuchsia::test]
     fn test_matching_with_partial() {
         let propreties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
         let partial = PartialNodeHierarchy::new("root", propreties, vec![]);
-        assert_data_tree!(partial, root: {
+        assert_json_diff!(partial, root: {
             sub: "sub_value",
         });
     }
@@ -1065,7 +1065,7 @@ mod tests {
             content: "missing-link-404".to_string(),
             disposition: LinkNodeDisposition::Child,
         }];
-        assert_data_tree!(partial, root: {});
+        assert_json_diff!(partial, root: {});
     }
 
     #[fuchsia::test]
@@ -1074,7 +1074,7 @@ mod tests {
         let partial = PartialNodeHierarchy::new("root", properties, vec![]);
         let value = || "sub_value";
         let key = || "sub".to_string();
-        assert_data_tree!(partial, root: {
+        assert_json_diff!(partial, root: {
             key() => value(),
         });
     }

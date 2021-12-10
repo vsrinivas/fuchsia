@@ -233,10 +233,47 @@ macro_rules! assert_data_tree {
     }};
 }
 
+/// Macro to check a hierarchy with a nice JSON diff.
+/// The syntax of the `expected` value is the same as that of `hierarchy!`, and
+/// essentially the same as `assert_data_tree!`, except that partial tree matching
+/// is not supported (i.e. the keyword `contains`).
+#[macro_export]
+macro_rules! assert_json_diff {
+    ($diagnostics_hierarchy:expr, $($rest:tt)+) => {{
+        use $crate::testing::JsonGetter as _;
+
+        let expected = $diagnostics_hierarchy.get_pretty_json();
+        let actual_hierarchy: DiagnosticsHierarchy = $crate::hierarchy!{$($rest)+};
+        let actual = actual_hierarchy.get_pretty_json();
+
+        if actual != expected {
+            panic!("{}", $crate::testing::diff_json(&expected, &actual));
+        }
+    }}
+}
+
 /// A type which can function as a "view" into a diagnostics hierarchy, optionally allocating a new
 /// instance to service a request.
 pub trait DiagnosticsHierarchyGetter<K: Clone> {
     fn get_diagnostics_hierarchy(&self) -> Cow<'_, DiagnosticsHierarchy<K>>;
+}
+
+pub fn diff_json(expected: &str, actual: &str) -> Changeset {
+    Changeset::new(expected, actual, "")
+}
+
+pub trait JsonGetter<K: Clone + AsRef<str>>: DiagnosticsHierarchyGetter<K> {
+    fn get_pretty_json(&self) -> String {
+        let mut tree = self.get_diagnostics_hierarchy();
+        tree.to_mut().sort();
+        serde_json::to_string_pretty(&tree).expect("pretty json string")
+    }
+
+    fn get_json(&self) -> String {
+        let mut tree = self.get_diagnostics_hierarchy();
+        tree.to_mut().sort();
+        serde_json::to_string(&tree).expect("pretty json string")
+    }
 }
 
 impl<K: Clone> DiagnosticsHierarchyGetter<K> for DiagnosticsHierarchy<K> {
@@ -244,6 +281,8 @@ impl<K: Clone> DiagnosticsHierarchyGetter<K> for DiagnosticsHierarchy<K> {
         Cow::Borrowed(self)
     }
 }
+
+impl<K: Clone + AsRef<str>, T: DiagnosticsHierarchyGetter<K>> JsonGetter<K> for T {}
 
 /// A difference between expected and actual output.
 struct Diff(Changeset);
@@ -624,6 +663,53 @@ impl<T: MulAssign + AddAssign + PartialOrd + Add<Output = T> + Copy + Default + 
 #[cfg(test)]
 mod tests {
     use {super::*, crate::Bucket};
+
+    #[fuchsia::test]
+    fn test_assert_json_diff() {
+        assert_json_diff!(
+            simple_tree(),
+             key: {
+                sub: "sub_value",
+                sub2: "sub2_value",
+            }
+        );
+
+        let diagnostics_hierarchy = complex_tree();
+        assert_json_diff!(diagnostics_hierarchy, key: {
+            sub: "sub_value",
+            sub2: "sub2_value",
+            child1: {
+                child1_sub: 10i64,
+            },
+            child2: {
+                child2_sub: 20u64,
+            },
+        });
+    }
+
+    #[fuchsia::test]
+    #[should_panic]
+    fn test_panicking_assert_json_diff() {
+        assert_json_diff!(
+            simple_tree(),
+             key: {
+                sub: "sub_value",
+                sb2: "sub2_value",
+            }
+        );
+
+        let diagnostics_hierarchy = complex_tree();
+        assert_json_diff!(diagnostics_hierarchy, key: {
+            sb: "sub_value",
+            sub2: "sub2_value",
+            child: {
+                child1_sub: 10i64,
+            },
+            child3: {
+                child2_sub: 20u64,
+            },
+        });
+    }
 
     #[fuchsia::test]
     fn test_exact_match_simple() {

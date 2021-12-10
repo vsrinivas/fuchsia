@@ -93,7 +93,7 @@ pub use {
 
 pub mod testing {
     pub use diagnostics_hierarchy::{
-        assert_data_tree,
+        assert_data_tree, assert_json_diff,
         testing::{
             AnyProperty, DiagnosticsHierarchyGetter, HistogramAssertion, NonZeroUintProperty,
             PropertyAssertion, TreeAssertion,

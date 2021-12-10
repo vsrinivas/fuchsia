@@ -29,6 +29,8 @@ rustc_library("diagnostics-hierarchy") {
     "//third_party/rust_crates:thiserror",
   ]
 
+  test_deps = [ "//src/lib/diagnostics/inspect/rust" ]
+
   sources = [
     "src/lib.rs",
     "src/macros.rs",

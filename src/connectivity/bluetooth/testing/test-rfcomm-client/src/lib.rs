@@ -502,7 +502,7 @@ mod tests {
         match rfcomm_test_server.next().await.expect("valid fidl request") {
             Ok(rfcomm::RfcommTestRequest::RemoteLineStatus { id, channel_number, .. }) => {
                 assert_eq!(id, remote_id.into());
-                assert_eq!(channel_number, random_channel_number.into());
+                assert_eq!(channel_number, u8::from(random_channel_number));
             }
             x => panic!("Expected RLS request but got: {:?}", x),
         }

@@ -639,7 +639,7 @@ mod tests {
                 // The connect request should be for the PSM advertised by the remote peer.
                 match connection {
                     ConnectParameters::L2cap(L2capParameters { psm: Some(v), .. }) => {
-                        assert_eq!(v, peer_psm.into());
+                        assert_eq!(v, u16::from(peer_psm));
                     }
                     x => panic!("Expected L2CAP parameters but got: {:?}", x),
                 }
@@ -691,7 +691,7 @@ mod tests {
                 responder.send(&mut Ok(channel)).expect("FIDL response should work");
                 match connection {
                     ConnectParameters::L2cap(L2capParameters { psm: Some(v), .. }) => {
-                        assert_eq!(v, peer_psm.into());
+                        assert_eq!(v, u16::from(peer_psm));
                     }
                     x => panic!("Expected L2CAP parameters but got: {:?}", x),
                 }

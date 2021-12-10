@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use crate::writer::{private::InspectTypeInternal, Error, Heap, Node, State};
-use diagnostics_hierarchy::{testing::DiagnosticsHierarchyGetter, DiagnosticsHierarchy};
+use diagnostics_hierarchy::{
+    testing::{DiagnosticsHierarchyGetter, JsonGetter},
+    DiagnosticsHierarchy,
+};
 use fuchsia_zircon::{self as zx, HandleBased};
 use inspect_format::constants;
 use mapped_vmo::Mapping;
-use std::{borrow::Cow, cmp::max, sync::Arc};
+use std::{borrow::Cow, cmp::max, fmt, sync::Arc};
 use tracing::error;
 
 /// Root of the Inspect API. Through this API, further nodes can be created and inspect can be
@@ -19,6 +22,14 @@ pub struct Inspector {
 
     /// The VMO backing the inspector
     pub(in crate) vmo: Option<Arc<zx::Vmo>>,
+}
+
+impl fmt::Debug for Inspector {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let result = if fmt.alternate() { self.get_pretty_json() } else { self.get_json() };
+
+        fmt.write_str(&result)
+    }
 }
 
 impl DiagnosticsHierarchyGetter<String> for Inspector {
@@ -164,7 +175,43 @@ impl Inspector {
 mod tests {
     use super::*;
     use fuchsia_zircon::AsHandleRef;
+    use futures::FutureExt;
     use std::ffi::CString;
+
+    #[fuchsia::test]
+    fn debug_impl() {
+        let inspector = Inspector::new();
+        inspector.root().record_int("name", 5);
+
+        assert_eq!(format!("{:?}", &inspector), r#"{"root":{"name":5}}"#);
+
+        let pretty = r#"{
+  "root": {
+    "name": 5
+  }
+}"#;
+        assert_eq!(format!("{:#?}", &inspector), pretty);
+
+        let two = inspector.root().create_child("two");
+        two.record_lazy_child("two_child", || {
+            let insp = Inspector::new();
+            insp.root().record_double("double", 1.0);
+
+            async move { Ok(insp) }.boxed()
+        });
+
+        let pretty = r#"{
+  "root": {
+    "name": 5,
+    "two": {
+      "two_child": {
+        "double": 1.0
+      }
+    }
+  }
+}"#;
+        assert_eq!(format!("{:#?}", &inspector), pretty);
+    }
 
     #[fuchsia::test]
     fn inspector_new() {

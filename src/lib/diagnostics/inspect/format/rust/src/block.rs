@@ -1126,7 +1126,7 @@ mod tests {
         assert_eq!(block.next_extent().unwrap(), 0);
         assert_eq!(block.string_reference_count().unwrap(), 0);
         assert_eq!(block.total_length().unwrap(), 0);
-        assert_eq!(block.inline_string_reference().unwrap(), vec![]);
+        assert_eq!(block.inline_string_reference().unwrap(), Vec::<u8>::new());
         assert_eq!(container[..8], [0x01, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
         assert_eq!(container[8..], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
     }
