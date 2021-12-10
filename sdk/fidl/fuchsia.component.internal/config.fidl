@@ -4,7 +4,7 @@
 library fuchsia.component.internal;
 
 using fuchsia.component;
-using fuchsia.sys2;
+using fuchsia.component.decl;
 
 /// The maximum size of the JobPolicyAllowlists entries.
 /// This value is currently set arbitrarily.
@@ -27,10 +27,10 @@ type Config = table {
     3: security_policy SecurityPolicy;
 
     /// Capabilities offered from component manager's namespace.
-    4: namespace_capabilities vector<fuchsia.sys2.CapabilityDecl>:MAX;
+    4: namespace_capabilities vector<fuchsia.component.decl.Capability>:MAX;
 
     /// Capabilities offered from component manager as built-in capabilities.
-   17: builtin_capabilities vector<fuchsia.sys2.CapabilityDecl>:MAX;
+   17: builtin_capabilities vector<fuchsia.component.decl.Capability>:MAX;
 
     /// If true, component_manager will serve an instance of fuchsia.process.Launcher and use this
     /// launcher for the built-in ELF component runner. The root component can additionally
@@ -243,7 +243,7 @@ type CapabilityAllowlistEntry = table {
     4: target_monikers vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE;
 
     /// The original source type of this capability, self or framework.
-    5: source fuchsia.sys2.Ref;
+    5: source fuchsia.component.decl.Ref;
 };
 
 /// Defines the total set of capability allowlists. Each

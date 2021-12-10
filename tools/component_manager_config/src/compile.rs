@@ -7,7 +7,7 @@ use {
     cm_types::{symmetrical_enums, Url},
     cml::error::{Error, Location},
     fidl::encoding::encode_persistent,
-    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     serde::Deserialize,
     serde_json5,
     std::{
@@ -195,14 +195,14 @@ pub enum CapabilityFrom {
     Framework,
 }
 
-impl Into<fsys::Ref> for CapabilityFrom {
-    fn into(self) -> fsys::Ref {
+impl Into<fdecl::Ref> for CapabilityFrom {
+    fn into(self) -> fdecl::Ref {
         match &self {
             CapabilityFrom::Capability => {
-                fsys::Ref::Capability(fsys::CapabilityRef { name: "".into() })
+                fdecl::Ref::Capability(fdecl::CapabilityRef { name: "".into() })
             }
-            CapabilityFrom::Component => fsys::Ref::Self_(fsys::SelfRef {}),
-            CapabilityFrom::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+            CapabilityFrom::Component => fdecl::Ref::Self_(fdecl::SelfRef {}),
+            CapabilityFrom::Framework => fdecl::Ref::Framework(fdecl::FrameworkRef {}),
         }
     }
 }
@@ -259,12 +259,12 @@ impl TryFrom<Config> for component_internal::Config {
             namespace_capabilities: config
                 .namespace_capabilities
                 .as_ref()
-                .map(|c| cml::translate::fsys::translate_capabilities(c, false))
+                .map(|c| cml::translate::fdecl::translate_capabilities(c, false))
                 .transpose()?,
             builtin_capabilities: config
                 .builtin_capabilities
                 .as_ref()
-                .map(|c| cml::translate::fsys::translate_capabilities(c, true))
+                .map(|c| cml::translate::fdecl::translate_capabilities(c, true))
                 .transpose()?,
             num_threads: config.num_threads,
             out_dir_contents: match config.out_dir_contents {
@@ -518,8 +518,8 @@ fn compile(args: Args) -> Result<(), Error> {
 mod tests {
     use super::*;
     use {
-        fidl::encoding::decode_persistent, fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
-        matches::assert_matches, std::io::Read, tempfile::TempDir,
+        fidl::encoding::decode_persistent, fidl_fuchsia_component_decl as fdecl,
+        fidl_fuchsia_io2 as fio2, matches::assert_matches, std::io::Read, tempfile::TempDir,
     };
 
     fn compile_str(input: &str) -> Result<component_internal::Config, Error> {
@@ -640,7 +640,7 @@ mod tests {
                             component_internal::CapabilityAllowlistEntry {
                                 source_moniker: Some("<component_manager>".to_string()),
                                 source_name: Some("fuchsia.kernel.RootResource".to_string()),
-                                source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                                source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
                                 capability: Some(
                                     component_internal::AllowlistedCapability::Protocol(
                                         component_internal::AllowlistedProtocol::EMPTY
@@ -659,7 +659,7 @@ mod tests {
                                     component_internal::AllowlistedEvent::EMPTY
                                 )),
                                 source_name: Some("running".to_string()),
-                                source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                                source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
                                 target_monikers: Some(vec![
                                     "/foo/bar".to_string(),
                                     "/foo/bar/baz".to_string()
@@ -695,48 +695,48 @@ mod tests {
                     ..component_internal::SecurityPolicy::EMPTY
                 }),
                 namespace_capabilities: Some(vec![
-                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                    fdecl::Capability::Protocol(fdecl::Protocol {
                         name: Some("foo_svc".into()),
                         source_path: Some("/svc/foo_svc".into()),
-                        ..fsys::ProtocolDecl::EMPTY
+                        ..fdecl::Protocol::EMPTY
                     }),
-                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                    fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("bar_dir".into()),
                         source_path: Some("/bar".into()),
                         rights: Some(fio2::Operations::Connect),
-                        ..fsys::DirectoryDecl::EMPTY
+                        ..fdecl::Directory::EMPTY
                     }),
                 ]),
                 builtin_capabilities: Some(vec![
-                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                    fdecl::Capability::Protocol(fdecl::Protocol {
                         name: Some("foo_protocol".into()),
                         source_path: None,
-                        ..fsys::ProtocolDecl::EMPTY
+                        ..fdecl::Protocol::EMPTY
                     }),
-                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                    fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("foo_dir".into()),
                         source_path: None,
                         rights: Some(fio2::Operations::Connect),
-                        ..fsys::DirectoryDecl::EMPTY
+                        ..fdecl::Directory::EMPTY
                     }),
-                    fsys::CapabilityDecl::Service(fsys::ServiceDecl {
+                    fdecl::Capability::Service(fdecl::Service {
                         name: Some("foo_svc".into()),
                         source_path: None,
-                        ..fsys::ServiceDecl::EMPTY
+                        ..fdecl::Service::EMPTY
                     }),
-                    fsys::CapabilityDecl::Runner(fsys::RunnerDecl {
+                    fdecl::Capability::Runner(fdecl::Runner {
                         name: Some("foo_runner".into()),
                         source_path: None,
-                        ..fsys::RunnerDecl::EMPTY
+                        ..fdecl::Runner::EMPTY
                     }),
-                    fsys::CapabilityDecl::Resolver(fsys::ResolverDecl {
+                    fdecl::Capability::Resolver(fdecl::Resolver {
                         name: Some("foo_resolver".into()),
                         source_path: None,
-                        ..fsys::ResolverDecl::EMPTY
+                        ..fdecl::Resolver::EMPTY
                     }),
-                    fsys::CapabilityDecl::Event(fsys::EventDecl {
+                    fdecl::Capability::Event(fdecl::Event {
                         name: Some("foo_event".into()),
-                        ..fsys::EventDecl::EMPTY
+                        ..fdecl::Event::EMPTY
                     }),
                 ]),
                 num_threads: Some(321),

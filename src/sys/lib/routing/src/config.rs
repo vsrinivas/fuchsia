@@ -7,12 +7,12 @@ use {
     cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
     cm_types::{Name, Url},
     fidl::encoding::decode_persistent,
+    fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinBootResolver, BuiltinPkgResolver,
         CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, LogDestination,
         OutDirContents, RealmBuilderResolverAndRunner,
     },
-    fidl_fuchsia_sys2 as fsys,
     moniker::{AbsoluteMonikerBase, ExtendedMoniker, MonikerError, PartialAbsoluteMoniker},
     std::{
         collections::{HashMap, HashSet},
@@ -235,23 +235,23 @@ impl RuntimeConfig {
     }
 
     fn translate_namespace_capabilities(
-        capabilities: Option<Vec<fsys::CapabilityDecl>>,
+        capabilities: Option<Vec<fdecl::Capability>>,
     ) -> Result<Vec<cm_rust::CapabilityDecl>, Error> {
         let capabilities = capabilities.unwrap_or(vec![]);
         if let Some(c) = capabilities.iter().find(|c| {
-            !matches!(c, fsys::CapabilityDecl::Protocol(_) | fsys::CapabilityDecl::Directory(_))
+            !matches!(c, fdecl::Capability::Protocol(_) | fdecl::Capability::Directory(_))
         }) {
             return Err(format_err!("Type unsupported for namespace capability: {:?}", c));
         }
-        cm_fidl_validator::fsys::validate_capabilities(&capabilities, false)?;
+        cm_fidl_validator::fdecl::validate_capabilities(&capabilities, false)?;
         Ok(capabilities.into_iter().map(FidlIntoNative::fidl_into_native).collect())
     }
 
     fn translate_builtin_capabilities(
-        capabilities: Option<Vec<fsys::CapabilityDecl>>,
+        capabilities: Option<Vec<fdecl::Capability>>,
     ) -> Result<Vec<cm_rust::CapabilityDecl>, Error> {
         let capabilities = capabilities.unwrap_or(vec![]);
-        cm_fidl_validator::fsys::validate_capabilities(&capabilities, true)?;
+        cm_fidl_validator::fdecl::validate_capabilities(&capabilities, true)?;
         Ok(capabilities.into_iter().map(FidlIntoNative::fidl_into_native).collect())
     }
 }
@@ -417,9 +417,9 @@ fn parse_capability_policy(
                     Err(PolicyConfigError::EmptyCapabilitySourceName)
                 }?;
                 let source = match e.source {
-                    Some(fsys::Ref::Self_(_)) => Ok(CapabilityAllowlistSource::Self_),
-                    Some(fsys::Ref::Framework(_)) => Ok(CapabilityAllowlistSource::Framework),
-                    Some(fsys::Ref::Capability(_)) => Ok(CapabilityAllowlistSource::Capability),
+                    Some(fdecl::Ref::Self_(_)) => Ok(CapabilityAllowlistSource::Self_),
+                    Some(fdecl::Ref::Framework(_)) => Ok(CapabilityAllowlistSource::Framework),
+                    Some(fdecl::Ref::Capability(_)) => Ok(CapabilityAllowlistSource::Capability),
                     _ => Err(Error::new(PolicyConfigError::InvalidSourceCapability)),
                 }?;
 
@@ -680,7 +680,7 @@ mod tests {
                         component_internal::CapabilityAllowlistEntry {
                             source_moniker: Some("<component_manager>".to_string()),
                             source_name: Some("fuchsia.kernel.RootResource".to_string()),
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
                             capability: Some(component_internal::AllowlistedCapability::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
                             target_monikers: Some(vec![
                                 "/bootstrap".to_string(),
@@ -692,7 +692,7 @@ mod tests {
                         component_internal::CapabilityAllowlistEntry {
                             source_moniker: Some("/foo/bar".to_string()),
                             source_name: Some("running".to_string()),
-                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
                             capability: Some(component_internal::AllowlistedCapability::Event(component_internal::AllowlistedEvent::EMPTY)),
                             target_monikers: Some(vec![
                                 "/foo/bar".to_string(),
@@ -744,27 +744,27 @@ mod tests {
                 }),
                 num_threads: Some(24),
                 namespace_capabilities: Some(vec![
-                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                    fdecl::Capability::Protocol(fdecl::Protocol {
                         name: Some("foo_svc".into()),
                         source_path: Some("/svc/foo".into()),
-                        ..fsys::ProtocolDecl::EMPTY
+                        ..fdecl::Protocol::EMPTY
                     }),
-                    fsys::CapabilityDecl::Directory(fsys::DirectoryDecl {
+                    fdecl::Capability::Directory(fdecl::Directory {
                         name: Some("bar_dir".into()),
                         source_path: Some("/bar".into()),
                         rights: Some(fio2::Operations::Connect),
-                        ..fsys::DirectoryDecl::EMPTY
+                        ..fdecl::Directory::EMPTY
                     }),
                 ]),
                 builtin_capabilities: Some(vec![
-                    fsys::CapabilityDecl::Protocol(fsys::ProtocolDecl {
+                    fdecl::Capability::Protocol(fdecl::Protocol {
                         name: Some("foo_protocol".into()),
                         source_path: None,
-                        ..fsys::ProtocolDecl::EMPTY
+                        ..fdecl::Protocol::EMPTY
                     }),
-                   fsys::CapabilityDecl::Event(fsys::EventDecl {
+                   fdecl::Capability::Event(fdecl::Event {
                        name: Some("bar_event".into()),
-                        ..fsys::EventDecl::EMPTY
+                        ..fdecl::Event::EMPTY
                     }),
                 ]),
                 out_dir_contents: Some(component_internal::OutDirContents::Svc),
@@ -925,7 +925,7 @@ mod tests {
                     component_internal::CapabilityAllowlistEntry {
                         source_moniker: Some("<component_manager>".to_string()),
                         source_name: Some("fuchsia.kernel.RootResource".to_string()),
-                        source: Some(fsys::Ref::Self_(fsys::SelfRef{})),
+                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef{})),
                         capability: None,
                         target_monikers: Some(vec!["/core".to_string()]),
                         ..component_internal::CapabilityAllowlistEntry::EMPTY
