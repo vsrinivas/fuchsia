@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/blobfs/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -18,15 +18,20 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fidl/cpp/binding.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <utime.h>
 #include <zircon/device/vfs.h>
+#include <zircon/errors.h>
 #include <zircon/fidl.h>
+#include <zircon/time.h>
 
 #include <array>
 #include <atomic>
@@ -38,11 +43,14 @@
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
+#include <fbl/unique_fd.h>
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>
+#include <safemath/safe_conversions.h>
 
 #include "src/lib/digest/digest.h"
+#include "src/lib/digest/node-digest.h"
 #include "src/storage/blobfs/format.h"
 #include "src/storage/blobfs/test/blob_utils.h"
 #include "src/storage/blobfs/test/integration/blobfs_fixtures.h"
@@ -57,59 +65,20 @@ namespace fio = fuchsia_io;
 using BlobfsIntegrationTest = ParameterizedBlobfsTest;
 using ::testing::UnitTest;
 
-void VerifyCorruptedBlob(int fd, const uint8_t* data, size_t size_data) {
-  // Verify the contents of the Blob
-  fbl::Array<char> buf(new char[size_data], size_data);
-
-  ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-  ASSERT_EQ(StreamAll(read, fd, buf.data(), size_data), -1) << "Expected reading to fail";
-}
-
-// Creates a corrupted blob with the provided Merkle tree + Data, and
-// reads to verify the data.
-void ReadBlobCorrupted(BlobInfo* info) {
-  fbl::unique_fd fd(open(info->path, O_CREAT | O_RDWR));
-  ASSERT_TRUE(fd) << "Failed to create blob";
-  ASSERT_EQ(ftruncate(fd.get(), info->size_data), 0);
-
-  // Writing corrupted blob to disk.
-  StreamAll(write, fd.get(), info->data.get(), info->size_data);
-
-  ASSERT_NO_FATAL_FAILURE(VerifyCorruptedBlob(fd.get(), info->data.get(), info->size_data));
-  ASSERT_EQ(close(fd.release()), 0);
-}
-
-// Class emulating the corruption handler service
-class CorruptBlobHandler final {
+// Class emulating a corruption handler service.
+class CorruptBlobHandlerImpl final : public fuchsia::blobfs::CorruptBlobHandler {
  public:
-  using CorruptBlobHandlerBinder = fidl::Binder<CorruptBlobHandler>;
-
-  ~CorruptBlobHandler() = default;
-
-  zx_status_t CorruptBlob(const uint8_t* merkleroot_hash, size_t count) {
-    num_calls_++;
-    return ZX_OK;
+  void CorruptBlob(::std::vector<uint8_t> merkleroot) override {
+    sync_completion_signal(&notified_);
   }
 
-  zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
-    static constexpr fuchsia_blobfs_CorruptBlobHandler_ops_t kOps = {
-        .CorruptBlob = CorruptBlobHandlerBinder::BindMember<&CorruptBlobHandler::CorruptBlob>,
-    };
-
-    return CorruptBlobHandlerBinder::BindOps<fuchsia_blobfs_CorruptBlobHandler_dispatch>(
-        dispatcher, std::move(channel), this, &kOps);
+  bool WasCalled() {
+    zx_status_t status = sync_completion_wait(&notified_, ZX_TIME_INFINITE);
+    return status == ZX_OK;
   }
-
-  void UpdateClientHandle(zx::channel client) { client_ = std::move(client); }
-
-  zx_handle_t GetClientHandle() { return client_.get(); }
-
-  // Checks if the corruption handler is called.
-  bool IsCalled() const { return num_calls_ > 0; }
 
  private:
-  zx::channel client_, server_;
-  size_t num_calls_;
+  sync_completion_t notified_;
 };
 
 // Go over the parent device logic and test fixture.
@@ -141,52 +110,77 @@ TEST_P(BlobfsIntegrationTest, Basics) {
   }
 }
 
-void StartMockCorruptionHandlerService(async_dispatcher_t* dispatcher,
-                                       std::unique_ptr<CorruptBlobHandler>* out) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  ASSERT_EQ(ZX_OK, status);
-  auto handler = std::make_unique<CorruptBlobHandler>();
-  ASSERT_EQ(ZX_OK, handler->Bind(dispatcher, std::move(server)));
+TEST_P(BlobfsIntegrationTest, CorruptBlobNotify) {
+  ssize_t device_block_size = fs().options().device_block_size;
 
-  handler->UpdateClientHandle(std::move(client));
-  *out = std::move(handler);
-}
+  // Create a small blob and add it to blobfs.
+  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), device_block_size);
+  fbl::unique_fd blob_fd;
+  ASSERT_NO_FATAL_FAILURE(MakeBlob(*info, &blob_fd));
+  blob_fd.reset();
 
-// TODO(fxbug.dev/56432): Enable this.
-TEST_P(BlobfsIntegrationTest, DISABLED_CorruptBlobNotify) {
-  // Start the corruption handler server.
-  std::unique_ptr<CorruptBlobHandler> corruption_server;
+  // Unmount blobfs before corrupting the blob. Blobfs needs to be remounted to ensure that the
+  // uncorrupted blob wasn't cached.
+  ASSERT_EQ(fs().Unmount().status_value(), ZX_OK);
+
+  // Find the blob within the block device and corrupt it.
+  fbl::unique_fd device_fd(open(fs().DevicePath().value().c_str(), O_RDWR));
+  ASSERT_TRUE(device_fd.is_valid());
+  // Read the superblock to find where the data blocks start.
+  Superblock superblock;
+  ssize_t bytes_read = pread(device_fd.get(), &superblock, kBlobfsBlockSize, 0);
+  ASSERT_EQ(bytes_read, static_cast<ssize_t>(kBlobfsBlockSize));
+  uint64_t data_start_block = DataStartBlock(superblock);
+  uint64_t data_block_count = DataBlocks(superblock);
+  auto data = std::make_unique<uint8_t[]>(device_block_size);
+  bool was_blob_corrupted = false;
+  // Loop through the data blocks looking for the blob. Blobs always start on a block boundary.
+  for (uint64_t block = 0; block < data_block_count; ++block) {
+    off_t device_offset =
+        safemath::checked_cast<off_t>((data_start_block + block) * kBlobfsBlockSize);
+    ssize_t bytes_read = pread(device_fd.get(), data.get(), device_block_size, device_offset);
+    ASSERT_EQ(bytes_read, device_block_size);
+    if (memcmp(info->data.get(), data.get(), device_block_size) == 0) {
+      // Corrupt the first byte by flipping all of the bits.
+      data[0] = ~data[0];
+      ssize_t bytes_written = pwrite(device_fd.get(), data.get(), device_block_size, device_offset);
+      ASSERT_EQ(bytes_written, device_block_size);
+      was_blob_corrupted = true;
+      break;
+    }
+  }
+  ASSERT_TRUE(was_blob_corrupted) << "The blob didn't get corrupted";
+
+  ASSERT_EQ(fs().Mount().status_value(), ZX_OK);
+
+  // Start the corrupt blob handler server.
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(ZX_OK, loop.StartThread("corruption-dispatcher"));
+  CorruptBlobHandlerImpl corrupt_blob_handler;
+  fidl::Binding<fuchsia::blobfs::CorruptBlobHandler> binding(&corrupt_blob_handler);
+  auto client_end = binding.NewBinding(loop.dispatcher());
 
-  ASSERT_NO_FATAL_FAILURE(StartMockCorruptionHandlerService(loop.dispatcher(), &corruption_server));
-  zx_handle_t blobfs_client = corruption_server->GetClientHandle();
-
-  // Pass the client end to blobfs.
+  // Pass the corrupt blob handler server to blobfs.
   fbl::unique_fd fd(open(fs().mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-  ASSERT_TRUE(fd);
+  ASSERT_TRUE(fd.is_valid());
+  fdio_cpp::FdioCaller blobfs_caller(std::move(fd));
+  auto blobfs_channel = blobfs_caller.take_channel();
+  ASSERT_EQ(blobfs_channel.status_value(), ZX_OK);
+  fuchsia::blobfs::BlobfsSyncPtr blobfs_proxy;
+  blobfs_proxy.Bind(std::move(*blobfs_channel));
   zx_status_t status;
-  fdio_cpp::FdioCaller caller(std::move(fd));
-
-  ASSERT_EQ(
-      fuchsia_blobfs_BlobfsSetCorruptBlobHandler(caller.borrow_channel(), blobfs_client, &status),
-      ZX_OK);
+  ASSERT_EQ(blobfs_proxy->SetCorruptBlobHandler(std::move(client_end), &status), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  // Create a blob, corrupt it and then attempt to read it.
-  std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), 1 << 5);
-  // Flip a random bit of the data
-  size_t rand_index = rand() % info->size_data;
-  uint8_t old_val = info->data.get()[rand_index];
-  while ((info->data.get()[rand_index] = static_cast<uint8_t>(rand())) == old_val) {
-  }
+  blob_fd.reset(open(info->path, O_RDONLY));
+  ASSERT_TRUE(blob_fd.is_valid());
+  EXPECT_EQ(pread(blob_fd.get(), data.get(), device_block_size, 0), -1);
 
-  ASSERT_NO_FATAL_FAILURE(ReadBlobCorrupted(info.get()));
-  // Shutdown explicitly calls "join" on the "corruption-dispatcher" thread and waits for it
-  // to increment num_calls_.
-  loop.Shutdown();
-  ASSERT_TRUE(corruption_server->IsCalled());
+  EXPECT_TRUE(corrupt_blob_handler.WasCalled());
+
+  // Format blobfs to remove the corruption so the fsck that is run in the destructor will pass.
+  ASSERT_EQ(fs().Unmount().status_value(), ZX_OK);
+  EXPECT_EQ(fs().Format().status_value(), ZX_OK);
 }
 
 TEST_P(BlobfsIntegrationTest, UnallocatedBlob) {
@@ -508,15 +502,15 @@ TEST_F(BlobfsWithFvmTest, QueryInfo) {
 
 void GetAllocations(fs_test::TestFilesystem& fs, zx::vmo* out_vmo, uint64_t* out_count) {
   fbl::unique_fd fd(open(fs.mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-  ASSERT_TRUE(fd);
-  zx_status_t status;
-  zx_handle_t vmo_handle;
+  ASSERT_TRUE(fd.is_valid());
   fdio_cpp::FdioCaller caller(std::move(fd));
-  ASSERT_EQ(fuchsia_blobfs_BlobfsGetAllocatedRegions(caller.borrow_channel(), &status, &vmo_handle,
-                                                     out_count),
-            ZX_OK);
+  auto channel = caller.take_channel();
+  ASSERT_EQ(channel.status_value(), ZX_OK);
+  fuchsia::blobfs::BlobfsSyncPtr proxy;
+  proxy.Bind(std::move(*channel));
+  zx_status_t status;
+  ASSERT_EQ(proxy->GetAllocatedRegions(&status, out_vmo, out_count), ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  out_vmo->reset(vmo_handle);
 }
 
 TEST_P(BlobfsIntegrationTest, GetAllocatedRegions) {
@@ -530,8 +524,8 @@ TEST_P(BlobfsIntegrationTest, GetAllocatedRegions) {
   // allocated regions.
   ASSERT_NO_FATAL_FAILURE(GetAllocations(fs(), &vmo, &count));
 
-  std::vector<fuchsia_blobfs_BlockRegion> buffer(count);
-  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count), ZX_OK);
+  std::vector<fuchsia::blobfs::BlockRegion> buffer(count);
+  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia::blobfs::BlockRegion) * count), ZX_OK);
   for (size_t i = 0; i < count; i++) {
     total_bytes += buffer[i].length * kBlobfsBlockSize;
   }
@@ -548,7 +542,7 @@ TEST_P(BlobfsIntegrationTest, GetAllocatedRegions) {
   ASSERT_NO_FATAL_FAILURE(GetAllocations(fs(), &vmo, &count));
 
   buffer.resize(count);
-  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia_blobfs_BlockRegion) * count), ZX_OK);
+  ASSERT_EQ(vmo.read(buffer.data(), 0, sizeof(fuchsia::blobfs::BlockRegion) * count), ZX_OK);
   for (size_t i = 0; i < count; i++) {
     fidl_bytes += buffer[i].length * kBlobfsBlockSize;
   }

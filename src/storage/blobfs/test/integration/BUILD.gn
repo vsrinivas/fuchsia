@@ -89,7 +89,7 @@ test("blobfs_integration") {
   ]
   deps = [
     ":blobfs_integration_fixtures",
-    "//sdk/fidl/fuchsia.blobfs:fuchsia.blobfs_c",
+    "//sdk/fidl/fuchsia.blobfs",
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
@@ -108,6 +108,7 @@ test("blobfs_integration") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zx",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
