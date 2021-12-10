@@ -47,14 +47,14 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1633
+From //build/config/BUILDCONFIG.gn:1652
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
 
 **Current value (from the default):** `true`
 
-From //src/storage/fshost/generated_fshost_config.gni:40
+From //src/storage/fshost/generated_fshost_config.gni:37
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -1290,7 +1290,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1390
+From //build/config/BUILDCONFIG.gn:1399
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1462,7 +1462,7 @@ Make fshost watch for NAND devices.
 
 **Current value (from the default):** `false`
 
-From //src/storage/fshost/generated_fshost_config.gni:43
+From //src/storage/fshost/generated_fshost_config.gni:40
 
 ### fuchsia_async_trace_level_logging
 Determines whether the fuchsia_async library used by many Rust targets will be compiled
@@ -2159,6 +2159,9 @@ Each element of the list is one variant, which is a scope defining:
 }, {
   configs = ["//build/config/profile:coverage-cts"]
   tags = ["instrumented", "coverage", "llvm-profdata"]
+}, {
+  configs = ["//build/config/sanitizers:tsan"]
+  tags = ["instrumentation-runtime", "instrumented", "kernel-excluded", "tsan"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
@@ -3473,7 +3476,7 @@ tests) can use the sanitizer_extra_options() mechanism instead.
 
 **Current value (from the default):** `[]`
 
-From //build/config/sanitizers/sanitizer_default_options.gni:67
+From //build/config/sanitizers/sanitizer_default_options.gni:82
 
 ### sdk_dirs
 The directories to search for parts of the SDK.
@@ -3561,7 +3564,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1623
+From //build/config/BUILDCONFIG.gn:1642
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3570,7 +3573,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1628
+From //build/config/BUILDCONFIG.gn:1647
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3611,10 +3614,16 @@ a list that can be spliced into [`select_variant`](#select_variant).
   host = true
   variant = "profile"
 }]
+}, {
+  name = "host_tsan"
+  select_variant = [{
+  host = true
+  variant = "tsan"
+}]
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1436
+From //build/config/BUILDCONFIG.gn:1445
 
 ### size_checker_input
 The input to the size checker.
@@ -3865,6 +3874,25 @@ for details and documentation for each field.
 
 From //build/config/BUILDCONFIG.gn:96
 
+### tsan_default_options
+Default [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html)
+options (before the `TSAN_OPTIONS` environment variable is read at runtime).
+This can be set as a build argument to affect most "tsan" variants in
+$variants (which see), or overrideen in $toolchain_args in one of those
+variants. This can be a list of strings or a single string.
+
+Note that even if this is empty, programs in this build **cannot** define
+their own `__tsan_default_options` C function.  Instead, they can use a
+sanitizer_extra_options() target in their `deps` and then any options
+injected that way can override that option's setting in this list.
+
+TODO(fxbug.dev/89981): `ignore_noninstrumented_modules=1` can be reevaluated
+when/if we have an instrumented libstd for Rust.
+
+**Current value (from the default):** `["ignore_noninstrumented_modules=1"]`
+
+From //build/config/sanitizers/sanitizer_default_options.gni:65
+
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
 options (before the `UBSAN_OPTIONS` environment variable is read at
@@ -3894,7 +3922,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1420
+From //build/config/BUILDCONFIG.gn:1429
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3919,13 +3947,6 @@ From //out/not-default/args.gn:12
 **Overridden from the default:** `[]`
 
 From //BUILD.gn:55
-
-### unstable_feature_use_fxfs
-Soft migration: Do not use
-
-**Current value (from the default):** `false`
-
-From //src/storage/fshost/generated_fshost_config.gni:37
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
