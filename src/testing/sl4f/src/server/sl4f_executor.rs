@@ -4,7 +4,6 @@
 
 use anyhow::Error;
 use fuchsia_syslog::macros::*;
-use futures::channel::mpsc;
 use futures::StreamExt;
 use serde_json::Value;
 use std::sync::Arc;
@@ -15,10 +14,10 @@ use crate::server::constants::CONCURRENT_REQ_LIMIT;
 use crate::server::sl4f::Sl4f;
 use crate::server::sl4f_types::{AsyncCommandRequest, AsyncRequest, AsyncResponse, MethodId};
 
-pub async fn run_fidl_loop(sl4f: Arc<Sl4f>, receiver: mpsc::UnboundedReceiver<AsyncRequest>) {
+pub async fn run_fidl_loop(sl4f: Arc<Sl4f>, receiver: async_channel::Receiver<AsyncRequest>) {
     let handler = move |request| handle_request(Arc::clone(&sl4f), request);
 
-    receiver.for_each_concurrent(CONCURRENT_REQ_LIMIT, handler).await;
+    receiver.for_each_concurrent(CONCURRENT_REQ_LIMIT, handler).await
 }
 
 async fn handle_request(sl4f: Arc<Sl4f>, request: AsyncRequest) {

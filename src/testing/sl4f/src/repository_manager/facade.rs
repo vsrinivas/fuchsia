@@ -111,7 +111,7 @@ mod tests {
     use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
     use fuchsia_url::pkg_url::{PkgUrl, RepoUrl};
     use futures::{future::Future, join, StreamExt, TryFutureExt, TryStreamExt};
-    use http::Uri;
+    use hyper::Uri;
     use matches::assert_matches;
     use parking_lot::Mutex;
     use serde_json::json;

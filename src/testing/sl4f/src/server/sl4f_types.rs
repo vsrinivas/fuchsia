@@ -4,9 +4,10 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
+use futures::channel::oneshot;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::{fmt::Debug, str::FromStr, sync::mpsc};
+use std::{fmt::Debug, str::FromStr};
 use thiserror::Error;
 
 use crate::server::constants::{COMMAND_DELIMITER, COMMAND_SIZE};
@@ -150,7 +151,7 @@ impl CommandResponse {
 /// Represents a RPC request to be fulfilled by the FIDL event loop
 #[derive(Debug)]
 pub enum AsyncRequest {
-    Cleanup(mpsc::Sender<()>),
+    Cleanup(oneshot::Sender<()>),
     Command(AsyncCommandRequest),
 }
 
@@ -158,7 +159,7 @@ pub enum AsyncRequest {
 #[derive(Debug)]
 pub struct AsyncCommandRequest {
     // tx: Transmit channel from FIDL event loop to RPC request side
-    pub tx: mpsc::Sender<AsyncResponse>,
+    pub tx: oneshot::Sender<AsyncResponse>,
 
     // method_id: struct containing:
     //  * facade: Method type of the request (e.g bluetooth, wlan, etc...)
@@ -171,7 +172,7 @@ pub struct AsyncCommandRequest {
 
 impl AsyncCommandRequest {
     pub fn new(
-        tx: mpsc::Sender<AsyncResponse>,
+        tx: oneshot::Sender<AsyncResponse>,
         method_id: MethodId,
         params: Value,
     ) -> AsyncCommandRequest {

@@ -126,13 +126,16 @@ rustc_library("lib") {
     "//src/testing/sl4f/fidl:fuchsia.testing.proxy-rustc",
     "//src/testing/system-metrics-logger/fuchsia.systemmetrics.test:fuchsia.systemmetrics.test-rustc",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:base64",
+    "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:eui48",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
@@ -143,7 +146,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:rouille",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:slab",
@@ -154,15 +156,10 @@ rustc_library("lib") {
   ]
 
   test_deps = [
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-url",
-    "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/test_util",
     "//src/testing/fidl:placeholders-rustc",
-    "//third_party/rust_crates:http",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:maplit",
   ]
 
   sources = [
@@ -389,12 +386,13 @@ rustc_binary("bin") {
   deps = [
     ":lib",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-hyper",
     "//src/lib/syslog/rust:syslog",
-    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:rouille",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/main.rs" ]

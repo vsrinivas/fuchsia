@@ -2,28 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::{Context as _, Error};
 use fidl_fuchsia_testing_sl4f::{
     FacadeIteratorMarker, FacadeIteratorSynchronousProxy, FacadeProviderMarker, FacadeProviderProxy,
 };
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_syslog::macros::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
-use futures::channel::mpsc;
 use maplit::{convert_args, hashmap};
 use parking_lot::RwLock;
-use rouille::{self, router, Request, Response};
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
-use std::io::Read;
 use std::sync::Arc;
 
 // Standardized sl4f types and constants
 use crate::{
     bluetooth::avrcp_facade::AvrcpFacade,
     server::sl4f_types::{
-        AsyncCommandRequest, AsyncRequest, AsyncResponse, ClientData, CommandRequest,
-        CommandResponse, Facade, MethodId, RequestId,
+        AsyncCommandRequest, AsyncRequest, ClientData, CommandRequest, CommandResponse, Facade,
+        MethodId, RequestId,
     },
 };
 
@@ -459,72 +456,89 @@ impl Sl4fClients {
     }
 }
 
+fn json<T>(content: &T) -> hyper::Response<hyper::Body>
+where
+    T: serde::Serialize,
+{
+    use std::convert::TryInto as _;
+
+    let application_json = "application/json".try_into().expect("json header value");
+    let data = serde_json::to_string(content).expect("encode json");
+
+    let mut response = hyper::Response::new(data.into());
+    assert_eq!(response.headers_mut().insert(hyper::header::CONTENT_TYPE, application_json), None);
+    response
+}
+
 /// Handles all incoming requests to SL4F server, routes accordingly
-pub fn serve(
-    request: &Request,
+pub async fn serve(
+    request: hyper::Request<hyper::Body>,
     clients: Arc<RwLock<Sl4fClients>>,
-    rouille_sender: mpsc::UnboundedSender<AsyncRequest>,
-) -> Response {
-    router!(request,
-        (GET) (/) => {
+    sender: async_channel::Sender<AsyncRequest>,
+) -> hyper::Response<hyper::Body> {
+    use hyper::Method;
+
+    match (request.method(), request.uri().path()) {
+        (&Method::GET, "/") => {
             // Parse the command request
             fx_log_info!(tag: "serve", "Received command request via GET.");
-            client_request(&request, &rouille_sender)
-        },
-        (POST) (/) => {
+            client_request(request, &sender).await
+        }
+        (&Method::POST, "/") => {
             // Parse the command request
             fx_log_info!(tag: "serve", "Received command request via POST.");
-            client_request(&request, &rouille_sender)
-        },
-        (GET) (/init) => {
+            client_request(request, &sender).await
+        }
+        (&Method::GET, "/init") => {
             // Initialize a client
             fx_log_info!(tag: "serve", "Received init request.");
-            client_init(&request, &clients)
-        },
-        (GET) (/print_clients) => {
+            client_init(request, &clients).await
+        }
+        (&Method::GET, "/print_clients") => {
             // Print information about all clients
             fx_log_info!(tag: "serve", "Received print client request.");
             const PRINT_ACK: &str = "Successfully printed clients.";
-            clients.read().print_clients();
-            rouille::Response::json(&PRINT_ACK)
-        },
-        (GET) (/cleanup) => {
+            json(&PRINT_ACK)
+        }
+        (&Method::GET, "/cleanup") => {
             fx_log_info!(tag: "serve", "Received server cleanup request.");
-            server_cleanup(&request, &rouille_sender)
-        },
+            server_cleanup(request, &sender).await
+        }
         _ => {
             fx_log_err!(tag: "serve", "Received unknown server request.");
             const FAIL_REQUEST_ACK: &str = "Unknown GET request.";
-            let res = CommandResponse::new(json!(""), None, serde::export::Some(FAIL_REQUEST_ACK.to_string()));
-            rouille::Response::json(&res)
+            let res = CommandResponse::new(
+                json!(""),
+                None,
+                serde::export::Some(FAIL_REQUEST_ACK.to_string()),
+            );
+            json(&res)
         }
-    )
+    }
 }
 
 /// Given the request, map the test request to a FIDL query and execute
 /// asynchronously
-fn client_request(
-    request: &Request,
-    rouille_sender: &mpsc::UnboundedSender<AsyncRequest>,
-) -> Response {
+async fn client_request(
+    request: hyper::Request<hyper::Body>,
+    sender: &async_channel::Sender<AsyncRequest>,
+) -> hyper::Response<hyper::Body> {
     const FAIL_TEST_ACK: &str = "Command failed";
 
-    let (request_id, method_id, method_params) = match parse_request(request) {
+    let (request_id, method_id, method_params) = match parse_request(request).await {
         Ok(res) => res,
         Err(e) => {
             fx_log_err!(tag: "client_request", "Failed to parse request. {:?}", e);
-            return Response::json(&FAIL_TEST_ACK);
+            return json(&FAIL_TEST_ACK);
         }
     };
 
     // Create channel for async thread to respond to
     // Package response and ship over JSON RPC
-    let (async_sender, rouille_receiver) = std::sync::mpsc::channel();
+    let (async_sender, receiver) = futures::channel::oneshot::channel();
     let req = AsyncCommandRequest::new(async_sender, method_id.clone(), method_params);
-    rouille_sender
-        .unbounded_send(AsyncRequest::Command(req))
-        .expect("Failed to send request to async thread.");
-    let resp: AsyncResponse = rouille_receiver.recv().unwrap();
+    sender.send(AsyncRequest::Command(req)).await.expect("Failed to send request to async thread.");
+    let resp = receiver.await.expect("Async thread dropped responder.");
 
     fx_log_info!(tag: "client_request", "Received async thread response for {:?}: {:?}", method_id.method, resp);
 
@@ -532,56 +546,54 @@ fn client_request(
     match resp.result {
         Some(async_res) => {
             let res = CommandResponse::new(request_id.into_response_id(), Some(async_res), None);
-            rouille::Response::json(&res)
+            json(&res)
         }
         None => {
             let res = CommandResponse::new(request_id.into_response_id(), None, resp.error);
-            rouille::Response::json(&res)
+            json(&res)
         }
     }
 }
 
-/// Initializes a new client, adds to clients, a thread-safe HashMap
-/// Returns a rouille::Response
-fn client_init(request: &Request, clients: &Arc<RwLock<Sl4fClients>>) -> Response {
+/// Initializes a new client, adds to clients.
+async fn client_init(
+    request: hyper::Request<hyper::Body>,
+    clients: &Arc<RwLock<Sl4fClients>>,
+) -> hyper::Response<hyper::Body> {
     const INIT_ACK: &str = "Recieved init request.";
     const FAIL_INIT_ACK: &str = "Failed to init client.";
 
-    let (_, _, method_params) = match parse_request(request) {
+    let (_, _, method_params) = match parse_request(request).await {
         Ok(res) => res,
-        Err(_) => return Response::json(&FAIL_INIT_ACK),
+        Err(_) => return json(&FAIL_INIT_ACK),
     };
 
     let client_id_raw = match method_params.get("client_id") {
         Some(id) => Some(id).unwrap().clone(),
-        None => return Response::json(&FAIL_INIT_ACK),
+        None => return json(&FAIL_INIT_ACK),
     };
 
     // Initialize client with key = id, val = client data
     let client_id = client_id_raw.as_str().map(String::from).unwrap();
 
     if clients.write().init_client(client_id) {
-        rouille::Response::json(&FAIL_INIT_ACK)
+        json(&FAIL_INIT_ACK)
     } else {
-        rouille::Response::json(&INIT_ACK)
+        json(&INIT_ACK)
     }
 }
 
 /// Given a request, grabs the method id, name, and parameters
 /// Return Sl4fError if fail
-fn parse_request(request: &Request) -> Result<(RequestId, MethodId, Value), Error> {
-    let mut data = match request.data() {
-        Some(d) => d,
-        None => return Err(Sl4fError::new("Failed to parse request buffer.").into()),
-    };
+async fn parse_request(
+    request: hyper::Request<hyper::Body>,
+) -> Result<(RequestId, MethodId, Value), Error> {
+    use bytes::buf::ext::BufExt as _;
 
-    let mut buf: String = String::new();
-    if data.read_to_string(&mut buf).is_err() {
-        return Err(Sl4fError::new("Failed to read request buffer.").into());
-    }
+    let body = hyper::body::aggregate(request.into_body()).await.context("read request")?;
 
     // Ignore the json_rpc field
-    let request_data: CommandRequest = match serde_json::from_str(&buf) {
+    let request_data: CommandRequest = match serde_json::from_reader(body.reader()) {
         Ok(tdata) => tdata,
         Err(_) => return Err(Sl4fError::new("Failed to unpack request data.").into()),
     };
@@ -601,28 +613,29 @@ fn parse_request(request: &Request) -> Result<(RequestId, MethodId, Value), Erro
     Ok((request_id, method_id, method_params))
 }
 
-fn server_cleanup(
-    request: &Request,
-    rouille_sender: &mpsc::UnboundedSender<AsyncRequest>,
-) -> Response {
+async fn server_cleanup(
+    request: hyper::Request<hyper::Body>,
+    sender: &async_channel::Sender<AsyncRequest>,
+) -> hyper::Response<hyper::Body> {
     const FAIL_CLEANUP_ACK: &str = "Failed to cleanup SL4F resources.";
     const CLEANUP_ACK: &str = "Successful cleanup of SL4F resources.";
 
     fx_log_info!(tag: "server_cleanup", "Cleaning up server state");
-    let (request_id, _, _) = match parse_request(request) {
+    let (request_id, _, _) = match parse_request(request).await {
         Ok(res) => res,
-        Err(_) => return Response::json(&FAIL_CLEANUP_ACK),
+        Err(_) => return json(&FAIL_CLEANUP_ACK),
     };
 
     // Create channel for async thread to respond to
-    let (async_sender, rouille_receiver) = std::sync::mpsc::channel();
+    let (async_sender, receiver) = futures::channel::oneshot::channel();
 
     // Cleanup all resources associated with sl4f
-    rouille_sender
-        .unbounded_send(AsyncRequest::Cleanup(async_sender))
+    sender
+        .send(AsyncRequest::Cleanup(async_sender))
+        .await
         .expect("Failed to send request to async thread.");
-    let () = rouille_receiver.recv().expect("Async thread dropped responder.");
+    let () = receiver.await.expect("Async thread dropped responder.");
 
     let ack = CommandResponse::new(request_id.into_response_id(), Some(json!(CLEANUP_ACK)), None);
-    rouille::Response::json(&ack)
+    json(&ack)
 }
