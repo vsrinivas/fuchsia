@@ -102,8 +102,28 @@ type testNetworkDispatcher struct {
 	count int
 }
 
+func (t *testNetworkDispatcher) release() {
+	if pkt := t.pkt; pkt != nil {
+		pkt.DecRef()
+	}
+
+	*t = testNetworkDispatcher{}
+}
+
+func (t *testNetworkDispatcher) takePkt() *stack.PacketBuffer {
+	pkt := t.pkt
+	t.pkt = nil
+	return pkt
+}
+
 func (t *testNetworkDispatcher) DeliverNetworkPacket(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
 	t.count++
+
+	if pkt := t.pkt; pkt != nil {
+		pkt.DecRef()
+	}
+
+	pkt.IncRef()
 	t.pkt = pkt
 }
 
@@ -163,11 +183,21 @@ func (*stubEndpoint) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList
 func (e *stubEndpoint) WriteRawPacket(pkt *stack.PacketBuffer) tcpip.Error {
 	select {
 	case e.c <- pkt:
+		pkt.IncRef()
 	default:
 		return &tcpip.ErrWouldBlock{}
 	}
 
 	return nil
+}
+
+func (e *stubEndpoint) release() {
+	c := e.c
+	*e = stubEndpoint{}
+	close(c)
+	for p := range c {
+		p.DecRef()
+	}
 }
 
 func (e *stubEndpoint) getPacket() *stack.PacketBuffer {
@@ -211,6 +241,7 @@ func expectPacket(t *testing.T, name string, pkt *stack.PacketBuffer, wantSrc, w
 
 func TestBridgeWithoutDispatcher(t *testing.T) {
 	ep := makeStubEndpoint(linkAddr1, 0)
+	defer ep.release()
 	bep := bridge.NewEndpoint(&ep)
 	bridgeEP, err := bridge.New([]*bridge.BridgeableEndpoint{bep})
 	if err != nil {
@@ -252,6 +283,11 @@ func TestBridgeWritePackets(t *testing.T) {
 		makeStubEndpoint(linkAddr2, len(data)),
 		makeStubEndpoint(linkAddr3, len(data)),
 	}
+	defer func() {
+		for _, e := range eps {
+			e.release()
+		}
+	}()
 
 	bridgeEP, err := bridge.New([]*bridge.BridgeableEndpoint{
 		bridge.NewEndpoint(ethernet.New(&eps[0])),
@@ -273,7 +309,11 @@ func TestBridgeWritePackets(t *testing.T) {
 		}
 
 		for i, ep := range eps {
-			expectPacket(t, fmt.Sprintf("ep%d", i), ep.getPacket(), baddr, dstAddr, fakeNetworkProtocol, data[0])
+			func() {
+				pkt := ep.getPacket()
+				defer pkt.DecRef()
+				expectPacket(t, fmt.Sprintf("ep%d", i), pkt, baddr, dstAddr, fakeNetworkProtocol, data[0])
+			}()
 		}
 	})
 
@@ -299,7 +339,11 @@ func TestBridgeWritePackets(t *testing.T) {
 
 			for j := 0; j < i; j++ {
 				for id, ep := range eps {
-					expectPacket(t, fmt.Sprintf("ep%d", id), ep.getPacket(), baddr, dstAddr, fakeNetworkProtocol, data[j])
+					func() {
+						pkt := ep.getPacket()
+						defer pkt.DecRef()
+						expectPacket(t, fmt.Sprintf("ep%d", id), pkt, baddr, dstAddr, fakeNetworkProtocol, data[j])
+					}()
 				}
 			}
 		})
@@ -313,6 +357,11 @@ func TestDeliverNetworkPacketToBridge(t *testing.T) {
 		makeStubEndpoint(linkAddr1, 1),
 		makeStubEndpoint(linkAddr2, 1),
 	}
+	defer func() {
+		for _, e := range eps {
+			e.release()
+		}
+	}()
 
 	beps := []*bridge.BridgeableEndpoint{
 		bridge.NewEndpoint(ethernet.New(&eps[0])),
@@ -379,6 +428,7 @@ func TestDeliverNetworkPacketToBridge(t *testing.T) {
 			for _, subtest := range subtests {
 				t.Run(subtest.name, func(t *testing.T) {
 					var ndb testNetworkDispatcher
+					defer ndb.release()
 					bridgeEP.Attach(&ndb)
 
 					srcAddr := linkAddr3
@@ -398,11 +448,20 @@ func TestDeliverNetworkPacketToBridge(t *testing.T) {
 					for i, ep := range eps {
 						// An endpoint on the bridge should receive all packets that do not come
 						// from itself and are not destined to the bridge itself.
-						if pkt := ep.getPacket(); test.rxEP != beps[i] && subtest.dstAddr != bridgeEP.LinkAddress() {
-							expectPacket(t, fmt.Sprintf("ep%d", i), pkt, srcAddr, subtest.dstAddr, fakeNetworkProtocol, data)
-						} else if pkt != nil {
-							t.Errorf("ep%d unexpectedly got a packet = %+v", i, pkt)
-						}
+						func() {
+							pkt := ep.getPacket()
+							if pkt != nil {
+								defer func() {
+									pkt.DecRef()
+								}()
+							}
+
+							if test.rxEP != beps[i] && subtest.dstAddr != bridgeEP.LinkAddress() {
+								expectPacket(t, fmt.Sprintf("ep%d", i), pkt, srcAddr, subtest.dstAddr, fakeNetworkProtocol, data)
+							} else if pkt != nil {
+								t.Errorf("ep%d unexpectedly got a packet = %+v", i, pkt)
+							}
+						}()
 					}
 
 					// The bridge should deliver packets destined to a group address or itself.
@@ -410,7 +469,11 @@ func TestDeliverNetworkPacketToBridge(t *testing.T) {
 						if ndb.count != 1 {
 							t.Errorf("got ndb.count = %d, want = 1", ndb.count)
 						} else {
-							expectPacket(t, "bridge-dispatcher", ndb.pkt, srcAddr, subtest.dstAddr, fakeNetworkProtocol, data)
+							func() {
+								pkt := ndb.takePkt()
+								defer pkt.DecRef()
+								expectPacket(t, "bridge-dispatcher", pkt, srcAddr, subtest.dstAddr, fakeNetworkProtocol, data)
+							}()
 						}
 					} else if ndb.count != 0 {
 						t.Errorf("got ndb.count = %d, want = 0", ndb.count)
@@ -651,6 +714,7 @@ func TestBridgeableEndpointDetach(t *testing.T) {
 	ep1 := loopback.New()
 	bep1 := bridge.NewEndpoint(ep1)
 	var disp testNetworkDispatcher
+	defer disp.release()
 
 	if ep1.IsAttached() {
 		t.Fatal("ep1.IsAttached() = true, want = false")
@@ -670,10 +734,14 @@ func TestBridgeableEndpointDetach(t *testing.T) {
 		t.Fatal("bep1.IsAttached() = false, want = true")
 	}
 
-	bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, &stack.PacketBuffer{})
-	if disp.count != 1 {
-		t.Fatalf("got disp.count = %d, want = 1", disp.count)
-	}
+	func() {
+		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{})
+		defer pkt.DecRef()
+		bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, pkt)
+		if disp.count != 1 {
+			t.Fatalf("got disp.count = %d, want = 1", disp.count)
+		}
+	}()
 
 	bep1.Attach(nil)
 	if ep1.IsAttached() {
@@ -683,10 +751,14 @@ func TestBridgeableEndpointDetach(t *testing.T) {
 		t.Fatal("bep1.IsAttached() = true, want = false")
 	}
 
-	bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, &stack.PacketBuffer{})
-	if disp.count != 1 {
-		t.Fatalf("got disp.count = %d, want = 1", disp.count)
-	}
+	func() {
+		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{})
+		defer pkt.DecRef()
+		bep1.DeliverNetworkPacket(linkAddr1, linkAddr2, header.IPv4ProtocolNumber, pkt)
+		if disp.count != 1 {
+			t.Fatalf("got disp.count = %d, want = 1", disp.count)
+		}
+	}()
 }
 
 // makePipe mints two linked endpoints with the given link addresses.
@@ -844,8 +916,8 @@ func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, protocolNumbe
 }
 
 func write(sender tcpip.Endpoint, s2fulladdr tcpip.FullAddress, payload string, wq *waiter.Queue) error {
-	payloadReceivedWaitEntry, payloadReceivedNotifyCh := waiter.NewChannelEntry(nil)
-	wq.EventRegister(&payloadReceivedWaitEntry, waiter.EventIn)
+	payloadReceivedWaitEntry, payloadReceivedNotifyCh := waiter.NewChannelEntry(waiter.EventIn)
+	wq.EventRegister(&payloadReceivedWaitEntry)
 	defer wq.EventUnregister(&payloadReceivedWaitEntry)
 	var r strings.Reader
 	r.Reset(payload)
@@ -861,12 +933,12 @@ func write(sender tcpip.Endpoint, s2fulladdr tcpip.FullAddress, payload string, 
 }
 
 func connect(sender tcpip.Endpoint, addr tcpip.FullAddress, senderWaitQueue, receiverWaitQueue *waiter.Queue) error {
-	sendReadyWaitEntry, sendReadyNotifyCh := waiter.NewChannelEntry(nil)
-	senderWaitQueue.EventRegister(&sendReadyWaitEntry, waiter.EventOut)
+	sendReadyWaitEntry, sendReadyNotifyCh := waiter.NewChannelEntry(waiter.EventOut)
+	senderWaitQueue.EventRegister(&sendReadyWaitEntry)
 	defer senderWaitQueue.EventUnregister(&sendReadyWaitEntry)
 
-	receiveReadyWaitEntry, receiveReadyNotifyCh := waiter.NewChannelEntry(nil)
-	receiverWaitQueue.EventRegister(&receiveReadyWaitEntry, waiter.EventIn)
+	receiveReadyWaitEntry, receiveReadyNotifyCh := waiter.NewChannelEntry(waiter.EventIn)
+	receiverWaitQueue.EventRegister(&receiveReadyWaitEntry)
 	defer receiverWaitQueue.EventUnregister(&receiveReadyWaitEntry)
 
 	switch err := sender.Connect(addr); err.(type) {

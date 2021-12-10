@@ -632,8 +632,8 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 		panic(fmt.Sprintf("unknown client state: c.State=%s", info.State))
 	}
 
-	we, ch := waiter.NewChannelEntry(nil)
-	c.wq.EventRegister(&we, waiter.EventIn)
+	we, ch := waiter.NewChannelEntry(waiter.EventIn)
+	c.wq.EventRegister(&we)
 	defer c.wq.EventUnregister(&we)
 
 	if _, err := c.rand.Read(c.xid[:]); err != nil {

@@ -360,9 +360,14 @@ func (c *Client) Run(ctx context.Context) {
 					dispatcher := port.state.mu.dispatcher
 					port.state.mu.Unlock()
 					if dispatcher != nil {
-						dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
-							Data: view.ToVectorisedView(),
-						}))
+						func() {
+							pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+								Data: view.ToVectorisedView(),
+							})
+							defer pkt.DecRef()
+
+							dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, pkt)
+						}()
 					}
 				} else {
 					// This can happen if the port flaps on the device while frames

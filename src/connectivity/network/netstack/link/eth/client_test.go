@@ -43,14 +43,23 @@ type DeliverNetworkPacketArgs struct {
 
 type dispatcherChan chan DeliverNetworkPacketArgs
 
-var _ stack.NetworkDispatcher = (*dispatcherChan)(nil)
+var _ stack.NetworkDispatcher = (dispatcherChan)(nil)
 
-func (ch *dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
-	*ch <- DeliverNetworkPacketArgs{
+func (ch dispatcherChan) DeliverNetworkPacket(srcLinkAddr, dstLinkAddr tcpip.LinkAddress, protocol tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) {
+	pkt.IncRef()
+
+	ch <- DeliverNetworkPacketArgs{
 		SrcLinkAddr: srcLinkAddr,
 		DstLinkAddr: dstLinkAddr,
 		Protocol:    protocol,
 		Pkt:         pkt,
+	}
+}
+
+func (ch dispatcherChan) release() {
+	close(ch)
+	for args := range ch {
+		args.Pkt.DecRef()
 	}
 }
 
@@ -157,6 +166,7 @@ func TestClient(t *testing.T) {
 			}
 
 			ch := make(dispatcherChan, 1)
+			defer ch.release()
 			client.Attach(&ch)
 
 			// Attaching a dispatcher to the client should cause it to fill the device's RX buffer pool.
@@ -201,6 +211,7 @@ func TestClient(t *testing.T) {
 
 						writeSize := depth + excess
 						var pkts stack.PacketBufferList
+						defer pkts.DecRef()
 						for i := uint32(0); i < writeSize; i++ {
 							pkts.PushBack(stack.NewPacketBuffer(stack.PacketBufferOptions{
 								ReserveHeaderBytes: int(client.MaxHeaderLength()),
@@ -237,11 +248,18 @@ func TestClient(t *testing.T) {
 								case <-timeout:
 									t.Fatal("timeout waiting for ethernet packet")
 								case args := <-ch:
-									if diff := cmp.Diff(DeliverNetworkPacketArgs{
-										Pkt: stack.NewPacketBuffer(stack.PacketBufferOptions{}),
-									}, args, testutil.PacketBufferCmpTransformer); diff != "" {
-										t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
-									}
+									func() {
+										defer args.Pkt.DecRef()
+
+										pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{})
+										defer pkt.DecRef()
+
+										if diff := cmp.Diff(DeliverNetworkPacketArgs{
+											Pkt: pkt,
+										}, args, testutil.PacketBufferCmpTransformer); diff != "" {
+											t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
+										}
+									}()
 								}
 							}
 							for len(b) != 0 {
@@ -347,17 +365,19 @@ func TestClient(t *testing.T) {
 
 			t.Run("WritePacket", func(t *testing.T) {
 				for i := 0; i < int(depth)*10; i++ {
-					pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
-						ReserveHeaderBytes: int(client.MaxHeaderLength()) + len(packetHeader) + 5,
-						Data:               buffer.View(body).ToVectorisedView(),
-					})
-					hdr := pkt.NetworkHeader().Push(len(packetHeader))
-					if n := copy(hdr, packetHeader); n != len(packetHeader) {
-						t.Fatalf("copied %d bytes, expected %d bytes", n, len(packetHeader))
-					}
-					if err := client.WritePacket(stack.RouteInfo{}, 1337, pkt); err != nil {
-						t.Fatal(err)
-					}
+					func() {
+						pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
+							ReserveHeaderBytes: int(client.MaxHeaderLength()) + len(packetHeader) + 5,
+							Data:               buffer.View(body).ToVectorisedView(),
+						})
+						defer pkt.DecRef()
+						if n := copy(pkt.NetworkHeader().Push(len(packetHeader)), packetHeader); n != len(packetHeader) {
+							t.Fatalf("got copy(...) = %d, want = %d", n, len(packetHeader))
+						}
+						if err := client.WritePacket(stack.RouteInfo{}, 1337, pkt); err != nil {
+							t.Fatalf("client.WritePacket({}, 1337, _): %s", err)
+						}
+					}()
 
 					if err := cycleTX(deviceFifos.Tx, 1, device.iob, func(b []byte) {
 						if diff := cmp.Diff(want, b); diff != "" {
@@ -422,13 +442,20 @@ func TestClient(t *testing.T) {
 					case <-time.After(5 * time.Second):
 						t.Fatal("timeout waiting for ethernet packet")
 					case args := <-ch:
-						if diff := cmp.Diff(DeliverNetworkPacketArgs{
-							Pkt: stack.NewPacketBuffer(stack.PacketBufferOptions{
+						func() {
+							defer args.Pkt.DecRef()
+
+							pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 								Data: buffer.View(payload).ToVectorisedView(),
-							}),
-						}, args, testutil.PacketBufferCmpTransformer); diff != "" {
-							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
-						}
+							})
+							defer pkt.DecRef()
+
+							if diff := cmp.Diff(DeliverNetworkPacketArgs{
+								Pkt: pkt,
+							}, args, testutil.PacketBufferCmpTransformer); diff != "" {
+								t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
+							}
+						}()
 					}
 				}
 			})
@@ -441,7 +468,7 @@ func TestClient(t *testing.T) {
 				// * heap object growth is ranging from negative 50 to 0.
 				if err := testutil.CheckHeapObjectsGrowth(10000, 100, func() {
 					send("foobarbazfoobar")
-					<-ch
+					(<-ch).Pkt.DecRef()
 				}); err != nil {
 					t.Fatal(err)
 				}

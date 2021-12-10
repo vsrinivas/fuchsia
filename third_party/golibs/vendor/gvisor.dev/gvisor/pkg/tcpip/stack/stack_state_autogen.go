@@ -89,7 +89,8 @@ func (cn *conn) StateFields() []string {
 		"ct",
 		"original",
 		"reply",
-		"finalized",
+		"finalizeOnce",
+		"finalizeResult",
 		"sourceManip",
 		"destinationManip",
 		"tcb",
@@ -105,11 +106,12 @@ func (cn *conn) StateSave(stateSinkObject state.Sink) {
 	stateSinkObject.Save(0, &cn.ct)
 	stateSinkObject.Save(1, &cn.original)
 	stateSinkObject.Save(2, &cn.reply)
-	stateSinkObject.Save(3, &cn.finalized)
-	stateSinkObject.Save(4, &cn.sourceManip)
-	stateSinkObject.Save(5, &cn.destinationManip)
-	stateSinkObject.Save(6, &cn.tcb)
-	stateSinkObject.Save(7, &cn.lastUsed)
+	stateSinkObject.Save(3, &cn.finalizeOnce)
+	stateSinkObject.Save(4, &cn.finalizeResult)
+	stateSinkObject.Save(5, &cn.sourceManip)
+	stateSinkObject.Save(6, &cn.destinationManip)
+	stateSinkObject.Save(7, &cn.tcb)
+	stateSinkObject.Save(8, &cn.lastUsed)
 }
 
 func (cn *conn) afterLoad() {}
@@ -119,11 +121,12 @@ func (cn *conn) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(0, &cn.ct)
 	stateSourceObject.Load(1, &cn.original)
 	stateSourceObject.Load(2, &cn.reply)
-	stateSourceObject.Load(3, &cn.finalized)
-	stateSourceObject.Load(4, &cn.sourceManip)
-	stateSourceObject.Load(5, &cn.destinationManip)
-	stateSourceObject.Load(6, &cn.tcb)
-	stateSourceObject.Load(7, &cn.lastUsed)
+	stateSourceObject.Load(3, &cn.finalizeOnce)
+	stateSourceObject.Load(4, &cn.finalizeResult)
+	stateSourceObject.Load(5, &cn.sourceManip)
+	stateSourceObject.Load(6, &cn.destinationManip)
+	stateSourceObject.Load(7, &cn.tcb)
+	stateSourceObject.Load(8, &cn.lastUsed)
 }
 
 func (ct *ConnTrack) StateTypeName() string {
@@ -134,6 +137,7 @@ func (ct *ConnTrack) StateFields() []string {
 	return []string{
 		"seed",
 		"clock",
+		"rand",
 		"buckets",
 	}
 }
@@ -145,7 +149,8 @@ func (ct *ConnTrack) StateSave(stateSinkObject state.Sink) {
 	ct.beforeSave()
 	stateSinkObject.Save(0, &ct.seed)
 	stateSinkObject.Save(1, &ct.clock)
-	stateSinkObject.Save(2, &ct.buckets)
+	stateSinkObject.Save(2, &ct.rand)
+	stateSinkObject.Save(3, &ct.buckets)
 }
 
 func (ct *ConnTrack) afterLoad() {}
@@ -154,7 +159,8 @@ func (ct *ConnTrack) afterLoad() {}
 func (ct *ConnTrack) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(0, &ct.seed)
 	stateSourceObject.Load(1, &ct.clock)
-	stateSourceObject.Load(2, &ct.buckets)
+	stateSourceObject.Load(2, &ct.rand)
+	stateSourceObject.Load(3, &ct.buckets)
 }
 
 func (bkt *bucket) StateTypeName() string {
@@ -188,7 +194,6 @@ func (it *IPTables) StateTypeName() string {
 
 func (it *IPTables) StateFields() []string {
 	return []string{
-		"priorities",
 		"connections",
 		"reaperDone",
 		"mu",
@@ -201,24 +206,22 @@ func (it *IPTables) StateFields() []string {
 // +checklocksignore
 func (it *IPTables) StateSave(stateSinkObject state.Sink) {
 	it.beforeSave()
-	stateSinkObject.Save(0, &it.priorities)
-	stateSinkObject.Save(1, &it.connections)
-	stateSinkObject.Save(2, &it.reaperDone)
-	stateSinkObject.Save(3, &it.mu)
-	stateSinkObject.Save(4, &it.v4Tables)
-	stateSinkObject.Save(5, &it.v6Tables)
-	stateSinkObject.Save(6, &it.modified)
+	stateSinkObject.Save(0, &it.connections)
+	stateSinkObject.Save(1, &it.reaperDone)
+	stateSinkObject.Save(2, &it.mu)
+	stateSinkObject.Save(3, &it.v4Tables)
+	stateSinkObject.Save(4, &it.v6Tables)
+	stateSinkObject.Save(5, &it.modified)
 }
 
 // +checklocksignore
 func (it *IPTables) StateLoad(stateSourceObject state.Source) {
-	stateSourceObject.Load(0, &it.priorities)
-	stateSourceObject.Load(1, &it.connections)
-	stateSourceObject.Load(2, &it.reaperDone)
-	stateSourceObject.Load(3, &it.mu)
-	stateSourceObject.Load(4, &it.v4Tables)
-	stateSourceObject.Load(5, &it.v6Tables)
-	stateSourceObject.Load(6, &it.modified)
+	stateSourceObject.Load(0, &it.connections)
+	stateSourceObject.Load(1, &it.reaperDone)
+	stateSourceObject.Load(2, &it.mu)
+	stateSourceObject.Load(3, &it.v4Tables)
+	stateSourceObject.Load(4, &it.v6Tables)
+	stateSourceObject.Load(5, &it.modified)
 	stateSourceObject.AfterLoad(it.afterLoad)
 }
 
@@ -458,6 +461,30 @@ func (e *PacketBufferEntry) afterLoad() {}
 func (e *PacketBufferEntry) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(0, &e.next)
 	stateSourceObject.Load(1, &e.prev)
+}
+
+func (r *packetBufferRefs) StateTypeName() string {
+	return "pkg/tcpip/stack.packetBufferRefs"
+}
+
+func (r *packetBufferRefs) StateFields() []string {
+	return []string{
+		"refCount",
+	}
+}
+
+func (r *packetBufferRefs) beforeSave() {}
+
+// +checklocksignore
+func (r *packetBufferRefs) StateSave(stateSinkObject state.Sink) {
+	r.beforeSave()
+	stateSinkObject.Save(0, &r.refCount)
+}
+
+// +checklocksignore
+func (r *packetBufferRefs) StateLoad(stateSourceObject state.Source) {
+	stateSourceObject.Load(0, &r.refCount)
+	stateSourceObject.AfterLoad(r.afterLoad)
 }
 
 func (t *TransportEndpointID) StateTypeName() string {
@@ -1251,6 +1278,7 @@ func init() {
 	state.Register((*neighborEntryEntry)(nil))
 	state.Register((*PacketBufferList)(nil))
 	state.Register((*PacketBufferEntry)(nil))
+	state.Register((*packetBufferRefs)(nil))
 	state.Register((*TransportEndpointID)(nil))
 	state.Register((*GSOType)(nil))
 	state.Register((*GSO)(nil))
