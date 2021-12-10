@@ -21,6 +21,7 @@
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
 #include <Weave/DeviceLayer/internal/DeviceNetworkInfo.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
+#include <Warm/Warm.h>
 #pragma GCC diagnostic pop
 // clang-format on
 
@@ -488,6 +489,13 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
 
   void GetDevices(GetDevicesCallback callback) override { callback({kFakeInterfaceName}); }
 
+  void WatchDevices(WatchDevicesCallback callback) override {
+    if (!watch_devices_once_) {
+      callback({.added = {kFakeInterfaceName}});
+      watch_devices_once_ = true;
+    }
+  }
+
   void LookupDevice(std::string name, Protocols protocols, LookupDeviceCallback callback) override {
     Lookup_LookupDevice_Result result;
     if (name != kFakeInterfaceName) {
@@ -521,13 +529,10 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
   }
 
   fidl::InterfaceRequestHandler<Lookup> GetHandler(async_dispatcher_t* dispatcher) {
-    dispatcher_ = dispatcher;
-    device_.set_dispatcher(dispatcher);
-    return [this](fidl::InterfaceRequest<Lookup> request) {
-      binding_.Bind(std::move(request), dispatcher_);
-    };
+    return bindings_.GetHandler(this, dispatcher);
   }
 
+  void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
   FakeLowpanDevice& device() { return device_; }
   FakeThreadLegacy& thread_legacy() { return thread_legacy_; }
   FakeCounters& counters() { return counters_; }
@@ -536,12 +541,13 @@ class FakeLowpanLookup final : public fuchsia::lowpan::device::testing::Lookup_T
   FakeLowpanDevice device_;
   FakeThreadLegacy thread_legacy_;
   FakeCounters counters_;
+  bool watch_devices_once_ = false;
   fidl::BindingSet<Device> device_bindings_;
   fidl::BindingSet<DeviceExtra> device_extra_bindings_;
   fidl::BindingSet<LegacyJoining> thread_legacy_bindings_;
   fidl::BindingSet<Counters> counters_bindings_;
   async_dispatcher_t* dispatcher_;
-  fidl::Binding<Lookup> binding_{this};
+  fidl::BindingSet<Lookup> bindings_;
 };
 
 class FakeNetRoutes : public fuchsia::net::routes::testing::State_TestBase {
@@ -689,6 +695,16 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
         fake_lookup_.GetHandler(dispatcher()));
     context_provider_.service_directory_provider()->AddService(
         fake_routes_.GetHandler(dispatcher()));
+    fake_lookup_.set_dispatcher(dispatcher());
+    fake_lookup_.device().set_dispatcher(dispatcher());
+
+    // TODO(fxbug.dev/90188): This test currently depends on WARM, which does
+    // not have a delegate interface in openweave-core. As a consequence, while
+    // this test does not need WARM, we must still initialize it and ensure that
+    // the fabric state is consistent, so that it does not attempt to add
+    // addresses during this test. The associated bug tracks the refactor to
+    // create that delegate interface and remove this test dependency.
+    fabric_state_.FabricId = kFabricIdNotSpecified;
   }
 
   void ResetConfigMgr() {
@@ -699,6 +715,8 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
   void SetUp() override {
     WeaveTestFixture<>::SetUp();
     PlatformMgrImpl().SetComponentContextForProcess(context_provider_.TakeContext());
+    PlatformMgrImpl().SetDispatcher(dispatcher());
+    Warm::Init(fabric_state_);
     RunFixtureLoop();
     ResetConfigMgr();
     ConfigurationMgr().StorePairingCode(kFakePairingCode, sizeof(kFakePairingCode));
@@ -717,6 +735,7 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
     WeaveTestFixture<>::TearDown();
     ThreadStackMgrImpl().SetDelegate(nullptr);
     ConfigurationMgrImpl().SetDelegate(nullptr);
+    Warm::Shutdown(fabric_state_);
   }
 
  protected:
@@ -724,6 +743,7 @@ class ThreadStackManagerTest : public WeaveTestFixture<> {
     return *reinterpret_cast<TestConfigurationManager*>(ConfigurationMgrImpl().GetDelegate());
   }
 
+  WeaveFabricState fabric_state_;
   FakeLowpanLookup fake_lookup_;
   FakeNetRoutes fake_routes_;
   MockedEventLoggingThreadStackManagerDelegateImpl* tsm_delegate_;

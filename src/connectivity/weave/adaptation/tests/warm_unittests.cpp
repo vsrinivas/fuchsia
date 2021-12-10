@@ -551,28 +551,6 @@ TEST_F(WarmTest, AddRemoveAddressThread) {
   EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
 }
 
-TEST_F(WarmTest, AddAddressThreadUnprovisioned) {
-  constexpr char kSubnetIp[] = "2001:0DB8:0042::";
-  constexpr uint8_t kPrefixLength = 48;
-  Inet::IPAddress addr;
-
-  // Fake unprovisioned TSM.
-  thread_delegate().set_is_thread_provisioned(false);
-
-  // Sanity check - no addresses assigned.
-  OwnedInterface& lowpan = GetThreadInterface();
-  EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
-
-  // Attempt to add the address.
-  ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
-  auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ true);
-  EXPECT_EQ(result, kPlatformResultFailure);
-
-  // Confirm that nothing was changed.
-  EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
-  EXPECT_FALSE(fake_lowpan_lookup().device_route().ContainsSubnetForAddress(addr));
-}
-
 TEST_F(WarmTest, AddRemoveAddressTunnel) {
   constexpr char kSubnetIp[] = "2001:0DB8:0042::";
   constexpr uint8_t kPrefixLength = 48;
@@ -634,10 +612,12 @@ TEST_F(WarmTest, RemoveAddressThreadNotFound) {
   OwnedInterface& lowpan = GetThreadInterface();
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
 
-  // Attempt to remove the address, expecting failure.
+  // Attempt to remove the address, expecting success - if the interface isn't
+  // available, assume it's removed. WARM may invoke us after the interface is
+  // down. This is distinct from the 'add' case, where it represents a failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeThread, addr, kPrefixLength, /*add*/ false);
-  EXPECT_EQ(result, kPlatformResultFailure);
+  EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Sanity check - still no addresses assigned.
   EXPECT_EQ(lowpan.ipv6addrs.size(), 0u);
@@ -653,10 +633,12 @@ TEST_F(WarmTest, RemoveAddressTunnelNotFound) {
   OwnedInterface& weave_tun = GetTunnelInterface();
   EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
 
-  // Attempt to remove the address, expecting failure.
+  // Attempt to remove the address, expecting success - if the interface isn't
+  // available, assume it's removed. WARM may invoke us after the interface is
+  // down. This is distinct from the 'add' case, where it represents a failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeTunnel, addr, kPrefixLength, /*add*/ false);
-  EXPECT_EQ(result, kPlatformResultFailure);
+  EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Sanity check - still no addresses assigned.
   EXPECT_EQ(weave_tun.ipv6addrs.size(), 0u);
@@ -671,10 +653,12 @@ TEST_F(WarmTest, RemoveAddressWiFiNotFound) {
   OwnedInterface& wlan = GetWiFiInterface();
   EXPECT_EQ(wlan.ipv6addrs.size(), 0u);
 
-  // Attempt to remove the address, expecting failure.
+  // Attempt to remove the address, expecting success - if the interface isn't
+  // available, assume it's removed. WARM may invoke us after the interface is
+  // down. This is distinct from the 'add' case, where it represents a failure.
   ASSERT_TRUE(Inet::IPAddress::FromString(kSubnetIp, addr));
   auto result = AddRemoveHostAddress(kInterfaceTypeWiFi, addr, kPrefixLength, /*add*/ false);
-  EXPECT_EQ(result, kPlatformResultFailure);
+  EXPECT_EQ(result, kPlatformResultSuccess);
 
   // Sanity check - still no addresses assigned.
   EXPECT_EQ(wlan.ipv6addrs.size(), 0u);

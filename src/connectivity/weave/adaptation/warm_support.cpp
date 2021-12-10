@@ -31,6 +31,9 @@ using DeviceLayer::ThreadStackMgrImpl;
 // Fixed name for tunnel interface.
 constexpr char kTunInterfaceName[] = "weav-tun0";
 
+// Prefix length for Thread addresses.
+constexpr uint8_t kThreadPrefixLength = 64;
+
 // Route metric values for primary and backup tunnels. Higher priority tunnels
 // have lower metric values so that they are prioritized in the routing table.
 constexpr uint32_t kRouteMetric_HighPriority = 0;
@@ -101,28 +104,11 @@ std::optional<uint64_t> GetInterfaceId(std::string interface_name) {
   return 0;
 }
 
-}  // namespace
-
-WEAVE_ERROR Init(WarmFabricStateDelegate *inFabricStateDelegate) { return WEAVE_NO_ERROR; }
-
-NL_DLL_EXPORT
-void CriticalSectionEnter(void) {}
-
-NL_DLL_EXPORT
-void CriticalSectionExit(void) {}
-
-NL_DLL_EXPORT
-void RequestInvokeActions(void) { ::nl::Weave::Warm::InvokeActions(); }
-
-// Add or remove address on tunnel interface.
-PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IPAddress &address,
-                                    uint8_t prefix_length, bool add) {
+// Add or remove an address attached to the Thread or WLAN interfaces.
+PlatformResult AddRemoveAddressInternal(InterfaceType interface_type,
+                                        const Inet::IPAddress &address, uint8_t prefix_length,
+                                        bool add) {
   auto svc = nl::Weave::DeviceLayer::PlatformMgrImpl().GetComponentContextForProcess()->svc();
-
-  if (interface_type == InterfaceType::kInterfaceTypeThread && !ConnectivityMgrImpl().IsThreadProvisioned()) {
-    FX_LOGS(WARNING) << "Not adding address when Thread is not provisioned.";
-    return kPlatformResultFailure;
-  }
 
   // Determine interface name to add/remove from.
   std::optional<std::string> interface_name = GetInterfaceName(interface_type);
@@ -165,13 +151,17 @@ PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IP
     FX_LOGS(ERROR) << "Failed to configure interface address to interface id "
                    << interface_id.value() << ": " << zx_status_get_string(status);
     return kPlatformResultFailure;
+  } else if (result.status == fuchsia::netstack::Status::UNKNOWN_ERROR) {
+    FX_LOGS(INFO) << "Interface address already configured on interface id "
+                  << interface_id.value();
+    return kPlatformResultSuccess;
   } else if (result.status != fuchsia::netstack::Status::OK) {
     FX_LOGS(ERROR) << "Unable to configure interface address to interface id "
                    << interface_id.value() << ": " << result.message;
     return kPlatformResultFailure;
   }
 
-  FX_LOGS(INFO) << (add ? "Added" : "Removed") << " host address from interface id "
+  FX_LOGS(INFO) << (add ? "Added" : "Removed") << " address from interface id "
                 << interface_id.value();
 
   // If this is not a Thread interface, adding the host address is sufficient.
@@ -226,8 +216,8 @@ PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IP
 }
 
 // Add or remove route to/from forwarding table.
-PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPrefix &prefix,
-                                  RoutePriority priority, bool add) {
+PlatformResult AddRemoveRouteInternal(InterfaceType interface_type, const Inet::IPPrefix &prefix,
+                                      RoutePriority priority, bool add) {
   auto svc = nl::Weave::DeviceLayer::PlatformMgrImpl().GetComponentContextForProcess()->svc();
 
   // Determine interface name to add to/remove from.
@@ -305,7 +295,7 @@ PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPr
     return kPlatformResultFailure;
   }
 
-  FX_LOGS(INFO) << (add ? "Added" : "Removed") << " host route to/from interface id "
+  FX_LOGS(INFO) << (add ? "Added" : "Removed") << " route to/from interface id "
                 << interface_id.value();
 
 #if WARM_CONFIG_SUPPORT_BORDER_ROUTING
@@ -347,32 +337,55 @@ PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPr
   return kPlatformResultSuccess;
 }
 
+}  // namespace
+
+WEAVE_ERROR Init(WarmFabricStateDelegate *inFabricStateDelegate) { return WEAVE_NO_ERROR; }
+
+NL_DLL_EXPORT
+void CriticalSectionEnter(void) {}
+
+NL_DLL_EXPORT
+void CriticalSectionExit(void) {}
+
+// Add or remove a host address attached to the Thread or WLAN interfaces.
+PlatformResult AddRemoveHostAddress(InterfaceType interface_type, const Inet::IPAddress &address,
+                                    uint8_t prefix_length, bool add) {
+  return AddRemoveAddressInternal(interface_type, address, prefix_length, add);
+}
+
+// Add or remove a host route attached to the Thread or WLAN interfaces.
+PlatformResult AddRemoveHostRoute(InterfaceType interface_type, const Inet::IPPrefix &prefix,
+                                  RoutePriority priority, bool add) {
+  return AddRemoveRouteInternal(interface_type, prefix, priority, add);
+}
+
+NL_DLL_EXPORT
+void RequestInvokeActions(void) { ::nl::Weave::Warm::InvokeActions(); }
+
 #if WARM_CONFIG_SUPPORT_THREAD
-PlatformResult AddRemoveThreadAddress(InterfaceType inInterfaceType,
-                                      const Inet::IPAddress &inAddress, bool inAdd) {
-  // This will be handled during the subsequent AddRemoveHostAddress from WARM.
-  return kPlatformResultSuccess;
+PlatformResult AddRemoveThreadAddress(InterfaceType interface_type, const Inet::IPAddress &address,
+                                      bool add) {
+  return AddRemoveAddressInternal(interface_type, address, kThreadPrefixLength, add);
 }
 #endif  // WARM_CONFIG_SUPPORT_THREAD
 
 #if WARM_CONFIG_SUPPORT_THREAD_ROUTING
-PlatformResult StartStopThreadAdvertisement(InterfaceType inInterfaceType,
-                                            const Inet::IPPrefix &inPrefix, bool inStart) {
+PlatformResult StartStopThreadAdvertisement(InterfaceType interface_type,
+                                            const Inet::IPPrefix &prefix, bool start) {
   // This is handled by the LoWPAN service, nothing to do here.
   return kPlatformResultSuccess;
 }
 #endif  // WARM_CONFIG_SUPPORT_THREAD_ROUTING
 
 #if WARM_CONFIG_SUPPORT_BORDER_ROUTING
-PlatformResult AddRemoveThreadRoute(InterfaceType inInterfaceType, const Inet::IPPrefix &inPrefix,
-                                    RoutePriority inPriority, bool inAdd) {
-  // This will be handled during the subsequent AddRemoveHostAddress from WARM.
-  return kPlatformResultSuccess;
+PlatformResult AddRemoveThreadRoute(InterfaceType interface_type, const Inet::IPPrefix &prefix,
+                                    RoutePriority priority, bool add) {
+  return AddRemoveRouteInternal(interface_type, prefix, priority, add);
 }
 
-PlatformResult SetThreadRoutePriority(InterfaceType inInterfaceType, const Inet::IPPrefix &inPrefix,
-                                      RoutePriority inPriority) {
-  // This will be handled during the subsequent AddRemoveHostAddress from WARM.
+PlatformResult SetThreadRoutePriority(InterfaceType interface_type, const Inet::IPPrefix &prefix,
+                                      RoutePriority priority) {
+  // This will be handled during the AddRemoveThreadRoute from WARM.
   return kPlatformResultSuccess;
 }
 #endif  // WARM_CONFIG_SUPPORT_BORDER_ROUTING
