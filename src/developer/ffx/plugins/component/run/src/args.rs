@@ -23,7 +23,7 @@ To learn more about running components, visit https://fuchsia.dev/fuchsia-src/de
 
 pub struct RunComponentCommand {
     #[argh(positional)]
-    /// url of component to run
+    /// url of the component to run.
     pub url: String,
 
     #[argh(option, short = 'n')]

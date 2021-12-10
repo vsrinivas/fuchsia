@@ -9,7 +9,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "destroy",
-    description = "Destroys a component instance, removing it from the component topology",
+    description = "Destroys a dynamic component instance, removing it from the collection designated by <moniker>",
     example = "To destroy a component instance designated by the moniker `/core/ffx-laboratory:foo`:
 
     $ ffx component destroy /core/ffx-laboratory:foo",
@@ -18,8 +18,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 pub struct DestroyComponentCommand {
     #[argh(positional)]
-    /// A moniker to a component instance in a collection.
-    /// This component instance will be removed from the topology if this command succeeds.
+    /// moniker of an existing component instance in a collection.
+    /// This component instance will be removed from the collection if this command succeeds.
     pub moniker: String,
 }
 

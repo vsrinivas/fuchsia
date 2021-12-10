@@ -9,7 +9,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "create",
-    description = "Creates a component instance, adding it to the component topology",
+    description = "Creates a dynamic component instance, adding it to the collection designated by <moniker>",
     example = "To create a component instance designated by the moniker `/core/ffx-laboratory:foo`:
 
     $ ffx component create /core/ffx-laboratory:foo fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm",
@@ -18,12 +18,12 @@ use {argh::FromArgs, ffx_core::ffx_command};
 
 pub struct CreateComponentCommand {
     #[argh(positional)]
-    /// A moniker to a (currently non-existent) component instance in a collection.
-    /// The component instance will be created at this moniker if the command succeeds.
+    /// moniker of a component instance in an existing collection.
+    /// The component instance will be added to the collection if the command succeeds.
     pub moniker: String,
 
     #[argh(positional)]
-    /// url of component to run
+    /// url of the component to create.
     pub url: String,
 }
 
