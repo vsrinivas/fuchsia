@@ -4,10 +4,12 @@
 {
     include: [
         "//src/sys/test_runners/gtest/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
         binary: "test/component_fuzzing_framework_unittests",
+        args: [ "data/corpus" ],
     },
     use: [
         {

@@ -25,12 +25,12 @@ source_set("engine") {
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
+    "//src/lib/files",
     "//src/lib/fxl",
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
     "//zircon/system/ulib/sync",
   ]
-
   deps = [
     "//sdk/lib/syslog/cpp",
     "//third_party/re2",

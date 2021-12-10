@@ -39,6 +39,13 @@ class Corpus final {
   // Sets options. This will reset the PRNG.
   void Configure(const std::shared_ptr<Options>& options);
 
+  // Recusively walks the |root|-relative directories given by |dirs| and |Add|s the contents of the
+  // files they contain.
+  zx_status_t LoadAt(const std::string& root, const std::vector<std::string>& dirs);
+
+  // Like |LoadAt| with |root| defaulting to "/pkg".
+  zx_status_t Load(const std::vector<std::string>& dirs);
+
   // Adds the input to the corpus. Returns ZX_ERR_BUFFER_TOO_SMALL if the input exceeds the max size
   // specified by the options; ZX_OK otherwise.
   zx_status_t Add(Input input) FXL_LOCKS_EXCLUDED(mutex_);
@@ -52,6 +59,12 @@ class Corpus final {
   void Pick(Input* out) FXL_LOCKS_EXCLUDED(mutex_);
 
  private:
+  // Reads the directory at |dirname| recursively and |Add|s the contents of each file.
+  zx_status_t ReadDir(const std::string& dirname);
+
+  // Reads the file at |filename| and |Add|s its contents.
+  zx_status_t ReadFile(const std::string& filename);
+
   std::shared_ptr<Options> options_;
   std::minstd_rand prng_;
   std::mutex mutex_;

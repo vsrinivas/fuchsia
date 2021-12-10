@@ -10,6 +10,10 @@
 
 #include <algorithm>
 
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+
 namespace fuzzing {
 
 // Public methods
@@ -52,6 +56,51 @@ void Corpus::AddDefaults(Options* options) {
 void Corpus::Configure(const std::shared_ptr<Options>& options) {
   options_ = options;
   prng_.seed(options_->seed());
+}
+
+zx_status_t Corpus::LoadAt(const std::string& root, const std::vector<std::string>& dirs) {
+  for (const auto& dirname : dirs) {
+    auto status = ReadDir(files::JoinPath(root, dirname));
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t Corpus::Load(const std::vector<std::string>& dirs) { return LoadAt("/pkg", dirs); }
+
+zx_status_t Corpus::ReadDir(const std::string& dirname) {
+  std::vector<std::string> contents;
+  if (!files::ReadDirContents(dirname, &contents)) {
+    FX_LOGS(ERROR) << "No such corpus directory: " << dirname << " (errno=" << errno << ")";
+    return ZX_ERR_NOT_FOUND;
+  }
+  for (const auto& dir_entry : contents) {
+    if (dir_entry == ".") {
+      continue;
+    }
+    auto pathname = files::SimplifyPath(files::JoinPath(dirname, dir_entry));
+    zx_status_t status = ZX_OK;
+    if (files::IsFile(pathname)) {
+      status = ReadFile(pathname);
+    } else if (files::IsDirectory(pathname)) {
+      status = ReadDir(pathname);
+    }
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
+}
+
+zx_status_t Corpus::ReadFile(const std::string& filename) {
+  std::vector<uint8_t> input;
+  if (!files::ReadFileToVector(filename, &input)) {
+    FX_LOGS(ERROR) << "Failed to read " << filename;
+    return ZX_ERR_IO;
+  }
+  return Add(Input(input));
 }
 
 zx_status_t Corpus::Add(Input input) {

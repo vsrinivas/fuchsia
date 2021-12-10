@@ -1,0 +1,13 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+
+resource("corpus") {
+  sources = [
+    "input-1",
+    "input-2",
+  ]
+  outputs = [ "data/corpus/{{source_file_part}}" ]
+}

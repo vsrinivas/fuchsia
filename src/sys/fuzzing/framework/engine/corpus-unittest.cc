@@ -9,6 +9,10 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
+#include "src/lib/files/path.h"
+
 namespace fuzzing {
 namespace {
 
@@ -40,6 +44,54 @@ TEST(CorpusTest, AddDefaults) {
   Corpus::AddDefaults(&options);
   EXPECT_EQ(options.seed(), kDefaultSeed);
   EXPECT_EQ(options.max_input_size(), kDefaultMaxInputSize);
+}
+
+TEST(CorpusTest, Load) {
+  Corpus corpus;
+  corpus.Configure(DefaultOptions());
+
+  // Double check that the unit test component manifest includes the tmp-storage shard...
+  ASSERT_TRUE(files::IsDirectory("/tmp"));
+
+  // Create a hierarchy of temporary directories. The unusual names are chosen to make the
+  // structure more apparent to the reader of this file.
+  auto r______ = files::JoinPath("/tmp", "corpus-test");
+  auto d_1____ = files::JoinPath(r______, "1");
+  auto d_1_1__ = files::JoinPath(d_1____, "1");
+  auto d_1_2__ = files::JoinPath(d_1____, "2");
+  auto d_2____ = files::JoinPath(r______, "2");
+  auto d_2_1__ = files::JoinPath(d_2____, "1");
+  auto d_2_2__ = files::JoinPath(d_2____, "2");
+  auto d_2_1_1 = files::JoinPath(d_2_1__, "1");
+
+  // |CreateDirectory| automatically creates parents, so it only needs to be called on the leaves.
+  EXPECT_TRUE(files::CreateDirectory(d_1_1__));
+  EXPECT_TRUE(files::CreateDirectory(d_1_2__));
+  EXPECT_TRUE(files::CreateDirectory(d_2_1_1));
+  EXPECT_TRUE(files::CreateDirectory(d_2_2__));
+
+  // Create some files to include conditions like:
+  //  * a directory with more than one file (d_1_1__).
+  //  * a directory with exactly one file (d_1_2__)
+  //  * a directory with only nested files (d_2_1__)
+  //  * a directory with no files (d_2_2__)
+  EXPECT_TRUE(files::WriteFile(files::JoinPath(d_1_1__, "1"), "foo"));
+  EXPECT_TRUE(files::WriteFile(files::JoinPath(d_1_1__, "2"), "bar"));
+  EXPECT_TRUE(files::WriteFile(files::JoinPath(d_1_2__, "1"), "baz"));
+  EXPECT_TRUE(files::WriteFile(files::JoinPath(d_2_1_1, "1"), "qux"));
+
+  corpus.LoadAt(r______, {"1", "2"});
+
+  Input inputs[5];
+  for (size_t i = 0; i < 4; ++i) {
+    EXPECT_TRUE(corpus.At(i + 1, &inputs[i]));
+  }
+  EXPECT_FALSE(corpus.At(5, &inputs[4]));
+  // Should be sorted on return.
+  EXPECT_EQ(inputs[0], Input("bar"));
+  EXPECT_EQ(inputs[1], Input("baz"));
+  EXPECT_EQ(inputs[2], Input("foo"));
+  EXPECT_EQ(inputs[3], Input("qux"));
 }
 
 TEST(CorpusTest, AddInputs) {
