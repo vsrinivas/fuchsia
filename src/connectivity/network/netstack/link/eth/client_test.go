@@ -372,35 +372,16 @@ func TestClient(t *testing.T) {
 				}
 			})
 
-			// ReceivePacket tests that receiving ethernet frames of size
-			// less than the minimum size does not panic or cause any issues for future
-			// (valid) frames.
-			t.Run("ReceivePacket", func(t *testing.T) {
-				const payload = "foobarbaz"
+			send := func(payload string) {
+				entry := &device.rxEntries[0]
+				buf := device.iob.BufferFromEntry(*entry)
+				if got, want := copy(buf, payload), len(payload); got != want {
+					t.Fatalf("got copy() = %d, want %d", got, want)
+				}
+				entry.SetLength(uint16(len(payload)))
 
-				// Send the first sendSize bytes of a frame.
-				send := func(sendSize uint16) {
-					entry := &device.rxEntries[0]
-					buf := device.iob.BufferFromEntry(*entry)
-					if got, want := copy(buf, payload), len(payload); got != want {
-						t.Fatalf("got copy() = %d, want %d", got, want)
-					}
-					entry.SetLength(sendSize)
-
-					{
-						status, count := eth_gen.FifoWrite(deviceFifos.Rx, device.rxEntries[:1])
-						if status != zx.ErrOk {
-							t.Fatal(status)
-						}
-						if count != 1 {
-							t.Fatalf("got zx_fifo_write(...) = %d want = %d", count, 1)
-						}
-					}
-					if _, err := zxwait.WaitContext(context.Background(), deviceFifos.Rx, zx.SignalFIFOReadable); err != nil {
-						t.Fatal(err)
-					}
-					// Assert that we read back only one entry (when depth is greater than 1).
-					status, count := eth_gen.FifoRead(deviceFifos.Rx, device.rxEntries)
+				{
+					status, count := eth_gen.FifoWrite(deviceFifos.Rx, device.rxEntries[:1])
 					if status != zx.ErrOk {
 						t.Fatal(status)
 					}
@@ -408,16 +389,32 @@ func TestClient(t *testing.T) {
 						t.Fatalf("got zx_fifo_write(...) = %d want = %d", count, 1)
 					}
 				}
+				if _, err := zxwait.WaitContext(context.Background(), deviceFifos.Rx, zx.SignalFIFOReadable); err != nil {
+					t.Fatal(err)
+				}
+				// Assert that we read back only one entry (when depth is greater than 1).
+				status, count := eth_gen.FifoRead(deviceFifos.Rx, device.rxEntries)
+				if status != zx.ErrOk {
+					t.Fatal(status)
+				}
+				if count != 1 {
+					t.Fatalf("got zx_fifo_read(...) = %d want = %d", count, 1)
+				}
+			}
 
-				for _, size := range []uint16{
+			// ReceivePacket tests that receiving ethernet frames of size
+			// less than the minimum size does not panic or cause any issues for future
+			// (valid) frames.
+			t.Run("ReceivePacket", func(t *testing.T) {
+				for _, payload := range []string{
+					// Test receiving a frame.
+					"foobarbaz",
 					// Test receiving a frame that is equal to the minimum frame size.
-					0,
+					"",
 					// Test receiving a frame that is just greater than the minimum frame size.
-					1,
-					// Test receiving the full frame.
-					uint16(len(payload)),
+					"a",
 				} {
-					send(size)
+					send(payload)
 
 					// Wait for a packet to be delivered on ch and validate the delivered
 					// network packet parameters. The packet should be delivered within 5s.
@@ -427,12 +424,26 @@ func TestClient(t *testing.T) {
 					case args := <-ch:
 						if diff := cmp.Diff(DeliverNetworkPacketArgs{
 							Pkt: stack.NewPacketBuffer(stack.PacketBufferOptions{
-								Data: buffer.View(payload[:size]).ToVectorisedView(),
+								Data: buffer.View(payload).ToVectorisedView(),
 							}),
 						}, args, testutil.PacketBufferCmpTransformer); diff != "" {
 							t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 						}
 					}
+				}
+			})
+
+			// ReceivePacketNoMemoryLeak tests that receiving many packets does not
+			// leak memory.
+			t.Run("ReceivePacketNoMemoryLeak", func(t *testing.T) {
+				// Measured in December 2021:
+				// * performing 10k runs takes ~900ms.
+				// * heap object growth is ranging from negative 50 to 0.
+				if err := testutil.CheckHeapObjectsGrowth(10000, 100, func() {
+					send("foobarbazfoobar")
+					<-ch
+				}); err != nil {
+					t.Fatal(err)
 				}
 			})
 		})

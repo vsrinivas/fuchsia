@@ -12,5 +12,8 @@ go_library("testutil") {
     "//third_party/golibs:gvisor.dev/gvisor",
   ]
 
-  sources = [ "packet_buffer.go" ]
+  sources = [
+    "memory.go",
+    "packet_buffer.go",
+  ]
 }

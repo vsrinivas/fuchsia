@@ -385,18 +385,9 @@ func TestClient_WritePacket(t *testing.T) {
 		port.Wait()
 	}()
 
-	linkEndpoint := ethernet.New(port)
-
-	port.SetOnLinkClosed(func() {})
-	port.SetOnLinkOnlineChanged(func(bool) {})
-
 	dispatcher := make(dispatcherChan)
 	close(dispatcher)
-	linkEndpoint.Attach(&dispatcher)
-
-	if err := port.Up(); err != nil {
-		t.Fatalf("port.Up() = %s", err)
-	}
+	linkEndpoint := setupPortAndCreateEndpoint(t, port, &dispatcher)
 
 	if err := linkEndpoint.WritePacket(stack.RouteInfo{}, header.IPv4ProtocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
 		ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
@@ -468,17 +459,10 @@ func TestWritePacket(t *testing.T) {
 					t.Errorf("port close failed: %s", err)
 				}
 			})
-			port.SetOnLinkClosed(func() {})
-			port.SetOnLinkOnlineChanged(func(bool) {})
-
-			linkEndpoint := ethernet.New(port)
 
 			dispatcher := make(dispatcherChan)
-			linkEndpoint.Attach(&dispatcher)
+			linkEndpoint := setupPortAndCreateEndpoint(t, port, &dispatcher)
 
-			if err := port.Up(); err != nil {
-				t.Fatalf("port.Up() = %s", err)
-			}
 			tunMac := getTunMac()
 			otherMac := getOtherMac()
 			const protocol = tcpip.NetworkProtocolNumber(45)
@@ -515,7 +499,7 @@ func TestWritePacket(t *testing.T) {
 				b := make([]byte, 0, TunMinTxLength)
 				b = append(b, otherMac.Octets[:]...)
 				b = append(b, tunMac.Octets[:]...)
-				ethType := [2]byte{0, 0}
+				var ethType [2]byte
 				binary.BigEndian.PutUint16(ethType[:], uint16(protocol))
 				b = append(b, ethType[:]...)
 				b = append(b, []byte(pktBody)...)
@@ -548,11 +532,8 @@ func TestWritePacket(t *testing.T) {
 	}
 }
 
-func TestReceivePacket(t *testing.T) {
-	ctx := context.Background()
-
-	tunDev, _, client, port := createTunClientPair(t, ctx)
-	runClient(t, client)
+func setupPortAndCreateEndpoint(t *testing.T, port *Port, dispatcher *dispatcherChan) *ethernet.Endpoint {
+	t.Helper()
 
 	port.SetOnLinkClosed(func() {})
 	port.SetOnLinkOnlineChanged(func(bool) {})
@@ -563,8 +544,26 @@ func TestReceivePacket(t *testing.T) {
 		t.Fatalf("port.Up() = %s", err)
 	}
 
+	linkEndpoint.Attach(dispatcher)
+
+	return linkEndpoint
+}
+
+func TestReceivePacket(t *testing.T) {
+	ctx := context.Background()
+
+	tunDev, _, client, port := createTunClientPair(t, ctx)
+	defer func() {
+		if err := tunDev.Close(); err != nil {
+			t.Fatalf("tunDev.Close() failed: %s", err)
+		}
+		port.Wait()
+	}()
+
+	runClient(t, client)
+
 	dispatcher := make(dispatcherChan, 1)
-	linkEndpoint.Attach(&dispatcher)
+	_ = setupPortAndCreateEndpoint(t, port, &dispatcher)
 
 	tunMac := getTunMac()
 	otherMac := getOtherMac()
@@ -573,7 +572,7 @@ func TestReceivePacket(t *testing.T) {
 	referenceFrame := func() []uint8 {
 		b := tunMac.Octets[:]
 		b = append(b, otherMac.Octets[:]...)
-		ethType := [2]byte{0, 0}
+		var ethType [2]byte
 		binary.BigEndian.PutUint16(ethType[:], uint16(protocol))
 		b = append(b, ethType[:]...)
 		b = append(b, []byte(pktPayload)...)
@@ -639,11 +638,56 @@ func TestReceivePacket(t *testing.T) {
 			t.Fatalf("delivered network packet mismatch (-want +got):\n%s", diff)
 		}
 	}
+}
 
-	if err := tunDev.Close(); err != nil {
-		t.Fatalf("tunDev.Close() failed: %s", err)
+func TestReceivePacketNoMemoryLeak(t *testing.T) {
+	ctx := context.Background()
+
+	tunDev, _, client, port := createTunClientPair(t, ctx)
+	defer func() {
+		if err := tunDev.Close(); err != nil {
+			t.Fatalf("tunDev.Close() failed: %s", err)
+		}
+		port.Wait()
+	}()
+
+	runClient(t, client)
+
+	dispatcher := make(dispatcherChan, 1)
+	_ = setupPortAndCreateEndpoint(t, port, &dispatcher)
+
+	const protocol = tcpip.NetworkProtocolNumber(45)
+	const pktPayload = "foobarbazfoobar"
+	tunMac := getTunMac()
+	otherMac := getOtherMac()
+
+	referenceFrame := tunMac.Octets[:]
+	referenceFrame = append(referenceFrame, otherMac.Octets[:]...)
+	var ethType [2]byte
+	binary.BigEndian.PutUint16(ethType[:], uint16(protocol))
+	referenceFrame = append(referenceFrame, ethType[:]...)
+	referenceFrame = append(referenceFrame, []byte(pktPayload)...)
+
+	var frame tun.Frame
+	frame.SetFrameType(network.FrameTypeEthernet)
+	frame.SetData(referenceFrame)
+	frame.SetPort(TunPortId)
+
+	// Measured in December 2021:
+	// * performing 10k runs takes ~1.3s.
+	// * heap object growth is ranging from negative 50 to 0.
+	if err := testutil.CheckHeapObjectsGrowth(10000, 100, func() {
+		status, err := tunDev.WriteFrame(ctx, frame)
+		if err != nil {
+			t.Fatalf("WriteFrame failed: %s", err)
+		}
+		if status.Which() == tun.DeviceWriteFrameResultErr {
+			t.Fatalf("unexpected error on WriteFrame: %s", zx.Status(status.Err))
+		}
+		<-dispatcher
+	}); err != nil {
+		t.Fatal(err)
 	}
-	linkEndpoint.Wait()
 }
 
 func TestUpDown(t *testing.T) {
