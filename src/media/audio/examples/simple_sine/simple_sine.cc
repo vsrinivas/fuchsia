@@ -13,10 +13,11 @@
 #include <math.h>
 
 #include <iostream>
+#include <utility>
 
 namespace {
 // Set the AudioRenderer stream type to: 48 kHz, mono, 32-bit float.
-constexpr uint32_t kFrameRate = 48000.0f;
+constexpr uint32_t kFrameRate = 48000;
 
 // This example feeds the system 1 second of audio, in 10-millisecond payloads.
 constexpr uint32_t kNumPayloads = 100;
@@ -33,7 +34,7 @@ MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_c
   FX_DCHECK(quit_callback_);
 }
 
-// Prepare for playback, submit initial data and start the presentation timeline
+// Prepare for playback, submit initial data and start the presentation timeline.
 void MediaApp::Run(sys::ComponentContext* app_context) {
   AcquireAudioRenderer(app_context);
   SetStreamType();
@@ -48,19 +49,17 @@ void MediaApp::Run(sys::ComponentContext* app_context) {
     SendPacket(CreatePacket(payload_num));
   }
 
-  // By not explicitly setting timestamp values for reference clock or media
-  // clock, we indicate that we want to start playback, with default timing.
-  // I.e., at a system reference_time of "as soon as safely possible", we will
-  // present audio corresponding to an initial media_time (PTS) of zero.
+  // By not explicitly setting timestamp values for reference clock or media clock, we indicate that
+  // we want to start playback, with default timing. I.e., at a system reference_time of "as soon as
+  // safely possible", we will present audio corresponding to an initial media_time (PTS) of zero.
   //
-  // AudioRenderer defaults to unity gain, unmuted; we need not change our
-  // volume. (Although not shown here, we would do so via the GainControl
-  // interface.)
+  // AudioRenderer defaults to unity gain, unmuted; we need not change our volume. (Although not
+  // shown here, we would do so via the GainControl interface.)
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP, fuchsia::media::NO_TIMESTAMP);
 }
 
-// Use StartupContext to acquire AudioPtr, which we only need in order to get
-// an AudioRendererPtr. Set an error handler, in case of channel closure.
+// Use StartupContext to acquire AudioPtr, which we only need in order to get an AudioRendererPtr.
+// Set an error handler, in case of channel closure.
 void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   fuchsia::media::AudioPtr audio = app_context->svc()->Connect<fuchsia::media::Audio>();
 
@@ -121,18 +120,17 @@ void MediaApp::WriteAudioIntoBuffer() {
   }
 }
 
-// We divide our cross-proc buffer into different zones, called payloads.
-// Create a packet that corresponds to this particular payload.
-// By specifying NO_TIMESTAMP for each packet's presentation timestamp, we rely
-// on AudioRenderer to treat the sequence of packets as a contiguous unbroken
-// stream of audio. We just need to make sure we present packets early enough.
-// For this example we actually submit all packets before playback starts.
-fuchsia::media::StreamPacket MediaApp::CreatePacket(uint32_t payload_num) {
+// We divide our cross-proc buffer into different zones, called payloads. Create a packet that
+// corresponds to this particular payload. By specifying NO_TIMESTAMP for each packet's presentation
+// timestamp, we rely on AudioRenderer to treat the sequence of packets as a contiguous unbroken
+// stream of audio. We just need to make sure we present packets early enough. For this example we
+// actually submit all packets before playback starts.
+fuchsia::media::StreamPacket MediaApp::CreatePacket(uint32_t packet_num) const {
   fuchsia::media::StreamPacket packet;
 
   // leave packet.pts as the default (fuchsia::media::NO_TIMESTAMP)
   // leave packet.payload_buffer_id as default (0): we only map a single buffer
-  packet.payload_offset = (payload_num * payload_size_) % total_mapping_size_;
+  packet.payload_offset = (packet_num * payload_size_) % total_mapping_size_;
   packet.payload_size = payload_size_;
   return packet;
 }

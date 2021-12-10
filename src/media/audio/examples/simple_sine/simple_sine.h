@@ -14,7 +14,7 @@ namespace examples {
 
 class MediaApp {
  public:
-  MediaApp(fit::closure quit_callback);
+  explicit MediaApp(fit::closure quit_callback);
 
   void Run(sys::ComponentContext* app_context);
 
@@ -26,7 +26,7 @@ class MediaApp {
 
   void WriteAudioIntoBuffer();
 
-  fuchsia::media::StreamPacket CreatePacket(uint32_t packet_num);
+  fuchsia::media::StreamPacket CreatePacket(uint32_t packet_num) const;
   void SendPacket(fuchsia::media::StreamPacket packet);
   void OnSendPacketComplete();
 
