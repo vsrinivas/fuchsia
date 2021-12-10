@@ -149,7 +149,7 @@ test("standalone") {
   }
   deps = core_tests + unified_only
   sources = [
-    "libc-and-io-stubs.c",
+    "standalone-init.cc",
     "standalone-io.cc",
     "standalone.h",
     "test-main-with-filter.c",

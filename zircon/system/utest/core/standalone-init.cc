@@ -22,6 +22,8 @@ static zx_handle_t root_resource;
 static zx_handle_t mmio_root_resource;
 static zx_handle_t system_root_resource;
 
+extern "C" {
+
 __EXPORT
 void __libc_extensions_init(uint32_t count, zx_handle_t handle[], uint32_t info[]) {
   for (unsigned n = 0; n < count; n++) {
@@ -59,3 +61,5 @@ zx_handle_t get_mmio_root_resource(void) { return mmio_root_resource; }
 
 __EXPORT
 zx_handle_t get_system_root_resource(void) { return system_root_resource; }
+
+}  // extern "C"
