@@ -9,7 +9,7 @@ use crate::output::{
 use std::{io::Error, path::Path};
 
 /// A reporter that acts as a data sink and does not save results or artifacts.
-pub(super) struct NoopReporter;
+pub struct NoopReporter;
 pub(super) struct NoopDirectoryWriter;
 
 impl Reporter for NoopReporter {

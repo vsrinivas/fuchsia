@@ -37,8 +37,8 @@ pub use error::{RunTestSuiteError, UnexpectedEventError};
 use {
     artifact::{Artifact, ArtifactSender},
     output::{
-        AnsiFilterWriter, ArtifactType, CaseId, DirectoryArtifactType, RunReporter, SuiteId,
-        SuiteReporter, Timestamp,
+        AnsiFilterWriter, ArtifactType, CaseId, DirectoryArtifactType, DirectoryReporter,
+        NoopReporter, RunReporter, SuiteId, SuiteReporter, Timestamp,
     },
     stream_util::StreamUtil,
 };
@@ -1068,10 +1068,12 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
         false => Box::new(io::stdout()),
     };
 
-    let reporter_res = match (filter_ansi, record_directory) {
-        (true, Some(dir)) => RunReporter::new_ansi_filtered(dir),
-        (false, Some(dir)) => RunReporter::new(dir),
-        (_, None) => Ok(RunReporter::new_noop()),
+    let reporter_res = match record_directory {
+        Some(dir) => DirectoryReporter::new(dir).map(|reporter| match filter_ansi {
+            true => RunReporter::new_ansi_filtered(reporter),
+            false => RunReporter::new(reporter),
+        }),
+        None => Ok(RunReporter::new(NoopReporter)),
     };
     let mut reporter = match reporter_res {
         Ok(r) => r,

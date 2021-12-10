@@ -39,7 +39,7 @@ impl<A: Write, B: Write> MultiplexedWriter<A, B> {
 }
 
 /// A reporter that reports results to two contained reporters.
-pub(super) struct MultiplexedReporter<A: Reporter, B: Reporter> {
+pub struct MultiplexedReporter<A: Reporter, B: Reporter> {
     a: A,
     b: B,
 }

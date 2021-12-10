@@ -3,21 +3,20 @@
 // found in the LICENSE file.
 
 use std::io::{Error, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 mod directory;
 mod line;
-#[allow(unused)]
 mod mux;
 mod noop;
-#[allow(unused)]
 mod shell;
 pub use line::AnsiFilterWriter;
-pub use mux::MultiplexedWriter;
 
-use directory::DirectoryReporter;
+pub use directory::DirectoryReporter;
 use fidl_fuchsia_test_manager as ftest_manager;
-use noop::NoopReporter;
+pub use mux::MultiplexedReporter;
+pub use noop::NoopReporter;
+pub use shell::ShellReporter;
 
 pub type DynArtifact = dyn 'static + Write + Send + Sync;
 pub type DynDirectoryArtifact = dyn 'static + DirectoryWrite + Send + Sync;
@@ -54,18 +53,10 @@ pub struct CaseReporter<'a> {
 }
 
 impl RunReporter {
-    /// Create a `RunReporter` that simply discards any artifacts or results it is given.
-    pub fn new_noop() -> Self {
-        let reporter = Box::new(NoopReporter);
-        let artifact_wrapper =
-            Box::new(|_type: &ArtifactType, artifact: Box<DynArtifact>| artifact);
-        Self { reporter, artifact_wrapper }
-    }
-
     /// Create a `RunReporter` that saves artifacts and results to the given directory.
     /// Any stdout artifacts are filtered for ANSI escape sequences before saving.
-    pub fn new_ansi_filtered(root: PathBuf) -> Result<Self, Error> {
-        let reporter = Box::new(DirectoryReporter::new(root)?);
+    pub fn new_ansi_filtered<R: 'static + Reporter + Send + Sync>(reporter: R) -> Self {
+        let reporter = Box::new(reporter);
         let artifact_wrapper =
             Box::new(|artifact_type: &ArtifactType, artifact: Box<DynArtifact>| {
                 match artifact_type {
@@ -79,15 +70,15 @@ impl RunReporter {
                     }
                 }
             });
-        Ok(Self { reporter, artifact_wrapper })
+        Self { reporter, artifact_wrapper }
     }
 
     /// Create a `RunReporter` that saves artifacts and results to the given directory.
-    pub fn new(root: PathBuf) -> Result<Self, Error> {
-        let reporter = Box::new(DirectoryReporter::new(root)?);
+    pub fn new<R: 'static + Reporter + Send + Sync>(reporter: R) -> Self {
+        let reporter = Box::new(reporter);
         let artifact_wrapper =
             Box::new(|_type: &ArtifactType, artifact: Box<DynArtifact>| artifact);
-        Ok(Self { reporter, artifact_wrapper })
+        Self { reporter, artifact_wrapper }
     }
 
     #[cfg(test)]
@@ -236,7 +227,7 @@ pub enum DirectoryArtifactType {
 }
 
 /// Common outcome type for test results, suites, and test cases.
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum ReportedOutcome {
     Passed,
     Failed,
@@ -326,7 +317,7 @@ pub enum EntityId {
 
 /// A trait for structs that report test results.
 /// Implementations of `Reporter` serve as the backend powering `RunReporter`.
-trait Reporter {
+pub trait Reporter {
     /// Record a new test suite or test case. This should be called once per entity.
     fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error>;
 

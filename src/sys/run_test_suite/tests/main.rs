@@ -80,7 +80,7 @@ async fn run_test_once<W: Write + Send>(
     writer: &mut W,
 ) -> Result<SuiteRunResult, RunTestSuiteError> {
     let test_result = {
-        let mut reporter = output::RunReporter::new_noop();
+        let mut reporter = output::RunReporter::new(output::NoopReporter);
         let streams = run_test_suite_lib::run_test(
             fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                 .expect("connecting to RunBuilderProxy"),
@@ -142,7 +142,9 @@ log3 for Example.Test3
 async fn launch_and_test_passing_v2_test() {
     let output_dir = tempfile::tempdir().expect("create temp directory");
     let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new(output_dir.path().to_path_buf()).unwrap();
+    let mut reporter = output::RunReporter::new(
+        output::DirectoryReporter::new(output_dir.path().to_path_buf()).unwrap(),
+    );
     let streams = run_test_suite_lib::run_test(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
@@ -233,7 +235,9 @@ log3 for Example.Test3
 async fn launch_and_test_stderr_test() {
     let output_dir = tempfile::tempdir().expect("create temp directory");
     let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new(output_dir.path().to_path_buf()).unwrap();
+    let mut reporter = output::RunReporter::new(
+        output::DirectoryReporter::new(output_dir.path().to_path_buf()).unwrap(),
+    );
     let streams = run_test_suite_lib::run_test(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
@@ -332,8 +336,9 @@ stderr msg2 for Example.Test3
 async fn launch_and_test_passing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
     let output_dir = tempfile::tempdir().expect("Create temp directory");
-    let mut reporter =
-        output::RunReporter::new(output_dir.path().to_path_buf()).expect("Create reporter");
+    let mut reporter = output::RunReporter::new(
+        output::DirectoryReporter::new(output_dir.path().to_path_buf()).expect("Create reporter"),
+    );
     let streams = run_test_suite_lib::run_test(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
@@ -401,8 +406,9 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
 async fn launch_and_test_multiple_passing_tests() {
     let mut output: Vec<u8> = vec![];
     let output_dir = tempfile::tempdir().expect("Create temp directory");
-    let mut reporter =
-        output::RunReporter::new(output_dir.path().to_path_buf()).expect("Create reporter");
+    let mut reporter = output::RunReporter::new(
+        output::DirectoryReporter::new(output_dir.path().to_path_buf()).expect("Create reporter"),
+    );
     let streams = run_test_suite_lib::run_test(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
@@ -710,7 +716,7 @@ log3 for Example.Test3
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_v2_test_multiple_times() {
     let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new_noop();
+    let mut reporter = output::RunReporter::new(output::NoopReporter);
     let streams = run_test_suite_lib::run_test(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
@@ -861,7 +867,7 @@ async fn test_timeout() {
 // when a test times out, we should not run it again.
 async fn test_timeout_multiple_times() {
     let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new_noop();
+    let mut reporter = output::RunReporter::new(output::NoopReporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
@@ -894,7 +900,7 @@ async fn test_timeout_multiple_times() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_coninue_on_timeout() {
     let mut output = std::io::sink();
-    let mut reporter = output::RunReporter::new_noop();
+    let mut reporter = output::RunReporter::new(output::NoopReporter);
     let mut long_test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
@@ -942,7 +948,7 @@ async fn test_coninue_on_timeout() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_stop_after_n_failures() {
     let mut output = std::io::sink();
-    let mut reporter = output::RunReporter::new_noop();
+    let mut reporter = output::RunReporter::new(output::NoopReporter);
     let streams = run_test_suite_lib::run_test(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
@@ -1056,7 +1062,7 @@ async fn test_stdout_and_log_ansi() {
 async fn test_stdout_and_log_filter_ansi() {
     let mut output: Vec<u8> = vec![];
     let mut ansi_filter = output::AnsiFilterWriter::new(&mut output);
-    let mut reporter = output::RunReporter::new_noop();
+    let mut reporter = output::RunReporter::new(output::NoopReporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );

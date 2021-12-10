@@ -23,7 +23,7 @@ const CUSTOM_ARTIFACT_DIRECTORY: &str = "custom";
 const TEST_SUMMARY_TMP_FILE: &str = ".test_summary_tmp.json";
 
 /// A reporter that saves results and artifacts to disk in the Fuchsia test output format.
-pub(super) struct DirectoryReporter {
+pub struct DirectoryReporter {
     /// Root directory in which to place results.
     root: PathBuf,
     /// A mapping from ID to every test run, test suite, and test case. The test run entry
@@ -88,7 +88,7 @@ impl EntityEntry {
 
 impl DirectoryReporter {
     /// Create a new `DirectoryReporter` that places results in the given `root` directory.
-    pub(super) fn new(root: PathBuf) -> Result<Self, Error> {
+    pub fn new(root: PathBuf) -> Result<Self, Error> {
         let artifact_dir = artifact_dir_name(&EntityId::TestRun);
 
         Self::ensure_directory_exists(root.as_path())?;
@@ -430,7 +430,9 @@ mod test {
         const SUITE_TIMES: (ZxTime, ZxTime) =
             (ZxTime::from_nanos(0x1000000), ZxTime::from_nanos(0x2400000));
 
-        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        let run_reporter = RunReporter::new(
+            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+        );
         for suite_no in 0..3 {
             let suite_reporter = run_reporter
                 .new_suite(&format!("suite-{:?}", suite_no), &SuiteId(suite_no))
@@ -487,7 +489,9 @@ mod test {
     #[test]
     fn artifacts_per_entity() {
         let dir = tempdir().expect("create temp directory");
-        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        let run_reporter = RunReporter::new(
+            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+        );
         let suite_reporter =
             run_reporter.new_suite("suite-1", &SuiteId(0)).expect("create new suite");
         run_reporter.started(Timestamp::Unknown).expect("start run");
@@ -570,7 +574,9 @@ mod test {
     fn empty_directory_artifacts() {
         let dir = tempdir().expect("create temp directory");
 
-        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        let run_reporter = RunReporter::new(
+            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+        );
         run_reporter.started(Timestamp::Unknown).expect("start run");
         let _run_directory_artifact = run_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, None)
@@ -641,7 +647,9 @@ mod test {
     fn directory_artifacts() {
         let dir = tempdir().expect("create temp directory");
 
-        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        let run_reporter = RunReporter::new(
+            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+        );
         run_reporter.started(Timestamp::Unknown).expect("start run");
         let run_directory_artifact = run_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, None)
@@ -728,7 +736,9 @@ mod test {
     #[test]
     fn duplicate_suite_names_ok() {
         let dir = tempdir().expect("create temp directory");
-        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        let run_reporter = RunReporter::new(
+            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+        );
 
         let success_suite_reporter =
             run_reporter.new_suite("suite", &SuiteId(0)).expect("create new suite");
@@ -788,7 +798,9 @@ mod test {
         // finishes. This allows intermediate results to be read even if the command is killed
         // before completion.
         let dir = tempdir().expect("create temp directory");
-        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        let run_reporter = RunReporter::new(
+            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+        );
 
         let (initial_run_result, initial_suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
@@ -840,7 +852,9 @@ mod test {
         // This test verifies that a suite is saved if finished() is called before an outcome is
         // reported. This could happen if some error causes test execution to terminate early.
         let dir = tempdir().expect("create temp directory");
-        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        let run_reporter = RunReporter::new(
+            DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
+        );
 
         run_reporter.started(Timestamp::Unknown).expect("start test run");
 
