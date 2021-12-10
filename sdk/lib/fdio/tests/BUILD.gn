@@ -64,6 +64,7 @@ test("fdio-test") {
     "pipe.cc",
   ]
   deps = [
+    "//src/lib/fxl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxtest",
   ]

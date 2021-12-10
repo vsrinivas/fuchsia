@@ -46,15 +46,6 @@ static int checkfd(int fd, int err) {
   return seterr(err);
 }
 
-static int check2fds(int fd1, int fd2, int err) {
-  for (int fd : {fd1, fd2}) {
-    if (!fdok(fd)) {
-      return ERRNO(EBADF);
-    }
-  }
-  return seterr(err);
-}
-
 static int checkfilefd(const char* path, int fd, int err) {
   struct stat s;
   if (stat(path, &s)) {
@@ -164,11 +155,6 @@ int sockatmark(int fd) {
 __EXPORT
 int fchownat(int fd, const char* path, uid_t uid, gid_t gid, int flag) {
   return checkfd(fd, ENOSYS);
-}
-
-__EXPORT
-int linkat(int fd1, const char* existing, int fd2, const char* newpath, int flag) {
-  return check2fds(fd1, fd2, ENOSYS);
 }
 
 __EXPORT

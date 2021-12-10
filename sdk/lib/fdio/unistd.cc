@@ -1137,6 +1137,16 @@ int rename(const char* oldpath, const char* newpath) {
 }
 
 __EXPORT
+int linkat(int olddirfd, const char* oldpath, int newdirfd, const char* newpath, int flags) {
+  // Accept AT_SYMLINK_FOLLOW, but ignore it because Fuchsia does not support symlinks yet.
+  if (flags & ~AT_SYMLINK_FOLLOW) {
+    return ERRNO(EINVAL);
+  }
+
+  return two_path_op_at(olddirfd, oldpath, newdirfd, newpath, &fdio_t::link);
+}
+
+__EXPORT
 int link(const char* oldpath, const char* newpath) {
   return two_path_op_at(AT_FDCWD, oldpath, AT_FDCWD, newpath, &fdio_t::link);
 }
