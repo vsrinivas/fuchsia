@@ -152,7 +152,7 @@ test("standalone") {
     "standalone-init.cc",
     "standalone-io.cc",
     "standalone.h",
-    "test-main-with-filter.c",
+    "test-main-with-filter.cc",
   ]
   deps += [
     "//zircon/system/ulib/zx",
