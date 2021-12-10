@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 
+#include <limits>
+
 #include "src/bringup/bin/netsvc/inet6.h"
 
 static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
@@ -16,13 +18,13 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   if (len) {
     sum += (*data & 0xFF);
   }
-  while (sum > 0xFFFF) {
+  while (sum > std::numeric_limits<uint16_t>::max()) {
     sum = (sum & 0xFFFF) + (sum >> 16);
   }
-  return sum;
+  return static_cast<uint16_t>(sum);
 }
 
-unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length) {
+uint16_t ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length) {
   uint16_t sum;
 
   // length and protocol field for pseudo-header

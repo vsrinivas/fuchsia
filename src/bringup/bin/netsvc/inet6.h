@@ -144,7 +144,7 @@ zx_status_t udp6_send(const void* data, size_t len, const ip6_addr_t* daddr, uin
 void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport);
 
-unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length);
+uint16_t ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length);
 
 void send_router_advertisement(void);
 

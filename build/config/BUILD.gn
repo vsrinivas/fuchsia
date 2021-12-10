@@ -610,7 +610,6 @@ config("Wno-conversion") {
     "//sdk/lib/vfs/cpp:*",
     "//sdk/lib/vfs/cpp/testing:*",
     "//src/bringup/bin/bootsvc:*",
-    "//src/bringup/bin/netsvc:inet6",
     "//src/bringup/bin/ptysvc:*",
     "//src/camera/bin/camera-gym:*",
     "//src/camera/drivers/controller/test:*",
