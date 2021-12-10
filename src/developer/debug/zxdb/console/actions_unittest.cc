@@ -80,6 +80,7 @@ TEST_F(ActionsTest, ScriptFile) {
   };
   // The callback mechanism depends on a global ActionFlow
   ActionFlow& flow = ActionFlow::Singleton();
+  flow.Clear();
   flow.ScheduleActions(std::move(actions), session.get(), console.get(), callback);
   loop().Run();
 
