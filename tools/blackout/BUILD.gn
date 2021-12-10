@@ -5,17 +5,18 @@
 group("all") {
   testonly = true
   public_deps = [
-    "//tools/blackout/blobfs-fsck-soft",
-    "//tools/blackout/minfs-fsck",
+    "blobfs-checkerboard",
+    "blobfs-fsck-soft",
+    "minfs-fsck",
   ]
 }
 
 group("tests") {
   testonly = true
   public_deps = [
+    "blackout-host:tests",
+    "blackout-target:tests",
     "blobfs-fsck-soft:tests",
-    "//tools/blackout/blackout-host:tests",
-    "//tools/blackout/blackout-target:tests",
   ]
 }
 

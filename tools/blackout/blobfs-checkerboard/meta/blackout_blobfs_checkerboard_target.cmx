@@ -1,0 +1,17 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/blackout_blobfs_checkerboard_target_bin"
+    },
+    "sandbox": {
+        "dev": [
+            "class/block"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
