@@ -294,6 +294,10 @@ class ::fidl::Response<::fidl_test_error::Example::Foo> final
   const ::fidl_test_error::ExampleFooTopResponse* operator->() const {
     return &payload_;
   }
+  ::fidl_test_error::ExampleFooTopResponse& operator*() { return payload_; }
+  const ::fidl_test_error::ExampleFooTopResponse& operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_error::ExampleFooTopResponse payload_;

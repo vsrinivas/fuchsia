@@ -4481,6 +4481,14 @@ class ::fidl::Response<
   operator->() const {
     return &payload_;
   }
+  ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse&
+  operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse&
+  operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse payload_;
@@ -4551,6 +4559,16 @@ class ::fidl::Response<
       operator->() const {
     return &payload_;
   }
+  ::fidl_test_protocols::
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
+      operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::
+      WithAndWithoutRequestResponseNoRequestWithResponseTopResponse&
+      operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_protocols::
@@ -4619,6 +4637,16 @@ class ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
       operator->() const {
     return &payload_;
   }
+  ::fidl_test_protocols::
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&
+      operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::
+      WithAndWithoutRequestResponseWithRequestWithResponseTopResponse&
+      operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_protocols::
@@ -4658,6 +4686,13 @@ class ::fidl::Response<::fidl_test_protocols::Transitional::Request> final
   const ::fidl_test_protocols::TransitionalRequestTopResponse* operator->()
       const {
     return &payload_;
+  }
+  ::fidl_test_protocols::TransitionalRequestTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::TransitionalRequestTopResponse& operator*()
+      const {
+    return payload_;
   }
 
  private:
@@ -4702,6 +4737,13 @@ class ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
   operator->() const {
     return &payload_;
   }
+  ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse&
+  operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse payload_;
@@ -4736,6 +4778,13 @@ class ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
   const ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse*
   operator->() const {
     return &payload_;
+  }
+  ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse&
+  operator*() const {
+    return payload_;
   }
 
  private:
@@ -4776,6 +4825,14 @@ class ::fidl::Response<
   const ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse*
   operator->() const {
     return &payload_;
+  }
+  ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse&
+  operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse&
+  operator*() const {
+    return payload_;
   }
 
  private:
@@ -4822,6 +4879,14 @@ class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
   operator->() const {
     return &payload_;
   }
+  ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse&
+  operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse&
+  operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse payload_;
@@ -4858,6 +4923,14 @@ class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
   operator->() const {
     return &payload_;
   }
+  ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse&
+  operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse&
+  operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse payload_;
@@ -4891,6 +4964,13 @@ class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
   const ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse*
   operator->() const {
     return &payload_;
+  }
+  ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse&
+  operator*() const {
+    return payload_;
   }
 
  private:
@@ -4928,6 +5008,13 @@ class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::HandleInResult>
   const ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse*
   operator->() const {
     return &payload_;
+  }
+  ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse&
+  operator*() const {
+    return payload_;
   }
 
  private:
@@ -4970,6 +5057,13 @@ class ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MethodB> final
   const ::fidl_test_protocols::ChannelProtocolMethodBTopResponse* operator->()
       const {
     return &payload_;
+  }
+  ::fidl_test_protocols::ChannelProtocolMethodBTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::ChannelProtocolMethodBTopResponse& operator*()
+      const {
+    return payload_;
   }
 
  private:
@@ -5028,6 +5122,13 @@ class ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MutateSocket>
   const ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse*
   operator->() const {
     return &payload_;
+  }
+  ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse&
+  operator*() const {
+    return payload_;
   }
 
  private:

@@ -34,6 +34,8 @@ class {{ .NaturalResponse }} final : public {{ .ResponseMessageBase }} {
   {{- if .HasResponsePayload }}
   {{ .ResponsePayload }}* operator->() { return &payload_; }
   const {{ .ResponsePayload }}* operator->() const { return &payload_; }
+  {{ .ResponsePayload }}& operator*() { return payload_; }
+  const {{ .ResponsePayload }}& operator*() const { return payload_; }
   {{- end }}
 
  private:

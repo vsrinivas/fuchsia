@@ -498,6 +498,13 @@ class ::fidl::Response<::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
   operator->() const {
     return &payload_;
   }
+  ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse&
+  operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse payload_;

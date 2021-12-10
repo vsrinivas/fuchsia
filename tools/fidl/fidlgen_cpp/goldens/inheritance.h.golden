@@ -206,6 +206,10 @@ class ::fidl::Response<::fidl_test_inheritance::Super::Foo> final
   const ::fidl_test_inheritance::SuperFooTopResponse* operator->() const {
     return &payload_;
   }
+  ::fidl_test_inheritance::SuperFooTopResponse& operator*() { return payload_; }
+  const ::fidl_test_inheritance::SuperFooTopResponse& operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_inheritance::SuperFooTopResponse payload_;
@@ -241,6 +245,10 @@ class ::fidl::Response<::fidl_test_inheritance::Sub::Foo> final
   }
   const ::fidl_test_inheritance::SuperFooTopResponse* operator->() const {
     return &payload_;
+  }
+  ::fidl_test_inheritance::SuperFooTopResponse& operator*() { return payload_; }
+  const ::fidl_test_inheritance::SuperFooTopResponse& operator*() const {
+    return payload_;
   }
 
  private:

@@ -481,6 +481,16 @@ class ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
       operator->() const {
     return &payload_;
   }
+  ::fidl_test_requestflexibleenvelope::
+      ProtocolRequestStrictResponseFlexibleTopResponse&
+      operator*() {
+    return payload_;
+  }
+  const ::fidl_test_requestflexibleenvelope::
+      ProtocolRequestStrictResponseFlexibleTopResponse&
+      operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_requestflexibleenvelope::
@@ -522,6 +532,16 @@ class ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
       ProtocolRequestFlexibleResponseStrictTopResponse*
       operator->() const {
     return &payload_;
+  }
+  ::fidl_test_requestflexibleenvelope::
+      ProtocolRequestFlexibleResponseStrictTopResponse&
+      operator*() {
+    return payload_;
+  }
+  const ::fidl_test_requestflexibleenvelope::
+      ProtocolRequestFlexibleResponseStrictTopResponse&
+      operator*() const {
+    return payload_;
   }
 
  private:

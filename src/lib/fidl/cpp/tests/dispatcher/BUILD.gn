@@ -8,7 +8,10 @@ import("//build/test.gni")
 
 group("dispatcher") {
   testonly = true
-  deps = [ ":fidl_cpp_dispatcher_tests" ]
+  deps = [
+    ":fidl_cpp_dispatcher_tests",
+    ":fidl_cpp_messaging_public_api_tests",
+  ]
 }
 
 test("fidl_cpp_dispatcher_tests_bin") {
@@ -34,4 +37,21 @@ test("fidl_cpp_dispatcher_tests_bin") {
 
 fuchsia_unittest_package("fidl_cpp_dispatcher_tests") {
   deps = [ ":fidl_cpp_dispatcher_tests_bin" ]
+}
+
+# Tests the public API of the unified messaging layer, along with any generated
+# bindings code.
+test("fidl_cpp_messaging_public_api_tests_bin") {
+  output_name = "fidl_cpp_messaging_public_api_tests"
+  sources = [ "request_response_wrapper_test.cc" ]
+  deps = [
+    "//sdk/lib/stdcompat",
+    "//src/lib/fidl/cpp",
+    "//src/lib/fidl/llcpp/tests/wire_types:fidl.llcpp.types.test_cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("fidl_cpp_messaging_public_api_tests") {
+  deps = [ ":fidl_cpp_messaging_public_api_tests_bin" ]
 }

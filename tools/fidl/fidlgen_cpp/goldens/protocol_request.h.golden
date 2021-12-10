@@ -474,6 +474,13 @@ class ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild> final
       const {
     return &payload_;
   }
+  ::fidl_test_protocolrequest::ParentGetChildTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocolrequest::ParentGetChildTopResponse& operator*()
+      const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_protocolrequest::ParentGetChildTopResponse payload_;
@@ -509,6 +516,13 @@ class ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChildRequest>
   const ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse*
   operator->() const {
     return &payload_;
+  }
+  ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse&
+  operator*() const {
+    return payload_;
   }
 
  private:

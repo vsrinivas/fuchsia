@@ -859,6 +859,16 @@ class ::fidl::Response<::fidl_test_union::TestProtocol::
       operator->() const {
     return &payload_;
   }
+  ::fidl_test_union::
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+      operator*() {
+    return payload_;
+  }
+  const ::fidl_test_union::
+      TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse&
+      operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_union::
@@ -903,6 +913,16 @@ class ::fidl::Response<::fidl_test_union::TestProtocol::
       TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse*
       operator->() const {
     return &payload_;
+  }
+  ::fidl_test_union::
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+      operator*() {
+    return payload_;
+  }
+  const ::fidl_test_union::
+      TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse&
+      operator*() const {
+    return payload_;
   }
 
  private:

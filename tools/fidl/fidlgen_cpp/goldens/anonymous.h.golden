@@ -573,6 +573,13 @@ class ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod> final
       const {
     return &payload_;
   }
+  ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse& operator*()
+      const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse payload_;

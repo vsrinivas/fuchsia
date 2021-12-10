@@ -363,6 +363,16 @@ class ::fidl::Response<
       operator->() const {
     return &payload_;
   }
+  ::fidl_test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&
+      operator*() {
+    return payload_;
+  }
+  const ::fidl_test_errorsyntax_parent::
+      ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse&
+      operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_errorsyntax_parent::
@@ -402,6 +412,15 @@ class ::fidl::Response<
       ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse*
       operator->() const {
     return &payload_;
+  }
+  ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
+  operator*() {
+    return payload_;
+  }
+  const ::fidl_test_errorsyntax::
+      ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse&
+      operator*() const {
+    return payload_;
   }
 
  private:

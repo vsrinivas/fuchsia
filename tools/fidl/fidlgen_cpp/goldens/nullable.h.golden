@@ -991,6 +991,12 @@ class ::fidl::Response<::fidl_test_nullable::SimpleProtocol::Add> final
   const ::fidl_test_nullable::SimpleProtocolAddTopResponse* operator->() const {
     return &payload_;
   }
+  ::fidl_test_nullable::SimpleProtocolAddTopResponse& operator*() {
+    return payload_;
+  }
+  const ::fidl_test_nullable::SimpleProtocolAddTopResponse& operator*() const {
+    return payload_;
+  }
 
  private:
   ::fidl_test_nullable::SimpleProtocolAddTopResponse payload_;
