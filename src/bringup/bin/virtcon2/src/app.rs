@@ -172,6 +172,9 @@ impl AppAssistant for VirtualConsoleAppAssistant {
     }
 
     fn create_view_assistant(&mut self, view_key: ViewKey) -> Result<ViewAssistantPtr, Error> {
+        // The first view created will take the role as primary output.
+        let is_primary = self.view_key == 0;
+
         let view_assistant = VirtualConsoleViewAssistant::new(
             &self.app_context,
             view_key,
@@ -180,11 +183,12 @@ impl AppAssistant for VirtualConsoleAppAssistant {
             self.args.font_size,
             self.args.dpi.iter().cloned().collect(),
             self.args.boot_animation,
+            is_primary,
         )?;
 
         // Early out if terminals are already associated with a view.
         // TODO(reveman): Improve this when we have multi-display support.
-        if self.view_key != 0 {
+        if !is_primary {
             return Ok(view_assistant);
         }
 
@@ -224,6 +228,7 @@ impl AppAssistant for VirtualConsoleAppAssistant {
     }
 
     fn filter_config(&mut self, config: &mut Config) {
+        config.view_mode = carnelian::app::ViewMode::Direct;
         config.virtcon_mode = Some(VirtconMode::Forced);
         config.keyboard_autorepeat = self.args.keyrepeat;
         config.display_rotation = self.args.display_rotation;

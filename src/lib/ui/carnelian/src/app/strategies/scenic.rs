@@ -4,7 +4,6 @@
 
 use crate::{
     app::{strategies::base::AppStrategy, InternalSender, MessageInternal},
-    geometry::IntSize,
     view::{
         strategies::{
             base::{FlatlandParams, ScenicParams, ViewStrategyParams, ViewStrategyPtr},
@@ -221,27 +220,7 @@ impl AppStrategy for ScenicAppStrategy {
         return Some(&self.scenic);
     }
 
-    fn get_frame_buffer_size(&self) -> Option<IntSize> {
-        None
-    }
-
-    fn get_pixel_size(&self) -> u32 {
-        4
-    }
-
-    fn get_pixel_format(&self) -> fuchsia_framebuffer::PixelFormat {
-        fuchsia_framebuffer::PixelFormat::Argb8888
-    }
-
-    fn get_linear_stride_bytes(&self) -> u32 {
-        0
-    }
-
-    async fn post_setup(
-        &mut self,
-        _: fuchsia_framebuffer::PixelFormat,
-        _internal_sender: &InternalSender,
-    ) -> Result<(), Error> {
+    async fn post_setup(&mut self, _internal_sender: &InternalSender) -> Result<(), Error> {
         Ok(())
     }
 }

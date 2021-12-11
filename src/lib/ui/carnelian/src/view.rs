@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    app::{FrameBufferPtr, MessageInternal},
+    app::MessageInternal,
     geometry::{IntPoint, Size},
     input::{self},
     message::Message,
@@ -14,10 +14,29 @@ use anyhow::Error;
 use euclid::size2;
 use fuchsia_framebuffer::ImageId;
 use fuchsia_scenic::View;
-use fuchsia_zircon::{Duration, Event, Time};
+use fuchsia_zircon::{Event, Time};
 use futures::channel::mpsc::UnboundedSender;
 
 pub(crate) mod strategies;
+
+#[derive(Debug, Clone)]
+pub struct DisplayInfo {
+    pub id: u64,
+    pub horizontal_size_mm: u32,
+    pub vertical_size_mm: u32,
+    pub using_fallback_size: bool,
+}
+
+impl From<&fidl_fuchsia_hardware_display::Info> for DisplayInfo {
+    fn from(info: &fidl_fuchsia_hardware_display::Info) -> Self {
+        Self {
+            id: info.id,
+            horizontal_size_mm: info.horizontal_size_mm,
+            vertical_size_mm: info.vertical_size_mm,
+            using_fallback_size: info.using_fallback_size,
+        }
+    }
+}
 
 /// parameter struct passed to setup and update trait methods.
 pub struct ViewAssistantContext {
@@ -44,9 +63,8 @@ pub struct ViewAssistantContext {
     /// `image_id`.
     pub image_index: u32,
 
-    /// Frame buffer
-    pub frame_buffer: Option<FrameBufferPtr>,
     pub mouse_cursor_position: Option<IntPoint>,
+    pub display_info: Option<DisplayInfo>,
 
     messages: Vec<Message>,
     app_sender: UnboundedSender<MessageInternal>,
@@ -332,7 +350,7 @@ pub trait ViewAssistant {
         true
     }
 
-    /// This method is called when running on the framebuffer and the ownership
+    /// This method is called when running directly on the display and the ownership
     /// of the display changes.
     fn ownership_changed(&mut self, _owned: bool) -> Result<(), Error> {
         Ok(())
@@ -351,6 +369,9 @@ pub type ViewAssistantPtr = Box<dyn ViewAssistant>;
 
 /// Key identifying a view.
 pub type ViewKey = u64;
+
+/// Magic value for the first key
+pub(crate) const USE_FIRST_VIEW: ViewKey = 0;
 
 #[derive(Debug)]
 pub(crate) struct ViewDetails {
@@ -540,18 +561,21 @@ impl ViewController {
         self.strategy.image_freed(image_id, collection_id);
     }
 
-    pub fn handle_vsync_parameters_changed(&mut self, phase: Time, interval: Duration) {
-        self.strategy.handle_vsync_parameters_changed(phase, interval);
-    }
-
-    pub fn handle_vsync_cookie(&mut self, cookie: u64) {
-        self.strategy.handle_vsync_cookie(cookie);
-    }
-
     pub fn handle_on_next_frame_begin(
         &mut self,
         info: &fidl_fuchsia_ui_composition::OnNextFrameBeginValues,
     ) {
         self.strategy.handle_on_next_frame_begin(info);
+    }
+
+    pub async fn handle_display_controller_event(
+        &mut self,
+        event: fidl_fuchsia_hardware_display::ControllerEvent,
+    ) {
+        self.strategy.handle_display_controller_event(event).await;
+    }
+
+    pub fn close(&mut self) {
+        self.strategy.close();
     }
 }
