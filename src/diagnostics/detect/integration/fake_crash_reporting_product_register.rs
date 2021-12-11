@@ -20,17 +20,10 @@ const REGISTER_PRODUCT_NAME: &str = "FuchsiaDetect";
 /// FakeCrashReportingProductRegister can be injected to capture Detect's program-name registration.
 pub struct FakeCrashReportingProductRegister {
     done_signaler: DoneSignaler,
-    // Since upsert() is a oneway call, the program will keep running after it's sent. So if it's
-    // sent to the TestEventSender stream, it will appear in an unpredictable place - or if the
-    // program bails, it may not appear at all even if it happened.
-    //
-    // The best information we can get is: Did it happen never, once, or more than once? If it
-    // happened, did it happen correctly each time?
-    //
-    // The program under test should call upsert at most once, with predictable inputs. So the
-    // correctness can be tracked with an AtomicUsize which will have the following values:
-    // 0: No call to upsert().
-    // 1: A single correct call to upsert().
+    // The program under test should call upsert_with_ack() exactly once, with predictable inputs.
+    // So the correctness can be tracked with an AtomicUsize which will have the following values:
+    // 0: No call to upsert_with_ack().
+    // 1: A single correct call to upsert_with_ack().
     // >1: Error: Multiple calls, and/or incorrect call.
     ok_tracker: AtomicUsize,
 }
@@ -86,20 +79,9 @@ impl FakeCrashReportingProductRegister {
     ) -> Result<(), Error> {
         loop {
             match request_stream.next().await {
-                Some(Ok(fcrash::CrashReportingProductRegisterRequest::Upsert {
-                    component_url,
-                    product,
-                    ..
-                })) => match evaluate_registration(component_url, &product) {
-                    Ok(()) => {
-                        self.record_correct_registration();
-                    }
-                    Err(problem) => {
-                        error!("Problem in report: {}", problem);
-                        self.record_bad_registration();
-                        self.done_signaler.signal_done().await;
-                    }
-                },
+                Some(Ok(fcrash::CrashReportingProductRegisterRequest::Upsert { .. })) => {
+                    error!("We shouldn't be calling upsert")
+                }
                 Some(Ok(fcrash::CrashReportingProductRegisterRequest::UpsertWithAck {
                     component_url,
                     product,

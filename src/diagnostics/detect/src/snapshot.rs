@@ -16,7 +16,7 @@ const CRASH_PRODUCT_NAME: &'static str = "FuchsiaDetect";
 //   only have to send the program name and not the product name with each
 //   crash report request.
 //   This association is registered via a call to
-//   CrashReportingProductRegister.upsert().
+//   CrashReportingProductRegister.upsert_with_ack().
 const CRASH_PROGRAM_NAME: &str = "triage_detect";
 
 #[derive(Debug)]
@@ -112,7 +112,7 @@ impl CrashReportHandlerBuilder {
         self
     }
 
-    pub fn build(self) -> Result<Rc<CrashReportHandler>, Error> {
+    pub async fn build(self) -> Result<Rc<CrashReportHandler>, Error> {
         // Proxy is only pre-set for tests. If a proxy was not specified,
         // this is a good time to configure for our crash reporting product.
         if matches!(self.proxy, None) {
@@ -123,7 +123,7 @@ impl CrashReportHandlerBuilder {
                 name: Some(CRASH_PRODUCT_NAME.to_string()),
                 ..fidl_feedback::CrashReportingProduct::EMPTY
             };
-            config_proxy.upsert(&CRASH_PROGRAM_NAME.to_string(), product_config)?;
+            config_proxy.upsert_with_ack(&CRASH_PROGRAM_NAME.to_string(), product_config).await?;
         }
         // Connect to the CrashReporter service if a proxy wasn't specified
         let proxy = if self.proxy.is_some() {
@@ -224,7 +224,7 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fidl_feedback::CrashReporterMarker>()
                 .unwrap();
         let crash_report_handler =
-            CrashReportHandlerBuilder::new().with_proxy(proxy).build().unwrap();
+            CrashReportHandlerBuilder::new().with_proxy(proxy).build().await.unwrap();
 
         // File a crash report
         crash_report_handler
@@ -251,9 +251,7 @@ mod tests {
 
     /// Tests that the number of pending crash reports is correctly bounded.
     #[fuchsia::test]
-    fn test_crash_report_pending_reports() {
-        let mut exec = fasync::TestExecutor::new().unwrap();
-
+    async fn test_crash_report_pending_reports() {
         // Set up the proxy/stream and node outside of the large future used below. This way we can
         // still poll the stream after the future completes.
         let (proxy, mut stream) =
@@ -263,78 +261,69 @@ mod tests {
             .with_proxy(proxy)
             .with_max_pending_crash_reports(1)
             .build()
+            .await
             .unwrap();
 
-        // Run most of the test logic inside a top level future for better ergonomics
-        exec.run_singlethreaded(async {
-            // Set up the CrashReportHandler node. The request stream is never serviced, so when the
-            // node makes the FIDL call to file the crash report, the call will block indefinitely.
-            // This lets us test the pending crash report counts.
+        // Set up the CrashReportHandler node. The request stream is never serviced, so when the
+        // node makes the FIDL call to file the crash report, the call will block indefinitely.
+        // This lets us test the pending crash report counts.
 
-            // The first FileCrashReport should succeed
-            assert_matches!(
-                crash_report_handler
-                    .request_snapshot(SnapshotRequest::new("TestCrash1".to_string())),
-                Ok(())
+        // The first FileCrashReport should succeed
+        assert_matches!(
+            crash_report_handler.request_snapshot(SnapshotRequest::new("TestCrash1".to_string())),
+            Ok(())
+        );
+
+        // The second FileCrashReport should also succeed because since the first is now in
+        // progress, this is now the first "pending" report request
+        assert_matches!(
+            crash_report_handler.request_snapshot(SnapshotRequest::new("TestCrash2".to_string())),
+            Ok(())
+        );
+
+        // Since the first request has not completed, and there is already one pending request,
+        // this request should fail
+        assert_matches!(
+            crash_report_handler.request_snapshot(SnapshotRequest::new("TestCrash3".to_string())),
+            Err(_)
+        );
+
+        // Verify the signature of the first crash report
+        if let Ok(Some(fidl_feedback::CrashReporterRequest::File { responder, report })) =
+            stream.try_next().await
+        {
+            // Send a reply to allow the node to process the next crash report
+            let _ = responder.send(&mut Ok(()));
+            assert_eq!(
+                report,
+                fidl_feedback::CrashReport {
+                    program_name: Some(CRASH_PROGRAM_NAME.to_string()),
+                    crash_signature: Some("TestCrash1".to_string()),
+                    is_fatal: Some(false),
+                    ..fidl_feedback::CrashReport::EMPTY
+                }
             );
+        } else {
+            panic!("Did not receive a crash report");
+        }
 
-            // The second FileCrashReport should also succeed because since the first is now in
-            // progress, this is now the first "pending" report request
-            assert_matches!(
-                crash_report_handler
-                    .request_snapshot(SnapshotRequest::new("TestCrash2".to_string())),
-                Ok(())
+        // Verify the signature of the second crash report
+        if let Ok(Some(fidl_feedback::CrashReporterRequest::File { responder, report })) =
+            stream.try_next().await
+        {
+            // Send a reply to allow the node to process the next crash report
+            let _ = responder.send(&mut Ok(()));
+            assert_eq!(
+                report,
+                fidl_feedback::CrashReport {
+                    program_name: Some(CRASH_PROGRAM_NAME.to_string()),
+                    crash_signature: Some("TestCrash2".to_string()),
+                    is_fatal: Some(false),
+                    ..fidl_feedback::CrashReport::EMPTY
+                }
             );
-
-            // Since the first request has not completed, and there is already one pending request,
-            // this request should fail
-            assert_matches!(
-                crash_report_handler
-                    .request_snapshot(SnapshotRequest::new("TestCrash3".to_string())),
-                Err(_)
-            );
-
-            // Verify the signature of the first crash report
-            if let Ok(Some(fidl_feedback::CrashReporterRequest::File { responder, report })) =
-                stream.try_next().await
-            {
-                // Send a reply to allow the node to process the next crash report
-                let _ = responder.send(&mut Ok(()));
-                assert_eq!(
-                    report,
-                    fidl_feedback::CrashReport {
-                        program_name: Some(CRASH_PROGRAM_NAME.to_string()),
-                        crash_signature: Some("TestCrash1".to_string()),
-                        is_fatal: Some(false),
-                        ..fidl_feedback::CrashReport::EMPTY
-                    }
-                );
-            } else {
-                panic!("Did not receive a crash report");
-            }
-
-            // Verify the signature of the second crash report
-            if let Ok(Some(fidl_feedback::CrashReporterRequest::File { responder, report })) =
-                stream.try_next().await
-            {
-                // Send a reply to allow the node to process the next crash report
-                let _ = responder.send(&mut Ok(()));
-                assert_eq!(
-                    report,
-                    fidl_feedback::CrashReport {
-                        program_name: Some(CRASH_PROGRAM_NAME.to_string()),
-                        crash_signature: Some("TestCrash2".to_string()),
-                        is_fatal: Some(false),
-                        ..fidl_feedback::CrashReport::EMPTY
-                    }
-                );
-            } else {
-                panic!("Did not receive a crash report");
-            }
-        });
-
-        // Verify there are no more crash reports. Use `run_until_stalled` because `next` is
-        // expected to block until a new crash report is ready, which shouldn't happen here.
-        assert!(exec.run_until_stalled(&mut stream.next()).is_pending());
+        } else {
+            panic!("Did not receive a crash report");
+        }
     }
 }

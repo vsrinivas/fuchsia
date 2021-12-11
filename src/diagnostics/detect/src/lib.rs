@@ -250,17 +250,10 @@ pub async fn main(args: CommandLine) -> Result<(), Error> {
 
     let selectors = triage_engine.selectors();
     let mut diagnostic_source = diagnostics::DiagnosticFetcher::create(selectors)?;
-    let snapshot_service = snapshot::CrashReportHandlerBuilder::new().build()?;
+    let snapshot_service = snapshot::CrashReportHandlerBuilder::new().build().await?;
     let system_time = MonotonicTime::new();
     let mut delay_tracker = DelayTracker::new(&system_time, &mode);
 
-    // Wait 30 seconds before starting to file reports. This gives Feedback enough time to handle
-    // our upsert registration.
-    // TODO(fxbug.dev/67806): Remove this once Upsert returns when the operation is complete.
-    inspect::component::health().set_starting_up();
-    if mode == Mode::Production {
-        fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(30).into())).await;
-    }
     inspect::component::health().set_ok();
 
     // Start the first scan as soon as the program starts, via the "missed deadline" logic below.
