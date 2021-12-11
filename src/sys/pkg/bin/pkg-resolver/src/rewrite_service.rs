@@ -558,11 +558,11 @@ mod tests {
         service.serve_edit_transaction(request_stream).await;
 
         let rules = vec![
-            rule!("example.com" => "wrong_host.fuchsia.com", "/" => "/"),
+            rule!("example.com" => "wrong-host.fuchsia.com", "/" => "/"),
             rule!("fuchsia.com" => "correct.fuchsia.com", "/" => "/"),
-            rule!("fuchsia.com" => "wrong_priority.fuchsia.com", "/" => "/"),
-            rule!("fuchsia.com" => "wrong_match.fuchsia.com", "/foo/" => "/"),
-            rule!("fuchsia.com" => "wrong_replacement.fuchsia.com", "/" => "/bar/"),
+            rule!("fuchsia.com" => "wrong-priority.fuchsia.com", "/" => "/"),
+            rule!("fuchsia.com" => "wrong-match.fuchsia.com", "/foo/" => "/"),
+            rule!("fuchsia.com" => "wrong-replacement.fuchsia.com", "/" => "/bar/"),
         ];
         for rule in rules.into_iter().rev() {
             assert_yields_result!(client.add(&mut rule.into()), Ok(()));

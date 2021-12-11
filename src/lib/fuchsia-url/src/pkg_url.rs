@@ -217,6 +217,7 @@ impl RepoUrl {
         }
 
         Host::parse(&host)?;
+        validate_host(&host)?;
 
         Ok(RepoUrl { host })
     }
@@ -309,8 +310,19 @@ fn parse_helper(input: &str) -> Result<(Url, RepoUrl), ParseError> {
     if host.is_empty() {
         return Err(ParseError::EmptyHost);
     }
+    validate_host(&host)?;
 
     Ok((url, RepoUrl { host }))
+}
+
+// Returns an error if the provided hostname does not comply to the package URL spec:
+// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#repository
+// Contains only lowercase ascii letters, digits, a hyphen or the dot delimiter.
+fn validate_host(host: &str) -> Result<(), ParseError> {
+    if !host.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '.') {
+        return Err(ParseError::InvalidHost);
+    }
+    Ok(())
 }
 
 // Returns a valid name and an optional variant on success.
@@ -939,6 +951,26 @@ mod tests {
         ];
         for url in urls {
             assert_eq!(RepoUrl::parse(url), Err(ParseError::InvalidRepository));
+        }
+    }
+
+    #[test]
+    fn test_repo_url_compliance() {
+        let valid_hosts =
+            &["fuchsia.com", "fuchsia-1.com", "riscv.fuchsia.com", "rv64.fuchsia.com"];
+        let invalid_hosts = &[
+            "FuChSiA.CoM",
+            "FUCHSIA_1.com",
+            "FUCHSIA-1.COM",
+            "fuchsia-①.com",
+            "RISCV.fuchsia.com",
+            "RV64.fuchsia.com",
+        ];
+        for host in valid_hosts {
+            assert!(RepoUrl::new(host.to_string()).is_ok());
+        }
+        for host in invalid_hosts {
+            assert_eq!(RepoUrl::new(host.to_string()), Err(ParseError::InvalidHost));
         }
     }
 

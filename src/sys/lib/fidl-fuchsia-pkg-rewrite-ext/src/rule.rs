@@ -388,6 +388,16 @@ mod rule_tests {
             path = "/" => "/",
             error = RuleParseError::InvalidHost,
         }
+        test_err_invalid_host_match_uppercase => {
+            host = "EXAMPLE.ORG" => "example.com",
+            path = "/" => "/",
+            error = RuleParseError::InvalidHost,
+        }
+        test_err_invalid_host_replacement_uppercase => {
+            host = "example.org" => "EXAMPLE.COM",
+            path = "/" => "/",
+            error = RuleParseError::InvalidHost,
+        }
         test_err_empty_path => {
             host = "fuchsia.com" => "fuchsia.com",
             path = "" => "rolldice",

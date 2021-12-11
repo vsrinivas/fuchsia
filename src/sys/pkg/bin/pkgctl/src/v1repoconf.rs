@@ -128,11 +128,9 @@ fn sanitize_id<'a>(id: &'a str) -> Cow<'a, str> {
 }
 
 pub fn validate_host(host: &str) -> Result<(), anyhow::Error> {
-    // Allow only [a-z0-9-] groups delimited by dots, according to the spec:
+    // Allow only [a-z0-9-.] groups delimited by dots, according to the spec:
     // https://fuchsia.dev/fuchsia-src/concepts/packages/package_url
-    if !host.chars().all(|c| {
-        (c.is_ascii_alphabetic() && c.is_lowercase()) || c.is_numeric() || c == '-' || c == '.'
-    }) {
+    if !host.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '.') {
         bail!("repo hostname {} contains invalid characters, only [a-z0-9-.] are allowed.", host);
     }
     Ok(())
@@ -171,6 +169,7 @@ mod tests {
             "FuChSiA.CoM",
             "FUCHSIA_1.com",
             "FUCHSIA_1.COM",
+            "fuchsia-①.com",
             "RISCV.fuchsia.com",
             "RV64.fuchsia.com",
         ];
