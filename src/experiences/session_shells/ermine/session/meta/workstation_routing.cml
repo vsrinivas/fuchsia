@@ -46,6 +46,9 @@
                 // Scene manager reads the keyboard configuration on behalf
                 // of the input pipeline library.
                 "fuchsia.settings.Keyboard",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
@@ -119,8 +122,11 @@
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "parent",
