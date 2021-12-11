@@ -33,6 +33,23 @@ type RecordingError = strict enum {
     NO_SUCH_TRACE_FILE = 5;
 };
 
+/// An action to be preformed on this trace. Used as part of a Trigger.
+type Action = strict enum {
+    /// Terminates the active trace.
+    TERMINATE = 1;
+};
+
+/// A trigger is an action that is done when a certain alert has been raised in the
+/// fuchsia tracing system.
+type Trigger = table {
+    /// The name of the alert being watched.
+    /// See fuchsia.tracing.controller.Controller.WatchAlert for more info.
+    1: alert string:fuchsia.tracing.controller.MAX_ALERT_NAME_LENGTH;
+
+    /// The action to run when this alert has been witnessed.
+    2: action Action;
+};
+
 /// Covers how a trace will be run when invoking `StartRecording`.
 type TraceOptions = table {
     /// Determines how long a trace recording will run before terminating in
@@ -43,6 +60,9 @@ type TraceOptions = table {
     /// using `StopRecording`. Or by cleanly shutting down the daemon via
     /// `ffx daemon stop` or by using the Deamon proxy itself.
     1: duration float64;
+
+    /// The triggers to run against this trace.
+    2: triggers vector<Trigger>:MAX;
 };
 
 @discoverable
@@ -95,6 +115,9 @@ type TraceInfo = table {
 
     /// The original config sent to the `StartRecording` command.
     5: config fuchsia.tracing.controller.TraceConfig;
+
+    /// A list of triggers active for this trace. See [Trigger] for more info.
+    6: triggers vector<Trigger>:MAX;
 };
 
 protocol TracingStatusIterator {

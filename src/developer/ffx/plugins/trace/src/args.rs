@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command, fidl_fuchsia_tracing_controller::BufferingMode};
+use {
+    argh::FromArgs,
+    ffx_core::ffx_command,
+    fidl_fuchsia_developer_bridge::{Action, Trigger},
+    fidl_fuchsia_tracing_controller::BufferingMode,
+};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -118,6 +123,40 @@ pub struct Start {
     /// which means the trace will run in "interactive" mode.
     #[argh(switch)]
     pub background: bool,
+
+    /// a trigger consists of an alert leading to an action. An alert
+    /// is written into the code being traced, and an action here is
+    /// what to do when the alert has happened. The list of supported
+    /// actions are: 'terminate'.
+    ///
+    /// The expected format is "<alert>:<action>" ex:
+    ///   -trigger "my_alert:terminate"
+    ///
+    /// This can be used with a duration, but keep in mind that this
+    /// introduces a race between whether the alert leads to an
+    /// action, and when the trace stops from the duration being
+    /// reached.
+    ///
+    /// Triggers can only be used in the background outside of
+    /// interactive mode.
+    #[argh(option, from_str_fn(trigger_from_str))]
+    pub trigger: Vec<Trigger>,
+}
+
+fn try_string_to_action(s: &str) -> Result<Action, String> {
+    match s {
+        "terminate" => Ok(Action::Terminate),
+        e => Err(format!("unsupported action: \"{}\"", e)),
+    }
+}
+
+fn trigger_from_str(val: &str) -> Result<Trigger, String> {
+    let (alert, action) = val
+        .split_once(":")
+        .ok_or("triggers must be delimited by ':'. Example: '-trigger \"my_alert:terminate\"")?;
+    let action = Some(try_string_to_action(action)?);
+    let alert = Some(alert.to_owned());
+    Ok(Trigger { alert, action, ..Trigger::EMPTY })
 }
 
 fn buffering_mode_from_str(val: &str) -> Result<BufferingMode, String> {
@@ -191,5 +230,27 @@ mod tests {
     #[test]
     fn test_unsupported_buffering_mode_from_str() {
         assert!(buffering_mode_from_str("roundrobin").is_err());
+    }
+
+    #[test]
+    fn test_trigger_from_str_no_colon() {
+        assert!(trigger_from_str("foobar").is_err());
+    }
+
+    #[test]
+    fn test_trigger_from_str_invalid_action() {
+        assert!(trigger_from_str("foobar:storp").is_err());
+    }
+
+    #[test]
+    fn test_trigger_from_str_valid() {
+        assert_eq!(
+            trigger_from_str("foobar:terminate").unwrap(),
+            Trigger {
+                alert: Some("foobar".to_owned()),
+                action: Some(Action::Terminate),
+                ..Trigger::EMPTY
+            },
+        );
     }
 }
