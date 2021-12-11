@@ -45,6 +45,13 @@ test("netstack_bsdsocket_c_api_test") {
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/fbl",
   ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
+      "//src/lib/testing/predicates",
+    ]
+  }
 }
 
 test("netstack_if_nameindex_test") {

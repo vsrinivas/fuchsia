@@ -31,7 +31,32 @@
 
 #include "util.h"
 
+#if defined(__Fuchsia__)
+#include <fidl/fuchsia.posix.socket/cpp/wire.h>
+#include <lib/fdio/fd.h>
+
+#include "src/lib/testing/predicates/status.h"
+#endif
+
 namespace {
+
+#if defined(__Fuchsia__)
+
+void ZxSocketInfo(int fd, zx_info_socket_t& out_info) {
+  fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
+  ASSERT_OK(fdio_fd_clone(fd, client_end.channel().reset_and_get_address()));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
+
+  auto response = client->Describe();
+  ASSERT_OK(response.status());
+  const fuchsia_io::wire::NodeInfo& node_info = response.Unwrap()->info;
+  ASSERT_EQ(node_info.which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+
+  ASSERT_OK(zx_object_get_info(node_info.stream_socket().socket.get(), ZX_INFO_SOCKET, &out_info,
+                               sizeof(zx_info_socket_t), nullptr, nullptr));
+}
+
+#endif
 
 template <typename T>
 void AssertBlocked(const std::future<T>& fut) {
@@ -73,6 +98,61 @@ void AssertExpectedReventsAfterPeerShutdown(int fd) {
   EXPECT_THAT(pfd.revents,
               testing::AnyOf(testing::Eq(POLLERR), testing::Eq(POLLERR | POLLHUP | POLLRDHUP),
                              testing::Eq(POLLERR | POLLHUP | POLLRDHUP | POLLIN)));
+#endif
+}
+
+void SocketType(int fd, uint32_t& sock_type) {
+  socklen_t socktype_optlen = sizeof(sock_type);
+  ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_TYPE, &sock_type, &socktype_optlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(socktype_optlen, sizeof(sock_type));
+}
+
+void TxCapacity(int fd, size_t& out_capacity) {
+  uint32_t sndbuf_opt;
+  socklen_t sndbuf_optlen = sizeof(sndbuf_opt);
+  ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf_opt, &sndbuf_optlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(sndbuf_optlen, sizeof(sndbuf_opt));
+
+  // SO_SNDBUF lies and reports double the real value.
+  out_capacity = sndbuf_opt >> 1;
+
+  uint32_t sock_type;
+  ASSERT_NO_FATAL_FAILURE(SocketType(fd, sock_type));
+
+#if defined(__Fuchsia__)
+  if (sock_type == SOCK_STREAM) {
+    // TODO(https://fxbug.dev/60337): We can avoid this additional space once zircon sockets are
+    // not artificially increasing the buffer sizes.
+    zx_info_socket_t zx_socket_info;
+    ASSERT_NO_FATAL_FAILURE(ZxSocketInfo(fd, zx_socket_info));
+    out_capacity += zx_socket_info.tx_buf_max;
+  }
+#endif
+}
+
+void RxCapacity(int fd, size_t& out_capacity) {
+  uint32_t rcvbuf_opt;
+  socklen_t rcvbuf_optlen = sizeof(rcvbuf_opt);
+  ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf_opt, &rcvbuf_optlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(rcvbuf_optlen, sizeof(rcvbuf_opt));
+
+  // SO_RCVBUF lies and reports double the real value.
+  out_capacity = rcvbuf_opt >> 1;
+
+  uint32_t sock_type;
+  ASSERT_NO_FATAL_FAILURE(SocketType(fd, sock_type));
+
+#if defined(__Fuchsia__)
+  if (sock_type == SOCK_STREAM) {
+    // TODO(https://fxbug.dev/60337): We can avoid this additional space once zircon sockets are
+    // not artificially increasing the buffer sizes.
+    zx_info_socket_t zx_socket_info;
+    ASSERT_NO_FATAL_FAILURE(ZxSocketInfo(fd, zx_socket_info));
+    out_capacity += zx_socket_info.rx_buf_max;
+  }
 #endif
 }
 
@@ -2315,26 +2395,12 @@ TEST_F(NetStreamSocketsTest, PartialWriteStress) {
   // Generate a payload large enough to fill the client->server buffers.
   std::string big_string;
   {
-    uint32_t sndbuf_opt;
-    socklen_t sndbuf_optlen = sizeof(sndbuf_opt);
-    EXPECT_EQ(getsockopt(client().get(), SOL_SOCKET, SO_SNDBUF, &sndbuf_opt, &sndbuf_optlen), 0)
-        << strerror(errno);
-    EXPECT_EQ(sndbuf_optlen, sizeof(sndbuf_opt));
+    size_t tx_capacity;
+    ASSERT_NO_FATAL_FAILURE(TxCapacity(client().get(), tx_capacity));
 
-    uint32_t rcvbuf_opt;
-    socklen_t rcvbuf_optlen = sizeof(rcvbuf_opt);
-    EXPECT_EQ(getsockopt(server().get(), SOL_SOCKET, SO_RCVBUF, &rcvbuf_opt, &rcvbuf_optlen), 0)
-        << strerror(errno);
-    EXPECT_EQ(rcvbuf_optlen, sizeof(rcvbuf_opt));
-
-    // SO_{SND,RCV}BUF lie and report double the real value.
-    size_t size = (sndbuf_opt + rcvbuf_opt) >> 1;
-#if defined(__Fuchsia__)
-    // TODO(https://fxbug.dev/60337): We can avoid this additional space once zircon sockets are not
-    // artificially increasing the buffer sizes.
-    size += 2 * (1 << 18);
-#endif
-
+    size_t rx_capacity;
+    ASSERT_NO_FATAL_FAILURE(RxCapacity(server().get(), rx_capacity));
+    const size_t size = tx_capacity + rx_capacity;
     big_string.reserve(size);
     while (big_string.size() < size) {
       big_string += "Though this upload be but little, it is fierce.";
