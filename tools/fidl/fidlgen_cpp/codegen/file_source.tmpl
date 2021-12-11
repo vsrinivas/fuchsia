@@ -33,6 +33,8 @@ do not support them in the bindings. */}}
 {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
 {{- range $transport, $_ := .Transports }}
 {{- if eq $transport "Channel" -}}
+  {{- template "ProtocolDetailsDefinition" $protocol }}
+{{ "" }}
   {{- template "ClientDefinition" $protocol }}
 {{ "" }}
   {{- /* TODO(fxbug.dev/60240): Add more */}}

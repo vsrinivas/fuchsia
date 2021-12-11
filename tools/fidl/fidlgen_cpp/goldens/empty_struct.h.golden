@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.emptystruct/cpp/wire.h>
 #include <fidl/test/emptystruct/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -34,6 +36,10 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
  private:
   friend ::fidl::internal::CodableBase<Empty>;
   Empty(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -77,6 +83,10 @@ class EmptyProtocolSendRequest final
  private:
   friend ::fidl::internal::CodableBase<EmptyProtocolSendRequest>;
   EmptyProtocolSendRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -124,6 +134,10 @@ class EmptyProtocolSendAndReceiveTopResponse final
  private:
   friend ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveTopResponse>;
   EmptyProtocolSendAndReceiveTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -173,6 +187,10 @@ class EmptyProtocolSendAndReceiveRequest final
  private:
   friend ::fidl::internal::CodableBase<EmptyProtocolSendAndReceiveRequest>;
   EmptyProtocolSendAndReceiveRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -222,6 +240,10 @@ class EmptyProtocolReceiveRequest final
  private:
   friend ::fidl::internal::CodableBase<EmptyProtocolReceiveRequest>;
   EmptyProtocolReceiveRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -518,6 +540,43 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload =
       ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveTopResponse;
+};
+namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_emptystruct::EmptyProtocol::
+                                          SendAndReceive>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_emptystruct::EmptyProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void SendAndReceive(
+      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest&& payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
+      const;
+
+  void SendAndReceive(
+      ::fidl_test_emptystruct::EmptyProtocolSendAndReceiveRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>&& _callback)
+      const;
+
+  ::fitx::result<::fidl::Error> Send(
+      ::fidl_test_emptystruct::EmptyProtocolSendRequest&& payload) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

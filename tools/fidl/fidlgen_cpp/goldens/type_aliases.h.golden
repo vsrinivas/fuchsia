@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.typealiases/cpp/wire.h>
 #include <fidl/test/typealiases/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <someotherlibrary/cpp/fidl_v2.h>
@@ -45,6 +47,10 @@ class ExampleOfUseOfAliases final
  private:
   friend ::fidl::internal::CodableBase<ExampleOfUseOfAliases>;
   ExampleOfUseOfAliases(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:

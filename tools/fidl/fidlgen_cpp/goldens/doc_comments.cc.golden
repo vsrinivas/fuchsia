@@ -16,6 +16,24 @@ void ::fidl_test_doccomments::Struct::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_doccomments {
+[[maybe_unused]] constexpr inline uint64_t kInterface_Method_Ordinal =
+    6649887292072346213lu;
+[[maybe_unused]] constexpr inline uint64_t kInterface_OnEvent_Ordinal =
+    3999525675942213370lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_doccomments
+::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
+    ::fidl_test_doccomments::Interface>::Method() const {
+  ::fidl::Encoder _encoder{::fidl_test_doccomments::kInterface_Method_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::doccomments::_internal::
+          fidl_test_doccomments_InterfaceMethodRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+  return ::fidl::internal::ToFitxResult(result);
+}
+namespace fidl_test_doccomments {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_doccomments

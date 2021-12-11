@@ -278,10 +278,27 @@ var commonTemplateFuncs = template.FuncMap{
 		return filtered
 	},
 
+	// Renders a list of parameters in a declaration, without extra decoration.
+	//
+	// Usage:
+	//   (RenderParams .Args "Foo local_var")
+	//
+	// Output:
+	//   Arg1 arg1, Foo local_var
+	//
 	"RenderParams": func(params ...interface{}) string {
 		return renderParams(param, params)
 	},
 
+	// Renders a list of parameters, but wraps every name in `std::move`.
+	// This is useful for method invocations.
+	//
+	// Usage:
+	//   (RenderForwardParams .Args "foo")
+	//
+	// Output:
+	//   std::move(arg1), std::move(foo)
+	//
 	"RenderForwardParams": func(params ...interface{}) string {
 		return renderParams(forwardParam, params)
 	},

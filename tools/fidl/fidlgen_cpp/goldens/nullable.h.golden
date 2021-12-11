@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.nullable/cpp/wire.h>
 #include <fidl/test/nullable/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <zx/cpp/fidl_v2.h>
@@ -48,6 +50,10 @@ class StructWithNullableVector final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableVector>;
   StructWithNullableVector(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -94,6 +100,10 @@ class StructWithNullableUnion final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableUnion>;
   StructWithNullableUnion(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -144,6 +154,10 @@ class StructWithNullableStruct final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableStruct>;
   StructWithNullableStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -194,6 +208,10 @@ class StructWithNullableString final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableString>;
   StructWithNullableString(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -240,6 +258,10 @@ class StructWithNullableRequest final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableRequest>;
   StructWithNullableRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -294,6 +316,10 @@ class StructWithNullableProtocol final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableProtocol>;
   StructWithNullableProtocol(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -349,6 +375,10 @@ class StructWithNullableHandle final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableHandle>;
   StructWithNullableHandle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -397,6 +427,10 @@ class SimpleProtocolAddTopResponse final
  private:
   friend ::fidl::internal::CodableBase<SimpleProtocolAddTopResponse>;
   SimpleProtocolAddTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -446,6 +480,10 @@ class SimpleProtocolAddRequest final
  private:
   friend ::fidl::internal::CodableBase<SimpleProtocolAddRequest>;
   SimpleProtocolAddRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -497,6 +535,10 @@ class Int32Wrapper final : public ::fidl::internal::CodableBase<Int32Wrapper> {
  private:
   friend ::fidl::internal::CodableBase<Int32Wrapper>;
   Int32Wrapper(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1009,6 +1051,34 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_nullable::SimpleProtocolAddTopResponse;
+};
+namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_nullable::SimpleProtocol::Add>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_nullable::SimpleProtocol::Add>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_nullable::SimpleProtocol::Add>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_nullable::SimpleProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void Add(::fidl_test_nullable::SimpleProtocolAddRequest&& payload,
+           ::fidl::ClientCallback<::fidl_test_nullable::SimpleProtocol::Add>&&
+               _callback) const;
+
+  void Add(::fidl_test_nullable::SimpleProtocolAddRequest&& payload,
+           ::fidl::ClientResponseCallback<
+               ::fidl_test_nullable::SimpleProtocol::Add>&& _callback) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

@@ -73,6 +73,7 @@ group("test") {
     "//examples/fidl/hlcpp:all",
     "//examples/fidl/llcpp:all",
     "//examples/fidl/rust:all",
+    "//src/lib/fidl/cpp/examples:all",
   ]
 }
 

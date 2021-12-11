@@ -2,10 +2,41 @@
 
 #include <fidl/test/service/cpp/fidl_v2.h>
 
-#ifdef __Fuchsia__
+namespace fidl_test_service {
+[[maybe_unused]] constexpr inline uint64_t
+    kSecondProtocol_MethodOnSecond_Ordinal = 6118813307380259369lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_service
+::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
+    ::fidl_test_service::SecondProtocol>::MethodOnSecond() const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_service::kSecondProtocol_MethodOnSecond_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::service::_internal::
+          fidl_test_service_SecondProtocolMethodOnSecondRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+  return ::fidl::internal::ToFitxResult(result);
+}
+namespace fidl_test_service {
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+[[maybe_unused]] constexpr inline uint64_t
+    kFirstProtocol_MethodOnFirst_Ordinal = 6590661047173168036lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_service
+::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
+    ::fidl_test_service::FirstProtocol>::MethodOnFirst() const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_service::kFirstProtocol_MethodOnFirst_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::service::_internal::
+          fidl_test_service_FirstProtocolMethodOnFirstRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+  return ::fidl::internal::ToFitxResult(result);
+}
+namespace fidl_test_service {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_service

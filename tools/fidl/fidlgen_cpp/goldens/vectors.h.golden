@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.vectors/cpp/wire.h>
 #include <fidl/test/vectors/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -29,6 +31,10 @@ class ExampleUseOfVectors final
  private:
   friend ::fidl::internal::CodableBase<ExampleUseOfVectors>;
   ExampleUseOfVectors(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:

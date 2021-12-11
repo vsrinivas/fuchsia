@@ -4,19 +4,37 @@
 
 #include <fidl/fidl.test.service/cpp/wire.h>
 #include <fidl/test/service/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
 namespace fidl {
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_service::SecondProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> MethodOnSecond() const;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_service::FirstProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> MethodOnFirst() const;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl

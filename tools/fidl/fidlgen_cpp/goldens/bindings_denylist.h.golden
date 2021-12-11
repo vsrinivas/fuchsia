@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.bindingsdenylist/cpp/wire.h>
 #include <fidl/test/bindingsdenylist/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -16,7 +18,15 @@ constexpr uint32_t AllBindings = ::fidl::test::bindingsdenylist::AllBindings;
 namespace fidl {
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl

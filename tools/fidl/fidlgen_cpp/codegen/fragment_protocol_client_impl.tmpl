@@ -4,12 +4,60 @@
 // found in the LICENSE file.
 */}}
 
+{{- define "ClientAsyncRequestArgumentsWithResult" -}}
+{{ if .HasRequestPayload }}{{ .RequestPayload }}&& payload, {{ end }}
+{{ printf "%s&& _callback" .CallbackType }}
+{{- end }}
+
+{{- define "ClientAsyncRequestArgumentsWithResponse" -}}
+{{ if .HasRequestPayload }}{{ .RequestPayload }}&& payload, {{ end }}
+{{ printf "%s&& _callback" .ClientResponseCallbackType }}
+{{- end }}
+
+{{- define "ClientRequestArgumentsOneWay" -}}
+{{ if .HasRequestPayload }}{{ .RequestPayload }}&& payload{{ end }}
+{{- end }}
+
+
 {{- define "ClientDeclaration" }}
 {{- IfdefFuchsia -}}
 
 {{- range .TwoWayMethods }}
+
 {{- template "MethodResponseDeclaration" . }}
-{{- end }}
+
+{{- EnsureNamespace "" }}
+template <>
+class {{ .ClientCallbackTraits }} final {
+ public:
+  {{ .ClientCallbackTraits.Self }}() = delete;
+  using ResultCallback =
+      ::fit::callback<void (::fitx::result<::fidl::Error, {{ .NaturalResponse }}>&)>;
+  using ResponseCallback = ::fit::callback<void ({{ .NaturalResponse }}&)>;
+};
+{{ end }}
+
+{{- EnsureNamespace "" }}
+template<>
+class {{ .NaturalClientImpl }} final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+
+  {{- range .TwoWayMethods }}
+  {{- .Docs }}
+  void {{ .Name }}({{ template "ClientAsyncRequestArgumentsWithResult" . }}) const;
+{{ "" }}
+  {{- .Docs }}
+  void {{ .Name }}({{ template "ClientAsyncRequestArgumentsWithResponse" . }}) const;
+{{ "" }}
+  {{- end }}
+
+  {{- range .OneWayMethods }}
+  {{- .Docs }}
+  ::fitx::result<::fidl::Error> {{ .Name }}({{ template "ClientRequestArgumentsOneWay" . }}) const;
+{{ "" }}
+  {{- end }}
+};
 
 {{- EndifFuchsia -}}
 {{- end }}
@@ -20,8 +68,51 @@
 {{- IfdefFuchsia }}
 
 {{- range .TwoWayMethods }}
-{{- template "MethodResponseDefinition" . }}
-{{- end }}
 
+{{- template "MethodResponseDefinition" . }}
+
+{{- EnsureNamespace "" }}
+void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
+    {{- template "ClientAsyncRequestArgumentsWithResult" . }}) const {
+  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  return messenger().TwoWay(
+      &{{ .Request.HlCodingTable }},
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
+      ::fidl::internal::MakeResponseContext<
+          {{ .NaturalResponse }}, {{ .CallbackType }}
+      >({{ .OrdinalName }}, std::move(_callback))
+  );
+}
+
+{{- EnsureNamespace "" }}
+void {{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
+    {{- template "ClientAsyncRequestArgumentsWithResponse" . }}) const {
+  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  return messenger().TwoWay(
+      &{{ .Request.HlCodingTable }},
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}),
+      ::fidl::internal::MakeResponseContext<
+          {{ .NaturalResponse }}, {{ .ClientResponseCallbackType }}
+      >({{ .OrdinalName }}, std::move(_callback))
+  );
+}
+{{ end }}
+
+{{- range .OneWayMethods }}
+
+{{- EnsureNamespace "" }}
+::fitx::result<::fidl::Error>
+{{ $.NaturalClientImpl.NoLeading }}::{{ .Name }}(
+    {{- template "ClientRequestArgumentsOneWay" . }}) const {
+  ::fidl::Encoder _encoder{ {{ .OrdinalName }} };
+  ::fidl::Result result = messenger().OneWay(
+      &{{ .Request.HlCodingTable }},
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder {{- if .HasRequestPayload }}, std::move(payload){{ end }}));
+  return ::fidl::internal::ToFitxResult(result);
+}
+{{ end }}
 {{- EndifFuchsia }}
 {{- end }}

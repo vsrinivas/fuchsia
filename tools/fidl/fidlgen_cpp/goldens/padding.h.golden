@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.padding/cpp/wire.h>
 #include <fidl/test/padding/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -59,6 +61,10 @@ class Padding7ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding7ByteMiddle>;
   Padding7ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -111,6 +117,10 @@ class Padding7ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding7ByteEnd>;
   Padding7ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -163,6 +173,10 @@ class Padding6ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding6ByteMiddle>;
   Padding6ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -215,6 +229,10 @@ class Padding6ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding6ByteEnd>;
   Padding6ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -269,6 +287,10 @@ class Padding5ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding5ByteMiddle>;
   Padding5ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -330,6 +352,10 @@ class Padding5ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding5ByteEnd>;
   Padding5ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -389,6 +415,10 @@ class Padding4ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding4ByteMiddle>;
   Padding4ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -441,6 +471,10 @@ class Padding4ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding4ByteEnd>;
   Padding4ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -497,6 +531,10 @@ class Padding4ByteAlignmentLength12 final
  private:
   friend ::fidl::internal::CodableBase<Padding4ByteAlignmentLength12>;
   Padding4ByteAlignmentLength12(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -568,6 +606,10 @@ class Padding3ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding3ByteMiddle>;
   Padding3ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -620,6 +662,10 @@ class Padding3ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding3ByteEnd>;
   Padding3ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -672,6 +718,10 @@ class Padding2ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding2ByteMiddle>;
   Padding2ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -724,6 +774,10 @@ class Padding2ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding2ByteEnd>;
   Padding2ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -778,6 +832,10 @@ class Padding2ByteAlignmentLength6 final
  private:
   friend ::fidl::internal::CodableBase<Padding2ByteAlignmentLength6>;
   Padding2ByteAlignmentLength6(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -842,6 +900,10 @@ class Padding1ByteMiddle final
  private:
   friend ::fidl::internal::CodableBase<Padding1ByteMiddle>;
   Padding1ByteMiddle(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -894,6 +956,10 @@ class Padding1ByteEnd final
  private:
   friend ::fidl::internal::CodableBase<Padding1ByteEnd>;
   Padding1ByteEnd(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:

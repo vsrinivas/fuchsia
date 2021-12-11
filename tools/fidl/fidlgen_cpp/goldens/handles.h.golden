@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.handles/cpp/wire.h>
 #include <fidl/test/handles/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <zx/cpp/fidl_v2.h>
@@ -95,6 +97,10 @@ class Handles final : public ::fidl::internal::CodableBase<Handles> {
  private:
   friend ::fidl::internal::CodableBase<Handles>;
   Handles(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -807,7 +813,14 @@ struct CodingTraits<::fidl_test_handles::Handles> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_handles::SomeProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl

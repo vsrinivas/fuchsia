@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.requestflexibleenvelope/cpp/wire.h>
 #include <fidl/test/requestflexibleenvelope/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -40,6 +42,10 @@ class ProtocolRequestStrictResponseFlexibleRequest final
   friend ::fidl::internal::CodableBase<
       ProtocolRequestStrictResponseFlexibleRequest>;
   ProtocolRequestStrictResponseFlexibleRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -98,6 +104,10 @@ class ProtocolRequestFlexibleResponseStrictTopResponse final
   friend ::fidl::internal::CodableBase<
       ProtocolRequestFlexibleResponseStrictTopResponse>;
   ProtocolRequestFlexibleResponseStrictTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -156,6 +166,10 @@ class ProtocolRequestStrictResponseFlexibleTopResponse final
   friend ::fidl::internal::CodableBase<
       ProtocolRequestStrictResponseFlexibleTopResponse>;
   ProtocolRequestStrictResponseFlexibleTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -214,6 +228,10 @@ class ProtocolRequestFlexibleResponseStrictRequest final
   friend ::fidl::internal::CodableBase<
       ProtocolRequestFlexibleResponseStrictRequest>;
   ProtocolRequestFlexibleResponseStrictRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -508,6 +526,22 @@ struct ::fidl::internal::MessageTraits<
       ProtocolRequestStrictResponseFlexibleTopResponse;
 };
 namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_requestflexibleenvelope::Protocol::
+        RequestStrictResponseFlexible>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestStrictResponseFlexible>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
+                           RequestStrictResponseFlexible>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
@@ -558,6 +592,57 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_requestflexibleenvelope::
       ProtocolRequestFlexibleResponseStrictTopResponse;
+};
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_requestflexibleenvelope::Protocol::
+        RequestFlexibleResponseStrict>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestFlexibleResponseStrict>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_requestflexibleenvelope::Protocol::
+                           RequestFlexibleResponseStrict>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_requestflexibleenvelope::Protocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void RequestStrictResponseFlexible(
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleRequest&& payload,
+      ::fidl::ClientCallback<::fidl_test_requestflexibleenvelope::Protocol::
+                                 RequestStrictResponseFlexible>&& _callback)
+      const;
+
+  void RequestStrictResponseFlexible(
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestStrictResponseFlexibleRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_requestflexibleenvelope::Protocol::
+              RequestStrictResponseFlexible>&& _callback) const;
+
+  void RequestFlexibleResponseStrict(
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictRequest&& payload,
+      ::fidl::ClientCallback<::fidl_test_requestflexibleenvelope::Protocol::
+                                 RequestFlexibleResponseStrict>&& _callback)
+      const;
+
+  void RequestFlexibleResponseStrict(
+      ::fidl_test_requestflexibleenvelope::
+          ProtocolRequestFlexibleResponseStrictRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_requestflexibleenvelope::Protocol::
+              RequestFlexibleResponseStrict>&& _callback) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

@@ -2,7 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Ensure FIDL snippets used in documentation builds
+group("all") {
+  testonly = true
+  deps = [
+    "client",
+    "unittests",
+  ]
+}
+
 group("tests") {
   testonly = true
-  deps = [ "unittests" ]
+  deps = [
+    "client",
+    "unittests",
+  ]
+}
+
+group("examples") {
+  testonly = true
+  deps = [ ":all" ]
 }

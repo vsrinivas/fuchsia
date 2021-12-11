@@ -5,8 +5,10 @@
 #include <exampleusing/cpp/fidl_v2.h>
 #include <fidl/fidl.test.placementofattributes/cpp/wire.h>
 #include <fidl/test/placementofattributes/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -42,6 +44,10 @@ class ExampleStruct final
  private:
   friend ::fidl::internal::CodableBase<ExampleStruct>;
   ExampleStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -89,6 +95,10 @@ class ExampleProtocolMethodRequest final
  private:
   friend ::fidl::internal::CodableBase<ExampleProtocolMethodRequest>;
   ExampleProtocolMethodRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -214,7 +224,18 @@ struct CodingTraits<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_placementofattributes::ExampleProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> Method(
+      ::fidl_test_placementofattributes::ExampleProtocolMethodRequest&& payload)
+      const;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl

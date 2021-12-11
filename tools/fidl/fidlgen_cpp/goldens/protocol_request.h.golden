@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.protocolrequest/cpp/wire.h>
 #include <fidl/test/protocolrequest/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -33,6 +35,10 @@ class ParentTakeChildRequestRequest final
  private:
   friend ::fidl::internal::CodableBase<ParentTakeChildRequestRequest>;
   ParentTakeChildRequestRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -90,6 +96,10 @@ class ParentTakeChildRequest final
  private:
   friend ::fidl::internal::CodableBase<ParentTakeChildRequest>;
   ParentTakeChildRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -144,6 +154,10 @@ class ParentGetChildTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ParentGetChildTopResponse>;
   ParentGetChildTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -199,6 +213,10 @@ class ParentGetChildRequestTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ParentGetChildRequestTopResponse>;
   ParentGetChildRequestTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -495,6 +513,19 @@ struct ::fidl::internal::MessageTraits<
   using Payload = ::fidl_test_protocolrequest::ParentGetChildTopResponse;
 };
 namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocolrequest::Parent::GetChild>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChildRequest>
@@ -537,11 +568,60 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse;
 };
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocolrequest::Parent::GetChildRequest>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocolrequest::Parent::
+                                          GetChildRequest>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChildRequest>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_protocolrequest::Parent>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void GetChild(
+      ::fidl::ClientCallback<::fidl_test_protocolrequest::Parent::GetChild>&&
+          _callback) const;
+
+  void GetChild(
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocolrequest::Parent::GetChild>&& _callback) const;
+
+  void GetChildRequest(::fidl::ClientCallback<
+                       ::fidl_test_protocolrequest::Parent::GetChildRequest>&&
+                           _callback) const;
+
+  void GetChildRequest(::fidl::ClientResponseCallback<
+                       ::fidl_test_protocolrequest::Parent::GetChildRequest>&&
+                           _callback) const;
+
+  ::fitx::result<::fidl::Error> TakeChild(
+      ::fidl_test_protocolrequest::ParentTakeChildRequest&& payload) const;
+
+  ::fitx::result<::fidl::Error> TakeChildRequest(
+      ::fidl_test_protocolrequest::ParentTakeChildRequestRequest&& payload)
+      const;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_protocolrequest::Child>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl

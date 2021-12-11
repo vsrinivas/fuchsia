@@ -64,6 +64,121 @@ void ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest::
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_errorsyntax {
+[[maybe_unused]] constexpr inline uint64_t
+    kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal =
+        8210161374538322484lu;
+[[maybe_unused]] constexpr inline uint64_t
+    kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal = 7435809829353441431lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_errorsyntax
+void fidl::internal::NaturalClientImpl<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>::
+    ComposedCallWhichMayFail(
+        ::fidl_test_errorsyntax_parent::
+            ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&& payload,
+        ::fidl::ClientCallback<
+            ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                ComposedCallWhichMayFail>&& _callback) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_errorsyntax::
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::errorsyntax::_internal::
+          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                               ComposedCallWhichMayFail>,
+          ::fidl::ClientCallback<
+              ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                  ComposedCallWhichMayFail>>(
+          ::fidl_test_errorsyntax::
+              kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+          std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>::
+    ComposedCallWhichMayFail(
+        ::fidl_test_errorsyntax_parent::
+            ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&& payload,
+        ::fidl::ClientResponseCallback<
+            ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                ComposedCallWhichMayFail>&& _callback) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_errorsyntax::
+          kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::errorsyntax::_internal::
+          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxComposedCallWhichMayFailRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                               ComposedCallWhichMayFail>,
+          ::fidl::ClientResponseCallback<
+              ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                  ComposedCallWhichMayFail>>(
+          ::fidl_test_errorsyntax::
+              kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
+          std::move(_callback)));
+}
+
+void fidl::internal::NaturalClientImpl<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>::
+    CallWhichMayFail(
+        ::fidl_test_errorsyntax::
+            ExampleUseOfErrorSyntaxCallWhichMayFailRequest&& payload,
+        ::fidl::ClientCallback<::fidl_test_errorsyntax::
+                                   ExampleUseOfErrorSyntax::CallWhichMayFail>&&
+            _callback) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_errorsyntax::
+          kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::errorsyntax::_internal::
+          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                               CallWhichMayFail>,
+          ::fidl::ClientCallback<
+              ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                  CallWhichMayFail>>(
+          ::fidl_test_errorsyntax::
+              kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
+          std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>::
+    CallWhichMayFail(
+        ::fidl_test_errorsyntax::
+            ExampleUseOfErrorSyntaxCallWhichMayFailRequest&& payload,
+        ::fidl::ClientResponseCallback<
+            ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                CallWhichMayFail>&& _callback) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_errorsyntax::
+          kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::errorsyntax::_internal::
+          fidl_test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                               CallWhichMayFail>,
+          ::fidl::ClientResponseCallback<
+              ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                  CallWhichMayFail>>(
+          ::fidl_test_errorsyntax::
+              kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
+          std::move(_callback)));
+}
+namespace fidl_test_errorsyntax {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_errorsyntax

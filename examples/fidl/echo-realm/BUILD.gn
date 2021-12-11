@@ -33,9 +33,21 @@ fuchsia_component("fidl_examples_test") {
   deps = [ ":bin" ]
 }
 
+# This registers the "fidl_examples_test" component with the
+# "echo-cpp-client-test" test package. It is a workaround for a GN limitation:
+# https://fuchsia.dev/fuchsia-src/development/components/build#test-packages
+#
+# TODO(fxbug.dev/60240): Remove this when the unified C++ bindings graduate
+# from its own examples directory.
+fuchsia_test("echo-cpp-client-test") {
+  package = "//src/lib/fidl/cpp/examples/client:echo-cpp-client-test"
+  component = ":fidl_examples_test"
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":echo-cpp-client-test",
     ":echo-go-client-test",
     ":echo-hlcpp-client-sync-test",
     ":echo-hlcpp-client-test",

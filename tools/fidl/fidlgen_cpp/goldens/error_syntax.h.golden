@@ -5,8 +5,10 @@
 #include <fidl/fidl.test.errorsyntax/cpp/wire.h>
 #include <fidl/test/errorsyntax/cpp/natural_types.h>
 #include <fidl/test/errorsyntax/parent/cpp/fidl_v2.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -37,6 +39,10 @@ class ExampleUseOfErrorSyntax_CallWhichMayFail_Response final
   friend ::fidl::internal::CodableBase<
       ExampleUseOfErrorSyntax_CallWhichMayFail_Response>;
   ExampleUseOfErrorSyntax_CallWhichMayFail_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -91,6 +97,10 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse final
   friend ::fidl::internal::CodableBase<
       ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse>;
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -152,6 +162,10 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final
   friend ::fidl::internal::CodableBase<
       ExampleUseOfErrorSyntaxCallWhichMayFailRequest>;
   ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -389,6 +403,21 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
       ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse;
 };
 namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                               ComposedCallWhichMayFail>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                           ComposedCallWhichMayFail>&)>;
+};
 
 template <>
 class ::fidl::Response<
@@ -436,6 +465,55 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_errorsyntax::
       ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
+};
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                               CallWhichMayFail>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                           CallWhichMayFail>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void ComposedCallWhichMayFail(
+      ::fidl_test_errorsyntax_parent::
+          ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&& payload,
+      ::fidl::ClientCallback<::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+                                 ComposedCallWhichMayFail>&& _callback) const;
+
+  void ComposedCallWhichMayFail(
+      ::fidl_test_errorsyntax_parent::
+          ParentUsesErrorSyntaxComposedCallWhichMayFailRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::
+              ComposedCallWhichMayFail>&& _callback) const;
+
+  void CallWhichMayFail(
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&
+          payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
+          _callback) const;
+
+  void CallWhichMayFail(
+      ::fidl_test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest&&
+          payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>&&
+          _callback) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

@@ -23,8 +23,11 @@ class TestProtocol {
 // Fake client implementations.
 namespace fidl {
 
+// TODO(fxbug.dev/60240): Switch to |fidl::AsyncEventHandler|.
 template <>
-class AsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
+class WireAsyncEventHandler<TestProtocol> : public fidl::internal::AsyncEventHandler {};
+template <>
+class AsyncEventHandler<TestProtocol> : public WireAsyncEventHandler<TestProtocol> {};
 
 namespace internal {
 

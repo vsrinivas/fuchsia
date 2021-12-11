@@ -37,6 +37,26 @@ void ::fidl_test_placementofattributes::ExampleProtocolMethodRequest::
     : storage_({::fidl::DecodeAs<::exampleusing::Empty>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_placementofattributes {
+[[maybe_unused]] constexpr inline uint64_t kExampleProtocol_Method_Ordinal =
+    2341079615635566980lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_placementofattributes
+::fitx::result<::fidl::Error> fidl::internal::NaturalClientImpl<
+    ::fidl_test_placementofattributes::ExampleProtocol>::
+    Method(::fidl_test_placementofattributes::ExampleProtocolMethodRequest&&
+               payload) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_placementofattributes::kExampleProtocol_Method_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::placementofattributes::_internal::
+          fidl_test_placementofattributes_ExampleProtocolMethodRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)));
+  return ::fidl::internal::ToFitxResult(result);
+}
+namespace fidl_test_placementofattributes {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_placementofattributes

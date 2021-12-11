@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.encapsulatedstructs/cpp/wire.h>
 #include <fidl/test/encapsulatedstructs/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <zx/cpp/fidl_v2.h>
@@ -40,6 +42,10 @@ class NonInlineStructTestStruct final
  private:
   friend ::fidl::internal::CodableBase<NonInlineStructTestStruct>;
   NonInlineStructTestStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -104,6 +110,10 @@ class Int8Int32 final : public ::fidl::internal::CodableBase<Int8Int32> {
  private:
   friend ::fidl::internal::CodableBase<Int8Int32>;
   Int8Int32(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -156,6 +166,10 @@ class Int16Int8 final : public ::fidl::internal::CodableBase<Int16Int8> {
  private:
   friend ::fidl::internal::CodableBase<Int16Int8>;
   Int16Int8(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -207,6 +221,10 @@ class ArrayInt16Int8 final
  private:
   friend ::fidl::internal::CodableBase<ArrayInt16Int8>;
   ArrayInt16Int8(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -261,6 +279,10 @@ class StructPaddingTestStruct final
  private:
   friend ::fidl::internal::CodableBase<StructPaddingTestStruct>;
   StructPaddingTestStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -335,6 +357,10 @@ class TopLevelStruct final
  private:
   friend ::fidl::internal::CodableBase<TopLevelStruct>;
   TopLevelStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:

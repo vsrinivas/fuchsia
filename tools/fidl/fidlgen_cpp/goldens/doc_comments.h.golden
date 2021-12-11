@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.doccomments/cpp/wire.h>
 #include <fidl/test/doccomments/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -69,6 +71,10 @@ class Struct final : public ::fidl::internal::CodableBase<Struct> {
  private:
   friend ::fidl::internal::CodableBase<Struct>;
   Struct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -149,7 +155,18 @@ struct CodingTraits<::fidl_test_doccomments::Struct> {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_doccomments::Interface>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  /// method comment #1
+  ///
+  /// method comment #3
+  ::fitx::result<::fidl::Error> Method() const;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 }  // namespace fidl

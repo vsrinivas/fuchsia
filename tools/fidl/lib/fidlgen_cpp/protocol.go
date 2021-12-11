@@ -90,10 +90,26 @@ func (p Protocol) WithHlMessaging() protocolWithHlMessaging {
 // These correspond to templated classes and functions forward-declared in
 // /src/lib/fidl/cpp/include/lib/fidl/cpp/unified_messaging.h
 var (
-	NaturalResponse = fidlNs.member(("Response"))
-	MessageTraits   = internalNs.member("MessageTraits")
-	MessageBase     = internalNs.member("MessageBase")
+	NaturalRequest                = fidlNs.member("Request")
+	NaturalResponse               = fidlNs.member("Response")
+	MessageTraits                 = internalNs.member("MessageTraits")
+	MessageBase                   = internalNs.member("MessageBase")
+	NaturalClientImpl             = internalNs.member("NaturalClientImpl")
+	NaturalClientCallbackTraits   = internalNs.member("ClientCallbackTraits")
+	NaturalClientCallback         = fidlNs.member("ClientCallback")
+	NaturalClientResponseCallback = fidlNs.member("ClientResponseCallback")
 )
+
+type unifiedMessagingDetails struct {
+	NaturalClientImpl name
+}
+
+func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol) unifiedMessagingDetails {
+	p := protocol.Wire
+	return unifiedMessagingDetails{
+		NaturalClientImpl: NaturalClientImpl.template(p),
+	}
+}
 
 // These correspond to templated classes forward-declared in
 // //zircon/system/ulib/fidl/include/lib/fidl/llcpp/wire_messaging.h
@@ -179,6 +195,7 @@ type protocolInner struct {
 	DiscoverableName string
 
 	HlMessaging hlMessagingDetails
+	unifiedMessagingDetails
 	wireTypeNames
 
 	// ClientAllocation is the allocation behavior of the client when receiving
@@ -355,17 +372,26 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 }
 
 type unifiedMethod struct {
-	NaturalResponse       name
-	ResponseMessageTraits name
-	ResponseMessageBase   name
+	NaturalRequest             name
+	NaturalResponse            name
+	ResponseMessageTraits      name
+	ResponseMessageBase        name
+	ClientCallbackTraits       name
+	ClientResponseCallbackType name
+	RequestMessageTraits       name
 }
 
 func newUnifiedMethod(methodMarker name) unifiedMethod {
+	naturalRequest := NaturalRequest.template(methodMarker)
 	naturalResponse := NaturalResponse.template(methodMarker)
 	return unifiedMethod{
-		NaturalResponse:       naturalResponse,
-		ResponseMessageTraits: MessageTraits.template(naturalResponse),
-		ResponseMessageBase:   MessageBase.template(naturalResponse),
+		NaturalResponse:            naturalResponse,
+		ResponseMessageTraits:      MessageTraits.template(naturalResponse),
+		ResponseMessageBase:        MessageBase.template(naturalResponse),
+		NaturalRequest:             naturalRequest,
+		ClientCallbackTraits:       NaturalClientCallbackTraits.template(methodMarker),
+		ClientResponseCallbackType: NaturalClientResponseCallback.template(methodMarker),
+		RequestMessageTraits:       MessageTraits.template(naturalRequest),
 	}
 }
 
@@ -481,6 +507,7 @@ func newMethod(inner methodInner, hl hlMessagingDetails, wire wireTypeNames, p f
 	var callbackType *nameVariants = nil
 	if inner.HasResponse {
 		callbackName := inner.appendName("Callback")
+		callbackName.Unified = NaturalClientCallback.template(inner.Marker.Wire)
 		callbackType = &callbackName
 	}
 	ordinalName := fmt.Sprintf("k%s_%s_Ordinal",
@@ -570,6 +597,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 	protocolName := c.compileNameVariants(p.Name)
 	codingTableName := codingTableName(p.Name)
 	hlMessaging := compileHlMessagingDetails(protocolName)
+	unifiedMessaging := compileUnifiedMessagingDetails(protocolName, p)
 	wireTypeNames := newWireTypeNames(protocolName)
 
 	methods := []Method{}
@@ -673,11 +701,12 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(p.Name), ".", "_"), "/", "_")
 	r := newProtocol(protocolInner{
-		Attributes:       Attributes{p.Attributes},
-		nameVariants:     protocolName,
-		HlMessaging:      hlMessaging,
-		wireTypeNames:    wireTypeNames,
-		DiscoverableName: p.GetServiceName(),
+		Attributes:              Attributes{p.Attributes},
+		nameVariants:            protocolName,
+		HlMessaging:             hlMessaging,
+		unifiedMessagingDetails: unifiedMessaging,
+		wireTypeNames:           wireTypeNames,
+		DiscoverableName:        p.GetServiceName(),
 		SyncEventAllocationV1: computeAllocation(
 			maxResponseSizeV1, messageDirectionResponse.queryBoundedness(
 				clientContext, anyEventHasFlexibleEnvelope(methods))),

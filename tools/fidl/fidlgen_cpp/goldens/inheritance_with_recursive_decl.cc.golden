@@ -36,10 +36,63 @@ void ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest::
           ::fidl::test::inheritancewithrecursivedecl::Parent>>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_inheritancewithrecursivedecl {
+[[maybe_unused]] constexpr inline uint64_t kParent_First_Ordinal =
+    3051519745671742363lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_inheritancewithrecursivedecl
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalClientImpl<::fidl_test_inheritancewithrecursivedecl::Parent>::First(
+        ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest&& payload)
+        const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_inheritancewithrecursivedecl::kParent_First_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ParentFirstRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)));
+  return ::fidl::internal::ToFitxResult(result);
+}
+namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+[[maybe_unused]] constexpr inline uint64_t kChild_First_Ordinal =
+    3051519745671742363lu;
+[[maybe_unused]] constexpr inline uint64_t kChild_Second_Ordinal =
+    489667253787160198lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_inheritancewithrecursivedecl
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalClientImpl<::fidl_test_inheritancewithrecursivedecl::Child>::First(
+        ::fidl_test_inheritancewithrecursivedecl::ParentFirstRequest&& payload)
+        const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_inheritancewithrecursivedecl::kChild_First_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ChildFirstRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)));
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalClientImpl<::fidl_test_inheritancewithrecursivedecl::Child>::Second(
+        ::fidl_test_inheritancewithrecursivedecl::ChildSecondRequest&& payload)
+        const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_inheritancewithrecursivedecl::kChild_Second_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::inheritancewithrecursivedecl::_internal::
+          fidl_test_inheritancewithrecursivedecl_ChildSecondRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)));
+  return ::fidl::internal::ToFitxResult(result);
+}
+namespace fidl_test_inheritancewithrecursivedecl {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_inheritancewithrecursivedecl

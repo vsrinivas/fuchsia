@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.union/cpp/wire.h>
 #include <fidl/test/union/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -84,6 +86,10 @@ class StructWithNullableXUnion final
  private:
   friend ::fidl::internal::CodableBase<StructWithNullableXUnion>;
   StructWithNullableXUnion(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -138,6 +144,10 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse final
       TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse>;
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse(
       ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -196,6 +206,10 @@ class Pizza final : public ::fidl::internal::CodableBase<Pizza> {
  private:
   friend ::fidl::internal::CodableBase<Pizza>;
   Pizza(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -239,6 +253,10 @@ class Pasta final : public ::fidl::internal::CodableBase<Pasta> {
  private:
   friend ::fidl::internal::CodableBase<Pasta>;
   Pasta(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -286,6 +304,10 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse
       TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>;
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse(
       ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -344,6 +366,10 @@ class NullableUnionStruct final
  private:
   friend ::fidl::internal::CodableBase<NullableUnionStruct>;
   NullableUnionStruct(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -395,6 +421,10 @@ class UnionSandwich final
  private:
   friend ::fidl::internal::CodableBase<UnionSandwich>;
   UnionSandwich(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -451,6 +481,10 @@ class Empty final : public ::fidl::internal::CodableBase<Empty> {
  private:
   friend ::fidl::internal::CodableBase<Empty>;
   Empty(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -887,6 +921,22 @@ struct ::fidl::internal::MessageTraits<
       TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
 };
 namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_union::TestProtocol::
+        StrictXUnionHenceResponseMayBeStackAllocated>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<
+                         ::fidl_test_union::TestProtocol::
+                             StrictXUnionHenceResponseMayBeStackAllocated>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_union::TestProtocol::
+                           StrictXUnionHenceResponseMayBeStackAllocated>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_union::TestProtocol::
@@ -940,6 +990,51 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_union::
       TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
+};
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_union::TestProtocol::
+        FlexibleXUnionHenceResponseMustBeHeapAllocated>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<
+              ::fidl_test_union::TestProtocol::
+                  FlexibleXUnionHenceResponseMustBeHeapAllocated>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_union::TestProtocol::
+                           FlexibleXUnionHenceResponseMustBeHeapAllocated>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_union::TestProtocol> final
+    : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::ClientCallback<::fidl_test_union::TestProtocol::
+                                 StrictXUnionHenceResponseMayBeStackAllocated>&&
+          _callback) const;
+
+  void StrictXUnionHenceResponseMayBeStackAllocated(
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_union::TestProtocol::
+              StrictXUnionHenceResponseMayBeStackAllocated>&& _callback) const;
+
+  void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::ClientCallback<
+          ::fidl_test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>&& _callback)
+      const;
+
+  void FlexibleXUnionHenceResponseMustBeHeapAllocated(
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_union::TestProtocol::
+              FlexibleXUnionHenceResponseMustBeHeapAllocated>&& _callback)
+      const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.unionsandwich/cpp/wire.h>
 #include <fidl/test/unionsandwich/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -50,6 +52,10 @@ class SandwichUnionSize8Alignment4 final
  private:
   friend ::fidl::internal::CodableBase<SandwichUnionSize8Alignment4>;
   SandwichUnionSize8Alignment4(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -121,6 +127,10 @@ class SandwichUnionSize36Alignment4 final
  private:
   friend ::fidl::internal::CodableBase<SandwichUnionSize36Alignment4>;
   SandwichUnionSize36Alignment4(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -192,6 +202,10 @@ class SandwichUnionSize12Alignment4 final
  private:
   friend ::fidl::internal::CodableBase<SandwichUnionSize12Alignment4>;
   SandwichUnionSize12Alignment4(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -261,6 +275,10 @@ class StructSize16Alignment8 final
  private:
   friend ::fidl::internal::CodableBase<StructSize16Alignment8>;
   StructSize16Alignment8(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -317,6 +335,10 @@ class SandwichUnionSize24Alignment8 final
  private:
   friend ::fidl::internal::CodableBase<SandwichUnionSize24Alignment8>;
   SandwichUnionSize24Alignment8(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:

@@ -30,6 +30,9 @@ class {{ .Name }} final : public ::fidl::internal::CodableBase<{{ .Name }}> {
  private:
   friend ::fidl::internal::CodableBase<{{ .Name }}>;
   {{ .Self }}(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload) -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:

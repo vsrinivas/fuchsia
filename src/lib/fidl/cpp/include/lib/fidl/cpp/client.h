@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_CLIENT_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_CLIENT_H_
 
+#include <lib/fidl/cpp/internal/make_response_context.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fidl/llcpp/client_end.h>
@@ -125,7 +126,8 @@ class Client {
   // If any other error occurs during initialization, the
   // |event_handler->on_fidl_error| handler will be invoked asynchronously with
   // the reason, if specified.
-  template <typename AsyncEventHandler = fidl::AsyncEventHandler<Protocol>>
+  // TODO(fxbug.dev/60240): Switch to |fidl::AsyncEventHandler|.
+  template <typename AsyncEventHandler = fidl::WireAsyncEventHandler<Protocol>>
   Client(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
          AsyncEventHandler* event_handler = nullptr) {
     Bind(std::move(client_end), dispatcher, event_handler);
@@ -177,8 +179,9 @@ class Client {
   // It is not allowed to call |Bind| on an initialized client. To rebind a
   // |Client| to a different endpoint, simply replace the |Client|
   // variable with a new instance.
+  // TODO(fxbug.dev/60240): Switch to |fidl::AsyncEventHandler|.
   void Bind(fidl::ClientEnd<Protocol> client_end, async_dispatcher_t* dispatcher,
-            fidl::AsyncEventHandler<Protocol>* event_handler = nullptr) {
+            fidl::WireAsyncEventHandler<Protocol>* event_handler = nullptr) {
     controller_.Bind(std::make_shared<WireClientImpl>(),
                      fidl::internal::MakeAnyTransport(client_end.TakeChannel()), dispatcher,
                      event_handler, fidl::AnyTeardownObserver::Noop(),

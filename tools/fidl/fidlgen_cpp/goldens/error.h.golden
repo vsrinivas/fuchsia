@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.error/cpp/wire.h>
 #include <fidl/test/error/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -33,6 +35,10 @@ class Example_foo_Response final
  private:
   friend ::fidl::internal::CodableBase<Example_foo_Response>;
   Example_foo_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -76,6 +82,10 @@ class ExampleFooTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ExampleFooTopResponse>;
   ExampleFooTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -123,6 +133,10 @@ class ExampleFooRequest final
  private:
   friend ::fidl::internal::CodableBase<ExampleFooRequest>;
   ExampleFooRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -310,6 +324,32 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_error::ExampleFooTopResponse;
+};
+namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<::fidl_test_error::Example::Foo>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_error::Example::Foo>>&)>;
+  using ResponseCallback =
+      ::fit::callback<void(::fidl::Response<::fidl_test_error::Example::Foo>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_error::Example> final
+    : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void foo(::fidl_test_error::ExampleFooRequest&& payload,
+           ::fidl::ClientCallback<::fidl_test_error::Example::Foo>&& _callback)
+      const;
+
+  void foo(::fidl_test_error::ExampleFooRequest&& payload,
+           ::fidl::ClientResponseCallback<::fidl_test_error::Example::Foo>&&
+               _callback) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

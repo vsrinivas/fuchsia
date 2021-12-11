@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.protocols/cpp/wire.h>
 #include <fidl/test/protocols/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -125,6 +127,10 @@ class WithErrorSyntax_HandleInResult_Response final
  private:
   friend ::fidl::internal::CodableBase<WithErrorSyntax_HandleInResult_Response>;
   WithErrorSyntax_HandleInResult_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -179,6 +185,10 @@ class WithErrorSyntaxHandleInResultTopResponse final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntaxHandleInResultTopResponse>;
   WithErrorSyntaxHandleInResultTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -238,6 +248,10 @@ class HandleRightsProtocolResponseMethodTopResponse final
   friend ::fidl::internal::CodableBase<
       HandleRightsProtocolResponseMethodTopResponse>;
   HandleRightsProtocolResponseMethodTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -292,6 +306,10 @@ class HandleRightsProtocolResponseMethodRequest final
   friend ::fidl::internal::CodableBase<
       HandleRightsProtocolResponseMethodRequest>;
   HandleRightsProtocolResponseMethodRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -346,6 +364,10 @@ class HandleRightsProtocolNoResponseMethodRequest final
   friend ::fidl::internal::CodableBase<
       HandleRightsProtocolNoResponseMethodRequest>;
   HandleRightsProtocolNoResponseMethodRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -398,6 +420,10 @@ class HandleRightsProtocolAnEventRequest final
  private:
   friend ::fidl::internal::CodableBase<HandleRightsProtocolAnEventRequest>;
   HandleRightsProtocolAnEventRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -450,6 +476,10 @@ class ChannelProtocolTakeHandleRequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolTakeHandleRequest>;
   ChannelProtocolTakeHandleRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -503,6 +533,10 @@ class ChannelProtocolMutateSocketTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketTopResponse>;
   ChannelProtocolMutateSocketTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -555,6 +589,10 @@ class ChannelProtocolMutateSocketRequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMutateSocketRequest>;
   ChannelProtocolMutateSocketRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -609,6 +647,10 @@ class WithProtocolEndsServerEndsTopResponse final
  private:
   friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsTopResponse>;
   WithProtocolEndsServerEndsTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -669,6 +711,10 @@ class WithProtocolEndsServerEndsRequest final
  private:
   friend ::fidl::internal::CodableBase<WithProtocolEndsServerEndsRequest>;
   WithProtocolEndsServerEndsRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -730,6 +776,10 @@ class WithProtocolEndsClientEndsTopResponse final
  private:
   friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsTopResponse>;
   WithProtocolEndsClientEndsTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -790,6 +840,10 @@ class WithProtocolEndsClientEndsRequest final
  private:
   friend ::fidl::internal::CodableBase<WithProtocolEndsClientEndsRequest>;
   WithProtocolEndsClientEndsRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -855,6 +909,10 @@ class WithErrorSyntax_ResponseAsStruct_Response final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntax_ResponseAsStruct_Response>;
   WithErrorSyntax_ResponseAsStruct_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -919,6 +977,10 @@ class WithErrorSyntaxResponseAsStructTopResponse final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntaxResponseAsStructTopResponse>;
   WithErrorSyntaxResponseAsStructTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -974,6 +1036,10 @@ class WithErrorSyntax_ErrorAsPrimitive_Response final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntax_ErrorAsPrimitive_Response>;
   WithErrorSyntax_ErrorAsPrimitive_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1024,6 +1090,10 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse final
   friend ::fidl::internal::CodableBase<
       WithErrorSyntaxErrorAsPrimitiveTopResponse>;
   WithErrorSyntaxErrorAsPrimitiveTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1078,6 +1148,10 @@ class WithErrorSyntax_ErrorAsEnum_Response final
  private:
   friend ::fidl::internal::CodableBase<WithErrorSyntax_ErrorAsEnum_Response>;
   WithErrorSyntax_ErrorAsEnum_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1130,6 +1204,10 @@ class WithAndWithoutRequestResponseWithRequestWithResponseTopResponse final
       WithAndWithoutRequestResponseWithRequestWithResponseTopResponse>;
   WithAndWithoutRequestResponseWithRequestWithResponseTopResponse(
       ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1189,6 +1267,10 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest final
       WithAndWithoutRequestResponseWithRequestWithResponseRequest>;
   WithAndWithoutRequestResponseWithRequestWithResponseRequest(
       ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1247,6 +1329,10 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest final
       WithAndWithoutRequestResponseWithRequestNoResponseRequest>;
   WithAndWithoutRequestResponseWithRequestNoResponseRequest(
       ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1305,6 +1391,10 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest final
       WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>;
   WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(
       ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1362,6 +1452,10 @@ class WithAndWithoutRequestResponseOnWithResponseRequest final
   friend ::fidl::internal::CodableBase<
       WithAndWithoutRequestResponseOnWithResponseRequest>;
   WithAndWithoutRequestResponseOnWithResponseRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1417,6 +1511,10 @@ class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final
       WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>;
   WithAndWithoutRequestResponseNoRequestWithResponseTopResponse(
       ::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1472,6 +1570,10 @@ class TransitionalRequestTopResponse final
  private:
   friend ::fidl::internal::CodableBase<TransitionalRequestTopResponse>;
   TransitionalRequestTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1519,6 +1621,10 @@ class TransitionalRequestRequest final
  private:
   friend ::fidl::internal::CodableBase<TransitionalRequestRequest>;
   TransitionalRequestRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1564,6 +1670,10 @@ class TransitionalOneWayRequest final
  private:
   friend ::fidl::internal::CodableBase<TransitionalOneWayRequest>;
   TransitionalOneWayRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1609,6 +1719,10 @@ class TransitionalEventRequest final
  private:
   friend ::fidl::internal::CodableBase<TransitionalEventRequest>;
   TransitionalEventRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1654,6 +1768,10 @@ class MethodWithUnionUnionMethodRequest final
  private:
   friend ::fidl::internal::CodableBase<MethodWithUnionUnionMethodRequest>;
   MethodWithUnionUnionMethodRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1705,6 +1823,10 @@ class SyscallProtocolMethodCRequest final
  private:
   friend ::fidl::internal::CodableBase<SyscallProtocolMethodCRequest>;
   SyscallProtocolMethodCRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1768,6 +1890,10 @@ class ProtocolEnds final : public ::fidl::internal::CodableBase<ProtocolEnds> {
  private:
   friend ::fidl::internal::CodableBase<ProtocolEnds>;
   ProtocolEnds(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1866,6 +1992,10 @@ class WithProtocolEndsStructContainingEndsTopResponse final
   friend ::fidl::internal::CodableBase<
       WithProtocolEndsStructContainingEndsTopResponse>;
   WithProtocolEndsStructContainingEndsTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -1925,6 +2055,10 @@ class WithProtocolEndsStructContainingEndsRequest final
   friend ::fidl::internal::CodableBase<
       WithProtocolEndsStructContainingEndsRequest>;
   WithProtocolEndsStructContainingEndsRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -2007,6 +2141,10 @@ class ManyParametersFifteenRequest final
  private:
   friend ::fidl::internal::CodableBase<ManyParametersFifteenRequest>;
   ManyParametersFifteenRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -2157,6 +2295,10 @@ class WithErrorSyntaxErrorAsEnumTopResponse final
  private:
   friend ::fidl::internal::CodableBase<WithErrorSyntaxErrorAsEnumTopResponse>;
   WithErrorSyntaxErrorAsEnumTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -2210,6 +2352,10 @@ class ChannelProtocolMethodBTopResponse final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodBTopResponse>;
   ChannelProtocolMethodBTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -2259,6 +2405,10 @@ class ChannelProtocolMethodBRequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodBRequest>;
   ChannelProtocolMethodBRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -2315,6 +2465,10 @@ class ChannelProtocolMethodARequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolMethodARequest>;
   ChannelProtocolMethodARequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -2371,6 +2525,10 @@ class ChannelProtocolEventARequest final
  private:
   friend ::fidl::internal::CodableBase<ChannelProtocolEventARequest>;
   ChannelProtocolEventARequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -4503,6 +4661,47 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   using Payload =
       ::fidl_test_protocols::HandleRightsProtocolResponseMethodTopResponse;
 };
+namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<
+              ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_protocols::HandleRightsProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void ResponseMethod(
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest&&
+          payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&&
+          _callback) const;
+
+  void ResponseMethod(
+      ::fidl_test_protocols::HandleRightsProtocolResponseMethodRequest&&
+          payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>&&
+          _callback) const;
+
+  ::fitx::result<::fidl::Error> NoResponseMethod(
+      ::fidl_test_protocols::HandleRightsProtocolNoResponseMethodRequest&&
+          payload) const;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
@@ -4533,6 +4732,22 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = false;
 };
 namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        NoRequestEmptyResponse>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<
+                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                             NoRequestEmptyResponse>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           NoRequestEmptyResponse>&)>;
+};
 
 template <>
 class ::fidl::Response<
@@ -4585,7 +4800,21 @@ struct ::fidl::internal::MessageTraits<
   using Payload = ::fidl_test_protocols::
       WithAndWithoutRequestResponseNoRequestWithResponseTopResponse;
 };
-namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<
+                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                             NoRequestWithResponse>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           NoRequestWithResponse>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -4610,7 +4839,22 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestEmptyResponse>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<
+                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                             WithRequestEmptyResponse>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           WithRequestEmptyResponse>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -4663,6 +4907,86 @@ struct ::fidl::internal::MessageTraits<
   using Payload = ::fidl_test_protocols::
       WithAndWithoutRequestResponseWithRequestWithResponseTopResponse;
 };
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponse>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<
+                         ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                             WithRequestWithResponse>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           WithRequestWithResponse>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void NoRequestEmptyResponse(
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestEmptyResponse>&& _callback) const;
+
+  void NoRequestEmptyResponse(
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestEmptyResponse>&& _callback) const;
+
+  void NoRequestWithResponse(
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestWithResponse>&& _callback) const;
+
+  void NoRequestWithResponse(
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestWithResponse>&& _callback) const;
+
+  void WithRequestEmptyResponse(
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&
+              payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestEmptyResponse>&& _callback) const;
+
+  void WithRequestEmptyResponse(
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestEmptyResponseRequest&&
+              payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestEmptyResponse>&& _callback) const;
+
+  void WithRequestWithResponse(
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest&& payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestWithResponse>&& _callback) const;
+
+  void WithRequestWithResponse(
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestWithResponseRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestWithResponse>&& _callback) const;
+
+  ::fitx::result<::fidl::Error> NoRequestNoResponse() const;
+
+  ::fitx::result<::fidl::Error> WithRequestNoResponse(
+      ::fidl_test_protocols::
+          WithAndWithoutRequestResponseWithRequestNoResponseRequest&& payload)
+      const;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
@@ -4707,11 +5031,54 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_protocols::TransitionalRequestTopResponse;
 };
+namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::Transitional::Request>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_protocols::Transitional::Request>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::Transitional::Request>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_protocols::Transitional>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void Request(
+      ::fidl_test_protocols::TransitionalRequestRequest&& payload,
+      ::fidl::ClientCallback<::fidl_test_protocols::Transitional::Request>&&
+          _callback) const;
+
+  void Request(
+      ::fidl_test_protocols::TransitionalRequestRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::Transitional::Request>&& _callback) const;
+
+  ::fitx::result<::fidl::Error> OneWay(
+      ::fidl_test_protocols::TransitionalOneWayRequest&& payload) const;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_protocols::MethodWithUnion>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> UnionMethod(
+      ::fidl_test_protocols::MethodWithUnionUnionMethodRequest&& payload) const;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4758,6 +5125,19 @@ struct ::fidl::internal::MessageTraits<
   using Payload = ::fidl_test_protocols::WithProtocolEndsClientEndsTopResponse;
 };
 namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithProtocolEnds::ClientEnds>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::
+                                          ClientEnds>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ClientEnds>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
@@ -4799,7 +5179,19 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_protocols::WithProtocolEndsServerEndsTopResponse;
 };
-namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithProtocolEnds::ServerEnds>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::
+                                          ServerEnds>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::ServerEnds>&)>;
+};
 
 template <>
 class ::fidl::Response<
@@ -4849,11 +5241,79 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<
   using Payload =
       ::fidl_test_protocols::WithProtocolEndsStructContainingEndsTopResponse;
 };
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::WithProtocolEnds::
+                                          StructContainingEnds>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<
+          ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_protocols::WithProtocolEnds>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void ClientEnds(
+      ::fidl_test_protocols::WithProtocolEndsClientEndsRequest&& payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithProtocolEnds::ClientEnds>&& _callback)
+      const;
+
+  void ClientEnds(
+      ::fidl_test_protocols::WithProtocolEndsClientEndsRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithProtocolEnds::ClientEnds>&& _callback)
+      const;
+
+  void ServerEnds(
+      ::fidl_test_protocols::WithProtocolEndsServerEndsRequest&& payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithProtocolEnds::ServerEnds>&& _callback)
+      const;
+
+  void ServerEnds(
+      ::fidl_test_protocols::WithProtocolEndsServerEndsRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithProtocolEnds::ServerEnds>&& _callback)
+      const;
+
+  void StructContainingEnds(
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest&&
+          payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>&&
+          _callback) const;
+
+  void StructContainingEnds(
+      ::fidl_test_protocols::WithProtocolEndsStructContainingEndsRequest&&
+          payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>&&
+          _callback) const;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_protocols::ManyParameters>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> Fifteen(
+      ::fidl_test_protocols::ManyParametersFifteenRequest&& payload) const;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4902,6 +5362,20 @@ struct ::fidl::internal::MessageTraits<
       ::fidl_test_protocols::WithErrorSyntaxResponseAsStructTopResponse;
 };
 namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::
+                                          ResponseAsStruct>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
@@ -4945,7 +5419,20 @@ struct ::fidl::internal::MessageTraits<
   using Payload =
       ::fidl_test_protocols::WithErrorSyntaxErrorAsPrimitiveTopResponse;
 };
-namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::
+                                          ErrorAsPrimitive>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
@@ -4985,7 +5472,19 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_protocols::WithErrorSyntaxErrorAsEnumTopResponse;
 };
-namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::
+                                          ErrorAsEnum>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::HandleInResult>
@@ -5030,11 +5529,77 @@ struct ::fidl::internal::MessageTraits<
   using Payload =
       ::fidl_test_protocols::WithErrorSyntaxHandleInResultTopResponse;
 };
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::WithErrorSyntax::
+                                          HandleInResult>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<
+          ::fidl_test_protocols::WithErrorSyntax::HandleInResult>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_protocols::WithErrorSyntax>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void ResponseAsStruct(
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>&& _callback)
+      const;
+
+  void ResponseAsStruct(
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>&& _callback)
+      const;
+
+  void ErrorAsPrimitive(
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>&& _callback)
+      const;
+
+  void ErrorAsPrimitive(
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>&& _callback)
+      const;
+
+  void ErrorAsEnum(::fidl::ClientCallback<
+                   ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>&&
+                       _callback) const;
+
+  void ErrorAsEnum(::fidl::ClientResponseCallback<
+                   ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>&&
+                       _callback) const;
+
+  void HandleInResult(::fidl::ClientCallback<
+                      ::fidl_test_protocols::WithErrorSyntax::HandleInResult>&&
+                          _callback) const;
+
+  void HandleInResult(::fidl::ClientResponseCallback<
+                      ::fidl_test_protocols::WithErrorSyntax::HandleInResult>&&
+                          _callback) const;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+}  // namespace fidl
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_protocols::DiscoverableProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  ::fitx::result<::fidl::Error> Method() const;
+};
+namespace fidl {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -5079,6 +5644,19 @@ struct ::fidl::internal::MessageTraits<
   using Payload = ::fidl_test_protocols::ChannelProtocolMethodBTopResponse;
 };
 namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::ChannelProtocol::MethodB>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MethodB>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MethodB>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocols::ChannelProtocol::TakeHandle> final
@@ -5100,7 +5678,19 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::ChannelProtocol::TakeHandle>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::ChannelProtocol::
+                                          TakeHandle>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::ChannelProtocol::TakeHandle>&)>;
+};
 
 template <>
 class ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MutateSocket>
@@ -5142,6 +5732,63 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_protocols::ChannelProtocolMutateSocketTopResponse;
+};
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_protocols::ChannelProtocol::MutateSocket>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_protocols::ChannelProtocol::
+                                          MutateSocket>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_protocols::ChannelProtocol::MutateSocket>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<
+    ::fidl_test_protocols::ChannelProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void MethodB(
+      ::fidl_test_protocols::ChannelProtocolMethodBRequest&& payload,
+      ::fidl::ClientCallback<::fidl_test_protocols::ChannelProtocol::MethodB>&&
+          _callback) const;
+
+  void MethodB(
+      ::fidl_test_protocols::ChannelProtocolMethodBRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::ChannelProtocol::MethodB>&& _callback) const;
+
+  void TakeHandle(
+      ::fidl_test_protocols::ChannelProtocolTakeHandleRequest&& payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>&& _callback)
+      const;
+
+  void TakeHandle(
+      ::fidl_test_protocols::ChannelProtocolTakeHandleRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::ChannelProtocol::TakeHandle>&& _callback)
+      const;
+
+  void MutateSocket(
+      ::fidl_test_protocols::ChannelProtocolMutateSocketRequest&& payload,
+      ::fidl::ClientCallback<
+          ::fidl_test_protocols::ChannelProtocol::MutateSocket>&& _callback)
+      const;
+
+  void MutateSocket(
+      ::fidl_test_protocols::ChannelProtocolMutateSocketRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_protocols::ChannelProtocol::MutateSocket>&& _callback)
+      const;
+
+  ::fitx::result<::fidl::Error> MethodA(
+      ::fidl_test_protocols::ChannelProtocolMethodARequest&& payload) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

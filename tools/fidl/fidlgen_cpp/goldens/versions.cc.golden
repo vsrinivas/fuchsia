@@ -21,6 +21,22 @@ void ::fidl_test_versions::Struct::EncodeWithoutValidating(
 
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_versions {
+[[maybe_unused]] constexpr inline uint64_t kProtocol_Foo_Ordinal =
+    7892886356712658659lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_versions
+::fitx::result<::fidl::Error>
+fidl::internal::NaturalClientImpl<::fidl_test_versions::Protocol>::Foo() const {
+  ::fidl::Encoder _encoder{::fidl_test_versions::kProtocol_Foo_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::versions::_internal::
+          fidl_test_versions_ProtocolFooRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder));
+  return ::fidl::internal::ToFitxResult(result);
+}
+namespace fidl_test_versions {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_versions

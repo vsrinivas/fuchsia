@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.inheritance/cpp/wire.h>
 #include <fidl/test/inheritance/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -29,6 +31,10 @@ class SuperFooTopResponse final
  private:
   friend ::fidl::internal::CodableBase<SuperFooTopResponse>;
   SuperFooTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -73,6 +79,10 @@ class SuperFooRequest final
  private:
   friend ::fidl::internal::CodableBase<SuperFooRequest>;
   SuperFooRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -223,6 +233,33 @@ struct ::fidl::internal::MessageTraits<
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_inheritance::SuperFooTopResponse;
 };
+namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_inheritance::Super::Foo>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_inheritance::Super::Foo>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_inheritance::Super::Foo>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_inheritance::Super> final
+    : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void foo(::fidl_test_inheritance::SuperFooRequest&& payload,
+           ::fidl::ClientCallback<::fidl_test_inheritance::Super::Foo>&&
+               _callback) const;
+
+  void foo(::fidl_test_inheritance::SuperFooRequest&& payload,
+           ::fidl::ClientResponseCallback<::fidl_test_inheritance::Super::Foo>&&
+               _callback) const;
+};
 namespace fidl {
 #endif  // __Fuchsia__
 
@@ -262,6 +299,32 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_inheritance::SuperFooTopResponse;
+};
+namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<::fidl_test_inheritance::Sub::Foo>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<::fidl::Error,
+                     ::fidl::Response<::fidl_test_inheritance::Sub::Foo>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_inheritance::Sub::Foo>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_inheritance::Sub> final
+    : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void foo(::fidl_test_inheritance::SuperFooRequest&& payload,
+           ::fidl::ClientCallback<::fidl_test_inheritance::Sub::Foo>&&
+               _callback) const;
+
+  void foo(::fidl_test_inheritance::SuperFooRequest&& payload,
+           ::fidl::ClientResponseCallback<::fidl_test_inheritance::Sub::Foo>&&
+               _callback) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

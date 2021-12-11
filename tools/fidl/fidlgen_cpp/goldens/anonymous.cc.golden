@@ -96,6 +96,51 @@ void ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse::
                                                                  0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_anonymous {
+[[maybe_unused]] constexpr inline uint64_t kSomeProtocol_SomeMethod_Ordinal =
+    8941579241812366574lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_anonymous
+void fidl::internal::NaturalClientImpl<::fidl_test_anonymous::SomeProtocol>::
+    SomeMethod(::fidl_test_anonymous::SomeProtocolSomeMethodRequest&& payload,
+               ::fidl::ClientCallback<
+                   ::fidl_test_anonymous::SomeProtocol::SomeMethod>&& _callback)
+        const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::anonymous::_internal::
+          fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>,
+          ::fidl::ClientCallback<
+              ::fidl_test_anonymous::SomeProtocol::SomeMethod>>(
+          ::fidl_test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
+          std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<::fidl_test_anonymous::SomeProtocol>::
+    SomeMethod(::fidl_test_anonymous::SomeProtocolSomeMethodRequest&& payload,
+               ::fidl::ClientResponseCallback<
+                   ::fidl_test_anonymous::SomeProtocol::SomeMethod>&& _callback)
+        const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_anonymous::kSomeProtocol_SomeMethod_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::anonymous::_internal::
+          fidl_test_anonymous_SomeProtocolSomeMethodRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>,
+          ::fidl::ClientResponseCallback<
+              ::fidl_test_anonymous::SomeProtocol::SomeMethod>>(
+          ::fidl_test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
+          std::move(_callback)));
+}
+namespace fidl_test_anonymous {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_anonymous

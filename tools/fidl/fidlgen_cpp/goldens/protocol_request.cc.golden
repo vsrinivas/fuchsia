@@ -82,10 +82,120 @@ void ::fidl_test_protocolrequest::ParentGetChildRequestTopResponse::
           &decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_protocolrequest {
+[[maybe_unused]] constexpr inline uint64_t kParent_GetChild_Ordinal =
+    7929845654914578302lu;
+[[maybe_unused]] constexpr inline uint64_t kParent_GetChildRequest_Ordinal =
+    1819029190665166744lu;
+[[maybe_unused]] constexpr inline uint64_t kParent_TakeChild_Ordinal =
+    374110854839013230lu;
+[[maybe_unused]] constexpr inline uint64_t kParent_TakeChildRequest_Ordinal =
+    1574820689302890956lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_protocolrequest
+void fidl::internal::NaturalClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChild(
+        ::fidl::ClientCallback<::fidl_test_protocolrequest::Parent::GetChild>&&
+            _callback) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_protocolrequest::kParent_GetChild_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::protocolrequest::_internal::
+          fidl_test_protocolrequest_ParentGetChildRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>,
+          ::fidl::ClientCallback<
+              ::fidl_test_protocolrequest::Parent::GetChild>>(
+          ::fidl_test_protocolrequest::kParent_GetChild_Ordinal,
+          std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChild(::fidl::ClientResponseCallback<
+             ::fidl_test_protocolrequest::Parent::GetChild>&& _callback) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_protocolrequest::kParent_GetChild_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::protocolrequest::_internal::
+          fidl_test_protocolrequest_ParentGetChildRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_protocolrequest::Parent::GetChild>,
+          ::fidl::ClientResponseCallback<
+              ::fidl_test_protocolrequest::Parent::GetChild>>(
+          ::fidl_test_protocolrequest::kParent_GetChild_Ordinal,
+          std::move(_callback)));
+}
+
+void fidl::internal::NaturalClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChildRequest(::fidl::ClientCallback<
+                    ::fidl_test_protocolrequest::Parent::GetChildRequest>&&
+                        _callback) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::protocolrequest::_internal::
+          fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<
+              ::fidl_test_protocolrequest::Parent::GetChildRequest>,
+          ::fidl::ClientCallback<
+              ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
+          ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal,
+          std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<::fidl_test_protocolrequest::Parent>::
+    GetChildRequest(::fidl::ClientResponseCallback<
+                    ::fidl_test_protocolrequest::Parent::GetChildRequest>&&
+                        _callback) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::protocolrequest::_internal::
+          fidl_test_protocolrequest_ParentGetChildRequestRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(_encoder),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<
+              ::fidl_test_protocolrequest::Parent::GetChildRequest>,
+          ::fidl::ClientResponseCallback<
+              ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
+          ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal,
+          std::move(_callback)));
+}
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalClientImpl<::fidl_test_protocolrequest::Parent>::TakeChild(
+        ::fidl_test_protocolrequest::ParentTakeChildRequest&& payload) const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_protocolrequest::kParent_TakeChild_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::protocolrequest::_internal::
+          fidl_test_protocolrequest_ParentTakeChildRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)));
+  return ::fidl::internal::ToFitxResult(result);
+}
+
+::fitx::result<::fidl::Error> fidl::internal::
+    NaturalClientImpl<::fidl_test_protocolrequest::Parent>::TakeChildRequest(
+        ::fidl_test_protocolrequest::ParentTakeChildRequestRequest&& payload)
+        const {
+  ::fidl::Encoder _encoder{
+      ::fidl_test_protocolrequest::kParent_TakeChildRequest_Ordinal};
+  ::fidl::Result result = messenger().OneWay(
+      &::fidl::test::protocolrequest::_internal::
+          fidl_test_protocolrequest_ParentTakeChildRequestRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)));
+  return ::fidl::internal::ToFitxResult(result);
+}
+namespace fidl_test_protocolrequest {
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_protocolrequest

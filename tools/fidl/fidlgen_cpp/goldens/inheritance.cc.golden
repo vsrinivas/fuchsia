@@ -34,10 +34,81 @@ void ::fidl_test_inheritance::SuperFooRequest::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_inheritance {
+[[maybe_unused]] constexpr inline uint64_t ksuper_foo_Ordinal =
+    4999045011615110827lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_inheritance
+void fidl::internal::NaturalClientImpl<::fidl_test_inheritance::Super>::foo(
+    ::fidl_test_inheritance::SuperFooRequest&& payload,
+    ::fidl::ClientCallback<::fidl_test_inheritance::Super::Foo>&& _callback)
+    const {
+  ::fidl::Encoder _encoder{::fidl_test_inheritance::ksuper_foo_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_superfooRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_inheritance::Super::Foo>,
+          ::fidl::ClientCallback<::fidl_test_inheritance::Super::Foo>>(
+          ::fidl_test_inheritance::ksuper_foo_Ordinal, std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<::fidl_test_inheritance::Super>::foo(
+    ::fidl_test_inheritance::SuperFooRequest&& payload,
+    ::fidl::ClientResponseCallback<::fidl_test_inheritance::Super::Foo>&&
+        _callback) const {
+  ::fidl::Encoder _encoder{::fidl_test_inheritance::ksuper_foo_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_superfooRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_inheritance::Super::Foo>,
+          ::fidl::ClientResponseCallback<::fidl_test_inheritance::Super::Foo>>(
+          ::fidl_test_inheritance::ksuper_foo_Ordinal, std::move(_callback)));
+}
+namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+[[maybe_unused]] constexpr inline uint64_t ksub_foo_Ordinal =
+    4999045011615110827lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_inheritance
+void fidl::internal::NaturalClientImpl<::fidl_test_inheritance::Sub>::foo(
+    ::fidl_test_inheritance::SuperFooRequest&& payload,
+    ::fidl::ClientCallback<::fidl_test_inheritance::Sub::Foo>&& _callback)
+    const {
+  ::fidl::Encoder _encoder{::fidl_test_inheritance::ksub_foo_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_subfooRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_inheritance::Sub::Foo>,
+          ::fidl::ClientCallback<::fidl_test_inheritance::Sub::Foo>>(
+          ::fidl_test_inheritance::ksub_foo_Ordinal, std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<::fidl_test_inheritance::Sub>::foo(
+    ::fidl_test_inheritance::SuperFooRequest&& payload,
+    ::fidl::ClientResponseCallback<::fidl_test_inheritance::Sub::Foo>&&
+        _callback) const {
+  ::fidl::Encoder _encoder{::fidl_test_inheritance::ksub_foo_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::inheritance::_internal::
+          fidl_test_inheritance_subfooRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_inheritance::Sub::Foo>,
+          ::fidl::ClientResponseCallback<::fidl_test_inheritance::Sub::Foo>>(
+          ::fidl_test_inheritance::ksub_foo_Ordinal, std::move(_callback)));
+}
+namespace fidl_test_inheritance {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_inheritance

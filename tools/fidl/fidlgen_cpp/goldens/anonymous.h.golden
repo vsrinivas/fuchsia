@@ -4,8 +4,10 @@
 
 #include <fidl/fidl.test.anonymous/cpp/wire.h>
 #include <fidl/test/anonymous/cpp/natural_types.h>
+#include <lib/fidl/cpp/client.h>
 #include <lib/fidl/cpp/internal/codable_base.h>
 #include <lib/fidl/cpp/internal/message_extensions.h>
+#include <lib/fidl/cpp/internal/natural_client_messenger.h>
 #include <lib/fidl/cpp/natural_types.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 
@@ -54,6 +56,10 @@ class TableData final : public ::fidl::internal::CodableBase<TableData> {
  private:
   friend ::fidl::internal::CodableBase<TableData>;
   TableData(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -99,6 +105,10 @@ class SomeProtocolSomeMethodRequest final
  private:
   friend ::fidl::internal::CodableBase<SomeProtocolSomeMethodRequest>;
   SomeProtocolSomeMethodRequest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -164,6 +174,10 @@ class OverrideTest final : public ::fidl::internal::CodableBase<OverrideTest> {
  private:
   friend ::fidl::internal::CodableBase<OverrideTest>;
   OverrideTest(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -230,6 +244,10 @@ class SomeProtocol_SomeMethod_Response final
  private:
   friend ::fidl::internal::CodableBase<SomeProtocol_SomeMethod_Response>;
   SomeProtocol_SomeMethod_Response(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -282,6 +300,10 @@ class SomeProtocolSomeMethodTopResponse final
  private:
   friend ::fidl::internal::CodableBase<SomeProtocolSomeMethodTopResponse>;
   SomeProtocolSomeMethodTopResponse(::fidl::Decoder& decoder);
+  template <typename Payload>
+  friend auto ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+      ::fidl::Encoder& encoder, Payload&& payload)
+      -> ::fidl::HLCPPOutgoingMessage;
   void EncodeWithoutValidating(::fidl::Encoder& encoder, size_t offset);
 
  public:
@@ -592,6 +614,36 @@ struct ::fidl::internal::MessageTraits<
  public:
   static constexpr bool kHasPayload = true;
   using Payload = ::fidl_test_anonymous::SomeProtocolSomeMethodTopResponse;
+};
+namespace fidl {}  // namespace fidl
+template <>
+class ::fidl::internal::ClientCallbackTraits<
+    ::fidl_test_anonymous::SomeProtocol::SomeMethod>
+    final {
+ public:
+  ClientCallbackTraits() = delete;
+  using ResultCallback = ::fit::callback<void(
+      ::fitx::result<
+          ::fidl::Error,
+          ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>>&)>;
+  using ResponseCallback = ::fit::callback<void(
+      ::fidl::Response<::fidl_test_anonymous::SomeProtocol::SomeMethod>&)>;
+};
+
+template <>
+class ::fidl::internal::NaturalClientImpl<::fidl_test_anonymous::SomeProtocol>
+    final : public ::fidl::internal::NaturalClientBase {
+ public:
+  using NaturalClientBase::NaturalClientBase;
+  void SomeMethod(
+      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest&& payload,
+      ::fidl::ClientCallback<::fidl_test_anonymous::SomeProtocol::SomeMethod>&&
+          _callback) const;
+
+  void SomeMethod(
+      ::fidl_test_anonymous::SomeProtocolSomeMethodRequest&& payload,
+      ::fidl::ClientResponseCallback<
+          ::fidl_test_anonymous::SomeProtocol::SomeMethod>&& _callback) const;
 };
 namespace fidl {
 #endif  // __Fuchsia__

@@ -174,6 +174,46 @@ void ::fidl_test_nullable::Int32Wrapper::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<int32_t>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_nullable {
+[[maybe_unused]] constexpr inline uint64_t kSimpleProtocol_Add_Ordinal =
+    1238508415331800925lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_nullable
+void fidl::internal::NaturalClientImpl<::fidl_test_nullable::SimpleProtocol>::
+    Add(::fidl_test_nullable::SimpleProtocolAddRequest&& payload,
+        ::fidl::ClientCallback<::fidl_test_nullable::SimpleProtocol::Add>&&
+            _callback) const {
+  ::fidl::Encoder _encoder{::fidl_test_nullable::kSimpleProtocol_Add_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::nullable::_internal::
+          fidl_test_nullable_SimpleProtocolAddRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_nullable::SimpleProtocol::Add>,
+          ::fidl::ClientCallback<::fidl_test_nullable::SimpleProtocol::Add>>(
+          ::fidl_test_nullable::kSimpleProtocol_Add_Ordinal,
+          std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<::fidl_test_nullable::SimpleProtocol>::
+    Add(::fidl_test_nullable::SimpleProtocolAddRequest&& payload,
+        ::fidl::ClientResponseCallback<
+            ::fidl_test_nullable::SimpleProtocol::Add>&& _callback) const {
+  ::fidl::Encoder _encoder{::fidl_test_nullable::kSimpleProtocol_Add_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::nullable::_internal::
+          fidl_test_nullable_SimpleProtocolAddRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_nullable::SimpleProtocol::Add>,
+          ::fidl::ClientResponseCallback<
+              ::fidl_test_nullable::SimpleProtocol::Add>>(
+          ::fidl_test_nullable::kSimpleProtocol_Add_Ordinal,
+          std::move(_callback)));
+}
+namespace fidl_test_nullable {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_nullable

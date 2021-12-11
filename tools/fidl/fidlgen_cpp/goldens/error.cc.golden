@@ -50,6 +50,42 @@ void ::fidl_test_error::ExampleFooRequest::EncodeWithoutValidating(
     : storage_({::fidl::DecodeAs<::std::string>(&decoder, 0)}) {}
 #endif  // __Fuchsia__
 
-#ifdef __Fuchsia__
+namespace fidl_test_error {
+[[maybe_unused]] constexpr inline uint64_t kExample_foo_Ordinal =
+    6333213382893778862lu;
 
+#ifdef __Fuchsia__
+}  // namespace fidl_test_error
+void fidl::internal::NaturalClientImpl<::fidl_test_error::Example>::foo(
+    ::fidl_test_error::ExampleFooRequest&& payload,
+    ::fidl::ClientCallback<::fidl_test_error::Example::Foo>&& _callback) const {
+  ::fidl::Encoder _encoder{::fidl_test_error::kExample_foo_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::error::_internal::
+          fidl_test_error_ExamplefooRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_error::Example::Foo>,
+          ::fidl::ClientCallback<::fidl_test_error::Example::Foo>>(
+          ::fidl_test_error::kExample_foo_Ordinal, std::move(_callback)));
+}
+void fidl::internal::NaturalClientImpl<::fidl_test_error::Example>::foo(
+    ::fidl_test_error::ExampleFooRequest&& payload,
+    ::fidl::ClientResponseCallback<::fidl_test_error::Example::Foo>&& _callback)
+    const {
+  ::fidl::Encoder _encoder{::fidl_test_error::kExample_foo_Ordinal};
+  return messenger().TwoWay(
+      &::fidl::test::error::_internal::
+          fidl_test_error_ExamplefooRequestMessageTable,
+      ::fidl::internal::EncodeTransactionalMessageWithoutValidating(
+          _encoder, std::move(payload)),
+      ::fidl::internal::MakeResponseContext<
+          ::fidl::Response<::fidl_test_error::Example::Foo>,
+          ::fidl::ClientResponseCallback<::fidl_test_error::Example::Foo>>(
+          ::fidl_test_error::kExample_foo_Ordinal, std::move(_callback)));
+}
+namespace fidl_test_error {
 #endif  // __Fuchsia__
+
+}  // namespace fidl_test_error
