@@ -33,7 +33,6 @@
 #include <object/job_dispatcher.h>
 #include <object/message_packet.h>
 #include <object/process_dispatcher.h>
-#include <object/resource_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
@@ -46,11 +45,32 @@
 #endif
 
 namespace {
+
 class VmoBuffer {
  public:
   explicit VmoBuffer(fbl::RefPtr<VmObjectPaged> vmo) : size_(vmo->size()), vmo_(ktl::move(vmo)) {}
 
+  explicit VmoBuffer(size_t size = PAGE_SIZE, uint32_t options = VmObjectPaged::kResizable) {
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, options, size, &vmo_);
+    ZX_ASSERT(status == ZX_OK);
+    size_ = vmo_->size();
+  }
+
   int Write(const ktl::string_view str) {
+    // Enlarge the VMO as needed if it was created as resizable.
+    if (str.size() > size_ - offset_ && vmo_->is_resizable()) {
+      DEBUG_ASSERT(vmo_->size() < offset_ + str.size());
+      zx_status_t status = vmo_->Resize(offset_ + str.size());
+      if (status == ZX_OK) {
+        // Update unlocked cache of the size.
+        size_ = vmo_->size();
+      } else if (offset_ == size_) {
+        // None left to write without the resize.
+        // Otherwise proceed to write what can be written.
+        return static_cast<int>(status);
+      }
+    }
+
     const size_t todo = ktl::min(str.size(), size_ - offset_);
 
     if (zx_status_t res = vmo_->Write(str.data(), offset_, todo); res != ZX_OK) {
@@ -63,68 +83,23 @@ class VmoBuffer {
     return static_cast<int>(todo);
   }
 
+  const fbl::RefPtr<VmObjectPaged>& vmo() const { return vmo_; }
+
+  size_t content_size() const { return offset_; }
+
  private:
   size_t offset_{0};
   size_t size_;
-  const fbl::RefPtr<VmObjectPaged> vmo_;
+  fbl::RefPtr<VmObjectPaged> vmo_;
 };
-}  // namespace
 
 static_assert(userboot::kCmdlineMax == Cmdline::kCmdlineMax);
-
-HandleOwner get_resource_handle(zx_rsrc_kind_t kind) {
-  char name[ZX_MAX_NAME_LEN];
-  switch (kind) {
-    case ZX_RSRC_KIND_MMIO:
-      strlcpy(name, "mmio", ZX_MAX_NAME_LEN);
-      break;
-    case ZX_RSRC_KIND_IRQ:
-      strlcpy(name, "irq", ZX_MAX_NAME_LEN);
-      break;
-    case ZX_RSRC_KIND_IOPORT:
-      strlcpy(name, "io_port", ZX_MAX_NAME_LEN);
-      break;
-    case ZX_RSRC_KIND_ROOT:
-      strlcpy(name, "root", ZX_MAX_NAME_LEN);
-      break;
-    case ZX_RSRC_KIND_SMC:
-      strlcpy(name, "smc", ZX_MAX_NAME_LEN);
-      break;
-    case ZX_RSRC_KIND_SYSTEM:
-      strlcpy(name, "system", ZX_MAX_NAME_LEN);
-      break;
-  }
-  zx_rights_t rights;
-  KernelHandle<ResourceDispatcher> rsrc;
-  zx_status_t result;
-  switch (kind) {
-    case ZX_RSRC_KIND_ROOT:
-      result = ResourceDispatcher::Create(&rsrc, &rights, kind, 0, 0, 0, name);
-      break;
-    case ZX_RSRC_KIND_MMIO:
-    case ZX_RSRC_KIND_IRQ:
-#if ARCH_X86
-    case ZX_RSRC_KIND_IOPORT:
-#elif ARCH_ARM64
-    case ZX_RSRC_KIND_SMC:
-#endif
-    case ZX_RSRC_KIND_SYSTEM:
-      result = ResourceDispatcher::CreateRangedRoot(&rsrc, &rights, kind, name);
-      break;
-    default:
-      result = ZX_ERR_WRONG_TYPE;
-      break;
-  }
-  ASSERT(result == ZX_OK);
-  return Handle::Make(ktl::move(rsrc), rights);
-}
-
-namespace {
 
 using namespace userboot;
 
 constexpr const char kStackVmoName[] = "userboot-initial-stack";
 constexpr const char kCrashlogVmoName[] = "crashlog";
+constexpr const char kBootOptionsVmoname[] = "boot-options.txt";
 constexpr const char kZbiVmoName[] = "zbi";
 
 constexpr size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
@@ -270,6 +245,17 @@ void bootstrap_vmos(Handle** handles) {
   ASSERT(status == ZX_OK);
   status = get_vmo_handle(crashlog_vmo, true, crashlog_size, nullptr, &handles[kCrashlog]);
   ASSERT(status == ZX_OK);
+
+  // Boot options.
+  {
+    VmoBuffer boot_options;
+    FILE boot_options_file{&boot_options};
+    gBootOptions->Show(/*defaults=*/false, &boot_options_file);
+    boot_options.vmo()->set_name(kBootOptionsVmoname, sizeof(kBootOptionsVmoname) - 1);
+    status = get_vmo_handle(boot_options.vmo(), false, boot_options.content_size(), nullptr,
+                            &handles[kBootOptions]);
+    ZX_ASSERT(status == ZX_OK);
+  }
 
 #if ENABLE_ENTROPY_COLLECTOR_TEST
   ASSERT(!crypto::entropy::entropy_was_lost);
@@ -437,6 +423,6 @@ void userboot_init(uint) {
   init_time.Add(current_time() / 1000000LL);
 }
 
-}  // anonymous namespace
+}  // namespace
 
 LK_INIT_HOOK(userboot, userboot_init, LK_INIT_LEVEL_USER)

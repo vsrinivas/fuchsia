@@ -55,6 +55,8 @@ enum HandleIndex : uint32_t {
   kCrashlog,
   kFirstKernelFile = kCrashlog,
 
+  kBootOptions,
+
   kCounterNames,
   kCounters,
 #if ENABLE_ENTROPY_COLLECTOR_TEST
