@@ -48,7 +48,7 @@ void PerformReads(const ReadLocation* locations, size_t num_reads, const zx::vmo
 }
 
 TEST_P(BlobfsMultithreadedSmokeTest, MultithreadedReads) {
-  srand(testing::GTEST_FLAG(random_seed) + NumThreads());
+  srand(testing::UnitTest::GetInstance()->random_seed() + NumThreads());
   std::vector<std::unique_ptr<BlobInfo>> file_info;
   // Add more files for more threads. We'll need it for scaling up the number of available pages to
   // fault in.

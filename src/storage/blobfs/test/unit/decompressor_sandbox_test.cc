@@ -32,7 +32,7 @@ constexpr size_t kMapSize = kDataSize * 2;
 // Generates a data set of size with sequences of the same bytes and random
 // values appearing with frequency kDataRandomnessRatio.
 void GenerateData(size_t size, uint8_t* dst) {
-  srand(testing::GTEST_FLAG(random_seed));
+  srand(testing::UnitTest::GetInstance()->random_seed());
   for (size_t i = 0; i < size; i++) {
     if ((rand() % 1000) / 1000.0l >= kDataRandomnessRatio) {
       dst[i] = 12;
