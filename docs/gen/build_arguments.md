@@ -3989,6 +3989,14 @@ otherwise the most recently validated version is used.
 
 From //src/chromium/build_args.gni:14
 
+### use_direct_for_carnelian_examples
+Include a config in the example packages to attempt to use view mode
+direct.
+
+**Current value (from the default):** `false`
+
+From //src/lib/ui/carnelian/BUILD.gn:29
+
 ### use_goma
 Set to true to enable distributed compilation using Goma.
 
