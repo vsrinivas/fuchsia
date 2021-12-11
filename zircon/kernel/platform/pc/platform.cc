@@ -122,6 +122,11 @@ static void platform_save_bootloader_data(void) {
     bootloader.fb = gPhysHandoff->arch_handoff.framebuffer.value();
   }
 
+  // Record any previous crashlog.
+  if (ktl::string_view crashlog = gPhysHandoff->crashlog.get(); !crashlog.empty()) {
+    crashlog_impls::efi.SetLastCrashlogLocation(crashlog);
+  }
+
   // If we have an NVRAM location and we have not already configured a platform
   // crashlog implementation, use the NVRAM location to back a
   // RamMappableCrashlog implementation and configure the generic platform
@@ -143,13 +148,6 @@ static void platform_save_bootloader_data(void) {
           payload.back() = ktl::byte{'\0'};
           gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
         }
-        break;
-      case ZBI_TYPE_CRASHLOG: {
-        crashlog_impls::efi.SetLastCrashlogLocation(
-            {reinterpret_cast<char*>(payload.data()), payload.size()});
-        break;
-      }
-      case ZBI_TYPE_DISCARD:
         break;
     };
   }

@@ -60,6 +60,14 @@ void HandoffPrep::SummarizeMiscZbiItems(ktl::span<const ktl::byte> zbi) {
         }
         break;
 
+      case ZBI_TYPE_CRASHLOG: {
+        fbl::AllocChecker ac;
+        ktl::span buffer = New(handoff_->crashlog, ac, payload.size());
+        ZX_ASSERT_MSG(ac.check(), "cannot allocate %zu bytes for crash log", payload.size());
+        memcpy(buffer.data(), payload.data(), payload.size_bytes());
+        break;
+      }
+
       // Default assumption is that the type is architecture-specific.
       default:
         ArchSummarizeMiscZbiItem(*header, payload);

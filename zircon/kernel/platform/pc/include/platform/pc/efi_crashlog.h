@@ -19,7 +19,7 @@ class EfiCrashlog final : public PlatformCrashlog::Interface {
   size_t Recover(FILE* tgt) final;
   void EnableCrashlogUptimeUpdates(bool enabled) final {}
 
-  void SetLastCrashlogLocation(ktl::span<char> last_crashlog) {
+  void SetLastCrashlogLocation(ktl::string_view last_crashlog) {
     Guard<SpinLock, IrqSave> guard{&last_crashlog_lock_};
     last_crashlog_ = last_crashlog;
   }
@@ -29,9 +29,9 @@ class EfiCrashlog final : public PlatformCrashlog::Interface {
   // to avoid excessive pressure on efi variable storage
   static constexpr size_t kMaxEfiCrashlogLen = 4096;
 
-  // Stashed values from ZBI_TYPE_CRASHLOG.
+  // Stashed crashlog-related values.
   DECLARE_SPINLOCK(EfiCrashlog) last_crashlog_lock_;
-  ktl::span<char> last_crashlog_ TA_GUARDED(last_crashlog_lock_){};
+  ktl::string_view last_crashlog_ TA_GUARDED(last_crashlog_lock_){};
   char render_target_[kMaxEfiCrashlogLen];
 };
 

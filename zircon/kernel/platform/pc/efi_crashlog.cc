@@ -35,13 +35,13 @@ __NO_ASAN void EfiCrashlog::Finalize(zircon_crash_reason_t reason, size_t amt) {
 }
 
 size_t EfiCrashlog::Recover(FILE* tgt) {
-  ktl::span<char> last_crashlog;
+  ktl::string_view last_crashlog;
   {
     Guard<SpinLock, IrqSave> guard{&last_crashlog_lock_};
     last_crashlog = last_crashlog_;
   }
 
-  if (last_crashlog.empty() || (last_crashlog.data() == nullptr)) {
+  if (last_crashlog.empty()) {
     return 0;
   }
 
@@ -49,8 +49,7 @@ size_t EfiCrashlog::Recover(FILE* tgt) {
   // Otherwise, just return the length which would have been needed to hold the
   // entire log.
   if (tgt != nullptr) {
-    return ktl::max(tgt->Write({last_crashlog.data(), last_crashlog.size()}), 0);
-  } else {
-    return last_crashlog.size();
+    return ktl::max(tgt->Write(last_crashlog), 0);
   }
+  return last_crashlog.size();
 }

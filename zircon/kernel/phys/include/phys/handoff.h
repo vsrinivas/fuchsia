@@ -93,6 +93,9 @@ struct PhysHandoff {
   // ZBI_TYPE_CPU_TOPOLOGY payload (or translated legacy equivalent).
   PhysHandoffTemporarySpan<const zbi_topology_node_t> cpu_topology;
 
+  // ZBI_TYPE_CRASHLOG payload.
+  PhysHandoffTemporaryString crashlog;
+
   // ZBI_TYPE_HW_REBOOT_REASON payload.
   ktl::optional<zbi_hw_reboot_reason_t> reboot_reason;
 
