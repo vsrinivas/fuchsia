@@ -257,10 +257,11 @@ fuchsia_unittest_package("fortune_tests") {
 
 ## Repository layout
 
-This section depicts the directory layout for the Fuchsia Source Tree. Non-bold
-entries are directories or files in the fuchsia.git repository. Bold entries are
-separate repositories that are mapped into the directory structure using `jiri`
-(except for the prebuilt directory, which is populated from CIPD).
+This section depicts the directory layout for the Fuchsia Source Tree.
+Non-starred entries are directories or files in the fuchsia.git repository.
+Starred (`*`) entries are separate repositories that are mapped into the
+directory structure using `jiri` (except for the prebuilt directory, which is
+populated from CIPD).
 
  * `.clang-format`
  * `.dir-locals.el`
@@ -298,15 +299,15 @@ separate repositories that are mapped into the directory structure using `jiri`
  * `docs/`
  * `examples/`
  * `third_party/`
-    * **`boringssl/`**
-    * **`icu/`**
-    * **`rust_crates/`**
-    * **`...`**
+    * `boringssl/` *
+    * `icu/` *
+    * `rust_crates/` *
+    * `...` *
  * `prebuilt/`
-    * **`chromium/`**
-    * **`dart/`**
-    * **`flutter/`**
-    * **`llvm/`**
+    * `chromium/` *
+    * `dart/` *
+    * `flutter/` *
+    * `llvm/` *
  * `tools/`
     * `banjo/`
     * `fidl/bin/backend/{c,cpp,dart,go,llcpp,rust}`
@@ -320,20 +321,22 @@ separate repositories that are mapped into the directory structure using `jiri`
     * `component/`
     * `connectivity/`
     * `developer/`
-    * **`experiences/`**
+    * `experiences/` *
     * `graphics/`
     * `identity/`
     * `media/`
     * `modular/`
     * `storage/`
     * `testing/`
+    * `ui/`
+       * `scenic/`
     * `updater/`
     * `virtualization/`
     * `zircon/kernel/`
     * `zircon/drivers/`
     * `zircon/userspace/`
  * `vendor/`
-    * **`[closed-source code from various vendors]`**
+    * `[closed-source code from various vendors]` *
 
 ## Evolution
 
