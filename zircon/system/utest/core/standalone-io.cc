@@ -7,12 +7,12 @@
 #include <lib/zx/resource.h>
 #include <stdio.h>
 #include <sys/uio.h>
-#include <threads.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
+#include <mutex>
 #include <string_view>
 
 #include "standalone.h"
@@ -25,18 +25,19 @@ constexpr std::string_view kStartMsg = "*** Running standalone Zircon core tests
 
 zx::debuglog gLogHandle;
 
-mtx_t linebuffer_lock = MTX_INIT;
-char linebuffer[ZX_LOG_RECORD_DATA_MAX] __TA_GUARDED(linebuffer_lock);
-size_t linebuffer_size __TA_GUARDED(linebuffer_lock);
+std::mutex gLinebufferLock;
+
+char linebuffer[ZX_LOG_RECORD_DATA_MAX] __TA_GUARDED(gLinebufferLock);
+size_t linebuffer_size __TA_GUARDED(gLinebufferLock);
 
 // Flushes and resets linebuffer.
-void flush_linebuffer_locked() __TA_REQUIRES(linebuffer_lock) {
+void flush_linebuffer_locked() __TA_REQUIRES(gLinebufferLock) {
   gLogHandle.write(0, linebuffer, linebuffer_size);
   linebuffer_size = 0;
 }
 
 void LogWrite(std::string_view str) {
-  mtx_lock(&linebuffer_lock);
+  std::lock_guard lock(gLinebufferLock);
 
   // printf calls write multiple times within a print, but each debuglog write
   // is a separate record, so each inserts a logical newline. To avoid
@@ -56,14 +57,12 @@ void LogWrite(std::string_view str) {
       flush_linebuffer_locked();
     }
   }
-
-  mtx_unlock(&linebuffer_lock);
 }
 
 }  // namespace
 
-void StandaloneInitIo(zx_handle_t root_resource) {
-  zx_status_t status = zx::debuglog::create(*zx::unowned_resource{root_resource}, 0, &gLogHandle);
+void StandaloneInitIo(zx::unowned_resource root_resource) {
+  zx_status_t status = zx::debuglog::create(*root_resource, 0, &gLogHandle);
   if (status != ZX_OK) {
     zx_process_exit(-2);
   }

@@ -5,13 +5,14 @@
 #ifndef ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
 #define ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/vmo.h>
 
-__BEGIN_CDECLS
+#include <functional>
+#include <initializer_list>
+#include <string>
+#include <string_view>
 
-void StandaloneInitIo(zx_handle_t root_resource);
-
-__END_CDECLS
+void StandaloneInitIo(zx::unowned_resource root_resource);
 
 #endif  // ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
