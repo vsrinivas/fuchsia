@@ -8,6 +8,7 @@ group("testing") {
     "bt-test-harness",
     "mock-a2dp-controller",
     "mock-piconet-server",
+    "test-battery-manager",
     "test-call-manager",
     "test-harness",
     "test-rfcomm-client",

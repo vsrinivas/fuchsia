@@ -150,7 +150,7 @@ impl BatteryClient {
     }
 
     /// Register for battery change updates from the Fuchsia battery `svc`.
-    fn register_updates(
+    pub fn register_updates(
         battery_svc: fpower::BatteryManagerProxy,
     ) -> Result<Self, BatteryClientError> {
         let (watcher_client, watcher) =
