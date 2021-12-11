@@ -873,7 +873,7 @@ func TestExecute(t *testing.T) {
 				ffxInstance = oldFFXInstance
 			}()
 			fuchsiaTester := &fakeTester{}
-			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool, _ testrunner.FFXTester) (testrunner.Tester, error) {
+			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool) (testrunner.Tester, error) {
 				if c.wantErr {
 					return nil, fmt.Errorf("failed to get tester")
 				}
@@ -886,7 +886,7 @@ func TestExecute(t *testing.T) {
 				return fuchsiaTester, nil
 			}
 			ffx := &testrunner.MockFFXTester{}
-			ffxInstance = func(_ context.Context, _, _ string, _ []string, _, _, _ string) (testrunner.FFXTester, error) {
+			ffxInstance = func(_ context.Context, _, _ string, _ []string, _, _, _ string) (testrunner.FFXInstance, error) {
 				if c.useFFX {
 					return ffx, nil
 				}
@@ -922,7 +922,7 @@ func TestExecute(t *testing.T) {
 			if copySinksCount != 1 {
 				t.Errorf("ran CopySinks %d times, want: 1", copySinksCount)
 			}
-			if snapshotCount != 1 {
+			if snapshotCount != 1 && !c.useFFX {
 				t.Errorf("ran RunSnapshot %d times, want: 1", snapshotCount)
 			}
 			if closeCount != 1 {
@@ -931,6 +931,10 @@ func TestExecute(t *testing.T) {
 			// Ensure CopySinks, RunSnapshot, and Close are run after all calls to Test.
 			lastCalls := fuchsiaTester.funcCalls[len(fuchsiaTester.funcCalls)-3:]
 			expectedLastCalls := []string{runSnapshotFunc, copySinksFunc, closeFunc}
+			if c.useFFX {
+				lastCalls = lastCalls[1:]
+				expectedLastCalls = expectedLastCalls[1:]
+			}
 			if diff := cmp.Diff(expectedLastCalls, lastCalls); diff != "" {
 				t.Errorf("Unexpected command run (-want +got):\n%s", diff)
 			}

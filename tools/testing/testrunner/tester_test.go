@@ -303,7 +303,8 @@ func TestSSHTester(t *testing.T) {
 			}
 			copier := &fakeDataSinkCopier{}
 			serialSocket := &fakeSerialClient{}
-			tester := &FuchsiaSSHTester{
+			var tester Tester
+			tester = &FuchsiaSSHTester{
 				client:                      client,
 				copier:                      copier,
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
@@ -312,7 +313,7 @@ func TestSSHTester(t *testing.T) {
 			}
 			ffx := &MockFFXTester{}
 			if c.useFFX {
-				tester.ffx = ffx
+				tester = NewFFXTester(ffx, tester, "")
 			}
 
 			defer func() {

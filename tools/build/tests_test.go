@@ -106,3 +106,43 @@ func TestUnmarshalTest(t *testing.T) {
 		t.Fatalf("got test spec: %#v\n\nexpected: %#v", testSpecs, expected)
 	}
 }
+
+func TestIsComponentV2(t *testing.T) {
+	testCases := []struct {
+		name          string
+		test          Test
+		isComponentV2 bool
+	}{
+		{
+			name: "component v1",
+			test: Test{
+				Name:       "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component.cmx",
+				PackageURL: "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component.cmx",
+			},
+			isComponentV2: false,
+		},
+		{
+			name: "component v2",
+			test: Test{
+				Name:       "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component.cm",
+				PackageURL: "fuchsia-pkg://fuchsia.com/fuchsia_pkg#meta/component.cm",
+			},
+			isComponentV2: true,
+		},
+		{
+			name: "host test",
+			test: Test{
+				Name: "path/to/host_test.sh",
+				Path: "path/to/host_test.sh",
+			},
+			isComponentV2: false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.test.IsComponentV2() != tc.isComponentV2 {
+				t.Errorf("failed to determine if %s is a component v2 test; want %v, got %v", tc.test.Name, tc.isComponentV2, tc.test.IsComponentV2())
+			}
+		})
+	}
+}

@@ -4,6 +4,12 @@
 
 package build
 
+import "strings"
+
+const (
+	componentV2Suffix = ".cm"
+)
+
 // TestSpec is the specification for a single test and the environments it
 // should be executed in.
 type TestSpec struct {
@@ -56,6 +62,11 @@ type Test struct {
 	// containing a JSON list of the test's runtime dependencies, Currently this
 	// field only makes sense for Linux and Mac tests.
 	RuntimeDepsFile string `json:"runtime_deps,omitempty"`
+}
+
+// IsComponentV2 returns whether the test is a component v2 test.
+func (t *Test) IsComponentV2() bool {
+	return strings.HasSuffix(t.PackageURL, componentV2Suffix)
 }
 
 type LogSettings struct {

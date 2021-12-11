@@ -224,8 +224,8 @@ var (
 	serialTester = testrunner.NewFuchsiaSerialTester
 )
 
-var ffxInstance = func(ctx context.Context, ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (testrunner.FFXTester, error) {
-	ffx, err := func() (testrunner.FFXTester, error) {
+var ffxInstance = func(ctx context.Context, ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (testrunner.FFXInstance, error) {
+	ffx, err := func() (testrunner.FFXInstance, error) {
 		ffx, err := ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
 		if ffx == nil {
 			// Return nil instead of ffx so that the returned FFXTester
@@ -271,16 +271,14 @@ func execute(
 ) error {
 	var fuchsiaSinks, localSinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester testrunner.Tester
-	var ffx testrunner.FFXTester
 
 	localEnv := append(os.Environ(),
 		// Tell tests written in Rust to print stack on failures.
 		"RUST_BACKTRACE=1",
 	)
 
-	var err error
 	if sshKeyFile != "" {
-		ffx, err = ffxInstance(
+		ffx, err := ffxInstance(
 			ctx, flags.ffxPath, flags.localWD, localEnv, os.Getenv(botanistconstants.NodenameEnvKey),
 			sshKeyFile, outputs.OutDir)
 		if err != nil {
@@ -288,6 +286,12 @@ func execute(
 		}
 		if ffx != nil {
 			defer ffx.Stop()
+			t, err := sshTester(
+				ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests)
+			if err != nil {
+				return fmt.Errorf("failed to initialize fuchsia tester: %w", err)
+			}
+			fuchsiaTester = testrunner.NewFFXTester(ffx, t, outputs.OutDir)
 		}
 	}
 
@@ -303,7 +307,7 @@ func execute(
 				var err error
 				if sshKeyFile != "" {
 					fuchsiaTester, err = sshTester(
-						ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests, ffx)
+						ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests)
 				} else {
 					if serialSocketPath == "" {
 						return nil, nil, fmt.Errorf("%q must be set if %q is not set", botanistconstants.SerialSocketEnvKey, botanistconstants.SSHKeyEnvKey)
@@ -325,8 +329,9 @@ func execute(
 			// Initialize the fuchsia SSH tester to run the snapshot at the end in case
 			// we ran any host-target interaction tests.
 			if fuchsiaTester == nil && sshKeyFile != "" {
+				var err error
 				fuchsiaTester, err = sshTester(
-					ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests, ffx)
+					ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
@@ -350,9 +355,6 @@ func execute(
 	}
 	if localTester != nil {
 		defer localTester.Close()
-	}
-	if ffx != nil {
-		defer ffx.Stop()
 	}
 	finalize := func(t testrunner.Tester, sinks []runtests.DataSinkReference) error {
 		if t != nil {
@@ -448,21 +450,7 @@ func runAndOutputTests(
 		test.previousRuns++
 		test.totalDuration += result.Duration()
 
-		// Schedule another run of the test if we haven't yet exceeded the
-		// time limit for reruns, or if the most recent test run didn't meet
-		// the stop condition for this test.
-		stopRepeatingDuration := time.Duration(test.StopRepeatingAfterSecs) * time.Second
-		keepGoing := true
-		if stopRepeatingDuration > 0 && test.totalDuration >= stopRepeatingDuration {
-			keepGoing = false
-		} else if test.Runs > 0 && test.previousRuns >= test.Runs {
-			keepGoing = false
-		} else if test.RunAlgorithm == testsharder.StopOnSuccess && result.Passed() {
-			keepGoing = false
-		} else if test.RunAlgorithm == testsharder.StopOnFailure && !result.Passed() {
-			keepGoing = false
-		}
-		if keepGoing {
+		if shouldKeepGoing(test.Test, result, test.totalDuration) {
 			// Schedule the test to be run again.
 			testQueue <- test
 		}
@@ -471,6 +459,23 @@ func runAndOutputTests(
 		*sinks = append(*sinks, result.DataSinks)
 	}
 	return nil
+}
+
+// shouldKeepGoing returns whether we should schedule another run of the test.
+// It'll return true if we haven't yet exceeded the time limit for reruns, or
+// if the most recent test run didn't meet the stop condition for this test.
+func shouldKeepGoing(test testsharder.Test, lastResult *testrunner.TestResult, testTotalDuration time.Duration) bool {
+	stopRepeatingDuration := time.Duration(test.StopRepeatingAfterSecs) * time.Second
+	if stopRepeatingDuration > 0 && testTotalDuration >= stopRepeatingDuration {
+		return false
+	} else if test.Runs > 0 && lastResult.RunIndex+1 >= test.Runs {
+		return false
+	} else if test.RunAlgorithm == testsharder.StopOnSuccess && lastResult.Passed() {
+		return false
+	} else if test.RunAlgorithm == testsharder.StopOnFailure && !lastResult.Passed() {
+		return false
+	}
+	return true
 }
 
 // runTestOnce runs the given test once. It will not return an error if the test

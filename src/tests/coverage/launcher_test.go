@@ -35,9 +35,9 @@ func TestCoverage(t *testing.T) {
 	testOutDir := t.TempDir()
 	// Create a new fuchsia tester that is responsible for executing the test.
 	// This is v2 test, which uses run-test-suite instead of runtests, so runtests=false.
-	// This test currently does use ffx, so ffx=nil.
-	// TODO(fxbug.dev/77634): When we start treating profiles as artifacts, start using ffx.
-	tester, err := testrunner.NewFuchsiaSSHTester(ctx, addr, sshKeyFile, testOutDir, "", false, nil)
+	// TODO(fxbug.dev/77634): When we start treating profiles as artifacts, start using ffx
+	// with testrunner.NewFFXTester().
+	tester, err := testrunner.NewFuchsiaSSHTester(ctx, addr, sshKeyFile, testOutDir, "", false)
 	if err != nil {
 		t.Fatalf("failed to initialize fuchsia tester: %s", err)
 	}

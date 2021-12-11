@@ -17,7 +17,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -49,8 +48,6 @@ const (
 	runtestsName         = "runtests"
 	runTestComponentName = "run-test-component"
 	runTestSuiteName     = "run-test-suite"
-
-	componentV2Suffix = ".cm"
 
 	// Returned by both run-test-component and run-test-suite to indicate the
 	// test timed out.
@@ -286,11 +283,78 @@ func (s *serialSocket) runDiagnostics(ctx context.Context) error {
 }
 
 // for testability
-type FFXTester interface {
+type FFXInstance interface {
 	SetStdoutStderr(stdout, stderr io.Writer)
 	Test(ctx context.Context, tests []ffxutil.TestDef, outDir string, args ...string) (*ffxutil.TestRunResult, error)
 	Snapshot(ctx context.Context, outDir string, snapshotFilename string) error
 	Stop() error
+}
+
+// FFXTester uses ffx to run tests and other enabled features.
+type FFXTester struct {
+	ffx FFXInstance
+	// It will temporarily use an sshTester for functions where ffx has not been
+	// enabled to run yet.
+	// TODO(ihuh): Remove once all v1 tests are migrated to v2 and data sinks are
+	// available as an output artifact of `ffx test`.
+	sshTester      Tester
+	localOutputDir string
+}
+
+// NewFFXTester returns an FFXTester.
+func NewFFXTester(ffx FFXInstance, sshTester Tester, localOutputDir string) *FFXTester {
+	return &FFXTester{
+		ffx:            ffx,
+		sshTester:      sshTester,
+		localOutputDir: localOutputDir,
+	}
+}
+
+func (t *FFXTester) Test(ctx context.Context, test testsharder.Test, stdout, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
+	if test.IsComponentV2() {
+		sinks := runtests.DataSinkReference{}
+		testDef := ffxutil.TestDef{
+			TestUrl:         test.PackageURL,
+			Timeout:         int(test.Timeout.Seconds()),
+			Parallel:        test.Parallel,
+			MaxSeverityLogs: test.LogSettings.MaxSeverity,
+		}
+		t.ffx.SetStdoutStderr(stdout, stderr)
+		defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
+		testResult, err := t.ffx.Test(ctx, []ffxutil.TestDef{testDef}, outDir, "--filter-ansi")
+		if err == nil && testResult.Outcome != ffxutil.TestPassed {
+			err = fmt.Errorf("test failed with status: %s", testResult.Outcome)
+		}
+		// TODO(ihuh): Use the artifacts from the output directory to get stdio.
+		// Remove the outDir for now since it's unused.
+		os.RemoveAll(outDir)
+		return sinks, err
+	}
+	return t.sshTester.Test(ctx, test, stdout, stderr, outDir)
+}
+
+func (t *FFXTester) Close() error {
+	t.sshTester.Close()
+	return t.ffx.Stop()
+}
+
+func (t *FFXTester) EnsureSinks(ctx context.Context, sinks []runtests.DataSinkReference, outputs *TestOutputs) error {
+	// TODO(fxbug.dev/77634): Implement. Until this is done, fuchsiaSSHTester.EnsureSinks()
+	// needs to be called to get the data sinks from the ffxTester.
+	return t.sshTester.EnsureSinks(ctx, sinks, outputs)
+}
+
+func (t *FFXTester) RunSnapshot(ctx context.Context, snapshotFile string) error {
+	if snapshotFile == "" {
+		return nil
+	}
+	startTime := clock.Now(ctx)
+	err := t.ffx.Snapshot(ctx, t.localOutputDir, snapshotFile)
+	if err != nil {
+		logger.Errorf(ctx, "%s: %s", constants.FailedToRunSnapshotMsg, err)
+	}
+	logger.Debugf(ctx, "ran snapshot in %s", clock.Now(ctx).Sub(startTime))
+	return err
 }
 
 // FuchsiaSSHTester executes fuchsia tests over an SSH connection.
@@ -301,13 +365,12 @@ type FuchsiaSSHTester struct {
 	localOutputDir              string
 	connectionErrorRetryBackoff retry.Backoff
 	serialSocket                serialClient
-	ffx                         FFXTester
 }
 
 // NewFuchsiaSSHTester returns a FuchsiaSSHTester associated to a fuchsia
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
-func NewFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, ffx FFXTester) (Tester, error) {
+func NewFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool) (Tester, error) {
 	key, err := ioutil.ReadFile(sshKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSH key file: %w", err)
@@ -343,7 +406,6 @@ func NewFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 		localOutputDir:              localOutputDir,
 		connectionErrorRetryBackoff: retry.NewConstantBackoff(time.Second),
 		serialSocket:                &serialSocket{serialSocketPath},
-		ffx:                         ffx,
 	}, nil
 }
 
@@ -397,24 +459,8 @@ func (t *FuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 }
 
 // Test runs a test over SSH.
-func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (runtests.DataSinkReference, error) {
+func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
 	sinks := runtests.DataSinkReference{}
-	isComponentV2 := strings.HasSuffix(test.PackageURL, componentV2Suffix)
-	if isComponentV2 && t.ffx != nil {
-		testDef := ffxutil.TestDef{
-			TestUrl:         test.PackageURL,
-			Timeout:         int(test.Timeout.Seconds()),
-			Parallel:        test.Parallel,
-			MaxSeverityLogs: test.LogSettings.MaxSeverity,
-		}
-		t.ffx.SetStdoutStderr(stdout, stderr)
-		defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
-		testResult, err := t.ffx.Test(ctx, []ffxutil.TestDef{testDef}, outDir, "--filter-ansi")
-		if err == nil && testResult.Outcome != ffxutil.TestPassed {
-			err = fmt.Errorf("test failed with status: %s", testResult.Outcome)
-		}
-		return sinks, err
-	}
 	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, test.Timeout)
 	if err != nil {
 		return sinks, err
@@ -436,7 +482,7 @@ func (t *FuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 
 	var sinkErr error
-	if t.useRuntests && !isComponentV2 {
+	if t.useRuntests && !test.IsComponentV2() {
 		startTime := clock.Now(ctx)
 		var sinksPerTest map[string]runtests.DataSinkReference
 		if sinksPerTest, sinkErr = t.copier.GetReferences(dataOutputDir); sinkErr != nil {
@@ -497,18 +543,12 @@ func (t *FuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string)
 		return nil
 	}
 	startTime := clock.Now(ctx)
-	var err error
-	if t.ffx != nil {
-		err = t.ffx.Snapshot(ctx, t.localOutputDir, snapshotFile)
-	} else {
-		snapshotOutFile, err := osmisc.CreateFile(filepath.Join(t.localOutputDir, snapshotFile))
-		if err != nil {
-			return fmt.Errorf("failed to create snapshot output file: %w", err)
-		}
-		defer snapshotOutFile.Close()
-		err = t.runSSHCommandWithRetry(ctx, []string{"/bin/snapshot"}, snapshotOutFile, os.Stderr)
-	}
+	snapshotOutFile, err := osmisc.CreateFile(filepath.Join(t.localOutputDir, snapshotFile))
 	if err != nil {
+		return fmt.Errorf("failed to create snapshot output file: %w", err)
+	}
+	defer snapshotOutFile.Close()
+	if err := t.runSSHCommandWithRetry(ctx, []string{"/bin/snapshot"}, snapshotOutFile, os.Stderr); err != nil {
 		logger.Errorf(ctx, "%s: %s", constants.FailedToRunSnapshotMsg, err)
 	}
 	logger.Debugf(ctx, "ran snapshot in %s", clock.Now(ctx).Sub(startTime))
@@ -769,7 +809,7 @@ func (t *FuchsiaSerialTester) Close() error {
 func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir string, timeout time.Duration) ([]string, error) {
 	command := []string{}
 	// For v2 coverage data, use run-test-suite instead of runtests and collect the data from the designated dataOutputDirV2 directory.
-	if useRuntests && !strings.HasSuffix(test.PackageURL, componentV2Suffix) {
+	if useRuntests && !test.IsComponentV2() {
 		command = []string{runtestsName}
 		if remoteOutputDir != "" {
 			command = append(command, "--output", remoteOutputDir)
@@ -786,7 +826,7 @@ func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir st
 			command = append(command, test.Path)
 		}
 	} else if test.PackageURL != "" {
-		if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
+		if test.IsComponentV2() {
 			command = []string{runTestSuiteName, "--filter-ansi"}
 			if test.LogSettings.MaxSeverity != "" {
 				command = append(command, "--max-severity-logs", fmt.Sprintf("%s", test.LogSettings.MaxSeverity))
