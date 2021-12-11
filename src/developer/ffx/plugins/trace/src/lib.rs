@@ -177,6 +177,13 @@ pub async fn trace(
         TraceSubCommand::Start(opts) => {
             let default: Option<String> = ffx_config::get("target.default").await.ok();
             let default = default.as_ref().and_then(|s| Some(s.as_str()));
+            let triggers = if opts.trigger.is_empty() { None } else { Some(opts.trigger) };
+            if triggers.is_some() && !opts.background {
+                ffx_bail!(
+                    "Triggers can only be set on a background trace. \
+                     Trace should be run with the --background flag."
+                );
+            }
             let trace_config = TraceConfig {
                 buffer_size_megabytes_hint: Some(opts.buffer_size),
                 categories: Some(opts.categories),
@@ -188,7 +195,11 @@ pub async fn trace(
                 .start_recording(
                     default,
                     &output,
-                    bridge::TraceOptions { duration: opts.duration, ..bridge::TraceOptions::EMPTY },
+                    bridge::TraceOptions {
+                        duration: opts.duration,
+                        triggers,
+                        ..bridge::TraceOptions::EMPTY
+                    },
                     trace_config,
                 )
                 .await?;
@@ -216,6 +227,7 @@ pub async fn trace(
                 writer.line("Press <enter> to stop trace.")?;
                 waiter.wait().await;
             }
+            writer.line(format!("Shutting down recording and writing to file."))?;
             stop_tracing(&proxy, output, writer).await?;
         }
         TraceSubCommand::Stop(opts) => {
@@ -276,6 +288,18 @@ async fn status(proxy: &TracingProxy, writer: Writer) -> Result<()> {
                 if let Some(categories) = config.categories {
                     writer.line("    - Categories:")?;
                     writer.line(format!("      - {}", categories.join(",")))?;
+                }
+            }
+            if let Some(triggers) = trace.triggers {
+                writer.line("  - Triggers:")?;
+                for trigger in triggers.into_iter() {
+                    if trigger.alert.is_some() && trigger.action.is_some() {
+                        writer.line(format!(
+                            "    - {} : {:?}",
+                            trigger.alert.unwrap(),
+                            trigger.action.unwrap()
+                        ))?;
+                    }
                 }
             }
         }
@@ -457,6 +481,18 @@ mod tests {
                                 },
                                 bridge::TraceInfo {
                                     output_file: Some("/florp/o/matic.txt".to_string()),
+                                    triggers: Some(vec![
+                                        bridge::Trigger {
+                                            alert: Some("foo".to_owned()),
+                                            action: Some(bridge::Action::Terminate),
+                                            ..bridge::Trigger::EMPTY
+                                        },
+                                        bridge::Trigger {
+                                            alert: Some("bar".to_owned()),
+                                            action: Some(bridge::Action::Terminate),
+                                            ..bridge::Trigger::EMPTY
+                                        },
+                                    ]),
                                     ..bridge::TraceInfo::EMPTY
                                 },
                             ]
@@ -676,6 +712,7 @@ mod tests {
                     buffering_mode: BufferingMode::Oneshot,
                     output: "foo.txt".to_string(),
                     background: true,
+                    trigger: vec![],
                 }),
             },
             writer.clone(),
@@ -694,7 +731,10 @@ Current tracing status:
   - Duration: indefinite
 - Unknown Target 2:
   - Output file: /florp/o/matic.txt
-  - Duration: indefinite";
+  - Duration: indefinite
+  - Triggers:
+    - foo : Terminate
+    - bar : Terminate\n";
         let want = Regex::new(regex_str).unwrap();
         assert!(want.is_match(&output), "\"{}\" didn't match regex /{}/", output, regex_str);
     }
@@ -716,7 +756,10 @@ Current tracing status:
   - Duration: indefinite
 - Unknown Target 2:
   - Output file: /florp/o/matic.txt
-  - Duration: indefinite\n";
+  - Duration: indefinite
+  - Triggers:
+    - foo : Terminate
+    - bar : Terminate\n";
         assert_eq!(want, output);
     }
 
@@ -746,6 +789,7 @@ Current tracing status:
                     buffering_mode: BufferingMode::Oneshot,
                     output: "foober.fxt".to_owned(),
                     background: true,
+                    trigger: vec![],
                 }),
             },
             writer.clone(),
@@ -770,6 +814,7 @@ Current tracing status:
                     buffering_mode: BufferingMode::Oneshot,
                     output: "foober.fxt".to_owned(),
                     background: false,
+                    trigger: vec![],
                 }),
             },
             writer.clone(),
@@ -779,6 +824,7 @@ Current tracing status:
         let regex_str =
             "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foober.fxt for 0.8 seconds.\n\
             Waiting for 0.8 seconds.\n\
+            Shutting down recording and writing to file.\n\
             Tracing stopped successfully on \"foo\".\nResults written to /([^/]+/)+?foober.fxt\n\
             Upload to https://ui.perfetto.dev/#!/ to view.";
         let want = Regex::new(regex_str).unwrap();
@@ -797,6 +843,7 @@ Current tracing status:
                     duration: None,
                     output: "foober.fxt".to_owned(),
                     background: false,
+                    trigger: vec![],
                 }),
             },
             writer.clone(),
@@ -806,6 +853,7 @@ Current tracing status:
         let regex_str =
             "Tracing started successfully on \"foo\".\nWriting to /([^/]+/)+?foober.fxt\n\
             Press <enter> to stop trace.\n\
+            Shutting down recording and writing to file.\n\
             Tracing stopped successfully on \"foo\".\nResults written to /([^/]+/)+?foober.fxt\n\
             Upload to https://ui.perfetto.dev/#!/ to view.";
         let want = Regex::new(regex_str).unwrap();
