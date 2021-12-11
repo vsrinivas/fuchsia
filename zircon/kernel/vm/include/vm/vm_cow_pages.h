@@ -499,22 +499,56 @@ class VmCowPages final
     return result;
   }
 
+  // can_borrow_locked() returns true if the VmCowPages is capable of borrowing pages, but whether
+  // the VmCowPages should actually borrow pages also depends on a borrowing-site-specific flag that
+  // the caller is responsible for checking (in addition to checking can_borrow_locked()).  Only if
+  // both are true should the caller actually borrow at the caller's specific potential borrowing
+  // site.  For example, see is_borrowing_in_supplypages_enabled() and
+  // is_borrowing_on_mru_enabled().
   bool can_borrow_locked() const TA_REQ(lock_) {
-    // If is_preserving_page_content, this VmCowPages can borrow loaned pages, but only while the
-    // page is not dirty, because we currently evict to reclaim instead of replacing the page, and
-    // we can't evict a dirty page since the contents would be lost.  When a loaned page is about to
-    // become dirty, it'll be replaced with a non-loaned page.  If we replaced instead of evicting
-    // to reclaim, we'd be able to borrow the loaned page while the contents are dirty.
+    // TODO(dustingreen): Or rashaeqbal@.  We can only borrow while the page is not dirty.
+    // Currently we enforce this by checking ShouldTrapDirtyTransitions() below and leaning on the
+    // fact that !ShouldTrapDirtyTransitions() dirtying isn't implemented yet.  We currently evict
+    // to reclaim instead of replacing the page, and we can't evict a dirty page since the contents
+    // would be lost.  Option 1: When a loaned page is about to become dirty, we could replace it
+    // with a non-loaned page.  Option 2: When reclaiming a loaned page we could replace instead of
+    // evicting (this may be simpler).
+
+    // Currently we can only borrow if we have a suitable PageSource, since this suitable page
+    // source is currently 1:1 with having the needed backlinks for reclaim.
+    bool source_is_suitable = page_source_ && page_source_->properties().is_preserving_page_content;
+    // This ensures that if borrowing is globally disabled (no borrowing sites enabled), that we'll
+    // return false.  We could delete this bool without damaging correctness, but we want to
+    // mitigate a call site that maybe fails to check its call-site-specific settings such as
+    // is_borrowing_in_supplypages_enabled().
     //
+    // We also don't technically need to check is_any_borrowing_enabled() here since pmm will check
+    // also, but by checking here, we minimize the amount of code that will run when
+    // !is_any_borrowing_enabled() (in case we have it disabled due to late discovery of a problem
+    // with borrowing).
+    bool borrowing_is_generally_acceptable =
+        pmm_physical_page_borrowing_config()->is_any_borrowing_enabled();
     // Exclude is_latency_sensitive_ to avoid adding latency due to reclaim.
     //
-    // Exclude ShouldTrapDirtyTransitions() for now to prevent write-back and borrowing from
-    // interesecting until we get a chance to fix that up.
-    bool result = page_source_ && page_source_->properties().is_preserving_page_content &&
-                  !is_latency_sensitive_ && !ever_pinned_ &&
-                  !page_source_->ShouldTrapDirtyTransitions();
-    DEBUG_ASSERT(result == (debug_is_user_pager_backed_locked() && !is_latency_sensitive_ &&
-                            !ever_pinned_ && !page_source_->ShouldTrapDirtyTransitions()));
+    // Currently we evict instead of replacing a page when reclaiming, so we want to avoid evicting
+    // pages that are latency sensitive or are fairly likely to be pinned at some point.
+    //
+    // We also don't want to borrow a page that might get pinned again since we want to mitigate the
+    // possibility of an invalid DMA-after-free.
+    bool excluded_from_borrowing_for_latency_reasons = is_latency_sensitive_ || ever_pinned_;
+    // Avoid borrowing and trapping dirty transitions overlapping for now; nothing really stops
+    // these from being compatible AFAICT - we're just avoiding overlap of these two things until
+    // later.
+    bool overlapping_with_other_features = page_source_->ShouldTrapDirtyTransitions();
+
+    bool result = source_is_suitable && borrowing_is_generally_acceptable &&
+                  !excluded_from_borrowing_for_latency_reasons && !overlapping_with_other_features;
+
+    DEBUG_ASSERT(result == (debug_is_user_pager_backed_locked() &&
+                            pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
+                            !is_latency_sensitive_ && !ever_pinned_ &&
+                            !page_source_->ShouldTrapDirtyTransitions()));
+
     return result;
   }
 
