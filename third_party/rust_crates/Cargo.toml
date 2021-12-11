@@ -140,8 +140,6 @@ rayon = "1.2.1"
 regex = "1.0.6"
 regex-syntax = "0.6.5"
 ring = "0.16"
-# Do not use rouille; it is not async and leaks threads via tiny_http.
-rouille = "3.0.0"
 rustc-demangle = "0.1.16"
 rustc-hash = "1.0.1"
 # FIXME(87798): We can switch to 0.19.1 once we've updated hyper to 0.14.x, and
@@ -264,6 +262,8 @@ proc-macro2 = "1.0.28"
 polling = "2.0.2"
 pulldown-cmark = "0.6.0"
 quote = "1.0.2"
+# Do not use rouille; it is not async and leaks threads via tiny_http.
+rouille = "3.0.0"
 serial_test = "0.5.1" # Not for use on Fuchsia, only for a single process.
 shared_child = "0.3.5"
 signal-hook = "0.3.8"

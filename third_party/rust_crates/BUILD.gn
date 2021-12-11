@@ -598,8 +598,10 @@ group("ring") {
   deps = [ ":ring-v0_16_12" ]
 }
 
-group("rouille") {
-  deps = [ ":rouille-v3_0_0" ]
+if (!(current_os == "fuchsia")) {
+  group("rouille") {
+    deps = [ ":rouille-v3_0_0" ]
+  }
 }
 
 if (current_os == "fuchsia") {
