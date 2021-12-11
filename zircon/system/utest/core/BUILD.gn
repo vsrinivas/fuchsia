@@ -151,10 +151,15 @@ test("standalone") {
   sources = [
     "standalone-init.cc",
     "standalone-io.cc",
+    "standalone-options.cc",
     "standalone.h",
     "test-main-with-filter.cc",
   ]
   deps += [
+    "//sdk/lib/stdcompat",
+    "//zircon/kernel/lib/boot-options",
+    "//zircon/system/ulib/lazy_init",
+    "//zircon/system/ulib/zbitl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -4,7 +4,7 @@
 
 #include <zxtest/zxtest.h>
 
-extern char** environ;
+#include "standalone.h"
 
 // This is the same as zxtest's default main() except that it checks the kernel
 // command line for gtest arguments and passes them through to the test.
@@ -12,24 +12,18 @@ extern char** environ;
 // a "normal" argc/argv.
 int main() {
   int argc = 1;
-  const char* argv[4] = {"core-tests", NULL, NULL, NULL};
+  const char* argv[4] = {"core-tests", nullptr, nullptr, nullptr};
 
-  bool has_filter = false;
-  static const char kFilterPrefix[] = "--gtest_filter=";
+  StandaloneOption filter = {"--gtest_filter="};
+  StandaloneOption repeat = {"--gtest_repeat="};
+  StandaloneGetOptions({filter, repeat});
 
-  bool has_repeat = false;
-  static const char kRepeatPrefix[] = "--gtest_repeat=";
-
-  for (char** p = environ; *p; ++p) {
-    if (!has_filter && strncmp(*p, kFilterPrefix, sizeof(kFilterPrefix) - 1) == 0) {
-      argv[argc++] = *p;
-      has_filter = true;
-    }
-
-    if (!has_repeat && strncmp(*p, kRepeatPrefix, sizeof(kRepeatPrefix) - 1) == 0) {
-      argv[argc++] = *p;
-      has_repeat = true;
-    }
+  if (!filter.option.empty()) {
+    argv[argc++] = filter.option.c_str();
   }
-  return RUN_ALL_TESTS(argc, (char**)argv);
+  if (!repeat.option.empty()) {
+    argv[argc++] = repeat.option.c_str();
+  }
+
+  return RUN_ALL_TESTS(argc, const_cast<char**>(argv));
 }

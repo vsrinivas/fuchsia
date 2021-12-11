@@ -15,4 +15,13 @@
 
 void StandaloneInitIo(zx::unowned_resource root_resource);
 
+zx::unowned_vmo StandaloneGetVmo(const std::string& name);
+
+struct StandaloneOption {
+  std::string_view prefix;
+  std::string option = {};
+};
+
+void StandaloneGetOptions(std::initializer_list<std::reference_wrapper<StandaloneOption>> opts);
+
 #endif  // ZIRCON_SYSTEM_UTEST_CORE_STANDALONE_H_
