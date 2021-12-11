@@ -133,6 +133,7 @@ project_root_rel="$(realpath --relative-to=. "$project_root")"
 # For debugging, trace the files accessed.
 fsatrace="$project_root_rel"/prebuilt/fsatrace/fsatrace
 
+detail_diff="$script_dir"/detail-diff.sh
 
 # Modify original command to extract dep-info only (fast).
 # Start with `env` in case command starts with environment variables.
@@ -902,31 +903,6 @@ EOF
   fi
 }
 
-# Diff two files, run through a command: diff -u <(command $1) <(command $2)
-# Usage: diff_with command [options] -- input1 input2
-function diff_with() {
-  local tool
-  local inputs
-  tool=()
-  for token in "$@"
-  do
-    case "$token" in
-      --) shift; break ;;
-      *) tool+=("$token") ;;
-    esac
-    shift
-  done
-
-  # The rest of "$@" are input files.
-  test "$#" = 2 || {
-    echo "diff_with: Expected two inputs, but got $#."
-    exit 1
-  }
-
-  echo "diff -u <(${tool[@]} $1) <(${tool[@]} $2)"
-  diff -u <("${tool[@]}" "$1") <("${tool[@]}" "$2")
-}
-
 # In compare mode, also build locally and compare outputs.
 # Fail if any differences are found.
 test "$status" -ne 0 || test "$compare" = 0 || {
@@ -971,7 +947,6 @@ test "$status" -ne 0 || test "$compare" = 0 || {
     fi
   done
 
-  diff_limit=25
   test "${#output_diffs[@]}" = 0 || {
     echo "*** Differences between local (-) and remote (+) build outputs found. ***"
     for f in "${output_diffs[@]}"
@@ -979,31 +954,7 @@ test "$status" -ne 0 || test "$compare" = 0 || {
       echo "  $build_subdir/$f vs."
       echo "    $build_subdir/$f.remote"
       echo
-      case "$f" in
-        *.d | *.map)
-          echo "text diff (first $diff_limit lines):"
-          diff -u "$f"{,.remote} | head -n "$diff_limit"
-          ;;
-        *)
-          # Intended for binaries (rlibs, executables).
-          test "${#linker[@]}" = 0 || {
-            echo "objdump-diff (first $diff_limit lines):"
-            diff_with "$objdump" --full-contents -- "$f"{,.remote} | head -n "$diff_limit"
-            echo
-            echo "readelf-diff (first $diff_limit lines):"
-            diff_with "$readelf" -a -- "$f"{,.remote} | head -n "$diff_limit"
-            echo
-            echo "dwarfdump-diff (first $diff_limit lines):"
-            diff_with "$dwarfdump" -a -- "$f"{,.remote} | head -n "$diff_limit"
-            echo
-          }
-          echo "nm-diff (first $diff_limit lines):"
-          diff_with nm -- "$f"{,.remote} | head -n "$diff_limit"
-          echo
-          echo "strings-diff (first $diff_limit lines):"
-          diff_with strings -- "$f"{,.remote} | head -n "$diff_limit"
-          ;;
-      esac
+      "$detail_diff" "$f"{,.remote} || :
       echo
       echo "------------------------------------"
     done
