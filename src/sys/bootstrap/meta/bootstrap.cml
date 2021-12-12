@@ -264,7 +264,7 @@
         {
             protocol: [
                 "fuchsia.boot.Arguments",
-                "fuchsia.boot.RootResource",
+                "fuchsia.kernel.DebugResource",
             ],
             from: "parent",
             to: "#console",

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/fs-pty/service.h>
 #include <lib/service/llcpp/service.h>
@@ -18,20 +18,21 @@
 
 namespace {
 
-zx::resource GetRootResource() {
-  auto client_end = service::Connect<fuchsia_boot::RootResource>();
+zx::resource GetDebugResource() {
+  auto client_end = service::Connect<fuchsia_kernel::DebugResource>();
   if (client_end.is_error()) {
-    printf("console: Could not connect to RootResource service: %s\n", client_end.status_string());
+    printf("console: Could not connect to DebugResource service: %s\n", client_end.status_string());
     return {};
   }
 
   auto client = fidl::BindSyncClient(std::move(client_end.value()));
   auto result = client->Get();
   if (result.status() != ZX_OK) {
-    printf("console: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));
+    printf("console: Could not retrieve DebugResource: %s\n",
+           zx_status_get_string(result.status()));
     return {};
   }
-  return std::move(result.Unwrap()->resource);
+  return std::move(result.Unwrap()->debug_resource);
 }
 
 zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> listener,
@@ -86,10 +87,10 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Provide a RxSource that grabs the data from the kernel serial connection
-  Console::RxSource rx_source = [root_resource = GetRootResource()](uint8_t* byte) {
+  Console::RxSource rx_source = [debug_resource = GetDebugResource()](uint8_t* byte) {
     size_t length = 0;
     zx_status_t status =
-        zx_debug_read(root_resource.get(), reinterpret_cast<char*>(byte), sizeof(*byte), &length);
+        zx_debug_read(debug_resource.get(), reinterpret_cast<char*>(byte), sizeof(*byte), &length);
     if (status == ZX_ERR_NOT_SUPPORTED) {
       // Suppress the error print in this case.  No console on this machine.
       return status;

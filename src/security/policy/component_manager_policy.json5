@@ -42,7 +42,6 @@
                 capability: "protocol",
                 target_monikers: [
                     "/bootstrap",
-                    "/bootstrap/console",
                     "/bootstrap/console-launcher",
                     "/bootstrap/driver_manager",
                     "/bootstrap/netsvc",
@@ -69,6 +68,7 @@
                 capability: "protocol",
                 target_monikers: [
                     "/bootstrap",
+                    "/bootstrap/console",
                     "/core",
                     "/core/debug_serial",
                 ],

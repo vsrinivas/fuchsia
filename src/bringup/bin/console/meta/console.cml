@@ -39,8 +39,8 @@
     ],
     use: [
         { protocol: "fuchsia.boot.Arguments" },
-        { protocol: "fuchsia.boot.RootResource" },
         { protocol: "fuchsia.boot.WriteOnlyLog" },
+        { protocol: "fuchsia.kernel.DebugResource" },
         { protocol: "fuchsia.logger.Log" },
     ],
     expose: [
