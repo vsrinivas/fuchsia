@@ -105,7 +105,7 @@ Flatland::Flatland(
       buffer_collection_importers_(buffer_collection_importers),
       transform_graph_(session_id_),
       local_root_(transform_graph_.CreateTransform()),
-      error_reporter_(scenic_impl::ErrorReporter::Default()),
+      error_reporter_(scenic_impl::ErrorReporter::DefaultUnique()),
       register_view_focuser_(std::move(register_view_focuser)),
       register_view_ref_focused_(std::move(register_view_ref_focused)),
       register_touch_source_(std::move(register_touch_source)),
@@ -418,8 +418,11 @@ void Flatland::ReleaseView() {
 
   // Delay the actual destruction of the Link until the next Present().
   pending_link_operations_.push_back(
-      [local_link = std::move(local_link), error_reporter = error_reporter_]() mutable {
+      [local_link = std::move(local_link), debug_name = debug_name_]() mutable {
         ViewCreationToken return_token;
+
+        auto error_reporter = scenic_impl::ErrorReporter::DefaultUnique();
+        error_reporter->SetPrefix(std::move(debug_name));
 
         // If the link is still valid, return the original token. If not, create an orphaned
         // zx::channel and return it since the ObjectLinker does not retain the orphaned token.
@@ -1282,8 +1285,8 @@ std::optional<TransformHandle> Flatland::GetContentHandle(ContentId content_id) 
   return handle_kv->second;
 }
 
-void Flatland::SetErrorReporter(std::shared_ptr<scenic_impl::ErrorReporter> error_reporter) {
-  error_reporter_ = error_reporter;
+void Flatland::SetErrorReporter(std::unique_ptr<scenic_impl::ErrorReporter> error_reporter) {
+  error_reporter_ = std::move(error_reporter);
 }
 
 scheduling::SessionId Flatland::GetSessionId() const { return session_id_; }

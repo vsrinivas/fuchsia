@@ -829,38 +829,71 @@ TEST_F(FlatlandTest, PresentsUpdateInCallOrder) {
 TEST_F(FlatlandTest, SetDebugNameAddsPrefixToLogs) {
   class TestErrorReporter : public scenic_impl::ErrorReporter {
    public:
-    std::string reported_error;
+    TestErrorReporter(std::optional<std::string>* last_error_log)
+        : reported_error(last_error_log) {}
 
-    std::string GetPrefix();
+    std::optional<std::string>* reported_error = nullptr;
 
    private:
     // |scenic_impl::ErrorReporter|
     void ReportError(syslog::LogSeverity severity, std::string error_string) override {
-      reported_error = error_string;
+      *reported_error = error_string;
     }
   };
 
-  std::shared_ptr<TestErrorReporter> test_error_reporter = std::make_shared<TestErrorReporter>();
   const TransformId kInvalidId = {0};
 
   // No prefix in errors by default.
   {
+    std::optional<std::string> error_log;
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->SetErrorReporter(test_error_reporter);
+    flatland->SetErrorReporter(std::make_unique<TestErrorReporter>(&error_log));
     flatland->CreateTransform(kInvalidId);
     PRESENT(flatland, false);
-    EXPECT_EQ("CreateTransform called with transform_id 0", test_error_reporter->reported_error);
+    ASSERT_TRUE(error_log.has_value());
+    EXPECT_EQ("CreateTransform called with transform_id 0", *error_log);
   }
 
   // SetDebugName() adds a prefix.
   {
+    std::optional<std::string> error_log;
     std::shared_ptr<Flatland> flatland = CreateFlatland();
-    flatland->SetErrorReporter(test_error_reporter);
+    flatland->SetErrorReporter(std::make_unique<TestErrorReporter>(&error_log));
     flatland->SetDebugName("test_client");
     flatland->CreateTransform(kInvalidId);
     PRESENT(flatland, false);
+    ASSERT_TRUE(error_log.has_value());
     EXPECT_EQ("Flatland client(test_client): CreateTransform called with transform_id 0",
-              test_error_reporter->reported_error);
+              *error_log);
+  }
+
+  // ErrorReporter logs the prefix of multiple flatland clients correctly.
+  {
+    std::optional<std::string> error_log_a;
+    std::optional<std::string> error_log_b;
+
+    std::shared_ptr<Flatland> flatland_a = CreateFlatland();
+    std::shared_ptr<Flatland> flatland_b = CreateFlatland();
+
+    flatland_a->SetErrorReporter(std::make_unique<TestErrorReporter>(&error_log_a));
+    flatland_b->SetErrorReporter(std::make_unique<TestErrorReporter>(&error_log_b));
+
+    flatland_a->SetDebugName("test_client");
+    flatland_b->SetDebugName("test_client1");
+
+    flatland_a->CreateTransform(kInvalidId);
+    flatland_b->CreateTransform(kInvalidId);
+
+    PRESENT(flatland_a, false);
+    PRESENT(flatland_b, false);
+
+    ASSERT_TRUE(error_log_a.has_value());
+    ASSERT_TRUE(error_log_b.has_value());
+
+    EXPECT_EQ("Flatland client(test_client): CreateTransform called with transform_id 0",
+              *error_log_a);
+    EXPECT_EQ("Flatland client(test_client1): CreateTransform called with transform_id 0",
+              *error_log_b);
   }
 }
 

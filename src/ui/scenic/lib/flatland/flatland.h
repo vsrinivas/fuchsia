@@ -180,7 +180,7 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   std::optional<TransformHandle> GetContentHandle(ContentId content_id) const;
 
   // For validating logs in tests only.
-  void SetErrorReporter(std::shared_ptr<scenic_impl::ErrorReporter> error_reporter);
+  void SetErrorReporter(std::unique_ptr<scenic_impl::ErrorReporter> error_reporter);
 
   // For using as a unique identifier in tests only.
   scheduling::SessionId GetSessionId() const;
@@ -371,7 +371,7 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   std::unordered_map<TransformHandle, allocation::ImageMetadata> image_metadatas_;
 
   // Error reporter used for printing debug logs.
-  std::shared_ptr<scenic_impl::ErrorReporter> error_reporter_;
+  std::unique_ptr<scenic_impl::ErrorReporter> error_reporter_;
 
   // Callbacks for registering View-bound protocols.
   fit::function<void(fidl::InterfaceRequest<fuchsia::ui::views::Focuser>, zx_koid_t)>

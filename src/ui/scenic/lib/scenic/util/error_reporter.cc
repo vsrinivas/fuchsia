@@ -51,4 +51,8 @@ const std::shared_ptr<ErrorReporter>& ErrorReporter::Default() {
   return kReporter;
 }
 
+std::unique_ptr<ErrorReporter> ErrorReporter::DefaultUnique() {
+  return std::make_unique<DefaultErrorReporter>();
+}
+
 }  // namespace scenic_impl

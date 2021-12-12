@@ -50,7 +50,7 @@ class ErrorReporter {
     friend class ErrorReporter;
     Report(ErrorReporter* owner, syslog::LogSeverity severity, const std::string& prefix);
 
-    ErrorReporter* owner_;
+    ErrorReporter* owner_ = nullptr;
     syslog::LogSeverity severity_;
     std::ostringstream stream_;
 
@@ -67,6 +67,8 @@ class ErrorReporter {
   // Return a default ErrorReporter that is always available, which simply logs
   // the error using FX_LOGS(severity).
   static const std::shared_ptr<ErrorReporter>& Default();
+
+  static std::unique_ptr<ErrorReporter> DefaultUnique();
 
   // Set a string that is printed before everything else.
   void SetPrefix(const std::string& prefix) { prefix_ = prefix; }
