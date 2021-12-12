@@ -461,10 +461,11 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
 }
 
 // zx_status_t zx_system_powerctl
-zx_status_t sys_system_powerctl(zx_handle_t root_rsrc, uint32_t cmd,
+zx_status_t sys_system_powerctl(zx_handle_t power_rsrc, uint32_t cmd,
                                 user_in_ptr<const zx_system_powerctl_arg_t> raw_arg) {
   zx_status_t status;
-  if ((status = validate_resource(root_rsrc, ZX_RSRC_KIND_ROOT)) < 0) {
+  if ((status = validate_ranged_resource(power_rsrc, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_POWER_BASE,
+                                         1)) != ZX_OK) {
     return status;
   }
 

@@ -40,7 +40,8 @@ constexpr const char kStackVmoName[] = "userboot-child-initial-stack";
 
 using namespace userboot;
 
-[[noreturn]] void do_powerctl(const zx::debuglog& log, const zx::resource& rroot, uint32_t reason) {
+[[noreturn]] void do_powerctl(const zx::debuglog& log, const zx::resource& power_rsrc,
+                              uint32_t reason) {
   const char* r_str = (reason == ZX_SYSTEM_POWERCTL_SHUTDOWN) ? "poweroff" : "reboot";
   if (reason == ZX_SYSTEM_POWERCTL_REBOOT) {
     printl(log, "Waiting 3 seconds...");
@@ -48,7 +49,7 @@ using namespace userboot;
   }
 
   printl(log, "Process exited.  Executing \"%s\".", r_str);
-  zx_system_powerctl(rroot.get(), reason, NULL);
+  zx_system_powerctl(power_rsrc.get(), reason, NULL);
   printl(log, "still here after %s!", r_str);
   while (true)
     __builtin_trap();
@@ -145,12 +146,12 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     printl(log, "zx_debuglog_create failed: %d, using zx_debug_write instead", status);
   }
 
-  // Hang on to the resource root handle in case we call powerctl below.
-  zx::resource root_resource;
-  status = zx::unowned_resource {
-    handles[kRootResource]
-    } -> duplicate(ZX_RIGHT_SAME_RIGHTS, &root_resource);
-  check(log, status, "zx_handle_duplicate");
+  // Get the power resource handle in case we call powerctl below.
+  zx::resource power_resource;
+  zx::unowned_resource system_resource(handles[kSystemResource]);
+  status = zx::resource::create(*system_resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_POWER_BASE, 1,
+                                nullptr, 0, &power_resource);
+  check(log, status, "zx_resource_create");
 
   // Process the kernel command line, which gives us options and also
   // becomes the environment strings for our child.
@@ -341,9 +342,9 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
       printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
     }
     if (o.value[OPTION_REBOOT]) {
-      do_powerctl(log, root_resource, ZX_SYSTEM_POWERCTL_REBOOT);
+      do_powerctl(log, power_resource, ZX_SYSTEM_POWERCTL_REBOOT);
     } else if (o.value[OPTION_SHUTDOWN]) {
-      do_powerctl(log, root_resource, ZX_SYSTEM_POWERCTL_SHUTDOWN);
+      do_powerctl(log, power_resource, ZX_SYSTEM_POWERCTL_SHUTDOWN);
     }
   }
 

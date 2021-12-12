@@ -119,7 +119,7 @@ protocol system {
         buffer vector_void;
     });
 
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_SYSTEM with base ZX_RSRC_SYSTEM_POWER_BASE.
     system_powerctl(resource struct {
         resource handle:RESOURCE;
         cmd uint32;
