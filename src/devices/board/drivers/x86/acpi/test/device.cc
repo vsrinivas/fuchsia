@@ -163,4 +163,43 @@ acpi::status<> Device::RemoveNotifyHandler(Acpi::NotifyHandlerCallable callback,
   return acpi::ok();
 }
 
+acpi::status<> Device::AddAddressSpaceHandler(ACPI_ADR_SPACE_TYPE type,
+                                              Acpi::AddressSpaceHandler handler, void* context) {
+  if (address_space_handlers_.find(type) != address_space_handlers_.end()) {
+    return acpi::error(AE_ALREADY_EXISTS);
+  }
+
+  address_space_handlers_.emplace(type, std::pair(handler, context));
+  return acpi::ok();
+}
+
+acpi::status<> Device::RemoveAddressSpaceHandler(ACPI_ADR_SPACE_TYPE type,
+                                                 Acpi::AddressSpaceHandler handler) {
+  auto result = address_space_handlers_.find(type);
+  if (result == address_space_handlers_.end()) {
+    zxlogf(ERROR, "No handler!!");
+    return acpi::error(AE_NOT_FOUND);
+  }
+
+  if (result->second.first != handler) {
+    zxlogf(ERROR, "Wrong handler!! %p", handler);
+    return acpi::error(AE_NOT_FOUND);
+  }
+
+  address_space_handlers_.erase(result);
+  return acpi::ok();
+}
+
+acpi::status<> Device::AddressSpaceOp(ACPI_ADR_SPACE_TYPE space, uint32_t function,
+                                      ACPI_PHYSICAL_ADDRESS address, uint32_t bit_width,
+                                      UINT64* value) {
+  auto result = address_space_handlers_.find(space);
+  if (result == address_space_handlers_.end()) {
+    return acpi::error(AE_NOT_FOUND);
+  }
+
+  return acpi::make_status(
+      result->second.first(function, address, bit_width, value, result->second.second, nullptr));
+}
+
 }  // namespace acpi::test

@@ -345,4 +345,12 @@ protocol Device {
     AcquireGlobalLock() -> (resource struct {
         handle client_end:GlobalLock;
     }) error Status;
+
+    /// Install an address space handler for this device.
+    /// Errors:
+    /// ALREADY_EXISTS - if a handler is already installed.
+    InstallAddressSpaceHandler(resource struct {
+        space AddressSpace;
+        handler client_end:AddressSpaceHandler;
+    }) -> (struct {}) error Status;
 };

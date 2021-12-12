@@ -1,0 +1,42 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.acpi;
+
+/// These values are taken from source/include/actypes.h in ACPICA.
+type AddressSpace = flexible enum {
+    SYSTEM_MEMORY = 0;
+    SYSTEM_IO = 1;
+    PCI_CONFIG = 2;
+    EC = 3;
+    SMBUS = 4;
+    CMOS = 5;
+    PCI_BAR_TARGET = 6;
+    IPMI = 7;
+    GPIO = 8;
+    GSBUS = 9;
+    PLATFORM_COMM = 10;
+};
+
+protocol AddressSpaceHandler {
+    /// Read a value from this address space.
+    Read(struct {
+        /// Address to be read.
+        address uint64;
+        /// Bit width of the operation (usually 8, 16, 32, or 64).
+        width uint32;
+    }) -> (struct {
+        /// Value returned by read.
+        value uint64;
+    });
+
+    /// Write a value to this address space.
+    Write(struct {
+        /// Address to be written.
+        address uint64;
+        /// Bit width of the operation (usually 8, 16, 32, or 64).
+        width uint32;
+        /// Value to be written.
+        value uint64;
+    }) -> ();
+};

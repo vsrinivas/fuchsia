@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_TEST_MOCK_ACPI_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_TEST_MOCK_ACPI_H_
 
+#include <lib/ddk/debug.h>
+
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
 #include "src/devices/board/drivers/x86/acpi/test/device.h"
 
@@ -62,6 +64,18 @@ class MockAcpi : public Acpi {
     ZX_ASSERT_MSG(handle == 0xd00dfeed, "global lock did not match handle");
     global_lock_.unlock();
     return acpi::ok();
+  }
+
+  acpi::status<> InstallAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
+                                            AddressSpaceHandler handler, AddressSpaceSetup setup,
+                                            void* context) override {
+    ZX_ASSERT_MSG(setup == nullptr, "AddressSpaceSetup not supported");
+    return ToDevice(object)->AddAddressSpaceHandler(space_id, handler, context);
+  }
+
+  acpi::status<> RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
+                                           AddressSpaceHandler handler) override {
+    return ToDevice(object)->RemoveAddressSpaceHandler(space_id, handler);
   }
 
  private:

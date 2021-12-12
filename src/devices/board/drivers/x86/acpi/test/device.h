@@ -102,6 +102,14 @@ class Device {
 
   ACPI_HANDLE parent() { return parent_; }
 
+  acpi::status<> AddAddressSpaceHandler(ACPI_ADR_SPACE_TYPE type, Acpi::AddressSpaceHandler handler,
+                                        void* context);
+  acpi::status<> RemoveAddressSpaceHandler(ACPI_ADR_SPACE_TYPE type,
+                                           Acpi::AddressSpaceHandler handler);
+
+  acpi::status<> AddressSpaceOp(ACPI_ADR_SPACE_TYPE space, uint32_t function,
+                                ACPI_PHYSICAL_ADDRESS address, uint32_t bit_width, UINT64* value);
+
  private:
   Device* FindByPathInternal(std::string path);
   Device* LookupChild(std::string_view name);
@@ -122,6 +130,10 @@ class Device {
   Acpi::NotifyHandlerCallable notify_handler_ = nullptr;
   void* notify_handler_ctx_ = nullptr;
   std::optional<fuchsia_hardware_acpi::wire::NotificationMode> notify_handler_mode_;
+
+  // address space handlers
+  std::unordered_map<ACPI_ADR_SPACE_TYPE, std::pair<Acpi::AddressSpaceHandler, void*>>
+      address_space_handlers_;
 };
 
 }  // namespace acpi::test

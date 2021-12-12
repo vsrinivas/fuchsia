@@ -44,6 +44,12 @@ class AcpiImpl : public Acpi {
                                      NotifyHandlerCallable callable) override;
   acpi::status<uint32_t> AcquireGlobalLock(uint16_t timeout) override;
   acpi::status<> ReleaseGlobalLock(uint32_t handle) override;
+
+  acpi::status<> InstallAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
+                                            AddressSpaceHandler handler, AddressSpaceSetup setup,
+                                            void* context) override;
+  acpi::status<> RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
+                                           AddressSpaceHandler handler) override;
 };
 }  // namespace acpi
 

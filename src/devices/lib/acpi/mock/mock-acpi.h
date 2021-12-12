@@ -45,6 +45,7 @@ class Device : public fidl::WireServer<fuchsia_hardware_acpi::Device> {
   MOCK_FN_IMPL(GetMmio, ZX_ERR_NOT_SUPPORTED);
   MOCK_FN_IMPL(InstallNotifyHandler, fuchsia_hardware_acpi::wire::Status::kNotImplemented);
   MOCK_FN_IMPL(AcquireGlobalLock, fuchsia_hardware_acpi::wire::Status::kNotImplemented);
+  MOCK_FN_IMPL(InstallAddressSpaceHandler, fuchsia_hardware_acpi::wire::Status::kNotImplemented);
 
 #undef MOCK_FN_IMPL
 };

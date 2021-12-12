@@ -77,6 +77,15 @@ class Acpi {
   // Returns a handle which can be passed to ReleaseGlobalLock.
   virtual acpi::status<uint32_t> AcquireGlobalLock(uint16_t timeout) = 0;
   virtual acpi::status<> ReleaseGlobalLock(uint32_t handle) = 0;
+
+  using AddressSpaceSetup = ACPI_ADR_SPACE_SETUP;
+  using AddressSpaceHandler = ACPI_ADR_SPACE_HANDLER;
+  virtual acpi::status<> InstallAddressSpaceHandler(ACPI_HANDLE object,
+                                                    ACPI_ADR_SPACE_TYPE space_id,
+                                                    AddressSpaceHandler handler,
+                                                    AddressSpaceSetup setup, void* context) = 0;
+  virtual acpi::status<> RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
+                                                   AddressSpaceHandler handler) = 0;
 };
 
 }  // namespace acpi

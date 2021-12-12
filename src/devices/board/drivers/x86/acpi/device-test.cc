@@ -9,6 +9,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "fidl/fuchsia.hardware.acpi/cpp/markers.h"
 #include "src/devices/board/drivers/x86/acpi/manager.h"
 #include "src/devices/board/drivers/x86/acpi/test/device.h"
 #include "src/devices/board/drivers/x86/acpi/test/mock-acpi.h"
@@ -44,6 +45,86 @@ class NotifyHandlerServer : public fidl::WireServer<fuchsia_hardware_acpi::Notif
  private:
   std::optional<fidl::ServerBindingRef<fuchsia_hardware_acpi::NotifyHandler>> ref_;
   Callback callback_;
+};
+
+class AddressSpaceHandlerServer
+    : public fidl::WireServer<fuchsia_hardware_acpi::AddressSpaceHandler> {
+ public:
+  ~AddressSpaceHandlerServer() override {
+    if (ref_ != std::nullopt) {
+      Close();
+    }
+  }
+  static std::pair<std::unique_ptr<AddressSpaceHandlerServer>,
+                   fidl::ClientEnd<fuchsia_hardware_acpi::AddressSpaceHandler>>
+  CreateAndServe(async_dispatcher_t* dispatcher) {
+    auto server = std::make_unique<AddressSpaceHandlerServer>();
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::AddressSpaceHandler>();
+    server->ref_ = fidl::BindServer(dispatcher, std::move(endpoints->server), server.get());
+    return std::pair(std::move(server), std::move(endpoints->client));
+  }
+
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override {
+    uint64_t ret;
+    switch (request->width) {
+      case 8:
+        ret = data_[request->address];
+        break;
+      case 16: {
+        uint16_t val;
+        memcpy(&val, &data_[request->address], sizeof(val));
+        ret = val;
+        break;
+      }
+      case 32: {
+        uint32_t val;
+        memcpy(&val, &data_[request->address], sizeof(val));
+        ret = val;
+        break;
+      }
+      case 64:
+        memcpy(&ret, &data_[request->address], sizeof(ret));
+        break;
+      default:
+        ZX_ASSERT(false);
+    }
+
+    completer.Reply(ret);
+  }
+
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override {
+    switch (request->width) {
+      case 8:
+        data_[request->address] = request->value & UINT8_MAX;
+        break;
+      case 16: {
+        uint16_t val = request->value & UINT16_MAX;
+        memcpy(&data_[request->address], &val, sizeof(val));
+        break;
+      }
+      case 32: {
+        uint32_t val = request->value & UINT32_MAX;
+        memcpy(&data_[request->address], &val, sizeof(val));
+        break;
+      }
+      case 64:
+        memcpy(&data_[request->address], &request->value, sizeof(request->value));
+        break;
+      default:
+        ZX_ASSERT(false);
+    }
+    completer.Reply();
+  }
+
+  void Close() {
+    ref_->Close(ZX_ERR_PEER_CLOSED);
+    ref_ = std::nullopt;
+  }
+
+  std::vector<uint8_t> data_;
+
+ private:
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_acpi::AddressSpaceHandler>> ref_;
 };
 
 class AcpiDeviceTest : public zxtest::Test {
@@ -352,4 +433,55 @@ TEST_F(AcpiDeviceTest, ReceiveEventAfterUnbind) {
   device_async_remove(ptr->zxdev());
   ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(mock_root_.get()));
   ASSERT_FALSE(hnd->HasNotifyHandler());
+}
+
+TEST_F(AcpiDeviceTest, TestAddressHandlerInstall) {
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+
+  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd, mock_root_.get());
+
+  SetUpFidlServer(std::move(device));
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::AddressSpaceHandler>();
+  ASSERT_OK(endpoints.status_value());
+
+  auto [server, client] = AddressSpaceHandlerServer::CreateAndServe(manager_.fidl_dispatcher());
+
+  auto result = fidl_client_->InstallAddressSpaceHandler(
+      fuchsia_hardware_acpi::wire::AddressSpace::kEc, std::move(client));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+}
+
+TEST_F(AcpiDeviceTest, TestAddressHandlerReadWrite) {
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+
+  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), hnd, mock_root_.get());
+
+  SetUpFidlServer(std::move(device));
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::AddressSpaceHandler>();
+  ASSERT_OK(endpoints.status_value());
+
+  auto [server, client] = AddressSpaceHandlerServer::CreateAndServe(manager_.fidl_dispatcher());
+
+  auto result = fidl_client_->InstallAddressSpaceHandler(
+      fuchsia_hardware_acpi::wire::AddressSpace::kEc, std::move(client));
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->result.is_response());
+
+  server->data_.resize(256, 0);
+  UINT64 value = 0xff;
+  ASSERT_EQ(hnd->AddressSpaceOp(ACPI_ADR_SPACE_EC, ACPI_READ, 0, 64, &value).status_value(), AE_OK);
+  ASSERT_EQ(value, 0);
+  value = 0xdeadbeefd00dfeed;
+  ASSERT_EQ(hnd->AddressSpaceOp(ACPI_ADR_SPACE_EC, ACPI_WRITE, 0, 64, &value).status_value(),
+            AE_OK);
+  value = 0;
+  ASSERT_EQ(hnd->AddressSpaceOp(ACPI_ADR_SPACE_EC, ACPI_READ, 0, 64, &value).status_value(), AE_OK);
+  ASSERT_EQ(value, 0xdeadbeefd00dfeed);
 }

@@ -10,6 +10,7 @@
 #include <lib/ddk/binding.h>
 #include <lib/fpromise/promise.h>
 
+#include <mutex>
 #include <utility>
 
 #include <acpica/acpi.h>
@@ -133,12 +134,22 @@ class Device : public DeviceType,
                             InstallNotifyHandlerCompleter::Sync& completer) override;
   void AcquireGlobalLock(AcquireGlobalLockRequestView request,
                          AcquireGlobalLockCompleter::Sync& completer) override;
+  void InstallAddressSpaceHandler(InstallAddressSpaceHandlerRequestView request,
+                                  InstallAddressSpaceHandlerCompleter::Sync& completer) override;
 
   std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
 
   void RemoveNotifyHandler();
 
  private:
+  struct HandlerCtx {
+    Device* device;
+    uint32_t space_type;
+  };
+
+  static ACPI_STATUS AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS physical_address,
+                                         uint32_t bit_width, UINT64* value, void* handler_ctx,
+                                         void* region_ctx);
   static void DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value, void* context);
   zx_status_t ReportCurrentResources() __TA_REQUIRES(lock_);
   ACPI_STATUS AddResource(ACPI_RESOURCE*) __TA_REQUIRES(lock_);
@@ -175,6 +186,13 @@ class Device : public DeviceType,
   std::atomic_bool notify_handler_active_ = false;
   uint32_t notify_handler_type_;
   bool notify_count_warned_ = false;
+
+  // ACPI address space handling.
+  std::mutex address_handler_lock_;
+  std::unordered_map<uint32_t, fidl::WireSharedClient<fuchsia_hardware_acpi::AddressSpaceHandler>>
+      address_handlers_ __TA_GUARDED(address_handler_lock_);
+  std::vector<fpromise::promise<void>> address_handler_teardown_finished_
+      __TA_GUARDED(address_handler_lock_);
 };
 
 }  // namespace acpi

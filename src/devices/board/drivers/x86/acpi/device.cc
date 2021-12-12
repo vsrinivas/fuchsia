@@ -8,6 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
@@ -205,10 +206,25 @@ void Device::DdkUnbind(ddk::UnbindTxn txn) {
   if (notify_handler_.has_value()) {
     RemoveNotifyHandler();
   }
+
+  std::optional<fpromise::promise<void>> address_handler_finished;
+  {
+    std::scoped_lock lock(address_handler_lock_);
+    for (auto& entry : address_handlers_) {
+      entry.second.AsyncTeardown();
+    }
+
+    address_handler_finished.emplace(
+        fpromise::join_promise_vector(std::move(address_handler_teardown_finished_))
+            .discard_result());
+  }
+
   std::optional<fpromise::promise<void>> teardown_finished;
   notify_teardown_finished_.swap(teardown_finished);
-  auto promise = std::move(teardown_finished)
-                     .value_or(fpromise::make_ok_promise())
+  auto promise = fpromise::join_promises(
+                     std::move(teardown_finished).value_or(fpromise::make_ok_promise()),
+                     std::move(address_handler_finished).value_or(fpromise::make_ok_promise()))
+                     .discard_result()
                      .and_then([txn = std::move(txn)]() mutable { txn.Reply(); });
   manager_->executor().schedule_task(std::move(promise));
 }
@@ -523,5 +539,96 @@ void Device::AcquireGlobalLock(AcquireGlobalLockRequestView request,
   }
 
   GlobalLockHandle::Create(acpi_, manager_->fidl_dispatcher(), completer.ToAsync());
+}
+
+ACPI_STATUS Device::AddressSpaceHandler(uint32_t function, ACPI_PHYSICAL_ADDRESS physical_address,
+                                        uint32_t bit_width, UINT64* value, void* handler_ctx,
+                                        void* region_ctx) {
+  HandlerCtx* ctx = static_cast<HandlerCtx*>(handler_ctx);
+  std::scoped_lock lock(ctx->device->address_handler_lock_);
+  auto client = ctx->device->address_handlers_.find(ctx->space_type);
+  if (client == ctx->device->address_handlers_.end()) {
+    zxlogf(ERROR, "No handler found for space %u", ctx->space_type);
+  }
+
+  switch (function) {
+    case ACPI_READ: {
+      auto result = client->second->Read_Sync(physical_address, bit_width);
+      if (!result.ok()) {
+        zxlogf(ERROR, "FIDL Read failed: %s", result.FormatDescription().data());
+        return AE_ERROR;
+      }
+      *value = result->value;
+      break;
+    }
+    case ACPI_WRITE: {
+      auto result = client->second->Write_Sync(physical_address, bit_width, *value);
+      if (!result.ok()) {
+        zxlogf(ERROR, "FIDL Write failed: %s", result.FormatDescription().data());
+        return AE_ERROR;
+      }
+      break;
+    }
+  }
+  return AE_OK;
+}
+
+void Device::InstallAddressSpaceHandler(InstallAddressSpaceHandlerRequestView request,
+                                        InstallAddressSpaceHandlerCompleter::Sync& completer) {
+  if (request->space.IsUnknown()) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kNotSupported);
+    return;
+  }
+
+  std::scoped_lock lock(address_handler_lock_);
+  uint32_t space(request->space);
+  if (address_handlers_.find(space) != address_handlers_.end()) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kAlreadyExists);
+    return;
+  }
+
+  // Allocated using new, and then destroyed by the FIDL teardown handler.
+  auto ctx = std::make_unique<HandlerCtx>();
+  ctx->device = this;
+  ctx->space_type = space;
+
+  // It's safe to do this now, because any address space requests will try and acquire the
+  // address_handler_lock_. As a result, nothing will happen until we've finished setting up the
+  // FIDL client and our bookkeeping below.
+  auto status = acpi_->InstallAddressSpaceHandler(acpi_handle_, static_cast<uint8_t>(space),
+                                                  AddressSpaceHandler, nullptr, ctx.get());
+  if (status.is_error()) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status(status.error_value()));
+    return;
+  }
+
+  fpromise::bridge<void> bridge;
+  fidl::WireSharedClient<fuchsia_hardware_acpi::AddressSpaceHandler> client(
+      std::move(request->handler), manager_->fidl_dispatcher(),
+      fidl::AnyTeardownObserver::ByCallback(
+          [this, ctx = std::move(ctx), space, completer = std::move(bridge.completer)]() mutable {
+            std::scoped_lock lock(address_handler_lock_);
+            // Remove the address space handler from ACPICA.
+            auto result = acpi_->RemoveAddressSpaceHandler(
+                acpi_handle_, static_cast<uint8_t>(space), AddressSpaceHandler);
+            if (result.is_error()) {
+              zxlogf(ERROR, "Failed to remove address space handler: %d", result.status_value());
+              // We're in a strange state now. Claim that we've torn down, but avoid freeing
+              // things to minimise the chance of a UAF in the address space handler.
+              ZX_DEBUG_ASSERT_MSG(false, "Failed to remove address space handler: %d",
+                                  result.status_value());
+              completer.complete_ok();
+              return;
+            }
+            // Clean up other things.
+            address_handlers_.erase(space);
+            completer.complete_ok();
+          }));
+
+  // Everything worked, so insert our book-keeping.
+  address_handler_teardown_finished_.emplace_back(bridge.consumer.promise());
+  address_handlers_.emplace(space, std::move(client));
+
+  completer.ReplySuccess();
 }
 }  // namespace acpi

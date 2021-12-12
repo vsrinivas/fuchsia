@@ -149,4 +149,18 @@ acpi::status<> AcpiImpl::ReleaseGlobalLock(uint32_t handle) {
   ACPI_STATUS status = AcpiReleaseGlobalLock(handle);
   return acpi::make_status(status);
 }
+
+acpi::status<> AcpiImpl::InstallAddressSpaceHandler(ACPI_HANDLE object,
+                                                    ACPI_ADR_SPACE_TYPE space_id,
+                                                    AddressSpaceHandler handler,
+                                                    AddressSpaceSetup setup, void* context) {
+  ACPI_STATUS status = AcpiInstallAddressSpaceHandler(object, space_id, handler, setup, context);
+  return acpi::make_status(status);
+}
+
+acpi::status<> AcpiImpl::RemoveAddressSpaceHandler(ACPI_HANDLE object, ACPI_ADR_SPACE_TYPE space_id,
+                                                   AddressSpaceHandler handler) {
+  ACPI_STATUS status = AcpiRemoveAddressSpaceHandler(object, space_id, handler);
+  return acpi::make_status(status);
+}
 }  // namespace acpi
