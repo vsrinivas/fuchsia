@@ -38,7 +38,7 @@ void FakeTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,
     wsync_.Reset();
     observed_ = observed;
     rsync_.Signal();
-    return !(observed & ZX_EVENTPAIR_PEER_CLOSED);
+    return observed == kStart;
   });
   callback();
 }

@@ -15,8 +15,9 @@ namespace fuzzing {
 
 LLVMTargetAdapter::LLVMTargetAdapter() : binding_(this) {}
 
-fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler(fit::closure on_close) {
-  on_close_ = std::move(on_close);
+LLVMTargetAdapter::~LLVMTargetAdapter() { sync_completion_signal(&connected_); }
+
+fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler() {
   return
       [this](fidl::InterfaceRequest<TargetAdapter> request) { binding_.Bind(std::move(request)); };
 }
@@ -36,11 +37,11 @@ void LLVMTargetAdapter::Connect(zx::eventpair eventpair, Buffer test_input,
   coordinator_.Pair(std::move(eventpair),
                     [this](zx_signals_t observed) { return OnSignal(observed); });
   callback();
+  sync_completion_signal(&connected_);
 }
 
 bool LLVMTargetAdapter::OnSignal(zx_signals_t observed) {
   if (observed & ZX_EVENTPAIR_PEER_CLOSED) {
-    on_close_();
     return false;
   }
   if (observed != kStart) {
@@ -52,6 +53,11 @@ bool LLVMTargetAdapter::OnSignal(zx_signals_t observed) {
     FX_LOGS(FATAL) << "Fuzz target function returned non-zero result: " << result;
   }
   return coordinator_.SignalPeer(kFinish);
+}
+
+zx_status_t LLVMTargetAdapter::Run() {
+  sync_completion_wait(&connected_, ZX_TIME_INFINITE);
+  return binding_.AwaitClose();
 }
 
 }  // namespace fuzzing

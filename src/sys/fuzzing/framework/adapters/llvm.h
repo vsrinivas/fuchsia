@@ -9,10 +9,13 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/compiler.h>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/binding.h"
@@ -30,11 +33,12 @@ using ::fuchsia::mem::Buffer;
 class LLVMTargetAdapter final : public TargetAdapter {
  public:
   LLVMTargetAdapter();
-  ~LLVMTargetAdapter() override = default;
+  ~LLVMTargetAdapter() override;
 
-  // Returns an interface request handler. The given |on_close| closure will be invoked when a
-  // |Connect|ed peer, i.e. the engine, disconnects.
-  fidl::InterfaceRequestHandler<TargetAdapter> GetHandler(fit::closure on_close);
+  async_dispatcher_t* dispatcher() const { return binding_.dispatcher()->get(); }
+
+  // Returns an interface request handler.
+  fidl::InterfaceRequestHandler<TargetAdapter> GetHandler();
 
   // Records the command-line parameters.
   void SetParameters(const std::vector<std::string>& parameters);
@@ -43,13 +47,16 @@ class LLVMTargetAdapter final : public TargetAdapter {
   void GetParameters(GetParametersCallback callback) override;
   void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;
 
+  // Blocks until a client connects, then blocks until the channel closes.
+  zx_status_t Run();
+
  private:
   bool OnSignal(zx_signals_t observed);
 
   Binding<TargetAdapter> binding_;
+  sync_completion_t connected_;
   std::vector<std::string> parameters_;
   SignalCoordinator coordinator_;
-  fit::closure on_close_;
   SharedMemory test_input_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(LLVMTargetAdapter);

@@ -28,6 +28,7 @@ source_set("llvm-no-main") {
   public_deps = [
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//zircon/system/ulib/sync",
   ]
   deps = [ "//sdk/lib/syslog/cpp" ]
 }

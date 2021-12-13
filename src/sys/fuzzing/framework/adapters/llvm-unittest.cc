@@ -27,6 +27,13 @@ namespace {
 
 using ::fuchsia::fuzzer::TargetAdapterSyncPtr;
 
+TargetAdapterSyncPtr MakeSyncPtr(LLVMTargetAdapter& adapter) {
+  TargetAdapterSyncPtr ptr;
+  auto handler = adapter.GetHandler();
+  handler(ptr.NewRequest());
+  return ptr;
+}
+
 // Unit tests.
 
 TEST(LLVMTargetAdapterTest, GetParameters) {
@@ -34,10 +41,7 @@ TEST(LLVMTargetAdapterTest, GetParameters) {
   std::vector<std::string> sent({"foo", "bar", "baz"});
   adapter.SetParameters(sent);
 
-  auto handler = adapter.GetHandler([&]() {});
-  TargetAdapterSyncPtr ptr;
-  handler(ptr.NewRequest());
-
+  auto ptr = MakeSyncPtr(adapter);
   std::vector<std::string> received;
   EXPECT_EQ(ptr->GetParameters(&received), ZX_OK);
   EXPECT_EQ(sent, received);
@@ -46,18 +50,11 @@ TEST(LLVMTargetAdapterTest, GetParameters) {
 TEST(LLVMTargetAdapterTest, Connect) {
   LLVMTargetAdapter adapter;
 
-  SyncWait closed;
-  auto handler = adapter.GetHandler(/* on_close */ [&]() { closed.Signal(); });
-
-  TargetAdapterSyncPtr ptr;
-  handler(ptr.NewRequest());
-
+  auto ptr = MakeSyncPtr(adapter);
   FakeSignalCoordinator coordinator;
-
   SharedMemory test_input;
   test_input.Reserve(1 << 12);
-
-  ptr->Connect(coordinator.Create(), test_input.Share());
+  EXPECT_EQ(ptr->Connect(coordinator.Create(), test_input.Share()), ZX_OK);
 
   // Test sending and signalling a test_input.
   std::string s("hello world!");
@@ -70,9 +67,26 @@ TEST(LLVMTargetAdapterTest, Connect) {
   EXPECT_EQ(coordinator.AwaitSignal(), Signal::kFinish);
   EXPECT_STREQ(last_input.data, s.data());
   EXPECT_EQ(last_input.size, test_input.size());
+}
 
-  coordinator.Reset();
-  closed.WaitFor("close");
+TEST(LLVMTargetAdapterTest, Run) {
+  LLVMTargetAdapter adapter;
+  std::atomic<bool> done(false);
+  std::thread run_thread([&]() {
+    adapter.Run();
+    done = true;
+  });
+
+  auto ptr = MakeSyncPtr(adapter);
+  FakeSignalCoordinator coordinator;
+  SharedMemory test_input;
+  test_input.Reserve(1 << 12);
+  EXPECT_EQ(ptr->Connect(coordinator.Create(), test_input.Share()), ZX_OK);
+
+  EXPECT_FALSE(done.load());
+  ptr.Unbind();
+  run_thread.join();
+  EXPECT_TRUE(done.load());
 }
 
 }  // namespace
