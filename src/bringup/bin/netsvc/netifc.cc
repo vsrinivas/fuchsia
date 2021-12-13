@@ -5,7 +5,6 @@
 #include "src/bringup/bin/netsvc/netifc.h"
 
 #include <dirent.h>
-#include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <lib/fit/defer.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -49,8 +48,7 @@ static int rxc;
 #endif
 
 static mtx_t eth_lock = {};
-static zx_handle_t g_netsvc = ZX_HANDLE_INVALID;
-static eth_client_t* g_eth;
+static std::unique_ptr<EthClient> g_eth;
 static uint8_t g_netmac[6];
 
 static zx_handle_t iovmo;
@@ -78,7 +76,7 @@ static_assert(sizeof(eth_buffer_t) == 32);
 
 static eth_buffer_t* eth_buffer_base;
 static size_t eth_buffer_count;
-static fuchsia_hardware_ethernet_DeviceStatus last_dev_status = 0;
+static fuchsia_hardware_ethernet::wire::DeviceStatus last_dev_status;
 
 static void check_ethbuf(eth_buffer_t* ethbuf, uint32_t state) {
   int check = [ethbuf, state]() {
@@ -132,24 +130,21 @@ static zx_status_t eth_get_buffer_locked(size_t sz, void** data, eth_buffer_t** 
   }
   if (eth_buffers == nullptr) {
     for (;;) {
-      eth_complete_tx(g_eth, nullptr, tx_complete);
+      if (zx_status_t status = g_eth->CompleteTx(nullptr, tx_complete); status != ZX_OK) {
+        printf("%s: CompleteTx error: %s\n", __FUNCTION__, zx_status_get_string(status));
+        return status;
+      }
       if (eth_buffers != nullptr) {
         break;
       }
       if (!block) {
         return ZX_ERR_SHOULD_WAIT;
       }
-      zx_status_t status;
-      zx_signals_t signals;
       mtx_unlock(&eth_lock);
-      status = zx_object_wait_one(g_eth->tx_fifo, ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
-                                  ZX_TIME_INFINITE, &signals);
+      zx_status_t status = g_eth->WaitTx(zx::time::infinite());
       mtx_lock(&eth_lock);
-      if (status < 0) {
+      if (status != ZX_OK) {
         return status;
-      }
-      if (signals & ZX_FIFO_PEER_CLOSED) {
-        return ZX_ERR_PEER_CLOSED;
       }
     }
   }
@@ -196,7 +191,7 @@ zx_status_t eth_send(eth_buffer_t* ethbuf, size_t skip, size_t len) {
   }
 
   ethbuf->state = ETH_BUFFER_TX;
-  status = eth_queue_tx(g_eth, ethbuf, static_cast<uint8_t*>(ethbuf->data) + skip, len, 0);
+  status = g_eth->QueueTx(ethbuf, static_cast<uint8_t*>(ethbuf->data) + skip, len);
   if (status < 0) {
     printf("eth_fifo_send: queue tx failed: %d\n", status);
     eth_put_buffer_locked(ethbuf, ETH_BUFFER_TX);
@@ -217,13 +212,12 @@ int eth_add_mcast_filter(const mac_addr_t* addr) { return 0; }
 int netifc_open(const char* interface) __TA_NO_THREAD_SAFETY_ANALYSIS {
   mtx_lock(&eth_lock);
 
-  auto defer_cleanup_netsvc = fit::defer([]() __TA_NO_THREAD_SAFETY_ANALYSIS {
-    zx_handle_close(g_netsvc);
-    g_netsvc = ZX_HANDLE_INVALID;
-    mtx_unlock(&eth_lock);
-  });
+  auto unlock = fit::defer([]() __TA_NO_THREAD_SAFETY_ANALYSIS { mtx_unlock(&eth_lock); });
+
+  fidl::ClientEnd<fuchsia_hardware_ethernet::Device> device;
   // TODO: parameterize netsvc ethdir as well?
-  if (netifc_discover("/dev/class/ethernet", interface, &g_netsvc, g_netmac)) {
+  if (netifc_discover("/dev/class/ethernet", interface, device.channel().reset_and_get_address(),
+                      g_netmac)) {
     return -1;
   }
 
@@ -263,26 +257,11 @@ int netifc_open(const char* interface) __TA_NO_THREAD_SAFETY_ANALYSIS {
     }
   }
 
-  if (zx_status_t status = eth_create(g_netsvc, iovmo, iobuf, &g_eth); status != ZX_OK) {
-    printf("eth_create() failed: %s\n", zx_status_get_string(status));
-    return status;
+  zx::status eth_status = EthClient::Create(std::move(device), zx::unowned_vmo(iovmo), iobuf);
+  if (eth_status.is_error()) {
+    printf("EthClient::create() failed: %s\n", eth_status.status_string());
   }
-
-  auto defer_destroy_client = fit::defer([]() {
-    eth_destroy(g_eth);
-    g_eth = nullptr;
-  });
-  {
-    zx_status_t call_status;
-    if (zx_status_t status = fuchsia_hardware_ethernet_DeviceStart(g_netsvc, &call_status);
-        status != ZX_OK) {
-      printf("netifc: ethernet_impl_start(): %s\n", zx_status_get_string(status));
-      return status;
-    }
-    if (call_status != ZX_OK) {
-      printf("netifc: ethernet_impl_start() returned: %s\n", zx_status_get_string(call_status));
-    }
-  }
+  std::unique_ptr<EthClient> eth = std::move(eth_status.value());
 
   ip6_init(g_netmac, false);
 
@@ -294,26 +273,17 @@ int netifc_open(const char* interface) __TA_NO_THREAD_SAFETY_ANALYSIS {
       printf("netifc: only queued %u buffers (desired: %u)\n", n, NET_BUFFERS);
       break;
     }
-    eth_queue_rx(g_eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
+    eth->QueueRx(ethbuf, ethbuf->data, NET_BUFFERSZ);
   }
 
-  defer_cleanup_netsvc.cancel();
-  defer_destroy_client.cancel();
+  g_eth = std::move(eth);
 
-  mtx_unlock(&eth_lock);
   return ZX_OK;
 }
 
-void netifc_close(void) {
+void netifc_close() {
   mtx_lock(&eth_lock);
-  if (g_netsvc != ZX_HANDLE_INVALID) {
-    zx_handle_close(g_netsvc);
-    g_netsvc = ZX_HANDLE_INVALID;
-  }
-  if (g_eth != nullptr) {
-    eth_destroy(g_eth);
-    g_eth = nullptr;
-  }
+  g_eth = nullptr;
   unsigned count = 0;
   for (unsigned n = 0; n < eth_buffer_count; n++) {
     switch (eth_buffer_base[n].state) {
@@ -338,40 +308,56 @@ void netifc_close(void) {
   mtx_unlock(&eth_lock);
 }
 
-static void rx_complete(void* ctx, void* cookie, size_t len, uint32_t flags) {
+static void rx_complete(void* ctx, void* cookie, size_t len) {
   eth_buffer_t* ethbuf = static_cast<eth_buffer_t*>(cookie);
   check_ethbuf(ethbuf, ETH_BUFFER_RX);
   netifc_recv(ethbuf->data, len);
-  eth_queue_rx(g_eth, ethbuf, ethbuf->data, NET_BUFFERSZ, 0);
+  g_eth->QueueRx(ethbuf, ethbuf->data, NET_BUFFERSZ);
 }
 
 int netifc_poll(zx_time_t deadline) {
   // Handle any completed rx packets
-  zx_status_t status;
-  if ((status = eth_complete_rx(g_eth, nullptr, rx_complete)) < 0) {
-    printf("netifc: eth rx failed: %d\n", status);
+  if (zx_status_t status = g_eth->CompleteRx(nullptr, rx_complete); status != ZX_OK) {
+    printf("netifc: eth rx failed: %s\n", zx_status_get_string(status));
     return -1;
   }
 
   if (netifc_send_pending()) {
     return 0;
   }
-  fuchsia_hardware_ethernet_DeviceStatus dev_status = 0;
-  zx_status_t fidl_status = fuchsia_hardware_ethernet_DeviceGetStatus(g_netsvc, &dev_status);
-  if (dev_status != last_dev_status) {
-    if (!(dev_status & fuchsia_hardware_ethernet_DeviceStatus_ONLINE)) {
-      printf("netifc: Interface down. Operation code %i, FIDL code %s\n", dev_status,
-             zx_status_get_string(fidl_status));
-    } else {
-      printf("netifc: Interface up.\n");
+
+  {
+    zx::status status = g_eth->WaitRx(zx::time(deadline));
+    if (status.is_error()) {
+      if (status.error_value() == ZX_ERR_TIMED_OUT) {
+        // Deadline exceeded.
+        return 0;
+      }
+      printf("netifc: eth rx wait failed: %s\n", status.status_string());
+      return -1;
     }
-    last_dev_status = dev_status;
+    // No changes to device status.
+    if (!status.value()) {
+      return 0;
+    }
   }
 
-  status = eth_wait_rx(g_eth, deadline);
-  if ((status < 0) && (status != ZX_ERR_TIMED_OUT)) {
-    printf("netifc: eth rx wait failed: %d\n", status);
-    return -1;
+  // Device status was signaled, fetch new status.
+  {
+    zx::status status = g_eth->GetStatus();
+    if (status.is_error()) {
+      printf("netifc: error fetching device status %s\n", status.status_string());
+      return -1;
+    }
+    fuchsia_hardware_ethernet::wire::DeviceStatus& device_status = status.value();
+    if (device_status != last_dev_status) {
+      if (device_status & fuchsia_hardware_ethernet::wire::DeviceStatus::kOnline) {
+        printf("netifc: Interface up.\n");
+      } else {
+        printf("netifc: Interface down.\n");
+      }
+      last_dev_status = device_status;
+    }
   }
 
   return 0;
