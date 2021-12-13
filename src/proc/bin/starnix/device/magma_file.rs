@@ -141,6 +141,30 @@ impl FileOps for MagmaFile {
                     virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE as u32;
                 task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO => {
+                let (control, mut response): (
+                    virtio_magma_virt_get_image_info_ctrl_t,
+                    virtio_magma_virt_get_image_info_resp_t,
+                ) = read_control_and_response(task, &command)?;
+
+                // TODO(fxb/90145): Store images per connection.
+                let _connection = control.connection;
+                let image = control.image as usize;
+
+                let mut image_info_ptr: u64 = 0;
+                let image_info_address = UserAddress::from(control.image_info_out as u64);
+                task.mm.read_object(UserRef::new(image_info_address), &mut image_info_ptr)?;
+
+                let infos = self.infos.lock();
+                let image_info = infos.get(&image).ok_or(errno!(EINVAL))?;
+                let image_info_out = UserAddress::from(image_info_ptr as u64);
+                task.mm.write_object(UserRef::new(image_info_out), &image_info.info)?;
+
+                response.hdr.type_ =
+                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_VIRT_GET_IMAGE_INFO as u32;
+                response.result_return = MAGMA_STATUS_OK as u64;
+                task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
