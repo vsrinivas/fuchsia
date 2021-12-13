@@ -53,9 +53,8 @@ struct Args {
     test_args: Vec<String>,
 }
 
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    fuchsia_syslog::init().expect("initializing syslog");
     let args = argh::from_env();
 
     let Args {
