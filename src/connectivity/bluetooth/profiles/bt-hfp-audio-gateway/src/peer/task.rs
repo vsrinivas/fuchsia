@@ -55,6 +55,8 @@ use crate::{
 
 const CONNECTION_INIT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
+const DEFAULT_CODECS: &[CodecId] = &[CodecId::CVSD];
+
 #[derive(Debug)]
 struct ScoActive {
     sco_connection: ScoConnection,
@@ -515,10 +517,7 @@ impl PeerTask {
                     self.connection.receive_ag_request(marker, AgUpdate::Ok).await;
                 }
                 if let ScoState::SettingUp = self.sco_state {
-                    let codecs = self
-                        .connection
-                        .get_selected_codec()
-                        .map_or(vec![CodecId::CVSD], |c| vec![c]);
+                    let codecs = self.get_codecs();
                     info!("About to connect SCO for peer {:}.", self.id);
                     let setup_result = self.sco_connector.connect(self.id.clone(), codecs).await;
                     info!("About to finish connecting SCO for peer {:}.", self.id);
@@ -727,7 +726,7 @@ impl PeerTask {
             // A call was active and has just been transferred to the HF, so wait for the SCO
             // connection to be set up by the HF.
             | ScoState::Active(_) => {
-               let codecs = self.connection.get_selected_codec().map_or(vec![CodecId::CVSD], |c| vec![c]);
+               let codecs = self.get_codecs();
                let sco_connector = self.sco_connector.clone();
                let id = self.id.clone();
                let fut = async move {
@@ -842,6 +841,10 @@ impl PeerTask {
             self.phone_status_update(status).await;
         }
         self.inspect.network.update(&self.network);
+    }
+
+    fn get_codecs(&self) -> Vec<CodecId> {
+        self.connection.get_selected_codec().map_or(DEFAULT_CODECS.to_vec(), |c| vec![c])
     }
 }
 
