@@ -95,7 +95,7 @@ class StartupService extends activity.Listener {
       RawKeyboard.instance.addListener((event) {
         // We use Alt key release event to dismiss app switching UI.
         final data = event.data as RawKeyEventDataFuchsia;
-        final fuchsiaKey = FuchsiaKeyboard.kHidUsagePageMask | data.hidUsage;
+        final fuchsiaKey = data.hidUsage;
         if (fuchsiaKey == PhysicalKeyboardKey.altLeft.usbHidUsage ||
             fuchsiaKey == PhysicalKeyboardKey.altRight.usbHidUsage) {
           if (!event.isAltPressed) {

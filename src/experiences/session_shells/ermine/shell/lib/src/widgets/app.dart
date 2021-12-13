@@ -41,7 +41,6 @@ class App extends StatelessWidget {
           GlobalWidgetsLocalizations.delegate,
         ],
         supportedLocales: supported_locales.locales,
-        shortcuts: FuchsiaKeyboard.defaultShortcuts,
         scrollBehavior: MaterialScrollBehavior().copyWith(
           dragDevices: {PointerDeviceKind.mouse, PointerDeviceKind.touch},
         ),

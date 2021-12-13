@@ -11,7 +11,6 @@ dart_library("ermine_utils") {
   sources = [
     "ermine_utils.dart",
     "src/crash.dart",
-    "src/fuchsia_keyboard.dart",
     "src/mobx_disposable.dart",
     "src/mobx_extensions.dart",
     "src/themes.dart",

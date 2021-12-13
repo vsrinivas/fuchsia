@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 export 'src/crash.dart';
-export 'src/fuchsia_keyboard.dart';
 export 'src/mobx_disposable.dart';
 export 'src/mobx_extensions.dart';
 export 'src/themes.dart';
