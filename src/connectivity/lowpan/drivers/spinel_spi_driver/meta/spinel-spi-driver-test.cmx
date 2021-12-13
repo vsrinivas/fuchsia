@@ -1,8 +1,0 @@
-{
-    "include": [
-        "syslog/client.shard.cmx"
-    ],
-    "program": {
-        "binary": "bin/spinel_spi_driver_bin_test"
-    }
-}
