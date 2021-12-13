@@ -59,6 +59,7 @@ async fn run_single_test(
         builder.add_suite(test_url, run_options).await.context("Cannot create suite instance")?;
     let builder_run = fasync::Task::spawn(async move { builder.run().await });
     let ret = collect_suite_events(suite_instance).await;
+
     builder_run.await.context("builder execution failed")?;
     ret
 }
@@ -82,11 +83,6 @@ async fn collect_suite_events(
                 }
                 let logs = stdout_message.split("\n");
                 for log in logs {
-                    // gtest produces this line when tests are randomized. As of
-                    // this writing, our gtest_main binary *always* randomizes.
-                    if log.contains("Note: Randomizing tests' orders with a seed of") {
-                        continue;
-                    }
                     events.push(RunEvent::case_stdout(name.clone(), log.to_string()));
                 }
             }

@@ -13,9 +13,6 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  // Setting this flag to true causes googletest to *generate* and log the random seed.
-  GTEST_FLAG_SET(shuffle, true);
-
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
