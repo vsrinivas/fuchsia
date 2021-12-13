@@ -53,11 +53,16 @@ TEST(MemallocPoolMemConfigTests, Ranges) {
           .size = kChunkSize * 2,
           .type = memalloc::Type::kReserved,
       },
+      {
+          .addr = kChunkSize * 100,
+          .size = kChunkSize * 5,
+          .type = memalloc::Type::kPeripheral,
+      },
   };
   EXPECT_TRUE(pool.Init(std::array{cpp20::span<memalloc::Range>(test_pool_ranges)}).is_ok());
   auto alloc_result = pool.Allocate(memalloc::Type::kPoolTestPayload, kChunkSize * 100);
   ASSERT_TRUE(alloc_result.is_ok());
-  EXPECT_EQ(kChunkSize * 52, alloc_result.value());
+  EXPECT_EQ(kChunkSize * 105, alloc_result.value());
 
   constexpr zbi_mem_range_t kExpectedZbiRanges[] = {
       {
@@ -66,13 +71,18 @@ TEST(MemallocPoolMemConfigTests, Ranges) {
           .type = ZBI_MEM_RANGE_RAM,
       },
       {
-          .paddr = kChunkSize * 50,
-          .length = kChunkSize * 2,
-          .type = ZBI_MEM_RANGE_RESERVED,
+          .paddr = kChunkSize * 52,
+          .length = kChunkSize * 48,
+          .type = ZBI_MEM_RANGE_RAM,
       },
       {
-          .paddr = kChunkSize * 52,
-          .length = kChunkSize * 948,
+          .paddr = kChunkSize * 100,
+          .length = kChunkSize * 5,
+          .type = ZBI_MEM_RANGE_PERIPHERAL,
+      },
+      {
+          .paddr = kChunkSize * 105,
+          .length = kChunkSize * 895,
           .type = ZBI_MEM_RANGE_RAM,
       },
   };
