@@ -2,7 +2,7 @@
 
 ## What is Fuchsia?
 
-Fuchsia an open source, general purpose operating system supporting modern
+Fuchsia is an open source, general purpose operating system supporting modern
 64-bit Intel and ARM processors.
 
 We expect everyone interacting with our project to respect our
