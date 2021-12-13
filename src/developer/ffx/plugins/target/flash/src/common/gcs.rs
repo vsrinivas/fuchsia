@@ -16,9 +16,8 @@ use {
         client::{Client, ClientFactory},
         token_store::{read_boto_refresh_token, TokenStore},
     },
-    sdk_metadata::{ElementType, Envelope, ProductBundleContainerV1, ProductBundleV1},
-    std::fs::File,
-    std::io::{BufReader, Write},
+    sdk_metadata::ProductBundleV1,
+    std::io::Write,
     std::path::{Path, PathBuf},
     tempfile::{tempdir, TempDir},
 };
@@ -64,22 +63,17 @@ impl GcsResolver {
     }
 }
 
+/// Read a product bundle entry from a product bundle container file.
+///
+/// `path` is a local path to the product bundle container file.
+/// `bundle` is the FMS Name of the desired product bundle.
 fn product_bundle_from_container_path<P: AsRef<Path>>(
     path: P,
-    bundle: &String,
+    bundle: &str,
 ) -> Result<ProductBundleV1> {
-    let container: Envelope<ProductBundleContainerV1> =
-        File::open(path).map(BufReader::new).map(serde_json::from_reader)??;
-    let product_bundle = container
-        .data
-        .bundles
-        .iter()
-        .find(|b| match b.data.kind {
-            ElementType::ProductBundle => b.data.name == *bundle,
-            _ => false,
-        })
-        .map(|b| b.data.clone());
-    product_bundle.map(|pb| pb).ok_or_else(|| anyhow!("No matching bundle found."))
+    let mut entries = fms::Entries::new();
+    entries.add_from_path(path.as_ref())?;
+    Ok(fms::find_product_bundle(&entries, &Some(bundle.to_string()))?.clone())
 }
 
 #[async_trait(?Send)]
