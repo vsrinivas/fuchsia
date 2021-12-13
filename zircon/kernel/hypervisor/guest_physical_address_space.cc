@@ -33,7 +33,7 @@ zx_status_t GuestPhysicalAddressSpace::Create(
     return ZX_ERR_NO_MEMORY;
   }
 
-  gpas->guest_aspace_ = VmAspace::Create(VmAspace::TYPE_GUEST_PHYS, "guest_paspace");
+  gpas->guest_aspace_ = VmAspace::Create(VmAspace::Type::GuestPhys, "guest_paspace");
   if (!gpas->guest_aspace_) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -87,7 +87,7 @@ static bool multiple_regions_test() {
   user_inout_ptr<void> ptr{nullptr};
   static const size_t alloc_size = 16 * 1024;
 
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test aspace");
   ASSERT_NONNULL(aspace, "VmAspace::Create pointer");
 
   VmAspace* old_aspace = Thread::Current::Get()->aspace();
@@ -172,7 +172,7 @@ static bool vmm_alloc_contiguous_zero_size_fails() {
 // Allocates a vm address space object directly, allows it to go out of scope.
 static bool vmaspace_create_smoke_test() {
   BEGIN_TEST;
-  auto aspace = VmAspace::Create(0, "test aspace");
+  auto aspace = VmAspace::Create(VmAspace::Type::User, "test aspace");
   zx_status_t err = aspace->Destroy();
   EXPECT_EQ(ZX_OK, err, "VmAspace::Destroy");
   END_TEST;
@@ -182,7 +182,7 @@ static bool vmaspace_create_smoke_test() {
 // allows it to go out of scope.
 static bool vmaspace_alloc_smoke_test() {
   BEGIN_TEST;
-  auto aspace = VmAspace::Create(0, "test aspace2");
+  auto aspace = VmAspace::Create(VmAspace::Type::User, "test aspace2");
 
   user_inout_ptr<void> ptr{nullptr};
   auto err = AllocUser(aspace.get(), "test", PAGE_SIZE, &ptr);
@@ -311,7 +311,7 @@ static bool vmaspace_free_unaccessed_page_tables_test() {
 
   // Construct an additional aspace to use for mappings and touching pages. This allows us to
   // control whether the aspace is considered active, which can effect reclamation and scanning.
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test-aspace");
   ASSERT_NONNULL(aspace);
 
   auto cleanup_aspace = fit::defer([&aspace]() { aspace->Destroy(); });
@@ -418,7 +418,7 @@ static bool vmaspace_free_unaccessed_page_tables_test() {
 static bool vmaspace_merge_mapping_test() {
   BEGIN_TEST;
 
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test aspace");
 
   // Create a sub VMAR we'll use for all our testing.
   fbl::RefPtr<VmAddressRegion> vmar;
@@ -591,7 +591,7 @@ static bool vm_mapping_attribution_commit_decommit_test() {
   AutoVmScannerDisable scanner_disable;
 
   // Create a test VmAspace to temporarily switch to for creating test mappings.
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test-aspace");
   ASSERT_NONNULL(aspace);
 
   // Create a VMO to map.
@@ -679,7 +679,7 @@ static bool vm_mapping_attribution_map_unmap_test() {
   AutoVmScannerDisable scanner_disable;
 
   // Create a test VmAspace to temporarily switch to for creating test mappings.
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test-aspace");
   ASSERT_NONNULL(aspace);
 
   // Create a VMO to map.
@@ -760,7 +760,7 @@ static bool vm_mapping_attribution_merge_test() {
   AutoVmScannerDisable scanner_disable;
 
   // Create a test VmAspace to temporarily switch to for creating test mappings.
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test-aspace");
   ASSERT_NONNULL(aspace);
   EXPECT_EQ(aspace->is_user(), true);
 

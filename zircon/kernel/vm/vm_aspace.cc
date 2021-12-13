@@ -62,36 +62,13 @@ lazy_init::LazyInit<VmAspace, lazy_init::CheckType::None, lazy_init::Destructor:
     g_kernel_aspace;
 lazy_init::LazyInit<VmAddressRegion, lazy_init::CheckType::None, lazy_init::Destructor::Disabled>
     g_kernel_root_vmar;
-}  // namespace
-
-// Called once at boot to initialize the singleton kernel address
-// space. Thread safety analysis is disabled since we don't need to
-// lock yet.
-void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
-  g_kernel_aspace.Initialize(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::TYPE_KERNEL,
-                             "kernel");
-
-#if LK_DEBUGLEVEL > 1
-  g_kernel_aspace->Adopt();
-#endif
-
-  g_kernel_root_vmar.Initialize(g_kernel_aspace.Get());
-  g_kernel_aspace->root_vmar_ = fbl::AdoptRef(&g_kernel_root_vmar.Get());
-
-  zx_status_t status = g_kernel_aspace->Init();
-  ASSERT(status == ZX_OK);
-
-  // save a pointer to the singleton kernel address space
-  VmAspace::kernel_aspace_ = &g_kernel_aspace.Get();
-  aspaces_list_.push_front(kernel_aspace_);
-}
 
 // simple test routines
-static inline bool is_inside(VmAspace& aspace, vaddr_t vaddr) {
+inline bool is_inside(VmAspace& aspace, vaddr_t vaddr) {
   return (vaddr >= aspace.base() && vaddr <= aspace.base() + aspace.size() - 1);
 }
 
-static inline size_t trim_to_aspace(VmAspace& aspace, vaddr_t vaddr, size_t size) {
+inline size_t trim_to_aspace(VmAspace& aspace, vaddr_t vaddr, size_t size) {
   DEBUG_ASSERT(is_inside(aspace, vaddr));
 
   if (size == 0) {
@@ -118,13 +95,43 @@ static inline size_t trim_to_aspace(VmAspace& aspace, vaddr_t vaddr, size_t size
   return size;
 }
 
-VmAspace::VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name)
+uint arch_aspace_flags_from_type(VmAspace::Type type) {
+  bool is_high_kernel = type == VmAspace::Type::Kernel;
+  bool is_guest = type == VmAspace::Type::GuestPhys;
+  return (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) | (is_guest ? ARCH_ASPACE_FLAG_GUEST : 0u);
+}
+
+}  // namespace
+
+// Called once at boot to initialize the singleton kernel address
+// space. Thread safety analysis is disabled since we don't need to
+// lock yet.
+void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
+  g_kernel_aspace.Initialize(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE, VmAspace::Type::Kernel,
+                             "kernel");
+
+#if LK_DEBUGLEVEL > 1
+  g_kernel_aspace->Adopt();
+#endif
+
+  g_kernel_root_vmar.Initialize(g_kernel_aspace.Get());
+  g_kernel_aspace->root_vmar_ = fbl::AdoptRef(&g_kernel_root_vmar.Get());
+
+  zx_status_t status = g_kernel_aspace->Init();
+  ASSERT(status == ZX_OK);
+
+  // save a pointer to the singleton kernel address space
+  VmAspace::kernel_aspace_ = &g_kernel_aspace.Get();
+  aspaces_list_.push_front(kernel_aspace_);
+}
+
+VmAspace::VmAspace(vaddr_t base, size_t size, Type type, const char* name)
     : base_(base),
       size_(size),
-      flags_(flags),
+      type_(type),
       root_vmar_(nullptr),
       aslr_prng_(nullptr, 0),
-      arch_aspace_(base, size, arch_aspace_flags_from_flags(flags)) {
+      arch_aspace_(base, size, arch_aspace_flags_from_type(type)) {
   DEBUG_ASSERT(size != 0);
   DEBUG_ASSERT(base + size - 1 >= base);
 
@@ -152,25 +159,25 @@ zx_status_t VmAspace::Init() {
   return ZX_OK;
 }
 
-fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
-  LTRACEF("flags 0x%x, name '%s'\n", flags, name);
+fbl::RefPtr<VmAspace> VmAspace::Create(Type type, const char* name) {
+  LTRACEF("type %u, name '%s'\n", static_cast<uint>(type), name);
 
   vaddr_t base;
   size_t size;
-  switch (flags & TYPE_MASK) {
-    case TYPE_USER:
+  switch (type) {
+    case Type::User:
       base = USER_ASPACE_BASE;
       size = USER_ASPACE_SIZE;
       break;
-    case TYPE_KERNEL:
+    case Type::Kernel:
       base = KERNEL_ASPACE_BASE;
       size = KERNEL_ASPACE_SIZE;
       break;
-    case TYPE_LOW_KERNEL:
+    case Type::LowKernel:
       base = 0;
       size = USER_ASPACE_BASE + USER_ASPACE_SIZE;
       break;
-    case TYPE_GUEST_PHYS:
+    case Type::GuestPhys:
       base = GUEST_PHYSICAL_ASPACE_BASE;
       size = GUEST_PHYSICAL_ASPACE_SIZE;
       break;
@@ -179,7 +186,7 @@ fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
   }
 
   fbl::AllocChecker ac;
-  auto aspace = fbl::AdoptRef(new (&ac) VmAspace(base, size, flags, name));
+  auto aspace = fbl::AdoptRef(new (&ac) VmAspace(base, size, type, name));
   if (!ac.check()) {
     return nullptr;
   }
@@ -553,7 +560,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
   DEBUG_ASSERT(!aspace_destroyed_);
   LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);
 
-  if ((flags_ & TYPE_MASK) == TYPE_GUEST_PHYS) {
+  if (type_ == Type::GuestPhys) {
     flags &= ~VMM_PF_FLAG_USER;
     flags |= VMM_PF_FLAG_GUEST;
   }
@@ -624,8 +631,9 @@ void VmAspace::Dump(bool verbose) const {
 
 void VmAspace::DumpLocked(bool verbose) const {
   canary_.Assert();
-  printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx fl %#x ref %d '%s' destroyed %d\n", this,
-         base_, base_ + size_ - 1, size_, flags_, ref_count_debug(), name_, aspace_destroyed_);
+  printf("as %p [%#" PRIxPTR " %#" PRIxPTR "] sz %#zx typ %u ref %d '%s' destroyed %d\n", this,
+         base_, base_ + size_ - 1, size_, static_cast<uint>(type_), ref_count_debug(), name_,
+         aspace_destroyed_);
 
   if (verbose && root_vmar_) {
     AssertHeld(root_vmar_->lock_ref());

@@ -768,7 +768,7 @@ static bool vmo_demand_paged_map_test() {
   ASSERT_EQ(status, ZX_OK, "vmobject creation\n");
   ASSERT_TRUE(vmo, "vmobject creation\n");
 
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test aspace");
   ASSERT_NONNULL(aspace, "VmAspace::Create pointer");
 
   VmAspace* old_aspace = Thread::Current::Get()->aspace();
@@ -2616,7 +2616,7 @@ static bool vmo_discard_failure_test() {
   EXPECT_EQ(0, memcmp(fill.data(), buf.data(), kSize));
 
   // Create a test user aspace to map the vmo.
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test aspace");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test aspace");
   ASSERT_NONNULL(aspace);
 
   VmAspace* old_aspace = Thread::Current::Get()->aspace();

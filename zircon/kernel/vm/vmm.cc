@@ -206,10 +206,10 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
     zx_status_t err = test_aspace->FreeRegion(reinterpret_cast<vaddr_t>(argv[2].u));
     printf("VmAspace::FreeRegion returns %d\n", err);
   } else if (!strcmp(argv[1].str, "create_aspace")) {
-    fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test");
+    fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test");
     printf("VmAspace::Create aspace %p\n", aspace.get());
   } else if (!strcmp(argv[1].str, "create_test_aspace")) {
-    fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test");
+    fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "test");
     printf("VmAspace::Create aspace %p\n", aspace.get());
 
     test_aspace = aspace;

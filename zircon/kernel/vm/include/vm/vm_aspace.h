@@ -36,12 +36,22 @@ class VmObject;
 
 class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCounted<VmAspace> {
  public:
-  // Create an address space of the type specified in |flags| with name |name|.
+  enum class Type {
+    User = 0,
+    Kernel,
+    // You probably do not want to use LOW_KERNEL. It is primarily used for SMP bootstrap or mexec
+    // to allow mappings of very low memory using the standard VMM subsystem.
+    LowKernel,
+    // Used to construct an address space representing hypervisor guest memory.
+    GuestPhys,
+  };
+
+  // Create an address space of the type specified in |type| with name |name|.
   //
   // Although reference counted, the returned VmAspace must be explicitly destroyed via Destroy.
   //
   // Returns null on failure (e.g. due to resource starvation).
-  static fbl::RefPtr<VmAspace> Create(uint flags, const char* name);
+  static fbl::RefPtr<VmAspace> Create(Type type, const char* name);
 
   // Destroy this address space.
   //
@@ -51,22 +61,12 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   void Rename(const char* name);
 
-  // flags
-  static constexpr uint32_t TYPE_USER = (0 << 0);
-  static constexpr uint32_t TYPE_KERNEL = (1 << 0);
-  // You probably do not want to use LOW_KERNEL.  It is primarily
-  // used for SMP bootstrap to allow mappings of very low memory using
-  // the standard VMM subsystem.
-  static constexpr uint32_t TYPE_LOW_KERNEL = (2 << 0);
-  static constexpr uint32_t TYPE_GUEST_PHYS = (3 << 0);
-  static constexpr uint32_t TYPE_MASK = (3 << 0);
-
   // simple accessors
   vaddr_t base() const { return base_; }
   size_t size() const { return size_; }
   const char* name() const { return name_; }
   ArchVmAspace& arch_aspace() { return arch_aspace_; }
-  bool is_user() const { return (flags_ & TYPE_MASK) == TYPE_USER; }
+  bool is_user() const { return type_ == Type::User; }
   bool is_aslr_enabled() const { return aslr_enabled_; }
 
   // Get the root VMAR (briefly acquires the aspace lock)
@@ -210,7 +210,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   friend lazy_init::Access;
 
   // can only be constructed via factory or LazyInit
-  VmAspace(vaddr_t base, size_t size, uint32_t flags, const char* name);
+  VmAspace(vaddr_t base, size_t size, Type type, const char* name);
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmAspace);
 
@@ -229,13 +229,6 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // Sets this aspace as being latency sensitive. This cannot be undone.
   void MarkAsLatencySensitive();
 
-  static constexpr uint arch_aspace_flags_from_flags(uint32_t flags) {
-    bool is_high_kernel = (flags & TYPE_MASK) == TYPE_KERNEL;
-    bool is_guest = (flags & TYPE_MASK) == TYPE_GUEST_PHYS;
-    return (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) |
-           (is_guest ? ARCH_ASPACE_FLAG_GUEST : 0u);
-  }
-
   // internal page fault routine, friended to be only called by vmm_page_fault_handler
   zx_status_t PageFault(vaddr_t va, uint flags);
   friend zx_status_t vmm_page_fault_handler(vaddr_t va, uint flags);
@@ -247,7 +240,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // members
   const vaddr_t base_;
   const size_t size_;
-  const uint32_t flags_;
+  const Type type_;
   char name_[32];
   bool aspace_destroyed_ = false;
   bool aslr_enabled_ = false;

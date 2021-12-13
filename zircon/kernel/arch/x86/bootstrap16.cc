@@ -82,7 +82,7 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
       ROUNDUP((uintptr_t)&_temp_gdt_end, PAGE_SIZE) - ROUNDDOWN((uintptr_t)&_temp_gdt, PAGE_SIZE);
 
   if (!bootstrap_aspace) {
-    bootstrap_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "bootstrap16");
+    bootstrap_aspace = VmAspace::Create(VmAspace::Type::LowKernel, "bootstrap16");
     if (!bootstrap_aspace) {
       return ZX_ERR_NO_MEMORY;
     }

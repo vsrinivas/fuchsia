@@ -38,7 +38,7 @@ zx_status_t InitEfiServices(uint64_t efi_system_table) {
   gEfiSystemTable = efi_system_table;
 
   // Create a new address space.
-  efi_aspace = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "uefi");
+  efi_aspace = VmAspace::Create(VmAspace::Type::LowKernel, "uefi");
   if (!efi_aspace) {
     return ZX_ERR_NO_RESOURCES;
   }

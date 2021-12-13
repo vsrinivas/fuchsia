@@ -144,7 +144,7 @@ int run_unittest_thread_entry(void* arg) {
 //
 // Returns true if the test passed.
 bool run_testcase_in_thread(const unittest_testcase_registration_t* testcase) {
-  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::TYPE_USER, "unittest");
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(VmAspace::Type::User, "unittest");
   if (!aspace) {
     unittest_printf("failed to create unittest user aspace\n");
     return false;

@@ -160,7 +160,7 @@ zx_status_t ProcessDispatcher::Initialize() {
   // create an address space for this process, named after the process's koid.
   char aspace_name[ZX_MAX_NAME_LEN];
   snprintf(aspace_name, sizeof(aspace_name), "proc:%" PRIu64, get_koid());
-  aspace_ = VmAspace::Create(VmAspace::TYPE_USER, aspace_name);
+  aspace_ = VmAspace::Create(VmAspace::Type::User, aspace_name);
   if (!aspace_) {
     TRACEF("error creating address space\n");
     return ZX_ERR_NO_MEMORY;

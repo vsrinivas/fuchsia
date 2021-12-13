@@ -96,7 +96,7 @@ zx_status_t IdentityPageAllocator::InitializeAspace() {
     return ZX_OK;
   }
 
-  aspace_ = VmAspace::Create(VmAspace::TYPE_LOW_KERNEL, "identity");
+  aspace_ = VmAspace::Create(VmAspace::Type::LowKernel, "identity");
   if (!aspace_) {
     return ZX_ERR_INTERNAL;
   }
