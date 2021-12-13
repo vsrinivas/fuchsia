@@ -159,7 +159,7 @@ TEST_F(DirectoryTest, DentryBucket) {
 }
 
 TEST_F(DirectoryTest, MultiSlotDentry) {
-  auto seed = testing::GTEST_FLAG(random_seed);
+  auto seed = testing::UnitTest::GetInstance()->random_seed();
   srand(seed);
   std::cout << "Random seed for DirTest.MultiSlotDentry: " << seed << std::endl;
 

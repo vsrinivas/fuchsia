@@ -19,9 +19,19 @@ pub async fn run_test(
     let suite_instance =
         builder.add_suite(test_url, run_options).await.context("Cannot create suite instance")?;
     let builder_run = fasync::Task::spawn(async move { builder.run().await });
-    let ret = test_runners_test_lib::process_events(suite_instance, false).await?;
+    let ret = test_runners_test_lib::process_events(suite_instance, false).await;
     builder_run.await.context("builder execution failed")?;
-    Ok(ret)
+    ret.map(|(mut events, logs)| {
+        let () = events.retain(|event| match event {
+            RunEvent::CaseStdout { name: _, stdout_message } => {
+                // gtest produces this line when tests are randomized. As of
+                // this writing, our gtest_main binary *always* randomizes.
+                !stdout_message.contains("Note: Randomizing tests' orders with a seed of")
+            }
+            _ => true,
+        });
+        (events, logs)
+    })
 }
 
 /// Helper for comparing grouped test events. Produces more readable diffs than diffing the entire

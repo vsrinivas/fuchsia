@@ -22,7 +22,7 @@ class FileTest : public F2fsFakeDevTestFixture {
 };
 
 TEST_F(FileTest, BlkAddrLevel) {
-  srand(testing::GTEST_FLAG(random_seed));
+  srand(testing::UnitTest::GetInstance()->random_seed());
 
   fbl::RefPtr<fs::Vnode> test_file;
   ASSERT_EQ(root_dir_->Create("test", S_IFREG, &test_file), ZX_OK);
@@ -84,7 +84,7 @@ TEST_F(FileTest, BlkAddrLevel) {
 }
 
 TEST_F(FileTest, NidAndBlkaddrAllocFree) {
-  srand(testing::GTEST_FLAG(random_seed));
+  srand(testing::UnitTest::GetInstance()->random_seed());
 
   fbl::RefPtr<fs::Vnode> test_file;
   ASSERT_EQ(root_dir_->Create("test", S_IFREG, &test_file), ZX_OK);
