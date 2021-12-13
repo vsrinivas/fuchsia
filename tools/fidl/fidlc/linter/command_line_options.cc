@@ -44,7 +44,7 @@ const char kHelp[] = R"(  --help
 
 }  // namespace help
 
-std::string Usage(std::string argv0) {
+std::string Usage(const std::string& argv0) {
   return argv0 + " " + help::kArgSpec +
          "\n(--help for more details))\n"
          "\n"

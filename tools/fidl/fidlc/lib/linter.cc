@@ -128,8 +128,8 @@ Finding* Linter::AddFinding(SourceSpan span, std::string check_id, std::string m
 // Add a finding with optional suggestion and replacement
 const Finding* Linter::AddFinding(SourceSpan span, const CheckDef& check,
                                   const Substitutions& substitutions,
-                                  const std::string& suggestion_template,
-                                  const std::string& replacement_template) {
+                                  std::string suggestion_template,
+                                  std::string replacement_template) {
   auto* finding =
       AddFinding(span, std::string(check.id()), check.message_template().Substitute(substitutions));
   if (finding == nullptr) {
@@ -137,10 +137,12 @@ const Finding* Linter::AddFinding(SourceSpan span, const CheckDef& check,
   }
   if (!suggestion_template.empty()) {
     if (replacement_template.empty()) {
-      finding->SetSuggestion(TemplateString(suggestion_template).Substitute(substitutions));
+      finding->SetSuggestion(
+          TemplateString(std::move(suggestion_template)).Substitute(substitutions));
     } else {
-      finding->SetSuggestion(TemplateString(suggestion_template).Substitute(substitutions),
-                             TemplateString(replacement_template).Substitute(substitutions));
+      finding->SetSuggestion(
+          TemplateString(std::move(suggestion_template)).Substitute(substitutions),
+          TemplateString(std::move(replacement_template)).Substitute(substitutions));
     }
   }
   return finding;
@@ -246,14 +248,14 @@ void Linter::NewFile(const raw::File& element) {
   EnterContext("library");
 }
 
-const Finding* Linter::CheckCase(const std::string& type,
+const Finding* Linter::CheckCase(std::string type,
                                  const std::unique_ptr<raw::Identifier>& identifier,
                                  const CheckDef& check_def, const CaseType& case_type) {
   std::string id = to_string(identifier);
   if (!case_type.matches(id)) {
     return AddFinding(identifier, check_def,
                       {
-                          {"TYPE", type},
+                          {"TYPE", std::move(type)},
                           {"IDENTIFIER", id},
                           {"REPLACEMENT", case_type.convert(id)},
                       },

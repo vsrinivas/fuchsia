@@ -24,7 +24,7 @@ class VirtualSourceFile : public SourceFile {
 
   virtual std::string_view LineContaining(std::string_view view, Position* position_out) const;
 
-  SourceSpan AddLine(const std::string& line);
+  SourceSpan AddLine(std::string_view line);
 
  private:
   std::vector<std::unique_ptr<std::string>> virtual_lines_;

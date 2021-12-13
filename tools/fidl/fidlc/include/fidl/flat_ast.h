@@ -1084,7 +1084,8 @@ class AttributeSchema {
   Kind kind_ = Kind::kValidateOnly;
   Placement placement_ = Placement::kAnywhere;
   std::set<AttributePlacement> specific_placements_;
-  std::map<std::string, AttributeArgSchema> arg_schemas_;
+  // Use transparent comparator std::less<> to allow std::string_view lookups.
+  std::map<std::string, AttributeArgSchema, std::less<>> arg_schemas_;
   Constraint constraint_ = nullptr;
 };
 
@@ -1099,8 +1100,8 @@ class Libraries {
   bool Lookup(const std::vector<std::string_view>& library_name, Library** out_library) const;
 
   // Registers a new attribute schema under the given name, and returns it.
-  AttributeSchema& AddAttributeSchema(const std::string& name) {
-    auto [it, inserted] = attribute_schemas_.try_emplace(name);
+  AttributeSchema& AddAttributeSchema(std::string name) {
+    auto [it, inserted] = attribute_schemas_.try_emplace(std::move(name));
     assert(inserted && "do not add schemas twice");
     return it->second;
   }
@@ -1112,7 +1113,8 @@ class Libraries {
 
  private:
   std::map<std::vector<std::string_view>, std::unique_ptr<Library>> all_libraries_;
-  std::map<std::string, AttributeSchema> attribute_schemas_;
+  // Use transparent comparator std::less<> to allow std::string_view lookups.
+  std::map<std::string, AttributeSchema, std::less<>> attribute_schemas_;
 };
 
 class Dependencies {
@@ -1169,7 +1171,8 @@ class Dependencies {
   };
 
   std::vector<std::unique_ptr<LibraryRef>> refs_;
-  std::map<std::string, std::unique_ptr<PerFile>> by_filename_;
+  // The string keys are owned by SourceFile objects.
+  std::map<std::string_view, std::unique_ptr<PerFile>> by_filename_;
   std::set<Library*> dependencies_aggregate_;
 };
 
@@ -1236,7 +1239,7 @@ class Library : Attributable {
   // is guaranteed to be unique within the library, and a derived name is one
   // that is library scoped but derived from the concatenated components using
   // underscores as delimiters.
-  SourceSpan GeneratedSimpleName(const std::string& name);
+  SourceSpan GeneratedSimpleName(std::string_view name);
   std::string NextAnonymousName();
 
   // Attempts to compile a compound identifier, and resolve it to a name

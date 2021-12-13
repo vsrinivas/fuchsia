@@ -300,7 +300,7 @@ class LintTest {
   }
 
   template <typename Iter>
-  void PrintFindings(std::ostream& os, Iter finding, Iter end, const std::string& title) {
+  void PrintFindings(std::ostream& os, Iter finding, Iter end, std::string_view title) {
     os << "\n\n";
     os << "============================" << std::endl;
     os << title << ":" << std::endl;

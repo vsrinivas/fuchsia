@@ -271,7 +271,7 @@ class SourceSpanVisitor : public fidl::raw::TreeVisitor {
   std::multiset<std::string> spans_;
 };
 
-std::string replace_markers(const std::string& source, std::string_view left_replace,
+std::string replace_markers(std::string_view source, std::string_view left_replace,
                             std::string_view right_replace) {
   std::string result(source);
 
@@ -288,12 +288,12 @@ std::string replace_markers(const std::string& source, std::string_view left_rep
   return result;
 }
 
-std::string remove_markers(const std::string& source) { return replace_markers(source, "", ""); }
+std::string remove_markers(std::string_view source) { return replace_markers(source, "", ""); }
 
 // Extracts marked source spans from a given source string.
 // If source spans are incorrectly marked (missing or extra markers), returns
 // empty set; otherwise, returns a multiset of expected spans.
-std::multiset<std::string> extract_expected_spans(const std::string& source,
+std::multiset<std::string> extract_expected_spans(std::string_view source,
                                                   std::vector<std::string>* errors) {
   std::stack<size_t> stack;
   std::multiset<std::string> spans;

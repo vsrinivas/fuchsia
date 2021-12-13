@@ -13,7 +13,7 @@
 namespace {
 
 template <class PrimitiveType>
-void CheckConstEq(TestLibrary& library, const std::string& name, PrimitiveType expected_value,
+void CheckConstEq(TestLibrary& library, std::string_view name, PrimitiveType expected_value,
                   fidl::flat::Constant::Kind expected_constant_kind,
                   fidl::flat::ConstantValue::Kind expected_constant_value_kind) {
   auto const_decl = library.LookupConstant(name);
@@ -36,7 +36,7 @@ const C_BINARY_L uint32 = 0B101010111100110111101111;
 )FIDL");
   ASSERT_COMPILED(library);
 
-  auto check_const_eq = [](TestLibrary& library, const std::string& name, uint32_t expected_value) {
+  auto check_const_eq = [](TestLibrary& library, std::string_view name, uint32_t expected_value) {
     CheckConstEq<uint32_t>(library, name, expected_value, fidl::flat::Constant::Kind::kLiteral,
                            fidl::flat::ConstantValue::Kind::kUint32);
   };

@@ -106,8 +106,8 @@ class TestLibrary final {
     return all_libraries_->Insert(std::move(dependent_library->library_));
   }
 
-  fidl::flat::AttributeSchema& AddAttributeSchema(const std::string& name) {
-    return all_libraries_->AddAttributeSchema(name);
+  fidl::flat::AttributeSchema& AddAttributeSchema(std::string name) {
+    return all_libraries_->AddAttributeSchema(std::move(name));
   }
 
   // TODO(pascallouis): remove, this does not use a library.
@@ -185,7 +185,7 @@ class TestLibrary final {
 
   fidl::Reporter* Reporter() { return reporter_; }
 
-  const fidl::flat::Bits* LookupBits(const std::string& name) {
+  const fidl::flat::Bits* LookupBits(std::string_view name) {
     for (const auto& bits_decl : library_->bits_declarations_) {
       if (bits_decl->GetName() == name) {
         return bits_decl.get();
@@ -194,7 +194,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::Const* LookupConstant(const std::string& name) {
+  const fidl::flat::Const* LookupConstant(std::string_view name) {
     for (const auto& const_decl : library_->const_declarations_) {
       if (const_decl->GetName() == name) {
         return const_decl.get();
@@ -203,7 +203,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::Enum* LookupEnum(const std::string& name) {
+  const fidl::flat::Enum* LookupEnum(std::string_view name) {
     for (const auto& enum_decl : library_->enum_declarations_) {
       if (enum_decl->GetName() == name) {
         return enum_decl.get();
@@ -212,7 +212,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::Resource* LookupResource(const std::string& name) {
+  const fidl::flat::Resource* LookupResource(std::string_view name) {
     for (const auto& resource_decl : library_->resource_declarations_) {
       if (resource_decl->GetName() == name) {
         return resource_decl.get();
@@ -221,7 +221,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::Service* LookupService(const std::string& name) {
+  const fidl::flat::Service* LookupService(std::string_view name) {
     for (const auto& service_decl : library_->service_declarations_) {
       if (service_decl->GetName() == name) {
         return service_decl.get();
@@ -230,7 +230,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::Struct* LookupStruct(const std::string& name) {
+  const fidl::flat::Struct* LookupStruct(std::string_view name) {
     for (const auto& struct_decl : library_->struct_declarations_) {
       if (struct_decl->GetName() == name) {
         return struct_decl.get();
@@ -239,7 +239,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::Table* LookupTable(const std::string& name) {
+  const fidl::flat::Table* LookupTable(std::string_view name) {
     for (const auto& table_decl : library_->table_declarations_) {
       if (table_decl->GetName() == name) {
         return table_decl.get();
@@ -248,7 +248,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::TypeAlias* LookupTypeAlias(const std::string& name) {
+  const fidl::flat::TypeAlias* LookupTypeAlias(std::string_view name) {
     for (const auto& type_alias_decl : library_->type_alias_declarations_) {
       if (type_alias_decl->GetName() == name) {
         return type_alias_decl.get();
@@ -257,7 +257,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::Union* LookupUnion(const std::string& name) {
+  const fidl::flat::Union* LookupUnion(std::string_view name) {
     for (const auto& union_decl : library_->union_declarations_) {
       if (union_decl->GetName() == name) {
         return union_decl.get();
@@ -266,7 +266,7 @@ class TestLibrary final {
     return nullptr;
   }
 
-  const fidl::flat::Protocol* LookupProtocol(const std::string& name) {
+  const fidl::flat::Protocol* LookupProtocol(std::string_view name) {
     for (const auto& protocol_decl : library_->protocol_declarations_) {
       if (protocol_decl->GetName() == name) {
         return protocol_decl.get();

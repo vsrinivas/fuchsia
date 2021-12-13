@@ -14,7 +14,7 @@ namespace fidl::reporter {
 
 using diagnostics::DiagnosticKind;
 
-static std::string MakeSquiggle(const std::string& surrounding_line, int column) {
+static std::string MakeSquiggle(std::string_view surrounding_line, int column) {
   std::string squiggle;
   size_t line_size = surrounding_line.size();
   for (size_t i = 0; i < (static_cast<size_t>(column) - 1); i++) {

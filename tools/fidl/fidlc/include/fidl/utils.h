@@ -52,20 +52,20 @@ inline bool IsBlank(std::string_view view) {
 // identifier.
 //
 // See https://fuchsia.dev/fuchsia-src/reference/fidl/language/language#identifiers
-bool IsValidLibraryComponent(const std::string& component);
+bool IsValidLibraryComponent(std::string_view component);
 
 // IsValidIdentifierComponent validates individual components of an identifier
 // (other than a library identifier).
 //
 // See https://fuchsia.dev/fuchsia-src/reference/fidl/language/language#identifiers
-bool IsValidIdentifierComponent(const std::string& component);
+bool IsValidIdentifierComponent(std::string_view component);
 
 // IsValidFullyQualifiedMethodIdentifier validates fully qualified method
 // identifiers, i.e. a library identifier, followed by a slash, followed by a
 // protocol identifier, a dot, and lastly the method name.
-bool IsValidFullyQualifiedMethodIdentifier(const std::string& fq_identifier);
+bool IsValidFullyQualifiedMethodIdentifier(std::string_view fq_identifier);
 
-inline bool LineFromOffsetIsBlank(const std::string& str, size_t offset) {
+inline bool LineFromOffsetIsBlank(std::string_view str, size_t offset) {
   for (size_t i = offset; i < str.size() && str[i] != '\n'; i++) {
     if (!IsWhitespaceNoNewline(str[i])) {
       return false;
@@ -74,7 +74,7 @@ inline bool LineFromOffsetIsBlank(const std::string& str, size_t offset) {
   return true;
 }
 
-inline bool FirstLineIsBlank(const std::string& str) { return LineFromOffsetIsBlank(str, 0); }
+inline bool FirstLineIsBlank(std::string_view str) { return LineFromOffsetIsBlank(str, 0); }
 
 inline bool LineFromOffsetIsRegularComment(std::string_view view, size_t offset) {
   size_t i = offset;
@@ -105,7 +105,7 @@ enum class ParseNumericResult {
 };
 
 template <typename NumericType>
-ParseNumericResult ParseNumeric(const std::string& input, NumericType* out_value, int base = 0) {
+ParseNumericResult ParseNumeric(std::string_view input, NumericType* out_value, int base = 0) {
   assert(out_value != nullptr);
 
   // Set locale to "C" for numeric types, since all strtox() functions are locale-dependent
@@ -148,36 +148,35 @@ ParseNumericResult ParseNumeric(const std::string& input, NumericType* out_value
       return ParseNumericResult::kOutOfBounds;
     *out_value = static_cast<NumericType>(value);
   }
-  if (endptr != (input.c_str() + input.size()))
+  if (endptr != (input.data() + input.size()))
     return ParseNumericResult::kMalformed;
   return ParseNumericResult::kSuccess;
 }
 
-bool ends_with_underscore(const std::string& str);
-bool has_adjacent_underscores(const std::string& str);
+bool ends_with_underscore(std::string_view str);
+bool has_adjacent_underscores(std::string_view str);
 
-std::vector<std::string> id_to_words(const std::string& str);
+std::vector<std::string> id_to_words(std::string_view str);
 
 // Split the identifier into words, excluding words in the |stop_words| set.
-std::vector<std::string> id_to_words(const std::string& str,
-                                     const std::set<std::string> stop_words);
+std::vector<std::string> id_to_words(std::string_view str, const std::set<std::string> stop_words);
 
-bool is_konstant_case(const std::string& str);
-bool is_lower_no_separator_case(const std::string& str);
-bool is_lower_snake_case(const std::string& str);
-bool is_upper_snake_case(const std::string& str);
-bool is_lower_camel_case(const std::string& str);
-bool is_upper_camel_case(const std::string& str);
+bool is_konstant_case(std::string_view str);
+bool is_lower_no_separator_case(std::string_view str);
+bool is_lower_snake_case(std::string_view str);
+bool is_upper_snake_case(std::string_view str);
+bool is_lower_camel_case(std::string_view str);
+bool is_upper_camel_case(std::string_view str);
 
 std::string strip_string_literal_quotes(std::string_view str);
 std::string strip_doc_comment_slashes(std::string_view str);
-std::string strip_konstant_k(const std::string& str);
-std::string to_konstant_case(const std::string& str);
-std::string to_lower_no_separator_case(const std::string& str);
-std::string to_lower_snake_case(const std::string& str);
-std::string to_upper_snake_case(const std::string& str);
-std::string to_lower_camel_case(const std::string& str);
-std::string to_upper_camel_case(const std::string& str);
+std::string strip_konstant_k(std::string_view str);
+std::string to_konstant_case(std::string_view str);
+std::string to_lower_no_separator_case(std::string_view str);
+std::string to_lower_snake_case(std::string_view str);
+std::string to_upper_snake_case(std::string_view str);
+std::string to_lower_camel_case(std::string_view str);
+std::string to_upper_camel_case(std::string_view str);
 
 // string_literal_length returns the length of the string
 // represented by the provided string literal.
@@ -211,8 +210,7 @@ std::vector<std::string> FormatFindings(const Findings& findings, bool enable_co
 // Gets a string with the original file contents, and a string with the
 // formatted file, and makes sure that the only difference is in the whitespace.
 // Used by the formatter to make sure that formatting was not destructive.
-bool OnlyWhitespaceChanged(const std::string& unformatted_input,
-                           const std::string& formatted_output);
+bool OnlyWhitespaceChanged(std::string_view unformatted_input, std::string_view formatted_output);
 
 }  // namespace fidl::utils
 

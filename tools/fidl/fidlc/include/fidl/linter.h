@@ -90,8 +90,8 @@ class Linter {
 
   const Finding* AddFinding(SourceSpan span, const CheckDef& check,
                             const Substitutions& substitutions = {},
-                            const std::string& suggestion_template = "",
-                            const std::string& replacement_template = "");
+                            std::string suggestion_template = "",
+                            std::string replacement_template = "");
 
   template <typename SourceElementSubtypeRefOrPtr>
   const Finding* AddFinding(const SourceElementSubtypeRefOrPtr& element, const CheckDef& check,
@@ -103,11 +103,10 @@ class Linter {
   void NewFile(const raw::File& element);
 
   // If a finding was added, return a pointer to that finding.
-  const Finding* CheckCase(const std::string& type,
-                           const std::unique_ptr<raw::Identifier>& identifier,
+  const Finding* CheckCase(std::string type, const std::unique_ptr<raw::Identifier>& identifier,
                            const CheckDef& check_def, const CaseType& case_type);
 
-  void EnterContext(const std::string& type) { type_stack_.push(type); }
+  void EnterContext(std::string type) { type_stack_.push(std::move(type)); }
 
   // Pops the context stack. If any contained types repeat names from the
   // context, this function compares the nested identifiers with each other.

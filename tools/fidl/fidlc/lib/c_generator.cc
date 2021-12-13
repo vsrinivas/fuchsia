@@ -472,8 +472,7 @@ size_t CountSecondaryObjects(const std::vector<CGenerator::Member>& params) {
   return count;
 }
 
-void EmitTxnHeader(std::ostream* file, const std::string& msg_name,
-                   const std::string& ordinal_name) {
+void EmitTxnHeader(std::ostream* file, std::string_view msg_name, std::string_view ordinal_name) {
   *file << kIndent << "fidl_init_txn_header(&" << msg_name << "->hdr, 0, " << ordinal_name
         << ");\n";
 }

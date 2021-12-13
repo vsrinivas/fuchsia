@@ -369,9 +369,10 @@ bool TypeTemplate::HasGeneratedName() const { return name_.as_anonymous() != nul
 
 class PrimitiveTypeTemplate : public TypeTemplate {
  public:
-  PrimitiveTypeTemplate(Typespace* typespace, Reporter* reporter, const std::string& name,
+  PrimitiveTypeTemplate(Typespace* typespace, Reporter* reporter, std::string name,
                         types::PrimitiveSubtype subtype)
-      : TypeTemplate(Name::CreateIntrinsic(name), typespace, reporter), subtype_(subtype) {}
+      : TypeTemplate(Name::CreateIntrinsic(std::move(name)), typespace, reporter),
+        subtype_(subtype) {}
 
   bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
@@ -1055,8 +1056,9 @@ Typespace Typespace::RootTypes(Reporter* reporter) {
     root_typespace.templates_.emplace(name, std::move(type_template));
   };
 
-  auto add_primitive = [&](const std::string& name, types::PrimitiveSubtype subtype) {
-    add_template(std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, name, subtype));
+  auto add_primitive = [&](std::string name, types::PrimitiveSubtype subtype) {
+    add_template(std::make_unique<PrimitiveTypeTemplate>(&root_typespace, reporter, std::move(name),
+                                                         subtype));
   };
 
   add_primitive("bool", types::PrimitiveSubtype::kBool);
@@ -1481,7 +1483,7 @@ bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
   return ok;
 }
 
-bool ParseBound(Reporter* reporter, const Attribute* attribute, const std::string& input,
+bool ParseBound(Reporter* reporter, const Attribute* attribute, std::string_view input,
                 uint32_t* out_value) {
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
@@ -1838,7 +1840,7 @@ std::set<std::vector<std::string_view>> Libraries::Unused(const Library* target_
   return unused;
 }
 
-size_t EditDistance(const std::string& sequence1, const std::string& sequence2) {
+static size_t EditDistance(std::string_view sequence1, std::string_view sequence2) {
   size_t s1_length = sequence1.length();
   size_t s2_length = sequence2.length();
   size_t row1[s1_length + 1];
@@ -1893,7 +1895,7 @@ Dependencies::RegisterResult Dependencies::Register(
 
   const std::vector<std::string_view> name =
       maybe_alias ? std::vector{maybe_alias->span().data()} : dep_library->name();
-  auto iter = by_filename_.find(std::string(filename));
+  auto iter = by_filename_.find(filename);
   if (iter == by_filename_.end()) {
     iter = by_filename_.emplace(filename, std::make_unique<PerFile>()).first;
   }
@@ -1909,7 +1911,7 @@ Dependencies::RegisterResult Dependencies::Register(
 }
 
 bool Dependencies::Contains(std::string_view filename, const std::vector<std::string_view>& name) {
-  const auto iter = by_filename_.find(std::string(filename));
+  const auto iter = by_filename_.find(filename);
   if (iter == by_filename_.end()) {
     return false;
   }
@@ -1919,7 +1921,7 @@ bool Dependencies::Contains(std::string_view filename, const std::vector<std::st
 
 bool Dependencies::Lookup(std::string_view filename, const std::vector<std::string_view>& name,
                           Dependencies::LookupMode mode, Library** out_library) const {
-  auto iter1 = by_filename_.find(std::string(filename));
+  auto iter1 = by_filename_.find(filename);
   if (iter1 == by_filename_.end()) {
     return false;
   }
@@ -1990,7 +1992,7 @@ void Library::ValidateAttributes(const Attributable* attributable) {
   }
 }
 
-SourceSpan Library::GeneratedSimpleName(const std::string& name) {
+SourceSpan Library::GeneratedSimpleName(std::string_view name) {
   return generated_source_file_.AddLine(name);
 }
 

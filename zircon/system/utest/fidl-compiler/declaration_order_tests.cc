@@ -58,7 +58,7 @@ class Namer {
     return input;
   }
 
-  const char* of(const std::string& key) const { return vars_.at(key).c_str(); }
+  const char* of(std::string_view key) const { return vars_.find(key)->second.c_str(); }
 
  private:
   std::string random_prefix(std::string label, std::size_t up_to) {
@@ -76,7 +76,8 @@ class Namer {
     return label;
   }
 
-  std::map<std::string, std::string> vars_;
+  // Use transparent comparator std::less<> to allow std::string_view lookups.
+  std::map<std::string, std::string, std::less<>> vars_;
 };
 
 constexpr int kRepeatTestCount = 100;

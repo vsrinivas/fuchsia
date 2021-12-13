@@ -308,9 +308,9 @@ constexpr ErrorDef<std::string, std::set<std::string>> ErrInvalidTransportType(
     "invalid transport type: got {} expected one of {}");
 constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributeType(
     "attribute '{}' has an invalid type");
-constexpr ErrorDef<const flat::Attribute *, std::string> ErrBoundIsTooBig(
+constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrBoundIsTooBig(
     "'{}' bound of '{}' is too big");
-constexpr ErrorDef<const flat::Attribute *, std::string> ErrUnableToParseBound(
+constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrUnableToParseBound(
     "unable to parse '{}' bound of '{}'");
 constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");

@@ -8,7 +8,7 @@
 
 namespace fidl {
 
-SourceSpan VirtualSourceFile::AddLine(const std::string& line) {
+SourceSpan VirtualSourceFile::AddLine(std::string_view line) {
   assert(line.find('\n') == std::string::npos &&
          "A single line should not contain a newline character");
   return SourceSpan(*virtual_lines_.emplace_back(std::make_unique<std::string>(line)), *this);

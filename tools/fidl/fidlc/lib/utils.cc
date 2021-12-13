@@ -13,17 +13,17 @@ namespace fidl::utils {
 const std::string kLibraryComponentPattern = "[a-z][a-z0-9]*";
 const std::string kIdentifierComponentPattern = "[A-Za-z]([A-Za-z0-9_]*[A-Za-z0-9])?";
 
-bool IsValidLibraryComponent(const std::string& component) {
+bool IsValidLibraryComponent(std::string_view component) {
   static const re2::RE2 kPattern("^" + kLibraryComponentPattern + "$");
   return re2::RE2::FullMatch(component, kPattern);
 }
 
-bool IsValidIdentifierComponent(const std::string& component) {
+bool IsValidIdentifierComponent(std::string_view component) {
   static const re2::RE2 kPattern("^" + kIdentifierComponentPattern + "$");
   return re2::RE2::FullMatch(component, kPattern);
 }
 
-bool IsValidFullyQualifiedMethodIdentifier(const std::string& fq_identifier) {
+bool IsValidFullyQualifiedMethodIdentifier(std::string_view fq_identifier) {
   static const re2::RE2 kPattern("^" +
                                  // library identifier
                                  kLibraryComponentPattern + "(\\." + kLibraryComponentPattern +
@@ -39,16 +39,14 @@ bool IsValidFullyQualifiedMethodIdentifier(const std::string& fq_identifier) {
   return re2::RE2::FullMatch(fq_identifier, kPattern);
 }
 
-bool ends_with_underscore(const std::string& str) {
+bool ends_with_underscore(std::string_view str) {
   assert(str.size() > 0);
   return str.back() == '_';
 }
 
-bool has_adjacent_underscores(const std::string& str) {
-  return str.find("__") != std::string::npos;
-}
+bool has_adjacent_underscores(std::string_view str) { return str.find("__") != std::string::npos; }
 
-bool has_konstant_k(const std::string& str) {
+bool has_konstant_k(std::string_view str) {
   return str.size() >= 2 && str[0] == 'k' && isupper(str[1]);
 }
 
@@ -71,30 +69,26 @@ std::string strip_doc_comment_slashes(std::string_view str) {
   return no_slashes;
 }
 
-std::string strip_konstant_k(const std::string& str) {
-  if (has_konstant_k(str)) {
-    return str.substr(1);
-  } else {
-    return str;
-  }
+std::string strip_konstant_k(std::string_view str) {
+  return std::string(has_konstant_k(str) ? str.substr(1) : str);
 }
 
-bool is_lower_no_separator_case(const std::string& str) {
+bool is_lower_no_separator_case(std::string_view str) {
   static re2::RE2 re{"^[a-z][a-z0-9]*$"};
   return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
-bool is_lower_snake_case(const std::string& str) {
+bool is_lower_snake_case(std::string_view str) {
   static re2::RE2 re{"^[a-z][a-z0-9_]*$"};
   return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
-bool is_upper_snake_case(const std::string& str) {
+bool is_upper_snake_case(std::string_view str) {
   static re2::RE2 re{"^[A-Z][A-Z0-9_]*$"};
   return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
-bool is_lower_camel_case(const std::string& str) {
+bool is_lower_camel_case(std::string_view str) {
   if (has_konstant_k(str)) {
     return false;
   }
@@ -102,13 +96,13 @@ bool is_lower_camel_case(const std::string& str) {
   return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
-bool is_upper_camel_case(const std::string& str) {
+bool is_upper_camel_case(std::string_view str) {
   static re2::RE2 re{
       "^(([A-Z]{1,2}[a-z0-9]+)(([A-Z]{1,2}[a-z0-9]+)|(_[0-9]+))*)?([A-Z][a-z0-9]*)?$"};
   return str.size() > 0 && re2::RE2::FullMatch(str, re);
 }
 
-bool is_konstant_case(const std::string& astr) {
+bool is_konstant_case(std::string_view astr) {
   if (!has_konstant_k(astr)) {
     return false;
   }
@@ -123,9 +117,9 @@ static void add_word(std::string word, std::vector<std::string>& words,
   }
 }
 
-std::vector<std::string> id_to_words(const std::string& astr) { return id_to_words(astr, {}); }
+std::vector<std::string> id_to_words(std::string_view astr) { return id_to_words(astr, {}); }
 
-std::vector<std::string> id_to_words(const std::string& astr, std::set<std::string> stop_words) {
+std::vector<std::string> id_to_words(std::string_view astr, std::set<std::string> stop_words) {
   std::string str = strip_konstant_k(astr);
   std::vector<std::string> words;
   std::string word;
@@ -156,7 +150,7 @@ std::vector<std::string> id_to_words(const std::string& astr, std::set<std::stri
   return words;
 }
 
-std::string to_lower_no_separator_case(const std::string& astr) {
+std::string to_lower_no_separator_case(std::string_view astr) {
   std::string str = strip_konstant_k(astr);
   std::string newid;
   for (const auto& word : id_to_words(str)) {
@@ -165,7 +159,7 @@ std::string to_lower_no_separator_case(const std::string& astr) {
   return newid;
 }
 
-std::string to_lower_snake_case(const std::string& astr) {
+std::string to_lower_snake_case(std::string_view astr) {
   std::string str = strip_konstant_k(astr);
   std::string newid;
   for (const auto& word : id_to_words(str)) {
@@ -177,14 +171,14 @@ std::string to_lower_snake_case(const std::string& astr) {
   return newid;
 }
 
-std::string to_upper_snake_case(const std::string& astr) {
+std::string to_upper_snake_case(std::string_view astr) {
   std::string str = strip_konstant_k(astr);
   auto newid = to_lower_snake_case(str);
   std::transform(newid.begin(), newid.end(), newid.begin(), ::toupper);
   return newid;
 }
 
-std::string to_lower_camel_case(const std::string& astr) {
+std::string to_lower_camel_case(std::string_view astr) {
   std::string str = strip_konstant_k(astr);
   bool prev_char_was_digit = false;
   std::string newid;
@@ -203,7 +197,7 @@ std::string to_lower_camel_case(const std::string& astr) {
   return newid;
 }
 
-std::string to_upper_camel_case(const std::string& astr) {
+std::string to_upper_camel_case(std::string_view astr) {
   std::string str = strip_konstant_k(astr);
   bool prev_char_was_digit = false;
   std::string newid;
@@ -218,7 +212,7 @@ std::string to_upper_camel_case(const std::string& astr) {
   return newid;
 }
 
-std::string to_konstant_case(const std::string& str) { return "k" + to_upper_camel_case(str); }
+std::string to_konstant_case(std::string_view str) { return "k" + to_upper_camel_case(str); }
 
 std::string canonicalize(std::string_view identifier) {
   const auto size = identifier.size();
@@ -280,9 +274,8 @@ std::vector<std::string> FormatFindings(const Findings& findings, bool enable_co
   return lint;
 }
 
-bool OnlyWhitespaceChanged(const std::string& unformatted_input,
-                           const std::string& formatted_output) {
-  std::string formatted = formatted_output;
+bool OnlyWhitespaceChanged(std::string_view unformatted_input, std::string_view formatted_output) {
+  std::string formatted(formatted_output);
   auto formatted_end = std::remove_if(formatted.begin(), formatted.end(), isspace);
   formatted.erase(formatted_end, formatted.end());
 

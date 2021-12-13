@@ -28,7 +28,7 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
                                  std::vector<std::string>* params);
 
 // Returns the fidl-lint usage string.
-std::string Usage(std::string argv0);
+std::string Usage(const std::string& argv0);
 
 }  // namespace fidl::linter
 

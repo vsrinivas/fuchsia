@@ -19,7 +19,7 @@
 
 namespace {
 
-void Usage(const std::string& argv0) {
+void Usage(std::string_view argv0) {
   std::cout << "usage: " << argv0
             << " <options> [<files>]\n"
                "\n"
@@ -32,7 +32,7 @@ void Usage(const std::string& argv0) {
   std::cout.flush();
 }
 
-[[noreturn]] void FailWithUsage(const std::string& argv0, const char* message, ...) {
+[[noreturn]] void FailWithUsage(std::string_view argv0, const char* message, ...) {
   va_list args;
   va_start(args, message);
   vfprintf(stderr, message, args);
