@@ -109,7 +109,7 @@ TEST(VmoTests, DISABLED_vmo_unmap_coherency) {
 
     while (!a->exit.load()) {
       // walk through the mapping, writing to every page
-      for (size_t off = 0; off < a->len; off += PAGE_SIZE) {
+      for (size_t off = 0; off < a->len; off += zx_system_get_page_size()) {
         *(uint32_t *)(a->ptr + off) = 99;
       }
 

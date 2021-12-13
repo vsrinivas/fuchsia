@@ -49,6 +49,7 @@ inline zx_time_t time_it(T func) {
 }
 
 int vmo_run_benchmark() {
+  const size_t kPageSize = zx_system_get_page_size();
   zx_time_t t;
   // zx_handle_t vmo;
 
@@ -81,7 +82,7 @@ int vmo_run_benchmark() {
   zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr);
 
   t = time_it([&]() {
-    for (size_t i = 0; i < size; i += PAGE_SIZE) {
+    for (size_t i = 0; i < size; i += kPageSize) {
       __UNUSED char a = ((volatile char *)ptr)[i];
     }
   });
@@ -90,7 +91,7 @@ int vmo_run_benchmark() {
          t, size);
 
   t = time_it([&]() {
-    for (size_t i = 0; i < size; i += PAGE_SIZE) {
+    for (size_t i = 0; i < size; i += kPageSize) {
       __UNUSED char a = ((volatile char *)ptr)[i];
     }
   });
@@ -99,7 +100,7 @@ int vmo_run_benchmark() {
          t, size);
 
   t = time_it([&]() {
-    for (size_t i = 0; i < size; i += PAGE_SIZE) {
+    for (size_t i = 0; i < size; i += kPageSize) {
       ((volatile char *)ptr)[i] = 99;
     }
   });
@@ -107,7 +108,7 @@ int vmo_run_benchmark() {
          size);
 
   t = time_it([&]() {
-    for (size_t i = 0; i < size; i += PAGE_SIZE) {
+    for (size_t i = 0; i < size; i += kPageSize) {
       ((volatile char *)ptr)[i] = 99;
     }
   });
@@ -115,13 +116,13 @@ int vmo_run_benchmark() {
 
   // unmap the original mapping
   t = time_it([&]() { zx_vmar_unmap(zx_vmar_root_self(), ptr, size); });
-  printf("\ttook %" PRIu64 " nsecs to unmap the vmo %zu (%zu pages)\n", t, size, size / PAGE_SIZE);
+  printf("\ttook %" PRIu64 " nsecs to unmap the vmo %zu (%zu pages)\n", t, size, size / kPageSize);
 
   // map it a again and time read faulting it
   zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr);
 
   t = time_it([&]() {
-    for (size_t i = 0; i < size; i += PAGE_SIZE) {
+    for (size_t i = 0; i < size; i += kPageSize) {
       __UNUSED char a = ((volatile char *)ptr)[i];
     }
   });
@@ -133,7 +134,7 @@ int vmo_run_benchmark() {
   zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr);
 
   t = time_it([&]() {
-    for (size_t i = 0; i < size; i += PAGE_SIZE) {
+    for (size_t i = 0; i < size; i += kPageSize) {
       ((volatile char *)ptr)[i] = 99;
     }
   });
@@ -152,7 +153,7 @@ int vmo_run_benchmark() {
   zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0, size, &ptr);
 
   t = time_it([&]() {
-    for (size_t i = 0; i < size; i += PAGE_SIZE) {
+    for (size_t i = 0; i < size; i += kPageSize) {
       ((volatile char *)ptr)[i] = 99;
     }
   });
