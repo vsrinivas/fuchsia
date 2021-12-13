@@ -67,11 +67,12 @@ void TestInitEncrypt(Cipher::Algorithm cipher) {
   EXPECT_STATUS(encrypt.InitEncrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
 
   // Bad alignment
-  EXPECT_STATUS(encrypt.InitEncrypt(cipher, key, iv, PAGE_SIZE - 1), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(encrypt.InitEncrypt(cipher, key, iv, zx_system_get_page_size() - 1),
+                ZX_ERR_INVALID_ARGS);
 
   // Valid with and without alignment
   EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv));
-  EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv, PAGE_SIZE));
+  EXPECT_OK(encrypt.InitEncrypt(cipher, key, iv, zx_system_get_page_size()));
 }
 TEST(InitEncrypt, AES256_XTS) { ASSERT_NO_FATAL_FAILURES(TestInitEncrypt(Cipher::kAES256_XTS)); }
 
@@ -99,16 +100,17 @@ void TestInitDecrypt(Cipher::Algorithm cipher) {
   EXPECT_STATUS(decrypt.InitDecrypt(cipher, key, bad_iv), ZX_ERR_INVALID_ARGS);
 
   // Bad alignment
-  EXPECT_STATUS(decrypt.InitDecrypt(cipher, key, iv, PAGE_SIZE - 1), ZX_ERR_INVALID_ARGS);
+  EXPECT_STATUS(decrypt.InitDecrypt(cipher, key, iv, zx_system_get_page_size() - 1),
+                ZX_ERR_INVALID_ARGS);
 
   // Valid with and without tweak
   EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv));
-  EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv, PAGE_SIZE));
+  EXPECT_OK(decrypt.InitDecrypt(cipher, key, iv, zx_system_get_page_size()));
 }
 TEST(InitDecrypt, AES256_XTS) { ASSERT_NO_FATAL_FAILURES(TestInitDecrypt(Cipher::kAES256_XTS)); }
 
 void TestEncryptStream(Cipher::Algorithm cipher) {
-  size_t len = PAGE_SIZE;
+  size_t len = zx_system_get_page_size();
   Secret key;
   Bytes iv, ptext;
   ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
@@ -142,7 +144,7 @@ TEST(EncryptStream, AES256_XTS) {
 }
 
 void TestEncryptRandomAccess(Cipher::Algorithm cipher) {
-  size_t len = PAGE_SIZE;
+  size_t len = zx_system_get_page_size();
   Secret key;
   Bytes iv, ptext;
   ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
@@ -179,7 +181,7 @@ TEST(EncryptRandomAccess, AES256_XTS) {
 }
 
 void TestDecryptStream(Cipher::Algorithm cipher) {
-  size_t len = PAGE_SIZE;
+  size_t len = zx_system_get_page_size();
   Secret key;
   Bytes iv, ptext;
   ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));
@@ -243,7 +245,7 @@ TEST(DecryptStream, AES256_XTS) {
 }
 
 void TestDecryptRandomAccess(Cipher::Algorithm cipher) {
-  size_t len = PAGE_SIZE;
+  size_t len = zx_system_get_page_size();
   Secret key;
   Bytes iv, ptext;
   ASSERT_OK(GenerateKeyMaterial(cipher, &key, &iv));

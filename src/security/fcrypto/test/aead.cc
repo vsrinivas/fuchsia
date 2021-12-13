@@ -126,7 +126,7 @@ void TestSealData(AEAD::Algorithm aead) {
   Bytes iv, ptext, ctext;
   uint64_t nonce;
   ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
-  ASSERT_OK(ptext.Randomize(PAGE_SIZE));
+  ASSERT_OK(ptext.Randomize(zx_system_get_page_size()));
 
   // Not initialized
   EXPECT_STATUS(sealer.Seal(ptext, &nonce, &ctext), ZX_ERR_BAD_STATE);
@@ -156,7 +156,7 @@ void TestOpenData(AEAD::Algorithm aead) {
   Bytes iv, ptext, ctext, result;
   uint64_t nonce = 0;
   ASSERT_OK(GenerateKeyMaterial(aead, &key, &iv));
-  ASSERT_OK(ptext.Randomize(PAGE_SIZE));
+  ASSERT_OK(ptext.Randomize(zx_system_get_page_size()));
 
   AEAD sealer;
   ASSERT_OK(sealer.InitSeal(aead, key, iv));
