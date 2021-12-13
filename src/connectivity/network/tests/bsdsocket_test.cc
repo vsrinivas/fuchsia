@@ -3072,7 +3072,9 @@ class IOMethod {
             .iov_len = next_len,
         });
         len_remaining -= next_len;
-        iov_start = iov_start != nullptr ? iov_start + next_len : nullptr;
+        if (iov_start != nullptr) {
+          iov_start += next_len;
+        }
       }
 
       std::uniform_int_distribution<size_t> distr(0, iov.size());
