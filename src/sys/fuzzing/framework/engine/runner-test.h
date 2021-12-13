@@ -9,6 +9,8 @@
 #include <lib/fidl/cpp/interface_request.h>
 
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
@@ -29,6 +31,9 @@ class RunnerImplTest : public RunnerTest {
   bool HasTestInput(const zx::duration& timeout) override;
   Input GetTestInput() override;
   void SetFeedback(const Coverage& coverage, Result result, bool leak) override;
+
+  // FakeTargetAdapter methods.
+  void SetAdapterParameters(const std::vector<std::string>& parameters);
 
  private:
   FakeTargetAdapter target_adapter_;

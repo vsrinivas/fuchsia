@@ -30,6 +30,20 @@ TEST_F(RunnerImplTest, AddDefaults) {
   EXPECT_EQ(options.pulse_interval(), kDefaultPulseInterval);
 }
 
+TEST_F(RunnerImplTest, LoadCorpus) {
+  RunnerImpl runner;
+  // In a real fuzzer, the parameters would be supplied by the 'program.args' from the adapter's
+  // component manifest.
+  //
+  // See also:
+  //   //src/sys/fuzzing/framework/testing/data/BUILD.gn
+  SetAdapterParameters(std::vector<std::string>({"data/corpus", "--ignored"}));
+  Configure(&runner, RunnerTest::DefaultOptions(&runner));
+  // Results are sorted.
+  EXPECT_EQ(runner.ReadFromCorpus(CorpusType::SEED, 1), Input("bar"));
+  EXPECT_EQ(runner.ReadFromCorpus(CorpusType::SEED, 2), Input("foo"));
+}
+
 #define RUNNER_TYPE RunnerImpl
 #define RUNNER_TEST RunnerImplTest
 #include "src/sys/fuzzing/common/runner-unittest.inc"

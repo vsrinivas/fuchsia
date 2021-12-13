@@ -49,7 +49,7 @@ class Runner {
   // default, but is set in tests to help diagnose flake.
   void SetWaitThreshold(zx::duration threshold);
 
-  // Lets this objects add defaults to unspecified options.
+  // Adds default values to unspecified options that are needed by objects of this class.
   virtual void AddDefaults(Options* options) = 0;
 
   // Add an input to the specified corpus. Returns ZX_ERR_INVALID_ARGS if |corpus_type| is

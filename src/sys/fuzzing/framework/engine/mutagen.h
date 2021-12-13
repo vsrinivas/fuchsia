@@ -74,7 +74,7 @@ class Mutagen final {
 
   void reset_mutations() { mutations_.clear(); }
 
-  // Lets this objects add defaults to unspecified options.
+  // Adds default values to unspecified options that are needed by objects of this class.
   static void AddDefaults(Options* options);
 
   // Sets options.

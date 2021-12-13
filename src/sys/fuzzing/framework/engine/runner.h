@@ -28,6 +28,7 @@
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
 #include "src/sys/fuzzing/common/sync-wait.h"
+#include "src/sys/fuzzing/framework/engine/adapter-client.h"
 #include "src/sys/fuzzing/framework/engine/corpus.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/mutagen.h"
@@ -38,8 +39,6 @@ namespace fuzzing {
 using ::fuchsia::fuzzer::MonitorPtr;
 using ::fuchsia::fuzzer::Result;
 using ::fuchsia::fuzzer::Status;
-using ::fuchsia::fuzzer::TargetAdapter;
-using ::fuchsia::fuzzer::TargetAdapterSyncPtr;
 using ::fuchsia::fuzzer::UpdateReason;
 using CorpusType = ::fuchsia::fuzzer::Corpus;
 
@@ -49,6 +48,8 @@ class RunnerImpl final : public Runner {
   RunnerImpl();
   ~RunnerImpl() override;
 
+  void SetTargetAdapter(std::unique_ptr<TargetAdapterClient> target_adapter);
+
   // |Runner| method implementations.
   void AddDefaults(Options* options) override;
   zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
@@ -56,9 +57,6 @@ class RunnerImpl final : public Runner {
   zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
   Status CollectStatus() override FXL_LOCKS_EXCLUDED(mutex_);
-
-  // Configure where to send |TargetAdapter| requests.
-  void SetTargetAdapterHandler(fidl::InterfaceRequestHandler<TargetAdapter> handler);
 
   // Handle incoming |ProcessProxy| requests.
   fidl::InterfaceRequestHandler<ProcessProxy> GetProcessProxyHandler();
@@ -188,12 +186,8 @@ class RunnerImpl final : public Runner {
   std::shared_ptr<Corpus> live_corpus_;
   Mutagen mutagen_;
 
-  // Variables used to send data to and coordinate with the target adapter.
-  fidl::InterfaceRequestHandler<TargetAdapter> target_adapter_handler_;
-  TargetAdapterSyncPtr target_adapter_;
-  SignalCoordinator coordinator_;
-  SharedMemory test_input_;
-  SyncWait adapter_sync_;
+  // Interface to the target adapter.
+  std::unique_ptr<TargetAdapterClient> target_adapter_;
 
   // Feedback collection and analysis variables.
   std::shared_ptr<ModulePool> pool_;

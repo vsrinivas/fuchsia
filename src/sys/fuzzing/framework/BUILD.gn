@@ -44,6 +44,7 @@ fuchsia_component("fatal-unittests") {
 fuchsia_test_package("tests") {
   package_name = "component-fuzzing-framework-tests"
   test_components = [ ":unittests" ]
+  deps = [ "testing/data:corpus" ]
 }
 
 fuchsia_test_package("fatal-tests") {

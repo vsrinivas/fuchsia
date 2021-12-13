@@ -42,6 +42,7 @@ void RunnerImpl::AddDefaults(Options* options) {
   Corpus::AddDefaults(options);
   Mutagen::AddDefaults(options);
   ProcessProxyImpl::AddDefaults(options);
+  TargetAdapterClient::AddDefaults(options);
   if (!options->has_runs()) {
     options->set_runs(kDefaultRuns);
   }
@@ -73,7 +74,9 @@ void RunnerImpl::ConfigureImpl(const std::shared_ptr<Options>& options) {
   seed_corpus_->Configure(options_);
   live_corpus_->Configure(options_);
   mutagen_.Configure(options_);
-  test_input_.Reserve(options_->max_input_size());
+  if (target_adapter_) {
+    target_adapter_->Configure(options_);
+  }
 }
 
 zx_status_t RunnerImpl::AddToCorpus(CorpusType corpus_type, Input input) {
@@ -444,6 +447,7 @@ void RunnerImpl::FuzzLoopRelaxed(fit::function<Input*(bool)> next_input,
 }
 
 void RunnerImpl::RunLoop(bool ignore_errors) {
+  FX_CHECK(target_adapter_);
   // Leak detection is expensive, so the strategy is as follows:
   // 1. Try inputs once without leak detection.
   // 2. If leak detection is requested, check if leaks are suspected (unbalanced malloc/frees).
@@ -493,17 +497,11 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
     if (!test_input) {
       break;
     }
-    test_input_.Clear();
-    test_input_.Write(test_input->data(), test_input->size());
     ++run_;
-    if (!coordinator_.is_valid()) {
-      ConnectTargetAdapter();
-    }
-    ResetSyncIfNoPendingError(&adapter_sync_);
-    coordinator_.SignalPeer(kStart);
+    target_adapter_->Start(test_input);
     ResetTimer();
     // Wait for the adapter to signal the run is complete.
-    adapter_sync_.WaitFor("adapter to complete run");
+    target_adapter_->AwaitFinish();
     has_error = HasError(test_input);
     // Signal proxies that a run has ended.
     {
@@ -556,16 +554,24 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
 void RunnerImpl::ClearErrors() {
   Runner::ClearErrors();
   error_ = 0;
-  adapter_sync_.Reset();
+  target_adapter_->ClearError();
   process_sync_.Reset();
 }
 
 ///////////////////////////////////////////////////////////////
-// Signalling-related methods.
+// Methods for,connecting to other components.
 
-void RunnerImpl::SetTargetAdapterHandler(fidl::InterfaceRequestHandler<TargetAdapter> handler) {
-  target_adapter_handler_ = std::move(handler);
-  coordinator_.Reset();
+void RunnerImpl::SetTargetAdapter(std::unique_ptr<TargetAdapterClient> target_adapter) {
+  FX_CHECK(options_);
+  FX_CHECK(!target_adapter_);
+  target_adapter_ = std::move(target_adapter);
+  target_adapter_->Configure(options_);
+  auto parameters = target_adapter_->GetParameters();
+  std::vector<std::string> seed_corpus_dirs;
+  std::copy_if(
+      parameters.begin(), parameters.end(), std::back_inserter(seed_corpus_dirs),
+      [](const std::string& parameter) { return !parameter.empty() && parameter[0] != '-'; });
+  seed_corpus_->Load(seed_corpus_dirs);
 }
 
 fidl::InterfaceRequestHandler<ProcessProxy> RunnerImpl::GetProcessProxyHandler() {
@@ -585,17 +591,8 @@ fidl::InterfaceRequestHandler<ProcessProxy> RunnerImpl::GetProcessProxyHandler()
   };
 }
 
-void RunnerImpl::ConnectTargetAdapter() {
-  FX_DCHECK(target_adapter_handler_);
-  target_adapter_handler_(target_adapter_.NewRequest());
-  auto eventpair = coordinator_.Create([this](zx_signals_t observed) {
-    adapter_sync_.Signal();
-    // The only signal we expected to receive from the target adapter is |kFinish| after each run.
-    return observed == kFinish;
-  });
-  auto status = target_adapter_->Connect(std::move(eventpair), test_input_.Share());
-  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-}
+///////////////////////////////////////////////////////////////
+// Signalling-related methods.
 
 bool RunnerImpl::OnSignal() {
   // "Normal" signals are received in response to signals sent to start or finish a run. |RunLoop|
@@ -612,7 +609,7 @@ void RunnerImpl::OnError(uintptr_t error) {
   // Only the first proxy to detect an error awakens the |RunLoop|. Subsequent errors are dropped.
   uintptr_t expected = 0;
   if (error_.compare_exchange_strong(expected, error)) {
-    adapter_sync_.Signal();
+    target_adapter_->SetError();
     process_sync_.Signal();
   }
 }
@@ -660,7 +657,7 @@ bool RunnerImpl::HasError(const Input* last_input) {
     return false;
   }
   // Otherwise, it's really an error. Remove the target adapter and all proxies.
-  coordinator_.Reset();
+  target_adapter_->Close();
   proxies_.clear();
   if (last_input) {
     set_result_input(*last_input);

@@ -43,7 +43,7 @@ class ProcessProxyImpl final : public ProcessProxy {
 
   bool leak_suspected() const { return leak_suspected_; }
 
-  // Lets this objects add defaults to unspecified options.
+  // Adds default values to unspecified options that are needed by objects of this class.
   static void AddDefaults(Options* options);
 
   // Sets options for this object.

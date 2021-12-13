@@ -2,12 +2,29 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+source_set("adapter-client") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [
+    "adapter-client.cc",
+    "adapter-client.h",
+    "corpus.cc",
+    "corpus.h",
+  ]
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fxl",
+    "//src/sys/fuzzing/common",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//zircon/system/ulib/sync",
+  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
 source_set("engine") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
-    "corpus.cc",
-    "corpus.h",
     "dictionary.cc",
     "dictionary.h",
     "module-pool.cc",
@@ -22,6 +39,7 @@ source_set("engine") {
     "runner.h",
   ]
   public_deps = [
+    ":adapter-client",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
@@ -62,6 +80,7 @@ source_set("unittests") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "adapter-client-unittest.cc",
     "corpus-unittest.cc",
     "dictionary-unittest.cc",
     "module-pool-unittest.cc",

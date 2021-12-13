@@ -10,11 +10,17 @@
 
 namespace fuzzing {
 
+void RunnerImplTest::SetAdapterParameters(const std::vector<std::string>& parameters) {
+  target_adapter_.SetParameters(parameters);
+}
+
 void RunnerImplTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
   RunnerTest::Configure(runner, options);
   auto* runner_impl = static_cast<RunnerImpl*>(runner);
-  runner_impl->SetTargetAdapterHandler(target_adapter_.GetHandler());
   process_proxy_handler_ = runner_impl->GetProcessProxyHandler();
+
+  auto target_adapter_client = std::make_unique<TargetAdapterClient>(target_adapter_.GetHandler());
+  runner_impl->SetTargetAdapter(std::move(target_adapter_client));
 }
 
 bool RunnerImplTest::HasTestInput(const zx::duration& timeout) {
