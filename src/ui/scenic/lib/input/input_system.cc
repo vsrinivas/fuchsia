@@ -643,11 +643,9 @@ std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
 }
 
 void InputSystem::UpdateGestureContest(const InternalTouchEvent& event, StreamId stream_id) {
-  const auto arena_it = gesture_arenas_.find(stream_id);
-  if (arena_it == gesture_arenas_.end()) {
-    // Contest already ended, with no winner.
-    return;
-  }
+  auto arena_it = gesture_arenas_.find(stream_id);
+  if (arena_it == gesture_arenas_.end())
+    return;  // Contest already ended, with no winner.
   auto& arena = arena_it->second;
 
   const bool is_end_of_stream = event.phase == Phase::kRemove || event.phase == Phase::kCancel;
@@ -659,30 +657,14 @@ void InputSystem::UpdateGestureContest(const InternalTouchEvent& event, StreamId
   const glm::mat4 world_from_viewport_transform = GetWorldFromViewTransform(event.context).value() *
                                                   event.viewport.context_from_viewport_transform;
   for (const auto contender_id : contenders) {
-    // Don't use the arena obtained above the loop, because it may have been removed from
-    // gesture_arenas_ in a previous loop iteration.
-    // TODO(fxbug.dev/90004): it would be nice to restructure the code so that the arena can be
-    // obtained once at the top of this method, and guaranteed to be safe to reuse thereafter.
-    const auto arena_it = gesture_arenas_.find(stream_id);
-    if (arena_it == gesture_arenas_.end()) {
-      // Break out of the loop: if we didn't find the arena in this iteration, we won't find it in
-      // subsequent iterations either.
-      break;
-    }
-    if (arena_it->second.contest_has_ended() && !arena_it->second.contains(contender_id)) {
-      // Contest ended with this contender not being the winner; no need to consider it further.
+    auto arena_it = gesture_arenas_.find(stream_id);
+    if (arena_it == gesture_arenas_.end() ||
+        (arena_it->second.contest_has_ended() && !arena_it->second.contains(contender_id))) {
+      // Contest ended with this contender not being the winner. No need to look further.
       continue;
     }
-    const auto it = contenders_.find(contender_id);
-    if (it == contenders_.end()) {
-      // This contender is no longer present, probably because the client has disconnected.
-      // TODO(fxbug.dev/90004): the contender is still in the arena, though.  Can this cause
-      // problems (such as the arena contest never completing), or will the arena soon finish and be
-      // deleted anyway?
-      continue;
-    }
-    GestureContender* const contender_ptr = it->second;
 
+    auto contender_ptr = contenders_.at(contender_id);
     const zx_koid_t view_ref_koid = contender_ptr->view_ref_koid_;
     if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
       // Everything is fine. Send as normal.
@@ -755,8 +737,6 @@ void InputSystem::DestroyArenaIfComplete(StreamId stream_id) {
 
   const auto& arena = arena_it->second;
 
-  // One of these two branches will always be reached eventually.
-  // TODO(fxbug.dev/90004): can we elaborate on why this is true?
   if (arena.contenders().empty()) {
     // If no one won the contest then it will appear as if nothing was hit. Transfer focus to root.
     // TODO(fxbug.dev/59858): This probably needs to change when we figure out the exact semantics
@@ -765,6 +745,7 @@ void InputSystem::DestroyArenaIfComplete(StreamId stream_id) {
     gesture_arenas_.erase(stream_id);
   } else if (arena.contest_has_ended() && arena.stream_has_ended()) {
     // If both the contest and the stream is over, destroy the arena.
+    // This branch will always be reached eventually.
     gesture_arenas_.erase(stream_id);
   }
 }
