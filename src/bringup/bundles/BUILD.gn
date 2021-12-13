@@ -2,11 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # Set to use legacy virtcon implementation.
-  use_legacy_virtcon = false
-}
-
 # This target contains elements that are present on the boot partition of all
 # products.
 group("bootstrap") {
@@ -51,9 +46,5 @@ group("debugging") {
 }
 
 group("virtcon") {
-  if (use_legacy_virtcon) {
-    deps = [ "//src/bringup/bin/virtcon:bootfs" ]
-  } else {
-    deps = [ "//src/bringup/bin/virtcon2:bootfs" ]
-  }
+  deps = [ "//src/bringup/bin/virtcon2:bootfs" ]
 }

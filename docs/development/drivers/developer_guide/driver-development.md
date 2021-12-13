@@ -290,7 +290,7 @@ rights than normal processes. Drivers are not allowed to access the filesystem,
 including devfs. That means a driver cannot interact with arbitrary devices. If
 your driver needs to do this, consider writing a service component instead. For
 example,the virtual console is implemented by the
-[virtcon](/src/bringup/bin/virtcon) component.
+[virtcon](/src/bringup/bin/virtcon2) component.
 
 Privileged operations such as `zx_vmo_create_contiguous()` and
 [zx_interrupt_create](/docs/reference/syscalls/interrupt_create.md) require a

@@ -3,19 +3,13 @@
 Virtcon is the system terminal. It is a critical part of bringup and
 provides graphical output with minimal hardware requrements.
 
-## Legacy Virtcon
+## Design
 
-The legacy implementation is written in C++ and graphical output is
-limited to bitmap text and basic primitives such as pixel aligned
-rectangles. Legacy Virtcon can be found in [virtcon/](/src/bringup/bin/virtcon).
+Virtcon is written in Rust and powered by Carnelian. Carnelian enables
+advanced vector graphics and truetype text rendering while maintaining
+minimal hardware requirements.
 
-## New Virtcon
-
-The new version of Virtcon is written in Rust and powered by Carnelian.
-Carnelian enable advanced vector graphics and truetype text rendering
-while maintaining minimal hardware requirements.
-
-### Goals
+## Goals
 
 * Minimal resource usage.
 * Maximize code reuse with Terminal app.
@@ -23,7 +17,7 @@ while maintaining minimal hardware requirements.
 * Runtime product configuration.
 * Flicker free single framebuffer mode.
 
-### Roadmap
+## Roadmap
 
 1. Boot animation chime support.
 2. Silent boot system for runtime suppression of chime.
