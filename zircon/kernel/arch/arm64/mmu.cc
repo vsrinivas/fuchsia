@@ -96,7 +96,9 @@ KCOUNTER(vm_mmu_protect_make_execute_calls, "vm.mmu.protect.make_execute_calls")
 KCOUNTER(vm_mmu_protect_make_execute_pages, "vm.mmu.protect.make_execute_pages")
 
 // Convert user level mmu flags to flags that go in L1 descriptors.
-pte_t mmu_flags_to_s1_pte_attr(uint flags) {
+// Hypervisor flag modifies behavior to work for single translation regimes
+// such as the mapping of kernel pages with ArmAspaceType::kHypervisor in EL2.
+pte_t mmu_flags_to_s1_pte_attr(uint flags, bool hypervisor = false) {
   pte_t attr = MMU_PTE_ATTR_AF;
 
   switch (flags & ARCH_MMU_FLAG_CACHE_MASK) {
@@ -131,9 +133,27 @@ pte_t mmu_flags_to_s1_pte_attr(uint flags) {
       break;
   }
 
-  if (!(flags & ARCH_MMU_FLAG_PERM_EXECUTE)) {
-    attr |= MMU_PTE_ATTR_UXN | MMU_PTE_ATTR_PXN;
+  if (hypervisor) {
+    // For single translation regimes such as the hypervisor pages, only
+    // the XN bit applies.
+    if ((flags & ARCH_MMU_FLAG_PERM_EXECUTE) == 0) {
+      attr |= MMU_PTE_ATTR_XN;
+    }
+  } else {
+    if (flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
+      if (flags & ARCH_MMU_FLAG_PERM_USER) {
+        // User executable page, marked privileged execute never.
+        attr |= MMU_PTE_ATTR_PXN;
+      } else {
+        // Privileged executable page, marked user execute never.
+        attr |= MMU_PTE_ATTR_UXN;
+      }
+    } else {
+      // All non executable pages are marked both privileged and user execute never.
+      attr |= MMU_PTE_ATTR_UXN | MMU_PTE_ATTR_PXN;
+    }
   }
+
   if (flags & ARCH_MMU_FLAG_NS) {
     attr |= MMU_PTE_ATTR_NON_SECURE;
   }
@@ -141,7 +161,7 @@ pte_t mmu_flags_to_s1_pte_attr(uint flags) {
   return attr;
 }
 
-uint s1_pte_attr_to_mmu_flags(pte_t pte) {
+uint s1_pte_attr_to_mmu_flags(pte_t pte, bool hypervisor = false) {
   uint mmu_flags = 0;
   switch (pte & MMU_PTE_ATTR_ATTR_INDEX_MASK) {
     case MMU_PTE_ATTR_STRONGLY_ORDERED:
@@ -175,9 +195,28 @@ uint s1_pte_attr_to_mmu_flags(pte_t pte) {
       break;
   }
 
-  if (!((pte & MMU_PTE_ATTR_UXN) && (pte & MMU_PTE_ATTR_PXN))) {
-    mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+  if (hypervisor) {
+    // Single translation regimes such as the hypervisor only support the XN bit.
+    if ((pte & MMU_PTE_ATTR_XN) == 0) {
+      mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    }
+  } else {
+    // Based on whether or not this is a user page, check UXN or PXN bit to determine
+    // if it's an executable page.
+    if (mmu_flags & ARCH_MMU_FLAG_PERM_USER) {
+      if ((pte & MMU_PTE_ATTR_UXN) == 0) {
+        mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+      }
+    } else if ((pte & MMU_PTE_ATTR_PXN) == 0) {
+      // Privileged page, check the PXN bit.
+      mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
+    }
+
+    // TODO: fxbug.dev/88451
+    // Add additional asserts here that the translation table entries are correctly formed
+    // with regards to UXN and PXN bits and possibly other unhandled and/or ambiguous bits.
   }
+
   if (pte & MMU_PTE_ATTR_NON_SECURE) {
     mmu_flags |= ARCH_MMU_FLAG_NS;
   }
@@ -410,8 +449,9 @@ uint ArmArchVmAspace::MmuFlagsFromPte(pte_t pte) {
   switch (type_) {
     case ArmAspaceType::kUser:
     case ArmAspaceType::kKernel:
-    case ArmAspaceType::kHypervisor:
       return s1_pte_attr_to_mmu_flags(pte);
+    case ArmAspaceType::kHypervisor:
+      return s1_pte_attr_to_mmu_flags(pte, true);
     case ArmAspaceType::kGuest:
       return s2_pte_attr_to_mmu_flags(pte);
   }
@@ -1210,7 +1250,7 @@ void ArmArchVmAspace::MmuParamsFromFlags(uint mmu_flags, pte_t* attrs, vaddr_t* 
     }
     case ArmAspaceType::kHypervisor: {
       if (attrs) {
-        *attrs = mmu_flags_to_s1_pte_attr(mmu_flags);
+        *attrs = mmu_flags_to_s1_pte_attr(mmu_flags, true);
       }
       *vaddr_base = 0;
       *top_size_shift = MMU_IDENT_SIZE_SHIFT;
