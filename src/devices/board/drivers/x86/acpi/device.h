@@ -161,7 +161,7 @@ class Device : public DeviceType,
 
   zx_device_t* platform_bus_;
 
-  mutable fbl::Mutex lock_;
+  mutable std::mutex lock_;
   bool got_resources_ = false;
 
   // Port, memory, and interrupt resources from _CRS respectively

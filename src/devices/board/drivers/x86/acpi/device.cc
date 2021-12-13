@@ -230,7 +230,7 @@ void Device::DdkUnbind(ddk::UnbindTxn txn) {
 }
 
 void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& completer) {
-  fbl::AutoLock<fbl::Mutex> guard{&lock_};
+  std::scoped_lock guard{lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
     completer.ReplyError(st);
@@ -283,7 +283,7 @@ zx_status_t Device::AcpiGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
 }
 
 zx_status_t Device::AcpiConnectSysmem(zx::channel connection) {
-  fbl::AutoLock<fbl::Mutex> guard{&lock_};
+  std::scoped_lock guard{lock_};
   sysmem_protocol_t sysmem;
   zx_status_t st = device_get_protocol(platform_bus_, ZX_PROTOCOL_SYSMEM, &sysmem);
   if (st != ZX_OK) {
@@ -293,7 +293,7 @@ zx_status_t Device::AcpiConnectSysmem(zx::channel connection) {
 }
 
 zx_status_t Device::AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection) {
-  fbl::AutoLock<fbl::Mutex> guard{&lock_};
+  std::scoped_lock guard{lock_};
   sysmem_protocol_t sysmem;
   zx_status_t st = device_get_protocol(platform_bus_, ZX_PROTOCOL_SYSMEM, &sysmem);
   if (st != ZX_OK) {
@@ -338,7 +338,7 @@ void Device::EvaluateObject(EvaluateObjectRequestView request,
 }
 
 void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter::Sync& completer) {
-  fbl::AutoLock<fbl::Mutex> guard{&lock_};
+  std::scoped_lock guard{lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
     completer.ReplyError(st);
@@ -406,7 +406,7 @@ void Device::MapInterrupt(MapInterruptRequestView request, MapInterruptCompleter
 }
 
 void Device::GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer) {
-  fbl::AutoLock<fbl::Mutex> guard{&lock_};
+  std::scoped_lock guard{lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {
     completer.ReplyError(st);
