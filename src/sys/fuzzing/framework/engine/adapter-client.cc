@@ -30,7 +30,7 @@ void TargetAdapterClient::Configure(const std::shared_ptr<Options>& options) {
 }
 
 void TargetAdapterClient::Connect() {
-  if (coordinator_.is_valid()) {
+  if (is_connected()) {
     return;
   }
   FX_CHECK(options_);

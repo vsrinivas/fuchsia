@@ -29,7 +29,9 @@ class TargetAdapterClient final {
   explicit TargetAdapterClient(fidl::InterfaceRequestHandler<TargetAdapter> handler);
   ~TargetAdapterClient();
 
-  // Lets this object add defaults to unspecified options.
+  bool is_connected() const { return coordinator_.is_valid(); }
+
+  // Adds default values to unspecified options that are needed by objects of this class.
   static void AddDefaults(Options* options);
 
   // Sets options. The max input size may be increased by |LoadSeedCorpus|.

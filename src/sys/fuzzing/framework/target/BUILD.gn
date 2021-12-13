@@ -43,7 +43,7 @@ source_set("unittests") {
   ]
   deps = [
     ":no_hooks",
-    "../engine",
+    "../engine:engine-lib",
     "../testing",
     "//src/sys/fuzzing/common/testing",
     "//third_party/googletest:gtest",
