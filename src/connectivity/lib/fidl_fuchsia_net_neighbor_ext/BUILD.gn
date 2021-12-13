@@ -12,6 +12,7 @@ rustc_library("fidl_fuchsia_net_neighbor_ext") {
     "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:serde",
   ]
 
   sources = [ "src/lib.rs" ]

@@ -10,7 +10,7 @@ use fidl_fuchsia_net_ext::{IpAddress, MacAddress};
 use fidl_fuchsia_net_neighbor as fidl;
 
 /// Information on a neighboring device in the local network.
-pub struct Entry(fidl::Entry);
+pub struct Entry(pub fidl::Entry);
 
 impl From<fidl::Entry> for Entry {
     fn from(entry: fidl::Entry) -> Self {
@@ -33,6 +33,23 @@ macro_rules! write_field {
     };
 }
 
+// TODO(https://fxbug.dev/90069): introduce a validated Entry struct and
+// EntryState enum type in the same shape as UpdateResult in
+// fidl_fuchsia_net_interfaces_ext.
+/// Returns a &str suitable for display representing the EntryState parameter.
+pub fn display_entry_state(state: &Option<fidl::EntryState>) -> &'static str {
+    match state {
+        None => "?",
+        Some(fidl::EntryState::Incomplete) => "INCOMPLETE",
+        Some(fidl::EntryState::Reachable) => "REACHABLE",
+        Some(fidl::EntryState::Stale) => "STALE",
+        Some(fidl::EntryState::Delay) => "DELAY",
+        Some(fidl::EntryState::Probe) => "PROBE",
+        Some(fidl::EntryState::Static) => "STATIC",
+        Some(fidl::EntryState::Unreachable) => "UNREACHABLE",
+    }
+}
+
 impl std::fmt::Display for Entry {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let Self(fidl::Entry { interface, neighbor, mac, state, updated_at: _, .. }) = self;
@@ -40,15 +57,6 @@ impl std::fmt::Display for Entry {
         write_field!(f, "Interface", interface, "|");
         write_field!(f, "IP", neighbor.map(IpAddress::from), "|");
         write_field!(f, "MAC", mac.map(MacAddress::from), "|");
-        match state {
-            None => write!(f, "?"),
-            Some(fidl::EntryState::Incomplete) => write!(f, "INCOMPLETE"),
-            Some(fidl::EntryState::Reachable) => write!(f, "REACHABLE"),
-            Some(fidl::EntryState::Stale) => write!(f, "STALE"),
-            Some(fidl::EntryState::Delay) => write!(f, "DELAY"),
-            Some(fidl::EntryState::Probe) => write!(f, "PROBE"),
-            Some(fidl::EntryState::Static) => write!(f, "STATIC"),
-            Some(fidl::EntryState::Unreachable) => write!(f, "UNREACHABLE"),
-        }
+        write!(f, "{}", display_entry_state(state))
     }
 }

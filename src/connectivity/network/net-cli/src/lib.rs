@@ -18,10 +18,13 @@ use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as
 use log::info;
 use netfilter::FidlReturn as _;
 use prettytable::{cell, format, row, Row, Table};
-use std::str::FromStr as _;
+use serde_json::{json, value::Value};
+use std::{iter::FromIterator as _, str::FromStr as _};
 
 mod opts;
 pub use opts::{Command, CommandEnum};
+
+mod ser;
 
 macro_rules! filter_fidl {
     ($method:expr, $context:expr) => {
@@ -81,16 +84,18 @@ pub async fn do_root<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     match cmd {
         CommandEnum::If(opts::If { if_cmd: cmd }) => {
-            do_if(cmd, connector).await.context("failed during if command")
+            do_if(std::io::stdout(), cmd, connector).await.context("failed during if command")
         }
         CommandEnum::Fwd(opts::Fwd { fwd_cmd: cmd }) => {
-            do_fwd(cmd, connector).await.context("failed during fwd command")
+            do_fwd(std::io::stdout(), cmd, connector).await.context("failed during fwd command")
         }
         CommandEnum::Route(opts::Route { route_cmd: cmd }) => {
-            do_route(cmd, connector).await.context("failed during route command")
+            do_route(std::io::stdout(), cmd, connector).await.context("failed during route command")
         }
         CommandEnum::Filter(opts::Filter { filter_cmd: cmd }) => {
-            do_filter(cmd, connector).await.context("failed during filter command")
+            do_filter(&mut std::io::stdout(), cmd, connector)
+                .await
+                .context("failed during filter command")
         }
         CommandEnum::IpFwd(opts::IpFwd { ip_fwd_cmd: cmd }) => {
             do_ip_fwd(cmd, connector).await.context("failed during ip-fwd command")
@@ -117,7 +122,27 @@ fn shortlist_interfaces(name_pattern: &str, interfaces: &mut Vec<fstack::Interfa
     interfaces.retain(|i| i.properties.name.contains(name_pattern))
 }
 
-async fn tabulate_interfaces_info(interfaces: Vec<fstack::InterfaceInfo>) -> Result<String, Error> {
+fn write_jsonified_interfaces_info<W: std::io::Write>(
+    mut out: W,
+    interfaces: Vec<fstack::InterfaceInfo>,
+) -> Result<(), Error> {
+    let value = itertools::process_results(
+        interfaces
+            .into_iter()
+            .map(fidl_fuchsia_net_stack_ext::InterfaceInfo::from)
+            .map(ser::InterfaceView::from)
+            .map(serde_json::to_value)
+            .map(|res| res.context("failed to serialize InterfaceView")),
+        |i| Value::from_iter(i),
+    )?;
+    write!(out, "{}", value)?;
+    Ok(())
+}
+
+fn write_tabulated_interfaces_info<W: std::io::Write>(
+    mut out: W,
+    interfaces: Vec<fstack::InterfaceInfo>,
+) -> Result<(), Error> {
     let mut t = Table::new();
     t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
@@ -163,7 +188,8 @@ async fn tabulate_interfaces_info(interfaces: Vec<fstack::InterfaceInfo>) -> Res
             let () = add_row(&mut t, row!["addr", addr]);
         }
     }
-    Ok(t.to_string())
+    writeln!(out, "{}", t)?;
+    Ok(())
 }
 
 async fn connect_with_context<S, C>(connector: &C) -> Result<S::Proxy, Error>
@@ -174,18 +200,25 @@ where
     connector.connect().await.with_context(|| format!("failed to connect to {}", S::NAME))
 }
 
-async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Result<(), Error> {
+async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
+    mut out: W,
+    cmd: opts::IfEnum,
+    connector: &C,
+) -> Result<(), Error> {
     match cmd {
-        opts::IfEnum::List(opts::IfList { name_pattern }) => {
+        opts::IfEnum::List(opts::IfList { name_pattern, json }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let mut response = stack.list_interfaces().await.context("error getting response")?;
             if let Some(name_pattern) = name_pattern {
                 let () = shortlist_interfaces(&name_pattern, &mut response);
             }
-            let result = tabulate_interfaces_info(response)
-                .await
-                .context("error tabulating interface info")?;
-            println!("{}", result);
+            if json {
+                write_jsonified_interfaces_info(out, response)
+                    .context("error jsonifying interface info")?;
+            } else {
+                write_tabulated_interfaces_info(out, response)
+                    .context("error tabulating interface info")?;
+            }
         }
         opts::IfEnum::Add(opts::IfAdd { path }) => match connector.connect_device(&path).await {
             Ok(Device { topological_path, dev }) => {
@@ -197,7 +230,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
                 info!("Added interface {}", id);
             }
             Err(e) => {
-                println!("{}", e);
+                writeln!(out, "{}", e)?;
             }
         },
         opts::IfEnum::Del(opts::IfDel { id }) => {
@@ -212,7 +245,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let info =
                 fstack_ext::exec_fidl!(stack.get_interface_info(id), "error getting interface")?;
-            println!("{}", fstack_ext::InterfaceInfo::from(info));
+            writeln!(out, "{}", fstack_ext::InterfaceInfo::from(info))?;
         }
         opts::IfEnum::IpForward(opts::IfIpForward { cmd }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
@@ -296,14 +329,33 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
     Ok(())
 }
 
-async fn do_fwd<C: NetCliDepsConnector>(cmd: opts::FwdEnum, connector: &C) -> Result<(), Error> {
+async fn do_fwd<W: std::io::Write, C: NetCliDepsConnector>(
+    mut out: W,
+    cmd: opts::FwdEnum,
+    connector: &C,
+) -> Result<(), Error> {
     let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
     match cmd {
-        opts::FwdEnum::List(_) => {
+        opts::FwdEnum::List(opts::FwdList { json }) => {
             let response =
                 stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
-            for entry in response {
-                println!("{}", fstack_ext::ForwardingEntry::from(entry));
+            if json {
+                write!(
+                    out,
+                    "{}",
+                    itertools::process_results(
+                        response
+                            .into_iter()
+                            .map(fstack_ext::ForwardingEntry::from)
+                            .map(ser::ForwardingEntry::from)
+                            .map(serde_json::to_value),
+                        |i| Value::from_iter(i),
+                    )?,
+                )?;
+            } else {
+                for entry in response {
+                    writeln!(out, "{}", fstack_ext::ForwardingEntry::from(entry))?;
+                }
             }
         }
         opts::FwdEnum::AddDevice(opts::FwdAddDevice { id, addr, prefix }) => {
@@ -351,36 +403,52 @@ async fn do_fwd<C: NetCliDepsConnector>(cmd: opts::FwdEnum, connector: &C) -> Re
     Ok(())
 }
 
-async fn do_route<C: NetCliDepsConnector>(
+async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
+    mut out: W,
     cmd: opts::RouteEnum,
     connector: &C,
 ) -> Result<(), Error> {
     let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
     match cmd {
-        opts::RouteEnum::List(opts::RouteList {}) => {
+        opts::RouteEnum::List(opts::RouteList { json }) => {
             let response =
                 netstack.get_route_table().await.context("error retrieving routing table")?;
 
-            let mut t = Table::new();
-            t.set_format(format::FormatBuilder::new().padding(2, 2).build());
+            if json {
+                write!(
+                    out,
+                    "{}",
+                    itertools::process_results(
+                        response
+                            .into_iter()
+                            .map(fidl_fuchsia_netstack_ext::RouteTableEntry::from)
+                            .map(ser::RouteTableEntry::from)
+                            .map(serde_json::to_value),
+                        |i| Value::from_iter(i),
+                    )?
+                )?;
+            } else {
+                let mut t = Table::new();
+                t.set_format(format::FormatBuilder::new().padding(2, 2).build());
 
-            t.set_titles(row!["Destination", "Gateway", "NICID", "Metric"]);
-            for entry in response {
-                let fidl_fuchsia_netstack_ext::RouteTableEntry {
-                    destination,
-                    gateway,
-                    nicid,
-                    metric,
-                } = entry.into();
-                let gateway = match gateway {
-                    None => "-".to_string(),
-                    Some(g) => format!("{}", g),
-                };
-                let () = add_row(&mut t, row![destination, gateway, nicid, metric]);
+                t.set_titles(row!["Destination", "Gateway", "NICID", "Metric"]);
+                for entry in response {
+                    let fidl_fuchsia_netstack_ext::RouteTableEntry {
+                        destination,
+                        gateway,
+                        nicid,
+                        metric,
+                    } = entry.into();
+                    let gateway = match gateway {
+                        None => "-".to_string(),
+                        Some(g) => format!("{}", g),
+                    };
+                    let () = add_row(&mut t, row![destination, gateway, nicid, metric]);
+                }
+
+                let _lines_printed: usize = t.print(&mut out)?;
+                writeln!(out)?;
             }
-
-            let _lines_printed: usize = t.printstd();
-            println!();
         }
         opts::RouteEnum::Add(route) => {
             let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
@@ -414,16 +482,17 @@ where
     Ok(())
 }
 
-async fn do_filter<C: NetCliDepsConnector>(
+async fn do_filter<C: NetCliDepsConnector, W: std::io::Write>(
+    mut out: W,
     cmd: opts::FilterEnum,
     connector: &C,
 ) -> Result<(), Error> {
     let filter = connect_with_context::<ffilter::FilterMarker, _>(connector).await?;
     match cmd {
-        opts::FilterEnum::GetRules(_) => {
-            let (rules, generation) =
+        opts::FilterEnum::GetRules(opts::FilterGetRules {}) => {
+            let (rules, generation): (Vec<ffilter::Rule>, u32) =
                 filter_fidl!(filter.get_rules(), "error getting filter rules")?;
-            println!("{:?} (generation {})", rules, generation);
+            writeln!(out, "{:?} (generation {})", rules, generation)?;
         }
         opts::FilterEnum::SetRules(opts::FilterSetRules { rules }) => {
             let (_cur_rules, generation) =
@@ -435,10 +504,10 @@ async fn do_filter<C: NetCliDepsConnector>(
             )?;
             info!("successfully set filter rules");
         }
-        opts::FilterEnum::GetNatRules(_) => {
-            let (rules, generation) =
+        opts::FilterEnum::GetNatRules(opts::FilterGetNatRules {}) => {
+            let (rules, generation): (Vec<ffilter::Nat>, u32) =
                 filter_fidl!(filter.get_nat_rules(), "error getting NAT rules")?;
-            println!("{:?} (generation {})", rules, generation);
+            writeln!(out, "{:?} (generation {})", rules, generation)?;
         }
         opts::FilterEnum::SetNatRules(opts::FilterSetNatRules { rules }) => {
             let (_cur_rules, generation) =
@@ -450,10 +519,10 @@ async fn do_filter<C: NetCliDepsConnector>(
             )?;
             info!("successfully set NAT rules");
         }
-        opts::FilterEnum::GetRdrRules(_) => {
-            let (rules, generation) =
+        opts::FilterEnum::GetRdrRules(opts::FilterGetRdrRules {}) => {
+            let (rules, generation): (Vec<ffilter::Rdr>, u32) =
                 filter_fidl!(filter.get_rdr_rules(), "error getting RDR rules")?;
-            println!("{:?} (generation {})", rules, generation);
+            writeln!(out, "{:?} (generation {})", rules, generation)?;
         }
         opts::FilterEnum::SetRdrRules(opts::FilterSetRdrRules { rules }) => {
             let (_cur_rules, generation) =
@@ -596,17 +665,27 @@ async fn do_neigh<C: NetCliDepsConnector>(
                 .context("failed during neigh del command")?;
             info!("Deleted entry {} for interface {}", ip, interface);
         }
-        opts::NeighEnum::List(opts::NeighList {}) => {
+        opts::NeighEnum::List(opts::NeighList { json }) => {
             let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
-            let () = print_neigh_entries(false /* watch_for_changes */, view)
-                .await
-                .context("error listing neighbor entries")?;
+            let () = print_neigh_entries(
+                &mut std::io::stdout(),
+                false, /* watch_for_changes */
+                view,
+                json,
+            )
+            .await
+            .context("error listing neighbor entries")?;
         }
-        opts::NeighEnum::Watch(opts::NeighWatch {}) => {
+        opts::NeighEnum::Watch(opts::NeighWatch { json_lines }) => {
             let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
-            let () = print_neigh_entries(true /* watch_for_changes */, view)
-                .await
-                .context("error watching for changes to the neighbor table")?;
+            let () = print_neigh_entries(
+                &mut std::io::stdout(),
+                true, /* watch_for_changes */
+                view,
+                json_lines,
+            )
+            .await
+            .context("error watching for changes to the neighbor table")?;
         }
         opts::NeighEnum::Config(opts::NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
             opts::NeighConfigEnum::Get(opts::NeighGetConfig { interface, ip_version }) => {
@@ -696,9 +775,49 @@ async fn do_neigh_del(
         .context("error removing neighbor entry")
 }
 
-async fn print_neigh_entries(
+fn unpack_neigh_iter_item(
+    item: fneighbor::EntryIteratorItem,
+) -> (&'static str, Option<fneighbor::Entry>) {
+    let displayed_state_change_status = ser::DISPLAYED_NEIGH_ENTRY_VARIANTS.select(&item);
+
+    (
+        displayed_state_change_status,
+        match item {
+            fneighbor::EntryIteratorItem::Existing(entry) => Some(entry),
+            fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent) => None,
+            fneighbor::EntryIteratorItem::Added(entry) => Some(entry),
+            fneighbor::EntryIteratorItem::Changed(entry) => Some(entry),
+            fneighbor::EntryIteratorItem::Removed(entry) => Some(entry),
+        },
+    )
+}
+
+fn jsonify_neigh_iter_item(
+    item: fneighbor::EntryIteratorItem,
+    include_entry_state: bool,
+) -> Result<Value, Error> {
+    let (state_change_status, entry) = unpack_neigh_iter_item(item);
+    let entry_json = entry
+        .map(fneighbor_ext::Entry::from)
+        .map(ser::NeighborTableEntry::from)
+        .map(serde_json::to_value)
+        .map(|res| res.map_err(Error::msg))
+        .unwrap_or(Err(anyhow::anyhow!("failed to jsonify NeighborTableEntry")))?;
+    if include_entry_state {
+        Ok(json!({
+            "state_change_status": state_change_status,
+            "entry": entry_json,
+        }))
+    } else {
+        Ok(entry_json)
+    }
+}
+
+async fn print_neigh_entries<W: std::io::Write>(
+    mut out: W,
     watch_for_changes: bool,
     view: fneighbor::ViewProxy,
+    json: bool,
 ) -> Result<(), Error> {
     let (it_client, it_server) =
         fidl::endpoints::create_endpoints::<fneighbor::EntryIteratorMarker>()
@@ -709,13 +828,50 @@ async fn print_neigh_entries(
         .open_entry_iterator(it_server, fneighbor::EntryIteratorOptions::EMPTY)
         .context("error opening a connection to the entry iterator")?;
 
-    neigh_entry_stream(it, watch_for_changes)
-        .map_ok(|item| {
-            write_neigh_entry(&mut std::io::stdout(), item, watch_for_changes)
+    if watch_for_changes {
+        neigh_entry_stream(it, watch_for_changes)
+            .map_ok(|item| {
+                write_neigh_entry(
+                    &mut out,
+                    item,
+                    /* include_entry_state= */ watch_for_changes,
+                    json,
+                )
                 .context("error writing entry")
-        })
-        .try_fold((), |(), r| futures::future::ready(r))
-        .await
+            })
+            .try_fold((), |(), r| futures::future::ready(r))
+            .await?;
+    } else {
+        let results: Vec<Result<fneighbor::EntryIteratorItem, _>> =
+            neigh_entry_stream(it, watch_for_changes).collect().await;
+        if json {
+            let jsonified_items: Value =
+                itertools::process_results(results.into_iter(), |items| {
+                    itertools::process_results(
+                        items.map(|item| {
+                            jsonify_neigh_iter_item(
+                                item,
+                                /* include_entry_state= */ watch_for_changes,
+                            )
+                        }),
+                        |json_values| Value::from_iter(json_values),
+                    )
+                })??;
+            write!(out, "{}", jsonified_items)?;
+        } else {
+            itertools::process_results(results.into_iter(), |mut items| {
+                items.try_for_each(|item| {
+                    write_tabular_neigh_entry(
+                        &mut out,
+                        item,
+                        /* include_entry_state= */ watch_for_changes,
+                    )
+                })
+            })??;
+        }
+    }
+
+    Ok(())
 }
 
 async fn print_neigh_config(
@@ -771,30 +927,47 @@ fn neigh_entry_stream(
     })
 }
 
-fn write_neigh_entry<W: std::io::Write>(
-    f: &mut W,
+fn write_tabular_neigh_entry<W: std::io::Write>(
+    mut f: W,
     item: fneighbor::EntryIteratorItem,
-    watch_for_changes: bool,
-) -> Result<(), std::io::Error> {
-    match item {
-        fneighbor::EntryIteratorItem::Existing(entry) => {
-            if watch_for_changes {
-                writeln!(f, "EXISTING | {}", fneighbor_ext::Entry::from(entry))
+    include_entry_state: bool,
+) -> Result<(), Error> {
+    let (state_change_status, entry) = unpack_neigh_iter_item(item);
+    match entry {
+        Some(entry) => {
+            if include_entry_state {
+                writeln!(
+                    &mut f,
+                    "{:width$} | {}",
+                    state_change_status,
+                    fneighbor_ext::Entry::from(entry),
+                    width = ser::DISPLAYED_NEIGH_ENTRY_VARIANTS
+                        .into_iter()
+                        .map(|s| s.len())
+                        .max()
+                        .unwrap_or(0),
+                )?
             } else {
-                writeln!(f, "{}", fneighbor_ext::Entry::from(entry))
+                writeln!(&mut f, "{}", fneighbor_ext::Entry::from(entry))?
             }
         }
-        fneighbor::EntryIteratorItem::Idle(fneighbor::IdleEvent {}) => writeln!(f, "IDLE"),
-        fneighbor::EntryIteratorItem::Added(entry) => {
-            writeln!(f, "ADDED    | {}", fneighbor_ext::Entry::from(entry))
-        }
-        fneighbor::EntryIteratorItem::Changed(entry) => {
-            writeln!(f, "CHANGED  | {}", fneighbor_ext::Entry::from(entry))
-        }
-        fneighbor::EntryIteratorItem::Removed(entry) => {
-            writeln!(f, "REMOVED  | {}", fneighbor_ext::Entry::from(entry))
-        }
+        None => writeln!(&mut f, "{}", state_change_status)?,
     }
+    Ok(())
+}
+
+fn write_neigh_entry<W: std::io::Write>(
+    mut f: W,
+    item: fneighbor::EntryIteratorItem,
+    include_entry_state: bool,
+    json: bool,
+) -> Result<(), Error> {
+    if json {
+        writeln!(f, "{}", jsonify_neigh_iter_item(item, include_entry_state)?)?
+    } else {
+        write_tabular_neigh_entry(f, item, include_entry_state)?
+    }
+    Ok(())
 }
 
 async fn do_dhcpd_start(server: fdhcp::Server_Proxy) -> Result<(), Error> {
@@ -910,7 +1083,11 @@ mod tests {
     use net_declare::{fidl_mac, fidl_subnet};
     use std::convert::TryFrom as _;
     use test_case::test_case;
-    use {super::*, fidl_fuchsia_net_stack::*, fidl_fuchsia_netstack::*};
+    use {
+        super::*,
+        fidl_fuchsia_net_stack::{AdministrativeStatus, PhysicalStatus, *},
+        fidl_fuchsia_netstack::*,
+    };
 
     const SUBNET_V4: fnet::Subnet = fidl_subnet!("192.168.0.1/32");
     const SUBNET_V6: fnet::Subnet = fidl_subnet!("fd00::1/128");
@@ -994,14 +1171,19 @@ mod tests {
         }
     }
 
-    fn get_fake_interface(id: u64, name: &str) -> InterfaceInfo {
+    fn trim_whitespace_for_comparison(s: &str) -> String {
+        s.trim().lines().map(|s| s.trim()).collect::<Vec<&str>>().join("\n")
+    }
+
+    fn get_fake_interface(id: u64, name: &str, mac: Option<[u8; 6]>) -> InterfaceInfo {
         InterfaceInfo {
             id,
             properties: InterfaceProperties {
                 name: name.to_string(),
                 topopath: "loopback".to_string(),
                 filepath: "[none]".to_string(),
-                mac: None,
+                mac: mac
+                    .map(|octets| Box::new(fidl_fuchsia_hardware_ethernet::MacAddress { octets })),
                 mtu: 65536,
                 features: fethernet::Features::Loopback,
                 administrative_status: AdministrativeStatus::Enabled,
@@ -1013,13 +1195,13 @@ mod tests {
 
     fn get_fake_interfaces() -> Vec<InterfaceInfo> {
         vec![
-            get_fake_interface(1, "lo"),
-            get_fake_interface(10, "eth001"),
-            get_fake_interface(20, "eth002"),
-            get_fake_interface(30, "eth003"),
-            get_fake_interface(100, "wlan001"),
-            get_fake_interface(200, "wlan002"),
-            get_fake_interface(300, "wlan003"),
+            get_fake_interface(1, "lo", None),
+            get_fake_interface(10, "eth001", Some([1, 2, 3, 4, 5, 6])),
+            get_fake_interface(20, "eth002", Some([1, 2, 3, 4, 5, 7])),
+            get_fake_interface(30, "eth003", Some([1, 2, 3, 4, 5, 8])),
+            get_fake_interface(100, "wlan001", Some([2, 2, 3, 4, 5, 6])),
+            get_fake_interface(200, "wlan002", Some([2, 2, 3, 4, 5, 7])),
+            get_fake_interface(300, "wlan003", Some([2, 2, 3, 4, 5, 8])),
         ]
     }
 
@@ -1042,7 +1224,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_if_ip_forward() {
+    async fn if_ip_forward() {
         const IP_FORWARD: bool = true;
 
         let (stack_controller, mut stack_requests) =
@@ -1056,6 +1238,7 @@ mod tests {
         };
 
         let do_if_fut = do_if(
+            std::io::sink(),
             opts::IfEnum::IpForward(opts::IfIpForward {
                 cmd: opts::IfIpForwardEnum::Set(opts::IfIpForwardSet {
                     id: INTERFACE_ID,
@@ -1084,6 +1267,7 @@ mod tests {
             .expect("setting interface ip forwarding should succeed");
 
         let do_if_fut = do_if(
+            std::io::sink(),
             opts::IfEnum::IpForward(opts::IfIpForward {
                 cmd: opts::IfIpForwardEnum::Show(opts::IfIpForwardShow {
                     id: INTERFACE_ID,
@@ -1111,7 +1295,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_if_del_addr() {
+    async fn if_del_addr() {
         async fn next_request(
             requests: &mut StackRequestStream,
         ) -> (u64, fnet::Subnet, StackDelInterfaceAddressResponder) {
@@ -1131,6 +1315,7 @@ mod tests {
 
         // Make the first request.
         let succeeds = do_if(
+            std::io::sink(),
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
                     id: 1,
@@ -1153,6 +1338,7 @@ mod tests {
 
         // Make the second request.
         let fails = do_if(
+            std::io::sink(),
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
                     id: 2,
@@ -1181,8 +1367,200 @@ mod tests {
         assert_eq!(*underlying_error, fidl_fuchsia_net_stack::Error::NotFound);
     }
 
+    fn wanted_net_if_list_json() -> String {
+        json!([
+            {
+                "addresses": {
+                    "ipv4": [],
+                    "ipv6": []
+                },
+                "admin_up": true,
+                "features": {
+                    "loopback": true,
+                    "synthetic": false,
+                    "wlan": false,
+                },
+                "filepath": "[none]",
+                "link_up": true,
+                "mac": null,
+                "mtu": 65536,
+                "name": "lo",
+                "nicid": 1,
+                "topopath": "loopback"
+                },
+            {
+                "addresses": {
+                    "ipv4": [],
+                    "ipv6": []
+                },
+                "admin_up": true,
+                "features": {
+                    "loopback": true,
+                    "synthetic": false,
+                    "wlan": false,
+                },
+                "filepath": "[none]",
+                "link_up": true,
+                "mac": "01:02:03:04:05:06",
+                "mtu": 65536,
+                "name": "eth001",
+                "nicid": 10,
+                "topopath": "loopback"
+            },
+        ])
+        .to_string()
+    }
+
+    fn wanted_net_if_list_tabular() -> String {
+        String::from(
+            r#"
+nicid       1
+name        lo
+topopath    loopback
+filepath    [none]
+mac         -
+mtu         65536
+features    Loopback
+status      ENABLED | LINK_UP
+
+nicid       10
+name        eth001
+topopath    loopback
+filepath    [none]
+mac         01:02:03:04:05:06
+mtu         65536
+features    Loopback
+status      ENABLED | LINK_UP"#,
+        )
+    }
+
+    #[test_case(true, wanted_net_if_list_json() ; "in json format")]
+    #[test_case(false, wanted_net_if_list_tabular() ; "in tabular format")]
     #[fasync::run_singlethreaded(test)]
-    async fn test_metric_set() {
+    async fn if_list(json: bool, wanted_output: String) {
+        let (stack_controller, mut stack_requests) =
+            fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
+        let (netstack_controller, _netstack_requests) =
+            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+        let connector = TestConnector {
+            stack: Some(stack_controller),
+            netstack: Some(netstack_controller),
+            dhcpd: None,
+        };
+
+        let mut output: Vec<u8> = Vec::new();
+
+        let do_if_fut = do_if(
+            &mut output,
+            opts::IfEnum::List(opts::IfList { name_pattern: None, json }),
+            &connector,
+        );
+        let requests_fut = async {
+            let responder = stack_requests
+                .try_next()
+                .await
+                .expect("stack FIDL error")
+                .expect("request stream should not have ended")
+                .into_list_interfaces()
+                .expect("request should be of type ListInterfaces");
+            let () = responder
+                .send(&mut get_fake_interfaces().iter_mut().take(2))
+                .expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
+            .await
+            .expect("listing interfaces should succeed");
+
+        let got_output: &str = std::str::from_utf8(&output).unwrap();
+
+        pretty_assertions::assert_eq!(
+            trim_whitespace_for_comparison(got_output),
+            trim_whitespace_for_comparison(&wanted_output),
+        );
+    }
+
+    fn wanted_fwd_list_json() -> String {
+        json!([
+            {
+                "destination": { "DeviceId": 4 },
+                "subnet": {"addr":"1.2.3.4","prefix_len":24}
+            },
+            {
+                "destination": { "NextHop": "1.2.3.6" },
+                "subnet": {"addr":"1.2.3.5","prefix_len":24}
+            }
+        ])
+        .to_string()
+    }
+
+    fn wanted_fwd_list_tabular() -> String {
+        "1.2.3.4/24 device id 4
+         1.2.3.5/24 next hop 1.2.3.6"
+            .to_string()
+    }
+
+    #[test_case(true, wanted_fwd_list_json() ; "in json format")]
+    #[test_case(false, wanted_fwd_list_tabular() ; "in tabular format")]
+    #[fasync::run_singlethreaded(test)]
+    async fn fwd_list(json: bool, wanted_output: String) {
+        let (stack_controller, mut stack_requests) =
+            fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
+        let connector =
+            TestConnector { stack: Some(stack_controller), netstack: None, dhcpd: None };
+
+        let mut output: Vec<u8> = Vec::new();
+
+        let do_fwd_fut =
+            do_fwd(&mut output, opts::FwdEnum::List(opts::FwdList { json }), &connector);
+
+        let requests_fut = async {
+            let responder = stack_requests
+                .try_next()
+                .await
+                .expect("stack FIDL error")
+                .expect("request stream should not have ended")
+                .into_get_forwarding_table()
+                .expect("request should be of type GetForwardingTable");
+            let () = responder
+                .send(
+                    &mut vec![
+                        fstack::ForwardingEntry {
+                            subnet: fnet::Subnet {
+                                addr: fnet_ext::IpAddress::from_str("1.2.3.4")?.into(),
+                                prefix_len: 24,
+                            },
+                            destination: fstack::ForwardingDestination::DeviceId(4),
+                        },
+                        fstack::ForwardingEntry {
+                            subnet: fnet::Subnet {
+                                addr: fnet_ext::IpAddress::from_str("1.2.3.5")?.into(),
+                                prefix_len: 24,
+                            },
+                            destination: fstack::ForwardingDestination::NextHop(
+                                fnet_ext::IpAddress::from_str("1.2.3.6")?.into(),
+                            ),
+                        },
+                    ]
+                    .iter_mut(),
+                )
+                .expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(do_fwd_fut, requests_fut)
+            .await
+            .expect("listing forwarding table entries should succeed");
+
+        let got_output: &str = std::str::from_utf8(&output).unwrap();
+
+        pretty_assertions::assert_eq!(
+            trim_whitespace_for_comparison(got_output),
+            trim_whitespace_for_comparison(&wanted_output),
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn metric_set() {
         async fn next_request(
             requests: &mut NetstackRequestStream,
         ) -> (u32, u32, NetstackSetInterfaceMetricResponder) {
@@ -1269,12 +1647,12 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_dhcp_start() {
+    async fn dhcp_start() {
         let () = test_do_dhcp(opts::DhcpEnum::Start(opts::DhcpStart { id: 1 })).await;
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_dhcp_stop() {
+    async fn dhcp_stop() {
         let () = test_do_dhcp(opts::DhcpEnum::Stop(opts::DhcpStop { id: 1 })).await;
     }
 
@@ -1282,7 +1660,7 @@ mod tests {
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
         let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
-        let op = do_route(cmd.clone(), &connector);
+        let op = do_route(std::io::sink(), cmd.clone(), &connector);
         let op_succeeds = async move {
             let (route_table_requests, netstack_responder) = requests
                 .try_next()
@@ -1297,7 +1675,7 @@ mod tests {
                 .send(zx::Status::OK.into_raw())
                 .expect("netstack_responder.send should succeed");
             let () = match cmd {
-                opts::RouteEnum::List(opts::RouteList {}) => {
+                opts::RouteEnum::List(opts::RouteList { json: _ }) => {
                     panic!("test_modify_route should not take a List command")
                 }
                 opts::RouteEnum::Add(route) => {
@@ -1332,7 +1710,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_route_add() {
+    async fn route_add() {
         // Test arguments have been arbitrarily selected.
         let () = test_modify_route(opts::RouteEnum::Add(opts::RouteAdd {
             destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
@@ -1345,7 +1723,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_route_del() {
+    async fn route_del() {
         // Test arguments have been arbitrarily selected.
         let () = test_modify_route(opts::RouteEnum::Del(opts::RouteDel {
             destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
@@ -1357,8 +1735,98 @@ mod tests {
         .await;
     }
 
+    fn wanted_route_list_json() -> String {
+        json!([
+            {
+                "destination":{"addr":"1.1.1.1","prefix_len":24},
+                "gateway":"1.1.1.2",
+                "metric":4,
+                "nicid":3
+            },
+            {
+                "destination":{"addr":"10.10.10.10","prefix_len":24},
+                "gateway":"10.10.10.20",
+                "metric":40,
+                "nicid":30
+            }
+        ])
+        .to_string()
+    }
+
+    fn wanted_route_list_tabular() -> String {
+        "Destination       Gateway        NICID    Metric
+         1.1.1.1/24        1.1.1.2        3        4
+         10.10.10.10/24    10.10.10.20    30       40"
+            .to_string()
+    }
+
+    #[test_case(true, wanted_route_list_json() ; "in json format")]
+    #[test_case(false, wanted_route_list_tabular() ; "in tabular format")]
     #[fasync::run_singlethreaded(test)]
-    async fn test_bridge() {
+    async fn route_list(json: bool, wanted_output: String) {
+        let (netstack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
+        let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
+
+        let mut output: Vec<u8> = Vec::new();
+
+        let do_route_fut =
+            do_route(&mut output, opts::RouteEnum::List(opts::RouteList { json }), &connector);
+
+        let requests_fut = async {
+            let responder = requests
+                .try_next()
+                .await
+                .expect("netstack FIDL error")
+                .expect("request stream should not have ended")
+                .into_get_route_table()
+                .expect("request should be of type GetRouteTable");
+
+            let () = responder
+                .send(
+                    &mut vec![
+                        fnetstack::RouteTableEntry {
+                            destination: fnet::Subnet {
+                                addr: fnet_ext::IpAddress::from_str("1.1.1.1")?.into(),
+                                prefix_len: 24,
+                            },
+                            gateway: Some(Box::new(
+                                fnet_ext::IpAddress::from_str("1.1.1.2")?.into(),
+                            )),
+                            nicid: 3,
+                            metric: 4,
+                        },
+                        fnetstack::RouteTableEntry {
+                            destination: fnet::Subnet {
+                                addr: fnet_ext::IpAddress::from_str("10.10.10.10")?.into(),
+                                prefix_len: 24,
+                            },
+                            gateway: Some(Box::new(
+                                fnet_ext::IpAddress::from_str("10.10.10.20")?.into(),
+                            )),
+                            nicid: 30,
+                            metric: 40,
+                        },
+                    ]
+                    .iter_mut(),
+                )
+                .expect("responder.send should succeed");
+            Ok(())
+        };
+        let ((), ()) = futures::future::try_join(do_route_fut, requests_fut)
+            .await
+            .expect("listing forwarding table entries should succeed");
+
+        let got_output: &str = std::str::from_utf8(&output).unwrap();
+
+        pretty_assertions::assert_eq!(
+            trim_whitespace_for_comparison(got_output),
+            trim_whitespace_for_comparison(&wanted_output),
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn bridge() {
         let (stack, _) = fidl::endpoints::create_proxy::<StackMarker>().unwrap();
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
@@ -1366,8 +1834,11 @@ mod tests {
         // interface id test values have been selected arbitrarily
         let bridge_ifs = vec![1, 2, 3];
         let bridge_id = 4;
-        let bridge =
-            do_if(opts::IfEnum::Bridge(opts::IfBridge { ids: bridge_ifs.clone() }), &connector);
+        let bridge = do_if(
+            std::io::sink(),
+            opts::IfEnum::Bridge(opts::IfBridge { ids: bridge_ifs.clone() }),
+            &connector,
+        );
         let bridge_succeeds = async move {
             let (requested_ifs, netstack_responder) = requests
                 .try_next()
@@ -1421,8 +1892,9 @@ mod tests {
 
             let item_to_string = |item| {
                 let mut buf = Vec::new();
-                let () = write_neigh_entry(&mut buf, item, watch_for_changes)
-                    .expect("write_neigh_entry should succeed");
+                let () =
+                    write_neigh_entry(&mut buf, item, watch_for_changes, /* json= */ false)
+                        .expect("write_neigh_entry should succeed");
                 String::from_utf8(buf).expect("string should be UTF-8")
             };
 
@@ -1460,12 +1932,12 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_list_none() {
+    async fn neigh_list_none() {
         test_neigh_none(false /* watch_for_changes */, "".to_string()).await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_watch_none() {
+    async fn neigh_watch_none() {
         test_neigh_none(true /* watch_for_changes */, "IDLE".to_string()).await
     }
 
@@ -1503,12 +1975,12 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_list_one() {
+    async fn neigh_list_one() {
         test_neigh_one(false /* watch_for_changes */, |entry| format!("{}\n", entry)).await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_watch_one() {
+    async fn neigh_watch_one() {
         test_neigh_one(true /* watch_for_changes */, |entry| {
             format!(
                 "EXISTING | {}\n\
@@ -1566,12 +2038,12 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_list_many() {
+    async fn neigh_list_many() {
         test_neigh_many(false /* watch_for_changes */, |a, b| format!("{}\n{}\n", a, b)).await
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_watch_many() {
+    async fn neigh_watch_many() {
         test_neigh_many(true /* watch_for_changes */, |a, b| {
             format!(
                 "EXISTING | {}\n\
@@ -1583,11 +2055,59 @@ mod tests {
         .await
     }
 
+    fn wanted_neigh_list_json() -> String {
+        json!({
+            "interface": 1,
+            "mac": "01:02:03:04:05:06",
+            "neighbor": "192.168.0.1",
+            "state": "REACHABLE",
+        })
+        .to_string()
+    }
+
+    fn wanted_neigh_watch_json() -> String {
+        json!({
+            "entry": {
+                "interface": 1,
+                "mac": "01:02:03:04:05:06",
+                "neighbor": "192.168.0.1",
+                "state": "REACHABLE",
+            },
+            "state_change_status": "EXISTING",
+        })
+        .to_string()
+    }
+
+    #[test_case(true, false, &wanted_neigh_list_json() ; "in json format, not including entry state")]
+    #[test_case(false, false, "Interface 1 | IP 192.168.0.1 | MAC 01:02:03:04:05:06 | REACHABLE" ; "in tabular format, not including entry state")]
+    #[test_case(true, true, &wanted_neigh_watch_json() ; "in json format, including entry state")]
+    #[test_case(false, true, "EXISTING | Interface 1 | IP 192.168.0.1 | MAC 01:02:03:04:05:06 | REACHABLE" ; "in tabular format, including entry state")]
+    #[test]
+    fn neigh_write_entry(json: bool, include_entry_state: bool, wanted_output: &str) {
+        let entry = fneighbor::EntryIteratorItem::Existing(fneighbor::Entry {
+            interface: Some(1),
+            neighbor: Some(SUBNET_V4.addr),
+            state: Some(fneighbor::EntryState::Reachable),
+            mac: Some(MAC_1),
+            updated_at: Some(timestamp_60s_ago()),
+            ..fneighbor::Entry::EMPTY
+        });
+
+        let mut output: Vec<u8> = Vec::new();
+        write_neigh_entry(&mut output, entry, include_entry_state, json)
+            .expect("write_neigh_entry should succeed");
+        let got_output: &str = std::str::from_utf8(&output).unwrap();
+        pretty_assertions::assert_eq!(
+            trim_whitespace_for_comparison(got_output),
+            trim_whitespace_for_comparison(wanted_output),
+        );
+    }
+
     const INTERFACE_ID: u64 = 1;
     const IP_VERSION: fnet::IpVersion = fnet::IpVersion::V4;
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_add() {
+    async fn neigh_add() {
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>().unwrap();
         let neigh = do_neigh_add(INTERFACE_ID, SUBNET_V4.addr, MAC_1, controller);
@@ -1611,7 +2131,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_clear() {
+    async fn neigh_clear() {
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>().unwrap();
         let neigh = do_neigh_clear(INTERFACE_ID, IP_VERSION, controller);
@@ -1634,7 +2154,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_del() {
+    async fn neigh_del() {
         let (controller, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fneighbor::ControllerMarker>().unwrap();
         let neigh = do_neigh_del(INTERFACE_ID, SUBNET_V4.addr, controller);
@@ -1657,7 +2177,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_config_get() {
+    async fn neigh_config_get() {
         let (view, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fneighbor::ViewMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
@@ -1683,7 +2203,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_neigh_config_update() {
+    async fn neigh_config_update() {
         const CONFIG: fneighbor::UnreachabilityConfig = fneighbor::UnreachabilityConfig::EMPTY;
 
         let (controller, mut requests) =
@@ -1715,7 +2235,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_ip_fwd_enable() {
+    async fn ip_fwd_enable() {
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
@@ -1737,7 +2257,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_ip_fwd_disable() {
+    async fn ip_fwd_disable() {
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");

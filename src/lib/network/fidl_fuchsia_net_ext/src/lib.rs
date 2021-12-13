@@ -250,9 +250,8 @@ impl From<fidl::MacAddress> for MacAddress {
     }
 }
 
-impl Into<fidl::MacAddress> for MacAddress {
-    fn into(self) -> fidl::MacAddress {
-        let Self { octets } = self;
+impl From<MacAddress> for fidl::MacAddress {
+    fn from(MacAddress { octets }: MacAddress) -> fidl::MacAddress {
         fidl::MacAddress { octets }
     }
 }

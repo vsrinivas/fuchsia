@@ -33,8 +33,8 @@ impl std::fmt::Display for ForwardingDestination {
 }
 
 pub struct ForwardingEntry {
-    subnet: fidl_fuchsia_net_ext::Subnet,
-    destination: ForwardingDestination,
+    pub subnet: fidl_fuchsia_net_ext::Subnet,
+    pub destination: ForwardingDestination,
 }
 
 impl From<fidl::ForwardingEntry> for ForwardingEntry {
@@ -177,6 +177,7 @@ impl std::fmt::Display for InterfaceProperties {
         Ok(())
     }
 }
+
 pub struct InterfaceInfo {
     pub id: u64,
     pub properties: InterfaceProperties,
