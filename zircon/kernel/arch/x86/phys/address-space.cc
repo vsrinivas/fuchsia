@@ -40,8 +40,8 @@ void InstallIdentityMapPageTables(page_table::MemoryManager& manager) {
   }
 
   const auto& pool = Allocation::GetPool();
-  uint64_t first = fbl::round_up(pool.front().addr, ZX_MAX_PAGE_SIZE);
-  uint64_t last = fbl::round_down(pool.back().end(), ZX_MAX_PAGE_SIZE);
+  uint64_t first = fbl::round_down(pool.front().addr, ZX_MAX_PAGE_SIZE);
+  uint64_t last = fbl::round_up(pool.back().end(), ZX_MAX_PAGE_SIZE);
   ZX_DEBUG_ASSERT(first < last);
   zx_status_t result = builder->MapRegion(Vaddr(first), Paddr(first), last - first,
                                           page_table::CacheAttributes::kNormal);
