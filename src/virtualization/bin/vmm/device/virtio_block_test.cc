@@ -58,7 +58,7 @@ class VirtioBlockTest : public TestWithDevice {
     uint64_t size;
     status = block_->Start(std::move(start_info), kVirtioBlockId,
                            fuchsia::virtualization::BlockMode::READ_WRITE,
-                           fuchsia::virtualization::BlockFormat::RAW, std::move(file), &size);
+                           fuchsia::virtualization::BlockFormat::FILE, std::move(file), &size);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(kBlockSectorSize * kNumSectors, size);
 

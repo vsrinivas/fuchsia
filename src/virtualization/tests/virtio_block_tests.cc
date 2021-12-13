@@ -130,7 +130,7 @@ static zx_status_t create_test_device(TestDevice* test_device,
   }
 
   zx_status_t status = ZX_ERR_BAD_STATE;
-  if (test_device->format == fuchsia::virtualization::BlockFormat::RAW) {
+  if (test_device->format == fuchsia::virtualization::BlockFormat::FILE) {
     status = write_raw_file(fd.get());
   } else if (test_device->format == fuchsia::virtualization::BlockFormat::QCOW) {
     status = write_qcow_file(fd.get());
@@ -160,21 +160,21 @@ class VirtioBlockTestGuest {
 
     test_devices_.push_back({
         .id = "raw_read_write",
-        .format = fuchsia::virtualization::BlockFormat::RAW,
+        .format = fuchsia::virtualization::BlockFormat::FILE,
         .mode = fuchsia::virtualization::BlockMode::READ_WRITE,
         .pci_bus = 0,
         .pci_device = device_count++,
     });
     test_devices_.push_back({
         .id = "raw_read_only",
-        .format = fuchsia::virtualization::BlockFormat::RAW,
+        .format = fuchsia::virtualization::BlockFormat::FILE,
         .mode = fuchsia::virtualization::BlockMode::READ_ONLY,
         .pci_bus = 0,
         .pci_device = device_count++,
     });
     test_devices_.push_back({
         .id = "raw_volatile_write",
-        .format = fuchsia::virtualization::BlockFormat::RAW,
+        .format = fuchsia::virtualization::BlockFormat::FILE,
         .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
         .pci_bus = 0,
         .pci_device = device_count++,
@@ -275,7 +275,7 @@ TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
     FX_LOGS(INFO) << "Device: " << device.id;
     size_t expected_size = 0;
     switch (device.format) {
-      case fuchsia::virtualization::BlockFormat::RAW:
+      case fuchsia::virtualization::BlockFormat::FILE:
         expected_size = kVirtioBlockCount;
         break;
       case fuchsia::virtualization::BlockFormat::QCOW:
@@ -303,7 +303,7 @@ TYPED_TEST(VirtioBlockGuestTest, CheckSize) {
 
 TYPED_TEST(VirtioBlockGuestTest, ReadRaw) {
   for (const auto& device : this->TestDevices()) {
-    if (device.format != fuchsia::virtualization::BlockFormat::RAW) {
+    if (device.format != fuchsia::virtualization::BlockFormat::FILE) {
       continue;
     }
     FX_LOGS(INFO) << "Device: " << device.id;
@@ -335,7 +335,7 @@ TYPED_TEST(VirtioBlockGuestTest, ReadRaw) {
 
 TYPED_TEST(VirtioBlockGuestTest, WriteRaw) {
   for (const auto& device : this->TestDevices()) {
-    if (device.format != fuchsia::virtualization::BlockFormat::RAW) {
+    if (device.format != fuchsia::virtualization::BlockFormat::FILE) {
       continue;
     }
     FX_LOGS(INFO) << "Device: " << device.id;

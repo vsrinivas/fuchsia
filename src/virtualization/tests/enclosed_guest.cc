@@ -405,7 +405,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
     cfg->mutable_block_devices()->push_back({
         "linux_tests",
         fuchsia::virtualization::BlockMode::READ_ONLY,
-        fuchsia::virtualization::BlockFormat::RAW,
+        fuchsia::virtualization::BlockFormat::FILE,
         fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
     });
   }
@@ -423,7 +423,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
     cfg->mutable_block_devices()->push_back({
         "extras",
         fuchsia::virtualization::BlockMode::READ_ONLY,
-        fuchsia::virtualization::BlockFormat::RAW,
+        fuchsia::virtualization::BlockFormat::FILE,
         fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
     });
   }

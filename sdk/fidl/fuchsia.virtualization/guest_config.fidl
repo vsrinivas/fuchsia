@@ -53,8 +53,8 @@ type BlockMode = strict enum {
 
 /// Data format of the file backing a block device.
 type BlockFormat = strict enum {
-    /// Raw IO. All reads and writes go directly to disk as a flat file.
-    RAW = 0;
+    /// File IO. All reads and writes go directly to disk as a flat file.
+    FILE = 0;
     /// QCOW image. All reads and writes go to a QCOW image.
     QCOW = 1;
 };

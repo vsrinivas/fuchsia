@@ -74,8 +74,8 @@ zx_status_t parse(const OpenAt& open_at, const std::string& name, const std::str
       out->mode = fuchsia::virtualization::BlockMode::READ_ONLY;
     } else if (token == "volatile") {
       out->mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE;
-    } else if (token == "fdio") {
-      out->format = fuchsia::virtualization::BlockFormat::RAW;
+    } else if (token == "file") {
+      out->format = fuchsia::virtualization::BlockFormat::FILE;
     } else if (token == "qcow") {
       out->format = fuchsia::virtualization::BlockFormat::QCOW;
     } else {

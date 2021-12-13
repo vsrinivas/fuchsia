@@ -71,13 +71,13 @@ constexpr DiskImage kStatefulImage = DiskImage{
 constexpr DiskImage kStatefulImage = DiskImage{
     // Minfs max file size is currently just under 4GB.
     .path = "/data/stateful.img",
-    .format = fuchsia::virtualization::BlockFormat::RAW,
+    .format = fuchsia::virtualization::BlockFormat::FILE,
     .read_only = false,
 };
 #endif
 constexpr DiskImage kExtrasImage = DiskImage{
     .path = "/pkg/data/extras.img",
-    .format = fuchsia::virtualization::BlockFormat::RAW,
+    .format = fuchsia::virtualization::BlockFormat::FILE,
     .read_only = true,
 };
 
@@ -131,7 +131,7 @@ std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t stateful_
   fidl::InterfaceHandle<fuchsia::io::File> stateful_handle = GetPartition(kStatefulImage);
   if (!stateful_handle.is_valid() && !kStatefulImage.read_only) {
     static_assert(kStatefulImage.read_only ||
-                      kStatefulImage.format == fuchsia::virtualization::BlockFormat::RAW,
+                      kStatefulImage.format == fuchsia::virtualization::BlockFormat::FILE,
                   "Read/write images must be in RAW format");
     FX_LOGS(INFO) << "Creating stateful partition: " << kStatefulImage.path;
     stateful_handle = CreateRawPartition(kStatefulImage.path, stateful_image_size);
