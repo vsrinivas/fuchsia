@@ -45,6 +45,7 @@ zx_library("vm") {
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/fbl",
+    "//zircon/kernel/lib/heap/cmpctmalloc:cmpctmalloc_headers",
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/ktrace",

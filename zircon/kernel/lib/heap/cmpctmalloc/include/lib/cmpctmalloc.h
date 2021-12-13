@@ -35,6 +35,8 @@ void cmpct_free(void*) TA_EXCL(TheHeapLock::Get());
 void cmpct_sized_free(void*, size_t) TA_EXCL(TheHeapLock::Get());
 void* cmpct_memalign(size_t alignment, size_t size) TA_EXCL(TheHeapLock::Get());
 
+// Zero-fill allocations smaller than |size|
+void cmpct_set_fill_on_alloc_threshold(size_t size);
 void cmpct_init(void) TA_EXCL(TheHeapLock::Get());
 void cmpct_dump(bool panic_time) TA_EXCL(TheHeapLock::Get());
 void cmpct_get_info(size_t* used_bytes, size_t* free_bytes, size_t* cached_bytes) TA_EXCL(TheHeapLock::Get());

@@ -378,6 +378,10 @@ This option configures the maximum size of the heap. Only has effect if kernel
 has been compiled to use a virtual heap.
 )""")
 
+DEFINE_OPTION("kernel.heap.alloc_fill_threshold", uint64_t, alloc_fill_threshold, {0}, R"""(
+When set, the kernel heap will fill allocations below this size (in bytes).
+)""")
+
 DEFINE_OPTION("kernel.bufferchain.reserve-pages", uint64_t, bufferchain_reserve_pages, {32}, R"""(
 Specifies the number of pages per CPU to reserve for buffer chain allocations
 (channel messages). Higher values reduce contention on the PMM when the

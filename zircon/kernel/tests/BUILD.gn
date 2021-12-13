@@ -80,6 +80,7 @@ if (toolchain_environment == "kernel") {
       "dpc_tests.cc",
       "event_tests.cc",
       "fibo.cc",
+      "heap_tests.cc",
       "interrupt_disable_tests.cc",
       "job_tests.cc",
       "kstack_tests.cc",
@@ -111,6 +112,7 @@ if (toolchain_environment == "kernel") {
     deps = [
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/arch/test:kernel-tests",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/crypto",
       "//zircon/kernel/lib/debuglog",

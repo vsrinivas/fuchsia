@@ -395,6 +395,11 @@ fault is never aborted due to a time out.
 This option configures the maximum size of the heap. Only has effect if kernel
 has been compiled to use a virtual heap.
 
+### kernel.heap.alloc_fill_threshold=\<uint64_t>
+**Default:** `0x0`
+
+When set, the kernel heap will fill allocations below this size (in bytes).
+
 ### kernel.bufferchain.reserve-pages=\<uint64_t>
 **Default:** `0x20`
 

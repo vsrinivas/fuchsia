@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
+#include <lib/cmpctmalloc.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/instrumentation/asan.h>
 #include <lib/lazy_init/lazy_init.h>
@@ -290,6 +291,8 @@ void vm_init() {
       "random_padding", kernel_random_padding_vmar->base(), kernel_random_padding_vmar->size(), 0);
   ASSERT(status == ZX_OK);
 #endif
+
+  cmpct_set_fill_on_alloc_threshold(gBootOptions->alloc_fill_threshold);
 }
 
 paddr_t vaddr_to_paddr(const void* ptr) {

@@ -307,6 +307,7 @@ struct heap {
 
 // Heap static vars.
 static struct heap theheap TA_GUARDED(TheHeapLock::Get());
+static size_t g_fill_on_alloc_threshold = 0;
 
 NO_ASAN static void dump_free(header_t* header) TA_REQ(TheHeapLock::Get()) {
   // This function accesses header->size so it has to be NO_ASAN
@@ -849,6 +850,7 @@ static_assert(SizeToIndexAllocating(kHeapMaxAllocSize).rounded_up + sizeof(heade
 
 NO_ASAN void* cmpct_alloc(size_t size) {
   LOCAL_TRACE_DURATION("cmpct_alloc", trace, size, 0);
+
   if (size == 0u) {
     return NULL;
   }
@@ -879,12 +881,12 @@ NO_ASAN void* cmpct_alloc(size_t size) {
     return NULL;
   }
 
+  const size_t alloc_size = size;
 #if KERNEL_ASAN
   // Add space at the end of the allocation for a redzone.
   // A redzone is used to detect buffer overflows by oversizing the buffer and poisoning the
   // excess memory. The redzone is after the buffer - before the buffer is a header_t, which
   // is also poisoned.
-  const size_t alloc_size = size;
   size += asan_heap_redzone_size(alloc_size);
   // When we validated the max allocation size above, we did not take into account the asan redzone.
   // Unfortunately this cannot presently be checked statically due to the asan_heap_redzone_size not
@@ -961,6 +963,10 @@ NO_ASAN void* cmpct_alloc(size_t size) {
   asan_unpoison_shadow(reinterpret_cast<uintptr_t>(result), alloc_size);
 #endif  //  KERNEL_ASAN
 
+  guard.Release();
+  if (result && alloc_size < g_fill_on_alloc_threshold) {
+    memset(result, 0, alloc_size);
+  }
   return result;
 }
 
@@ -1096,6 +1102,10 @@ NO_ASAN void* cmpct_memalign(size_t alignment, size_t size) {
   asan_unpoison_shadow(reinterpret_cast<uintptr_t>(payload), size);
 #endif  // KERNEL_ASAN
   return payload;
+}
+
+void cmpct_set_fill_on_alloc_threshold(size_t size) {
+  g_fill_on_alloc_threshold = size;
 }
 
 void cmpct_init(void) {
