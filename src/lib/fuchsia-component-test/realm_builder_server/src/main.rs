@@ -289,6 +289,18 @@ impl Realm {
                         }
                     }
                 }
+                ftest::RealmRequest::GetRealmDecl { responder } => {
+                    responder.send(&mut Ok(self.get_realm_decl().await))?;
+                }
+                ftest::RealmRequest::ReplaceRealmDecl { component_decl, responder } => {
+                    match self.replace_realm_decl(component_decl).await {
+                        Ok(()) => responder.send(&mut Ok(()))?,
+                        Err(e) => {
+                            warn!("unable to replace realm decl: {:?}", e);
+                            responder.send(&mut Err(e.into()))?;
+                        }
+                    }
+                }
                 ftest::RealmRequest::AddRoute { capabilities, from, to, responder } => {
                     match self.realm_node.route_capabilities(capabilities, from, to).await {
                         Ok(()) => {
@@ -438,6 +450,23 @@ impl Realm {
         let child_node = self.realm_node.get_sub_realm(&name).await?;
         child_node.replace_decl(component_decl.fidl_into_native()).await
     }
+
+    async fn get_realm_decl(&self) -> fcdecl::Component {
+        self.realm_node.get_decl().await.native_into_fidl()
+    }
+
+    async fn replace_realm_decl(
+        &self,
+        component_decl: fcdecl::Component,
+    ) -> Result<(), RealmBuilderError> {
+        if let Err(e) = cm_fidl_validator::fdecl::validate(&component_decl) {
+            return Err(RealmBuilderError::InvalidComponentDecl(
+                self.realm_path.join("/").to_string(),
+                e,
+            ));
+        }
+        self.realm_node.replace_decl(component_decl.fidl_into_native()).await
+    }
 }
 
 fn new_decl_with_program_entries(entries: Vec<(String, String)>) -> cm_rust::ComponentDecl {
@@ -563,7 +592,7 @@ impl RealmNode2 {
             return Err(RealmBuilderError::BuildAlreadyCalled);
         }
         for child in &new_decl.children {
-            if state_guard.contains_child(&child.name) {
+            if state_guard.mutable_children.contains_key(&child.name) {
                 return Err(RealmBuilderError::ChildAlreadyExists(child.name.clone()));
             }
         }
@@ -4259,6 +4288,60 @@ mod tests {
             .expect("failed to call replace_component_decl")
             .expect_err("replace_component_decl did not return an error");
         assert_eq!(err, ftest::RealmBuilderError2::ChildDeclNotVisible);
+    }
+
+    #[fuchsia::test]
+    async fn get_and_replace_realm_decl() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let mut realm_decl = realm_and_builder_task
+            .realm_proxy
+            .get_realm_decl()
+            .await
+            .expect("failed to call get_realm_decl")
+            .expect("get_realm_decl returned an error");
+        realm_decl.children = Some(vec![fcdecl::Child {
+            name: Some("example-child".to_string()),
+            url: Some("example://url".to_string()),
+            startup: Some(fcdecl::StartupMode::Eager),
+            ..fcdecl::Child::EMPTY
+        }]);
+        realm_and_builder_task
+            .realm_proxy
+            .replace_realm_decl(realm_decl.clone())
+            .await
+            .expect("failed to call replace_realm_decl")
+            .expect("replace_realm_decl returned an error");
+        assert_eq!(
+            realm_decl,
+            realm_and_builder_task
+                .realm_proxy
+                .get_realm_decl()
+                .await
+                .expect("failed to call get_realm_decl")
+                .expect("get_realm_decl returned an error"),
+        );
+    }
+
+    #[fuchsia::test]
+    async fn replace_decl_enforces_validation() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        let realm_decl = fcdecl::Component {
+            children: Some(vec![fcdecl::Child {
+                name: Some("example-child".to_string()),
+                url: Some("example://url".to_string()),
+                startup: Some(fcdecl::StartupMode::Eager),
+                environment: Some("i-dont-exist".to_string()),
+                ..fcdecl::Child::EMPTY
+            }]),
+            ..fcdecl::Component::EMPTY
+        };
+        let err = realm_and_builder_task
+            .realm_proxy
+            .replace_realm_decl(realm_decl)
+            .await
+            .expect("failed to call replace_realm_decl")
+            .expect_err("replace_realm_decl did not return an error");
+        assert_eq!(err, ftest::RealmBuilderError2::InvalidComponentDecl,);
     }
 
     // TODO(88429): The following test is impossible to write until sub-realms are supported

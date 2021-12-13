@@ -379,6 +379,7 @@ type Protocol = table {
     1: name fuchsia.component.name;
     2: as fuchsia.component.name; // optional
     3: type fuchsia.component.decl.DependencyType; // optional
+    4: path string:fuchsia.component.MAX_PATH_LENGTH; //optional
 };
 
 /// A directory capability
@@ -388,6 +389,7 @@ type Directory = table {
     3: type fuchsia.component.decl.DependencyType; // optional
     4: rights fuchsia.io2.Rights; // optional
     5: subdir string:fuchsia.component.MAX_PATH_LENGTH; // optional
+    6: path string:fuchsia.component.MAX_PATH_LENGTH; //optional
 };
 
 /// Properties that may be set on a child when it is added to a realm
@@ -410,6 +412,8 @@ protocol Realm {
     /// - `DECL_READ_ERROR`: Encountered an I/O error when attempting to read a
     ///   component declaration referenced by a relative URL from the test
     ///   package.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddChild(struct {
         /// The name of the child that is being added.
         name fuchsia.component.name;
@@ -437,6 +441,8 @@ protocol Realm {
     ///   given name.
     /// - `INVALID_MANIFEST_EXTENSION`: `url` does not end with `.cmx`, and thus
     ///   should be used with `AddChild` instead of `AddLegacyChild`.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddLegacyChild(struct {
         /// The name of the child that is being added.
         name fuchsia.component.name;
@@ -456,6 +462,8 @@ protocol Realm {
     /// - `CHILD_ALREADY_EXISTS`: this realm already contains a child with the
     ///   given name.
     /// - `INVALID_COMPONENT_DECL`: `decl` failed validation.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddChildFromDecl(struct {
         /// The name of the child that is being added.
         name fuchsia.component.name;
@@ -477,6 +485,8 @@ protocol Realm {
     /// Errors:
     /// - `CHILD_ALREADY_EXISTS`: this realm already contains a child with the
     ///   given name.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddLocalChild(struct {
         /// The name of the child that is being added.
         name fuchsia.component.name;
@@ -491,6 +501,8 @@ protocol Realm {
     /// Errors:
     /// - `CHILD_ALREADY_EXISTS`: this realm already contains a child with the
     ///   given name.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddChildRealm(resource struct {
         /// The name of the child realm that is being added.
         name fuchsia.component.name;
@@ -517,6 +529,8 @@ protocol Realm {
     /// - `CHILD_DECL_NOT_VISIBLE`: The component decl cannot be fetched for
     ///   the referenced child, because the child was added to the realm using
     ///   an absolute (not-relative) and modern (not legacy) URL.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
     GetComponentDecl(struct {
         /// The name of the component whose declaration is being retrieved.
         name fuchsia.component.name;
@@ -532,7 +546,6 @@ protocol Realm {
     /// - A component added with a relative URL
     /// - An automatically generated realm (ex: the root)
     ///
-    ///
     /// Errors:
     /// - `NO_SUCH_CHILD`: This realm does not contain a child with the given
     ///   name.
@@ -542,11 +555,34 @@ protocol Realm {
     /// - `CHILD_DECL_NOT_VISIBLE`: The component decl cannot be manipulated for
     ///   the referenced child, because the child was added to the realm using
     ///   an absolute (not relative) and modern (not legacy) URL.
+    /// - `INVALID_COMPONENT_DECL`: `component_decl` failed validation.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
     ReplaceComponentDecl(struct {
         /// The name of the component whose declaration is being replaced.
         name fuchsia.component.name;
 
         /// The new component declaration for `name`.
+        component_decl fuchsia.component.decl.Component;
+    }) -> (struct {}) error RealmBuilderError2;
+
+    /// Returns the component decl for this realm.
+    ///
+    /// Errors:
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
+    GetRealmDecl() -> (struct {
+        component_decl fuchsia.component.decl.Component;
+    }) error RealmBuilderError2;
+
+    /// Replaces the component decl for this realm.
+    ///
+    /// Errors:
+    /// - `INVALID_COMPONENT_DECL`: `component_decl` failed validation.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
+    ReplaceRealmDecl(struct {
+        /// The new component declaration for this realm.
         component_decl fuchsia.component.decl.Component;
     }) -> (struct {}) error RealmBuilderError2;
 
@@ -563,6 +599,8 @@ protocol Realm {
     ///   `to`.
     /// - `INVALID_COMPONENT_DECL`: The requested route caused one of the
     ///   involved manifests to fail validation.
+    /// - `BUILD_ALREADY_CALLED`: The `Builder.Build` function has been called
+    ///   for this realm, and thus this `Realm` channel can no longer be used.
     AddRoute(struct {
         /// The capabilities that are to be routed.
         capabilities vector<Capability2>:MAX;
