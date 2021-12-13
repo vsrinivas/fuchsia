@@ -59,5 +59,10 @@
         "log_settings": {
             "max_severity": "FATAL"
         }
+    },
+    {
+        "archive_name": "driver_test_realm_cts_test",
+        "component_name": "driver_test_realm_cts_test.cm",
+        "package": "driver_test_realm_cts_test"
     }
 ]

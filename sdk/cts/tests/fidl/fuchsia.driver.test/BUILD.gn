@@ -35,3 +35,8 @@ cts_fuchsia_test_package("driver_test_realm_cts_test") {
   test_components = [ ":component" ]
   package_deps_for_infra_only = [ "//sdk/lib/driver_test_realm:package" ]
 }
+
+sdk_molecule("test_sdks") {
+  testonly = true
+  deps = [ ":driver_test_realm_cts_test_sdk" ]
+}

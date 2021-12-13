@@ -23,6 +23,7 @@ sdk_molecule("test_sdks") {
   deps = [
     ":build_sdk",
     "fuchsia.diagnostics:test_sdks",
+    "fuchsia.driver.test:test_sdks",
     "fuchsia.element:test_sdks",
     "fuchsia.hwinfo:test_sdks",
     "fuchsia.settings:test_sdks",
