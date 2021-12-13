@@ -22,7 +22,7 @@
 ##    This file is the image to be loaded into RAM and jumped to. When using QEMU,
 ##    pass this file to the VM instance using the -kernel option.
 ## 2) fuchsia-ssh.zbi
-##    This file is the image to used as the initial ramdisk for the VM. When using QEMU,
+##    This file is the image to be used as the initial ramdisk for the VM. When using QEMU,
 ##    pass this file to the VM instance using the -initrd option.
 ## 3) fvm_raw.blk
 ##    This file is the initial raw image of the block device for the VM.  It is
