@@ -15,7 +15,11 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
     ]
     test_deps = [ "//third_party/rust_crates:tempfile" ]
-    sources = [ "src/lib.rs" ]
+    sources = [
+      "src/lib.rs",
+      "src/meta_package.rs",
+      "src/path_to_string.rs",
+    ]
   }
 }
 
