@@ -175,7 +175,6 @@ func clearEnvVars() {
 	os.Unsetenv("_EXPECTED_FFX_REPOSITORY_REGISTER_ARGS")
 	os.Unsetenv("FSERVE_EXPECTED_ARGS")
 	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DATA")
-	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE")
 	os.Unsetenv("_FAKE_FFX_TARGET_DEFAULT")
 	os.Unsetenv("_FAKE_FFX_TARGET_LIST")
 	os.Unsetenv("_FAKE_FFX_GET_SSH_ADDRESS")
@@ -770,8 +769,6 @@ func TestMain(t *testing.T) {
 		testName                          string
 		args                              []string
 		deviceConfiguration               string
-		defaultConfigDevice               string
-		ffxDefaultDevice                  string
 		ffxTargetList                     string
 		ffxTargetDefault                  string
 		ffxConfigServerMode               string
@@ -900,7 +897,6 @@ func TestMain(t *testing.T) {
 			ffxTargetList:  `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 			deviceConfiguration: `
 			{
-				"_DEFAULT_DEVICE_":"remote-target-name",
 				"remote-target-name": {
 					"bucket":"fuchsia-bucket",
 					"device-name":"remote-target-name",
@@ -919,7 +915,7 @@ func TestMain(t *testing.T) {
 				}
 			}`,
 			ffxTargetGetSSHAddress:  `[::1f]:2202`,
-			defaultConfigDevice:     "\"remote-target-name\"",
+			ffxTargetDefault:        "remote-target-name",
 			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig  -p 2202 -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -p 2202 -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
@@ -932,7 +928,6 @@ func TestMain(t *testing.T) {
 			ffxTargetGetSSHAddress: `[::ff]:22`,
 			deviceConfiguration: `
 			{
-				"_DEFAULT_DEVICE_":"remote-target-name",
 				"remote-target-name":{
 					"bucket":"fuchsia-bucket",
 					"device-name":"remote-target-name",
@@ -950,7 +945,7 @@ func TestMain(t *testing.T) {
 					"default": "false"
 				}
 			}`,
-			defaultConfigDevice:     "\"remote-target-name\"",
+			ffxTargetDefault:        "remote-target-name",
 			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::ff pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::ff pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
@@ -1012,7 +1007,6 @@ func TestMain(t *testing.T) {
 			ffxTargetList: `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 			deviceConfiguration: `
 			{
-				"_DEFAULT_DEVICE_":"remote-target-name",
 				"remote-target-name":{
 					"bucket":"fuchsia-bucket",
 					"device-name":"remote-target-name",
@@ -1031,7 +1025,7 @@ func TestMain(t *testing.T) {
 				}
 			}`,
 			ffxTargetGetSSHAddress:            `[::1f]:2202`,
-			defaultConfigDevice:               "\"remote-target-name\"",
+			ffxTargetDefault:                  "remote-target-name",
 			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm --repository devhost " + filepath.Join(dataDir, "remote-target-name/packages/amber-files"),
 			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target [::1f]:2202 target repository register --repository devhost --alias fuchsia.com",
 		},
@@ -1092,7 +1086,6 @@ func TestMain(t *testing.T) {
 			os.Setenv("_EXPECTED_FFX_REPOSITORY_REGISTER_ARGS", test.expectedFFXRepositoryRegisterArgs)
 			os.Setenv("FSERVE_EXPECTED_ARGS", test.expectedPMArgs)
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
-			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
 			os.Setenv("_FAKE_FFX_CONFIG_GET_SERVER_MODE", test.ffxConfigServerMode)
@@ -1240,9 +1233,6 @@ func fakeFFX(args []string) {
 	if args[0] == "config" && args[1] == "get" {
 		if args[2] == "DeviceConfiguration" {
 			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
-			os.Exit(0)
-		} else if args[2] == "DeviceConfiguration._DEFAULT_DEVICE_" {
-			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE"))
 			os.Exit(0)
 		} else if args[2] == "DeviceConfiguration.remote-target-name" {
 			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)

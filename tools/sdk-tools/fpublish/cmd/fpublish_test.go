@@ -138,9 +138,6 @@ func handleFakeFFX(args []string) {
 		if args[2] == "DeviceConfiguration" {
 			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DATA"))
 			os.Exit(0)
-		} else if args[2] == "DeviceConfiguration._DEFAULT_DEVICE_" {
-			fmt.Printf(os.Getenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE"))
-			os.Exit(0)
 		} else if args[2] == "DeviceConfiguration.remote-target-name" {
 			fmt.Println(`{"bucket":"","device-ip":"","device-name":"remote-target-name","image":"","package-port":"","package-repo":"/some/custom/repo/path","ssh-port":""}`)
 			os.Exit(0)
@@ -172,7 +169,6 @@ func handleFakeFFX(args []string) {
 func clearEnvVars() {
 	os.Unsetenv("TEST_EXPECTED_ARGS")
 	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DATA")
-	os.Unsetenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE")
 	os.Unsetenv("_FAKE_FFX_TARGET_DEFAULT")
 	os.Unsetenv("_FAKE_FFX_TARGET_LIST")
 	os.Unsetenv("_FAKE_FFX_GET_SSH_ADDRESS")
@@ -195,8 +191,6 @@ func TestMain(t *testing.T) {
 		name                   string
 		args                   []string
 		deviceConfiguration    string
-		defaultConfigDevice    string
-		ffxDefaultDevice       string
 		ffxTargetList          string
 		ffxTargetGetSSHAddress string
 		ffxTargetDefault       string
@@ -216,7 +210,6 @@ func TestMain(t *testing.T) {
 			ffxTargetList: `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]},
 			{"nodename":"test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::ff"]}]`,
 			deviceConfiguration: `{
-			"_DEFAULT_DEVICE_":"remote-target-name",
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
 				"device-name":"remote-target-name",
@@ -235,7 +228,7 @@ func TestMain(t *testing.T) {
 			}
 			}`,
 			ffxTargetGetSSHAddress: `[::ff]:22`,
-			defaultConfigDevice:    "\"remote-target-name\"",
+			ffxTargetDefault:       "remote-target-name",
 		},
 		{
 			name:          "Using a device that is discoverable but isn't saved in fconfig by passing the --device-name to fpublish",
@@ -243,7 +236,6 @@ func TestMain(t *testing.T) {
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", filepath.Join(dataDir, "test-device", "packages/amber-files"), "-f", "package.far"},
 			ffxTargetList: `[{"nodename":"test-device","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 			deviceConfiguration: `{
-			"_DEFAULT_DEVICE_":"remote-target-name",
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
 				"device-name":"remote-target-name",
@@ -262,7 +254,7 @@ func TestMain(t *testing.T) {
 			}
 			}`,
 			ffxTargetGetSSHAddress: `[::1f]:22`,
-			defaultConfigDevice:    "\"remote-target-name\"",
+			ffxTargetDefault:       "remote-target-name",
 		},
 		{
 			name:          "Using the default device from fconfig",
@@ -270,7 +262,6 @@ func TestMain(t *testing.T) {
 			expectedArgs:  []string{"publish", "-n", "-a", "-r", "/some/custom/repo/path", "-f", "package.far"},
 			ffxTargetList: `[{"nodename":"remote-target-name","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 			deviceConfiguration: `{
-			"_DEFAULT_DEVICE_":"remote-target-name",
 			"remote-target-name":{
 				"bucket":"fuchsia-bucket",
 				"device-ip":"::1f",
@@ -291,7 +282,7 @@ func TestMain(t *testing.T) {
 			}
 			}`,
 			ffxTargetGetSSHAddress: `[::1f]:22`,
-			defaultConfigDevice:    "\"remote-target-name\"",
+			ffxTargetDefault:       "remote-target-name",
 		},
 	}
 	for _, test := range tests {
@@ -300,7 +291,6 @@ func TestMain(t *testing.T) {
 			os.Args = test.args
 			os.Setenv("TEST_EXPECTED_ARGS", strings.Join(test.expectedArgs, ","))
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
-			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
 			os.Setenv("_FAKE_FFX_TARGET_DEFAULT", test.ffxTargetDefault)
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
 			os.Setenv("_FAKE_FFX_GET_SSH_ADDRESS", test.ffxTargetGetSSHAddress)
