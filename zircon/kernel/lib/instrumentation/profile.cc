@@ -57,7 +57,7 @@ InstrumentationDataVmo LlvmProfdataVmo() {
 
   // Now map in just the pages holding the counters.  This mapping will be kept
   // alive permanently so the live counters can be updated through it.
-  const uint64_t map_offset = ROUNDDOWN(profdata.counters_offset(), ZX_PAGE_SIZE);
+  const uint64_t map_offset = ROUNDDOWN(profdata.counters_offset(), PAGE_SIZE);
   const size_t map_size =
       ROUNDUP_PAGE_SIZE(profdata.counters_offset() + profdata.counters_size_bytes()) - map_offset;
   status = gProfdataCounters.Init(ktl::move(vmo), map_offset, map_size, "llvm-profdata-counters");

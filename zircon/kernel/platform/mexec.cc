@@ -32,7 +32,7 @@ namespace {
 zbitl::Image<fbl::Array<ktl::byte>> gImageAtHandoff;
 
 void ConstructMexecDataZbi(uint level) {
-  constexpr size_t kInitialBuffSize = ZX_PAGE_SIZE;
+  constexpr size_t kInitialBuffSize = PAGE_SIZE;
 
   ZX_ASSERT(!gImageAtHandoff.storage());
   {
