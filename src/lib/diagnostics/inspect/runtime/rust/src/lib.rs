@@ -11,7 +11,7 @@ use fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE}
 use fuchsia_component::server::{ServiceFs, ServiceObjTrait};
 use fuchsia_inspect::{Error, Inspector};
 use futures::prelude::*;
-use tracing::error;
+use tracing::warn;
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
     pseudo_directory, service as pseudo_fs_service,
@@ -42,7 +42,7 @@ pub fn serve_with_options<'a, ServiceObjTy: ServiceObjTrait>(
                     inspector, options, stream
                     )
                     .await
-                    .unwrap_or_else(|e| error!("failed to run server: {:?}", e));
+                    .unwrap_or_else(|e| warn!("failed to run server: {:?}", e));
             }
             .boxed()
         }),
