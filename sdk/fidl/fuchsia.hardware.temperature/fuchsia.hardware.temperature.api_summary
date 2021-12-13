@@ -1,3 +1,0 @@
-protocol/member fuchsia.hardware.temperature/Device.GetTemperatureCelsius() -> (int32 status,float32 temp)
-protocol fuchsia.hardware.temperature/Device
-library fuchsia.hardware.temperature

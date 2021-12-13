@@ -1,8 +1,0 @@
-bits/member fuchsia.opencl.loader/Features.CONNECT_TO_DEVICE_FS 2
-bits/member fuchsia.opencl.loader/Features.GET 1
-flexible bits fuchsia.opencl.loader/Features uint32
-protocol/member fuchsia.opencl.loader/Loader.ConnectToDeviceFs(zx/handle:CHANNEL channel)
-protocol/member fuchsia.opencl.loader/Loader.Get(string:64 name) -> (zx/handle:<VMO,optional> lib)
-protocol/member fuchsia.opencl.loader/Loader.GetSupportedFeatures() -> (fuchsia.opencl.loader/Features features)
-protocol fuchsia.opencl.loader/Loader
-library fuchsia.opencl.loader

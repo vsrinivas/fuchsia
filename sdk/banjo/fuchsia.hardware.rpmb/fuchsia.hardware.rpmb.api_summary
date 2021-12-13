@@ -1,3 +1,0 @@
-protocol/member fuchsia.hardware.rpmb/Rpmb.ConnectServer(zx/handle:CHANNEL server) -> ()
-protocol fuchsia.hardware.rpmb/Rpmb
-library fuchsia.hardware.rpmb

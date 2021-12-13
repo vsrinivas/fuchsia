@@ -1,3 +1,0 @@
-protocol/member fuchsia.hardware.goldfish.sync/GoldfishSync.CreateTimeline(zx/handle:CHANNEL timeline_req) -> (int32 s)
-protocol fuchsia.hardware.goldfish.sync/GoldfishSync
-library fuchsia.hardware.goldfish.sync

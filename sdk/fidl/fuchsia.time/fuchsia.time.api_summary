@@ -1,3 +1,0 @@
-protocol/member fuchsia.time/Maintenance.GetWritableUtcClock() -> (zx/handle:CLOCK utc_clock)
-protocol fuchsia.time/Maintenance
-library fuchsia.time

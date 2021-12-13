@@ -1,3 +1,0 @@
-protocol/member fuchsia.hardware.securemem/Device.GetSecureMemoryPhysicalAddress(zx/handle:VMO secure_mem) -> (int32 s,uint64 paddr)
-protocol fuchsia.hardware.securemem/Device
-library fuchsia.hardware.securemem

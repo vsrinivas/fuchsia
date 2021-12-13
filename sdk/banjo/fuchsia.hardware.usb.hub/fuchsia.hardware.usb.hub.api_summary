@@ -1,3 +1,0 @@
-protocol/member fuchsia.hardware.usb.hub/UsbHubInterface.ResetPort(uint32 port) -> (int32 s)
-protocol fuchsia.hardware.usb.hub/UsbHubInterface
-library fuchsia.hardware.usb.hub
