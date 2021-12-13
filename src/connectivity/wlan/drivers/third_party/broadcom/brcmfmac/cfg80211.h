@@ -554,7 +554,8 @@ void brcmf_if_disassoc_req(net_device* ndev, const wlanif_disassoc_req_t* req);
 void brcmf_if_reset_req(net_device* ndev, const wlanif_reset_req_t* req);
 void brcmf_if_start_req(net_device* ndev, const wlanif_start_req_t* req);
 void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req);
-void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req);
+void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req,
+                           wlanif_set_keys_resp_t* resp);
 void brcmf_if_del_keys_req(net_device* ndev, const wlanif_del_keys_req_t* req);
 void brcmf_if_eapol_req(net_device* ndev, const wlanif_eapol_req_t* req);
 void brcmf_if_stats_query_req(net_device* ndev);

@@ -68,7 +68,7 @@ class WlanInterface {
   void ResetReq(const wlanif_reset_req_t* req);
   void StartReq(const wlanif_start_req_t* req);
   void StopReq(const wlanif_stop_req_t* req);
-  void SetKeysReq(const wlanif_set_keys_req_t* req);
+  void SetKeysReq(const wlanif_set_keys_req_t* req, wlanif_set_keys_resp_t* resp);
   void DelKeysReq(const wlanif_del_keys_req_t* req);
   void EapolReq(const wlanif_eapol_req_t* req);
   void StatsQueryReq();

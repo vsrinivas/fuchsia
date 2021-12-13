@@ -93,8 +93,8 @@ wlanif_impl_protocol_ops_t wlan_interface_proto_ops = {
           return static_cast<WlanInterface*>(ctx)->StopReq(req);
         },
     .set_keys_req =
-        [](void* ctx, const wlanif_set_keys_req* req) {
-          return static_cast<WlanInterface*>(ctx)->SetKeysReq(req);
+        [](void* ctx, const wlanif_set_keys_req* req, wlanif_set_keys_resp* resp) {
+          return static_cast<WlanInterface*>(ctx)->SetKeysReq(req, resp);
         },
     .del_keys_req =
         [](void* ctx, const wlanif_del_keys_req* req) {
@@ -335,10 +335,10 @@ void WlanInterface::StopReq(const wlanif_stop_req_t* req) {
   }
 }
 
-void WlanInterface::SetKeysReq(const wlanif_set_keys_req_t* req) {
+void WlanInterface::SetKeysReq(const wlanif_set_keys_req_t* req, wlanif_set_keys_resp_t* resp) {
   std::shared_lock<std::shared_mutex> guard(lock_);
   if (wdev_ != nullptr) {
-    brcmf_if_set_keys_req(wdev_->netdev, req);
+    brcmf_if_set_keys_req(wdev_->netdev, req, resp);
   }
 }
 

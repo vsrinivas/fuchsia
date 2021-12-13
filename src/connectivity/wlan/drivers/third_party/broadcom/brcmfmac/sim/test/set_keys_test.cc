@@ -8,6 +8,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
+#include "zircon/errors.h"
 
 namespace wlan::brcmfmac {
 
@@ -40,7 +41,8 @@ wlanif_set_keys_req FakeSetKeysRequest(const uint8_t keys[][WLAN_MAX_KEY_LEN], s
 TEST_F(SetKeysTest, MultipleKeys) {
   const uint8_t keys[WLAN_MAX_KEYLIST_SIZE][WLAN_MAX_KEY_LEN] = {"One", "Two", "Three", "Four"};
   wlanif_set_keys_req set_keys_req = FakeSetKeysRequest(keys, WLAN_MAX_KEYLIST_SIZE);
-  client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req);
+  wlanif_set_keys_resp set_keys_resp;
+  client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req, &set_keys_resp);
 
   std::vector<brcmf_wsec_key_le> firmware_keys =
       device_->GetSim()->sim_fw->GetKeyList(client_ifc_.iface_id_);
@@ -49,6 +51,10 @@ TEST_F(SetKeysTest, MultipleKeys) {
   EXPECT_STREQ(reinterpret_cast<const char*>(firmware_keys[1].data), "Two");
   EXPECT_STREQ(reinterpret_cast<const char*>(firmware_keys[2].data), "Three");
   EXPECT_STREQ(reinterpret_cast<const char*>(firmware_keys[3].data), "Four");
+  ASSERT_EQ(set_keys_resp.num_keys, WLAN_MAX_KEYLIST_SIZE);
+  for (auto status : set_keys_resp.statuslist) {
+    ASSERT_EQ(status, ZX_OK);
+  }
 }
 
 // Ensure that group key is set correctly by the driver in firmware.
@@ -75,7 +81,11 @@ TEST_F(SetKeysTest, SetGroupKey) {
               },
           },
   };
-  client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &key_req);
+  wlanif_set_keys_resp set_keys_resp;
+  client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &key_req, &set_keys_resp);
+  ASSERT_EQ(set_keys_resp.num_keys, 2ul);
+  ASSERT_EQ(set_keys_resp.statuslist[0], ZX_OK);
+  ASSERT_EQ(set_keys_resp.statuslist[1], ZX_OK);
 
   std::vector<brcmf_wsec_key_le> firmware_keys =
       device_->GetSim()->sim_fw->GetKeyList(client_ifc_.iface_id_);

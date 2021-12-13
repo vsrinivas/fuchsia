@@ -285,7 +285,10 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     case SEC_TYPE_WEP_SHARED104: {
       wlanif_set_keys_req set_keys_req =
           CreateKeyReq(&test_key13[0], kWEP104KeyLen, WPA_CIPHER_WEP_104);
-      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req);
+      wlanif_set_keys_resp set_keys_resp;
+      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
+                                             &set_keys_resp);
+      EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
       auth_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
       break;
     }
@@ -293,7 +296,10 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     case SEC_TYPE_WEP_SHARED40: {
       wlanif_set_keys_req set_keys_req =
           CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
-      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req);
+      wlanif_set_keys_resp set_keys_resp;
+      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
+                                             &set_keys_resp);
+      EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
       auth_req.auth_type = WLAN_AUTH_TYPE_SHARED_KEY;
       break;
     }
@@ -301,7 +307,10 @@ void AuthTest::OnJoinConf(const wlanif_join_confirm_t* resp) {
     case SEC_TYPE_WEP_OPEN: {
       wlanif_set_keys_req set_keys_req =
           CreateKeyReq(&test_key5[0], kWEP40KeyLen, WPA_CIPHER_WEP_40);
-      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req);
+      wlanif_set_keys_resp set_keys_resp;
+      client_ifc_.if_impl_ops_->set_keys_req(client_ifc_.if_impl_ctx_, &set_keys_req,
+                                             &set_keys_resp);
+      EXPECT_EQ(set_keys_resp.statuslist[0], ZX_OK);
       auth_req.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
       break;
     }

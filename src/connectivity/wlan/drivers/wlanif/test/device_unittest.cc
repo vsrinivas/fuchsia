@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <zircon/errors.h>
 
 #include <functional>
 #include <memory>
@@ -25,6 +26,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "fuchsia/hardware/wlan/fullmac/c/banjo.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace wlan_internal = ::fuchsia::wlan::internal;
@@ -175,7 +177,8 @@ wlanif_impl_protocol_ops_t EmptyProtoOps() {
       .reset_req = [](void* ctx, const wlanif_reset_req_t* req) {},
       .start_req = [](void* ctx, const wlanif_start_req_t* req) {},
       .stop_req = [](void* ctx, const wlanif_stop_req_t* req) {},
-      .set_keys_req = [](void* ctx, const wlanif_set_keys_req_t* req) {},
+      .set_keys_req = [](void* ctx, const wlanif_set_keys_req_t* req,
+                         wlanif_set_keys_resp_t* resp) {},
       .del_keys_req = [](void* ctx, const wlanif_del_keys_req_t* req) {},
       .eapol_req = [](void* ctx, const wlanif_eapol_req_t* req) {},
   };
@@ -476,7 +479,142 @@ TEST(AssocReqHandling, MultipleAssocReq) {
   device->Unbind();
 }
 
-struct EthernetTestFixture : public ::gtest::TestLoopFixture {
+struct DeviceTestFixture : public ::gtest::TestLoopFixture {
+  void InitDevice();
+  void TearDown() override {
+    device_->Unbind();
+    TestLoopFixture::TearDown();
+  }
+  zx_status_t HookStart(const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
+    auto [new_sme, new_mlme] = make_channel();
+
+    zx_status_t status = mlme_.Bind(std::move(new_sme), dispatcher());
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    wlanif_impl_ifc_ = *ifc;
+    *out_mlme_channel = new_mlme.release();
+    return ZX_OK;
+  }
+  std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
+  wlanif_impl_protocol_ops_t proto_ops_ = EmptyProtoOps();
+  wlanif_impl_protocol_t proto_{.ops = &proto_ops_, .ctx = this};
+  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
+  wlanif::Device* device_{new wlanif::Device(parent_.get(), proto_)};
+  wlanif_impl_ifc_protocol_t wlanif_impl_ifc_{};
+
+  fuchsia::wlan::mlme::MLMEPtr mlme_;
+};
+
+#define DEV(c) static_cast<DeviceTestFixture*>(c)
+static zx_status_t hook_start(void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
+                              zx_handle_t* out_mlme_channel) {
+  return DEV(ctx)->HookStart(ifc, out_mlme_channel);
+}
+#undef DEV
+
+void DeviceTestFixture::InitDevice() {
+  proto_ops_.start = hook_start;
+  ASSERT_EQ(device_->Bind(), ZX_OK);
+}
+
+TEST_F(DeviceTestFixture, SetKeysSuccess) {
+  InitDevice();
+  proto_ops_.set_keys_req = [](void* ctx, const wlanif_set_keys_req_t* req,
+                               wlanif_set_keys_resp_t* out_resp) {
+    for (size_t key_num = 0; key_num < req->num_keys; key_num++) {
+      out_resp->statuslist[key_num] = ZX_OK;
+    }
+    out_resp->num_keys = req->num_keys;
+  };
+  fuchsia::wlan::mlme::SetKeysConfirm conf;
+  mlme_.events().SetKeysConf = [&](fuchsia::wlan::mlme::SetKeysConfirm set_keys_conf) {
+    conf = std::move(set_keys_conf);
+  };
+  fuchsia::wlan::mlme::SetKeysRequest req{
+      .keylist = {fuchsia::wlan::mlme::SetKeyDescriptor{
+                      .key_id = 1,
+                      .key_type = fuchsia::wlan::mlme::KeyType::GROUP,
+                  },
+                  fuchsia::wlan::mlme::SetKeyDescriptor{
+                      .key_id = 2,
+                      .key_type = fuchsia::wlan::mlme::KeyType::GROUP,
+                  }},
+  };
+  device_->SetKeysReq(req);
+  RunLoopUntilIdle();
+  ASSERT_EQ(conf.results.size(), 2ul);
+  ASSERT_EQ(conf.results[0].key_id, 1);
+  ASSERT_EQ(conf.results[0].status, ZX_OK);
+  ASSERT_EQ(conf.results[1].key_id, 2);
+  ASSERT_EQ(conf.results[1].status, ZX_OK);
+}
+
+TEST_F(DeviceTestFixture, SetKeysPartialFailure) {
+  InitDevice();
+  proto_ops_.set_keys_req = [](void* ctx, const wlanif_set_keys_req_t* req,
+                               wlanif_set_keys_resp_t* out_resp) {
+    for (size_t key_num = 0; key_num < req->num_keys; key_num++) {
+      if (req->keylist[key_num].key_id == 1) {
+        out_resp->statuslist[key_num] = ZX_ERR_INTERNAL;
+      } else {
+        out_resp->statuslist[key_num] = ZX_OK;
+      }
+    }
+    out_resp->num_keys = req->num_keys;
+  };
+  fuchsia::wlan::mlme::SetKeysConfirm conf;
+  mlme_.events().SetKeysConf = [&](fuchsia::wlan::mlme::SetKeysConfirm set_keys_conf) {
+    conf = std::move(set_keys_conf);
+  };
+  fuchsia::wlan::mlme::SetKeysRequest req{
+      .keylist = {fuchsia::wlan::mlme::SetKeyDescriptor{
+                      .key_id = 0,
+                      .key_type = fuchsia::wlan::mlme::KeyType::PEER_KEY,
+                  },
+                  fuchsia::wlan::mlme::SetKeyDescriptor{
+                      .key_id = 1,
+                      .key_type = fuchsia::wlan::mlme::KeyType::GROUP,
+                  },
+                  fuchsia::wlan::mlme::SetKeyDescriptor{
+                      .key_id = 2,
+                      .key_type = fuchsia::wlan::mlme::KeyType::GROUP,
+                  }},
+  };
+  device_->SetKeysReq(req);
+  RunLoopUntilIdle();
+  ASSERT_EQ(conf.results.size(), 3ul);
+  ASSERT_EQ(conf.results[0].key_id, 0);
+  ASSERT_EQ(conf.results[0].status, ZX_OK);
+  ASSERT_EQ(conf.results[1].key_id, 1);
+  ASSERT_EQ(conf.results[1].status, ZX_ERR_INTERNAL);
+  ASSERT_EQ(conf.results[2].key_id, 2);
+  ASSERT_EQ(conf.results[2].status, ZX_OK);
+}
+
+TEST_F(DeviceTestFixture, SetKeysTooLarge) {
+  InitDevice();
+  fuchsia::wlan::mlme::SetKeysConfirm conf;
+  mlme_.events().SetKeysConf = [&](fuchsia::wlan::mlme::SetKeysConfirm set_keys_conf) {
+    conf = std::move(set_keys_conf);
+  };
+  fuchsia::wlan::mlme::SetKeysRequest req;
+  for (uint16_t i = 0; i < static_cast<uint16_t>(WLAN_MAX_KEYLIST_SIZE) + 1; i++) {
+    req.keylist.push_back(fuchsia::wlan::mlme::SetKeyDescriptor{
+        .key_id = i,
+        .key_type = fuchsia::wlan::mlme::KeyType::GROUP,
+    });
+  }
+  device_->SetKeysReq(req);
+  RunLoopUntilIdle();
+  ASSERT_EQ(conf.results.size(), WLAN_MAX_KEYLIST_SIZE + 1);
+  for (size_t i = 0; i < WLAN_MAX_KEYLIST_SIZE + 1; i++) {
+    EXPECT_EQ(conf.results[i].status, ZX_ERR_INVALID_ARGS);
+  }
+}
+
+struct EthernetTestFixture : public DeviceTestFixture {
   void TestEthernetAgainstRole(wlan_info_mac_role_t role);
   void InitDeviceWithRole(wlan_info_mac_role_t role);
   void SetEthernetOnline(uint32_t expected_status = ETHERNET_STATUS_ONLINE) {
@@ -490,47 +628,16 @@ struct EthernetTestFixture : public ::gtest::TestLoopFixture {
     ASSERT_EQ(ethernet_status_, expected_status);
   }
 
-  void TearDown() override {
-    device_->Unbind();
-    TestLoopFixture::TearDown();
-  }
-
-  zx_status_t HookStart(const wlanif_impl_ifc_protocol_t* ifc, zx_handle_t* out_mlme_channel) {
-    auto [new_sme, new_mlme] = make_channel();
-
-    zx_status_t status = mlme_.Bind(std::move(new_sme), dispatcher());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    wlanif_impl_ifc_ = *ifc;
-    *out_mlme_channel = new_mlme.release();
-    return ZX_OK;
-  }
-
-  std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
-  wlanif_impl_protocol_ops_t proto_ops_ = EmptyProtoOps();
-  wlanif_impl_protocol_t proto_{.ops = &proto_ops_, .ctx = this};
-  // The parent calls release on this pointer which will delete it so don't delete it or manage it.
-  wlanif::Device* device_{new wlanif::Device(parent_.get(), proto_)};
   ethernet_ifc_protocol_ops_t eth_ops_{};
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
-  wlanif_impl_ifc_protocol_t wlanif_impl_ifc_{};
   wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
   uint32_t ethernet_status_{0};
   uint32_t driver_features_{0};
   std::optional<bool> link_state_;
   std::function<void(const wlanif_start_req_t*)> start_req_cb_;
-
-  fuchsia::wlan::mlme::MLMEPtr mlme_;
 };
 
 #define ETH_DEV(c) static_cast<EthernetTestFixture*>(c)
-static zx_status_t hook_start(void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
-                              zx_handle_t* out_mlme_channel) {
-  return ETH_DEV(ctx)->HookStart(ifc, out_mlme_channel);
-}
-
 static void hook_query(void* ctx, wlanif_query_info_t* info) {
   info->role = ETH_DEV(ctx)->role_;
   info->driver_features = ETH_DEV(ctx)->driver_features_;

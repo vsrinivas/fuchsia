@@ -501,21 +501,53 @@ void Device::StopReq(wlan_mlme::StopRequest req) {
 }
 
 void Device::SetKeysReq(wlan_mlme::SetKeysRequest req) {
-  wlanif_set_keys_req_t impl_req = {};
+  std::lock_guard<std::mutex> lock(lock_);
+  if (binding_ == nullptr) {
+    return;
+  }
 
-  // keylist
+  wlanif_set_keys_req_t impl_req = {};
+  wlanif_set_keys_resp_t impl_resp = {};
+
+  // Abort if too many keys sent.
   size_t num_keys = req.keylist.size();
   if (num_keys > WLAN_MAX_KEYLIST_SIZE) {
-    lwarn("truncating key list from %zu to %d members\n", num_keys, WLAN_MAX_KEYLIST_SIZE);
-    impl_req.num_keys = WLAN_MAX_KEYLIST_SIZE;
-  } else {
-    impl_req.num_keys = num_keys;
+    lerror("Key list with length %zu exceeds maximum size %d", num_keys, WLAN_MAX_KEYLIST_SIZE);
+    std::vector<wlan_mlme::SetKeyResult> results;
+    for (size_t result_idx = 0; result_idx < num_keys; result_idx++) {
+      results.push_back(wlan_mlme::SetKeyResult{
+          .key_id = req.keylist[result_idx].key_id,
+          .status = ZX_ERR_INVALID_ARGS,
+      });
+    }
+    wlan_mlme::SetKeysConfirm fidl_err_conf{.results = results};
+    binding_->events().SetKeysConf(std::move(fidl_err_conf));
+    return;
   }
+
+  impl_req.num_keys = num_keys;
   for (size_t desc_ndx = 0; desc_ndx < num_keys; desc_ndx++) {
     ConvertSetKeyDescriptor(&impl_req.keylist[desc_ndx], req.keylist[desc_ndx]);
   }
 
-  wlanif_impl_set_keys_req(&wlanif_impl_, &impl_req);
+  wlanif_impl_set_keys_req(&wlanif_impl_, &impl_req, &impl_resp);
+
+  auto num_results = impl_resp.num_keys;
+  if (num_keys != num_results) {
+    lerror("SetKeyReq count (%zu) and SetKeyResp count (%zu) do not agree", num_keys, num_results);
+    return;
+  }
+
+  std::vector<wlan_mlme::SetKeyResult> results;
+  for (size_t result_idx = 0; result_idx < impl_resp.num_keys; result_idx++) {
+    results.push_back(wlan_mlme::SetKeyResult{
+        .key_id = impl_req.keylist[result_idx].key_id,
+        .status = impl_resp.statuslist[result_idx],
+    });
+  }
+
+  wlan_mlme::SetKeysConfirm fidl_conf{.results = results};
+  binding_->events().SetKeysConf(std::move(fidl_conf));
 }
 
 void Device::DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) {

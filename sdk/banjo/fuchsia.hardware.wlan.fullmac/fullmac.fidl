@@ -150,6 +150,11 @@ type WlanifSetKeysReq = struct {
     keylist array<SetKeyDescriptor, WLAN_MAX_KEYLIST_SIZE>;
 };
 
+type WlanifSetKeysResp = struct {
+    num_keys uint64;
+    statuslist array<int32, WLAN_MAX_KEYLIST_SIZE>;
+};
+
 type DeleteKeyDescriptor = struct {
     key_id uint16;
     key_type fuchsia.hardware.wlanassocinfo.WlanKeyType;
@@ -778,7 +783,9 @@ protocol WlanifImpl {
     }) -> ();
     SetKeysReq(struct {
         req WlanifSetKeysReq;
-    }) -> ();
+    }) -> (struct {
+        resp WlanifSetKeysResp;
+    });
     DelKeysReq(struct {
         req WlanifDelKeysReq;
     }) -> ();

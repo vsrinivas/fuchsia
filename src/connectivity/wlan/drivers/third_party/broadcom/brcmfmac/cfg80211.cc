@@ -3694,16 +3694,18 @@ void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req) {
   wlanif_impl_ifc_stop_conf(&ndev->if_proto, &result);
 }
 
-void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req) {
+void brcmf_if_set_keys_req(net_device* ndev, const wlanif_set_keys_req_t* req,
+                           wlanif_set_keys_resp_t* resp) {
   BRCMF_IFDBG(WLANIF, ndev, "Set keys request from SME. num_keys: %zu", req->num_keys);
   zx_status_t result;
 
+  resp->num_keys = req->num_keys;
   for (size_t i = 0; i < req->num_keys; i++) {
     result = brcmf_cfg80211_add_key(ndev, &req->keylist[i]);
     if (result != ZX_OK) {
       BRCMF_WARN("Error setting key %zu: %s.", i, zx_status_get_string(result));
     }
-    // TODO(fxbug.dev/87211): Return a SetKeysConfirm to SME.
+    resp->statuslist[i] = result;
   }
 }
 
