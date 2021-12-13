@@ -85,34 +85,6 @@ EfiCrashlog efi;
 
 static bool early_console_disabled;
 
-// Copy ranges in the given ZBI into a newly-allocated array of zbi_mem_range_t structs.
-//
-// Allocation takes place from early booth memory, which cannot be released.
-static ktl::span<zbi_mem_range_t> get_memory_ranges(ktl::span<std::byte> zbi) {
-  zbitl::View zbi_view(zbitl::ByteView(zbi.data(), zbi.size()));
-  fitx::result<std::string_view, zbitl::MemRangeTable> range_table =
-      zbitl::MemRangeTable::FromView(zbi_view);
-  if (range_table.is_error()) {
-    panic("Failed to find memory information in ZBI: %*s\n",
-          static_cast<int>(range_table.error_value().size()), range_table.error_value().data());
-  }
-
-  // Allocate memory for the ranges.
-  size_t num_ranges = range_table->size();
-  zbi_mem_range_t* ranges =
-      reinterpret_cast<zbi_mem_range_t*>(boot_alloc_mem(sizeof(zbi_mem_range_t) * num_ranges));
-  ZX_ASSERT(ranges != nullptr);
-
-  // Itereate over the the range table (which converts the various memory range formats into
-  // zbi_mem_range_t), and make a copy.
-  size_t n = 0;
-  for (const zbi_mem_range_t& range : *range_table) {
-    ranges[n++] = range;
-  }
-  ZX_ASSERT(n == num_ranges);
-  return {ranges, num_ranges};
-}
-
 static void platform_save_bootloader_data(void) {
   if (gPhysHandoff->arch_handoff.acpi_rsdp) {
     bootloader.acpi_rsdp = gPhysHandoff->arch_handoff.acpi_rsdp.value();
@@ -161,9 +133,6 @@ static void platform_save_bootloader_data(void) {
   // is located in.
   auto phys = reinterpret_cast<uintptr_t>(view.storage().data());
   boot_alloc_reserve(phys, view.size_bytes());
-
-  // Save memory range information from the ZBI.
-  bootloader.memory_ranges = get_memory_ranges(zbi);
 }
 
 static void boot_reserve_zbi() {
@@ -265,27 +234,7 @@ void platform_init_crashlog(void) {
   PlatformCrashlog::Bind(crashlog_impls::efi);
 }
 
-zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
-  zbitl::Image image(data_zbi);
-  // The only possible storage error that can result from a span-backed Image
-  // would be a failure to increase the capacity.
-  auto error = [](const auto& image_error) -> zx_status_t {
-    return image_error.storage_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
-  };
-
-  // Append physical memory ranges.
-  if (!bootloader.memory_ranges.empty()) {
-    if (auto result = image.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG},
-                                   zbitl::AsBytes(bootloader.memory_ranges));
-        result.is_error()) {
-      printf("mexec: failed to append memory range metadata to data ZBI: ");
-      zbitl::PrintViewError(result.error_value());
-      return error(result.error_value());
-    }
-  }
-
-  return ZX_OK;
-}
+zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) { return ZX_OK; }
 
 // Number of pages required to identity map 8GiB of memory.
 constexpr size_t kBytesToIdentityMap = 8ull * GB;
@@ -410,7 +359,7 @@ void platform_early_init(void) {
   boot_reserve_zbi();
 
   /* initialize physical memory arenas */
-  pc_mem_init(bootloader.memory_ranges);
+  pc_mem_init(gPhysHandoff->mem_config.get());
 
   /* wire all of the reserved boot sections */
   boot_reserve_wire();

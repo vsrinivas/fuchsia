@@ -21,6 +21,7 @@
 #include <kernel/mutex.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
+#include <phys/handoff.h>
 #include <platform/pc/bootloader.h>
 
 class X86PciePlatformSupport : public PciePlatformInterface {
@@ -105,7 +106,7 @@ static void x86_pcie_init_hook(uint level) {
     return;
   }
 
-  for (const zbi_mem_range_t& range : bootloader.memory_ranges) {
+  for (const zbi_mem_range_t& range : gPhysHandoff->mem_config.get()) {
     zx_status_t result = pcie->SubtractBusRegion(range.paddr, range.length, PciAddrSpace::MMIO);
     if (result != ZX_OK) {
       // Woah, this is Very Bad!  If we failed to prohibit the PCIe bus

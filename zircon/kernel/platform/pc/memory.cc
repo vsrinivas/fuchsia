@@ -8,7 +8,6 @@
 #include <inttypes.h>
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/memory_limit.h>
-#include <lib/zbitl/items/mem-config.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <string.h>
@@ -72,7 +71,7 @@ void mark_pio_region_to_reserve(uint64_t base, size_t len) {
 #define DEFAULT_MEMEND (16 * 1024 * 1024)
 
 // Populate global memory arenas from the given memory ranges.
-static zx_status_t mem_arena_init(ktl::span<zbi_mem_range_t> ranges) {
+static zx_status_t mem_arena_init(ktl::span<const zbi_mem_range_t> ranges) {
   // Determine if the user has given us an artificial limit on the amount of memory we can use.
   bool have_limit = (memory_limit_init() == ZX_OK);
 
@@ -81,13 +80,8 @@ static zx_status_t mem_arena_init(ktl::span<zbi_mem_range_t> ranges) {
   snprintf(base_arena.name, sizeof(base_arena.name), "%s", "memory");
   base_arena.flags = 0;
 
-  // Iterate over the ranges, merging continguous ranges as we go.
-  //
-  // Some platforms gives us hundreds of entries (hitting a static ceiling in
-  // the arena code) that can be merged down to just a few. (c.f.
-  // http://fxbug.dev/66742).
-  zbitl::MemRangeMerger merged_ranges(ranges.begin(), ranges.end());
-  for (const zbi_mem_range_t& range : merged_ranges) {
+  LTRACEF("%zu memory ranges from physboot\n", ranges.size());
+  for (const zbi_mem_range_t& range : ranges) {
     LTRACEF("Range at %#" PRIx64 " of %#" PRIx64 " bytes is %smemory.\n", range.paddr, range.length,
             range.type == ZBI_MEM_RANGE_RAM ? "" : "not ");
     if (range.type != ZBI_MEM_RANGE_RAM) {
@@ -139,7 +133,7 @@ static zx_status_t mem_arena_init(ktl::span<zbi_mem_range_t> ranges) {
 }
 
 // Discover the basic memory map.
-void pc_mem_init(ktl::span<zbi_mem_range_t> ranges) {
+void pc_mem_init(ktl::span<const zbi_mem_range_t> ranges) {
   pmm_checker_init_from_cmdline();
 
   // If no ranges were provided, use a fixed-size fallback range.
