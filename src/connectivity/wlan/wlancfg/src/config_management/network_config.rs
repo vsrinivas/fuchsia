@@ -157,7 +157,7 @@ impl DisconnectList {
 /// Connection quality data related to RSSI
 #[derive(Clone, Debug, PartialEq)]
 pub struct RssiData {
-    pub rssi: f32,
+    pub ewma_rssi: f32,
     pub velocity: f32,
 }
 /// Used to allow hidden probability calculations to make use of what happened most recently

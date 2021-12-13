@@ -5,7 +5,7 @@
 use {
     crate::{
         client::{network_selection, sme_credential_from_policy, types},
-        config_management::SavedNetworksManagerApi,
+        config_management::{self, SavedNetworksManagerApi},
         telemetry::{DisconnectInfo, TelemetryEvent, TelemetrySender},
         util::{
             listener::{
@@ -186,7 +186,7 @@ struct CommonStateOptions {
 pub struct PeriodicConnectionStats {
     pub id: types::NetworkIdentifier,
     pub iface_id: u16,
-    pub rssi: i8,
+    pub ewma_rssi: f32,
 }
 
 pub type ConnectionStatsSender = mpsc::UnboundedSender<PeriodicConnectionStats>;
@@ -708,13 +708,18 @@ async fn connected_state(
                         fidl_sme::ConnectTransactionEvent::OnSignalReport { ind } => {
                             options.latest_ap_state.rssi_dbm = ind.rssi_dbm;
                             options.latest_ap_state.snr_db = ind.snr_db;
+
+                            let current_connection = &options.currently_fulfilled_request.target;
                             handle_connection_stats(
+                                &mut common_options.telemetry_sender,
                                 &mut common_options.stats_sender,
-                                options.currently_fulfilled_request.target.network.clone().into(),
+                                &mut common_options.saved_networks_manager,
+                                current_connection.network.clone(),
+                                &current_connection.credential.clone().into(),
+                                options.latest_ap_state.bssid,
                                 common_options.iface_id,
-                                ind.rssi_dbm,
-                            );
-                            common_options.telemetry_sender.send(TelemetryEvent::OnSignalReport { ind });
+                                ind,
+                            ).await;
                             false
                         }
                         fidl_sme::ConnectTransactionEvent::OnChannelSwitched { info } => {
@@ -831,16 +836,29 @@ async fn connected_state(
     }
 }
 
-fn handle_connection_stats(
+async fn handle_connection_stats(
+    telemetry_sender: &mut TelemetrySender,
     stats_sender: &mut ConnectionStatsSender,
+    saved_network_manager: &mut Arc<dyn SavedNetworksManagerApi>,
     id: types::NetworkIdentifier,
+    credential: &config_management::Credential,
+    bssid: types::Bssid,
     iface_id: u16,
-    rssi: i8,
+    ind: fidl_internal::SignalReportIndication,
 ) {
-    let connection_stats = PeriodicConnectionStats { id, iface_id, rssi };
-    stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
-        error!("Failed to send periodic connection stats from the connected state: {}", e);
+    let rssi_data = saved_network_manager
+        .record_connection_quality_data(&id.clone().into(), &credential, bssid, ind.rssi_dbm.into())
+        .await;
+    // Send RSSI and RSSI velocity metrics
+    let rssi_velocity = rssi_data.map(|data| {
+        // Send periodic connection quality data to IfaceManager
+        let connection_stats = PeriodicConnectionStats { id, ewma_rssi: data.ewma_rssi, iface_id };
+        stats_sender.unbounded_send(connection_stats).unwrap_or_else(|e| {
+            error!("Failed to send periodic connection stats from the connected state: {}", e);
+        });
+        data.velocity
     });
+    telemetry_sender.send(TelemetryEvent::OnSignalReport { ind, rssi_velocity });
 }
 
 #[cfg(test)]
@@ -885,6 +903,8 @@ mod tests {
         common_options: CommonStateOptions,
         sme_req_stream: fidl_sme::ClientSmeRequestStream,
         saved_networks_manager: Arc<FakeSavedNetworksManager>,
+        record_connection_quality_channel:
+            mpsc::UnboundedSender<Option<config_management::RssiData>>,
         client_req_sender: mpsc::Sender<ManualRequest>,
         update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         cobalt_events: mpsc::Receiver<CobaltEvent>,
@@ -898,7 +918,9 @@ mod tests {
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
-        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
+        let (saved_networks, record_connection_quality_channel) =
+            FakeSavedNetworksManager::new_with_channel();
+        let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
@@ -925,6 +947,7 @@ mod tests {
             },
             sme_req_stream,
             saved_networks_manager,
+            record_connection_quality_channel,
             client_req_sender,
             update_receiver,
             cobalt_events,
@@ -3693,6 +3716,14 @@ mod tests {
         pin_mut!(sme_fut);
 
         let rssi = -40;
+        let velocity = -1.2;
+        // Tell the FakeSavedNetworksManager what to respond to record_connection_quality_data
+        let rssi_data = config_management::RssiData { ewma_rssi: rssi.into(), velocity };
+        test_values
+            .record_connection_quality_channel
+            .unbounded_send(Some(rssi_data))
+            .expect("failed to send expected connection quality data");
+        // Send the signal report from SME
         let mut fidl_signal_report =
             fidl_internal::SignalReportIndication { rssi_dbm: rssi, snr_db: 30 };
         connect_txn_handle
@@ -3700,10 +3731,11 @@ mod tests {
             .expect("failed to send signal report");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        // Verify telemetry event
+        // Verify telemetry event for signal report data then RSSI data.
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_variant!(event, TelemetryEvent::OnSignalReport { ind } => {
+            assert_variant!(event, TelemetryEvent::OnSignalReport { ind, rssi_velocity } => {
                 assert_eq!(ind, fidl_signal_report);
+                assert_eq!(rssi_velocity, Some(velocity));
             });
         });
 
@@ -3716,7 +3748,8 @@ mod tests {
             security_type: types::SecurityType::Wpa2,
         };
         // Test setup always use iface ID 1.
-        let expected_connection_stats = PeriodicConnectionStats { id, iface_id: 1, rssi };
+        let expected_connection_stats =
+            PeriodicConnectionStats { id, iface_id: 1, ewma_rssi: rssi.into() };
         let stats = test_values.stats_receiver.try_next().expect("failed to get connection stats");
         assert_eq!(stats, Some(expected_connection_stats));
     }

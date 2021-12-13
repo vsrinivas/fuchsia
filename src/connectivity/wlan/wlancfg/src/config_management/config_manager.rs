@@ -559,16 +559,17 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                 let rssi_data = match network.perf_stats.rssi_data_by_bssid.get(&bssid) {
                     Some(rssi_data) => {
                         let ewma_rssi = calculate_ewma_rssi(
-                            rssi_data.rssi,
+                            rssi_data.ewma_rssi,
                             connection_data,
                             EWMA_SMOOTHING_FACTOR,
                         );
                         // TODO(fxbug.dev/84872): Use historical RSSI values to calculate smoothed
                         // velocity.
-                        let velocity = calculate_rssi_velocity(vec![rssi_data.rssi, ewma_rssi]);
-                        RssiData { rssi: ewma_rssi, velocity: velocity }
+                        let velocity =
+                            calculate_rssi_velocity(vec![rssi_data.ewma_rssi, ewma_rssi]);
+                        RssiData { ewma_rssi, velocity: velocity }
                     }
-                    None => RssiData { rssi: connection_data, velocity: 0.0 },
+                    None => RssiData { ewma_rssi: connection_data, velocity: 0.0 },
                 };
                 let _ = network.perf_stats.rssi_data_by_bssid.insert(bssid, rssi_data.clone());
                 return Some(rssi_data);
@@ -2064,7 +2065,7 @@ mod tests {
             .get(&bssid)
             .expect("failed to get rssi data.");
         assert_eq!(response, *rssi_data);
-        assert_eq!(rssi_data.rssi, -50.0);
+        assert_eq!(rssi_data.ewma_rssi, -50.0);
         assert_eq!(rssi_data.velocity, 0.0);
 
         // Record second quality connection data
@@ -2084,8 +2085,8 @@ mod tests {
             .get(&bssid)
             .expect("failed to get rssi data.");
         assert_eq!(response, *rssi_data);
-        assert_lt!(rssi_data.rssi, -50.0);
-        assert_gt!(rssi_data.rssi, -51.0);
+        assert_lt!(rssi_data.ewma_rssi, -50.0);
+        assert_gt!(rssi_data.ewma_rssi, -51.0);
         assert_lt!(rssi_data.velocity, 0.0);
     }
 
