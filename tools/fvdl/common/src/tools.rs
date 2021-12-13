@@ -106,15 +106,13 @@ impl HostTools {
                 Ok(val) => val.join("emulator"),
                 _ => {
                     let fuchsia_root = f.find_fuchsia_root()?;
-                    WalkDir::new(fuchsia_root.join("prebuilt/third_party/android/aemu/release"))
+                    WalkDir::new(fuchsia_root.join("prebuilt/third_party/aemu"))
                         .into_iter()
                         .filter_map(|e| e.ok())
                         .find(|e| e.file_name() == "emulator")
                         .ok_or(anyhow!(
                             "Cannot find emulator executable from {:?}",
-                            fuchsia_root
-                                .join("prebuilt/third_party/android/aemu/release")
-                                .display()
+                            fuchsia_root.join("prebuilt/third_party/aemu").display()
                         ))?
                         .path()
                         .to_path_buf()
@@ -394,8 +392,8 @@ mod test {
         let tmp_dir = Builder::new().tempdir()?;
         let a = tmp_dir.into_path();
 
-        create_dir_all(a.join("prebuilt/third_party/android/aemu/release"))?;
-        File::create(a.join("prebuilt/third_party/android/aemu/release/emulator"))?
+        create_dir_all(a.join("prebuilt/third_party/aemu"))?;
+        File::create(a.join("prebuilt/third_party/aemu/emulator"))?
             .write_all("foo bar".as_bytes())?;
 
         create_dir_all(a.join("prebuilt/third_party/grpcwebproxy"))?;

@@ -85,7 +85,7 @@ pub struct StartCommand {
     pub device_spec: Option<String>,
 
     /// path to aemu location.
-    /// When running in fuchsia repo, defaults to looking in prebuilt/third_party/android/aemu/release/PLATFORM.
+    /// When running in fuchsia repo, defaults to looking in prebuilt/third_party/aemu/PLATFORM.
     /// When running in fuchsia sdk, defaults to looking in $HOME/.fuchsia/femu.
     #[argh(option, short = 'e')]
     pub aemu_path: Option<String>,

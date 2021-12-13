@@ -30,7 +30,7 @@ group("tests") {
 }
 
 if (is_linux) {
-  _aemu_dir = "//prebuilt/third_party/android/aemu/release/${host_platform}"
+  _aemu_dir = "//prebuilt/third_party/aemu/${host_platform}"
   _device_launcher_dir = "//prebuilt/vdl"
   _grpcwebproxy_dir = "//prebuilt/third_party/grpcwebproxy/${host_platform}"
 
