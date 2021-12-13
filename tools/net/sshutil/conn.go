@@ -276,26 +276,26 @@ func (c *Conn) Run(ctx context.Context, command []string, stdout io.Writer, stde
 			return ctx.Err()
 		}
 		var log string
-		var level logger.LogLevel
+		level := logger.DebugLevel
 		switch e := err.(type) {
 		case *ssh.ExitError:
 			log = fmt.Sprintf("ssh command failed with exit code %d", e.ExitStatus())
-			level = logger.DebugLevel
 		case *ssh.ExitMissingError:
 			log = "ssh command failed with no exit code"
-			level = logger.DebugLevel
 			err = ConnectionError{err}
 		default:
 			if errors.Is(err, io.EOF) {
 				log = "got EOF trying to run ssh command, the device likely stopped responding to keep-alive pings"
-				level = logger.DebugLevel
+				err = ConnectionError{err}
+			} else if strings.HasSuffix(err.Error(), "broken pipe") {
+				log = fmt.Sprintf("ssh command failed with error: %s", err)
 				err = ConnectionError{err}
 			} else {
 				log = fmt.Sprintf("ssh command failed with error: %s", err)
 				level = logger.ErrorLevel
 			}
 		}
-		logger.Logf(ctx, level, "%s: %v", log, command)
+		logger.Logf(ctx, level, "%s. Full command: %v", log, command)
 		return err
 	}
 	logger.Debugf(ctx, "successfully ran over ssh: %v", command)
