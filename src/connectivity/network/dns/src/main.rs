@@ -422,6 +422,7 @@ fn handle_err(source: &str, err: ResolveError) -> fname::LookupError {
             | ProtoErrorKind::UnknownRecordTypeValue(_)
             | ProtoErrorKind::UnrecognizedLabelCode(_)
             | ProtoErrorKind::UnrecognizedNsec3Flags(_)
+            | ProtoErrorKind::UnrecognizedCsyncFlags(_)
             | ProtoErrorKind::Poisoned
             | ProtoErrorKind::Ring(_)
             | ProtoErrorKind::SSL(_)
@@ -440,9 +441,9 @@ fn handle_err(source: &str, err: ResolveError) -> fname::LookupError {
         },
         ResolveErrorKind::Io(inner) => (fname::LookupError::Transient, Some(inner)),
         ResolveErrorKind::Timeout => (fname::LookupError::Transient, None),
-        ResolveErrorKind::Msg(_) | ResolveErrorKind::Message(_) => {
-            (fname::LookupError::InternalError, None)
-        }
+        ResolveErrorKind::Msg(_)
+        | ResolveErrorKind::Message(_)
+        | ResolveErrorKind::NoConnections => (fname::LookupError::InternalError, None),
         // ResolveErrorKind is marked #[non_exhaustive] in trust-dns:
         // https://github.com/bluejekyll/trust-dns/blob/v0.21.0-alpha.1/crates/resolver/src/error.rs#L29
         // So we have to include a wildcard match.

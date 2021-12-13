@@ -5,6 +5,12 @@ replace-with = "vendored-sources"
 [source.vendored-sources]
 directory = "./vendor"
 
+# Build this git source from the vendored sources, rather than a local registry.
+[source."https://github.com/bluejekyll/trust-dns"]
+git = "https://github.com/bluejekyll/trust-dns"
+rev = "e5fa03de354f8a97e59d44ec1f4afe5f923b1003"
+replace-with = "vendored-sources"
+
 # used to ensure consistency with other cargo workflows in-tree
 [build]
 target-dir = "../../out/cargo_target"

@@ -224,8 +224,14 @@ rust_icu_unorm2 = { version = "1.0.3", default-features = false, features = ["re
 rust_icu_ustring = { version = "1.0.3", default-features = false, features = ["renaming", "icu_version_in_env"] }
 smallvec = "1.2"
 tokio-rustls = "0.13.0"
-trust-dns-proto = { version = "0.21.0-alpha.4", default-features = false, features = ["testing"] }
-trust-dns-resolver = { version = "0.21.0-alpha.4", default-features = false, features = ["testing"] }
+# TODO(https://fxbug.dev/90312): point to a crates.io version when there is a
+# new official release of Trust-DNS that includes
+# https://github.com/bluejekyll/trust-dns/commit/a8842545fc2e9d01c7b985812d85c6aceee9357f.
+#
+# In the meantime, when updating, keep these git revisions in sync with the
+# relevant `source` section in //third_party/rust_crates/.cargo/config.toml.
+trust-dns-proto = { git = "https://github.com/bluejekyll/trust-dns", rev = "e5fa03de354f8a97e59d44ec1f4afe5f923b1003", default-features = false, features = ["testing"] }
+trust-dns-resolver = { git = "https://github.com/bluejekyll/trust-dns", rev = "e5fa03de354f8a97e59d44ec1f4afe5f923b1003", default-features = false, features = ["testing"] }
 ttf-parser = "0.10.1"
 unicode-normalization = "0.1"
 vk-sys = "0.4.0"

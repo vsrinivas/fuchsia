@@ -17,7 +17,7 @@ use crate::proto::op::{Query, ResponseCode};
 use crate::proto::rr::rdata::SOA;
 use crate::proto::xfer::retry_dns_handle::RetryableError;
 use crate::proto::xfer::DnsResponse;
-#[cfg(feature = "with-backtrace")]
+#[cfg(feature = "backtrace")]
 use crate::proto::{trace, ExtBacktrace};
 
 /// An alias for results returned by functions of this crate
@@ -35,6 +35,10 @@ pub enum ResolveErrorKind {
     /// An error with an arbitrary message, stored as String
     #[error("{0}")]
     Msg(String),
+
+    /// No resolvers available
+    #[error("No connections available")]
+    NoConnections,
 
     /// No records were found for a query
     #[error("no record found for {query}")]
@@ -71,6 +75,7 @@ impl Clone for ResolveErrorKind {
     fn clone(&self) -> Self {
         use self::ResolveErrorKind::*;
         match self {
+            NoConnections => NoConnections,
             Message(msg) => Message(msg),
             Msg(ref msg) => Msg(msg.clone()),
             NoRecordsFound {
@@ -98,7 +103,7 @@ impl Clone for ResolveErrorKind {
 #[derive(Debug, Clone, Error)]
 pub struct ResolveError {
     pub(crate) kind: ResolveErrorKind,
-    #[cfg(feature = "with-backtrace")]
+    #[cfg(feature = "backtrace")]
     backtrack: Option<ExtBacktrace>,
 }
 
@@ -123,6 +128,18 @@ impl ResolveError {
     /// Get the kind of the error
     pub fn kind(&self) -> &ResolveErrorKind {
         &self.kind
+    }
+
+    pub(crate) fn no_connections() -> Self {
+        Self {
+            kind: ResolveErrorKind::NoConnections,
+            #[cfg(feature = "backtrace")]
+            backtrack: trace!(),
+        }
+    }
+
+    pub(crate) fn is_no_connections(&self) -> bool {
+        matches!(self.kind, ResolveErrorKind::NoConnections)
     }
 
     /// A conversion to determine if the response is an error
@@ -235,7 +252,15 @@ impl ResolveError {
 
 impl RetryableError for ResolveError {
     fn should_retry(&self) -> bool {
-        !matches!(self.kind(), ResolveErrorKind::NoRecordsFound { trusted, .. } if *trusted)
+        match self.kind() {
+            ResolveErrorKind::Message(_)
+            | ResolveErrorKind::Msg(_)
+            | ResolveErrorKind::NoConnections
+            | ResolveErrorKind::NoRecordsFound { .. } => false,
+            ResolveErrorKind::Io(_) | ResolveErrorKind::Proto(_) | ResolveErrorKind::Timeout => {
+                true
+            }
+        }
     }
 
     fn attempted(&self) -> bool {
@@ -249,7 +274,7 @@ impl RetryableError for ResolveError {
 impl fmt::Display for ResolveError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         cfg_if::cfg_if! {
-            if #[cfg(feature = "with-backtrace")] {
+            if #[cfg(feature = "backtrace")] {
                 if let Some(ref backtrace) = self.backtrack {
                     fmt::Display::fmt(&self.kind, f)?;
                     fmt::Debug::fmt(backtrace, f)
@@ -267,7 +292,7 @@ impl From<ResolveErrorKind> for ResolveError {
     fn from(kind: ResolveErrorKind) -> ResolveError {
         ResolveError {
             kind,
-            #[cfg(feature = "with-backtrace")]
+            #[cfg(feature = "backtrace")]
             backtrack: trace!(),
         }
     }

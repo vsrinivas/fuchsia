@@ -223,17 +223,26 @@ impl ResolverConfig {
     /// ```
     /// use std::sync::Arc;
     ///
-    /// use rustls::{ClientConfig, ProtocolVersion, RootCertStore};
+    /// use rustls::{ClientConfig, ProtocolVersion, RootCertStore, OwnedTrustAnchor};
     /// use trust_dns_resolver::config::ResolverConfig;
     /// use webpki_roots;
     ///
     /// let mut root_store = RootCertStore::empty();
-    /// root_store.add_server_trust_anchors(&webpki_roots::TLS_SERVER_ROOTS);
-    /// let versions = vec![ProtocolVersion::TLSv1_2];
+    /// root_store.add_server_trust_anchors(webpki_roots::TLS_SERVER_ROOTS.0.iter().map(|ta| {
+    ///     OwnedTrustAnchor::from_subject_spki_name_constraints(
+    ///         ta.subject,
+    ///         ta.spki,
+    ///         ta.name_constraints,
+    ///     )
+    /// }));
     ///
-    /// let mut client_config = ClientConfig::new();
-    /// client_config.root_store = root_store;
-    /// client_config.versions = versions;
+    /// let mut client_config = ClientConfig::builder()
+    ///     .with_safe_default_cipher_suites()
+    ///     .with_safe_default_kx_groups()
+    ///     .with_protocol_versions(&[&rustls::version::TLS12])
+    ///     .unwrap()
+    ///     .with_root_certificates(root_store)
+    ///     .with_no_client_auth();
     ///
     /// let mut resolver_config = ResolverConfig::quad9_tls();
     /// resolver_config.set_tls_client_config(Arc::new(client_config));
@@ -376,14 +385,16 @@ pub struct NameServerConfig {
     /// SPKI name, only relevant for TLS connections
     #[cfg_attr(feature = "serde-config", serde(default))]
     pub tls_dns_name: Option<String>,
-    /// Default to not trust negative responses from upstream nameservers
+    /// Whether to trust `NXDOMAIN` responses from upstream nameservers.
     ///
-    /// When this is `false`, and an empty `NXDOMAIN` response is received, the
-    /// query will be retried against other configured name servers.
+    /// When this is `true`, and an empty `NXDOMAIN` response is received, the
+    /// query will not be retried against other configured name servers.
     ///
     /// (On an empty `NoError` response, or a response with any other error
-    /// response code, the query will be retried regardless of this
+    /// response code, the query will still be retried regardless of this
     /// configuration setting.)
+    ///
+    /// Defaults to false.
     #[cfg_attr(feature = "serde-config", serde(default))]
     pub trust_nx_responses: bool,
     #[cfg(feature = "dns-over-rustls")]
