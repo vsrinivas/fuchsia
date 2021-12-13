@@ -4,6 +4,14 @@
 
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Sub, SubAssign};
 
+/// Cursor messages.
+pub enum CursorMessage {
+    /// Set the position of the cursor.
+    SetPosition(Position),
+    /// Set the visibility of the cursor.
+    SetVisibility(bool),
+}
+
 /// Represents a generic 2D position.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Position {

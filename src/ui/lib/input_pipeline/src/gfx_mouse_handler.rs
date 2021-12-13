@@ -6,7 +6,7 @@ use {
     crate::input_device,
     crate::input_handler::InputHandler,
     crate::mouse_binding,
-    crate::utils::Position,
+    crate::utils::{CursorMessage, Position},
     async_trait::async_trait,
     fidl_fuchsia_ui_input as fidl_ui_input, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
     fuchsia_scenic as scenic,
@@ -26,14 +26,20 @@ pub struct GfxMouseHandler {
     /// and scale absolute positions from device coordinates.
     max_position: Position,
 
-    /// A [`Sender`] used to communicate the current position.
-    position_sender: RefCell<Sender<Position>>,
+    /// A [`Sender`] used to communicate the current cursor state.
+    cursor_sender: RefCell<Sender<CursorMessage>>,
 
     /// The Scenic session to send pointer events to.
     scenic_session: scenic::SessionPtr,
 
     /// The Scenic compositor id to tag pointer events with.
     scenic_compositor_id: u32,
+
+    /// Set to true when in immersive mode.
+    immersive_mode: RefCell<bool>,
+
+    /// The current visibility for the cursor.
+    is_cursor_visible: RefCell<bool>,
 }
 
 #[async_trait(?Send)]
@@ -42,24 +48,76 @@ impl InputHandler for GfxMouseHandler {
         self: Rc<Self>,
         mut input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        if let input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(ref mouse_event),
-            device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
-            event_time,
-            handled: input_device::Handled::No,
-        } = input_event
-        {
-            self.update_cursor_position(&mouse_event, &mouse_descriptor).await;
-            self.send_events_to_scenic(
-                mouse_event.phase,
-                &mouse_event.buttons,
-                &mouse_descriptor,
+        match input_event {
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Mouse(ref mouse_event),
+                device_descriptor: input_device::InputDeviceDescriptor::Mouse(mouse_descriptor),
                 event_time,
-            )
-            .await;
+                handled: input_device::Handled::No,
+            } => {
+                self.update_cursor_position(&mouse_event, &mouse_descriptor).await;
+                self.update_cursor_visibility(!*self.immersive_mode.borrow()).await;
+                self.send_events_to_scenic(
+                    mouse_event.phase,
+                    &mouse_event.buttons,
+                    &mouse_descriptor,
+                    event_time,
+                )
+                .await;
 
-            // Consume the input event.
-            input_event.handled = input_device::Handled::Yes
+                // Consume the input event.
+                input_event.handled = input_device::Handled::Yes
+            }
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Touch(ref _touch_event),
+                device_descriptor:
+                    input_device::InputDeviceDescriptor::Touch(ref _touch_device_descriptor),
+                event_time: _,
+                handled: _,
+            } => {
+                // Hide the cursor on touch input.
+                // TODO(fxbug.dev/90290): Remove this workaround when we have a
+                // proper cursor API.
+                let visible = false;
+                self.update_cursor_visibility(visible).await;
+            }
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Keyboard(ref keyboard_device_event),
+                device_descriptor: input_device::InputDeviceDescriptor::Keyboard(_),
+                event_time: _,
+                handled: _,
+            } => {
+                // Alt+Shift+I toggles immersive mode.
+                //
+                // Immersive mode hides the cursor and is a temporary workaround
+                // until we have a cursor API that makes it possible for UI
+                // components to control the appearance of the cursor.
+                //
+                // TODO(fxbug.dev/90290): Remove this workaround when we have a
+                // proper cursor API.
+                if keyboard_device_event.get_event_type()
+                    == fidl_fuchsia_ui_input3::KeyEventType::Pressed
+                    && keyboard_device_event.get_key() == fidl_fuchsia_input::Key::I
+                    && keyboard_device_event
+                        .get_modifiers()
+                        .filter(|m| {
+                            m.contains(
+                                fidl_fuchsia_ui_input3::Modifiers::Alt
+                                    | fidl_fuchsia_ui_input3::Modifiers::Shift,
+                            )
+                        })
+                        .is_some()
+                {
+                    let mut immersive_mode = self.immersive_mode.borrow_mut();
+                    *immersive_mode = !*immersive_mode;
+
+                    self.update_cursor_visibility(!*immersive_mode).await;
+
+                    // Consume the input event.
+                    input_event.handled = input_device::Handled::Yes
+                }
+            }
+            _ => {}
         }
         vec![input_event]
     }
@@ -70,28 +128,32 @@ impl GfxMouseHandler {
     /// position.
     ///
     /// # Parameters
+    /// - `initial_position`: The initial position.
     /// - `max_position`: The maximum position, used to bound events sent to clients.
     /// - `position_sender`: A [`Sender`] used to communicate the current position.
     /// - `scenic_session`: The Scenic session to send pointer events to.
     /// - `scenic_compositor_id`: The Scenic compositor id to tag pointer events with.
     pub fn new(
+        initial_position: Position,
         max_position: Position,
-        position_sender: Sender<Position>,
+        cursor_sender: Sender<CursorMessage>,
         scenic_session: scenic::SessionPtr,
         scenic_compositor_id: u32,
     ) -> Rc<GfxMouseHandler> {
         Rc::new(GfxMouseHandler {
             max_position,
-            position_sender: RefCell::new(position_sender),
+            cursor_sender: RefCell::new(cursor_sender),
             scenic_session,
             scenic_compositor_id,
-            current_position: RefCell::new(Position { x: 0.0, y: 0.0 }),
+            current_position: RefCell::new(initial_position),
+            immersive_mode: RefCell::new(false),
+            is_cursor_visible: RefCell::new(true),
         })
     }
 
     /// Updates the current cursor position according to the received mouse event.
     ///
-    /// The updated position is sent to a client via `self.position_sender`.
+    /// The updated position is sent to a client via `self.cursor_sender`.
     ///
     /// If there is no movement, the location is not sent to clients.
     ///
@@ -123,7 +185,7 @@ impl GfxMouseHandler {
 
             *current_position
         };
-        match self.position_sender.borrow_mut().send(pos).await {
+        match self.cursor_sender.borrow_mut().send(CursorMessage::SetPosition(pos)).await {
             Err(e) => {
                 fx_log_err!("Failed to send current mouse position with error {:?}", e);
             }
@@ -194,6 +256,31 @@ impl GfxMouseHandler {
             _ => *position,
         }
     }
+
+    /// Updates the current cursor's visibility.
+    ///
+    /// The updated visibility is sent to a client via `self.cursor_sender`.
+    ///
+    /// If there is no change to visibility, the state is not sent to clients.
+    ///
+    /// # Parameters
+    /// - `visible`: The new visibility of the cursor.
+    async fn update_cursor_visibility(self: &Rc<Self>, visible: bool) {
+        let mut is_cursor_visible = self.is_cursor_visible.borrow_mut();
+
+        // No change to visibility needed.
+        if visible == *is_cursor_visible {
+            return;
+        }
+        *is_cursor_visible = visible;
+
+        match self.cursor_sender.borrow_mut().send(CursorMessage::SetVisibility(visible)).await {
+            Err(e) => {
+                fx_log_err!("Failed to send current cursor visibilty with error {:?}", e);
+            }
+            _ => {}
+        }
+    }
 }
 
 #[cfg(test)]
@@ -202,12 +289,14 @@ mod tests {
         super::*,
         crate::testing_utilities::{
             assert_handler_ignores_input_event_sequence, create_mouse_event,
-            create_mouse_event_with_handled,
+            create_mouse_event_with_handled, create_touch_contact, create_touch_event_with_handled,
         },
+        crate::touch_binding,
         crate::utils::Position,
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_scenic as fidl_ui_scenic,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::StreamExt,
+        maplit::hashmap,
         matches::assert_matches,
     };
 
@@ -293,8 +382,22 @@ mod tests {
         }
     }
 
+    /// Returns an TouchDescriptor.
+    fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchDeviceDescriptor {
+            device_id: 1,
+            contacts: vec![touch_binding::ContactDeviceDescriptor {
+                x_range: fidl_input_report::Range { min: 0, max: 100 },
+                y_range: fidl_input_report::Range { min: 0, max: 100 },
+                pressure_range: None,
+                width_range: None,
+                height_range: None,
+            }],
+        })
+    }
+
     // Tests that a mouse move event both sends an update to scenic and sends the current cursor
-    // location via the cursor location sender.
+    // location via the cursor sender.
     #[fasync::run_singlethreaded(test)]
     async fn move_event() {
         const DEVICE_ID: u32 = 1;
@@ -307,6 +410,7 @@ mod tests {
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mouse_handler = GfxMouseHandler::new(
+            Position { x: 0.0, y: 0.0 },
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
@@ -342,7 +446,9 @@ mod tests {
 
         let expected_cursor_location = cursor_relative_position;
         match receiver.next().await {
-            Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
+            Some(CursorMessage::SetPosition(cursor_location)) => {
+                assert_eq!(cursor_location, expected_cursor_location)
+            }
             _ => assert!(false),
         };
     }
@@ -361,6 +467,7 @@ mod tests {
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mouse_handler = GfxMouseHandler::new(
+            Position { x: 0.0, y: 0.0 },
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
@@ -400,7 +507,9 @@ mod tests {
         let expected_cursor_location =
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT };
         match receiver.next().await {
-            Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
+            Some(CursorMessage::SetPosition(cursor_location)) => {
+                assert_eq!(cursor_location, expected_cursor_location)
+            }
             _ => assert!(false),
         };
     }
@@ -419,6 +528,7 @@ mod tests {
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mouse_handler = GfxMouseHandler::new(
+            Position { x: 0.0, y: 0.0 },
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
@@ -454,7 +564,9 @@ mod tests {
 
         let expected_cursor_location = Position { x: 0.0, y: 0.0 };
         match receiver.next().await {
-            Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
+            Some(CursorMessage::SetPosition(cursor_location)) => {
+                assert_eq!(cursor_location, expected_cursor_location)
+            }
             _ => assert!(false),
         };
     }
@@ -473,6 +585,7 @@ mod tests {
         let (sender, mut receiver) = futures::channel::mpsc::channel(1);
 
         let mouse_handler = GfxMouseHandler::new(
+            Position { x: 0.0, y: 0.0 },
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
@@ -531,7 +644,9 @@ mod tests {
 
         let expected_cursor_location = expected_position;
         match receiver.next().await {
-            Some(cursor_location) => assert_eq!(cursor_location, expected_cursor_location),
+            Some(CursorMessage::SetPosition(cursor_location)) => {
+                assert_eq!(cursor_location, expected_cursor_location)
+            }
             _ => assert!(false),
         };
     }
@@ -548,6 +663,7 @@ mod tests {
 
         let (sender, _) = futures::channel::mpsc::channel(1);
         let mouse_handler = GfxMouseHandler::new(
+            Position { x: 0.0, y: 0.0 },
             Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
             sender,
             scenic_session.clone(),
@@ -573,5 +689,109 @@ mod tests {
             session_request_stream,
         )
         .await;
+    }
+
+    // Tests that initial location is handled correctly.
+    #[fasync::run_singlethreaded(test)]
+    async fn initial_location() {
+        const DEVICE_ID: u32 = 1;
+
+        let (session_proxy, mut session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+
+        let (sender, mut receiver) = futures::channel::mpsc::channel(1);
+
+        let initial_location = Position { x: 10.0, y: 10.0 };
+        let mouse_handler = GfxMouseHandler::new(
+            initial_location,
+            Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
+            sender,
+            scenic_session.clone(),
+            SCENIC_COMPOSITOR_ID,
+        );
+
+        let cursor_relative_position = Position { x: 50.0, y: 75.0 };
+        let cursor_location = mouse_binding::MouseLocation::Relative(cursor_relative_position);
+        let descriptor = mouse_device_descriptor(DEVICE_ID);
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let input_events = vec![create_mouse_event(
+            cursor_location,
+            fidl_ui_input::PointerEventPhase::Move,
+            HashSet::<mouse_binding::MouseButton>::new(),
+            event_time,
+            &descriptor,
+        )];
+
+        let expected_commands = vec![create_pointer_event(
+            initial_location + cursor_relative_position,
+            fidl_ui_input::PointerEventPhase::Move,
+            DEVICE_ID,
+            event_time,
+        )];
+
+        assert_input_event_sequence_generates_scenic_events!(
+            input_handler: mouse_handler,
+            input_events: input_events,
+            expected_commands: expected_commands,
+            scenic_session_request_stream: session_request_stream,
+            assert_command: verify_pointer_event,
+        );
+
+        let expected_cursor_location = initial_location + cursor_relative_position;
+        match receiver.next().await {
+            Some(CursorMessage::SetPosition(cursor_location)) => {
+                assert_eq!(cursor_location, expected_cursor_location)
+            }
+            _ => assert!(false),
+        };
+    }
+
+    // Tests that touch events hide the cursor.
+    #[fasync::run_singlethreaded(test)]
+    async fn touch_hides_cursor() {
+        let (session_proxy, session_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<fidl_ui_scenic::SessionMarker>()
+                .expect("Failed to create ScenicProxy and stream.");
+        let scenic_session: scenic::SessionPtr = scenic::Session::new(session_proxy);
+
+        let (sender, mut receiver) = futures::channel::mpsc::channel(1);
+
+        let mouse_handler = GfxMouseHandler::new(
+            Position { x: 0.0, y: 0.0 },
+            Position { x: SCENIC_DISPLAY_WIDTH, y: SCENIC_DISPLAY_HEIGHT },
+            sender,
+            scenic_session.clone(),
+            SCENIC_COMPOSITOR_ID,
+        );
+
+        const TOUCH_ID: u32 = 1;
+        let touch_descriptor = get_touch_device_descriptor();
+        let event_time = zx::Time::get_monotonic().into_nanos() as input_device::EventTime;
+        let input_events = vec![create_touch_event_with_handled(
+            hashmap! {
+                fidl_ui_input::PointerEventPhase::Add
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
+                fidl_ui_input::PointerEventPhase::Down
+                    => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],
+            },
+            event_time,
+            &touch_descriptor,
+            input_device::Handled::Yes,
+        )];
+
+        assert_handler_ignores_input_event_sequence(
+            mouse_handler,
+            input_events,
+            session_request_stream,
+        )
+        .await;
+
+        // Touch event should hide the cursor.
+        match receiver.next().await {
+            Some(CursorMessage::SetVisibility(visible)) => assert_eq!(visible, false),
+            _ => assert!(false),
+        };
     }
 }

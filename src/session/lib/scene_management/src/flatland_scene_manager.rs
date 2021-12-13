@@ -291,6 +291,11 @@ impl SceneManager for FlatlandSceneManager {
         // let screen_coordinates = ScreenCoordinates::from_pixels(position.x, position.y, self.display_metrics);
     }
 
+    // TODO(fxbug.dev/86554)
+    fn set_cursor_visibility(&mut self, _visible: bool) {
+        fx_log_warn!("fxbug.dev/86554: set_cursor_visibility() not implemented");
+    }
+
     fn get_pointerinjection_display_size(&self) -> Size {
         let logical_size = self.layout_info.logical_size.unwrap();
         let pixel_scale = self.layout_info.pixel_scale.unwrap();
@@ -309,7 +314,7 @@ impl SceneManager for FlatlandSceneManager {
 
     async fn add_mouse_handler(
         &self,
-        _position_sender: futures::channel::mpsc::Sender<input_pipeline::Position>,
+        _cursor_sender: futures::channel::mpsc::Sender<input_pipeline::CursorMessage>,
         assembly: InputPipelineAssembly,
     ) -> InputPipelineAssembly {
         fx_log_warn!("fxbug.dev/86554: add_mouse_handler() not implemented");

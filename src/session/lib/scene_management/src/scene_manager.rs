@@ -126,6 +126,12 @@ pub trait SceneManager: Send {
     /// is responsible for translating the raw input position into "pips".
     fn set_cursor_position(&mut self, position: input_pipeline::Position);
 
+    /// Sets the visibility of the cursor in the current scene. The cursor is visible by default.
+    ///
+    /// # Parameters
+    /// - `visible`: Boolean value indicating if the cursor should be visible.
+    fn set_cursor_visibility(&mut self, visible: bool);
+
     /// Annotates `assembly` with an additional pipeline stage.
     ///
     /// # Parameters
@@ -140,7 +146,7 @@ pub trait SceneManager: Send {
     /// - `assembly`: An [`InputPipelineAssembly`] which represents a partially-constructed input pipeline.
     async fn add_mouse_handler(
         &self,
-        position_sender: futures::channel::mpsc::Sender<input_pipeline::Position>,
+        position_sender: futures::channel::mpsc::Sender<input_pipeline::CursorMessage>,
         mut assembly: InputPipelineAssembly,
     ) -> InputPipelineAssembly;
 

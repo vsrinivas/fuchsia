@@ -249,6 +249,19 @@ impl SceneManager for GfxSceneManager {
         GfxSceneManager::request_present(&self.presentation_sender);
     }
 
+    fn set_cursor_visibility(&mut self, visible: bool) {
+        if let Some(shape) = self.cursor_shape.as_ref() {
+            // Safe to unwrap as cursor shape can only exist if there is a cursor node.
+            let node = self.cursor_node.as_ref().unwrap();
+            if visible {
+                node.add_child(shape);
+            } else {
+                node.remove_child(shape);
+            }
+            GfxSceneManager::request_present(&self.presentation_sender);
+        }
+    }
+
     fn get_pointerinjection_display_size(&self) -> Size {
         let (width_pixels, height_pixels) = self.display_size.pixels();
         Size { width: width_pixels, height: height_pixels }
@@ -272,13 +285,15 @@ impl SceneManager for GfxSceneManager {
 
     async fn add_mouse_handler(
         &self,
-        position_sender: futures::channel::mpsc::Sender<input_pipeline::Position>,
+        cursor_sender: futures::channel::mpsc::Sender<input_pipeline::CursorMessage>,
         mut assembly: InputPipelineAssembly,
     ) -> InputPipelineAssembly {
         let (width_pixels, height_pixels) = self.display_size.pixels();
         let mouse_handler = GfxMouseHandler::new(
+            // Initially centered.
+            Position { x: width_pixels / 2.0, y: height_pixels / 2.0 },
             Position { x: width_pixels, y: height_pixels },
-            position_sender,
+            cursor_sender,
             self.session.clone(),
             self.compositor_id,
         );

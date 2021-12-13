@@ -32,5 +32,6 @@ pub mod touch_injector_handler;
 pub mod focus_listening;
 pub mod input_pipeline;
 
+pub use utils::CursorMessage;
 pub use utils::Position;
 pub use utils::Size;

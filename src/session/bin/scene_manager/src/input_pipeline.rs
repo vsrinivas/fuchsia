@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    ::input_pipeline::text_settings_handler::TextSettingsHandler,
+    ::input_pipeline::{text_settings_handler::TextSettingsHandler, CursorMessage},
     anyhow::{Context, Error},
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_settings as fsettings, fidl_fuchsia_ui_shortcut as ui_shortcut,
@@ -135,9 +135,16 @@ async fn build_input_pipeline_assembly(
     {
         let scene_manager = scene_manager.clone();
         fasync::Task::spawn(async move {
-            while let Some(position) = receiver.next().await {
+            while let Some(message) = receiver.next().await {
                 let mut scene_manager = scene_manager.lock().await;
-                scene_manager.set_cursor_position(position);
+                match message {
+                    CursorMessage::SetPosition(position) => {
+                        scene_manager.set_cursor_position(position)
+                    }
+                    CursorMessage::SetVisibility(visible) => {
+                        scene_manager.set_cursor_visibility(visible)
+                    }
+                }
             }
         })
         .detach();
