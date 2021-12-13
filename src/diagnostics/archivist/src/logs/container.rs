@@ -624,7 +624,7 @@ mod tests {
         severities: [(Severity, usize); N],
     ) {
         let mut expected_map = BTreeMap::new();
-        expected_map.extend(std::array::IntoIter::new(severities).map(|(s, c)| {
+        expected_map.extend(IntoIterator::into_iter(severities).map(|(s, c)| {
             let interest = FidlInterest { min_severity: Some(s), ..FidlInterest::EMPTY };
             (interest.into(), c)
         }));
