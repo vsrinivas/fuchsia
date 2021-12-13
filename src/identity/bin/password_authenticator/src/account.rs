@@ -11,13 +11,22 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_identity_account::{
     self as faccount, AccountRequest, AccountRequestStream, Lifetime,
 };
-use fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE};
+use fidl_fuchsia_io::{
+    DirectoryMarker, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE, OPEN_FLAG_DIRECTORY,
+    OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+};
 use fuchsia_zircon::Status;
 use futures::{lock::Mutex, prelude::*, select};
 use identity_common::{TaskGroup, TaskGroupCancel, TaskGroupError};
 use log::{error, info, warn};
 use std::sync::Arc;
 use thiserror::Error;
+
+/// The default directory on the filesystem that we return to all clients. Returning a subdirectory
+/// rather than the root provides scope to store private account data on the encrypted filesystem
+/// that FIDL clients cannot access, and to potentially serve different directories to different
+/// clients in the future.
+const DEFAULT_DIR: &str = "default";
 
 /// Serves the `fuchsia.identity.account.Account` FIDL protocol.
 pub struct Account<EB, M> {
@@ -46,6 +55,7 @@ enum State<EB, M> {
 }
 
 /// The result of the [`Account::check_new_client()`] method.
+#[derive(Debug, PartialEq)]
 pub enum CheckNewClientResult {
     /// The [`Account`] instance has been locked and should not be re-used.
     Locked,
@@ -185,20 +195,8 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
                 responder.send(&mut res).context("sending Lock response")?;
             }
             AccountRequest::GetDataDirectory { data_directory, responder } => {
-                match &*self.state.lock().await {
-                    State::Locked => responder.send(&mut Err(faccount::Error::FailedPrecondition)),
-                    State::Unlocked { minfs, .. } => {
-                        let mut result = minfs
-                            .root_dir()
-                            .clone(
-                                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                                ServerEnd::new(data_directory.into_channel()),
-                            )
-                            .map_err(|_| faccount::Error::Internal);
-                        responder.send(&mut result)
-                    }
-                }
-                .context("sending GetDataDirectory response")?;
+                let mut result = self.get_data_directory(data_directory).await;
+                responder.send(&mut result).context("sending GetDataDirectory response")?;
             }
             AccountRequest::GetAuthState { scenario: _, responder } => {
                 responder
@@ -250,33 +248,70 @@ impl<EB: EncryptedBlockDevice, M: Minfs> Account<EB, M> {
         }
         Ok(())
     }
+
+    /// Implements the GetDataDirectory method
+    async fn get_data_directory(
+        &self,
+        data_directory: ServerEnd<DirectoryMarker>,
+    ) -> Result<(), faccount::Error> {
+        match &*self.state.lock().await {
+            State::Locked => Err(faccount::Error::FailedPrecondition),
+            State::Unlocked { minfs, .. } => minfs
+                .root_dir()
+                .open(
+                    OPEN_RIGHT_READABLE
+                        | OPEN_RIGHT_WRITABLE
+                        | OPEN_FLAG_DIRECTORY
+                        | OPEN_FLAG_CREATE,
+                    MODE_TYPE_DIRECTORY,
+                    DEFAULT_DIR,
+                    ServerEnd::new(data_directory.into_channel()),
+                )
+                .map_err(|_| faccount::Error::Resource),
+        }
+    }
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::disk_management::MockMinfs;
-    use crate::testing::CallCounter;
-    use async_trait::async_trait;
-    use fidl_fuchsia_identity_account::{AccountMarker, AccountProxy};
-    use vfs::execution_scope::ExecutionScope;
+mod test {
+    use {
+        super::*,
+        crate::{disk_management::MockMinfs, keys::Key, testing::CallCounter},
+        async_trait::async_trait,
+        fidl_fuchsia_identity_account::{AccountMarker, AccountProxy},
+        fidl_fuchsia_io::DirectoryMarker,
+        fuchsia_zircon::Status,
+        io_util::{directory, file, node::OpenError},
+        vfs::execution_scope::ExecutionScope,
+    };
+
+    const TEST_KEY: Key = [1; 32];
+    const WRONG_KEY: Key = [2; 32];
 
     /// A mock implementation of [`EncryptedBlockDevice`].
     #[derive(Debug, Clone)]
     struct MockEncryptedBlockDevice {
-        // Whether the block encrypted block device can be sealed.
+        /// Whether the block encrypted block device can be sealed.
         seal_behavior: Result<(), fn() -> DiskError>,
 
-        // The number of times [`MockEncryptedBlockDevice::seal`] was called.
+        /// The number of times [`MockEncryptedBlockDevice::seal`] was called.
         seal_call_counter: CallCounter,
     }
 
     impl MockEncryptedBlockDevice {
+        /// Returns a new `MockEncryptedBlockDevice` that returns the supplied result on seal, and
+        /// the call counter for this `MockEncryptedBlockDevice`.
         fn new_with_call_counter(
             seal_behavior: Result<(), fn() -> DiskError>,
         ) -> (CallCounter, Self) {
             let seal_call_counter = CallCounter::new(0);
             (seal_call_counter.clone(), Self { seal_behavior, seal_call_counter })
+        }
+    }
+
+    impl Default for MockEncryptedBlockDevice {
+        fn default() -> Self {
+            Self { seal_behavior: Ok(()), seal_call_counter: CallCounter::new(0) }
         }
     }
 
@@ -298,12 +333,70 @@ mod tests {
         }
     }
 
+    async fn directory_exists<EB: EncryptedBlockDevice, M: Minfs>(
+        account: &Account<EB, M>,
+        path: &str,
+    ) -> bool {
+        let lock = account.state.lock().await;
+        match &*lock {
+            State::Locked => panic!("Account should not be locked"),
+            State::Unlocked { minfs, .. } => {
+                match directory::open_directory(minfs.root_dir(), path, 0).await {
+                    Ok(_) => true,
+                    Err(OpenError::OpenError(Status::NOT_FOUND)) => false,
+                    Err(err) => panic!("Unexpected error opening directory: {:?}", err),
+                }
+            }
+        }
+    }
+
     async fn serve_new_client<EB: EncryptedBlockDevice, M: Minfs>(
         account: &Arc<Account<EB, M>>,
     ) -> Result<AccountProxy, AccountError> {
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<AccountMarker>().unwrap();
         account.clone().handle_requests_for_stream(stream).await?;
         Ok(proxy)
+    }
+
+    #[fuchsia::test]
+    async fn test_check_new_client() {
+        let minfs = MockMinfs::default();
+        let eb = MockEncryptedBlockDevice::default();
+        let account = Arc::new(Account::new(TEST_KEY, eb, minfs));
+
+        assert_eq!(
+            account.check_new_client(&TEST_KEY).await,
+            CheckNewClientResult::UnlockedSameKey
+        );
+        assert_eq!(
+            account.check_new_client(&WRONG_KEY).await,
+            CheckNewClientResult::UnlockedDifferentKey
+        );
+        assert!(Arc::clone(&account).lock().await.is_ok());
+        assert_eq!(account.check_new_client(&TEST_KEY).await, CheckNewClientResult::Locked);
+    }
+
+    #[fuchsia::test]
+    async fn test_get_data_directory() {
+        let minfs = MockMinfs::default();
+        let eb = MockEncryptedBlockDevice::default();
+        let account = Account::new(TEST_KEY, eb, minfs);
+
+        // The freshly created filesystem should not contain a default client directory.
+        assert!(!directory_exists(&account, DEFAULT_DIR).await);
+
+        // Get a directory.
+        let (dir, dir_server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+        assert_eq!(account.get_data_directory(dir_server_end).await, Ok(()));
+
+        // The act of getting a data directory should have created the default client directory.
+        assert!(directory_exists(&account, DEFAULT_DIR).await);
+
+        // Verify the directory we got is usable.
+        let file = directory::open_file(&dir, "testfile", OPEN_FLAG_CREATE | OPEN_RIGHT_WRITABLE)
+            .await
+            .expect("opening test file");
+        file::write(&file, "test").await.expect("writing file");
     }
 
     #[fuchsia::test]
