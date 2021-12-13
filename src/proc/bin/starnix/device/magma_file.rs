@@ -165,6 +165,17 @@ impl FileOps for MagmaFile {
                 response.result_return = MAGMA_STATUS_OK as u64;
                 task.mm.write_object(UserRef::new(response_address), &response)
             }
+            virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_BUFFER_SIZE => {
+                let (control, mut response): (
+                    virtio_magma_get_buffer_size_ctrl_t,
+                    virtio_magma_get_buffer_size_resp_t,
+                ) = read_control_and_response(task, &command)?;
+
+                response.result_return = unsafe { magma_get_buffer_size(control.buffer as usize) };
+                response.hdr.type_ =
+                    virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_SIZE as u32;
+                task.mm.write_object(UserRef::new(response_address), &response)
+            }
             t => {
                 log::warn!("Got unknown request: {:?}", t);
                 error!(ENOSYS)
