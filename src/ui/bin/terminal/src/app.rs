@@ -11,6 +11,8 @@ use {
 
 const TERMINAL_ENVIRON: &[&str; 1] = &["TERM=xterm-256color"];
 
+const TERMINAL_SCROLL_TO_BOTTOM_ON_INPUT: bool = true;
+
 pub struct TerminalAssistant {
     app_context: AppContext,
     cmd: Vec<CString>,
@@ -39,6 +41,7 @@ impl AppAssistant for TerminalAssistant {
         Ok(Box::new(TerminalViewAssistant::new(
             &self.app_context,
             view_key,
+            TERMINAL_SCROLL_TO_BOTTOM_ON_INPUT,
             self.cmd.clone(),
             environ,
         )))

@@ -191,6 +191,7 @@ pub struct TerminalViewAssistant {
     term: Rc<RefCell<Term<EventProxy>>>,
     app_context: AppContextWrapper,
     view_key: ViewKey,
+    scroll_to_bottom_on_input: bool,
     font: FontFace,
     font_size: f32,
     scene_details: Option<SceneDetails>,
@@ -207,6 +208,7 @@ impl TerminalViewAssistant {
     pub fn new(
         app_context: &AppContext,
         view_key: ViewKey,
+        scroll_to_bottom_on_input: bool,
         spawn_command: Vec<CString>,
         spawn_environ: Vec<CString>,
     ) -> TerminalViewAssistant {
@@ -248,13 +250,14 @@ impl TerminalViewAssistant {
             scene_details: None,
             spawn_command,
             spawn_environ,
+            scroll_to_bottom_on_input,
         }
     }
 
     #[cfg(test)]
     pub fn new_for_test() -> TerminalViewAssistant {
         let app_context = AppContext::new_for_testing_purposes_only();
-        Self::new(&app_context, 1, vec![cstr!("/pkg/bin/sh").to_owned()], vec![])
+        Self::new(&app_context, 1, false, vec![cstr!("/pkg/bin/sh").to_owned()], vec![])
     }
 
     /// Checks if we need to perform a resize based on a new size.
@@ -315,7 +318,7 @@ impl TerminalViewAssistant {
 
             self.last_known_size = *new_size;
             self.last_known_size_info = term_size_info;
-            self.terminal_scene.update_size(clamped_size, cell_size);
+            self.terminal_scene.update_size(floored_size, cell_size);
             self.scene_details = None;
         }
         Ok(())
@@ -450,6 +453,12 @@ impl TerminalViewAssistant {
                 pty_context
                     .write_all(string.as_bytes())
                     .unwrap_or_else(|e| println!("failed to write character to pty: {}", e));
+            }
+
+            // Scroll to bottom on input if enabled.
+            if self.scroll_to_bottom_on_input {
+                let mut term = self.term.borrow_mut();
+                term.scroll_display(Scroll::Bottom);
             }
         }
 

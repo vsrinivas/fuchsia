@@ -21,8 +21,6 @@ impl Default for GridView {
 const MAXIMUM_THUMB_RATIO: f32 = 0.8;
 const MINIMUM_THUMB_RATIO: f32 = 0.05;
 
-const SCROLL_BAR_MOVEMENT_THRESHOLD: f32 = 1.0;
-
 pub struct ScrollBar {
     pub frame: Rect,
 
@@ -38,7 +36,7 @@ pub struct ScrollBar {
     /// Indicates whether we are tracking a scroll or not. This will
     /// eventually need to track the device_id when we handle multiple
     /// input events.
-    last_pointer_tracking_location: Option<Point>,
+    pointer_tracking_start: Option<(Point, Coord)>,
 
     // AppContext used to update scroll thumb rendering.
     app_context: Option<AppContext>,
@@ -54,7 +52,7 @@ impl Default for ScrollBar {
             content_height: 0.0,
             content_offset: 0.0,
             thumb_frame: None,
-            last_pointer_tracking_location: None,
+            pointer_tracking_start: None,
         }
     }
 }
@@ -68,7 +66,7 @@ impl ScrollBar {
             content_height: 0.0,
             content_offset: 0.0,
             thumb_frame: None,
-            last_pointer_tracking_location: None,
+            pointer_tracking_start: None,
         }
     }
 
@@ -98,31 +96,24 @@ impl ScrollBar {
 
                 self.propose_offset(proposed_offset, conversion_factor, thumb_height);
             }
-            self.last_pointer_tracking_location = Some(point);
+            let start_content_offset = self.content_offset;
+            self.pointer_tracking_start = Some((point, start_content_offset));
         }
     }
 
     pub fn handle_pointer_move(&mut self, point: Point) {
-        if let (Some(last_point), Some(thumb_frame)) =
-            (self.last_pointer_tracking_location, self.thumb_frame)
+        if let (Some((start_point, start_offset)), Some(thumb_frame)) =
+            (self.pointer_tracking_start, self.thumb_frame)
         {
-            let dy = last_point.y - point.y;
-            // We do not want to respond to every micro pixel change. Only
-            // move if we are above the threshold
-            if dy.abs() < SCROLL_BAR_MOVEMENT_THRESHOLD {
-                return;
-            }
-
+            let dy = start_point.y - point.y;
             let conversion_factor = self.pixel_space_to_content_space_conversion_factor();
-            let proposed_offset = self.content_offset + (conversion_factor * dy);
+            let proposed_offset = start_offset + (conversion_factor * dy);
             self.propose_offset(proposed_offset, conversion_factor, thumb_frame.size.height);
-
-            self.last_pointer_tracking_location = Some(point);
         }
     }
 
     pub fn cancel_pointer_event(&mut self) {
-        self.last_pointer_tracking_location = None;
+        self.pointer_tracking_start = None;
     }
 
     fn propose_offset(
@@ -141,7 +132,7 @@ impl ScrollBar {
 
     #[inline]
     pub fn is_tracking(&self) -> bool {
-        self.last_pointer_tracking_location.is_some()
+        self.pointer_tracking_start.is_some()
     }
 
     fn update_thumb_frame(&mut self) {
@@ -231,7 +222,7 @@ mod tests {
 
         assert_eq!(scroll_bar.is_tracking(), false);
 
-        scroll_bar.last_pointer_tracking_location = Some(Point::new(0.0, 0.0));
+        scroll_bar.pointer_tracking_start = Some((Point::new(0.0, 0.0), 0.0));
         assert_eq!(scroll_bar.is_tracking(), true);
     }
 
@@ -246,26 +237,14 @@ mod tests {
     }
 
     #[test]
-    fn scroll_bar_does_not_change_content_offset_if_less_than_threshold() {
-        let mut scroll_bar = ScrollBar::default();
-        scroll_bar.frame = rect_with_height(100.0);
-        scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
-
-        scroll_bar.last_pointer_tracking_location = Some(Point::new(10.0, 90.0));
-
-        scroll_bar.handle_pointer_move(Point::new(10.0, 89.9));
-        assert_eq!(scroll_bar.content_offset, 0.0);
-    }
-
-    #[test]
     fn scroll_bar_updates_content_offset_on_move_when_tracking() {
         let mut scroll_bar = ScrollBar::default();
         scroll_bar.frame = rect_with_height(100.0);
         scroll_bar.content_height = 400.0;
         scroll_bar.invalidate_thumb_frame();
 
-        scroll_bar.last_pointer_tracking_location = Some(Point::new(10.0, 90.0));
+        scroll_bar.pointer_tracking_start =
+            Some((Point::new(10.0, 90.0), scroll_bar.content_offset));
 
         // a movement of 1 pixel in view space should equate to a movement
         // of 4 points in content space
@@ -280,7 +259,8 @@ mod tests {
         scroll_bar.content_height = 400.0;
         scroll_bar.invalidate_thumb_frame();
 
-        scroll_bar.last_pointer_tracking_location = Some(Point::new(10.0, 90.0));
+        scroll_bar.pointer_tracking_start =
+            Some((Point::new(10.0, 90.0), scroll_bar.content_offset));
 
         // a movement of 1 pixel in view space should equate to a movement
         // of 4 points in content space
@@ -295,7 +275,8 @@ mod tests {
         scroll_bar.content_height = 400.0;
         scroll_bar.invalidate_thumb_frame();
 
-        scroll_bar.last_pointer_tracking_location = Some(Point::new(10.0, 90.0));
+        scroll_bar.pointer_tracking_start =
+            Some((Point::new(10.0, 90.0), scroll_bar.content_offset));
 
         scroll_bar.handle_pointer_move(Point::new(10.0, 91.0));
         assert_eq!(scroll_bar.content_offset, 0.0);
@@ -308,33 +289,11 @@ mod tests {
         scroll_bar.content_height = 400.0;
         scroll_bar.invalidate_thumb_frame();
 
-        scroll_bar.last_pointer_tracking_location = Some(Point::new(10.0, 90.0));
+        scroll_bar.pointer_tracking_start =
+            Some((Point::new(10.0, 90.0), scroll_bar.content_offset));
 
         scroll_bar.handle_pointer_move(Point::new(10.0, 0.0));
         assert_eq!(scroll_bar.content_offset, 300.0);
-    }
-
-    #[test]
-    fn scroll_bar_handle_pointer_move_updates_last_tracking_point() {
-        let mut scroll_bar = ScrollBar::default();
-        scroll_bar.frame = rect_with_height(100.0);
-        scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
-
-        scroll_bar.last_pointer_tracking_location = Some(Point::new(10.0, 10.0));
-        scroll_bar.handle_pointer_move(Point::new(10.0, 11.0));
-        assert_eq!(scroll_bar.last_pointer_tracking_location.unwrap(), Point::new(10.0, 11.0));
-    }
-
-    #[test]
-    fn scroll_bar_begin_pointer_move_updates_last_tracking_point() {
-        let mut scroll_bar = ScrollBar::default();
-        scroll_bar.frame = rect_with_height(100.0);
-        scroll_bar.content_height = 400.0;
-        scroll_bar.invalidate_thumb_frame();
-
-        scroll_bar.begin_tracking_pointer_event(Point::new(5.0, 90.0));
-        assert_eq!(scroll_bar.last_pointer_tracking_location.unwrap(), Point::new(5.0, 90.0));
     }
 
     #[test]
@@ -391,7 +350,7 @@ mod tests {
 
         scroll_bar.begin_tracking_pointer_event(Point::new(10.0, 10.0));
         scroll_bar.cancel_pointer_event();
-        assert!(scroll_bar.last_pointer_tracking_location.is_none());
+        assert!(scroll_bar.pointer_tracking_start.is_none());
     }
 
     #[test]

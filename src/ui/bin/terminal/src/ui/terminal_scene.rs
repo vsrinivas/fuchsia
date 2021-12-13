@@ -6,7 +6,7 @@ use {
     crate::ui::terminal_views::{GridView, ScrollBar},
     carnelian::{
         input::{self},
-        AppContext, Coord, Rect, Size, ViewAssistantContext, ViewKey,
+        AppContext, Coord, Point, Rect, Size, ViewAssistantContext, ViewKey,
     },
     fuchsia_trace as ftrace,
 };
@@ -16,6 +16,8 @@ pub struct TerminalScene {
     scroll_bar: ScrollBar,
     size: Size,
     scroll_context: ScrollContext,
+    active_pointer_id: Option<input::pointer::PointerId>,
+    start_pointer_location: Point,
 }
 
 const SCROLL_BAR_WIDTH: f32 = 16.0;
@@ -36,6 +38,8 @@ impl TerminalScene {
             grid_view: GridView::default(),
             scroll_bar: ScrollBar::new(app_context, view_key),
             scroll_context: ScrollContext::default(),
+            active_pointer_id: None,
+            start_pointer_location: Point::zero(),
         }
     }
 
@@ -84,9 +88,36 @@ impl TerminalScene {
                     let point = point.to_f32();
                     if self.scroll_bar.frame.contains(point) {
                         return self.handle_primary_pointer_event_for_scroll_bar(&event);
+                    } else {
+                        self.active_pointer_id = Some(event.pointer_id.clone());
+                        self.start_pointer_location = point.to_f32();
                     }
                 }
-                _ => (),
+                input::pointer::Phase::Moved(location) => {
+                    if Some(event.pointer_id.clone()) == self.active_pointer_id {
+                        let location_offset = location.to_f32() - self.start_pointer_location;
+
+                        fn div_and_trunc(value: f32, divisor: f32) -> isize {
+                            (value / divisor).trunc() as isize
+                        }
+
+                        // Movement along Y-axis scrolls.
+                        let cell_offset =
+                            div_and_trunc(location_offset.y, self.grid_view.cell_size.height);
+                        if cell_offset != 0 {
+                            self.start_pointer_location.y +=
+                                cell_offset as f32 * self.grid_view.cell_size.height;
+                            return Some(PointerEventResponse::ScrollLines(cell_offset));
+                        }
+                    }
+                }
+                input::pointer::Phase::Up
+                | input::pointer::Phase::Remove
+                | input::pointer::Phase::Cancel => {
+                    if Some(event.pointer_id.clone()) == self.active_pointer_id {
+                        self.active_pointer_id = None;
+                    }
+                }
             }
         }
 
@@ -155,6 +186,8 @@ impl Default for TerminalScene {
             grid_view: GridView::default(),
             scroll_bar: ScrollBar::default(),
             scroll_context: ScrollContext::default(),
+            active_pointer_id: None,
+            start_pointer_location: Point::zero(),
         }
     }
 }
