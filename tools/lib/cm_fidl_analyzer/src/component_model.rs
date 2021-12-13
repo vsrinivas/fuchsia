@@ -779,7 +779,7 @@ impl ComponentModelForAnalyzer {
     //
     // TODO(fxbug.dev/87204): Remove this function and use `route_capability` directly when Scrutiny's
     // `DataController`s allow async function calls.
-    fn route_capability_sync(
+    pub fn route_capability_sync(
         request: RouteRequest,
         target: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Result<

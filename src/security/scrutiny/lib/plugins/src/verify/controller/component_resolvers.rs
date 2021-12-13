@@ -4,15 +4,17 @@
 
 use {
     crate::verify::collection::V2ComponentModel,
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     cm_fidl_analyzer::{
-        component_instance::ComponentInstanceForAnalyzer, BreadthFirstModelWalker,
+        component_instance::ComponentInstanceForAnalyzer,
+        component_model::ComponentModelForAnalyzer, BreadthFirstModelWalker,
         ComponentInstanceVisitor, ComponentModelWalker,
     },
-    cm_rust::{CapabilityName, RegistrationSource, UseDecl},
-    moniker::{AbsoluteMonikerBase, PartialChildMoniker},
-    routing::component_instance::{
-        ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
+    cm_rust::{CapabilityName, UseDecl},
+    moniker::AbsoluteMonikerBase,
+    routing::{
+        component_instance::{ComponentInstanceInterface, ExtendedInstanceInterface},
+        RouteSource,
     },
     scrutiny::{model::controller::DataController, model::model::*},
     serde::{Deserialize, Serialize},
@@ -20,21 +22,29 @@ use {
     std::sync::Arc,
 };
 
-// ComponentResolversController
-//
-// A DataController which returns a list of components that can be resolved given a scheme, protocol, and moniker.
+/// ComponentResolversController
+///
+/// A DataController which returns a list component node paths of all
+/// components that, in their environment, contain a resolver with the
+///  given moniker for a scheme with access to a protocol.
 #[derive(Default)]
 pub struct ComponentResolversController {}
 
-// The expected query format.
+/// The expected query format.
 #[derive(Deserialize, Serialize)]
 pub struct ComponentResolverRequest {
+    // `resolver` URI scheme of interest
     pub scheme: String,
+    // Node path of the `resolver`
     pub moniker: String,
+    // Filter the results to components resolved with a `resolver` with access to a protocol
     pub protocol: String,
 }
 
-// A visitor that queries the tree for component node paths given a request.
+/// Walks the tree for component node paths of all components that, in their
+/// environment, contain a resolver with the given moniker for a scheme
+/// with access to a protocol.
+/// `monikers` contains the components which match the `request` parameters.
 struct ComponentResolversVisitor {
     request: ComponentResolverRequest,
     monikers: Vec<String>,
@@ -54,26 +64,41 @@ impl ComponentResolversVisitor {
 impl ComponentInstanceVisitor for ComponentResolversVisitor {
     fn visit_instance(&mut self, instance: &Arc<ComponentInstanceForAnalyzer>) -> Result<()> {
         if let Ok(Some((
-            ExtendedInstanceInterface::Component(resolver_parent_instance),
+            ExtendedInstanceInterface::Component(resolver_register_instance),
             resolver,
         ))) = instance.environment().get_registered_resolver(&self.request.scheme)
         {
-            let resolver_instance = {
-                match &resolver.source {
-                    RegistrationSource::Parent => todo!("fxbug.dev/89882"),
-                    RegistrationSource::Self_ => todo!("fxbug.dev/89882"),
-                    RegistrationSource::Child(moniker) => resolver_parent_instance
-                        .get_live_child(&PartialChildMoniker::new(moniker.to_owned(), None))
-                        .unwrap(),
+            // The resolver is a capability and we need to get the component that provides it.
+            let resolver_source = match ComponentModelForAnalyzer::route_capability_sync(
+                routing::RouteRequest::Resolver(resolver),
+                &resolver_register_instance,
+            ) {
+                Ok((source, _route)) => {
+                    match source {
+                        RouteSource::Resolver(resolver) => {
+                            match resolver.source_instance().upgrade()? {
+                            routing::component_instance::ExtendedInstanceInterface::Component(
+                                component,
+                            ) => component,
+                            routing::component_instance::ExtendedInstanceInterface::AboveRoot(..) => {
+                                return Err(anyhow!("The plugin is unable to verify resolvers declared above the root."));
+                            }
+                        }
+                        }
+                        _ => {
+                            unreachable!("We only care about resolvers!")
+                        }
+                    }
                 }
+                Err(err) => return Err(anyhow!("failed to route to a resolver: {:?} ", err)),
             };
 
             let moniker =
                 moniker::AbsoluteMoniker::parse_string_without_instances(&self.request.moniker)?
                     .to_string();
 
-            if resolver_instance.abs_moniker().to_string() == moniker {
-                for use_decl in &resolver_instance.decl_for_testing().uses {
+            if resolver_source.abs_moniker().to_string() == moniker {
+                for use_decl in &resolver_source.decl_for_testing().uses {
                     if let UseDecl::Protocol(name) = use_decl {
                         if name.source_name == CapabilityName(self.request.protocol.clone()) {
                             let moniker = instance.abs_moniker();

@@ -535,7 +535,7 @@ mod tests {
                                 "protocol",
                             ],
                             "from" : "#self",
-                            "to": "#logger"
+                            "to": "#my-resolver"
                         },
                     ],
                     "children": [
@@ -582,7 +582,7 @@ mod tests {
                     },
                     "capabilities": [
                         {
-                            "resolver": "resolver",
+                            "resolver": "my-resolver",
                             "path": "/svc/fuchsia.sys2.ComponentResolver",
                         },
                         { "protocol": "fuchsia.sys2.ComponentResolver" },
@@ -615,6 +615,156 @@ mod tests {
             json!({ "scheme": "fuchsia-pkg", "moniker": "/my-resolver", "protocol": "protocol"}),
         )?;
         assert_eq!(response, json!(["/logger:0"]));
+        Ok(())
+    }
+
+    #[test]
+    fn test_component_resolvers_self_source() -> Result<()> {
+        let model = cmls_to_model(vec![
+            (
+                "fuchsia-boot:///#meta/root.cm",
+                json!({
+                    "capabilities": [
+                        {
+                            "protocol": "protocol",
+                            "path": "/protocol",
+                        },
+                        {
+                            "resolver": "my-resolver",
+                            "path": "/svc/fuchsia.sys2.ComponentResolver",
+                        },
+                    ],
+                    "use": [
+                        {
+                            "protocol": [
+                                "protocol",
+                            ],
+                        },
+                    ],
+                    "children": [
+                        {
+                            "name": "logger",
+                            "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                            "environment": "#myenv"
+                        },
+                    ],
+                    "environments" : [
+                        {
+                            "name": "myenv",
+                            "extends": "realm",
+                            "resolvers" : [
+                                {
+                                    "resolver" : "my-resolver",
+                                    "scheme": "fuchsia-pkg",
+                                    "from": "self",
+                                }
+                            ]
+                        }
+                    ]
+
+                }),
+            ),
+            (
+                "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                json!({
+                    "program" : {
+                        "runner" : "elf",
+                        "binary" : "bin/logger",
+                    },
+                }),
+            ),
+        ])?;
+        let controller = ComponentResolversController::default();
+
+        let response = controller.query(
+            model.clone(),
+            json!({ "scheme": "fuchsia-pkg", "moniker": "/", "protocol": "protocol"}),
+        )?;
+        assert_eq!(response, json!(["/logger:0"]));
+        Ok(())
+    }
+
+    #[test]
+    fn test_component_resolvers_parent_source() -> Result<()> {
+        let model = cmls_to_model(vec![
+            (
+                "fuchsia-boot:///#meta/root.cm",
+                json!({
+                    "capabilities": [
+                        {
+                            "protocol": "protocol",
+                            "path": "/protocol",
+                        },
+                        {
+                            "resolver": "my-resolver",
+                            "path": "/svc/fuchsia.sys2.ComponentResolver",
+                        },
+                    ],
+                    "offer": [
+                        {
+                            "resolver": "my-resolver",
+                            "from" : "self",
+                            "to": "#logger"
+                        },
+                    ],
+                    "use": [
+                        {
+                            "protocol": [
+                                "protocol",
+                            ],
+                        },
+                    ],
+                    "children": [
+                        {
+                            "name": "logger",
+                            "url": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                        },
+                    ],
+
+                }),
+            ),
+            (
+                "fuchsia-pkg://fuchsia.com/logger#meta/logger.cm",
+                json!({
+                    "children" : [
+                        {
+                            "name": "log-child",
+                            "url": "fuchsia-pkg://fuchsia.com/log-child#meta/log-child.cm",
+                            "environment" : "#env",
+                        },
+                    ],
+                    "environments" : [
+                        {
+                            "name": "env",
+                            "extends": "none",
+                            "resolvers" : [ {
+                                "resolver" : "my-resolver",
+                                "from" : "parent",
+                                "scheme": "fuchsia-pkg",
+                            },
+                            ],
+                        },
+                    ],
+                }),
+            ),
+            (
+                "fuchsia-pkg://fuchsia.com/log-child#meta/log-child.cm",
+                json!({
+                    "program" : {
+                        "runner" : "elf",
+                        "binary" : "bin/logger",
+                    },
+                }),
+            ),
+        ])?;
+
+        let controller = ComponentResolversController::default();
+
+        let response = controller.query(
+            model.clone(),
+            json!({ "scheme": "fuchsia-pkg", "moniker": "/", "protocol": "protocol"}),
+        )?;
+        assert_eq!(response, json!(["/logger:0/log-child:0"]));
         Ok(())
     }
 
