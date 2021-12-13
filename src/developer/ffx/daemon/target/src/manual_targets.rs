@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use ffx_config::{self, api::ConfigError, ConfigLevel};
 use std::collections::HashSet;
 use std::iter::FromIterator;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[cfg(test)]
 pub(crate) const MANUAL_TARGETS: &'static str = "targets.manual";
@@ -30,9 +31,11 @@ pub trait ManualTargets: Sync {
     async fn add(&self, target: String) -> Result<()> {
         let mut targets = self.get_or_default().await;
         if !targets.contains(&target) {
-            targets.push(target)
+            targets.push(target);
+            self.storage_set(targets.into()).await
+        } else {
+            Ok(())
         }
-        self.storage_set(targets.into()).await
     }
 
     async fn remove(&self, target: String) -> Result<()> {
@@ -61,6 +64,7 @@ impl ManualTargets for Config {
 #[derive(Default)]
 pub struct Mock {
     targets: Mutex<Option<Vec<String>>>,
+    set_count: AtomicUsize,
 }
 
 #[async_trait(?Send)]
@@ -75,6 +79,7 @@ impl ManualTargets for Mock {
     }
 
     async fn storage_set(&self, targets: Vec<String>) -> Result<()> {
+        self.set_count.fetch_add(1, Ordering::SeqCst);
         self.targets.lock().await.replace(targets);
         Ok(())
     }
@@ -83,13 +88,14 @@ impl ManualTargets for Mock {
 impl Mock {
     #[cfg(test)]
     pub fn new(targets: Vec<String>) -> Self {
-        Self { targets: Mutex::new(Some(targets)) }
+        Self { targets: Mutex::new(Some(targets)), ..Self::default() }
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
+    use serial_test::serial;
 
     mod real_impl {
         use super::*;
@@ -199,5 +205,19 @@ mod test {
             let targets = mt.get_or_default().await;
             assert_eq!(targets, Vec::<String>::new());
         }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    #[serial]
+    async fn test_repeated_adds_do_not_rewrite_storage() {
+        let mt = Mock::new(vec![]);
+        mt.add("127.0.0.1:8022".to_string()).await.unwrap();
+        assert_eq!(mt.set_count.load(Ordering::SeqCst), 1);
+        mt.add("127.0.0.1:8022".to_string()).await.unwrap();
+        assert_eq!(mt.set_count.load(Ordering::SeqCst), 1);
+        mt.add("127.0.0.1:8023".to_string()).await.unwrap();
+        assert_eq!(mt.set_count.load(Ordering::SeqCst), 2);
+        mt.add("127.0.0.1:8023".to_string()).await.unwrap();
+        assert_eq!(mt.set_count.load(Ordering::SeqCst), 2);
     }
 }
