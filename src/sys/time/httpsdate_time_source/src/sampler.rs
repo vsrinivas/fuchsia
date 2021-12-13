@@ -429,23 +429,20 @@ mod test {
         // Since the 'source' reported by the test client and the test clock are
         // synchronized we can assert that the reported samples are within some bound.
         let test_clock = zx::Clock::create(zx::ClockOpts::empty(), None).unwrap();
+        let monotonic_ref = zx::Time::get_monotonic();
         test_clock
             .update(
                 zx::ClockUpdate::builder()
-                    .approximate_value(zx::Time::get_monotonic() + TEST_UTC_OFFSET),
+                    .absolute_value(monotonic_ref, monotonic_ref + TEST_UTC_OFFSET),
             )
             .unwrap();
-        // The actual offset from monotonic can differ slightly as the exact monotonic time at
-        // which the update occurs affects the offset. We pull the exact offset from clock details.
-        let monotonic_ref = zx::Time::get_monotonic();
-        let utc_offset = time_util::time_at_monotonic(&test_clock, monotonic_ref) - monotonic_ref;
 
         let sampler = HttpsSamplerImpl {
             uri: TEST_URI.clone(),
             client: Mutex::new(TestClient::with_offset_responses(vec![
-                Ok(utc_offset),
-                Ok(utc_offset),
-                Ok(utc_offset),
+                Ok(TEST_UTC_OFFSET),
+                Ok(TEST_UTC_OFFSET),
+                Ok(TEST_UTC_OFFSET),
             ])),
             system_clock_for_metrics_only: test_clock,
         };

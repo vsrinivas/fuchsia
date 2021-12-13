@@ -655,20 +655,23 @@ mod tests {
         let (inspect_diagnostics, clock) = create_test_object(&inspector, false);
 
         // Perform two updates to the clock. The inspect data should reflect the most recent.
+        let monotonic_time = zx::Time::get_monotonic();
         clock
             .update(
                 zx::ClockUpdate::builder()
-                    .approximate_value(zx::Time::from_nanos(BACKSTOP_TIME + 1234))
+                    .absolute_value(monotonic_time, zx::Time::from_nanos(BACKSTOP_TIME + 1234))
                     .rate_adjust(0)
                     .error_bounds(0),
             )
             .expect("Failed to update test clock");
         inspect_diagnostics
             .record(Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc });
+
+        let monotonic_time = zx::Time::get_monotonic();
         clock
             .update(
                 zx::ClockUpdate::builder()
-                    .approximate_value(zx::Time::from_nanos(BACKSTOP_TIME + 2345))
+                    .absolute_value(monotonic_time, zx::Time::from_nanos(BACKSTOP_TIME + 2345))
                     .rate_adjust(RATE_ADJUST)
                     .error_bounds(ERROR_BOUNDS),
             )
@@ -693,8 +696,8 @@ mod tests {
                     last_update: contains {
                         retrieval_monotonic: AnyProperty,
                         generation_counter: 4u64,
-                        monotonic_offset: AnyProperty,
-                        utc_offset: AnyProperty,
+                        monotonic_offset: monotonic_time.into_nanos() as i64,
+                        utc_offset: (BACKSTOP_TIME + 2345) as i64,
                         rate_ppm: RATE_ADJUST as i64,
                         error_bounds: ERROR_BOUNDS,
                         reason: "Some(TimeStep)",
