@@ -137,6 +137,9 @@ pub trait Policy {
 
     /// Given the current PolicyData, is reboot allowed right now.
     fn reboot_allowed(policy_data: &Self::RebootPolicyData, check_options: &CheckOptions) -> bool;
+
+    /// Given the InstallPlan, is reboot needed after update has been installed.
+    fn reboot_needed(install_plan: &impl Plan) -> bool;
 }
 
 pub trait PolicyEngine {
@@ -179,6 +182,9 @@ pub trait PolicyEngine {
         check_options: &CheckOptions,
         install_result: &Self::InstallResult,
     ) -> BoxFuture<'_, bool>;
+
+    /// Given the InstallPlan, is reboot needed after update has been installed.
+    fn reboot_needed(&mut self, install_plan: &impl Plan) -> BoxFuture<'_, bool>;
 }
 
 #[cfg(test)]

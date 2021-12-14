@@ -10,7 +10,7 @@ use crate::{
     metrics::MetricsReporter,
     policy::PolicyEngine,
     request_builder::RequestParams,
-    state_machine::{update_check, ControlHandle, State, StateMachine, StateMachineEvent},
+    state_machine::{update_check, ControlHandle, StateMachine, StateMachineEvent},
     storage::Storage,
     time::Timer,
 };
@@ -25,7 +25,7 @@ use crate::{
     installer::stub::StubInstaller,
     metrics::StubMetricsReporter,
     policy::StubPolicyEngine,
-    state_machine::UpdateCheckError,
+    state_machine::{RebootAfterUpdate, UpdateCheckError},
     storage::StubStorage,
     time::{timers::StubTimer, MockTimeSource},
 };
@@ -244,7 +244,6 @@ where
             metrics_reporter,
             storage_ref: storage,
             context,
-            state: State::Idle,
             app_set,
         }
     }
@@ -276,7 +275,9 @@ where
 
     /// Run perform_update_check once, returning the update check result.
     #[cfg(test)]
-    pub async fn oneshot(self) -> Result<(update_check::Response, Option<IR>), UpdateCheckError> {
+    pub(super) async fn oneshot(
+        self,
+    ) -> Result<(update_check::Response, RebootAfterUpdate<IR>), UpdateCheckError> {
         self.build().await.oneshot().await
     }
 }

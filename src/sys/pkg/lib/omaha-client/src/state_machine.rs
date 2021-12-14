@@ -93,9 +93,6 @@ where
     /// Context for update check.
     context: update_check::Context,
 
-    /// The current State of the StateMachine.
-    state: State,
-
     /// The list of apps used for update check.
     /// When locking both storage and app_set, make sure to always lock storage first.
     app_set: Rc<Mutex<AS>>,
@@ -221,6 +218,12 @@ impl ControlHandle {
     }
 }
 
+#[derive(Debug)]
+enum RebootAfterUpdate<T> {
+    Needed(T),
+    NotNeeded,
+}
+
 impl<PE, HR, IN, TM, MR, ST, AS, IR> StateMachine<PE, HR, IN, TM, MR, ST, AS>
 where
     PE: PolicyEngine<InstallResult = IR>,
@@ -340,7 +343,7 @@ where
                 }
             };
 
-            let install_result = {
+            let reboot_after_update = {
                 let apps = self.app_set.lock().await.get_apps();
                 info!("Checking to see if an update check is allowed at this time for {:?}", apps);
                 let decision = self
@@ -382,7 +385,7 @@ where
                 // during the check.
                 loop {
                     select! {
-                        install_result = update_check => break install_result,
+                        update_check_result = update_check => break update_check_result,
                         ControlRequest::StartUpdateCheck{
                             options: new_options,
                             responder
@@ -399,16 +402,12 @@ where
                 }
             };
 
-            // TODO: This is the last place we read self.state, we should see if we can find another
-            // way to achieve this so that we can remove self.state entirely.
-            if self.state == State::WaitingForReboot {
-                // install_result is safe to unwrap here!
-                // This option is always `Some` if the state machine enters the WaitingForReboot state,
-                // which only happens when an update installs successfully.
-                self.wait_for_reboot(options, &mut control, install_result.unwrap(), &mut co).await;
+            if let RebootAfterUpdate::Needed(install_result) = reboot_after_update {
+                Self::yield_state(State::WaitingForReboot, &mut co).await;
+                self.wait_for_reboot(options, &mut control, install_result, &mut co).await;
             }
 
-            self.set_state(State::Idle, &mut co).await;
+            Self::yield_state(State::Idle, &mut co).await;
         }
     }
 
@@ -574,17 +573,18 @@ where
 
     /// Perform update check and handle the result, including updating the update check context
     /// and cohort.
-    pub async fn start_update_check(
+    /// Returns whether reboot is needed after the update.
+    async fn start_update_check(
         &mut self,
         request_params: RequestParams,
         co: &mut async_generator::Yield<StateMachineEvent>,
-    ) -> Option<IN::InstallResult> {
+    ) -> RebootAfterUpdate<IN::InstallResult> {
         let apps = self.app_set.lock().await.get_apps();
         let result = self.perform_update_check(request_params, apps, co).await;
 
-        let (result, install_result) =
+        let (result, reboot_after_update) =
             match result {
-                Ok((result, install_result)) => {
+                Ok((result, reboot_after_update)) => {
                     info!("Update check result: {:?}", result);
                     // Update check succeeded, update |last_update_time|.
                     self.context.schedule.last_update_time = Some(self.time_source.now().into());
@@ -610,7 +610,7 @@ where
                         self.report_attempts_to_successful_install(success).await;
                     }
 
-                    (Ok(result), install_result)
+                    (Ok(result), reboot_after_update)
                     // TODO: update consecutive_proxied_requests
                 }
                 Err(error) => {
@@ -635,7 +635,7 @@ where
                     self.report_metrics(Metrics::UpdateCheckFailureReason(failure_reason));
 
                     self.report_attempts_to_successful_check(false).await;
-                    (Err(error), None)
+                    (Err(error), RebootAfterUpdate::NotNeeded)
                 }
             };
 
@@ -645,7 +645,7 @@ where
 
         self.persist_data().await;
 
-        install_result
+        reboot_after_update
     }
 
     // Update self.context.state.consecutive_failed_update_checks and report the metric if
@@ -696,8 +696,9 @@ where
         request_params: RequestParams,
         apps: Vec<App>,
         co: &mut async_generator::Yield<StateMachineEvent>,
-    ) -> Result<(update_check::Response, Option<IN::InstallResult>), UpdateCheckError> {
-        self.set_state(State::CheckingForUpdates, co).await;
+    ) -> Result<(update_check::Response, RebootAfterUpdate<IN::InstallResult>), UpdateCheckError>
+    {
+        Self::yield_state(State::CheckingForUpdates, co).await;
 
         self.report_check_interval(request_params.source.clone()).await;
 
@@ -747,12 +748,12 @@ where
                 }
                 Err(OmahaRequestError::Json(e)) => {
                     error!("Unable to construct request body! {:?}", e);
-                    self.set_state(State::ErrorCheckingForUpdate, co).await;
+                    Self::yield_state(State::ErrorCheckingForUpdate, co).await;
                     break Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
                 Err(OmahaRequestError::HttpBuilder(e)) => {
                     error!("Unable to construct HTTP request! {:?}", e);
-                    self.set_state(State::ErrorCheckingForUpdate, co).await;
+                    Self::yield_state(State::ErrorCheckingForUpdate, co).await;
                     break Err(UpdateCheckError::OmahaRequest(e.into()));
                 }
                 Err(OmahaRequestError::HttpTransport(e)) => {
@@ -763,7 +764,7 @@ where
                         || e.is_user()
                         || self.context.state.server_dictated_poll_interval.is_some()
                     {
-                        self.set_state(State::ErrorCheckingForUpdate, co).await;
+                        Self::yield_state(State::ErrorCheckingForUpdate, co).await;
                         break Err(UpdateCheckError::OmahaRequest(e.into()));
                     }
                 }
@@ -772,7 +773,7 @@ where
                     if omaha_request_attempt >= MAX_OMAHA_REQUEST_ATTEMPTS
                         || self.context.state.server_dictated_poll_interval.is_some()
                     {
-                        self.set_state(State::ErrorCheckingForUpdate, co).await;
+                        Self::yield_state(State::ErrorCheckingForUpdate, co).await;
                         break Err(UpdateCheckError::OmahaRequest(e.into()));
                     }
                 }
@@ -799,7 +800,7 @@ where
             Ok(res) => res,
             Err(err) => {
                 warn!("Unable to parse Omaha response: {:?}", err);
-                self.set_state(State::ErrorCheckingForUpdate, co).await;
+                Self::yield_state(State::ErrorCheckingForUpdate, co).await;
                 self.report_omaha_event_and_update_context(
                     &request_params,
                     Event::error(EventErrorCode::ParseResponse),
@@ -828,8 +829,8 @@ where
         if !some_app_has_update {
             // A successful, no-update, check
 
-            self.set_state(State::NoUpdateAvailable, co).await;
-            Ok((Self::make_response(response, update_check::Action::NoUpdate), None))
+            Self::yield_state(State::NoUpdateAvailable, co).await;
+            Self::make_not_updated_result(response, update_check::Action::NoUpdate)
         } else {
             info!(
                 "At least one app has an update, proceeding to build and process an Install Plan"
@@ -848,8 +849,8 @@ where
                     Ok(plan) => plan,
                     Err(e) => {
                         error!("Unable to construct install plan! {}", e);
-                        self.set_state(State::InstallingUpdate, co).await;
-                        self.set_state(State::InstallationError, co).await;
+                        Self::yield_state(State::InstallingUpdate, co).await;
+                        Self::yield_state(State::InstallationError, co).await;
                         self.report_omaha_event_and_update_context(
                             &request_params,
                             Event::error(EventErrorCode::ConstructInstallPlan),
@@ -890,11 +891,12 @@ where
                     )
                     .await;
 
-                    self.set_state(State::InstallationDeferredByPolicy, co).await;
-                    return Ok((
-                        Self::make_response(response, update_check::Action::DeferredByPolicy),
-                        None,
-                    ));
+                    Self::yield_state(State::InstallationDeferredByPolicy, co).await;
+
+                    return Self::make_not_updated_result(
+                        response,
+                        update_check::Action::DeferredByPolicy,
+                    );
                 }
                 UpdateDecision::DeniedByPolicy => {
                     warn!("Install plan was denied by Policy, see Policy logs for reasoning");
@@ -908,14 +910,15 @@ where
                         co,
                     )
                     .await;
-                    return Ok((
-                        Self::make_response(response, update_check::Action::DeniedByPolicy),
-                        None,
-                    ));
+
+                    return Self::make_not_updated_result(
+                        response,
+                        update_check::Action::DeniedByPolicy,
+                    );
                 }
             }
 
-            self.set_state(State::InstallingUpdate, co).await;
+            Self::yield_state(State::InstallingUpdate, co).await;
             self.report_omaha_event_and_update_context(
                 &request_params,
                 Event::success(EventType::UpdateDownloadStarted),
@@ -969,7 +972,7 @@ where
                 Ok(install_result) => install_result,
                 Err(e) => {
                     co.yield_(StateMachineEvent::InstallerError(Some(Box::new(e)))).await;
-                    self.set_state(State::InstallationError, co).await;
+                    Self::yield_state(State::InstallationError, co).await;
                     self.report_omaha_event_and_update_context(
                         &request_params,
                         Event::error(EventErrorCode::Installation),
@@ -981,13 +984,10 @@ where
                     )
                     .await;
 
-                    return Ok((
-                        Self::make_response(
-                            response,
-                            update_check::Action::InstallPlanExecutionError,
-                        ),
-                        None,
-                    ));
+                    return Self::make_not_updated_result(
+                        response,
+                        update_check::Action::InstallPlanExecutionError,
+                    );
                 }
             };
 
@@ -1035,8 +1035,15 @@ where
                 }
                 storage.commit_or_log().await;
             }
-            self.set_state(State::WaitingForReboot, co).await;
-            Ok((Self::make_response(response, update_check::Action::Updated), Some(install_result)))
+
+            let reboot_after_update = if self.policy_engine.reboot_needed(&install_plan).await {
+                RebootAfterUpdate::Needed(install_result)
+            } else {
+                RebootAfterUpdate::NotNeeded
+            };
+
+            let app_responses = Self::make_app_responses(response, update_check::Action::Updated);
+            Ok((update_check::Response { app_responses }, reboot_after_update))
         }
     }
 
@@ -1111,9 +1118,8 @@ where
         self.context.schedule.last_update_time = Some(self.time_source.now().into());
         co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule)).await;
 
-        let result = Self::make_response(response, update_check::Action::NoUpdate);
-
-        self.app_set.lock().await.update_from_omaha(&result.app_responses);
+        let app_responses = Self::make_app_responses(response, update_check::Action::NoUpdate);
+        self.app_set.lock().await.update_from_omaha(&app_responses);
 
         self.persist_data().await;
     }
@@ -1205,36 +1211,42 @@ where
             .collect()
     }
 
-    /// Utility to take a set of protocol::response::Apps and then construct a response from the
-    /// update check based on those app IDs.
+    /// Utility to take a set of protocol::response::Apps and then construct a set of AppResponse
+    /// from the update check based on those app IDs.
     ///
-    /// TODO: Change the Policy and Installer to return a set of results, one for each app ID, then
-    ///       make this match that.
-    fn make_response(
+    /// TODO(fxbug.dev/88997): Change the Policy and Installer to return a set of results, one for
+    ///                        each app ID, then make this match that.
+    fn make_app_responses(
         response: protocol::response::Response,
         action: update_check::Action,
-    ) -> update_check::Response {
-        update_check::Response {
-            app_responses: response
-                .apps
-                .iter()
-                .map(|app| update_check::AppResponse {
-                    app_id: app.id.clone(),
-                    cohort: app.cohort.clone(),
-                    user_counting: response.daystart.clone().into(),
-                    result: action.clone(),
-                })
-                .collect(),
-        }
+    ) -> Vec<update_check::AppResponse> {
+        let daystart = response.daystart;
+        response
+            .apps
+            .into_iter()
+            .map(|app| update_check::AppResponse {
+                app_id: app.id,
+                cohort: app.cohort,
+                user_counting: daystart.clone().into(),
+                result: action.clone(),
+            })
+            .collect()
     }
 
-    /// Update the state internally and send it to the observer.
-    async fn set_state(
-        &mut self,
-        state: State,
-        co: &mut async_generator::Yield<StateMachineEvent>,
-    ) {
-        self.state = state;
+    /// Make an Ok result for `perform_update_check()` when update wasn't installed/failed.
+    fn make_not_updated_result(
+        response: protocol::response::Response,
+        action: update_check::Action,
+    ) -> Result<(update_check::Response, RebootAfterUpdate<IN::InstallResult>), UpdateCheckError>
+    {
+        Ok((
+            update_check::Response { app_responses: Self::make_app_responses(response, action) },
+            RebootAfterUpdate::NotNeeded,
+        ))
+    }
+
+    /// Send the state to the observer.
+    async fn yield_state(state: State, co: &mut async_generator::Yield<StateMachineEvent>) {
         co.yield_(StateMachineEvent::StateChange(state)).await;
     }
 
@@ -1289,9 +1301,10 @@ where
     IR: 'static + Send,
 {
     /// Run perform_update_check once, returning the update check result.
-    pub async fn oneshot(
+    async fn oneshot(
         &mut self,
-    ) -> Result<(update_check::Response, Option<IN::InstallResult>), UpdateCheckError> {
+    ) -> Result<(update_check::Response, RebootAfterUpdate<IN::InstallResult>), UpdateCheckError>
+    {
         let request_params = RequestParams::default();
 
         let apps = self.app_set.lock().await.get_apps();
@@ -1304,7 +1317,7 @@ where
     }
 
     /// Run start_upate_check once, discarding its states.
-    pub async fn run_once(&mut self) {
+    async fn run_once(&mut self) {
         let request_params = RequestParams::default();
 
         async_generator::generate(move |mut co| async move {
@@ -1360,6 +1373,21 @@ mod tests {
         )
         .with_cohort(Cohort::new("stable-channel"))
         .build()])))
+    }
+
+    fn make_update_available_response() -> HttpResponse<Vec<u8>> {
+        let response = json!({"response":{
+          "server": "prod",
+          "protocol": "3.0",
+          "app": [{
+            "appid": "{00000000-0000-0000-0000-000000000001}",
+            "status": "ok",
+            "updatecheck": {
+              "status": "ok"
+            }
+          }],
+        }});
+        HttpResponse::new(serde_json::to_vec(&response).unwrap())
     }
 
     // Assert that the last request made to |http| is equal to the request built by
@@ -1420,14 +1448,14 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(HttpResponse::new(response));
 
-            let (response, install_result) =
+            let (response, reboot_after_update) =
                 StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
             assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
             assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
             assert_eq!(None, response.app_responses[0].cohort.hint);
 
-            assert_eq!(None, install_result);
+            assert_matches!(reboot_after_update, RebootAfterUpdate::NotNeeded);
         });
     }
 
@@ -1450,14 +1478,14 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(HttpResponse::new(response));
 
-            let (response, install_result) =
+            let (response, reboot_after_update) =
                 StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
             assert_eq!("{00000000-0000-0000-0000-000000000001}", response.app_responses[0].app_id);
             assert_eq!(Some("1".into()), response.app_responses[0].cohort.id);
             assert_eq!(Some("stable-channel".into()), response.app_responses[0].cohort.name);
             assert_eq!(None, response.app_responses[0].cohort.hint);
 
-            assert_eq!(Some(()), install_result);
+            assert_matches!(reboot_after_update, RebootAfterUpdate::Needed(()));
         });
     }
 
@@ -1555,9 +1583,9 @@ mod tests {
                 .build()
                 .await;
 
-            let (response, install_result) = state_machine.oneshot().await.unwrap();
+            let (response, reboot_after_update) = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::InstallPlanExecutionError, response.app_responses[0].result);
-            assert_eq!(None, install_result);
+            assert_matches!(reboot_after_update, RebootAfterUpdate::NotNeeded);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
@@ -1581,28 +1609,7 @@ mod tests {
     #[test]
     fn test_observe_installation_error() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok",
-                  "manifest": {
-                      "version": "5.6.7.8",
-                      "actions": {
-                          "action": [],
-                      },
-                      "packages": {
-                          "package": [],
-                      },
-                  }
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(HttpResponse::new(response));
+            let http = MockHttpRequest::new(make_update_available_response());
 
             let actual_errors = StateMachineBuilder::new_stub()
                 .http(http)
@@ -1628,19 +1635,7 @@ mod tests {
     #[test]
     fn test_report_deferred_by_policy() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(HttpResponse::new(response));
+            let http = MockHttpRequest::new(make_update_available_response());
 
             let policy_engine = MockPolicyEngine {
                 update_decision: UpdateDecision::DeferredByPolicy,
@@ -1652,9 +1647,9 @@ mod tests {
                 .build()
                 .await;
 
-            let (response, install_result) = state_machine.oneshot().await.unwrap();
+            let (response, reboot_after_update) = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::DeferredByPolicy, response.app_responses[0].result);
-            assert_eq!(None, install_result);
+            assert_matches!(reboot_after_update, RebootAfterUpdate::NotNeeded);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
@@ -1676,19 +1671,8 @@ mod tests {
     #[test]
     fn test_report_denied_by_policy() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(HttpResponse::new(response));
+            let response = make_update_available_response();
+            let http = MockHttpRequest::new(response);
             let policy_engine = MockPolicyEngine {
                 update_decision: UpdateDecision::DeniedByPolicy,
                 ..MockPolicyEngine::default()
@@ -1700,9 +1684,9 @@ mod tests {
                 .build()
                 .await;
 
-            let (response, install_result) = state_machine.oneshot().await.unwrap();
+            let (response, reboot_after_update) = state_machine.oneshot().await.unwrap();
             assert_eq!(Action::DeniedByPolicy, response.app_responses[0].result);
-            assert_eq!(None, install_result);
+            assert_matches!(reboot_after_update, RebootAfterUpdate::NotNeeded);
 
             let request_params = RequestParams::default();
             let mut request_builder = RequestBuilder::new(&state_machine.config, &request_params);
@@ -1819,14 +1803,14 @@ mod tests {
             let response = serde_json::to_vec(&response).unwrap();
             let http = MockHttpRequest::new(HttpResponse::new(response));
 
-            let (response, install_result) =
+            let (response, reboot_after_update) =
                 StateMachineBuilder::new_stub().http(http).oneshot().await.unwrap();
 
             assert_eq!(
                 UserCounting::ClientRegulatedByDate(Some(1234567)),
                 response.app_responses[0].user_counting
             );
-            assert_eq!(None, install_result);
+            assert_matches!(reboot_after_update, RebootAfterUpdate::NotNeeded);
         });
     }
 
@@ -2615,19 +2599,7 @@ mod tests {
     #[test]
     fn test_report_successful_update_duration() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(HttpResponse::new(response));
+            let http = MockHttpRequest::new(make_update_available_response());
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
             let mut mock_time = MockTimeSource::new_from_now();
@@ -2684,19 +2656,7 @@ mod tests {
     #[test]
     fn test_report_failed_update_duration() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(HttpResponse::new(response));
+            let http = MockHttpRequest::new(make_update_available_response());
             let mut state_machine = StateMachineBuilder::new_stub()
                 .http(http)
                 .installer(StubInstaller { should_fail: true })
@@ -2857,19 +2817,7 @@ mod tests {
     #[test]
     fn test_report_attempts_to_successful_install() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(HttpResponse::new(response.clone()));
+            let http = MockHttpRequest::new(make_update_available_response());
             let storage = Rc::new(Mutex::new(MemStorage::new()));
 
             let mock_time = MockTimeSource::new_from_now();
@@ -2908,31 +2856,19 @@ mod tests {
     #[test]
     fn test_report_attempts_to_successful_install_fails_then_succeeds() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let mut http = MockHttpRequest::new(HttpResponse::new(response.clone()));
+            let mut http = MockHttpRequest::new(make_update_available_response());
             // Responses to events. This first batch corresponds to the install failure, so these
             // should be the update download started, and another for a failed install.
             // `Event::error(EventErrorCode::Installation)`.
-            http.add_response(HttpResponse::new(response.clone()));
-            http.add_response(HttpResponse::new(response.clone()));
+            http.add_response(HttpResponse::new(vec![]));
+            http.add_response(HttpResponse::new(vec![]));
 
             // Respond to the next request.
-            http.add_response(HttpResponse::new(response.clone()));
-            // Responses to events. This cooresponds to the update download started, and the other
+            http.add_response(make_update_available_response());
+            // Responses to events. This corresponds to the update download started, and the other
             // for a successful install.
-            http.add_response(HttpResponse::new(response.clone()));
-            http.add_response(HttpResponse::new(response.clone()));
+            http.add_response(HttpResponse::new(vec![]));
+            http.add_response(HttpResponse::new(vec![]));
 
             let storage = Rc::new(Mutex::new(MemStorage::new()));
             let mock_time = MockTimeSource::new_from_now();
@@ -3024,19 +2960,7 @@ mod tests {
         let mut pool = LocalPool::new();
         let spawner = pool.spawner();
 
-        let response = json!({"response":{
-          "server": "prod",
-          "protocol": "3.0",
-          "app": [{
-            "appid": "{00000000-0000-0000-0000-000000000001}",
-            "status": "ok",
-            "updatecheck": {
-              "status": "ok"
-            }
-          }],
-        }});
-        let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(HttpResponse::new(response));
+        let http = MockHttpRequest::new(make_update_available_response());
         let mock_time = MockTimeSource::new_from_now();
         let next_update_time = mock_time.now();
         let (timer, mut timers) = BlockingTimer::new();
@@ -3063,23 +2987,56 @@ mod tests {
     }
 
     #[test]
+    fn test_skip_reboot_if_not_needed() {
+        let mut pool = LocalPool::new();
+        let spawner = pool.spawner();
+
+        let http = MockHttpRequest::new(make_update_available_response());
+        let mock_time = MockTimeSource::new_from_now();
+        let next_update_time = mock_time.now();
+        let reboot_check_options_received = Rc::new(RefCell::new(vec![]));
+        let policy_engine = MockPolicyEngine {
+            reboot_check_options_received: Rc::clone(&reboot_check_options_received),
+            check_timing: Some(CheckTiming::builder().time(next_update_time).build()),
+            time_source: mock_time.clone(),
+            reboot_needed: Rc::new(RefCell::new(false)),
+            ..MockPolicyEngine::default()
+        };
+        let (timer, mut timers) = BlockingTimer::new();
+
+        let installer = TestInstaller::builder(mock_time).build();
+        let reboot_called = Rc::clone(&installer.reboot_called);
+        let (_ctl, state_machine) = pool.run_until(
+            StateMachineBuilder::new_stub()
+                .http(http)
+                .installer(installer)
+                .policy_engine(policy_engine)
+                .timer(timer)
+                .start(),
+        );
+        let observer = TestObserver::default();
+        spawner.spawn_local(observer.observe(state_machine)).unwrap();
+
+        let blocked_timer = pool.run_until(timers.next()).unwrap();
+        assert_eq!(blocked_timer.requested_wait(), RequestedWait::Until(next_update_time.into()));
+        blocked_timer.unblock();
+        pool.run_until_stalled();
+
+        assert_eq!(
+            observer.take_states(),
+            vec![State::CheckingForUpdates, State::InstallingUpdate, State::Idle]
+        );
+
+        assert_eq!(*reboot_check_options_received.borrow(), vec![]);
+        assert!(!*reboot_called.borrow());
+    }
+
+    #[test]
     fn test_failed_update_does_not_trigger_reboot() {
         let mut pool = LocalPool::new();
         let spawner = pool.spawner();
 
-        let response = json!({"response":{
-          "server": "prod",
-          "protocol": "3.0",
-          "app": [{
-            "appid": "{00000000-0000-0000-0000-000000000001}",
-            "status": "ok",
-            "updatecheck": {
-              "status": "ok"
-            }
-          }],
-        }});
-        let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(HttpResponse::new(response));
+        let http = MockHttpRequest::new(make_update_available_response());
         let mock_time = MockTimeSource::new_from_now();
         let next_update_time = mock_time.now();
         let (timer, mut timers) = BlockingTimer::new();
@@ -3113,19 +3070,7 @@ mod tests {
         let mut pool = LocalPool::new();
         let spawner = pool.spawner();
 
-        let response = json!({"response":{
-          "server": "prod",
-          "protocol": "3.0",
-          "app": [{
-            "appid": "{00000000-0000-0000-0000-000000000001}",
-            "status": "ok",
-            "updatecheck": {
-              "status": "ok"
-            }
-          }],
-        }});
-        let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(HttpResponse::new(response));
+        let http = MockHttpRequest::new(make_update_available_response());
         let mock_time = MockTimeSource::new_from_now();
 
         let (send_install, mut recv_install) = mpsc::channel(0);
@@ -3190,25 +3135,13 @@ mod tests {
         let mut pool = LocalPool::new();
         let spawner = pool.spawner();
 
-        let response = json!({"response":{
-          "server": "prod",
-          "protocol": "3.0",
-          "app": [{
-            "appid": "{00000000-0000-0000-0000-000000000001}",
-            "status": "ok",
-            "updatecheck": {
-              "status": "ok"
-            }
-          }],
-        }});
-        let response = serde_json::to_vec(&response).unwrap();
-        let mut http = MockHttpRequest::new(HttpResponse::new(response.clone()));
+        let mut http = MockHttpRequest::new(make_update_available_response());
         // Responses to events.
-        http.add_response(HttpResponse::new(response.clone()));
-        http.add_response(HttpResponse::new(response.clone()));
-        http.add_response(HttpResponse::new(response.clone()));
+        http.add_response(HttpResponse::new(vec![]));
+        http.add_response(HttpResponse::new(vec![]));
+        http.add_response(HttpResponse::new(vec![]));
         // Response to the ping.
-        http.add_response(HttpResponse::new(response));
+        http.add_response(make_update_available_response());
         let mut mock_time = MockTimeSource::new_from_now();
         mock_time.truncate_submicrosecond_walltime();
         let next_update_time = mock_time.now() + Duration::from_secs(1000);
@@ -3295,25 +3228,13 @@ mod tests {
         let mut pool = LocalPool::new();
         let spawner = pool.spawner();
 
-        let response = json!({"response":{
-          "server": "prod",
-          "protocol": "3.0",
-          "app": [{
-            "appid": "{00000000-0000-0000-0000-000000000001}",
-            "status": "ok",
-            "updatecheck": {
-              "status": "ok"
-            }
-          }],
-        }});
-        let response = serde_json::to_vec(&response).unwrap();
-        let mut http = MockHttpRequest::new(HttpResponse::new(response.clone()));
+        let mut http = MockHttpRequest::new(make_update_available_response());
         // Responses to events.
-        http.add_response(HttpResponse::new(response.clone()));
-        http.add_response(HttpResponse::new(response.clone()));
-        http.add_response(HttpResponse::new(response.clone()));
+        http.add_response(HttpResponse::new(vec![]));
+        http.add_response(HttpResponse::new(vec![]));
+        http.add_response(HttpResponse::new(vec![]));
         // Response to the ping.
-        http.add_response(HttpResponse::new(response));
+        http.add_response(make_update_available_response());
         let ping_request_viewer = MockHttpRequest::from_request_cell(http.get_request_cell());
         let second_ping_request_viewer =
             MockHttpRequest::from_request_cell(http.get_request_cell());
@@ -3551,19 +3472,7 @@ mod tests {
         let mut pool = LocalPool::new();
         let spawner = pool.spawner();
 
-        let response = json!({"response":{
-          "server": "prod",
-          "protocol": "3.0",
-          "app": [{
-            "appid": "{00000000-0000-0000-0000-000000000001}",
-            "status": "ok",
-            "updatecheck": {
-              "status": "ok"
-            }
-          }],
-        }});
-        let response = serde_json::to_vec(&response).unwrap();
-        let http = MockHttpRequest::new(HttpResponse::new(response));
+        let http = MockHttpRequest::new(make_update_available_response());
         let (send_install, mut recv_install) = mpsc::channel(0);
         let (mut ctl, state_machine) = pool.run_until(
             StateMachineBuilder::new_stub()
@@ -3689,19 +3598,7 @@ mod tests {
     #[test]
     fn test_progress_observer() {
         block_on(async {
-            let response = json!({"response":{
-              "server": "prod",
-              "protocol": "3.0",
-              "app": [{
-                "appid": "{00000000-0000-0000-0000-000000000001}",
-                "status": "ok",
-                "updatecheck": {
-                  "status": "ok"
-                }
-              }],
-            }});
-            let response = serde_json::to_vec(&response).unwrap();
-            let http = MockHttpRequest::new(HttpResponse::new(response));
+            let http = MockHttpRequest::new(make_update_available_response());
             let mock_time = MockTimeSource::new_from_now();
             let progresses = StateMachineBuilder::new_stub()
                 .http(http)

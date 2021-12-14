@@ -884,6 +884,10 @@ mod stub {
         ) -> BoxFuture<'_, bool> {
             future::ready(true).boxed()
         }
+
+        fn reboot_needed(&mut self, _install_plan: &impl Plan) -> BoxFuture<'_, bool> {
+            future::ready(true).boxed()
+        }
     }
 }
 

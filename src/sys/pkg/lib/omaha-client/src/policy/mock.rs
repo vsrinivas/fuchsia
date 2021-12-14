@@ -20,6 +20,7 @@ pub struct MockPolicyEngine {
     pub update_decision: UpdateDecision,
     pub time_source: MockTimeSource,
     pub reboot_allowed: Rc<RefCell<bool>>,
+    pub reboot_needed: Rc<RefCell<bool>>,
     pub reboot_check_options_received: Rc<RefCell<Vec<CheckOptions>>>,
 }
 
@@ -31,6 +32,7 @@ impl Default for MockPolicyEngine {
             update_decision: Default::default(),
             time_source: MockTimeSource::new_from_now(),
             reboot_allowed: Rc::new(RefCell::new(true)),
+            reboot_needed: Rc::new(RefCell::new(true)),
             reboot_check_options_received: Rc::new(RefCell::new(vec![])),
         }
     }
@@ -77,5 +79,9 @@ impl PolicyEngine for MockPolicyEngine {
     ) -> BoxFuture<'_, bool> {
         (*self.reboot_check_options_received.borrow_mut()).push(check_options.clone());
         future::ready(*self.reboot_allowed.borrow()).boxed()
+    }
+
+    fn reboot_needed(&mut self, _install_plan: &impl Plan) -> BoxFuture<'_, bool> {
+        future::ready(*self.reboot_needed.borrow()).boxed()
     }
 }

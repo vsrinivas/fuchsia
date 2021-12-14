@@ -55,6 +55,10 @@ impl Policy for StubPolicy {
     ) -> bool {
         true
     }
+
+    fn reboot_needed(_install_plan: &impl Plan) -> bool {
+        true
+    }
 }
 
 /// A stub PolicyEngine that just gathers the current time and hands it off to the StubPolicy as the
@@ -127,6 +131,11 @@ where
         _install_result: &Self::InstallResult,
     ) -> BoxFuture<'_, bool> {
         let decision = StubPolicy::reboot_allowed(&(), check_options);
+        future::ready(decision).boxed()
+    }
+
+    fn reboot_needed(&mut self, install_plan: &impl Plan) -> BoxFuture<'_, bool> {
+        let decision = StubPolicy::reboot_needed(install_plan);
         future::ready(decision).boxed()
     }
 }

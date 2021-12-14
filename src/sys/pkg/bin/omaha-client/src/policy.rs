@@ -207,6 +207,12 @@ impl Policy for FuchsiaPolicy {
                 .is_after_or_eq_any(policy_data.last_reboot_time + VALID_REBOOT_DURATION))
             || policy_data.urgent_update
     }
+
+    fn reboot_needed(_install_plan: &impl Plan) -> bool {
+        // TODO(fxbug.dev/88995): uncomment this
+        // matches!(install_plan.update_package_urls, UpdatePackageUrls::System(_))
+        true
+    }
 }
 
 // fuzz_interval deterministically fuzzes `interval` into the range
@@ -382,6 +388,11 @@ where
             ),
             check_options,
         );
+        future::ready(decision).boxed()
+    }
+
+    fn reboot_needed(&mut self, install_plan: &impl Plan) -> BoxFuture<'_, bool> {
+        let decision = FuchsiaPolicy::reboot_needed(install_plan);
         future::ready(decision).boxed()
     }
 }
