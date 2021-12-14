@@ -2444,6 +2444,184 @@ pub(crate) mod testutil {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         msg.msg_type()
     }
+
+    /// A helper identity association test type specifying T1/T2, for testing
+    /// T1/T2 variations across IAs.
+    pub(crate) struct TestIdentityAssociation {
+        pub(crate) address: Ipv6Addr,
+        pub(crate) preferred_lifetime: v6::TimeValue,
+        pub(crate) valid_lifetime: v6::TimeValue,
+        pub(crate) t1: v6::TimeValue,
+        pub(crate) t2: v6::TimeValue,
+    }
+
+    /// Creates a stateful client and exchanges messages to assign the
+    /// configured addresses. Returns the client in AddressAssigned state, and
+    /// asserts the state and the actions associated with transitioning to this
+    /// state.
+    ///
+    /// # Panics
+    ///
+    /// `assign_addresses_and_assert` panics if address assignment fails.
+    pub(crate) fn assign_addresses_and_assert<R: Rng + std::fmt::Debug>(
+        client_id: [u8; CLIENT_ID_LEN],
+        addresses_to_assign: Vec<TestIdentityAssociation>,
+        rng: R,
+    ) -> ClientStateMachine<R> {
+        let transaction_id = [0, 1, 2];
+        let configured_addresses = to_configured_addresses(
+            u32::try_from(addresses_to_assign.len()).unwrap(),
+            addresses_to_assign
+                .iter()
+                .map(
+                    |TestIdentityAssociation {
+                         address,
+                         preferred_lifetime: _,
+                         valid_lifetime: _,
+                         t1: _,
+                         t2: _,
+                     }| *address,
+                )
+                .collect(),
+        );
+        let mut client = testutil::start_and_assert_server_discovery(
+            transaction_id.clone(),
+            client_id.clone(),
+            configured_addresses.clone(),
+            Vec::new(),
+            rng,
+        );
+
+        let server_id = [1, 2, 3];
+        let mut options = vec![
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&server_id),
+            v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
+        ];
+        let addresses_to_assign: HashMap<u32, TestIdentityAssociation> =
+            (0..).zip(addresses_to_assign).collect();
+        let mut iaaddr_opts = HashMap::new();
+        for (iaid, ia) in &addresses_to_assign {
+            assert_matches!(
+                iaaddr_opts.insert(
+                    *iaid,
+                    [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                        ia.address,
+                        testutil::get_value(ia.preferred_lifetime),
+                        testutil::get_value(ia.valid_lifetime),
+                        &[]
+                    ))]
+                ),
+                None
+            );
+        }
+        for (iaid, ia) in &addresses_to_assign {
+            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                *iaid,
+                testutil::get_value(ia.t1),
+                testutil::get_value(ia.t2),
+                iaaddr_opts.get(iaid).unwrap(),
+            )));
+        }
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        // The client should transition to Requesting and select the server that
+        // sent the best advertise.
+        assert_matches!(
+            &client.handle_message_receive(msg)[..],
+           [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
+                // TODO(https://fxbug.dev/88838): reuse `send_request` test
+                // asserts to check the content of the Request message.
+           ] if testutil::msg_type(buf) == v6::MessageType::Request
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
+        assert_matches!(&state, Some(ClientState::Requesting(Requesting {
+                client_id: _,
+                configured_addresses: _,
+                server_id,
+                addresses_to_request: _,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+        })) if *server_id == vec![1,2,3]);
+
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(
+            &client.handle_message_receive(msg)[..],
+            [Action::CancelTimer(ClientTimerType::Retransmission)]
+        );
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        let expected_assigned_addressess =
+            addresses_to_assign.iter().fold(HashMap::new(), |mut addrs, (iaid, ia)| {
+                let TestIdentityAssociation {
+                    address,
+                    preferred_lifetime,
+                    valid_lifetime,
+                    t1: _,
+                    t2: _,
+                } = ia;
+                assert_eq!(
+                    addrs.insert(
+                        *iaid,
+                        IdentityAssociation {
+                            address: *address,
+                            preferred_lifetime: *preferred_lifetime,
+                            valid_lifetime: *valid_lifetime
+                        }
+                    ),
+                    None
+                );
+                addrs
+            });
+        assert_matches!(
+            &state,
+            Some(ClientState::AddressAssigned(AddressAssigned {
+                client_id: got_client_id,
+                configured_addresses: got_configured_addresses,
+                server_id: got_server_id,
+                assigned_addresses,
+                // Because T1 and T2 are calculated based on the input
+                // configured addresses, they are not checked here to avoid
+                // duplicating the logic in the test covering T1/T2 calculation.
+                t1: _,
+                t2: _,
+                addresses_to_request,
+                dns_servers,
+                solicit_max_rt,
+            })) if *got_client_id == client_id &&
+                   *got_configured_addresses == configured_addresses &&
+                   *got_server_id == server_id &&
+                   *assigned_addresses == expected_assigned_addressess &&
+                   // All configured addresses were assigned, no addresses left
+                   // to request in subsequent messages.
+                   *addresses_to_request == HashMap::new() &&
+                   *dns_servers == Vec::<Ipv6Addr>::new() &&
+                   *solicit_max_rt == SOLICIT_MAX_RT
+        );
+        client
+    }
+
+    /// Gets the `u32` value inside a `v6::TimeValue`.
+    fn get_value(t: v6::TimeValue) -> u32 {
+        match t {
+            v6::TimeValue::Zero => 0,
+            v6::TimeValue::Finite(t) => t.get(),
+            v6::TimeValue::Infinity => INFINITY,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -2453,6 +2631,7 @@ mod tests {
     use packet::ParsablePacket;
     use rand::rngs::mock::StepRng;
     use test_case::test_case;
+    use testutil::TestIdentityAssociation;
 
     #[test]
     fn send_information_request_and_receive_reply() {
@@ -3808,150 +3987,70 @@ mod tests {
     // Test 4-msg exchange for address assignment.
     #[test]
     fn assign_addresses() {
-        let client_id = v6::duid_uuid();
-        let transaction_id = [0, 1, 2];
-        let mut client = testutil::start_and_assert_server_discovery(
-            transaction_id.clone(),
-            client_id.clone(),
-            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
-            Vec::new(),
+        const T1: u32 = 50;
+        const T2: u32 = 80;
+        let client = testutil::assign_addresses_and_assert(
+            v6::duid_uuid(),
+            vec![
+                TestIdentityAssociation {
+                    address: std_ip_v6!("::ffff:c00a:1ff"),
+                    preferred_lifetime: v6::TimeValue::Finite(
+                        v6::NonZeroOrMaxU32::new(100)
+                            .expect("should succeed for non-zero or u32::MAX values"),
+                    ),
+                    valid_lifetime: v6::TimeValue::Finite(
+                        v6::NonZeroOrMaxU32::new(120)
+                            .expect("should succeed for non-zero or u32::MAX values"),
+                    ),
+                    t1: v6::TimeValue::Finite(
+                        v6::NonZeroOrMaxU32::new(T1)
+                            .expect("should succeed for non-zero or u32::MAX values"),
+                    ),
+                    t2: v6::TimeValue::Finite(
+                        v6::NonZeroOrMaxU32::new(T2)
+                            .expect("should succeed for non-zero or u32::MAX values"),
+                    ),
+                },
+                TestIdentityAssociation {
+                    address: std_ip_v6!("::ffff:c00a:2ff"),
+                    preferred_lifetime: v6::TimeValue::Finite(
+                        v6::NonZeroOrMaxU32::new(150)
+                            .expect("should succeed for non-zero or u32::MAX values"),
+                    ),
+                    valid_lifetime: v6::TimeValue::Finite(
+                        v6::NonZeroOrMaxU32::new(180)
+                            .expect("should succeed for non-zero or u32::MAX values"),
+                    ),
+                    t1: v6::TimeValue::Finite(
+                        v6::NonZeroOrMaxU32::new(T1)
+                            .expect("should succeed for non-zero or u32::MAX values"),
+                    ),
+                    t2: v6::TimeValue::Finite(
+                        v6::NonZeroOrMaxU32::new(T2)
+                            .expect("should succeed for non-zero or u32::MAX values"),
+                    ),
+                },
+            ],
             StepRng::new(std::u64::MAX / 2, 0),
         );
 
-        let address = std_ip_v6!("::ffff:c00a:1ff");
-        let iana_options =
-            [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(address, 60, 60, &[]))];
-        let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
-        ];
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_matches!(client.handle_message_receive(msg)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(
-            &state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
+            state,
+            Some(ClientState::AddressAssigned(AddressAssigned {
                 client_id: _,
                 configured_addresses: _,
-                first_solicit_time: _,
-                retrans_timeout: _,
-                solicit_max_rt: _,
-                collected_advertise: _,
-                collected_sol_max_rt: _,
-            }))
-        );
-
-        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:2ff"),
-            60,
-            60,
-            &[],
-        ))];
-        let options = [
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ServerId(&[4, 5, 6]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 60, &iana_options)),
-        ];
-        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        assert_matches!(client.handle_message_receive(msg)[..], []);
-        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
-            &client;
-        assert_matches!(
-            &state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
-                client_id: _,
-                configured_addresses: _,
-                first_solicit_time: _,
-                retrans_timeout: _,
-                solicit_max_rt: _,
-                collected_advertise: _,
-                collected_sol_max_rt: _,
-            }))
-        );
-
-        // The client should transition to Requesting and select the server that sent the best advertise.
-        assert_matches!(
-            &client.handle_timeout(ClientTimerType::Retransmission)[..],
-           [
-                Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::SendMessage(buf),
-                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REQUEST_TIMEOUT)
-           ] if testutil::msg_type(buf) == v6::MessageType::Request
-        );
-        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
-        assert_matches!(&state, Some(ClientState::Requesting(Requesting {
-                client_id: _,
-                configured_addresses: _,
-                server_id,
+                server_id: _,
+                assigned_addresses: _,
+                t1: got_t1,
+                t2: got_t2,
                 addresses_to_request: _,
-                collected_advertise: _,
-                first_request_time: _,
-                retrans_timeout: _,
-                retrans_count: _,
+                dns_servers: _,
                 solicit_max_rt: _,
-        })) if *server_id == vec![1,2,3]);
-
-        let iana_options =
-            [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(address, 70, 130, &[]))];
-        let options = [
-            v6::DhcpOption::ServerId(&[1, 2, 3]),
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(0, 60, 120, &iana_options)),
-        ];
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        let () = builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let actions: Vec<Action> = client.handle_message_receive(msg);
-        assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission),]);
-        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
-            &client;
-        let (server_id, assigned_addresses, t1, t2, addresses_to_request, dns_servers) =
-            match &state {
-                Some(ClientState::AddressAssigned(AddressAssigned {
-                    client_id: _,
-                    configured_addresses: _,
-                    server_id,
-                    assigned_addresses,
-                    t1,
-                    t2,
-                    addresses_to_request,
-                    dns_servers,
-                    solicit_max_rt: _,
-                })) => (server_id, assigned_addresses, t1, t2, addresses_to_request, dns_servers),
-                state => panic!("unexpected state {:?}", state),
-            };
-        let expected_assigned_addressess = HashMap::from([(
-            0,
-            IdentityAssociation {
-                address,
-                preferred_lifetime: v6::TimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(70)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                ),
-                valid_lifetime: v6::TimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(130)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                ),
-            },
-        )]);
-        assert_eq!(*assigned_addresses, expected_assigned_addressess);
-        assert_eq!(*server_id, vec![1, 2, 3]);
-        assert_eq!(*t1, Duration::from_secs(60));
-        assert_eq!(*t2, Duration::from_secs(120));
-        assert_eq!(*addresses_to_request, HashMap::new());
-        assert_eq!(*dns_servers, Vec::<Ipv6Addr>::new());
+            })) if *got_t1 == Duration::from_secs(T1.into()) &&
+                   *got_t2 == Duration::from_secs(T2.into())
+        );
     }
 
     #[test]
