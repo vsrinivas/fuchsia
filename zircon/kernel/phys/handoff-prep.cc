@@ -7,6 +7,8 @@
 #include "handoff-prep.h"
 
 #include <lib/llvm-profdata/llvm-profdata.h>
+#include <lib/memalloc/pool-mem-config.h>
+#include <lib/trivial-allocator/new.h>
 #include <string-file.h>
 #include <zircon/assert.h>
 
@@ -92,4 +94,17 @@ void HandoffPrep::SetSymbolizerLog(ktl::initializer_list<Debugdata> dumps) {
   // We had to add an extra char to the buffer since StringFile wants to
   // NUL-terminate it.  But we don't want the NUL, so make it whitespace.
   ktl::move(buffer_file).take().back() = '\n';
+}
+
+// Reconstruct a normalized ZBI_TYPE_MEM_CONFIG payload from the allocation
+// pool rather than actually using the input item for handoff.
+void HandoffPrep::SetMemConfig(const memalloc::Pool& pool) {
+  memalloc::PoolMemConfig pool_mem_config(pool);
+  const size_t mem_config_count = std::distance(pool_mem_config.begin(), pool_mem_config.end());
+  fbl::AllocChecker ac;
+  ktl::span handoff_mem_config = New(handoff()->mem_config, ac, mem_config_count);
+  ZX_ASSERT_MSG(ac.check(), "cannot allocate %zu bytes for memory handoff",
+                mem_config_count * sizeof(handoff_mem_config[0]));
+  ZX_DEBUG_ASSERT(handoff_mem_config.size() == mem_config_count);
+  ktl::copy(pool_mem_config.begin(), pool_mem_config.end(), handoff_mem_config.begin());
 }

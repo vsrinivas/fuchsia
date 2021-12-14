@@ -375,6 +375,7 @@ if (toolchain_environment == "kernel.phys" ||
       ":symbolize",
       "//src/lib/llvm-profdata",
       "//zircon/kernel/arch/$zircon_cpu/phys:arch-handoff-prep",
+      "//zircon/kernel/phys/lib/memalloc",
       "//zircon/system/ulib/zbitl",
     ]
   }
