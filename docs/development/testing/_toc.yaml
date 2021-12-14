@@ -50,3 +50,7 @@ toc:
   path: /docs/development/testing/stress_tests.md
 - title: "Rust stress test library"
   path: /docs/development/testing/rust_stress_test_library.md
+- title: "Bluetooth"
+  section:
+  - title: "Writing unit tests for the C++ bt-host driver"
+    path: /docs/development/testing/bt_host_unittesting.md
