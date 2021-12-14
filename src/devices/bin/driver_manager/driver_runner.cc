@@ -136,9 +136,19 @@ Node* PrimaryParent(const std::vector<Node*>& parents) {
   return parents.empty() ? nullptr : parents[0];
 }
 
+void CloseAndReset(std::optional<fidl::ServerBindingRef<frunner::ComponentController>>& ref) {
+  if (ref) {
+    // Send an epitaph to the component manager and close the connection. The
+    // server of a `ComponentController` protocol is expected to send an epitaph
+    // before closing the associated connection.
+    ref->Close(ZX_OK);
+    ref.reset();
+  }
+}
+
 template <typename T>
 void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
-  if (ref.has_value()) {
+  if (ref) {
     ref->Unbind();
     ref.reset();
   }
@@ -215,22 +225,32 @@ zx::status<> DriverComponent::Watch(async_dispatcher_t* dispatcher) {
 
 void DriverComponent::Stop(StopRequestView request,
                            DriverComponent::StopCompleter::Sync& completer) {
-  zx_status_t status = wait_.Cancel();
-  if (status != ZX_OK) {
-    LOGF(WARNING, "Failed to cancel watch on driver: %s", zx_status_get_string(status));
-  }
-  driver_.reset();
+  Stop();
 }
 
 void DriverComponent::Kill(KillRequestView request,
-                           DriverComponent::KillCompleter::Sync& completer) {}
+                           DriverComponent::KillCompleter::Sync& completer) {
+  Stop();
+}
+
+void DriverComponent::Stop() {
+  // Stop waiting on `driver_`, if there is a wait pending.
+  if (wait_.is_pending()) {
+    if (zx_status_t status = wait_.Cancel(); status != ZX_OK) {
+      LOGF(WARNING, "Failed to cancel watch on driver: %s", zx_status_get_string(status));
+    }
+  }
+  // Close `driver_` to signal to the driver host that the associated driver
+  // component should be stopped.
+  driver_.reset();
+}
 
 void DriverComponent::OnPeerClosed(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                    zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
     LOGF(WARNING, "Failed to watch driver: %s", zx_status_get_string(status));
   } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    UnbindAndReset(driver_ref_);
+    CloseAndReset(driver_ref_);
   }
 }
 
@@ -373,7 +393,7 @@ void Node::OnBind() const {
 
 bool Node::Unbind(std::unique_ptr<AsyncRemove>& async_remove) {
   bool has_driver = driver_ref_.has_value();
-  UnbindAndReset(driver_ref_);
+  CloseAndReset(driver_ref_);
   if (has_driver) {
     // If a driver was bound to this node, store the async remove and wait for
     // the driver to stop.

@@ -43,6 +43,7 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   void Stop(StopRequestView request, StopCompleter::Sync& completer) override;
   void Kill(KillRequestView request, KillCompleter::Sync& completer) override;
 
+  void Stop();
   void OnPeerClosed(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                     const zx_packet_signal_t* signal);
 
