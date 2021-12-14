@@ -45,6 +45,24 @@ ScreenReaderContext::ScreenReaderContext(std::unique_ptr<A11yFocusManager> a11y_
       std::make_unique<ScreenReaderMessageGenerator>(std::move(message_formatter));
   speaker_ = std::make_unique<Speaker>(&executor_, &tts_engine_ptr_,
                                        std::move(screen_reader_message_generator));
+
+  a11y_focus_manager_->set_on_a11y_focus_updated_callback(
+      [this](std::optional<A11yFocusManager::A11yFocusInfo> a11y_focus) {
+        if (!a11y_focus) {
+          last_a11y_focused_node_ = std::nullopt;
+          return;
+        }
+        const auto* node =
+            semantics_source_->GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
+        if (!node) {
+          last_a11y_focused_node_ = std::nullopt;
+          return;
+        }
+
+        fuchsia::accessibility::semantics::Node clone;
+        node->Clone(&clone);
+        last_a11y_focused_node_ = std::move(clone);
+      });
 }
 
 ScreenReaderContext::ScreenReaderContext() : executor_(async_get_default_dispatcher()) {}
@@ -104,7 +122,37 @@ void ScreenReaderContext::run_and_clear_on_node_update_callback() {
     on_node_update_callback_();
   }
 
-  on_node_update_callback_ = {};
+  on_node_update_callback_ = nullptr;
+}
+
+bool ScreenReaderContext::UpdateCacheIfDescribableA11yFocusedNodeContentChanged() {
+  const auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
+  if (!a11y_focus || !last_a11y_focused_node_) {
+    return false;
+  }
+  const auto* node =
+      semantics_source_->GetSemanticNode(a11y_focus->view_ref_koid, a11y_focus->node_id);
+  if (!node) {
+    return false;
+  }
+
+  // Note that if both don't have attributes, they are equal. That's why the OR between the two
+  // expressions here.
+  const bool same_attributes =
+      (!node->has_attributes() && !last_a11y_focused_node_->has_attributes()) ||
+      (node->has_attributes() && last_a11y_focused_node_->has_attributes() &&
+       fidl::Equals(node->attributes(), last_a11y_focused_node_->attributes()));
+  const bool same_states = (!node->has_states() && !last_a11y_focused_node_->has_states()) ||
+                           (node->has_states() && last_a11y_focused_node_->has_states() &&
+                            fidl::Equals(node->states(), last_a11y_focused_node_->states()));
+  if (!same_attributes || !same_states) {
+    fuchsia::accessibility::semantics::Node clone;
+    node->Clone(&clone);
+    last_a11y_focused_node_ = std::move(clone);
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace a11y

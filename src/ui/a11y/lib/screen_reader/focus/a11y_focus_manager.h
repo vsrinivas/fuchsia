@@ -40,6 +40,9 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // focus.
   using SetA11yFocusCallback = fit::function<void(bool)>;
 
+  // Callback used to inform when the a11y focus changes.
+  using OnA11yFocusUpdatedCallback = fit::function<void(std::optional<A11yFocusInfo>)>;
+
   // Root node id, which will be used to set the default node_id for a view.
   static constexpr uint32_t kRootNodeId = 0;
 
@@ -71,6 +74,13 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // focused_node_in_view_map_[currently_focused_view_]}|.
   virtual void UpdateHighlights();
 
+  // Registers a callback that is invoked when the a11y focus is updated. For now, only one callback
+  // can be registered at a time.
+  virtual void set_on_a11y_focus_updated_callback(
+      OnA11yFocusUpdatedCallback on_a11y_focus_updated_callback) {
+    on_a11y_focus_updated_callback_ = std::move(on_a11y_focus_updated_callback);
+  }
+
  protected:
   // For mocks only.
   A11yFocusManager();
@@ -95,6 +105,8 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
 
   // Used to manipulate semantic annotations.
   FocusHighlightManager* const focus_highlight_manager_ = nullptr;
+
+  OnA11yFocusUpdatedCallback on_a11y_focus_updated_callback_;
 
   fxl::WeakPtrFactory<AccessibilityFocusChainListener> weak_ptr_factory_;
 

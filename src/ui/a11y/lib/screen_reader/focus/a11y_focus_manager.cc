@@ -55,6 +55,9 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
     focused_node_in_view_map_[koid] = node_id;
     UpdateHighlights();
     set_focus_callback(true);
+    if (on_a11y_focus_updated_callback_) {
+      on_a11y_focus_updated_callback_(GetA11yFocus());
+    }
     UpdateInspectProperties();
     return;
   }
@@ -68,6 +71,9 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
           focused_node_in_view_map_[koid] = node_id;
           currently_focused_view_ = koid;
           UpdateHighlights();
+          if (on_a11y_focus_updated_callback_) {
+            on_a11y_focus_updated_callback_(GetA11yFocus());
+          }
           UpdateInspectProperties();
           callback(true);
         }
@@ -83,6 +89,9 @@ void A11yFocusManager::OnViewFocus(zx_koid_t view_ref_koid) {
   currently_focused_view_ = view_ref_koid;
   focused_node_in_view_map_[currently_focused_view_] = newly_focused_node_id;
   UpdateHighlights();
+  if (on_a11y_focus_updated_callback_) {
+    on_a11y_focus_updated_callback_(GetA11yFocus());
+  }
   UpdateInspectProperties();
 }
 
@@ -113,6 +122,9 @@ void A11yFocusManager::UpdateHighlights() {
 void A11yFocusManager::ClearA11yFocus() {
   currently_focused_view_ = ZX_KOID_INVALID;
   focus_highlight_manager_->ClearFocusHighlights();
+  if (on_a11y_focus_updated_callback_) {
+    on_a11y_focus_updated_callback_(GetA11yFocus());
+  }
 }
 
 }  // namespace a11y

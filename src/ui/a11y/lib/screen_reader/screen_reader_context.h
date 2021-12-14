@@ -101,6 +101,13 @@ class ScreenReaderContext {
   // Returns true if the node currently focused by the screen reader is part of a virtual keyboard.
   virtual bool IsVirtualKeyboardFocused() const;
 
+  // Tries to update the cache if the describable content of the a11y focused node has changed in
+  // respect to the cached copy of the node. Returns true if the cache was updated. Please only
+  // modify this function to add new describable content if the changes can be spoken. For example,
+  // a change on the node location is not describable, because the screen reader does not report it
+  // where a change in some attribute that is spoken to the user is.
+  virtual bool UpdateCacheIfDescribableA11yFocusedNodeContentChanged();
+
  protected:
   // For mocks.
   ScreenReaderContext();
@@ -134,6 +141,9 @@ class ScreenReaderContext {
 
   // Unicode BCP-47 Locale Identifier.
   std::string locale_id_;
+
+  // Copy of the last node to receive the a11y focus.
+  std::optional<fuchsia::accessibility::semantics::Node> last_a11y_focused_node_;
 
   // Invoked once, on the first tree update received after the callback is set.
   // The callback is cleared after it's invoked.

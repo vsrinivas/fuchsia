@@ -16,6 +16,7 @@
 #include "src/ui/a11y/lib/screen_reader/explore_action.h"
 #include "src/ui/a11y/lib/screen_reader/inject_pointer_event_action.h"
 #include "src/ui/a11y/lib/screen_reader/linear_navigation_action.h"
+#include "src/ui/a11y/lib/screen_reader/process_update_action.h"
 #include "src/ui/a11y/lib/screen_reader/recover_a11y_focus_action.h"
 #include "src/ui/a11y/lib/screen_reader/three_finger_swipe_action.h"
 
@@ -36,6 +37,7 @@ constexpr char kIncrementRangeValueActionLabel[] = "Increment Range Value Action
 constexpr char kDecrementRangeValueActionLabel[] = "Decrement Range Value Action";
 constexpr char kRecoverA11YFocusActionLabel[] = "Recover A11Y Focus Action";
 constexpr char kInjectPointerEventActionLabel[] = "Inject Pointer Event Action";
+constexpr char kProcessUpdateActionLabel[] = "Process Update Action";
 
 // Returns the appropriate next action based on the semantic level.
 std::string NextActionFromSemanticLevel(ScreenReaderContext::SemanticLevel semantic_level) {
@@ -323,6 +325,10 @@ void ScreenReader::InitializeActions() {
   action_registry_->AddAction(
       kInjectPointerEventActionLabel,
       std::make_unique<InjectPointerEventAction>(action_context_.get(), context_.get()));
+
+  action_registry_->AddAction(
+      kProcessUpdateActionLabel,
+      std::make_unique<ProcessUpdateAction>(action_context_.get(), context_.get()));
 }
 
 bool ScreenReader::ExecuteAction(const std::string& action_name, GestureContext gesture_context) {
@@ -358,13 +364,14 @@ void ScreenReader::OnEvent(SemanticsEventInfo event_info) {
   // Process internal semantic events.
   switch (event_info.event_type) {
     case SemanticsEventType::kSemanticTreeUpdated: {
-      context_->run_and_clear_on_node_update_callback();
-
       GestureContext gesture_context;
       if (event_info.view_ref_koid) {
         gesture_context.view_ref_koid = *event_info.view_ref_koid;
       }
-      ExecuteAction(kRecoverA11YFocusActionLabel, std::move(gesture_context));
+
+      ExecuteAction(kRecoverA11YFocusActionLabel, gesture_context);
+      ExecuteAction(kProcessUpdateActionLabel, std::move(gesture_context));
+
       break;
     }
     case SemanticsEventType::kUnknown:

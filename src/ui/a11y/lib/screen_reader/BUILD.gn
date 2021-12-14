@@ -16,6 +16,8 @@ source_set("screen_reader") {
     "inject_pointer_event_action.h",
     "linear_navigation_action.cc",
     "linear_navigation_action.h",
+    "process_update_action.cc",
+    "process_update_action.h",
     "recover_a11y_focus_action.cc",
     "recover_a11y_focus_action.h",
     "screen_reader.cc",

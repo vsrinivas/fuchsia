@@ -119,5 +119,58 @@ TEST_F(ScreenReaderContextTest, FallbackToEnglishWhenLocaleIsUnknown) {
                 ->locale(),
             locale);
 }
+
+TEST_F(ScreenReaderContextTest, UpdateCacheIfDescribableA11yFocusedNodeContentChanged) {
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(0u);
+    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+  }
+
+  a11y_focus_manager_ptr_->SetA11yFocus(1u, 0u, [](auto...) {});
+  EXPECT_FALSE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
+
+  fuchsia::accessibility::semantics::Node clone;
+  {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(0u);
+    node.mutable_attributes()->set_label("foo");
+    node.Clone(&clone);
+    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+  }
+
+  EXPECT_TRUE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    clone.Clone(&node);
+    node.mutable_states()->set_selected(true);
+    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+  }
+
+  EXPECT_TRUE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    clone.Clone(&node);
+    node.mutable_states()->set_selected(false);
+    node.Clone(&clone);  // To update the value in clone.
+    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+  }
+
+  EXPECT_TRUE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
+
+  {
+    fuchsia::accessibility::semantics::Node node;
+    clone.Clone(&node);
+    node.set_role(fuchsia::accessibility::semantics::Role::BUTTON);
+    mock_semantics_source_.CreateSemanticNode(1u, std::move(node));
+  }
+
+  // No change this time, as only the role changed and we care only about changes in attributes or
+  // states.
+  EXPECT_FALSE(screen_reader_context_->UpdateCacheIfDescribableA11yFocusedNodeContentChanged());
+}
+
 }  // namespace
 }  // namespace accessibility_test

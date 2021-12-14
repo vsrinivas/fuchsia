@@ -98,12 +98,20 @@ class MockScreenReaderContext : public a11y::ScreenReaderContext {
 
   void set_virtual_keyboard_focused(bool value) { virtual_keyboard_focused_ = value; }
 
+  // |ScreenReaderContext|
+  bool UpdateCacheIfDescribableA11yFocusedNodeContentChanged() override {
+    return describable_content_changed_;
+  }
+
+  void set_describable_content_changed(bool value) { describable_content_changed_ = value; }
+
  private:
   std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
   MockA11yFocusManager* mock_a11y_focus_manager_ptr_;
   std::unique_ptr<a11y::Speaker> speaker_;
   MockSpeaker* mock_speaker_ptr_;
   bool virtual_keyboard_focused_ = false;
+  bool describable_content_changed_ = false;
 };
 
 class MockScreenReaderContextFactory : public a11y::ScreenReaderContextFactory {

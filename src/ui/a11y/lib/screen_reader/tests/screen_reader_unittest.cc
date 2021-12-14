@@ -314,7 +314,7 @@ TEST_F(ScreenReaderTest, SemanticEventsTriggerScreenReaderAction) {
   view_manager_->GetSemanticsEventManager()->OnEvent(
       {.event_type = a11y::SemanticsEventType::kSemanticTreeUpdated});
   EXPECT_THAT(mock_action_registry_ptr_->invoked_actions(),
-              ElementsAre(StrEq("Recover A11Y Focus Action")));
+              ElementsAre(StrEq("Recover A11Y Focus Action"), StrEq("Process Update Action")));
 }
 
 TEST_F(ScreenReaderTest, SemanticEventAnnounceCausesScreenReaderToSpeak) {

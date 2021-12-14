@@ -17,6 +17,7 @@ executable("screen_reader_tests") {
     "explore_action_unittest.cc",
     "inject_pointer_event_action_test.cc",
     "linear_navigation_action_unittest.cc",
+    "process_update_action_unittest.cc",
     "recover_a11y_focus_action_unittest.cc",
     "screen_reader_action_test_fixture.cc",
     "screen_reader_action_test_fixture.h",

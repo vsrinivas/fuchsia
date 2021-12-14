@@ -33,6 +33,10 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
     a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManager>(
         &mock_focus_chain_requester_, &mock_focus_chain_registry_, &mock_focus_highlight_manager_,
         inspector_->GetRoot().CreateChild(kInspectNodeName));
+    a11y_focus_manager_->set_on_a11y_focus_updated_callback(
+        [this](std::optional<a11y::A11yFocusManager::A11yFocusInfo> focus) {
+          a11y_focus_received_in_update_callback_ = std::move(focus);
+        });
   }
 
   // Helper function to check if the given ViewRef has a11y focus.
@@ -56,6 +60,7 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
   MockAccessibilityFocusChainRequester mock_focus_chain_requester_;
   MockAccessibilityFocusChainRegistry mock_focus_chain_registry_;
   MockFocusHighlightManager mock_focus_highlight_manager_;
+  std::optional<a11y::A11yFocusManager::A11yFocusInfo> a11y_focus_received_in_update_callback_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
   async::Executor executor_;
@@ -66,6 +71,7 @@ TEST_F(A11yFocusManagerTest, GetA11yFocusNoViewFound) {
   // By default no view is in a11y focus.
   auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
   ASSERT_FALSE(a11y_focus.has_value());
+  EXPECT_FALSE(a11y_focus_received_in_update_callback_);
 }
 
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFocusChainUpdate) {
@@ -76,6 +82,10 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFocusChainUpdate) {
                                     [&success](bool result) { success = result; });
   CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
   EXPECT_TRUE(success);
+  EXPECT_TRUE(a11y_focus_received_in_update_callback_);
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper.koid());
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, a11y::A11yFocusManager::kRootNodeId);
+
   // Now that one view is in Focus, changes the focus to another view, which causes again a Focus
   // Chain update.
   mock_focus_chain_requester_.set_will_change_focus(true);
@@ -85,6 +95,9 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFocusChainUpdate) {
                                     [&success_2](bool result) { success_2 = result; });
   CheckViewInFocus(view_ref_helper_2, 1u);
   EXPECT_TRUE(success_2);
+  EXPECT_TRUE(a11y_focus_received_in_update_callback_);
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper_2.koid());
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, 1u);
 }
 
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAnInspectUpdate) {
@@ -137,6 +150,9 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusToTheSameView) {
                                     [&success](bool result) { success = result; });
   CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
   EXPECT_TRUE(success);
+  EXPECT_TRUE(a11y_focus_received_in_update_callback_);
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper.koid());
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, a11y::A11yFocusManager::kRootNodeId);
 
   // Changes the focus to the same view.
   mock_focus_chain_requester_.set_will_change_focus(true);
@@ -145,6 +161,9 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusToTheSameView) {
                                     [&success_2](bool result) { success_2 = result; });
   CheckViewInFocus(view_ref_helper, 1u);
   EXPECT_TRUE(success_2);
+  EXPECT_TRUE(a11y_focus_received_in_update_callback_);
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper.koid());
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, 1u);
 }
 
 TEST_F(A11yFocusManagerTest, ListensToFocusChainUpdates) {
@@ -166,6 +185,8 @@ TEST_F(A11yFocusManagerTest, ClearsTheA11YFocus) {
   a11y_focus_manager_->ClearA11yFocus();
   auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
   ASSERT_FALSE(a11y_focus);
+  EXPECT_FALSE(a11y_focus_received_in_update_callback_);
+
   auto highlighted_node = mock_focus_highlight_manager_.GetHighlightedNode();
   ASSERT_FALSE(highlighted_node);
 }
