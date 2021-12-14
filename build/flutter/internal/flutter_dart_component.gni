@@ -312,7 +312,7 @@ template("flutter_dart_component") {
       }
       args += [ rebase_path(_kernel_path, root_build_dir) ]
 
-      pool = "//build/dart:dart_pool($dart_toolchain)"
+      pool = "//build/config:local($default_toolchain)"
     }
 
     # copy the snapshot as a resource

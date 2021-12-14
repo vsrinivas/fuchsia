@@ -8,15 +8,6 @@ import("//build/python/python_host_test.gni")
 import("//build/toolchain/basic_toolchain.gni")
 import("//build/toolchain/concurrent_jobs.gni")
 
-declare_args() {
-  # Maximum number of Dart processes to run in parallel.
-  #
-  # Dart analyzer uses a lot of memory which may cause issues when building
-  # with many parallel jobs e.g. when using goma. To avoid out-of-memory
-  # errors we explicitly reduce the number of jobs.
-  concurrent_dart_jobs = default_concurrent_jobs.dart
-}
-
 python_binary("gen_dart_package_config") {
   main_source = "gen_dart_package_config.py"
   deps = [ "//third_party/pyyaml:yaml" ]
@@ -85,12 +76,6 @@ copy("platform_files") {
     "//prebuilt/third_party/flutter/$target_cpu/release/aot/dart_runner_patched_sdk/vm_outline_strong.dill",
   ]
   outputs = [ "$root_out_dir/dart_runner_patched_sdk/{{source_file_part}}" ]
-}
-
-if (current_toolchain == dart_toolchain) {
-  pool("dart_pool") {
-    depth = concurrent_dart_jobs
-  }
 }
 
 # A toolchain dedicated to processing and analyzing Dart packages.

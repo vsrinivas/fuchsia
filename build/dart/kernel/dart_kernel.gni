@@ -172,7 +172,7 @@ template("dart_kernel") {
                              "testonly",
                              "visibility",
                            ])
-    pool = "//build/dart:dart_pool($dart_toolchain)"
+    pool = "//build/config:local($default_toolchain)"
 
     if (defined(invoker.kernel_path)) {
       _kernel_path = invoker.kernel_path

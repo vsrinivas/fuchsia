@@ -33,10 +33,6 @@ if (use_lto) {
     "local=1GB",
   ]
 }
-_args += [
-  "--memory-per-job",
-  "dart=1GB",
-]
 default_concurrent_jobs =
     exec_script(python_exe_src, _args, "json", [ _script ])
 
