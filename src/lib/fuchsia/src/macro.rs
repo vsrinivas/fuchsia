@@ -88,7 +88,7 @@ struct Transformer {
 
 struct Args {
     threads: usize,
-    allow_stalls: bool,
+    allow_stalls: Option<bool>,
     logging: bool,
     logging_tags: LoggingTags,
     interest: Interest,
@@ -233,7 +233,7 @@ impl Parse for Args {
     fn parse(input: ParseStream<'_>) -> syn::Result<Self> {
         let mut args = Self {
             threads: 1,
-            allow_stalls: true,
+            allow_stalls: None,
             logging: true,
             logging_tags: LoggingTags::default(),
             interest: Interest::default(),
@@ -248,7 +248,7 @@ impl Parse for Args {
             let err = |message| Err(Error::new(ident.span(), message));
             match ident.to_string().as_ref() {
                 "threads" => args.threads = get_base10_arg(&input)?,
-                "allow_stalls" => args.allow_stalls = get_bool_arg(&input, true)?,
+                "allow_stalls" => args.allow_stalls = Some(get_bool_arg(&input, true)?),
                 "logging" => args.logging = get_bool_arg(&input, true)?,
                 "logging_tags" => args.logging_tags = get_logging_tags(&input)?,
                 "logging_minimum_severity" => args.interest = get_interest_arg(&input)?,
@@ -280,20 +280,23 @@ impl Transformer {
 
         let executor = match (args.threads, args.allow_stalls, is_async, function_type) {
             (0, _, _, _) => return err("need at least one thread"),
-            (_, false, _, FunctionType::Component) => {
-                return err("allow_stalls=false only applies to tests")
+            (_, Some(_), _, FunctionType::Component) => {
+                return err("allow_stalls only applies to tests")
             }
             (1, _, false, FunctionType::Component) => Executor::None,
-            (1, true, true, FunctionType::Component) => Executor::Singlethreaded,
-            (n, true, true, FunctionType::Component) => Executor::Multithreaded(n),
-            (1, _, false, FunctionType::Test) => Executor::Test,
-            (1, true, true, FunctionType::Test) => Executor::SinglethreadedTest,
-            (n, true, true, FunctionType::Test) => Executor::MultithreadedTest(n),
-            (1, false, true, FunctionType::Test) => Executor::UntilStalledTest,
-            (_, false, _, FunctionType::Test) => {
+            (1, None, true, FunctionType::Component) => Executor::Singlethreaded,
+            (n, None, true, FunctionType::Component) => Executor::Multithreaded(n),
+            (1, Some(_), false, FunctionType::Test) => {
+                return err("allow_stalls only applies to async tests")
+            }
+            (1, None, false, FunctionType::Test) => Executor::Test,
+            (1, Some(true) | None, true, FunctionType::Test) => Executor::SinglethreadedTest,
+            (n, Some(true) | None, true, FunctionType::Test) => Executor::MultithreadedTest(n),
+            (1, Some(false), true, FunctionType::Test) => Executor::UntilStalledTest,
+            (_, Some(false), _, FunctionType::Test) => {
                 return err("allow_stalls=false tests must be single threaded")
             }
-            (_, true, false, _) => return err("must be async to use >1 thread"),
+            (_, Some(true) | None, false, _) => return err("must be async to use >1 thread"),
         };
 
         Ok(Transformer {
