@@ -182,7 +182,7 @@ void SharedMemory::Reset() {
 
 void SharedMemory::Create(size_t capacity) {
   Reset();
-  mapped_size_ = fbl::round_up(capacity, ZX_PAGE_SIZE);
+  mapped_size_ = fbl::round_up(capacity, zx_system_get_page_size());
   auto status = zx::vmo::create(mapped_size_, 0, &vmo_);
   if (status != ZX_OK) {
     FX_LOGS(FATAL) << "Failed to create VMO: " << zx_status_get_string(status);
@@ -191,7 +191,7 @@ void SharedMemory::Create(size_t capacity) {
 
 void SharedMemory::Map(Buffer&& buf) {
   vmo_ = std::move(buf.vmo);
-  mapped_size_ = fbl::round_up(buf.size, ZX_PAGE_SIZE);
+  mapped_size_ = fbl::round_up(buf.size, zx_system_get_page_size());
   Map();
 }
 
