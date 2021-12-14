@@ -147,12 +147,14 @@ static bool pmm_node_loan_borrow_cancel_reclaim_end() {
   ManagedPmmNode node;
 
   bool was_loaning_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
-  bool was_borrowing_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+  bool was_borrowing_enabled =
+      pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled();
   pmm_physical_page_borrowing_config()->set_loaning_enabled(true);
-  pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+  pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(true);
   auto cleanup = fit::defer([was_loaning_enabled, was_borrowing_enabled] {
     pmm_physical_page_borrowing_config()->set_loaning_enabled(was_loaning_enabled);
-    pmm_physical_page_borrowing_config()->set_borrowing_enabled(was_borrowing_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(
+        was_borrowing_enabled);
   });
 
   list_node list = LIST_INITIAL_VALUE(list);
@@ -300,12 +302,14 @@ static bool pmm_node_loan_delete_lender() {
   ManagedPmmNode node;
 
   bool was_loaning_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
-  bool was_borrowing_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+  bool was_borrowing_enabled =
+      pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled();
   pmm_physical_page_borrowing_config()->set_loaning_enabled(true);
-  pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+  pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(true);
   auto cleanup = fit::defer([was_loaning_enabled, was_borrowing_enabled] {
     pmm_physical_page_borrowing_config()->set_loaning_enabled(was_loaning_enabled);
-    pmm_physical_page_borrowing_config()->set_borrowing_enabled(was_borrowing_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(
+        was_borrowing_enabled);
   });
 
   // Required to stack-own loaned pages.  We don't care about minimizing the duration of this

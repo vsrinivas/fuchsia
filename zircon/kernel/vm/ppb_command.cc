@@ -39,12 +39,14 @@ static Thread* ppb_stats_thread TA_GUARDED(ppb_stats_lock::Get()) = nullptr;
 static Event ppb_stats_thread_stop_event(false);
 
 static void cmd_ppb_borrowing_on() {
-  pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+  pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(true);
+  pmm_physical_page_borrowing_config()->set_borrowing_on_mru_enabled(true);
   printf("borrowing enabled\n");
 }
 
 static void cmd_ppb_borrowing_off() {
-  pmm_physical_page_borrowing_config()->set_borrowing_enabled(false);
+  pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(false);
+  pmm_physical_page_borrowing_config()->set_borrowing_on_mru_enabled(false);
   printf("borrowing disabled\n");
 }
 

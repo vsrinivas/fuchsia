@@ -31,11 +31,11 @@ class PmmNode;
 // any "active" sweeping, we need to consider integration of sweeping with eviction and zero
 // scanning to make sure they don't have any adverse interactions.
 //
-// If pmm_physical_page_borrowing_config()->is_borrowing_enabled(), non-loaned pages are replaced
-// with loaned pages (to the extent that free loaned pages are available).
+// If pmm_physical_page_borrowing_config()->is_any_borrowing_enabled(), non-loaned pages are
+// replaced with loaned pages (to the extent that free loaned pages are available).
 //
-// If !pmm_physical_page_borrowing_config()->is_borrowing_enabled(), loaned pages are replaced with
-// non-loaned pages.
+// If !pmm_physical_page_borrowing_config()->is_any_borrowing_enabled(), loaned pages are replaced
+// with non-loaned pages.
 //
 // The k ppb enable and k ppb disable commands can be used to switch enabled() to true or false.
 class LoanSweeper {
