@@ -59,7 +59,7 @@ pub fn compile(
     util::ensure_directory_exists(&output)?;
     let mut out_file =
         fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
-    let mut out_data = cml::fdecl::compile(&document)?;
+    let mut out_data = cml::compile(&document)?;
     out_file.write(&encode_persistent(&mut out_data)?)?;
 
     // Write includes to depfile
@@ -97,983 +97,974 @@ macro_rules! test_compile_with_features {
     }
 }
 
-macro_rules! test_suite {
-    ($mod:ident, $namespace:ident) => {
-        #[allow(unused)]
-        #[cfg(test)]
-        mod $mod {
-            use super::*;
-            use crate::features::Feature;
-            use fidl::encoding::decode_persistent;
-            use fidl_fuchsia_data as fdata;
-            use fidl_fuchsia_sys2 as fsys;
-            use cm_rust::convert as fdecl;
-            use matches::assert_matches;
-            use serde_json::json;
-            use std::fs::File;
-            use std::io::{self, Read, Write};
-            use tempfile::TempDir;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::features::Feature;
+    use fidl::encoding::decode_persistent;
+    use fidl_fuchsia_component_decl as fdecl;
+    use fidl_fuchsia_data as fdata;
+    use matches::assert_matches;
+    use serde_json::json;
+    use std::fs::File;
+    use std::io::{self, Read, Write};
+    use tempfile::TempDir;
 
+    fn compile_test_with_forced_runner(
+        in_path: PathBuf,
+        out_path: PathBuf,
+        includepath: Option<PathBuf>,
+        input: serde_json::value::Value,
+        expected_output: fdecl::Component,
+        features: &FeatureSet,
+        experimental_force_runner: &Option<String>,
+    ) -> Result<(), Error> {
+        File::create(&in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
+        let includepath = includepath.unwrap_or(PathBuf::new());
 
-            fn compile_test_with_forced_runner(
-                in_path: PathBuf,
-                out_path: PathBuf,
-                includepath: Option<PathBuf>,
-                input: serde_json::value::Value,
-                expected_output: $namespace::ComponentDecl,
-                features: &FeatureSet,
-                experimental_force_runner: &Option<String>,
-            ) -> Result<(), Error> {
-                File::create(&in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
-                let includepath = includepath.unwrap_or(PathBuf::new());
+        compile(
+            &in_path.clone(),
+            &out_path.clone(),
+            None,
+            &vec![includepath.clone()],
+            &includepath.clone(),
+            features.clone(),
+            experimental_force_runner,
+        )?;
+        let mut buffer = Vec::new();
+        fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
 
-                compile(
-                    &in_path.clone(),
-                    &out_path.clone(),
-                    None,
-                    &vec![includepath.clone()],
-                    &includepath.clone(),
-                    features.clone(),
-                    experimental_force_runner,
-                )?;
-                let mut buffer = Vec::new();
-                fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
+        let output: fdecl::Component = decode_persistent(&buffer).unwrap();
+        assert_eq!(output, expected_output);
 
-                let output: $namespace::ComponentDecl = decode_persistent(&buffer).unwrap();
-                assert_eq!(output, expected_output);
+        Ok(())
+    }
 
-                Ok(())
-            }
+    fn compile_test(
+        in_path: PathBuf,
+        out_path: PathBuf,
+        includepath: Option<PathBuf>,
+        input: serde_json::value::Value,
+        expected_output: fdecl::Component,
+        features: &FeatureSet,
+    ) -> Result<(), Error> {
+        compile_test_with_forced_runner(
+            in_path,
+            out_path,
+            includepath,
+            input,
+            expected_output,
+            features,
+            &None,
+        )
+    }
 
-            fn compile_test(
-                in_path: PathBuf,
-                out_path: PathBuf,
-                includepath: Option<PathBuf>,
-                input: serde_json::value::Value,
-                expected_output: $namespace::ComponentDecl,
-                features: &FeatureSet,
-            ) -> Result<(), Error> {
-                compile_test_with_forced_runner(
-                    in_path,
-                    out_path,
-                    includepath,
-                    input,
-                    expected_output,
-                    features,
-                    &None,
-                )
-            }
+    fn default_component_decl() -> fdecl::Component {
+        fdecl::Component::EMPTY
+    }
 
-            fn default_component_decl() -> $namespace::ComponentDecl {
-                $namespace::ComponentDecl::EMPTY
-            }
-
-            test_compile_with_features! { FeatureSet::from(vec![Feature::Services]), {
-                test_compile_service_capabilities => {
-                    input = json!({
-                        "capabilities": [
-                            {
-                                "service": "myservice",
-                                "path": "/service",
-                            },
-                            {
-                                "service": [ "myservice2", "myservice3" ],
-                            },
-                        ]
-                    }),
-                    output = $namespace::ComponentDecl {
-                        capabilities: Some(vec![
-                            $namespace::CapabilityDecl::Service (
-                                $namespace::ServiceDecl {
-                                    name: Some("myservice".to_string()),
-                                    source_path: Some("/service".to_string()),
-                                    ..$namespace::ServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::CapabilityDecl::Service (
-                                $namespace::ServiceDecl {
-                                    name: Some("myservice2".to_string()),
-                                    source_path: Some("/svc/myservice2".to_string()),
-                                    ..$namespace::ServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::CapabilityDecl::Service (
-                                $namespace::ServiceDecl {
-                                    name: Some("myservice3".to_string()),
-                                    source_path: Some("/svc/myservice3".to_string()),
-                                    ..$namespace::ServiceDecl::EMPTY
-                                }
-                            ),
-                        ]),
-                        ..$namespace::ComponentDecl::EMPTY
+    test_compile_with_features! { FeatureSet::from(vec![Feature::Services]), {
+        test_compile_service_capabilities => {
+            input = json!({
+                "capabilities": [
+                    {
+                        "service": "myservice",
+                        "path": "/service",
                     },
-                },
-                test_compile_use_service => {
-                    input = json!({
-                        "use": [
-                            { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
-                            { "service": "fuchsia.component.Realm", "from": "framework" },
-                            { "service": [ "myservice", "myservice2" ] },
-                        ]
-                    }),
-                    output = $namespace::ComponentDecl {
-                        uses: Some(vec![
-                            $namespace::UseDecl::Service (
-                                $namespace::UseServiceDecl {
-                                    dependency_type: Some($namespace::DependencyType::Strong),
-                                    source: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    source_name: Some("CoolFonts".to_string()),
-                                    target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                                    ..$namespace::UseServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::UseDecl::Service (
-                                $namespace::UseServiceDecl {
-                                    dependency_type: Some($namespace::DependencyType::Strong),
-                                    source: Some($namespace::Ref::Framework($namespace::FrameworkRef {})),
-                                    source_name: Some("fuchsia.component.Realm".to_string()),
-                                    target_path: Some("/svc/fuchsia.component.Realm".to_string()),
-                                    ..$namespace::UseServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::UseDecl::Service (
-                                $namespace::UseServiceDecl {
-                                    dependency_type: Some($namespace::DependencyType::Strong),
-                                    source: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    source_name: Some("myservice".to_string()),
-                                    target_path: Some("/svc/myservice".to_string()),
-                                    ..$namespace::UseServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::UseDecl::Service (
-                                $namespace::UseServiceDecl {
-                                    dependency_type: Some($namespace::DependencyType::Strong),
-                                    source: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    source_name: Some("myservice2".to_string()),
-                                    target_path: Some("/svc/myservice2".to_string()),
-                                    ..$namespace::UseServiceDecl::EMPTY
-                                }
-                            ),
-                        ]),
-                        ..$namespace::ComponentDecl::EMPTY
+                    {
+                        "service": [ "myservice2", "myservice3" ],
                     },
-                },
-                test_compile_offer_service => {
-                    input = json!({
-                        "offer": [
-                            {
-                                "service": "fuchsia.logger.Log",
-                                "from": "#logger",
-                                "to": [ "#netstack" ]
-                            },
-                            {
-                                "service": "fuchsia.logger.Log",
-                                "from": "#logger",
-                                "to": [ "#coll" ],
-                                "as": "fuchsia.logger.Log2",
-                            },
-                            {
-                                "service": [
-                                    "my.service.Service",
-                                    "my.service.Service2",
-                                ],
-                                "from": ["#logger", "self"],
-                                "to": [ "#netstack" ]
-                            },
-                            {
-                                "service": "my.service.CollectionService",
-                                "from": ["#coll"],
-                                "to": [ "#netstack" ],
-                            },
-                        ],
-                        "capabilities": [
-                            {
-                                "service": [
-                                    "my.service.Service",
-                                    "my.service.Service2",
-                                ],
-                            },
-                        ],
-                        "children": [
-                            {
-                                "name": "logger",
-                                "url": "fuchsia-pkg://logger.cm"
-                            },
-                            {
-                                "name": "netstack",
-                                "url": "fuchsia-pkg://netstack.cm"
-                            },
-                        ],
-                        "collections": [
-                            {
-                                "name": "coll",
-                                "durability": "transient",
-                            },
-                        ],
-                    }),
-                    output = $namespace::ComponentDecl {
-                        offers: Some(vec![
-                            $namespace::OfferDecl::Service (
-                                $namespace::OfferServiceDecl {
-                                    source: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "logger".to_string(),
-                                        collection: None,
-                                    })),
-                                    source_name: Some("fuchsia.logger.Log".to_string()),
-                                    target: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "netstack".to_string(),
-                                        collection: None,
-                                    })),
-                                    target_name: Some("fuchsia.logger.Log".to_string()),
-                                    ..$namespace::OfferServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::OfferDecl::Service (
-                                $namespace::OfferServiceDecl {
-                                    source: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "logger".to_string(),
-                                        collection: None,
-                                    })),
-                                    source_name: Some("fuchsia.logger.Log".to_string()),
-                                    target: Some($namespace::Ref::Collection($namespace::CollectionRef {
-                                        name: "coll".to_string(),
-                                    })),
-                                    target_name: Some("fuchsia.logger.Log2".to_string()),
-                                    ..$namespace::OfferServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::OfferDecl::Service (
-                                $namespace::OfferServiceDecl {
-                                    source: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "logger".to_string(),
-                                        collection: None,
-                                    })),
-                                    source_name: Some("my.service.Service".to_string()),
-                                    target: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "netstack".to_string(),
-                                        collection: None,
-                                    })),
-                                    target_name: Some("my.service.Service".to_string()),
-                                    ..$namespace::OfferServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::OfferDecl::Service (
-                                $namespace::OfferServiceDecl {
-                                    source: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "logger".to_string(),
-                                        collection: None,
-                                    })),
-                                    source_name: Some("my.service.Service2".to_string()),
-                                    target: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "netstack".to_string(),
-                                        collection: None,
-                                    })),
-                                    target_name: Some("my.service.Service2".to_string()),
-                                    ..$namespace::OfferServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::OfferDecl::Service (
-                                $namespace::OfferServiceDecl {
-                                    source: Some($namespace::Ref::Self_($namespace::SelfRef {})),
-                                    source_name: Some("my.service.Service".to_string()),
-                                    target: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "netstack".to_string(),
-                                        collection: None,
-                                    })),
-                                    target_name: Some("my.service.Service".to_string()),
-                                    ..$namespace::OfferServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::OfferDecl::Service (
-                                $namespace::OfferServiceDecl {
-                                    source: Some($namespace::Ref::Self_($namespace::SelfRef {})),
-                                    source_name: Some("my.service.Service2".to_string()),
-                                    target: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "netstack".to_string(),
-                                        collection: None,
-                                    })),
-                                    target_name: Some("my.service.Service2".to_string()),
-                                    ..$namespace::OfferServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::OfferDecl::Service (
-                                $namespace::OfferServiceDecl {
-                                    source: Some($namespace::Ref::Collection($namespace::CollectionRef { name: "coll".to_string() })),
-                                    source_name: Some("my.service.CollectionService".to_string()),
-                                    target: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "netstack".to_string(),
-                                        collection: None,
-                                    })),
-                                    target_name: Some("my.service.CollectionService".to_string()),
-                                    ..$namespace::OfferServiceDecl::EMPTY
-                                }
-                            ),
-                        ]),
-                        capabilities: Some(vec![
-                            $namespace::CapabilityDecl::Service (
-                                $namespace::ServiceDecl {
-                                    name: Some("my.service.Service".to_string()),
-                                    source_path: Some("/svc/my.service.Service".to_string()),
-                                    ..$namespace::ServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::CapabilityDecl::Service (
-                                $namespace::ServiceDecl {
-                                    name: Some("my.service.Service2".to_string()),
-                                    source_path: Some("/svc/my.service.Service2".to_string()),
-                                    ..$namespace::ServiceDecl::EMPTY
-                                }
-                            ),
-                        ]),
-                        children: Some(vec![
-                            $namespace::ChildDecl {
-                                name: Some("logger".to_string()),
-                                url: Some("fuchsia-pkg://logger.cm".to_string()),
-                                startup: Some($namespace::StartupMode::Lazy),
-                                environment: None,
-                                on_terminate: None,
-                                ..$namespace::ChildDecl::EMPTY
-                            },
-                            $namespace::ChildDecl {
-                                name: Some("netstack".to_string()),
-                                url: Some("fuchsia-pkg://netstack.cm".to_string()),
-                                startup: Some($namespace::StartupMode::Lazy),
-                                environment: None,
-                                on_terminate: None,
-                                ..$namespace::ChildDecl::EMPTY
-                            }
-                        ]),
-                        collections: Some(vec![
-                            $namespace::CollectionDecl {
-                                name: Some("coll".to_string()),
-                                durability: Some($namespace::Durability::Transient),
-                                allowed_offers: None,
-                                environment: None,
-                                ..$namespace::CollectionDecl::EMPTY
-                            }
-                        ]),
-                        ..$namespace::ComponentDecl::EMPTY
-                    },
-                },
-                test_compile_expose_service => {
-                    input = json!({
-                        "expose": [
-                            {
-                                "service": "fuchsia.logger.Log",
-                                "from": "#logger",
-                                "as": "fuchsia.logger.Log2",
-                            },
-                            {
-                                "service": [
-                                    "my.service.Service",
-                                    "my.service.Service2",
-                                ],
-                                "from": ["#logger", "self"],
-                            },
-                            {
-                                "service": "my.service.CollectionService",
-                                "from": ["#coll"],
-                            },
-                        ],
-                        "capabilities": [
-                            {
-                                "service": [
-                                    "my.service.Service",
-                                    "my.service.Service2",
-                                ],
-                            },
-                        ],
-                        "children": [
-                            {
-                                "name": "logger",
-                                "url": "fuchsia-pkg://logger.cm"
-                            },
-                        ],
-                        "collections": [
-                            {
-                                "name": "coll",
-                                "durability": "transient",
-                            },
-                        ],
-                    }),
-                    output = $namespace::ComponentDecl {
-                        exposes: Some(vec![
-                            $namespace::ExposeDecl::Service (
-                                $namespace::ExposeServiceDecl {
-                                    source: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "logger".to_string(),
-                                        collection: None,
-                                    })),
-                                    source_name: Some("fuchsia.logger.Log".to_string()),
-                                    target_name: Some("fuchsia.logger.Log2".to_string()),
-                                    target: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    ..$namespace::ExposeServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::ExposeDecl::Service (
-                                $namespace::ExposeServiceDecl {
-                                    source: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "logger".to_string(),
-                                        collection: None,
-                                    })),
-                                    source_name: Some("my.service.Service".to_string()),
-                                    target_name: Some("my.service.Service".to_string()),
-                                    target: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    ..$namespace::ExposeServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::ExposeDecl::Service (
-                                $namespace::ExposeServiceDecl {
-                                    source: Some($namespace::Ref::Self_($namespace::SelfRef {})),
-                                    source_name: Some("my.service.Service".to_string()),
-                                    target_name: Some("my.service.Service".to_string()),
-                                    target: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    ..$namespace::ExposeServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::ExposeDecl::Service (
-                                $namespace::ExposeServiceDecl {
-                                    source: Some($namespace::Ref::Child($namespace::ChildRef {
-                                        name: "logger".to_string(),
-                                        collection: None,
-                                    })),
-                                    source_name: Some("my.service.Service2".to_string()),
-                                    target_name: Some("my.service.Service2".to_string()),
-                                    target: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    ..$namespace::ExposeServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::ExposeDecl::Service (
-                                $namespace::ExposeServiceDecl {
-                                    source: Some($namespace::Ref::Self_($namespace::SelfRef {})),
-                                    source_name: Some("my.service.Service2".to_string()),
-                                    target_name: Some("my.service.Service2".to_string()),
-                                    target: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    ..$namespace::ExposeServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::ExposeDecl::Service (
-                                $namespace::ExposeServiceDecl {
-                                    source: Some($namespace::Ref::Collection($namespace::CollectionRef { name: "coll".to_string() })),
-                                    source_name: Some("my.service.CollectionService".to_string()),
-                                    target_name: Some("my.service.CollectionService".to_string()),
-                                    target: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                                    ..$namespace::ExposeServiceDecl::EMPTY
-                                }
-                            ),
-                        ]),
-                        capabilities: Some(vec![
-                            $namespace::CapabilityDecl::Service (
-                                $namespace::ServiceDecl {
-                                    name: Some("my.service.Service".to_string()),
-                                    source_path: Some("/svc/my.service.Service".to_string()),
-                                    ..$namespace::ServiceDecl::EMPTY
-                                }
-                            ),
-                            $namespace::CapabilityDecl::Service (
-                                $namespace::ServiceDecl {
-                                    name: Some("my.service.Service2".to_string()),
-                                    source_path: Some("/svc/my.service.Service2".to_string()),
-                                    ..$namespace::ServiceDecl::EMPTY
-                                }
-                            ),
-                        ]),
-                        children: Some(vec![
-                            $namespace::ChildDecl {
-                                name: Some("logger".to_string()),
-                                url: Some("fuchsia-pkg://logger.cm".to_string()),
-                                startup: Some($namespace::StartupMode::Lazy),
-                                environment: None,
-                                on_terminate: None,
-                                ..$namespace::ChildDecl::EMPTY
-                            }
-                        ]),
-                        collections: Some(vec![
-                            $namespace::CollectionDecl {
-                                name: Some("coll".to_string()),
-                                durability: Some($namespace::Durability::Transient),
-                                allowed_offers: None,
-                                environment: None,
-                                ..$namespace::CollectionDecl::EMPTY
-                            }
-                        ]),
-                        ..$namespace::ComponentDecl::EMPTY
-                    },
-                },
-            }}
-
-            test_compile_with_features! { FeatureSet::from(vec![Feature::DynamicOffers]), {
-                test_compile_dynamic_offers => {
-                    input = json!({
-                        "collections": [
-                            {
-                                "name": "modular",
-                                "durability": "persistent",
-                            },
-                            {
-                                "name": "tests",
-                                "durability": "transient",
-                                "allowed_offers": "static_only",
-                            },
-                            {
-                                "name": "dynamic_offers",
-                                "durability": "transient",
-                                "allowed_offers": "static_and_dynamic",
-                            },
-                        ],
-                    }),
-                    output = $namespace::ComponentDecl {
-                        collections: Some(vec![
-                            $namespace::CollectionDecl {
-                                name: Some("modular".to_string()),
-                                durability: Some($namespace::Durability::Persistent),
-                                allowed_offers: None,
-                                ..$namespace::CollectionDecl::EMPTY
-                            },
-                            $namespace::CollectionDecl {
-                                name: Some("tests".to_string()),
-                                durability: Some($namespace::Durability::Transient),
-                                allowed_offers: Some($namespace::AllowedOffers::StaticOnly),
-                                ..$namespace::CollectionDecl::EMPTY
-                            },
-                            $namespace::CollectionDecl {
-                                name: Some("dynamic_offers".to_string()),
-                                durability: Some($namespace::Durability::Transient),
-                                allowed_offers: Some($namespace::AllowedOffers::StaticAndDynamic),
-                                ..$namespace::CollectionDecl::EMPTY
-                            }
-                        ]),
-                        ..$namespace::ComponentDecl::EMPTY
-                    },
-                },
-            }}
-
-            test_compile_with_features! { FeatureSet::from(vec![Feature::StructuredConfig]), {
-                test_compile_config => {
-                    input = json!({
-                        "config": {
-                            "test8": {
-                                "type": "vector",
-                                "max_count": 100,
-                                "element": {
-                                    "type": "uint16"
-                                }
-                            },
-                            "test7": { "type": "int64" },
-                            "test6": { "type": "uint64" },
-                            "test5": { "type": "int8" },
-                            "test4": { "type": "uint8" },
-                            "test3": { "type": "bool" },
-                            "test2": {
-                                "type": "vector",
-                                "max_count": 100,
-                                "element": {
-                                    "type": "string",
-                                    "max_size": 50
-                                }
-                            },
-                            "test1": {
-                                "type": "string",
-                                "max_size": 50
-                            }
+                ]
+            }),
+            output = fdecl::Component {
+                capabilities: Some(vec![
+                    fdecl::Capability::Service (
+                        fdecl::Service {
+                            name: Some("myservice".to_string()),
+                            source_path: Some("/service".to_string()),
+                            ..fdecl::Service::EMPTY
                         }
-                    }),
-                    output = $namespace::ComponentDecl {
-                        config: Some($namespace::ConfigDecl {
-                            fields: Some(vec![
-                                $namespace::ConfigField {
-                                    key: Some("test1".to_string()),
-                                    value_type: Some($namespace::ConfigValueType::String(
-                                        $namespace::ConfigStringType {
+                    ),
+                    fdecl::Capability::Service (
+                        fdecl::Service {
+                            name: Some("myservice2".to_string()),
+                            source_path: Some("/svc/myservice2".to_string()),
+                            ..fdecl::Service::EMPTY
+                        }
+                    ),
+                    fdecl::Capability::Service (
+                        fdecl::Service {
+                            name: Some("myservice3".to_string()),
+                            source_path: Some("/svc/myservice3".to_string()),
+                            ..fdecl::Service::EMPTY
+                        }
+                    ),
+                ]),
+                ..fdecl::Component::EMPTY
+            },
+        },
+        test_compile_use_service => {
+            input = json!({
+                "use": [
+                    { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
+                    { "service": "fuchsia.component.Realm", "from": "framework" },
+                    { "service": [ "myservice", "myservice2" ] },
+                ]
+            }),
+            output = fdecl::Component {
+                uses: Some(vec![
+                    fdecl::Use::Service (
+                        fdecl::UseService {
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            source_name: Some("CoolFonts".to_string()),
+                            target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                            ..fdecl::UseService::EMPTY
+                        }
+                    ),
+                    fdecl::Use::Service (
+                        fdecl::UseService {
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            source: Some(fdecl::Ref::Framework(fdecl::FrameworkRef {})),
+                            source_name: Some("fuchsia.component.Realm".to_string()),
+                            target_path: Some("/svc/fuchsia.component.Realm".to_string()),
+                            ..fdecl::UseService::EMPTY
+                        }
+                    ),
+                    fdecl::Use::Service (
+                        fdecl::UseService {
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            source_name: Some("myservice".to_string()),
+                            target_path: Some("/svc/myservice".to_string()),
+                            ..fdecl::UseService::EMPTY
+                        }
+                    ),
+                    fdecl::Use::Service (
+                        fdecl::UseService {
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            source_name: Some("myservice2".to_string()),
+                            target_path: Some("/svc/myservice2".to_string()),
+                            ..fdecl::UseService::EMPTY
+                        }
+                    ),
+                ]),
+                ..fdecl::Component::EMPTY
+            },
+        },
+        test_compile_offer_service => {
+            input = json!({
+                "offer": [
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "to": [ "#netstack" ]
+                    },
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "to": [ "#coll" ],
+                        "as": "fuchsia.logger.Log2",
+                    },
+                    {
+                        "service": [
+                            "my.service.Service",
+                            "my.service.Service2",
+                        ],
+                        "from": ["#logger", "self"],
+                        "to": [ "#netstack" ]
+                    },
+                    {
+                        "service": "my.service.CollectionService",
+                        "from": ["#coll"],
+                        "to": [ "#netstack" ],
+                    },
+                ],
+                "capabilities": [
+                    {
+                        "service": [
+                            "my.service.Service",
+                            "my.service.Service2",
+                        ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://logger.cm"
+                    },
+                    {
+                        "name": "netstack",
+                        "url": "fuchsia-pkg://netstack.cm"
+                    },
+                ],
+                "collections": [
+                    {
+                        "name": "coll",
+                        "durability": "transient",
+                    },
+                ],
+            }),
+            output = fdecl::Component {
+                offers: Some(vec![
+                    fdecl::Offer::Service (
+                        fdecl::OfferService {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("fuchsia.logger.Log".to_string()),
+                            ..fdecl::OfferService::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::Service (
+                        fdecl::OfferService {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fdecl::Ref::Collection(fdecl::CollectionRef {
+                                name: "coll".to_string(),
+                            })),
+                            target_name: Some("fuchsia.logger.Log2".to_string()),
+                            ..fdecl::OfferService::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::Service (
+                        fdecl::OfferService {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service".to_string()),
+                            ..fdecl::OfferService::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::Service (
+                        fdecl::OfferService {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service2".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service2".to_string()),
+                            ..fdecl::OfferService::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::Service (
+                        fdecl::OfferService {
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                            source_name: Some("my.service.Service".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service".to_string()),
+                            ..fdecl::OfferService::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::Service (
+                        fdecl::OfferService {
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                            source_name: Some("my.service.Service2".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service2".to_string()),
+                            ..fdecl::OfferService::EMPTY
+                        }
+                    ),
+                    fdecl::Offer::Service (
+                        fdecl::OfferService {
+                            source: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name: "coll".to_string() })),
+                            source_name: Some("my.service.CollectionService".to_string()),
+                            target: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.CollectionService".to_string()),
+                            ..fdecl::OfferService::EMPTY
+                        }
+                    ),
+                ]),
+                capabilities: Some(vec![
+                    fdecl::Capability::Service (
+                        fdecl::Service {
+                            name: Some("my.service.Service".to_string()),
+                            source_path: Some("/svc/my.service.Service".to_string()),
+                            ..fdecl::Service::EMPTY
+                        }
+                    ),
+                    fdecl::Capability::Service (
+                        fdecl::Service {
+                            name: Some("my.service.Service2".to_string()),
+                            source_path: Some("/svc/my.service.Service2".to_string()),
+                            ..fdecl::Service::EMPTY
+                        }
+                    ),
+                ]),
+                children: Some(vec![
+                    fdecl::Child {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://logger.cm".to_string()),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        environment: None,
+                        on_terminate: None,
+                        ..fdecl::Child::EMPTY
+                    },
+                    fdecl::Child {
+                        name: Some("netstack".to_string()),
+                        url: Some("fuchsia-pkg://netstack.cm".to_string()),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        environment: None,
+                        on_terminate: None,
+                        ..fdecl::Child::EMPTY
+                    }
+                ]),
+                collections: Some(vec![
+                    fdecl::Collection {
+                        name: Some("coll".to_string()),
+                        durability: Some(fdecl::Durability::Transient),
+                        allowed_offers: None,
+                        environment: None,
+                        ..fdecl::Collection::EMPTY
+                    }
+                ]),
+                ..fdecl::Component::EMPTY
+            },
+        },
+        test_compile_expose_service => {
+            input = json!({
+                "expose": [
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "as": "fuchsia.logger.Log2",
+                    },
+                    {
+                        "service": [
+                            "my.service.Service",
+                            "my.service.Service2",
+                        ],
+                        "from": ["#logger", "self"],
+                    },
+                    {
+                        "service": "my.service.CollectionService",
+                        "from": ["#coll"],
+                    },
+                ],
+                "capabilities": [
+                    {
+                        "service": [
+                            "my.service.Service",
+                            "my.service.Service2",
+                        ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://logger.cm"
+                    },
+                ],
+                "collections": [
+                    {
+                        "name": "coll",
+                        "durability": "transient",
+                    },
+                ],
+            }),
+            output = fdecl::Component {
+                exposes: Some(vec![
+                    fdecl::Expose::Service (
+                        fdecl::ExposeService {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target_name: Some("fuchsia.logger.Log2".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            ..fdecl::ExposeService::EMPTY
+                        }
+                    ),
+                    fdecl::Expose::Service (
+                        fdecl::ExposeService {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service".to_string()),
+                            target_name: Some("my.service.Service".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            ..fdecl::ExposeService::EMPTY
+                        }
+                    ),
+                    fdecl::Expose::Service (
+                        fdecl::ExposeService {
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                            source_name: Some("my.service.Service".to_string()),
+                            target_name: Some("my.service.Service".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            ..fdecl::ExposeService::EMPTY
+                        }
+                    ),
+                    fdecl::Expose::Service (
+                        fdecl::ExposeService {
+                            source: Some(fdecl::Ref::Child(fdecl::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service2".to_string()),
+                            target_name: Some("my.service.Service2".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            ..fdecl::ExposeService::EMPTY
+                        }
+                    ),
+                    fdecl::Expose::Service (
+                        fdecl::ExposeService {
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
+                            source_name: Some("my.service.Service2".to_string()),
+                            target_name: Some("my.service.Service2".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            ..fdecl::ExposeService::EMPTY
+                        }
+                    ),
+                    fdecl::Expose::Service (
+                        fdecl::ExposeService {
+                            source: Some(fdecl::Ref::Collection(fdecl::CollectionRef { name: "coll".to_string() })),
+                            source_name: Some("my.service.CollectionService".to_string()),
+                            target_name: Some("my.service.CollectionService".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            ..fdecl::ExposeService::EMPTY
+                        }
+                    ),
+                ]),
+                capabilities: Some(vec![
+                    fdecl::Capability::Service (
+                        fdecl::Service {
+                            name: Some("my.service.Service".to_string()),
+                            source_path: Some("/svc/my.service.Service".to_string()),
+                            ..fdecl::Service::EMPTY
+                        }
+                    ),
+                    fdecl::Capability::Service (
+                        fdecl::Service {
+                            name: Some("my.service.Service2".to_string()),
+                            source_path: Some("/svc/my.service.Service2".to_string()),
+                            ..fdecl::Service::EMPTY
+                        }
+                    ),
+                ]),
+                children: Some(vec![
+                    fdecl::Child {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://logger.cm".to_string()),
+                        startup: Some(fdecl::StartupMode::Lazy),
+                        environment: None,
+                        on_terminate: None,
+                        ..fdecl::Child::EMPTY
+                    }
+                ]),
+                collections: Some(vec![
+                    fdecl::Collection {
+                        name: Some("coll".to_string()),
+                        durability: Some(fdecl::Durability::Transient),
+                        allowed_offers: None,
+                        environment: None,
+                        ..fdecl::Collection::EMPTY
+                    }
+                ]),
+                ..fdecl::Component::EMPTY
+            },
+        },
+    }}
+
+    test_compile_with_features! { FeatureSet::from(vec![Feature::DynamicOffers]), {
+        test_compile_dynamic_offers => {
+            input = json!({
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent",
+                    },
+                    {
+                        "name": "tests",
+                        "durability": "transient",
+                        "allowed_offers": "static_only",
+                    },
+                    {
+                        "name": "dynamic_offers",
+                        "durability": "transient",
+                        "allowed_offers": "static_and_dynamic",
+                    },
+                ],
+            }),
+            output = fdecl::Component {
+                collections: Some(vec![
+                    fdecl::Collection {
+                        name: Some("modular".to_string()),
+                        durability: Some(fdecl::Durability::Persistent),
+                        allowed_offers: None,
+                        ..fdecl::Collection::EMPTY
+                    },
+                    fdecl::Collection {
+                        name: Some("tests".to_string()),
+                        durability: Some(fdecl::Durability::Transient),
+                        allowed_offers: Some(fdecl::AllowedOffers::StaticOnly),
+                        ..fdecl::Collection::EMPTY
+                    },
+                    fdecl::Collection {
+                        name: Some("dynamic_offers".to_string()),
+                        durability: Some(fdecl::Durability::Transient),
+                        allowed_offers: Some(fdecl::AllowedOffers::StaticAndDynamic),
+                        ..fdecl::Collection::EMPTY
+                    }
+                ]),
+                ..fdecl::Component::EMPTY
+            },
+        },
+    }}
+
+    test_compile_with_features! { FeatureSet::from(vec![Feature::StructuredConfig]), {
+        test_compile_config => {
+            input = json!({
+                "config": {
+                    "test8": {
+                        "type": "vector",
+                        "max_count": 100,
+                        "element": {
+                            "type": "uint16"
+                        }
+                    },
+                    "test7": { "type": "int64" },
+                    "test6": { "type": "uint64" },
+                    "test5": { "type": "int8" },
+                    "test4": { "type": "uint8" },
+                    "test3": { "type": "bool" },
+                    "test2": {
+                        "type": "vector",
+                        "max_count": 100,
+                        "element": {
+                            "type": "string",
+                            "max_size": 50
+                        }
+                    },
+                    "test1": {
+                        "type": "string",
+                        "max_size": 50
+                    }
+                }
+            }),
+            output = fdecl::Component {
+                config: Some(fdecl::Config {
+                    fields: Some(vec![
+                        fdecl::ConfigField {
+                            key: Some("test1".to_string()),
+                            value_type: Some(fdecl::ConfigValueType::String(
+                                fdecl::ConfigStringType {
+                                    max_size: Some(50),
+                                    ..fdecl::ConfigStringType::EMPTY
+                                }
+                            )),
+                            ..fdecl::ConfigField::EMPTY
+                        },
+                        fdecl::ConfigField {
+                            key: Some("test2".to_string()),
+                            value_type: Some(fdecl::ConfigValueType::Vector(
+                                fdecl::ConfigVectorType {
+                                    max_count: Some(100),
+                                    element_type: Some(fdecl::ConfigVectorElementType::String(
+                                        fdecl::ConfigStringType {
                                             max_size: Some(50),
-                                            ..$namespace::ConfigStringType::EMPTY
+                                            ..fdecl::ConfigStringType::EMPTY
                                         }
                                     )),
-                                    ..$namespace::ConfigField::EMPTY
-                                },
-                                $namespace::ConfigField {
-                                    key: Some("test2".to_string()),
-                                    value_type: Some($namespace::ConfigValueType::Vector(
-                                        $namespace::ConfigVectorType {
-                                            max_count: Some(100),
-                                            element_type: Some($namespace::ConfigVectorElementType::String(
-                                                $namespace::ConfigStringType {
-                                                    max_size: Some(50),
-                                                    ..$namespace::ConfigStringType::EMPTY
-                                                }
-                                            )),
-                                            ..$namespace::ConfigVectorType::EMPTY
-                                        }
-                                    )),
-                                    ..$namespace::ConfigField::EMPTY
-                                },
-                                $namespace::ConfigField {
-                                    key: Some("test3".to_string()),
-                                    value_type: Some($namespace::ConfigValueType::Bool($namespace::ConfigBooleanType::EMPTY)),
-                                    ..$namespace::ConfigField::EMPTY
-                                },
-                                $namespace::ConfigField {
-                                    key: Some("test4".to_string()),
-                                    value_type: Some($namespace::ConfigValueType::Uint8($namespace::ConfigUnsigned8Type::EMPTY)),
-                                    ..$namespace::ConfigField::EMPTY
-                                },
-                                $namespace::ConfigField {
-                                    key: Some("test5".to_string()),
-                                    value_type: Some($namespace::ConfigValueType::Int8($namespace::ConfigSigned8Type::EMPTY)),
-                                    ..$namespace::ConfigField::EMPTY
-                                },
-                                $namespace::ConfigField {
-                                    key: Some("test6".to_string()),
-                                    value_type: Some($namespace::ConfigValueType::Uint64($namespace::ConfigUnsigned64Type::EMPTY)),
-                                    ..$namespace::ConfigField::EMPTY
-                                },
-                                $namespace::ConfigField {
-                                    key: Some("test7".to_string()),
-                                    value_type: Some($namespace::ConfigValueType::Int64($namespace::ConfigSigned64Type::EMPTY)),
-                                    ..$namespace::ConfigField::EMPTY
-                                },
-
-                                $namespace::ConfigField {
-                                    key: Some("test8".to_string()),
-                                    value_type: Some($namespace::ConfigValueType::Vector(
-                                        $namespace::ConfigVectorType {
-                                            max_count: Some(100),
-                                            element_type: Some($namespace::ConfigVectorElementType::Uint16($namespace::ConfigUnsigned16Type::EMPTY)),
-                                            ..$namespace::ConfigVectorType::EMPTY
-                                        }
-                                    )),
-                                    ..$namespace::ConfigField::EMPTY
-                                },
-                            ]),
-                            declaration_checksum: Some(vec![
-                                29, 216, 58, 250, 74, 84, 151, 187, 165, 124, 211, 208, 215, 241, 78, 166,
-                                54, 186, 142, 201, 10, 136, 180, 16, 171, 129, 154, 142, 44, 7, 46, 146
-                            ]),
-                            ..$namespace::ConfigDecl::EMPTY
-                        }),
-                        ..$namespace::ComponentDecl::EMPTY
-                    },
-                },
-            }}
-
-            #[test]
-            fn test_invalid_json() {
-                let tmp_dir = TempDir::new().unwrap();
-                let tmp_in_path = tmp_dir.path().join("test.cml");
-                let tmp_out_path = tmp_dir.path().join("test.cm");
-
-                let input = json!({
-                    "expose": [
-                        { "directory": "blobfs", "from": "parent" }
-                    ]
-                });
-                File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
-                {
-                    let result = compile(
-                        &tmp_in_path,
-                        &tmp_out_path.clone(),
-                        None,
-                        &vec![],
-                        &PathBuf::new(),
-                        &FeatureSet::empty(),
-                        &None,
-                    );
-                    assert_matches!(
-                        result,
-                        Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
-                    );
-                }
-                // Compilation failed so output should not exist.
-                {
-                    let result = fs::File::open(&tmp_out_path);
-                    assert_eq!(result.unwrap_err().kind(), io::ErrorKind::NotFound);
-                }
-            }
-
-            #[test]
-            fn test_missing_include() {
-                let tmp_dir = TempDir::new().unwrap();
-                let in_path = tmp_dir.path().join("test.cml");
-                let out_path = tmp_dir.path().join("test.cm");
-                let result = compile_test(
-                    in_path,
-                    out_path,
-                    Some(tmp_dir.into_path()),
-                    json!({ "include": [ "doesnt_exist.cml" ] }),
-                    default_component_decl(),
-                    &FeatureSet::empty(),
-                );
-                assert_matches!(
-                    result,
-                    Err(Error::Parse { err, .. }) if err.starts_with("Couldn't read include ") && err.contains("doesnt_exist.cml")
-                );
-            }
-
-            #[test]
-            fn test_good_include() {
-                let tmp_dir = TempDir::new().unwrap();
-                let foo_path = tmp_dir.path().join("foo.cml");
-                fs::File::create(&foo_path)
-                    .unwrap()
-                    .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
-                    .unwrap();
-
-                let in_path = tmp_dir.path().join("test.cml");
-                let out_path = tmp_dir.path().join("test.cm");
-                compile_test(
-                    in_path,
-                    out_path,
-                    Some(tmp_dir.into_path()),
-                    json!({
-                        "include": [ "foo.cml" ],
-                        "program": { "binary": "bin/test" },
-                    }),
-                    $namespace::ComponentDecl {
-                        program: Some($namespace::ProgramDecl {
-                            runner: Some("elf".to_string()),
-                            info: Some(fdata::Dictionary {
-                                entries: Some(vec![fdata::DictionaryEntry {
-                                    key: "binary".to_string(),
-                                    value: Some(Box::new(fdata::DictionaryValue::Str(
-                                        "bin/test".to_string(),
-                                    ))),
-                                }]),
-                                ..fdata::Dictionary::EMPTY
-                            }),
-                            ..$namespace::ProgramDecl::EMPTY
-                        }),
-                        ..default_component_decl()
-                    },
-                    &FeatureSet::empty(),
-                )
-                .unwrap();
-            }
-
-            #[test]
-            fn test_good_include_with_force_runner() {
-                let tmp_dir = TempDir::new().unwrap();
-                let foo_path = tmp_dir.path().join("foo.cml");
-                fs::File::create(&foo_path)
-                    .unwrap()
-                    .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
-                    .unwrap();
-
-                let in_path = tmp_dir.path().join("test.cml");
-                let out_path = tmp_dir.path().join("test.cm");
-                compile_test_with_forced_runner(
-                    in_path,
-                    out_path,
-                    Some(tmp_dir.into_path()),
-                    json!({
-                        "include": [ "foo.cml" ],
-                        "program": { "binary": "bin/test" },
-                    }),
-                    $namespace::ComponentDecl {
-                        program: Some($namespace::ProgramDecl {
-                            runner: Some("elf_test_runner".to_string()),
-                            info: Some(fdata::Dictionary {
-                                entries: Some(vec![fdata::DictionaryEntry {
-                                    key: "binary".to_string(),
-                                    value: Some(Box::new(fdata::DictionaryValue::Str(
-                                        "bin/test".to_string(),
-                                    ))),
-                                }]),
-                                ..fdata::Dictionary::EMPTY
-                            }),
-                            ..$namespace::ProgramDecl::EMPTY
-                        }),
-                        ..default_component_decl()
-                    },
-                    &FeatureSet::empty(),
-                    &Some("elf_test_runner".to_string()),
-                )
-                .unwrap();
-            }
-
-            #[test]
-            fn test_recursive_include() {
-                let tmp_dir = TempDir::new().unwrap();
-                let foo_path = tmp_dir.path().join("foo.cml");
-                fs::File::create(&foo_path)
-                    .unwrap()
-                    .write_all(format!("{}", json!({ "include": [ "bar.cml" ] })).as_bytes())
-                    .unwrap();
-
-                let bar_path = tmp_dir.path().join("bar.cml");
-                fs::File::create(&bar_path)
-                    .unwrap()
-                    .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
-                    .unwrap();
-
-                let in_path = tmp_dir.path().join("test.cml");
-                let out_path = tmp_dir.path().join("test.cm");
-                compile_test(
-                    in_path,
-                    out_path,
-                    Some(tmp_dir.into_path()),
-                    json!({
-                        "include": [ "foo.cml" ],
-                        "program": { "binary": "bin/test" },
-                    }),
-                    $namespace::ComponentDecl {
-                        program: Some($namespace::ProgramDecl {
-                            runner: Some("elf".to_string()),
-                            info: Some(fdata::Dictionary {
-                                entries: Some(vec![fdata::DictionaryEntry {
-                                    key: "binary".to_string(),
-                                    value: Some(Box::new(fdata::DictionaryValue::Str(
-                                        "bin/test".to_string(),
-                                    ))),
-                                }]),
-                                ..fdata::Dictionary::EMPTY
-                            }),
-                            ..$namespace::ProgramDecl::EMPTY
-                        }),
-                        ..default_component_decl()
-                    },
-                    &FeatureSet::empty(),
-                )
-                .unwrap();
-            }
-
-            #[test]
-            fn test_cyclic_include() {
-                let tmp_dir = TempDir::new().unwrap();
-                let foo_path = tmp_dir.path().join("foo.cml");
-                fs::File::create(&foo_path)
-                    .unwrap()
-                    .write_all(format!("{}", json!({ "include": [ "bar.cml" ] })).as_bytes())
-                    .unwrap();
-
-                let bar_path = tmp_dir.path().join("bar.cml");
-                fs::File::create(&bar_path)
-                    .unwrap()
-                    .write_all(format!("{}", json!({ "include": [ "foo.cml" ] })).as_bytes())
-                    .unwrap();
-
-                let in_path = tmp_dir.path().join("test.cml");
-                let out_path = tmp_dir.path().join("test.cm");
-                let result = compile_test(
-                    in_path,
-                    out_path,
-                    Some(tmp_dir.into_path()),
-                    json!({
-                        "include": [ "foo.cml" ],
-                        "program": {
-                            "runner": "elf",
-                            "binary": "bin/test",
+                                    ..fdecl::ConfigVectorType::EMPTY
+                                }
+                            )),
+                            ..fdecl::ConfigField::EMPTY
                         },
-                    }),
-                    default_component_decl(),
-                    &FeatureSet::empty(),
-                );
-                assert_matches!(result, Err(Error::Parse { err, .. }) if err.contains("Includes cycle"));
-            }
-
-            #[test]
-            fn test_conflicting_includes() {
-                let tmp_dir = TempDir::new().unwrap();
-                let foo_path = tmp_dir.path().join("foo.cml");
-                fs::File::create(&foo_path)
-                    .unwrap()
-                    .write_all(
-                        format!("{}", json!({ "use": [ { "protocol": "foo", "path": "/svc/foo" } ] }))
-                            .as_bytes(),
-                    )
-                    .unwrap();
-                let bar_path = tmp_dir.path().join("bar.cml");
-
-                // Try to mount protocol "bar" under the same path "/svc/foo".
-                fs::File::create(&bar_path)
-                    .unwrap()
-                    .write_all(
-                        format!("{}", json!({ "use": [ { "protocol": "bar", "path": "/svc/foo" } ] }))
-                            .as_bytes(),
-                    )
-                    .unwrap();
-
-                let in_path = tmp_dir.path().join("test.cml");
-                let out_path = tmp_dir.path().join("test.cm");
-                let result = compile_test(
-                    in_path,
-                    out_path,
-                    Some(tmp_dir.into_path()),
-                    json!({
-                        "include": [ "foo.cml", "bar.cml" ],
-                        "program": {
-                            "runner": "elf",
-                            "binary": "bin/test",
+                        fdecl::ConfigField {
+                            key: Some("test3".to_string()),
+                            value_type: Some(fdecl::ConfigValueType::Bool(fdecl::ConfigBooleanType::EMPTY)),
+                            ..fdecl::ConfigField::EMPTY
                         },
-                    }),
-                    default_component_decl(),
-                    &FeatureSet::empty(),
-                );
-                // Including both foo.cml and bar.cml should fail to validate because of an incoming
-                // namespace collision.
-                assert_matches!(result, Err(Error::Validate { err, .. }) if err.contains("is a duplicate \"use\""));
-            }
-
-            #[test]
-            fn test_overlapping_includes() {
-                let tmp_dir = TempDir::new().unwrap();
-                let foo1_path = tmp_dir.path().join("foo1.cml");
-                fs::File::create(&foo1_path)
-                    .unwrap()
-                    .write_all(format!("{}", json!({ "use": [ { "protocol": "foo" } ] })).as_bytes())
-                    .unwrap();
-
-                let foo2_path = tmp_dir.path().join("foo2.cml");
-                // Include protocol "foo" again
-                fs::File::create(&foo2_path)
-                    .unwrap()
-                    // Use different but equivalent syntax to further stress any overlap affordances
-                    .write_all(format!("{}", json!({ "use": [ { "protocol": [ "foo" ] } ] })).as_bytes())
-                    .unwrap();
-
-                let in_path = tmp_dir.path().join("test.cml");
-                let out_path = tmp_dir.path().join("test.cm");
-                let result = compile_test(
-                    in_path,
-                    out_path,
-                    Some(tmp_dir.into_path()),
-                    json!({
-                        "include": [ "foo1.cml", "foo2.cml" ],
-                        "program": {
-                            "runner": "elf",
-                            "binary": "bin/test",
+                        fdecl::ConfigField {
+                            key: Some("test4".to_string()),
+                            value_type: Some(fdecl::ConfigValueType::Uint8(fdecl::ConfigUnsigned8Type::EMPTY)),
+                            ..fdecl::ConfigField::EMPTY
                         },
-                    }),
-                    $namespace::ComponentDecl {
-                        program: Some($namespace::ProgramDecl {
-                            runner: Some("elf".to_string()),
-                            info: Some(fdata::Dictionary {
-                                entries: Some(vec![fdata::DictionaryEntry {
-                                    key: "binary".to_string(),
-                                    value: Some(Box::new(fdata::DictionaryValue::Str(
-                                        "bin/test".to_string(),
-                                    ))),
-                                }]),
-                                ..fdata::Dictionary::EMPTY
-                            }),
-                            ..$namespace::ProgramDecl::EMPTY
-                        }),
-                        uses: Some(vec![$namespace::UseDecl::Protocol($namespace::UseProtocolDecl {
-                            dependency_type: Some($namespace::DependencyType::Strong),
-                            source: Some($namespace::Ref::Parent($namespace::ParentRef {})),
-                            source_name: Some("foo".to_string()),
-                            target_path: Some("/svc/foo".to_string()),
-                            ..$namespace::UseProtocolDecl::EMPTY
-                        })]),
-                        ..default_component_decl()
-                    },
-                    &FeatureSet::empty(),
-                );
-                // Including both foo1.cml and foo2.cml is fine because they overlap,
-                // so merging foo2.cml after having merged foo1.cml is a no-op.
-                assert_matches!(result, Ok(()));
-            }
+                        fdecl::ConfigField {
+                            key: Some("test5".to_string()),
+                            value_type: Some(fdecl::ConfigValueType::Int8(fdecl::ConfigSigned8Type::EMPTY)),
+                            ..fdecl::ConfigField::EMPTY
+                        },
+                        fdecl::ConfigField {
+                            key: Some("test6".to_string()),
+                            value_type: Some(fdecl::ConfigValueType::Uint64(fdecl::ConfigUnsigned64Type::EMPTY)),
+                            ..fdecl::ConfigField::EMPTY
+                        },
+                        fdecl::ConfigField {
+                            key: Some("test7".to_string()),
+                            value_type: Some(fdecl::ConfigValueType::Int64(fdecl::ConfigSigned64Type::EMPTY)),
+                            ..fdecl::ConfigField::EMPTY
+                        },
+
+                        fdecl::ConfigField {
+                            key: Some("test8".to_string()),
+                            value_type: Some(fdecl::ConfigValueType::Vector(
+                                fdecl::ConfigVectorType {
+                                    max_count: Some(100),
+                                    element_type: Some(fdecl::ConfigVectorElementType::Uint16(fdecl::ConfigUnsigned16Type::EMPTY)),
+                                    ..fdecl::ConfigVectorType::EMPTY
+                                }
+                            )),
+                            ..fdecl::ConfigField::EMPTY
+                        },
+                    ]),
+                    declaration_checksum: Some(vec![
+                        29, 216, 58, 250, 74, 84, 151, 187, 165, 124, 211, 208, 215, 241, 78, 166,
+                        54, 186, 142, 201, 10, 136, 180, 16, 171, 129, 154, 142, 44, 7, 46, 146
+                    ]),
+                    ..fdecl::Config::EMPTY
+                }),
+                ..fdecl::Component::EMPTY
+            },
+        },
+    }}
+
+    #[test]
+    fn test_invalid_json() {
+        let tmp_dir = TempDir::new().unwrap();
+        let tmp_in_path = tmp_dir.path().join("test.cml");
+        let tmp_out_path = tmp_dir.path().join("test.cm");
+
+        let input = json!({
+            "expose": [
+                { "directory": "blobfs", "from": "parent" }
+            ]
+        });
+        File::create(&tmp_in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
+        {
+            let result = compile(
+                &tmp_in_path,
+                &tmp_out_path.clone(),
+                None,
+                &vec![],
+                &PathBuf::new(),
+                &FeatureSet::empty(),
+                &None,
+            );
+            assert_matches!(
+                result,
+                Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
+            );
+        }
+        // Compilation failed so output should not exist.
+        {
+            let result = fs::File::open(&tmp_out_path);
+            assert_eq!(result.unwrap_err().kind(), io::ErrorKind::NotFound);
         }
     }
-}
 
-test_suite!(fdecl_test, fdecl);
+    #[test]
+    fn test_missing_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        let result = compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({ "include": [ "doesnt_exist.cml" ] }),
+            default_component_decl(),
+            &FeatureSet::empty(),
+        );
+        assert_matches!(
+            result,
+            Err(Error::Parse { err, .. }) if err.starts_with("Couldn't read include ") && err.contains("doesnt_exist.cml")
+        );
+    }
+
+    #[test]
+    fn test_good_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
+            .unwrap();
+
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml" ],
+                "program": { "binary": "bin/test" },
+            }),
+            fdecl::Component {
+                program: Some(fdecl::Program {
+                    runner: Some("elf".to_string()),
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "bin/test".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fdecl::Program::EMPTY
+                }),
+                ..default_component_decl()
+            },
+            &FeatureSet::empty(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_good_include_with_force_runner() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
+            .unwrap();
+
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        compile_test_with_forced_runner(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml" ],
+                "program": { "binary": "bin/test" },
+            }),
+            fdecl::Component {
+                program: Some(fdecl::Program {
+                    runner: Some("elf_test_runner".to_string()),
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "bin/test".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fdecl::Program::EMPTY
+                }),
+                ..default_component_decl()
+            },
+            &FeatureSet::empty(),
+            &Some("elf_test_runner".to_string()),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_recursive_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "include": [ "bar.cml" ] })).as_bytes())
+            .unwrap();
+
+        let bar_path = tmp_dir.path().join("bar.cml");
+        fs::File::create(&bar_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "program": { "runner": "elf" } })).as_bytes())
+            .unwrap();
+
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml" ],
+                "program": { "binary": "bin/test" },
+            }),
+            fdecl::Component {
+                program: Some(fdecl::Program {
+                    runner: Some("elf".to_string()),
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "bin/test".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fdecl::Program::EMPTY
+                }),
+                ..default_component_decl()
+            },
+            &FeatureSet::empty(),
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn test_cyclic_include() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "include": [ "bar.cml" ] })).as_bytes())
+            .unwrap();
+
+        let bar_path = tmp_dir.path().join("bar.cml");
+        fs::File::create(&bar_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "include": [ "foo.cml" ] })).as_bytes())
+            .unwrap();
+
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        let result = compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml" ],
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/test",
+                },
+            }),
+            default_component_decl(),
+            &FeatureSet::empty(),
+        );
+        assert_matches!(result, Err(Error::Parse { err, .. }) if err.contains("Includes cycle"));
+    }
+
+    #[test]
+    fn test_conflicting_includes() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo_path = tmp_dir.path().join("foo.cml");
+        fs::File::create(&foo_path)
+            .unwrap()
+            .write_all(
+                format!("{}", json!({ "use": [ { "protocol": "foo", "path": "/svc/foo" } ] }))
+                    .as_bytes(),
+            )
+            .unwrap();
+        let bar_path = tmp_dir.path().join("bar.cml");
+
+        // Try to mount protocol "bar" under the same path "/svc/foo".
+        fs::File::create(&bar_path)
+            .unwrap()
+            .write_all(
+                format!("{}", json!({ "use": [ { "protocol": "bar", "path": "/svc/foo" } ] }))
+                    .as_bytes(),
+            )
+            .unwrap();
+
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        let result = compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo.cml", "bar.cml" ],
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/test",
+                },
+            }),
+            default_component_decl(),
+            &FeatureSet::empty(),
+        );
+        // Including both foo.cml and bar.cml should fail to validate because of an incoming
+        // namespace collision.
+        assert_matches!(result, Err(Error::Validate { err, .. }) if err.contains("is a duplicate \"use\""));
+    }
+
+    #[test]
+    fn test_overlapping_includes() {
+        let tmp_dir = TempDir::new().unwrap();
+        let foo1_path = tmp_dir.path().join("foo1.cml");
+        fs::File::create(&foo1_path)
+            .unwrap()
+            .write_all(format!("{}", json!({ "use": [ { "protocol": "foo" } ] })).as_bytes())
+            .unwrap();
+
+        let foo2_path = tmp_dir.path().join("foo2.cml");
+        // Include protocol "foo" again
+        fs::File::create(&foo2_path)
+            .unwrap()
+            // Use different but equivalent syntax to further stress any overlap affordances
+            .write_all(format!("{}", json!({ "use": [ { "protocol": [ "foo" ] } ] })).as_bytes())
+            .unwrap();
+
+        let in_path = tmp_dir.path().join("test.cml");
+        let out_path = tmp_dir.path().join("test.cm");
+        let result = compile_test(
+            in_path,
+            out_path,
+            Some(tmp_dir.into_path()),
+            json!({
+                "include": [ "foo1.cml", "foo2.cml" ],
+                "program": {
+                    "runner": "elf",
+                    "binary": "bin/test",
+                },
+            }),
+            fdecl::Component {
+                program: Some(fdecl::Program {
+                    runner: Some("elf".to_string()),
+                    info: Some(fdata::Dictionary {
+                        entries: Some(vec![fdata::DictionaryEntry {
+                            key: "binary".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str(
+                                "bin/test".to_string(),
+                            ))),
+                        }]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
+                    ..fdecl::Program::EMPTY
+                }),
+                uses: Some(vec![fdecl::Use::Protocol(fdecl::UseProtocol {
+                    dependency_type: Some(fdecl::DependencyType::Strong),
+                    source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                    source_name: Some("foo".to_string()),
+                    target_path: Some("/svc/foo".to_string()),
+                    ..fdecl::UseProtocol::EMPTY
+                })]),
+                ..default_component_decl()
+            },
+            &FeatureSet::empty(),
+        );
+        // Including both foo1.cml and foo2.cml is fine because they overlap,
+        // so merging foo2.cml after having merged foo1.cml is a no-op.
+        assert_matches!(result, Ok(()));
+    }
+}

@@ -172,7 +172,7 @@ impl RealmCapabilityHost {
         child_args: fcomponent::CreateChildArgs,
     ) -> Result<(), fcomponent::Error> {
         let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
-        cm_fidl_validator::fdecl::validate_child(&child_decl).map_err(|e| {
+        cm_fidl_validator::validate_child(&child_decl).map_err(|e| {
             debug!("validate_child() failed: {}", e);
             fcomponent::Error::InvalidArguments
         })?;
@@ -455,12 +455,13 @@ mod tests {
             },
         },
         cm_rust::{
-            self, convert as fdecl, CapabilityName, CapabilityPath, ComponentDecl, EventMode,
-            ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget,
+            self, CapabilityName, CapabilityPath, ComponentDecl, EventMode, ExposeDecl,
+            ExposeProtocolDecl, ExposeSource, ExposeTarget,
         },
         cm_rust_testing::*,
         fidl::endpoints::{self, Proxy},
         fidl_fidl_examples_routing_echo as echo, fidl_fuchsia_component as fcomponent,
+        fidl_fuchsia_component_decl as fdecl,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
         fuchsia_component::client,
@@ -553,14 +554,14 @@ mod tests {
         }
     }
 
-    fn child_decl(name: &str) -> fdecl::ChildDecl {
-        fdecl::ChildDecl {
+    fn child_decl(name: &str) -> fdecl::Child {
+        fdecl::Child {
             name: Some(name.to_owned()),
             url: Some(format!("test:///{}", name)),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             on_terminate: None,
-            ..fdecl::ChildDecl::EMPTY
+            ..fdecl::Child::EMPTY
         }
     }
 
@@ -636,12 +637,12 @@ mod tests {
         // Invalid arguments.
         {
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
-            let child_decl = fdecl::ChildDecl {
+            let child_decl = fdecl::Child {
                 name: Some("a".to_string()),
                 url: None,
                 startup: Some(fdecl::StartupMode::Lazy),
                 environment: None,
-                ..fdecl::ChildDecl::EMPTY
+                ..fdecl::Child::EMPTY
             };
             let err = test
                 .realm_proxy
@@ -653,12 +654,12 @@ mod tests {
         }
         {
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
-            let child_decl = fdecl::ChildDecl {
+            let child_decl = fdecl::Child {
                 name: Some("a".to_string()),
                 url: Some("test:///a".to_string()),
                 startup: Some(fdecl::StartupMode::Lazy),
                 environment: Some("env".to_string()),
-                ..fdecl::ChildDecl::EMPTY
+                ..fdecl::Child::EMPTY
             };
             let err = test
                 .realm_proxy
@@ -728,12 +729,12 @@ mod tests {
         }
         {
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
-            let child_decl = fdecl::ChildDecl {
+            let child_decl = fdecl::Child {
                 name: Some("b".to_string()),
                 url: Some("test:///b".to_string()),
                 startup: Some(fdecl::StartupMode::Eager),
                 environment: None,
-                ..fdecl::ChildDecl::EMPTY
+                ..fdecl::Child::EMPTY
             };
             let err = test
                 .realm_proxy
@@ -747,12 +748,12 @@ mod tests {
         // Disallowed dynamic offers specified.
         {
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
-            let child_decl = fdecl::ChildDecl {
+            let child_decl = fdecl::Child {
                 name: Some("b".to_string()),
                 url: Some("test:///b".to_string()),
                 startup: Some(fdecl::StartupMode::Lazy),
                 environment: None,
-                ..fdecl::ChildDecl::EMPTY
+                ..fdecl::Child::EMPTY
             };
             let err = test
                 .realm_proxy
@@ -760,14 +761,12 @@ mod tests {
                     &mut collection_ref,
                     child_decl,
                     fcomponent::CreateChildArgs {
-                        dynamic_offers: Some(vec![fdecl::OfferDecl::Protocol(
-                            fdecl::OfferProtocolDecl {
-                                source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
-                                source_name: Some("foo".to_string()),
-                                target_name: Some("foo".to_string()),
-                                ..fdecl::OfferProtocolDecl::EMPTY
-                            },
-                        )]),
+                        dynamic_offers: Some(vec![fdecl::Offer::Protocol(fdecl::OfferProtocol {
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                            source_name: Some("foo".to_string()),
+                            target_name: Some("foo".to_string()),
+                            ..fdecl::OfferProtocol::EMPTY
+                        })]),
                         ..fcomponent::CreateChildArgs::EMPTY
                     },
                 )
@@ -781,12 +780,12 @@ mod tests {
         {
             test.drop_component();
             let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
-            let child_decl = fdecl::ChildDecl {
+            let child_decl = fdecl::Child {
                 name: Some("b".to_string()),
                 url: Some("test:///b".to_string()),
                 startup: Some(fdecl::StartupMode::Lazy),
                 environment: None,
-                ..fdecl::ChildDecl::EMPTY
+                ..fdecl::Child::EMPTY
             };
             let err = test
                 .realm_proxy
@@ -918,12 +917,12 @@ mod tests {
         // Recreate "a" and verify "a" is back (but it's a different "a"). The old "a" is gone
         // from the client's point of view, but it hasn't been cleaned up yet.
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
-        let child_decl = fdecl::ChildDecl {
+        let child_decl = fdecl::Child {
             name: Some("a".to_string()),
             url: Some("test:///a_alt".to_string()),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
-            ..fdecl::ChildDecl::EMPTY
+            ..fdecl::Child::EMPTY
         };
         let res = test
             .realm_proxy

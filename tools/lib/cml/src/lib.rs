@@ -40,9 +40,7 @@ pub use cm_types::{
     StartupMode, StorageId, Url,
 };
 
-pub mod fdecl {
-    pub use crate::translate::fdecl::compile;
-}
+pub use crate::translate::compile;
 
 lazy_static! {
     static ref DEFAULT_EVENT_STREAM_NAME: Name = "EventStream".parse().unwrap();

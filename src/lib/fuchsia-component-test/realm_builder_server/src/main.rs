@@ -407,7 +407,7 @@ impl Realm {
         component_decl: fcdecl::Component,
         options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
-        if let Err(e) = cm_fidl_validator::fdecl::validate(&component_decl) {
+        if let Err(e) = cm_fidl_validator::validate(&component_decl) {
             return Err(RealmBuilderError::InvalidComponentDecl(name, e));
         }
         let child_realm_node = RealmNode2::new_from_decl(component_decl.fidl_into_native(), true);
@@ -495,7 +495,7 @@ impl Realm {
         name: String,
         component_decl: fcdecl::Component,
     ) -> Result<(), RealmBuilderError> {
-        if let Err(e) = cm_fidl_validator::fdecl::validate(&component_decl) {
+        if let Err(e) = cm_fidl_validator::validate(&component_decl) {
             return Err(RealmBuilderError::InvalidComponentDecl(name, e));
         }
         let child_node = self.realm_node.get_sub_realm(&name).await?;
@@ -510,7 +510,7 @@ impl Realm {
         &self,
         component_decl: fcdecl::Component,
     ) -> Result<(), RealmBuilderError> {
-        if let Err(e) = cm_fidl_validator::fdecl::validate(&component_decl) {
+        if let Err(e) = cm_fidl_validator::validate(&component_decl) {
             return Err(RealmBuilderError::InvalidComponentDecl(
                 self.realm_path.join("/").to_string(),
                 e,
@@ -702,7 +702,7 @@ impl RealmNode2 {
             let fidl_decl = io_util::read_file_fidl::<fcdecl::Component>(&file_proxy)
                 .await
                 .map_err(|e| RealmBuilderError::DeclReadError(relative_url.clone(), e))?;
-            cm_fidl_validator::fdecl::validate(&fidl_decl)
+            cm_fidl_validator::validate(&fidl_decl)
                 .map_err(|e| RealmBuilderError::InvalidComponentDecl(relative_url, e))?;
 
             let mut self_ = RealmNode2::new_from_decl(fidl_decl.fidl_into_native(), false);
@@ -1422,9 +1422,7 @@ impl RealmNode {
     /// point. These decls are re-validated (without filtering out errors) during `commit()`.
     /// `moniker` is used for error reporting.
     fn validate(&self, moniker: &Moniker) -> Result<(), Error> {
-        if let Err(mut e) =
-            cm_fidl_validator::fdecl::validate(&self.decl.clone().native_into_fidl())
-        {
+        if let Err(mut e) = cm_fidl_validator::validate(&self.decl.clone().native_into_fidl()) {
             e.errs = e
                 .errs
                 .into_iter()
@@ -4860,7 +4858,7 @@ mod tests {
                         cm_fidl_validator::error::ErrorList {
                             errs: vec![cm_fidl_validator::error::Error::DuplicateField(
                                 cm_fidl_validator::error::DeclField {
-                                    decl: "ExposeProtocolDecl".to_string(),
+                                    decl: "ExposeProtocol".to_string(),
                                     field: "target_name".to_string()
                                 },
                                 "fidl.examples.routing.echo.Echo".to_string()

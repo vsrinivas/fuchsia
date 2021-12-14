@@ -12,7 +12,6 @@ rustc_library("cm_fidl_validator") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/directed_graph",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:itertools",
@@ -27,10 +26,8 @@ rustc_library("cm_fidl_validator") {
   ]
 
   sources = [
-    "src/convert.rs",
     "src/error.rs",
     "src/lib.rs",
-    "src/tests.rs",
     "src/util.rs",
   ]
 }

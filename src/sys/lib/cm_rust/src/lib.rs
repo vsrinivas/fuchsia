@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#[allow(dead_code)]
-pub mod convert;
-
 use {
     cm_fidl_validator,
     cm_rust_derive::{
@@ -1572,7 +1569,7 @@ impl TryFrom<fdecl::Component> for ComponentDecl {
     type Error = Error;
 
     fn try_from(decl: fdecl::Component) -> Result<Self, Self::Error> {
-        cm_fidl_validator::fdecl::validate(&decl).map_err(|err| Error::Validate { err })?;
+        cm_fidl_validator::validate(&decl).map_err(|err| Error::Validate { err })?;
         Ok(decl.fidl_into_native())
     }
 }

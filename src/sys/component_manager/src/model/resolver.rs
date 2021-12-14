@@ -189,8 +189,7 @@ pub async fn read_and_validate_manifest(
     let component_decl: fdecl::Component =
         fidl::encoding::decode_persistent::<fdecl::Component>(&bytes)
             .map_err(|err| ResolverError::manifest_invalid(err))?;
-    cm_fidl_validator::fdecl::validate(&component_decl)
-        .map_err(|e| ResolverError::manifest_invalid(e))?;
+    cm_fidl_validator::validate(&component_decl).map_err(|e| ResolverError::manifest_invalid(e))?;
     Ok(component_decl.fidl_into_native())
 }
 
@@ -288,9 +287,9 @@ mod tests {
         super::*,
         crate::model::{component::ComponentInstance, environment::Environment},
         anyhow::format_err,
-        cm_rust::convert as fdecl,
         cm_rust::NativeIntoFidl,
         cm_rust_testing::new_decl_from_json,
+        fidl_fuchsia_component_decl as fdecl,
         lazy_static::lazy_static,
         serde_json::json,
         std::sync::Weak,
@@ -458,20 +457,15 @@ mod tests {
         .expect("failed to construct manifest");
     }
 
-    macro_rules! test_read_and_validate_manifest {
-        ($label:ident) => {
-            paste::paste! {
-                #[fuchsia::test]
-                async fn [<test _ read _ and _ validate _ manifest _ $label>]() {
-                    let manifest = fmem::Data::Bytes(
-                        fidl::encoding::encode_persistent::<$label::ComponentDecl>(&mut (COMPONENT_DECL.clone()).native_into_fidl()).expect("failed to encode manifest")
-                    );
-                    let actual = read_and_validate_manifest(manifest).await.expect("failed to decode manifest");
-                    assert_eq!(actual, COMPONENT_DECL.clone());
-                }
-            }
-        };
+    #[fuchsia::test]
+    async fn test_read_and_validate_manifest() {
+        let manifest = fmem::Data::Bytes(
+            fidl::encoding::encode_persistent::<fdecl::Component>(
+                &mut (COMPONENT_DECL.clone()).native_into_fidl(),
+            )
+            .expect("failed to encode manifest"),
+        );
+        let actual = read_and_validate_manifest(manifest).await.expect("failed to decode manifest");
+        assert_eq!(actual, COMPONENT_DECL.clone());
     }
-
-    test_read_and_validate_manifest!(fdecl);
 }

@@ -27,7 +27,6 @@ rustc_library("util") {
 
   sources = [
     "src/channel.rs",
-    "src/convert.rs",
     "src/lib.rs",
   ]
 }

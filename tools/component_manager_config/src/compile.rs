@@ -259,12 +259,12 @@ impl TryFrom<Config> for component_internal::Config {
             namespace_capabilities: config
                 .namespace_capabilities
                 .as_ref()
-                .map(|c| cml::translate::fdecl::translate_capabilities(c, false))
+                .map(|c| cml::translate::translate_capabilities(c, false))
                 .transpose()?,
             builtin_capabilities: config
                 .builtin_capabilities
                 .as_ref()
-                .map(|c| cml::translate::fdecl::translate_capabilities(c, true))
+                .map(|c| cml::translate::translate_capabilities(c, true))
                 .transpose()?,
             num_threads: config.num_threads,
             out_dir_contents: match config.out_dir_contents {

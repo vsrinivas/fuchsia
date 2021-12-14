@@ -74,7 +74,7 @@ impl FuchsiaPkgResolver {
             }
         })?;
         // Validate the component manifest
-        cm_fidl_validator::fdecl::validate(&component_decl)
+        cm_fidl_validator::validate(&component_decl)
             .map_err(|e| ResolverError::manifest_invalid(e))?;
 
         let package_dir = ClientEnd::new(

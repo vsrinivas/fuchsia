@@ -18,7 +18,7 @@ pub const TEST_RUNNER_NAME: &str = "test_runner";
 
 /// Translates cml::Document to ComponentDecl.
 pub fn new_decl_from_cml(doc: cml::Document) -> Result<ComponentDecl, Error> {
-    let cm = cml::fdecl::compile(&doc).context("failed to compile manifest")?;
+    let cm = cml::compile(&doc).context("failed to compile manifest")?;
     Ok(cm.fidl_into_native())
 }
 
