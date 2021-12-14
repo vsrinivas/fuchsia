@@ -64,7 +64,23 @@ const char* ReportReasonStr(const FsManager::ReportReason& reason) {
   }
 }
 
+zx_status_t Unmount(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> root) {
+  // TODO(fxbug.dev/89869): For now, just use DirectoryAdmin to unmount. This should change to use
+  // fuchsia.fs/Admin when all filesystems support it.
+  auto resp = fidl::WireCall(root)->Unmount();
+  if (!resp.ok()) {
+    return resp.status();
+  }
+  return resp.value().s;
+}
+
 }  // namespace
+
+FsManager::MountedFilesystem::~MountedFilesystem() {
+  fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root(node_->DetachRemote().TakeChannel());
+  if (zx_status_t status = Unmount(root); status != ZX_OK)
+    FX_LOGS(WARNING) << "Unmount error: " << zx_status_get_string(status);
+}
 
 FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
                      std::unique_ptr<FsHostMetrics> metrics)
@@ -350,6 +366,8 @@ const char* FsManager::MountPointPath(FsManager::MountPoint point) {
       return "/factory";
     case MountPoint::kDurable:
       return "/durable";
+    case MountPoint::kMnt:
+      return "/mnt";
   }
 }
 
@@ -439,6 +457,36 @@ void FsManager::FileReport(ReportReason reason) {
     }
   });
   t.detach();
+}
+
+zx_status_t FsManager::AttachMount(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+                                   std::string_view name) {
+  auto root_or = fs_management::FsRootHandle(export_root);
+  if (root_or.is_error()) {
+    FX_LOGS(WARNING) << "Failed to get root: " << root_or.status_string();
+    return root_or.error_value();
+  }
+
+  const auto& node = mount_nodes_[MountPoint::kMnt];
+  fbl::RefPtr<fs::Vnode> vnode;
+  if (zx_status_t status = node.root_directory->Create(name, S_IFDIR, &vnode); status != ZX_OK) {
+    Unmount(export_root);
+    return status;
+  }
+
+  vnode->SetRemote(fidl::ClientEnd<fuchsia_io::Directory>(root_or->TakeChannel()));
+  mounted_filesystems_.emplace(
+      std::make_unique<MountedFilesystem>(name, std::move(export_root), std::move(vnode)));
+  return ZX_OK;
+}
+
+zx_status_t FsManager::DetachMount(std::string_view name) {
+  if (auto iter = mounted_filesystems_.find(name); iter == mounted_filesystems_.end()) {
+    return ZX_ERR_NOT_FOUND;
+  } else {
+    mounted_filesystems_.erase(iter);
+  }
+  return mount_nodes_[MountPoint::kMnt].root_directory->Unlink(name, false);
 }
 
 }  // namespace fshost

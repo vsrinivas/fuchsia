@@ -9,8 +9,8 @@ group("fs-mount") {
 executable("mount") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/lib/fdio",
-    "//src/lib/storage/fs_management",
-    "//zircon/system/ulib/zxc",
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }

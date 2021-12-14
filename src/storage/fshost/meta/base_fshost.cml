@@ -28,6 +28,11 @@
             path: "/fs/install",
         },
         {
+            directory: "mnt",
+            rights: [ "rw*" ],
+            path: "/fs/mnt",
+        },
+        {
             directory: "tmp",
             rights: [
                 "admin",
@@ -104,6 +109,10 @@
         },
         {
             directory: "install",
+            from: "self",
+        },
+        {
+            directory: "mnt",
             from: "self",
         },
         {

@@ -383,7 +383,7 @@ void MultipleDeviceTestCase::DoSuspend(uint32_t flags,
   if (!coordinator_loop_thread_running()) {
     coordinator_loop()->RunUntilIdle();
   }
-  ASSERT_EQ(vfs_exit_expected, admin_server().has_been_shutdown_);
+  ASSERT_EQ(vfs_exit_expected, admin_server().has_been_shutdown());
 }
 
 void MultipleDeviceTestCase::DoSuspend(uint32_t flags) {

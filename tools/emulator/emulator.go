@@ -309,11 +309,10 @@ func (d *Distribution) RunNonInteractive(toRun, hostPathMinfsBinary, hostPathZbi
 func (d *Distribution) runNonInteractive(root, toRun, hostPathMinfsBinary, hostPathZbiBinary string, fvd *fvdpb.VirtualDevice) (string, string, error) {
 	// Write runcmds that mounts the results disk, runs the requested command, and
 	// shuts down.
-	script := `mkdir /tmp/testdata-fs
-waitfor class=block topo=/dev/pci-00:06.0/virtio-block/block timeout=60000
-mount /dev/pci-00:06.0/virtio-block/block /tmp/testdata-fs
-` + toRun + ` 2>/tmp/testdata-fs/err.txt >/tmp/testdata-fs/log.txt
-umount /tmp/testdata-fs
+	script := `waitfor class=block topo=/dev/pci-00:06.0/virtio-block/block timeout=60000
+mount /dev/pci-00:06.0/virtio-block/block /mnt/testdata-fs
+` + toRun + ` 2>/mnt/testdata-fs/err.txt >/mnt/testdata-fs/log.txt
+umount /mnt/testdata-fs
 dm poweroff
 `
 	runcmds := filepath.Join(root, "runcmds.txt")

@@ -64,15 +64,16 @@ class FsManager {
     kPkgfs,
     kFactory,
     kDurable,
+    kMnt,
   };
 
   // Returns the fully qualified for the given mount point.
   static const char* MountPointPath(MountPoint);
 
-  constexpr static std::array<MountPoint, 9> kAllMountPoints{
-      MountPoint::kBin,    MountPoint::kData,    MountPoint::kVolume,
-      MountPoint::kSystem, MountPoint::kInstall, MountPoint::kBlob,
-      MountPoint::kPkgfs,  MountPoint::kFactory, MountPoint::kDurable,
+  constexpr static std::array<MountPoint, 10> kAllMountPoints{
+      MountPoint::kBin,     MountPoint::kData, MountPoint::kVolume, MountPoint::kSystem,
+      MountPoint::kInstall, MountPoint::kBlob, MountPoint::kPkgfs,  MountPoint::kFactory,
+      MountPoint::kDurable, MountPoint::kMnt,
   };
 
   // Installs the filesystem with |root_directory| at |mount_point| (which must not already have an
@@ -128,7 +129,42 @@ class FsManager {
   // blocks. Note that there is no indication if the reporting fails.
   void FileReport(ReportReason reason);
 
+  zx_status_t AttachMount(fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+                          std::string_view name);
+
+  zx_status_t DetachMount(std::string_view name);
+
  private:
+  class MountedFilesystem {
+   public:
+    struct Compare {
+      using is_transparent = void;
+      bool operator()(const std::unique_ptr<MountedFilesystem>& a,
+                      const std::unique_ptr<MountedFilesystem>& b) const {
+        return a->name_ < b->name_;
+      }
+
+      bool operator()(const std::unique_ptr<MountedFilesystem>& a, std::string_view b) const {
+        return a->name_ < b;
+      }
+
+      bool operator()(std::string_view a, const std::unique_ptr<MountedFilesystem>& b) const {
+        return a < b->name_;
+      }
+    };
+
+    MountedFilesystem(std::string_view name,
+                      fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root,
+                      fbl::RefPtr<fs::Vnode> node)
+        : name_(name), export_root_(std::move(export_root)), node_(node) {}
+    ~MountedFilesystem();
+
+   private:
+    std::string name_;
+    fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> export_root_;
+    fbl::RefPtr<fs::Vnode> node_;
+  };
+
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
                                      std::shared_ptr<loader::LoaderServiceBase> loader,
                                      BlockWatcher& watcher);
@@ -189,6 +225,8 @@ class FsManager {
   fidl::WireSharedClient<fuchsia_device_manager::Administrator> driver_admin_;
 
   bool file_crash_report_ = true;
+
+  std::set<std::unique_ptr<MountedFilesystem>, MountedFilesystem::Compare> mounted_filesystems_;
 };
 
 }  // namespace fshost

@@ -9,7 +9,7 @@ group("fs-umount") {
 executable("umount") {
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/lib/fdio",
-    "//src/lib/storage/fs_management",
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }

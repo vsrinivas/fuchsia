@@ -9,10 +9,10 @@
 namespace fs_management {
 
 std::string GetBinaryPath(const char* file) {
-  std::string path = std::string("/boot/bin/") + file;
+  std::string path = std::string("/pkg/bin/") + file;
   struct stat stat_buf;
   if (stat(path.c_str(), &stat_buf) == -1 && errno == ENOENT) {
-    return std::string("/pkg/bin/") + file;
+    return std::string("/boot/bin/") + file;
   } else {
     return path;
   }

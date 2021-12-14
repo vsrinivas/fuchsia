@@ -42,6 +42,12 @@
             ],
             from: "#fake-crash-reporter",
         },
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
     ],
     offer: [
         {

@@ -371,6 +371,7 @@
                 "hub",
                 "install",
                 "minfs",
+                "mnt",
                 "system",
                 "tmp",
                 "volume",

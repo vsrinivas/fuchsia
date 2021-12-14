@@ -2,19 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <errno.h>
-#include <fcntl.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stdbool.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <getopt.h>
+#include <lib/service/llcpp/service.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <zircon/device/vfs.h>
 
-#include <fs-management/mount.h>
+#include <filesystem>
+#include <string>
 
 bool verbose = false;
 
@@ -25,26 +21,82 @@ bool verbose = false;
   } while (0)
 
 int usage(void) {
-  fprintf(stderr, "usage: umount [ <option>* ] path \n");
-  fprintf(stderr, "   -v: Verbose mode\n");
-  return -1;
+  fprintf(stderr,
+          "usage: umount [ <option>* ] <mount-name>\n"
+          "options:\n"
+          " -v|--verbose   : Verbose mode\n"
+          " --fshost-path  : The path to the fshost admin service (if different from the default)\n"
+          " -h|--help      : Display this message\n");
+  return EXIT_FAILURE;
 }
 
 int main(int argc, char** argv) {
-  while (argc > 1) {
-    if (!strcmp(argv[1], "-v")) {
-      verbose = true;
-    } else {
+  std::string fshost_path =
+      "/hub-v2/children/bootstrap/children/fshost/exec/out/svc/fuchsia.fshost.Admin";
+  while (1) {
+    static struct option opts[] = {
+        {"help", no_argument, NULL, 'h'},
+        {"verbose", no_argument, NULL, 'v'},
+        {"fshost-path", required_argument, NULL, 'p'},
+        {NULL, 0, NULL, 0},
+    };
+    int opt_index;
+    int c = getopt_long(argc, argv, "v", opts, &opt_index);
+    if (c < 0) {
       break;
     }
-    argc--;
-    argv++;
+    switch (c) {
+      case 'v':
+        verbose = true;
+        break;
+      case 'p':
+        fshost_path = optarg;
+        break;
+      case 'h':
+      default:
+        return usage();
+    }
   }
-  if (argc < 2) {
+
+  argc -= optind;
+  argv += optind;
+
+  if (argc < 1) {
     return usage();
   }
-  char* path = argv[1];
+  std::filesystem::path path(argv[0]);
+  if (path.parent_path() != "/mnt") {
+    std::error_code error;
+    auto directory = std::filesystem::canonical(path.parent_path(), error);
+    if (error) {
+      fprintf(stderr, "Bad mount path: %s\n\n", strerror(error.value()));
+      return usage();
+    }
+    if (directory != "/mnt") {
+      fprintf(stderr, "Only mounts in /mnt are supported.\n\n");
+      return usage();
+    }
+  }
 
-  xprintf("Unmount path: %s\n", path);
-  return fs_management::Unmount(path);
+  std::string mount_name = path.filename();
+  xprintf("Unmount path: /mnt/%s\n", mount_name.c_str());
+
+  auto client_or = service::Connect<fuchsia_fshost::Admin>(fshost_path.c_str());
+  if (client_or.is_error()) {
+    fprintf(stderr, "Error connecting to fshost (@ %s): %s\n", fshost_path.c_str(),
+            client_or.status_string());
+    return EXIT_FAILURE;
+  }
+
+  auto result = fidl::WireCall(*client_or)->Unmount(fidl::StringView::FromExternal(mount_name));
+  if (!result.ok()) {
+    fprintf(stderr, "Error unmounting, fidl error: %s\n", result.FormatDescription().c_str());
+    return EXIT_FAILURE;
+  }
+  if (result->result.is_err()) {
+    fprintf(stderr, "Error unmounting: %s\n", zx_status_get_string(result->result.err()));
+    return EXIT_FAILURE;
+  }
+
+  return EXIT_SUCCESS;
 }

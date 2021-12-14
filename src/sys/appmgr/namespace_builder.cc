@@ -145,6 +145,7 @@ zx_status_t NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/data");
       PushDirectoryFromPath("/dev");
       AddHub(hub_directory_factory);
+      PushDirectoryFromPath("/mnt");
       PushDirectoryFromPath("/pkgfs");
       PushDirectoryFromPath("/system");
       PushDirectoryFromPath("/tmp");

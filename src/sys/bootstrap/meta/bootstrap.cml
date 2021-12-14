@@ -523,6 +523,12 @@
             dependency: "weak_for_migration",
         },
         {
+            directory: [ "mnt" ],
+            from: "#fshost",
+            to: [ "#console-launcher" ],
+            dependency: "weak_for_migration",
+        },
+        {
             directory: "system-delayed",
             from: "#fshost",
             to: "#driver_manager",
@@ -877,6 +883,7 @@
                 "durable",
                 "factory",
                 "minfs",
+                "mnt",
                 "pkgfs",
                 "root-ssl-certificates",
                 "system",

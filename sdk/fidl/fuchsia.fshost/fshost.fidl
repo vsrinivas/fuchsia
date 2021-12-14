@@ -4,6 +4,8 @@
 library fuchsia.fshost;
 
 using zx;
+using fuchsia.hardware.block;
+using fuchsia.io;
 
 /// Manages the block watcher.
 @discoverable
@@ -23,6 +25,13 @@ protocol BlockWatcher {
     });
 };
 
+type MountOptions = resource table {
+    1: read_only bool;
+    2: collect_metrics bool;
+    3: verbose bool;
+    4: write_compression_algorithm string:32;
+};
+
 /// Manages fshost lifecycle
 @discoverable
 protocol Admin {
@@ -32,4 +41,18 @@ protocol Admin {
     // TODO(fxbug.dev/43186): replace with the component manager shutdown API once it
     // becomes available.
     Shutdown() -> ();
+
+    /// Mounts the filesystem on the block device. The filesystem will be mounted in /fs/mnt/<name>
+    /// (in fshost's outgoing directory). This may or may not be supported depending on fshost
+    /// configuration.
+    Mount(resource struct {
+        device client_end:fuchsia.hardware.block.Block;
+        name string:fuchsia.io.MAX_FILENAME;
+        options MountOptions;
+    }) -> (struct {}) error zx.status;
+
+    /// Unmounts a previously mounted filesystem.
+    Unmount(struct {
+        name string:fuchsia.io.MAX_FILENAME;
+    }) -> (struct {}) error zx.status;
 };

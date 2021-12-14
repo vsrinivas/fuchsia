@@ -23,6 +23,8 @@ class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admi
  public:
   MockFshostAdminServer() = default;
 
+  bool has_been_shutdown() const { return has_been_shutdown_; }
+
   fidl::WireSharedClient<fuchsia_fshost::Admin> CreateClient(async_dispatcher* dispatcher) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_fshost::Admin>();
     if (endpoints.is_error()) {
@@ -44,6 +46,15 @@ class MockFshostAdminServer final : public fidl::WireServer<fuchsia_fshost::Admi
     completer.Reply();
   }
 
+  void Mount(MountRequestView request, MountCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Unmount(UnmountRequestView request, UnmountCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+
+ private:
   bool has_been_shutdown_ = false;
 };
 

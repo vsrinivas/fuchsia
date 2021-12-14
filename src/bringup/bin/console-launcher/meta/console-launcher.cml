@@ -53,6 +53,11 @@
             path: "/install",
         },
         {
+            directory: "mnt",
+            rights: [ "rw*" ],
+            path: "/mnt",
+        },
+        {
             directory: "pkgfs",
             rights: [ "rx*" ],
             path: "/pkgfs",

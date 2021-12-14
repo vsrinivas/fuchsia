@@ -97,6 +97,7 @@
                 "durable",
                 "factory",
                 "minfs",
+                "mnt",
                 "pkgfs",
                 "root-ssl-certificates",
                 "system",

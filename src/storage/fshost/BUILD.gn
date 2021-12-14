@@ -354,6 +354,7 @@ fuchsia_unittest_component("fshost-metrics-test") {
 
 test("fshost_integration_test") {
   sources = [
+    "admin-server-test.cc",
     "block-device-manager-test.cc",
     "block-device-test.cc",
     "block-watcher-test.cc",
@@ -388,6 +389,10 @@ test("fshost_integration_test") {
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/service:service-llcpp",
+  ]
+  data_deps = [
+    "//src/storage/bin/mount",
+    "//src/storage/bin/umount",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

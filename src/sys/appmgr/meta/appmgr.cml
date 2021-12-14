@@ -89,6 +89,11 @@
             path: "/data",
         },
         {
+            directory: "mnt",
+            rights: [ "rw*" ],
+            path: "/mnt",
+        },
+        {
             directory: "pkgfs",
             rights: [ "rx*" ],
             path: "/pkgfs",
