@@ -69,7 +69,7 @@
 
 ## **ENUMS**
 
-### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum}
+### MyFlexibleEnum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleEnum}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=57)*
@@ -96,7 +96,7 @@ Type: <code>uint32</code>
 </td>
         </tr></table>
 
-### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum}
+### MyStrictEnum [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictEnum}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=42)*
@@ -155,7 +155,7 @@ Type: <code>uint32</code>
 
 ## **UNIONS**
 
-### FlexibleUnion [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#FlexibleUnion data-text="FlexibleUnion"}
+### FlexibleUnion [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#FlexibleUnion data-text="FlexibleUnion"}
 *Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=92)*
 
 <p>flexible union comment #1</p>
@@ -175,7 +175,7 @@ Type: <code>uint32</code>
 </td>
         </tr></table>
 
-### StrictUnion [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#StrictUnion data-text="StrictUnion"}
+### StrictUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#StrictUnion data-text="StrictUnion"}
 *Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=82)*
 
 <p>strict union comment #1</p>
@@ -199,7 +199,7 @@ Type: <code>uint32</code>
 
 ## **BITS**
 
-### MyFlexibleBits [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleBits}
+### MyFlexibleBits [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyFlexibleBits}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=23)*
@@ -226,7 +226,7 @@ Type: <code>uint32</code>
 </td>
         </tr></table>
 
-### MyStrictBits [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#MyStrictBits}
+### MyStrictBits [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#MyStrictBits}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.doccomments/doc_comments.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/doc_comments.test.fidl;l=9)*

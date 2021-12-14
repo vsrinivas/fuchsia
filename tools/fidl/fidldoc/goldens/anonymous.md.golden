@@ -121,7 +121,7 @@
 
 ## **ENUMS**
 
-### Op [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Op}
+### Op [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Op}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=7)*
@@ -147,7 +147,7 @@ Type: <code>uint32</code>
 </td>
         </tr></table>
 
-### SomeProtocol_SomeMethod_Error [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#SomeProtocol_SomeMethod_Error}
+### SomeProtocol_SomeMethod_Error [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#SomeProtocol_SomeMethod_Error}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=42)*
@@ -248,7 +248,7 @@ Type: <code>uint32</code>
 
 ## **UNIONS**
 
-### Expression [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#Expression data-text="Expression"}
+### Expression [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Expression data-text="Expression"}
 *Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=4)*
 
 
@@ -280,7 +280,7 @@ Type: <code>uint32</code>
 </td>
         </tr></table>
 
-### SomeProtocol_SomeMethod_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#SomeProtocol_SomeMethod_Result data-text="SomeProtocol_SomeMethod_Result"}
+### SomeProtocol_SomeMethod_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#SomeProtocol_SomeMethod_Result data-text="SomeProtocol_SomeMethod_Result"}
 *Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=37)*
 
 
@@ -304,7 +304,7 @@ Type: <code>uint32</code>
 </td>
         </tr></table>
 
-### UnionMember [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#UnionMember data-text="UnionMember"}
+### UnionMember [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionMember data-text="UnionMember"}
 *Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=27)*
 
 
@@ -332,7 +332,7 @@ Type: <code>uint32</code>
 
 ## **BITS**
 
-### BitsMember [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#BitsMember}
+### BitsMember [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#BitsMember}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=38)*
@@ -353,7 +353,7 @@ Type: <code>uint32</code>
 </td>
         </tr></table>
 
-### Flags [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Flags}
+### Flags [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Flags}
 Type: <code>uint16</code>
 
 *Defined in [fidl.test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=19)*

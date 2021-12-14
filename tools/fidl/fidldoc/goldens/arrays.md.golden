@@ -96,7 +96,7 @@
 
 ## **UNIONS**
 
-### UnionLargeArray [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#UnionLargeArray data-text="UnionLargeArray"}
+### UnionLargeArray [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionLargeArray data-text="UnionLargeArray"}
 *Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=23)*
 
 
@@ -112,7 +112,7 @@
 </td>
         </tr></table>
 
-### UnionSmallArray [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#UnionSmallArray data-text="UnionSmallArray"}
+### UnionSmallArray [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#UnionSmallArray data-text="UnionSmallArray"}
 *Defined in [fidl.test.arrays/arrays.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/arrays.test.fidl;l=19)*
 
 

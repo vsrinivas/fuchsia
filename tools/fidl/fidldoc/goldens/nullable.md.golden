@@ -199,7 +199,7 @@
 
 ## **UNIONS**
 
-### SimpleUnion [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#SimpleUnion data-text="SimpleUnion"}
+### SimpleUnion [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#SimpleUnion data-text="SimpleUnion"}
 *Defined in [fidl.test.nullable/nullable.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/nullable.test.fidl;l=42)*
 
 

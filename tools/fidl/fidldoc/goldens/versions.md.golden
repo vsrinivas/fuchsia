@@ -53,7 +53,7 @@
 
 ## **ENUMS**
 
-### Enum [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Enum}
+### Enum [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Enum}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=18)*
@@ -105,7 +105,7 @@ Type: <code>uint32</code>
 
 ## **UNIONS**
 
-### Union [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#Union data-text="Union"}
+### Union [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Union data-text="Union"}
 *Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=38)*
 
 <p><b>Added:1 Deprecated:2 Removed:3</b></p>
@@ -133,7 +133,7 @@ Type: <code>uint32</code>
 
 ## **BITS**
 
-### Bits [flexible](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute} {#Bits}
+### Bits [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute} {#Bits}
 Type: <code>uint32</code>
 
 *Defined in [fidl.test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=12)*

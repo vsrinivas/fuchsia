@@ -93,7 +93,7 @@
 
 ## **UNIONS**
 
-### ExampleUseOfErrorSyntax_CallWhichMayFail_Result [strict](/fuchsia-src/reference/fidl/language/language#strict-vs-flexible){:.fidl-attribute}  {#ExampleUseOfErrorSyntax_CallWhichMayFail_Result data-text="ExampleUseOfErrorSyntax_CallWhichMayFail_Result"}
+### ExampleUseOfErrorSyntax_CallWhichMayFail_Result [strict](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#ExampleUseOfErrorSyntax_CallWhichMayFail_Result data-text="ExampleUseOfErrorSyntax_CallWhichMayFail_Result"}
 *Defined in [fidl.test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=13)*
 
 
