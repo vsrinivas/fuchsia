@@ -208,13 +208,23 @@ fn recurse_cmd_output<W: Write>(
 
     // Write out the header.
     let cmd_heading_formatting = "#".repeat(cmd_level + 1);
-    writeln!(output_writer, "{} {}\n", cmd_heading_formatting, cmd_name)?;
-    writeln!(output_writer, "{}", CODEBLOCK_START)?;
-
-    debug!("Processing {:?} {:?}", cmd_path, cmds_sequence);
 
     // Get terminal output for cmd <subcommands> --help for a given command.
     let lines: Vec<String> = help_output_for(&cmd_path, &cmds_sequence)?;
+
+    // TODO(fxb/85803): This is a short term solution to prevent errantly documentating
+    // run-on sentences as args with ffx. Long term solution involves using help-json.
+    if lines.len() > 0 {
+        let first_line = &lines[0];
+        if first_line.contains("Unrecognized argument:") && cmd_path.ends_with("ffx") {
+            return Ok(());
+        }
+    }
+
+    debug!("Processing {:?} {:?}", cmd_path, cmds_sequence);
+
+    writeln!(output_writer, "{} {}\n", cmd_heading_formatting, cmd_name)?;
+    writeln!(output_writer, "{}", CODEBLOCK_START)?;
 
     for line in lines {
         // TODO(fxb/69457): Capture all section headers in addition to "Commands" and "Options".
