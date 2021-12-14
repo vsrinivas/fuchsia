@@ -1095,20 +1095,47 @@ mod tests {
         Push { value: V },
     }
 
-    impl<V> Operation<usize, V> {
-        fn apply(self, map: &mut IdMap<V>) {
+    use fakealloc::collections::HashMap;
+
+    impl<V> Operation<usize, V>
+    where
+        V: Copy + core::cmp::PartialEq + core::fmt::Debug,
+    {
+        fn apply(self, map: &mut IdMap<V>, source_of_truth: &mut HashMap<usize, V>) {
             match self {
                 Self::Get { key } => {
-                    let _ = map.get(key);
+                    assert_eq!(
+                        map.get(key),
+                        source_of_truth.get(&key),
+                        "key={} map.get == truth.get",
+                        key
+                    );
                 }
                 Self::Insert { key, value } => {
-                    let _ = map.insert(key, value);
+                    assert_eq!(
+                        map.insert(key, value),
+                        source_of_truth.insert(key, value),
+                        "key={}, map.insert == truth.insert",
+                        key
+                    );
                 }
                 Self::Remove { key } => {
-                    let _ = map.remove(key);
+                    assert_eq!(
+                        map.remove(key),
+                        source_of_truth.remove(&key),
+                        "key={} map.remove == truth.remove",
+                        key,
+                    );
                 }
                 Self::Push { value } => {
-                    let _ = map.push(value);
+                    let key = map.push(value);
+                    assert_eq!(
+                        source_of_truth.insert(key, value),
+                        None,
+                        "pushed key={}, value={:?}",
+                        key,
+                        value
+                    );
                 }
             }
         }
@@ -1204,8 +1231,9 @@ mod tests {
         #[test]
         fn test_arbitrary_operations(operations in proptest::collection::vec(operation_strategy(), 10)) {
             let mut map = IdMap::new();
+            let mut reference = HashMap::new();
             for op in operations {
-                op.apply(&mut map);
+                op.apply(&mut map, &mut reference);
 
                 // Now check the invariants that the map should be guaranteeing.
                 let IdMap {data, freelist} = &map;
@@ -1222,6 +1250,10 @@ mod tests {
                     }
                 }
             }
+
+            // After all operations have completed, the contents of the map should match the source of truth.
+            let elements : HashMap<_, i32> = map.iter().map(|(a, b)| (a, *b)).collect();
+            assert_eq!(elements, reference);
         }
 
     }
