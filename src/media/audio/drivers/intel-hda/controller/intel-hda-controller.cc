@@ -211,6 +211,9 @@ zx_status_t IntelHDAController::DeviceGetProtocol(uint32_t proto_id, void* proto
 }
 
 void IntelHDAController::DeviceShutdown() {
+  if (dsp_ != nullptr) {
+    dsp_->DeviceShutdown();
+  }
   // Loop shutdown.
   loop_->Shutdown();
 

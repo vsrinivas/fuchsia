@@ -112,7 +112,7 @@ class HdaCodecConnection : public fbl::RefCounted<HdaCodecConnection> {
   zx_status_t GetChannel(fidl_txn_t* txn);
   zx_status_t ProcessUserRequest(Channel* channel);
   zx_status_t ProcessCodecRequest(Channel* channel);
-  void ProcessCodecDeactivate(const Channel* channel);
+  void ProcessCodecDeactivate();
   zx_status_t ProcessGetIDs(Channel* channel, const ihda_proto::GetIDsReq& req);
   zx_status_t ProcessSendCORBCmd(Channel* channel, const ihda_proto::SendCORBCmdReq& req);
   zx_status_t ProcessRequestStream(Channel* channel, const ihda_proto::RequestStreamReq& req);

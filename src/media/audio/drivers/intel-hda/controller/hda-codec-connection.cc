@@ -185,6 +185,7 @@ void HdaCodecConnection::Shutdown() {
   // Close all existing connections and synchronize with any client threads
   // who are currently processing requests.
   state_ = State::SHUTTING_DOWN;
+  ProcessCodecDeactivate();
   loop_.Shutdown();
 
   // Give any active streams we had back to our controller.
@@ -432,15 +433,12 @@ zx_status_t HdaCodecConnection::ProcessUserRequest(Channel* channel) {
 
 #undef PROCESS_CMD
 
-void HdaCodecConnection::ProcessCodecDeactivate(const Channel* channel) {
-  ZX_DEBUG_ASSERT(channel != nullptr);
-
+void HdaCodecConnection::ProcessCodecDeactivate() {
   // This should be the driver channel (client channels created with IOCTL do
   // not register a deactivate handler).  Start by releasing the internal
   // channel reference from within the codec_driver_channel_lock.
   {
     fbl::AutoLock lock(&codec_driver_channel_lock_);
-    ZX_DEBUG_ASSERT(channel == codec_driver_channel_.get());
     codec_driver_channel_.reset();
   }
 

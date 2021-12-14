@@ -492,6 +492,7 @@ Status IntelDsp::SetupDspDevice() {
 }
 
 void IntelDsp::DeviceShutdown() {
+  ProcessClientDeactivate();
   if (state_ == State::INITIALIZING) {
     thrd_join(init_thread_, nullptr);
   }
