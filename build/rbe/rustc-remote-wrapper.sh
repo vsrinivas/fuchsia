@@ -376,7 +376,7 @@ EOF
     -Clink-args=--Map=* | link-args=--Map=*)
         map_output="$(expr "X$optarg" : '[^=]*=\(.*\)')"
         map_output_stripped="${map_output#./}"
-        extra_linker_outputs+=( "$build_subdir/$map_output_stripped" )
+        extra_linker_outputs+=( "$map_output_stripped" )
         ;;
 
     # This flag informs the linker where to search for libraries.
