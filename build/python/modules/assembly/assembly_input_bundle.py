@@ -106,12 +106,11 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         """Dump the object out as a dict."""
         result = super().to_dict()
         config_data = {}
-        for package in sorted(self.config_data.keys()):
-            entries = self.config_data[package]
+        for (package, entries) in sorted(self.config_data.items()):
             config_data[package] = [
                 entry.to_dict() for entry in sorted(entries)
             ]
-        if len(config_data) > 0:
+        if config_data:
             result['config_data'] = config_data
         return result
 
@@ -135,7 +134,7 @@ class AssemblyInputBundle(ImageAssemblyConfig):
                 other_entries = other.config_data[package]
                 entries = entries.intersection(other_entries)
                 config_data[package] = entries
-        if len(config_data) > 0:
+        if config_data:
             result.config_data = config_data
         return result
 

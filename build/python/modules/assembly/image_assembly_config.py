@@ -43,7 +43,7 @@ class KernelInfo:
         result = {}
         set_if_named_member_not_empty(result, 'path', self)
         set_if_named_member_not_empty(result, 'args', self, sort=True)
-        if self.clock_backstop is not None:
+        if self.clock_backstop:
             result['clock_backstop'] = self.clock_backstop
         return result
 

@@ -57,10 +57,10 @@ def copy_to_assembly_input_bundle(
     # assembly bundle
     result.boot_args = config.boot_args
     kernel_args = config.kernel.args
-    if kernel_args is not None and len(kernel_args) > 0:
+    if kernel_args:
         result.kernel.args = kernel_args
     kernel_backstop = config.kernel.clock_backstop
-    if kernel_backstop is not None:
+    if kernel_backstop:
         result.kernel.clock_backstop = kernel_backstop
 
     # Copy the manifests for the base package set into the assembly bundle
@@ -332,12 +332,12 @@ def main():
 
     # Write out a fini manifest of the files that have been copied, to create a
     # package or archive that contains all of the files in the bundle.
-    if args.export_manifest is not None:
+    if args.export_manifest:
         assembly_input_bundle.write_fini_manifest(
             args.export_manifest, base_dir=args.outdir)
 
     # Write out a depfile.
-    if args.depfile is not None:
+    if args.depfile:
         dep_file.write_to(args.depfile)
 
 

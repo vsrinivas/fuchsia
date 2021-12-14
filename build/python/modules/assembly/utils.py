@@ -34,7 +34,7 @@ def set_if_not_empty(
 
     If `sort` is `True`, sort the items.
     """
-    if items is not None and len(items):
+    if items:
         if transform is not None:
             items = [transform(item) for item in items]
         if sort:
