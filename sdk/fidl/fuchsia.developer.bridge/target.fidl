@@ -207,4 +207,13 @@ protocol TargetHandle {
     Reboot(struct {
         state TargetRebootState;
     }) -> (struct {}) error TargetRebootError;
+
+
+    /// Runs an iterator over diagnostics data. At present, this means cached log data.
+    StreamActiveDiagnostics(resource struct {
+        parameters DaemonDiagnosticsStreamParameters;
+        iterator server_end:rc.ArchiveIterator;
+    }) -> (struct {
+        log_session LogSession;
+    }) error DiagnosticsStreamError;
 };

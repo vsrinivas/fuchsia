@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.developer.bridge;
-using fuchsia.developer.remotecontrol as rc;
-using fuchsia.device;
 using zx;
 
 const MAX_SERVICE_NAME_SIZE uint8 = 255;
@@ -73,28 +71,7 @@ protocol Daemon {
         response string:64;
     });
 
-    /// Creates an iterator over diagnostics data. At present, this means cached log data.
-    ///
-    /// Note that there is some duplication in this API and the StreamDiagnostics API in RCS.
-    /// This is because the surface for the daemon API needs to be slightly different:
-    /// 1) It needs to accomodate specifying a target.
-    /// 2) The error surface is accordingly slightly different.
-    /// 3) The parameters surface is currently different (SNAPSHOT_RECENT_THEN_SUBSCRIBE has no meaning
-    ///    in the diagnostics bridge) and have different evolution paths - for example, the daemon may
-    ///    eventually support multi-target log streaming.
-    ///
-    /// If the target field is a nodename or log session identifier (e.g. "ffx_daemon"),
-    /// then cached logs will be returned for that target even if the target is
-    /// currently offline.
-    StreamDiagnostics(resource struct {
-        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
-        parameters DaemonDiagnosticsStreamParameters;
-        iterator server_end:rc.ArchiveIterator;
-    }) -> (struct {
-        session LogSession;
-    }) error DiagnosticsStreamError;
-
-    /// Connects to a deamon service.
+    /// Connects to a daemon service.
     ///
     /// Takes a service name under which the channel will be connected (the
     /// caller is intended to know the type of the channel a priori).

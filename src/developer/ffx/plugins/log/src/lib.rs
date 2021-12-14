@@ -15,7 +15,7 @@ use {
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_frontend::{exec_log_cmd, LogCommandParameters, LogFormatter},
     ffx_writer::Writer,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, StreamMode, TimeBound},
+    fidl_fuchsia_developer_bridge::{DiagnosticsProxy, StreamMode, TimeBound},
     fidl_fuchsia_developer_remotecontrol::{ArchiveIteratorError, RemoteControlProxy},
     fidl_fuchsia_diagnostics::LogSettingsProxy,
     fuchsia_async::futures::{AsyncWrite, AsyncWriteExt},
@@ -398,17 +398,18 @@ This likely means that your logs will not be symbolized."
 
 #[ffx_plugin(
     "proactive_log.enabled",
+    DiagnosticsProxy = "daemon::service",
     LogSettingsProxy = "bootstrap:expose:fuchsia.diagnostics.LogSettings"
 )]
 pub async fn log(
-    daemon_proxy: DaemonProxy,
+    diagnostics_proxy: DiagnosticsProxy,
     #[ffx(machine = Vec<JsonTargets>)] writer: Writer,
     rcs_proxy: Option<RemoteControlProxy>,
     log_settings: Option<LogSettingsProxy>,
     cmd: LogCommand,
 ) -> Result<()> {
     log_impl(
-        daemon_proxy,
+        diagnostics_proxy,
         rcs_proxy,
         log_settings,
         cmd,
@@ -419,7 +420,7 @@ pub async fn log(
 }
 
 pub async fn log_impl<W: std::io::Write>(
-    daemon_proxy: DaemonProxy,
+    diagnostics_proxy: DiagnosticsProxy,
     rcs_proxy: Option<RemoteControlProxy>,
     log_settings: Option<LogSettingsProxy>,
     cmd: LogCommand,
@@ -461,11 +462,11 @@ pub async fn log_impl<W: std::io::Write>(
         };
     }
 
-    log_cmd(daemon_proxy, rcs_proxy, log_settings, &mut formatter, cmd, writer).await
+    log_cmd(diagnostics_proxy, rcs_proxy, log_settings, &mut formatter, cmd, writer).await
 }
 
 pub async fn log_cmd<W: std::io::Write>(
-    daemon_proxy: DaemonProxy,
+    diagnostics_proxy: DiagnosticsProxy,
     rcs_opt: Option<RemoteControlProxy>,
     log_settings: Option<LogSettingsProxy>,
     log_formatter: &mut impl LogFormatter,
@@ -547,7 +548,7 @@ pub async fn log_cmd<W: std::io::Write>(
             to_bound: to_bound,
             stream_mode,
         },
-        daemon_proxy,
+        diagnostics_proxy,
         log_formatter,
         writer,
     )
@@ -566,7 +567,7 @@ mod test {
         ffx_log_args::DumpCommand,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
         fidl_fuchsia_developer_bridge::{
-            DaemonDiagnosticsStreamParameters, DaemonRequest, LogSession, SessionSpec,
+            DaemonDiagnosticsStreamParameters, DiagnosticsRequest, LogSession, SessionSpec,
         },
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlRequest,
@@ -654,9 +655,14 @@ mod test {
     fn setup_fake_daemon_server(
         expected_parameters: DaemonDiagnosticsStreamParameters,
         expected_responses: Arc<Vec<FakeArchiveIteratorResponse>>,
-    ) -> DaemonProxy {
-        setup_fake_daemon_proxy(move |req| match req {
-            DaemonRequest::StreamDiagnostics { target: t, parameters, iterator, responder } => {
+    ) -> DiagnosticsProxy {
+        setup_fake_diagnostics_proxy(move |req| match req {
+            DiagnosticsRequest::StreamDiagnostics {
+                target: t,
+                parameters,
+                iterator,
+                responder,
+            } => {
                 assert_eq!(parameters, expected_parameters);
                 setup_fake_archive_iterator(iterator, expected_responses.clone(), false).unwrap();
                 responder
@@ -668,7 +674,6 @@ mod test {
                     .context("error sending response")
                     .expect("should send")
             }
-            _ => assert!(false),
         })
     }
 

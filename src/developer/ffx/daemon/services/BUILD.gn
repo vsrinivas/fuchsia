@@ -9,6 +9,7 @@ if (is_host) {
     version = "0.1.0"
     sources = [ "src/lib.rs" ]
     deps = [
+      "//src/developer/ffx/daemon/services/diagnostics:ffx_daemon_service_diagnostics",
       "//src/developer/ffx/daemon/services/echo:ffx_daemon_service_echo",
       "//src/developer/ffx/daemon/services/fastboot_target_stream:ffx_daemon_service_fastboot_target_stream",
       "//src/developer/ffx/daemon/services/forward:ffx_daemon_service_forward",
@@ -24,6 +25,7 @@ group("tests") {
   testonly = true
   deps = [
     ":ffx_daemon_services_lib_test($host_toolchain)",
+    "diagnostics:tests($host_toolchain)",
     "echo:tests($host_toolchain)",
     "fastboot_target_stream:tests($host_toolchain)",
     "forward:tests($host_toolchain)",

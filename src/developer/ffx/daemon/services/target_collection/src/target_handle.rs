@@ -5,16 +5,23 @@
 use {
     crate::reboot,
     anyhow::{anyhow, Context as _, Result},
+    diagnostics::{get_streaming_min_timestamp, run_diagnostics_streaming},
     ffx_core::TryStreamUtilExt,
     ffx_daemon_events::TargetEvent,
+    ffx_daemon_target::logger::streamer::GenericDiagnosticsStreamer,
     ffx_daemon_target::target::Target,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_bridge::{self as bridge},
-    fuchsia_async::futures::TryStreamExt,
+    fuchsia_async::{
+        futures::{FutureExt, TryStreamExt},
+        TimeoutExt,
+    },
     services::Context,
     std::future::Future,
     std::pin::Pin,
     std::rc::Rc,
+    std::time::Duration,
+    tasks::TaskManager,
 };
 
 // TODO(awdavies): Abstract this to use similar utilities to an actual service.
@@ -30,7 +37,7 @@ impl TargetHandle {
         handle: ServerEnd<bridge::TargetHandleMarker>,
     ) -> Result<Pin<Box<dyn Future<Output = ()>>>> {
         let reboot_controller = reboot::RebootController::new(target.clone());
-        let inner = TargetHandleInner { target, reboot_controller };
+        let inner = TargetHandleInner { target, reboot_controller, tasks: TaskManager::default() };
         let stream = handle.into_stream()?;
         let fut = Box::pin(async move {
             let _ = stream
@@ -43,6 +50,7 @@ impl TargetHandle {
 }
 
 struct TargetHandleInner {
+    tasks: TaskManager,
     target: Rc<Target>,
     reboot_controller: reboot::RebootController,
 }
@@ -73,7 +81,7 @@ impl TargetHandleInner {
                 }
                 // After the event fires it should be guaranteed that the
                 // SSH address is written to the target.
-                let poll_duration = std::time::Duration::from_millis(15);
+                let poll_duration = Duration::from_millis(15);
                 loop {
                     if let Some(mut addr) = self.target.ssh_address_info() {
                         return responder.send(&mut addr).map_err(Into::into);
@@ -110,6 +118,51 @@ impl TargetHandleInner {
             bridge::TargetHandleRequest::Identity { responder } => {
                 let target_info = bridge::Target::from(&*self.target);
                 responder.send(target_info).map_err(Into::into)
+            }
+            bridge::TargetHandleRequest::StreamActiveDiagnostics {
+                parameters,
+                iterator,
+                responder,
+            } => {
+                let target_identifier = self.target.nodename();
+                let stream = self.target.stream_info();
+                match stream
+                    .wait_for_setup()
+                    .map(|_| Ok(()))
+                    .on_timeout(Duration::from_secs(3), || {
+                        Err(bridge::DiagnosticsStreamError::NoStreamForTarget)
+                    })
+                    .await
+                {
+                    Ok(_) => {}
+                    Err(e) => {
+                        return responder.send(&mut Err(e)).context("sending error response");
+                    }
+                }
+                let min_timestamp = match get_streaming_min_timestamp(&parameters, &stream).await {
+                    Ok(n) => n,
+                    Err(e) => {
+                        responder.send(&mut Err(e))?;
+                        return Ok(());
+                    }
+                };
+                let log_iterator =
+                    stream.stream_entries(parameters.stream_mode.unwrap(), min_timestamp).await?;
+                self.tasks.spawn(async move {
+                    let _ = run_diagnostics_streaming(log_iterator, iterator).await.map_err(|e| {
+                        log::warn!("failure running diagnostics streaming: {:?}", e);
+                    });
+                });
+                responder
+                    .send(&mut Ok(bridge::LogSession {
+                        target_identifier,
+                        session_timestamp_nanos: stream
+                            .session_timestamp_nanos()
+                            .await
+                            .map(|t| t as u64),
+                        ..bridge::LogSession::EMPTY
+                    }))
+                    .map_err(Into::into)
             }
         }
     }

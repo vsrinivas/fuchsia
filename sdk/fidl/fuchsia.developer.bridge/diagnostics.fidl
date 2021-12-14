@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.developer.bridge;
 using fuchsia.device;
+using fuchsia.developer.remotecontrol as rc;
 
 type StreamMode = strict enum : uint32 {
     SNAPSHOT_ALL = 1;
@@ -66,4 +67,31 @@ type LogSession = table {
     // Timestamp identifier for the logging session. For Fuchsia targets, this is the
     // boot timestamp of the target.
     2: session_timestamp_nanos uint64;
+};
+
+@discoverable
+protocol Diagnostics {
+    /// Creates an iterator over diagnostics data. At present, this means cached log data.
+    ///
+    /// Note that there is some duplication in this API and the StreamDiagnostics API in RCS.
+    /// This is because the surface for the service API needs to be slightly different:
+    /// 1) It needs to accomodate specifying a target.
+    /// 2) The error surface is accordingly slightly different.
+    /// 3) The parameters surface is currently different (SNAPSHOT_RECENT_THEN_SUBSCRIBE has no
+    ///    meaning in the diagnostics bridge) and have different evolution paths - for example, this
+    ///    service may eventually support multi-target log streaming.
+    ///
+    /// If the target field is a nodename or log session identifier (e.g. "ffx_daemon"),
+    /// then cached logs will be returned for that target even if the target is
+    /// currently offline.
+    ///
+    /// One must keep the channel open to this protocol in order for the
+    /// ArchiveIterator to function properly.
+    StreamDiagnostics(resource struct {
+        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        parameters DaemonDiagnosticsStreamParameters;
+        iterator server_end:rc.ArchiveIterator;
+    }) -> (struct {
+        session LogSession;
+    }) error DiagnosticsStreamError;
 };

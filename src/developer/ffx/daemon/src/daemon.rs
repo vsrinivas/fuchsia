@@ -7,7 +7,6 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
-    diagnostics_data::Timestamp,
     ffx_build_version::build_info,
     ffx_core::metrics::{add_daemon_launch_event, add_daemon_metrics_event},
     ffx_core::TryStreamUtilExt,
@@ -16,20 +15,15 @@ use {
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
     },
     ffx_daemon_services::create_service_register_map,
-    ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
     ffx_daemon_target::target::Target,
     ffx_daemon_target::target_collection::TargetCollection,
     ffx_daemon_target::zedboot::zedboot_discovery,
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, ProtocolMarker, RequestStream},
     fidl_fuchsia_developer_bridge::{
         self as bridge, DaemonError, DaemonMarker, DaemonRequest, DaemonRequestStream,
-        DiagnosticsStreamError, LogSession, RepositoryRegistryMarker, SessionSpec, StreamMode,
-        TargetCollectionMarker, TimeBound,
+        RepositoryRegistryMarker, TargetCollectionMarker,
     },
-    fidl_fuchsia_developer_remotecontrol::{
-        ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, DiagnosticsData,
-        InlineData, RemoteControlMarker, RemoteControlProxy,
-    },
+    fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fidl_fuchsia_overnet::Peer,
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::NodeId,
@@ -42,7 +36,6 @@ use {
     std::collections::HashSet,
     std::hash::{Hash, Hasher},
     std::rc::Rc,
-    std::sync::Arc,
     std::time::{Duration, Instant},
 };
 
@@ -618,269 +611,6 @@ impl Daemon {
                     format!("connect_to_service: {}", &name_for_analytics).as_str(),
                 )
                 .await;
-            }
-            DaemonRequest::StreamDiagnostics {
-                target: target_str,
-                parameters,
-                iterator,
-                responder,
-            } => {
-                add_daemon_metrics_event("stream_diagnostics").await;
-                let stream_mode = if let Some(mode) = parameters.stream_mode {
-                    mode
-                } else {
-                    log::info!("StreamDiagnostics failed: stream mode is required");
-                    return responder
-                        .send(&mut Err(DiagnosticsStreamError::MissingParameter))
-                        .context("sending missing parameter response");
-                };
-
-                let target_result = self
-                    .get_target(target_str.clone())
-                    .on_timeout(Duration::from_secs(1), || Err(DaemonError::Timeout))
-                    .await;
-                let (target_identifier, stream) = if stream_mode == StreamMode::SnapshotAll {
-                    let target_str = if let Some(target_str) = target_str {
-                        target_str
-                    } else {
-                        log::warn!(
-                            "StreamDiagnostics failed: Missing target string in SnapshotAll mode."
-                        );
-                        return responder
-                            .send(&mut Err(DiagnosticsStreamError::MissingParameter))
-                            .context("sending missing parameter response");
-                    };
-
-                    let session = if let Some(session) = parameters.session {
-                        session
-                    } else {
-                        log::warn!(
-                            "StreamDiagnostics failed: Missing session in SnapshotAll mode."
-                        );
-                        return responder
-                            .send(&mut Err(DiagnosticsStreamError::MissingParameter))
-                            .context("sending missing parameter response");
-                    };
-
-                    let mut streams =
-                        DiagnosticsStreamer::list_sessions(Some(target_str.clone())).await?;
-                    if streams.is_empty() {
-                        responder
-                            .send(&mut Err(DiagnosticsStreamError::NoMatchingOfflineTargets))?;
-                        return Ok(());
-                    }
-
-                    let streams = streams
-                        .remove(&target_str)
-                        .context("getting stream by target name. should be infallible")?;
-
-                    if streams.is_empty() {
-                        responder
-                            .send(&mut Err(DiagnosticsStreamError::NoMatchingOfflineTargets))?;
-                        return Ok(());
-                    }
-
-                    match session {
-                        SessionSpec::TimestampNanos(ts) => {
-                            let mut result_stream = None;
-
-                            for stream in streams.into_iter() {
-                                let session_ts = stream.session_timestamp_nanos().await;
-                                if Some(ts) == session_ts.map(|t| t as u64) {
-                                    result_stream = Some(Arc::new(stream));
-                                    break;
-                                }
-                            }
-
-                            if let Some(stream) = result_stream {
-                                (target_str, stream)
-                            } else {
-                                responder.send(&mut Err(
-                                    DiagnosticsStreamError::NoMatchingOfflineSessions,
-                                ))?;
-                                return Ok(());
-                            }
-                        }
-                        SessionSpec::Relative(rel) => {
-                            let mut sorted = vec![];
-                            for stream in streams.into_iter() {
-                                let ts = stream.session_timestamp_nanos().await;
-                                if let Some(ts) = ts {
-                                    sorted.push((ts, stream));
-                                }
-                            }
-
-                            sorted.sort_by_key(|t| -t.0);
-
-                            // If there is not an active session, we offset the session number relative to the
-                            // index by 1, as `0` is reserved for an active session
-                            let has_active_session = if let Ok(ref t) = target_result {
-                                t.is_logger_running()
-                            } else {
-                                false
-                            };
-
-                            let rel = if has_active_session {
-                                rel
-                            } else {
-                                if rel == 0 {
-                                    return responder
-                                        .send(&mut Err(
-                                            DiagnosticsStreamError::NoMatchingOfflineSessions,
-                                        ))
-                                        .context("sending no matching offline sessions response");
-                                }
-                                rel - 1
-                            };
-
-                            if let Some((_, stream)) = sorted.into_iter().nth(rel as usize) {
-                                (target_str, Arc::new(stream))
-                            } else {
-                                return responder
-                                    .send(&mut Err(
-                                        DiagnosticsStreamError::NoMatchingOfflineSessions,
-                                    ))
-                                    .context("sending no offline sessions response");
-                            }
-                        }
-                        _ => bail!("unexpected SessionSpec value"),
-                    }
-                } else {
-                    match target_result {
-                        Ok(t) => (t.nodename_str(), t.stream_info()),
-                        Err(DaemonError::Timeout) => {
-                            return responder
-                                .send(&mut Err(DiagnosticsStreamError::NoMatchingTargets))
-                                .context("sending no matching targets response");
-                        }
-                        Err(e) => {
-                            log::warn!(
-                                "got error fetching target with filter '{}': {:#?}",
-                                target_str.as_ref().unwrap_or(&String::default()),
-                                e
-                            );
-                            return responder
-                                .send(&mut Err(DiagnosticsStreamError::TargetMatchFailed))
-                                .context("sending TargetMatchFailed response");
-                        }
-                    }
-                };
-
-                match stream
-                    .wait_for_setup()
-                    .map(|_| Ok(()))
-                    .on_timeout(Duration::from_secs(3), || {
-                        Err(DiagnosticsStreamError::NoStreamForTarget)
-                    })
-                    .await
-                {
-                    Ok(_) => {}
-                    Err(e) => {
-                        // TODO(jwing): we should be able to interact with inactive targets here for
-                        // stream modes that don't involve subscription.
-                        return responder.send(&mut Err(e)).context("sending error response");
-                    }
-                }
-
-                let min_timestamp = match parameters.min_timestamp_nanos {
-                    Some(TimeBound::Absolute(t)) => {
-                        if let Some(session) = stream.session_timestamp_nanos().await {
-                            Some(Timestamp::from(t as i64 - session))
-                        } else {
-                            None
-                        }
-                    }
-                    Some(TimeBound::Monotonic(t)) => Some(Timestamp::from(t as i64)),
-                    Some(bound) => {
-                        log::error!("Got unexpected TimeBound field {:?}", bound);
-                        responder.send(&mut Err(DiagnosticsStreamError::GenericError))?;
-                        return Ok(());
-                    }
-                    None => {
-                        parameters.min_target_timestamp_nanos.map(|t| Timestamp::from(t as i64))
-                    }
-                };
-
-                let mut log_iterator =
-                    stream.stream_entries(parameters.stream_mode.unwrap(), min_timestamp).await?;
-                let task = Task::local(async move {
-                    let mut iter_stream = iterator.into_stream()?;
-
-                    while let Some(request) = iter_stream.next().await {
-                        match request? {
-                            ArchiveIteratorRequest::GetNext { responder } => {
-                                let res = log_iterator.iter().await?;
-                                match res {
-                                    Some(Ok(entry)) => {
-                                        // If the entry is small enough to fit into a FIDL message
-                                        // we send it using the Inline variant. Otherwise, we use
-                                        // the Socket variant by sending one end of the socket as a
-                                        // response and sending the data into the other end of the
-                                        // socket.
-                                        // TODO(fxbug.dev/81310): This should be unified across the
-                                        // daemon and bridge.
-                                        let data = serde_json::to_string(&entry)?;
-                                        if data.len()
-                                            <= fidl_fuchsia_logger::MAX_DATAGRAM_LEN_BYTES as usize
-                                        {
-                                            responder.send(&mut Ok(vec![
-                                                ArchiveIteratorEntry {
-                                                    diagnostics_data: Some(
-                                                        DiagnosticsData::Inline(InlineData {
-                                                            data,
-                                                            truncated_chars: 0,
-                                                        }),
-                                                    ),
-                                                    ..ArchiveIteratorEntry::EMPTY
-                                                },
-                                            ]))?;
-                                        } else {
-                                            let (socket, tx_socket) =
-                                                fuchsia_async::emulated_handle::Socket::create(
-                                                    fuchsia_async::emulated_handle::SocketOpts::STREAM,
-                                                )?;
-                                            let mut tx_socket =
-                                                fuchsia_async::Socket::from_socket(tx_socket)?;
-                                            // We send one end of the socket back to the caller.
-                                            // The receiver will need to read the socket content to
-                                            // get the data.
-                                            let response = vec![ArchiveIteratorEntry {
-                                                diagnostics_data: Some(DiagnosticsData::Socket(
-                                                    socket,
-                                                )),
-                                                ..ArchiveIteratorEntry::EMPTY
-                                            }];
-                                            responder.send(&mut Ok(response))?;
-                                            // We write all the data to the other end of the
-                                            // socket.
-                                            tx_socket.write_all(data.as_bytes()).await?;
-                                        }
-                                    }
-                                    Some(Err(e)) => {
-                                        log::warn!("got error streaming diagnostics: {}", e);
-                                        responder
-                                            .send(&mut Err(ArchiveIteratorError::DataReadFailed))?;
-                                    }
-                                    None => {
-                                        responder.send(&mut Ok(vec![]))?;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Ok::<(), anyhow::Error>(())
-                });
-                responder.send(&mut Ok(LogSession {
-                    target_identifier: Some(target_identifier),
-                    session_timestamp_nanos: stream
-                        .session_timestamp_nanos()
-                        .await
-                        .map(|t| t as u64),
-                    ..LogSession::EMPTY
-                }))?;
-                task.await?;
             }
         }
 

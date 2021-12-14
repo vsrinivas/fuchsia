@@ -12,7 +12,7 @@ use {
     ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
     fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_developer_bridge::{
-        DaemonDiagnosticsStreamParameters, DaemonProxy, DiagnosticsStreamError, LogSession,
+        DaemonDiagnosticsStreamParameters, DiagnosticsProxy, DiagnosticsStreamError, LogSession,
         SessionSpec, StreamMode, TimeBound,
     },
     fidl_fuchsia_developer_remotecontrol::{
@@ -56,6 +56,7 @@ fn format_ffx_event(msg: &str, timestamp: Option<Timestamp>) -> String {
         .to_string();
     format!("[{}][<ffx>]: {}", dt, msg)
 }
+
 #[async_trait(?Send)]
 pub trait LogFormatter {
     async fn push_log(&mut self, log_entry: ArchiveIteratorResult) -> Result<()>;
@@ -83,8 +84,8 @@ impl Default for LogCommandParameters {
     }
 }
 
-async fn setup_daemon_stream(
-    daemon_proxy: &DaemonProxy,
+async fn setup_diagnostics_stream(
+    diagnostics_proxy: &DiagnosticsProxy,
     target_str: &str,
     server: ServerEnd<ArchiveIteratorMarker>,
     stream_mode: StreamMode,
@@ -97,7 +98,7 @@ async fn setup_daemon_stream(
         session,
         ..DaemonDiagnosticsStreamParameters::EMPTY
     };
-    daemon_proxy
+    diagnostics_proxy
         .stream_diagnostics(Some(&target_str), params, server)
         .await
         .context("connecting to daemon")
@@ -105,15 +106,15 @@ async fn setup_daemon_stream(
 
 pub async fn exec_log_cmd<W: std::io::Write>(
     params: LogCommandParameters,
-    daemon_proxy: DaemonProxy,
+    diagnostics_proxy: DiagnosticsProxy,
     log_formatter: &mut impl LogFormatter,
     writer: &mut W,
 ) -> Result<()> {
     let (mut proxy, server) =
         create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
 
-    let session = setup_daemon_stream(
-        &daemon_proxy,
+    let session = setup_diagnostics_stream(
+        &diagnostics_proxy,
         &params.target_identifier,
         server,
         params.stream_mode,
@@ -146,7 +147,7 @@ pub async fn exec_log_cmd<W: std::io::Write>(
             match timeout(Duration::from_secs(5), run_logging_pipeline(&mut requests, &proxy)).await
             {
                 Ok(tup) => tup,
-                Err(_) => match retry_loop(&daemon_proxy, params.clone(), writer).await {
+                Err(_) => match retry_loop(&diagnostics_proxy, params.clone(), writer).await {
                     Ok(p) => {
                         proxy = p;
                         continue;
@@ -217,7 +218,7 @@ pub async fn exec_log_cmd<W: std::io::Write>(
 }
 
 async fn retry_loop<W: std::io::Write>(
-    daemon_proxy: &DaemonProxy,
+    diagnostics_proxy: &DiagnosticsProxy,
     params: LogCommandParameters,
     writer: &mut W,
 ) -> Result<ArchiveIteratorProxy> {
@@ -225,8 +226,8 @@ async fn retry_loop<W: std::io::Write>(
     loop {
         let (new_proxy, server) =
             create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
-        match setup_daemon_stream(
-            daemon_proxy,
+        match setup_diagnostics_stream(
+            diagnostics_proxy,
             &params.target_identifier,
             server,
             params.stream_mode,
@@ -299,16 +300,13 @@ async fn log_entry_from_socket(socket: fidl::Socket) -> Result<LogEntry> {
     Ok(entry)
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// tests
-
 #[cfg(test)]
 mod test {
     use {
         super::*,
         diagnostics_data::Timestamp,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
-        fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonRequest},
+        fidl_fuchsia_developer_bridge::{DiagnosticsMarker, DiagnosticsRequest},
         fidl_fuchsia_developer_remotecontrol::ArchiveIteratorError,
         fuchsia_async::futures::TryStreamExt,
         std::sync::Arc,
@@ -371,16 +369,16 @@ mod test {
         }
     }
 
-    fn setup_fake_daemon_server(
+    fn setup_fake_diagnostics_server(
         expected_parameters: DaemonDiagnosticsStreamParameters,
         expected_responses: Arc<Vec<FakeArchiveIteratorResponse>>,
-    ) -> DaemonProxy {
+    ) -> DiagnosticsProxy {
         let (proxy, mut stream) =
-            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+            fidl::endpoints::create_proxy_and_stream::<DiagnosticsMarker>().unwrap();
         fuchsia_async::Task::local(async move {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    DaemonRequest::StreamDiagnostics {
+                    DiagnosticsRequest::StreamDiagnostics {
                         target,
                         parameters,
                         iterator,
@@ -398,7 +396,6 @@ mod test {
                             .context("error sending response")
                             .expect("should send")
                     }
-                    _ => assert!(false),
                 }
             }
         })
@@ -426,7 +423,7 @@ mod test {
         let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
-            setup_fake_daemon_server(params, Arc::new(expected_responses)),
+            setup_fake_diagnostics_server(params, Arc::new(expected_responses)),
             &mut formatter,
             &mut writer,
         )
@@ -463,7 +460,7 @@ mod test {
         let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
-            setup_fake_daemon_server(params, Arc::new(expected_responses)),
+            setup_fake_diagnostics_server(params, Arc::new(expected_responses)),
             &mut formatter,
             &mut writer,
         )
@@ -500,7 +497,7 @@ mod test {
         let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
-            setup_fake_daemon_server(params, Arc::new(expected_responses)),
+            setup_fake_diagnostics_server(params, Arc::new(expected_responses)),
             &mut formatter,
             &mut writer,
         )
@@ -529,7 +526,7 @@ mod test {
         let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
-            setup_fake_daemon_server(params, Arc::new(vec![])),
+            setup_fake_diagnostics_server(params, Arc::new(vec![])),
             &mut formatter,
             &mut writer,
         )
@@ -553,7 +550,7 @@ mod test {
         let mut writer = Vec::new();
         exec_log_cmd(
             LogCommandParameters::from(params.clone()),
-            setup_fake_daemon_server(params, Arc::new(vec![])),
+            setup_fake_diagnostics_server(params, Arc::new(vec![])),
             &mut formatter,
             &mut writer,
         )
