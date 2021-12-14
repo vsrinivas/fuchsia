@@ -229,13 +229,7 @@ async fn handle_request(
                 return status_response(StatusCode::NOT_FOUND);
             }
         }
-        _ => match repo
-            .fetch_range(
-                resource_path,
-                range.clone().unwrap_or(ResourceRange::RangeFrom { start: 0 }),
-            )
-            .await
-        {
+        _ => match repo.fetch_range(resource_path, range.clone()).await {
             Ok(file) => file,
             Err(Error::NotFound) => {
                 warn!("could not find resource: {}", resource_path);
@@ -260,19 +254,17 @@ async fn handle_request(
 }
 
 fn generate_response_from_range(
-    range: Option<ResourceRange>,
+    range: ResourceRange,
     resource: Resource,
     total_len: u64,
 ) -> Response<Body> {
-    if range.is_none() {
-        return Response::builder()
+    match range {
+        ResourceRange::RangeFull => Response::builder()
             .status(200)
             .header("Content-Length", resource.len)
             .header("Accept-Ranges", "bytes")
             .body(Body::wrap_stream(resource.stream))
-            .unwrap();
-    }
-    match range.unwrap() {
+            .unwrap(),
         ResourceRange::RangeFrom { start } => Response::builder()
             .status(206)
             .header("Content-Length", resource.len - start)
@@ -294,9 +286,9 @@ fn generate_response_from_range(
     }
 }
 
-fn extract_range_from_range_header(headers: &HeaderMap) -> Result<Option<ResourceRange>, Error> {
+fn extract_range_from_range_header(headers: &HeaderMap) -> Result<ResourceRange, Error> {
     if !headers.contains_key(RANGE) {
-        return Ok(None);
+        return Ok(ResourceRange::RangeFull);
     }
     let range = headers[RANGE].to_str()?;
     let mut range_split = range.split("=");
@@ -307,13 +299,13 @@ fn extract_range_from_range_header(headers: &HeaderMap) -> Result<Option<Resourc
     let start_str = vec.next().ok_or(Error::RangeNotSatisfiable)?;
     let end_str = vec.next().ok_or(Error::RangeNotSatisfiable)?;
     match (start_str.is_empty(), end_str.is_empty()) {
-        (true, true) => Ok(Some(ResourceRange::RangeFrom { start: 0 })),
-        (false, false) => Ok(Some(ResourceRange::Range {
+        (true, true) => Ok(ResourceRange::RangeFrom { start: 0 }),
+        (false, false) => Ok(ResourceRange::Range {
             start: start_str.parse::<u64>()?,
             end: end_str.parse::<u64>()?,
-        })),
-        (false, true) => Ok(Some(ResourceRange::RangeFrom { start: start_str.parse::<u64>()? })),
-        (true, false) => Ok(Some(ResourceRange::RangeTo { end: end_str.parse::<u64>()? })),
+        }),
+        (false, true) => Ok(ResourceRange::RangeFrom { start: start_str.parse::<u64>()? }),
+        (true, false) => Ok(ResourceRange::RangeTo { end: end_str.parse::<u64>()? }),
     }
 }
 
@@ -429,15 +421,23 @@ async fn read_timestamp_version(repo: Arc<Repository>) -> Option<u32> {
         //
         // FIXME: We should be using the TUF client to get the latest
         // timestamp in order to make sure the metadata is valid.
-        match repo.fetch_bytes("timestamp.json").await {
-            Ok(file) => match serde_json::from_slice::<SignedTimestamp>(&file) {
-                Ok(timestamp_file) => {
-                    return Some(timestamp_file.signed.version);
+        match repo.fetch("timestamp.json").await {
+            Ok(mut file) => {
+                let mut bytes = vec![];
+                match file.read_to_end(&mut bytes).await {
+                    Ok(()) => match serde_json::from_slice::<SignedTimestamp>(&bytes) {
+                        Ok(timestamp_file) => {
+                            return Some(timestamp_file.signed.version);
+                        }
+                        Err(err) => {
+                            warn!("failed to parse timestamp.json: {:#?}", err);
+                        }
+                    },
+                    Err(err) => {
+                        warn!("failed to read timestamp.json: {:#}", err);
+                    }
                 }
-                Err(err) => {
-                    warn!("failed to parse timestamp.json: {:#?}", err);
-                }
-            },
+            }
             Err(err) => {
                 warn!("failed to read timestamp.json: {:#?}", err);
             }

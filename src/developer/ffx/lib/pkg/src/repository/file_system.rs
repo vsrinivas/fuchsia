@@ -59,15 +59,7 @@ impl RepositoryBackend for FileSystemRepository {
         }
     }
 
-    async fn fetch(&self, resource_path: &str) -> Result<Resource, Error> {
-        self.fetch_range(resource_path, ResourceRange::RangeFrom { start: 0 }).await
-    }
-
-    async fn fetch_range(
-        &self,
-        resource_path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
+    async fn fetch(&self, resource_path: &str, range: ResourceRange) -> Result<Resource, Error> {
         let file_path =
             sanitize_path(&self.metadata_repo_path, &self.blob_repo_path, resource_path)?;
 
@@ -77,8 +69,9 @@ impl RepositoryBackend for FileSystemRepository {
         match range {
             ResourceRange::Range { start, end: _ } => file.seek(SeekFrom::Start(start)).await?,
             ResourceRange::RangeFrom { start } => file.seek(SeekFrom::Start(start)).await?,
-            _ => len,
+            ResourceRange::RangeFull | ResourceRange::RangeTo { .. } => len,
         };
+
         let len = match range {
             ResourceRange::Range { start, end } => {
                 if start > end || end > len {
@@ -92,7 +85,7 @@ impl RepositoryBackend for FileSystemRepository {
                 }
                 end
             }
-            _ => len,
+            ResourceRange::RangeFull | ResourceRange::RangeFrom { .. } => len,
         };
 
         Ok(Resource { len, stream: Box::pin(file_stream(file_path, len as usize, file)) })
@@ -292,36 +285,16 @@ mod tests {
             }
         }
 
-        async fn read_metadata(&self, path: &str) -> Result<Vec<u8>, Error> {
+        async fn read_metadata(&self, path: &str, range: ResourceRange) -> Result<Vec<u8>, Error> {
             let mut body = vec![];
-            self.repo.fetch(path).await?.read_to_end(&mut body).await?;
+            self.repo.fetch(path, range).await?.read_to_end(&mut body).await?;
             Ok(body)
         }
 
-        async fn read_blob(&self, path: &str) -> Result<Vec<u8>, Error> {
-            let mut body = vec![];
-            self.repo.fetch(&format!("blobs/{}", path)).await?.read_to_end(&mut body).await?;
-            Ok(body)
-        }
-
-        async fn read_metadata_range(
-            &self,
-            path: &str,
-            range: ResourceRange,
-        ) -> Result<Vec<u8>, Error> {
-            let mut body = vec![];
-            self.repo.fetch_range(path, range).await?.read_to_end(&mut body).await?;
-            Ok(body)
-        }
-
-        async fn read_blob_range(
-            &self,
-            path: &str,
-            range: ResourceRange,
-        ) -> Result<Vec<u8>, Error> {
+        async fn read_blob(&self, path: &str, range: ResourceRange) -> Result<Vec<u8>, Error> {
             let mut body = vec![];
             self.repo
-                .fetch_range(&format!("blobs/{}", path), range)
+                .fetch(&format!("blobs/{}", path), range)
                 .await?
                 .read_to_end(&mut body)
                 .await?;
@@ -345,8 +318,14 @@ mod tests {
     async fn test_fetch_missing() {
         let env = TestEnv::new();
 
-        assert_matches!(env.read_metadata("meta-does-not-exist").await, Err(Error::NotFound));
-        assert_matches!(env.read_blob("blob-does-not-exist").await, Err(Error::NotFound));
+        assert_matches!(
+            env.read_metadata("meta-does-not-exist", ResourceRange::RangeFull).await,
+            Err(Error::NotFound)
+        );
+        assert_matches!(
+            env.read_blob("blob-does-not-exist", ResourceRange::RangeFull).await,
+            Err(Error::NotFound)
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -356,8 +335,8 @@ mod tests {
         env.write_metadata("empty-meta", b"");
         env.write_blob("empty-blob", b"");
 
-        assert_matches!(env.read_metadata("empty-meta").await, Ok(body) if body == b"");
-        assert_matches!(env.read_blob("empty-blob").await, Ok(body) if body == b"");
+        assert_matches!(env.read_metadata("empty-meta", ResourceRange::RangeFull).await, Ok(body) if body == b"");
+        assert_matches!(env.read_blob("empty-blob", ResourceRange::RangeFull).await, Ok(body) if body == b"");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -390,8 +369,14 @@ mod tests {
         env.write_metadata("small-meta", b"hello meta");
         env.write_blob("small-blob", b"hello blob");
 
-        assert_matches!(env.read_metadata("small-meta").await, Ok(b) if b == b"hello meta");
-        assert_matches!(env.read_blob("small-blob").await, Ok(b) if b == b"hello blob");
+        assert_matches!(
+            env.read_metadata("small-meta", ResourceRange::RangeFull).await,
+            Ok(b) if b == b"hello meta"
+        );
+        assert_matches!(
+            env.read_blob("small-blob", ResourceRange::RangeFull).await,
+            Ok(b) if b == b"hello blob"
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -404,11 +389,11 @@ mod tests {
         env.write_blob("small-blob", blob_body);
 
         assert_matches!(
-            env.read_metadata_range("small-meta", ResourceRange::Range { start: 1, end: 7 }).await,
+            env.read_metadata("small-meta", ResourceRange::Range { start: 1, end: 7 }).await,
             Ok(b) if b == b"ello m"
         );
         assert_matches!(
-            env.read_blob_range("small-blob", ResourceRange::Range { start: 1, end: 7 }).await,
+            env.read_blob("small-blob", ResourceRange::Range { start: 1, end: 7 }).await,
             Ok(b) if b == b"ello b"
         );
     }
@@ -423,20 +408,20 @@ mod tests {
         env.write_blob("small-blob", blob_body);
 
         assert_matches!(
-            env.read_metadata_range("small-meta", ResourceRange::Range { start: 4, end: 3 }).await,
+            env.read_metadata("small-meta", ResourceRange::Range { start: 4, end: 3 }).await,
             Err(Error::RangeNotSatisfiable)
         );
         assert_matches!(
-            env.read_blob_range("small-blob", ResourceRange::Range { start: 4, end: 3 }).await,
+            env.read_blob("small-blob", ResourceRange::Range { start: 4, end: 3 }).await,
             Err(Error::RangeNotSatisfiable)
         );
 
         assert_matches!(
-            env.read_metadata_range("small-meta", ResourceRange::RangeTo { end: 12 }).await,
+            env.read_metadata("small-meta", ResourceRange::RangeTo { end: 12 }).await,
             Err(Error::RangeNotSatisfiable)
         );
         assert_matches!(
-            env.read_blob_range("small-blob", ResourceRange::RangeTo { end: 12 }).await,
+            env.read_blob("small-blob", ResourceRange::RangeTo { end: 12 }).await,
             Err(Error::RangeNotSatisfiable)
         );
     }
@@ -453,11 +438,11 @@ mod tests {
             env.write_blob(&path, &body);
 
             assert_matches!(
-                env.read_metadata(&path).await,
+                env.read_metadata(&path, ResourceRange::RangeFull).await,
                 Ok(b) if b == body
             );
             assert_matches!(
-                env.read_blob(&path).await,
+                env.read_blob(&path, ResourceRange::RangeFull).await,
                 Ok(b) if b == body
             );
         }
@@ -476,11 +461,11 @@ mod tests {
             env.write_blob(&path, &body);
 
             assert_matches!(
-                env.read_metadata_range(&path, ResourceRange::RangeFrom { start: 1 }).await,
+                env.read_metadata(&path, ResourceRange::RangeFrom { start: 1 }).await,
                 Ok(b) if b == body[1..]
             );
             assert_matches!(
-                env.read_blob_range(&path, ResourceRange::RangeFrom { start: 1 }).await,
+                env.read_blob(&path, ResourceRange::RangeFrom { start: 1 }).await,
                 Ok(b) if b == body[1..]
             );
         }
@@ -491,9 +476,9 @@ mod tests {
         let env = TestEnv::new();
         env.write_metadata("empty", b"");
 
-        assert_matches!(env.read_metadata("empty").await, Ok(body) if body == b"");
+        assert_matches!(env.read_metadata("empty", ResourceRange::RangeFull).await, Ok(body) if body == b"");
         assert_matches!(
-            env.read_metadata("subdir/../empty").await,
+            env.read_metadata("subdir/../empty", ResourceRange::RangeFull).await,
             Err(Error::InvalidPath(path)) if path == Path::new("subdir/../empty")
         );
     }

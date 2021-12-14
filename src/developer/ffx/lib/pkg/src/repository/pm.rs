@@ -35,16 +35,8 @@ impl RepositoryBackend for PmRepository {
         RepositorySpec::Pm { path: self.pm_repo_path.clone() }
     }
 
-    async fn fetch(&self, resource_path: &str) -> Result<Resource, Error> {
-        self.repo.fetch(resource_path).await
-    }
-
-    async fn fetch_range(
-        &self,
-        resource_path: &str,
-        range: ResourceRange,
-    ) -> Result<Resource, Error> {
-        self.repo.fetch_range(resource_path, range).await
+    async fn fetch(&self, resource_path: &str, range: ResourceRange) -> Result<Resource, Error> {
+        self.repo.fetch(resource_path, range).await
     }
 
     fn supports_watch(&self) -> bool {

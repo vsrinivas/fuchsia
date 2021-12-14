@@ -170,7 +170,6 @@ pub struct Resource {
 }
 
 impl Resource {
-    #[cfg(test)]
     async fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<(), Error> {
         buf.reserve(self.len as usize);
         while let Some(chunk) = self.stream.next().await.transpose()? {
@@ -285,24 +284,12 @@ impl Repository {
 
     /// Return a stream of bytes for the resource.
     pub async fn fetch(&self, path: &str) -> Result<Resource, Error> {
-        self.backend.fetch(path).await
+        self.fetch_range(path, ResourceRange::RangeFull).await
     }
 
     /// Return a stream of bytes for the resource in given range.
     pub async fn fetch_range(&self, path: &str, range: ResourceRange) -> Result<Resource, Error> {
-        self.backend.fetch_range(path, range).await
-    }
-
-    /// Return a `Vec<u8>` of the resource.
-    pub async fn fetch_bytes(&self, path: &str) -> Result<Vec<u8>, Error> {
-        let mut resource = self.fetch(path).await?;
-
-        let mut bytes = Vec::with_capacity(resource.len as usize);
-        while let Some(chunk) = resource.stream.next().await.transpose()? {
-            bytes.extend_from_slice(&chunk);
-        }
-
-        Ok(bytes)
+        self.backend.fetch(path, range).await
     }
 
     pub async fn get_config(
@@ -426,8 +413,9 @@ impl Repository {
                 let hash = custom.get("merkle")?.as_str().unwrap_or("").to_string();
                 let path = format!("blobs/{}", hash);
                 Some(async move {
-                    let res = self.fetch_bytes(&path).await?;
-                    let mut archive = AsyncReader::new(Adapter::new(Cursor::new(res))).await?;
+                    let mut bytes = vec![];
+                    self.fetch(&path).await?.read_to_end(&mut bytes).await?;
+                    let mut archive = AsyncReader::new(Adapter::new(Cursor::new(bytes))).await?;
                     let contents = archive.read_file("meta/contents").await?;
                     let contents = MetaContents::deserialize(contents.as_slice())?;
 
@@ -534,7 +522,8 @@ impl Repository {
             .ok_or_else(|| anyhow!("package {:?} should be a u64, not {:?}", package_name, size))?;
 
         // Read the meta.far.
-        let meta_far_bytes = self.fetch_bytes(&format!("blobs/{}", &hash)).await?;
+        let mut meta_far_bytes = vec![];
+        self.fetch(&format!("blobs/{}", &hash)).await?.read_to_end(&mut meta_far_bytes).await?;
         let mut archive = AsyncReader::new(Adapter::new(Cursor::new(meta_far_bytes))).await?;
 
         let modified = self
@@ -606,6 +595,7 @@ impl Drop for Repository {
 
 #[derive(Debug, Clone)]
 pub enum ResourceRange {
+    RangeFull,
     Range { start: u64, end: u64 },
     RangeFrom { start: u64 },
     RangeTo { end: u64 },
@@ -617,10 +607,7 @@ pub trait RepositoryBackend: std::fmt::Debug {
     fn spec(&self) -> RepositorySpec;
 
     /// Fetch a [Resource] from this repository.
-    async fn fetch(&self, path: &str) -> Result<Resource, Error>;
-
-    /// Fetch a [Resource] from this repository.
-    async fn fetch_range(&self, path: &str, range: ResourceRange) -> Result<Resource, Error>;
+    async fn fetch(&self, path: &str, range: ResourceRange) -> Result<Resource, Error>;
 
     /// Whether or not the backend supports watching for file changes.
     fn supports_watch(&self) -> bool {
