@@ -280,7 +280,8 @@ class GnuHash {
       // number of Addr words in the overall table.
       const uint32_t bucket_slots = (sizes.nbucket + 1 + kBucketsPerAddr - 1) / kBucketsPerAddr;
 
-      if (sizes.shift < 32 &&                      // Must be plausible.
+      if (sizes.nbucket > 0 &&                     // Cannot be empty.
+          sizes.shift < 32 &&                      // Must be plausible.
           cpp20::has_single_bit(sizes.nfilter) &&  // Must be power of two.
           total_addrs >= sizes.nfilter &&          // Space for the filters.
           // There must be space for the buckets and the chain table.  We can't
