@@ -6,6 +6,7 @@ use crate::output::{
     ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
     EntityId, ReportedOutcome, Reporter, Timestamp, ZxTime,
 };
+use async_trait::async_trait;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
@@ -135,8 +136,9 @@ impl DirectoryReporter {
     }
 }
 
+#[async_trait]
 impl Reporter for DirectoryReporter {
-    fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error> {
+    async fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error> {
         let artifact_dir = artifact_dir_name(entity);
 
         let mut entries = self.entries.lock();
@@ -165,7 +167,7 @@ impl Reporter for DirectoryReporter {
         Ok(())
     }
 
-    fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {
+    async fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {
         let mut entries = self.entries.lock();
         let entry =
             entries.get_mut(entity).expect("Outcome reported for an entity that does not exist");
@@ -180,7 +182,7 @@ impl Reporter for DirectoryReporter {
         Ok(())
     }
 
-    fn entity_stopped(
+    async fn entity_stopped(
         &self,
         entity: &EntityId,
         outcome: &ReportedOutcome,
@@ -205,7 +207,7 @@ impl Reporter for DirectoryReporter {
 
     /// Finalize and persist the outcome and artifacts for an entity. This should only be
     /// called once per entity.
-    fn entity_finished(&self, entity: &EntityId) -> Result<(), Error> {
+    async fn entity_finished(&self, entity: &EntityId) -> Result<(), Error> {
         match entity {
             EntityId::TestRun => self.persist_run_summary(),
             EntityId::Suite(suite_id) => {
@@ -233,7 +235,7 @@ impl Reporter for DirectoryReporter {
         }
     }
 
-    fn new_artifact(
+    async fn new_artifact(
         &self,
         entity: &EntityId,
         artifact_type: &ArtifactType,
@@ -259,7 +261,7 @@ impl Reporter for DirectoryReporter {
         Ok(Box::new(artifact))
     }
 
-    fn new_directory_artifact(
+    async fn new_directory_artifact(
         &self,
         entity: &EntityId,
         artifact_type: &DirectoryArtifactType,
@@ -419,8 +421,8 @@ mod test {
         ExpectedDirectory, ExpectedSuite, ExpectedTestCase, ExpectedTestRun,
     };
 
-    #[test]
-    fn no_artifacts() {
+    #[fuchsia::test]
+    async fn no_artifacts() {
         let dir = tempdir().expect("create temp directory");
         const CASE_TIMES: [(ZxTime, ZxTime); 3] = [
             (ZxTime::from_nanos(0x1100000), ZxTime::from_nanos(0x2100000)),
@@ -436,28 +438,34 @@ mod test {
         for suite_no in 0..3 {
             let suite_reporter = run_reporter
                 .new_suite(&format!("suite-{:?}", suite_no), &SuiteId(suite_no))
+                .await
                 .expect("create suite reporter");
-            suite_reporter.started(Timestamp::Given(SUITE_TIMES.0)).expect("start suite");
+            suite_reporter.started(Timestamp::Given(SUITE_TIMES.0)).await.expect("start suite");
             for case_no in 0..3 {
                 let case_reporter = suite_reporter
                     .new_case(&format!("case-{:?}-{:?}", suite_no, case_no), &CaseId(case_no))
+                    .await
                     .expect("create suite reporter");
                 case_reporter
                     .started(Timestamp::Given(CASE_TIMES[case_no as usize].0))
+                    .await
                     .expect("start case");
                 case_reporter
                     .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+                    .await
                     .expect("stop case");
             }
             suite_reporter
                 .stopped(&ReportedOutcome::Failed, Timestamp::Unknown)
+                .await
                 .expect("set suite outcome");
-            suite_reporter.finished().expect("record suite");
+            suite_reporter.finished().await.expect("record suite");
         }
         run_reporter
             .stopped(&ReportedOutcome::Timedout, Timestamp::Unknown)
+            .await
             .expect("set run outcome");
-        run_reporter.finished().expect("record run");
+        run_reporter.finished().await.expect("record run");
 
         // assert on directory
         let (run_result, suite_results) = parse_json_in_output(dir.path());
@@ -486,45 +494,53 @@ mod test {
         );
     }
 
-    #[test]
-    fn artifacts_per_entity() {
+    #[fuchsia::test]
+    async fn artifacts_per_entity() {
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(
             DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
         );
         let suite_reporter =
-            run_reporter.new_suite("suite-1", &SuiteId(0)).expect("create new suite");
-        run_reporter.started(Timestamp::Unknown).expect("start run");
+            run_reporter.new_suite("suite-1", &SuiteId(0)).await.expect("create new suite");
+        run_reporter.started(Timestamp::Unknown).await.expect("start run");
         for case_no in 0..3 {
             let case_reporter = suite_reporter
                 .new_case(&format!("case-1-{:?}", case_no), &CaseId(case_no))
+                .await
                 .expect("create new case");
-            case_reporter.started(Timestamp::Unknown).expect("start case");
-            let mut artifact =
-                case_reporter.new_artifact(&ArtifactType::Stdout).expect("create case artifact");
+            case_reporter.started(Timestamp::Unknown).await.expect("start case");
+            let mut artifact = case_reporter
+                .new_artifact(&ArtifactType::Stdout)
+                .await
+                .expect("create case artifact");
             writeln!(artifact, "stdout from case {:?}", case_no).expect("write to artifact");
             case_reporter
                 .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+                .await
                 .expect("report case outcome");
         }
 
-        let mut suite_artifact =
-            suite_reporter.new_artifact(&ArtifactType::Stdout).expect("create suite artifact");
+        let mut suite_artifact = suite_reporter
+            .new_artifact(&ArtifactType::Stdout)
+            .await
+            .expect("create suite artifact");
         writeln!(suite_artifact, "stdout from suite").expect("write to artifact");
-        suite_reporter.started(Timestamp::Unknown).expect("start suite");
+        suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
         suite_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("report suite outcome");
-        suite_reporter.finished().expect("record suite");
+        suite_reporter.finished().await.expect("record suite");
         drop(suite_artifact); // want to flush contents
 
         let mut run_artifact =
-            run_reporter.new_artifact(&ArtifactType::Stdout).expect("create run artifact");
+            run_reporter.new_artifact(&ArtifactType::Stdout).await.expect("create run artifact");
         writeln!(run_artifact, "stdout from run").expect("write to artifact");
         run_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("record run outcome");
-        run_reporter.finished().expect("record run");
+        run_reporter.finished().await.expect("record run");
         drop(run_artifact); // want to flush contents
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
@@ -570,45 +586,51 @@ mod test {
         );
     }
 
-    #[test]
-    fn empty_directory_artifacts() {
+    #[fuchsia::test]
+    async fn empty_directory_artifacts() {
         let dir = tempdir().expect("create temp directory");
 
         let run_reporter = RunReporter::new(
             DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
         );
-        run_reporter.started(Timestamp::Unknown).expect("start run");
+        run_reporter.started(Timestamp::Unknown).await.expect("start run");
         let _run_directory_artifact = run_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .await
             .expect("Create run directory artifact");
 
         let suite_reporter =
-            run_reporter.new_suite("suite-1", &SuiteId(0)).expect("create new suite");
-        suite_reporter.started(Timestamp::Unknown).expect("start suite");
+            run_reporter.new_suite("suite-1", &SuiteId(0)).await.expect("create new suite");
+        suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
         let _suite_directory_artifact = suite_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, Some("suite-moniker".into()))
+            .await
             .expect("create suite directory artifact");
 
         let case_reporter =
-            suite_reporter.new_case("case-1-1", &CaseId(1)).expect("create new case");
-        case_reporter.started(Timestamp::Unknown).expect("start case");
+            suite_reporter.new_case("case-1-1", &CaseId(1)).await.expect("create new case");
+        case_reporter.started(Timestamp::Unknown).await.expect("start case");
         let _case_directory_artifact = case_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .await
             .expect("create suite directory artifact");
         case_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("report case outcome");
-        case_reporter.finished().expect("Case finished");
+        case_reporter.finished().await.expect("Case finished");
 
         suite_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("report suite outcome");
-        suite_reporter.finished().expect("record suite");
+        suite_reporter.finished().await.expect("record suite");
 
         run_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("record run outcome");
-        run_reporter.finished().expect("record run");
+        run_reporter.finished().await.expect("record run");
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
@@ -643,16 +665,17 @@ mod test {
         );
     }
 
-    #[test]
-    fn directory_artifacts() {
+    #[fuchsia::test]
+    async fn directory_artifacts() {
         let dir = tempdir().expect("create temp directory");
 
         let run_reporter = RunReporter::new(
             DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
         );
-        run_reporter.started(Timestamp::Unknown).expect("start run");
+        run_reporter.started(Timestamp::Unknown).await.expect("start run");
         let run_directory_artifact = run_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .await
             .expect("Create run directory artifact");
         let mut run_artifact_file = run_directory_artifact
             .new_file("run-artifact".as_ref())
@@ -661,10 +684,11 @@ mod test {
         drop(run_artifact_file); // force flushing
 
         let suite_reporter =
-            run_reporter.new_suite("suite-1", &SuiteId(0)).expect("create new suite");
-        suite_reporter.started(Timestamp::Unknown).expect("start suite");
+            run_reporter.new_suite("suite-1", &SuiteId(0)).await.expect("create new suite");
+        suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
         let suite_directory_artifact = suite_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, Some("suite-moniker".into()))
+            .await
             .expect("create suite directory artifact");
         let mut suite_artifact_file = suite_directory_artifact
             .new_file("suite-artifact".as_ref())
@@ -673,10 +697,11 @@ mod test {
         drop(suite_artifact_file); // force flushing
 
         let case_reporter =
-            suite_reporter.new_case("case-1-1", &CaseId(1)).expect("create new case");
-        case_reporter.started(Timestamp::Unknown).expect("start case");
+            suite_reporter.new_case("case-1-1", &CaseId(1)).await.expect("create new case");
+        case_reporter.started(Timestamp::Unknown).await.expect("start case");
         let case_directory_artifact = case_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .await
             .expect("create suite directory artifact");
         let mut case_artifact_file = case_directory_artifact
             .new_file("case-artifact".as_ref())
@@ -685,18 +710,21 @@ mod test {
         drop(case_artifact_file); // force flushing
         case_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("report case outcome");
-        case_reporter.finished().expect("Case finished");
+        case_reporter.finished().await.expect("Case finished");
 
         suite_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("report suite outcome");
-        suite_reporter.finished().expect("record suite");
+        suite_reporter.finished().await.expect("record suite");
 
         run_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("record run outcome");
-        run_reporter.finished().expect("record run");
+        run_reporter.finished().await.expect("record run");
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
@@ -733,36 +761,40 @@ mod test {
         );
     }
 
-    #[test]
-    fn duplicate_suite_names_ok() {
+    #[fuchsia::test]
+    async fn duplicate_suite_names_ok() {
         let dir = tempdir().expect("create temp directory");
         let run_reporter = RunReporter::new(
             DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
         );
 
         let success_suite_reporter =
-            run_reporter.new_suite("suite", &SuiteId(0)).expect("create new suite");
+            run_reporter.new_suite("suite", &SuiteId(0)).await.expect("create new suite");
         success_suite_reporter
             .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
             .expect("report suite outcome");
         success_suite_reporter
             .new_artifact(&ArtifactType::Stdout)
+            .await
             .expect("create new artifact")
             .write_all(b"stdout from passed suite\n")
             .expect("write to artifact");
-        success_suite_reporter.finished().expect("record suite");
+        success_suite_reporter.finished().await.expect("record suite");
 
         let failed_suite_reporter =
-            run_reporter.new_suite("suite", &SuiteId(1)).expect("create new suite");
+            run_reporter.new_suite("suite", &SuiteId(1)).await.expect("create new suite");
         failed_suite_reporter
             .stopped(&ReportedOutcome::Failed, Timestamp::Unknown)
+            .await
             .expect("report suite outcome");
-        failed_suite_reporter.finished().expect("record suite");
+        failed_suite_reporter.finished().await.expect("record suite");
 
         run_reporter
             .stopped(&ReportedOutcome::Failed, Timestamp::Unknown)
+            .await
             .expect("report run outcome");
-        run_reporter.finished().expect("record run");
+        run_reporter.finished().await.expect("record run");
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
@@ -792,8 +824,8 @@ mod test {
         }
     }
 
-    #[test]
-    fn intermediate_results_persisted() {
+    #[fuchsia::test]
+    async fn intermediate_results_persisted() {
         // This test verifies that the results of the test run are persisted after each test suite
         // finishes. This allows intermediate results to be read even if the command is killed
         // before completion.
@@ -810,13 +842,16 @@ mod test {
         );
         assert!(initial_suite_results.is_empty());
 
-        run_reporter.started(Timestamp::Unknown).expect("start test run");
+        run_reporter.started(Timestamp::Unknown).await.expect("start test run");
 
         let suite_reporter =
-            run_reporter.new_suite("suite", &SuiteId(0)).expect("create new suite");
-        suite_reporter.started(Timestamp::Unknown).expect("start suite");
-        suite_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop suite");
-        suite_reporter.finished().expect("finish suite");
+            run_reporter.new_suite("suite", &SuiteId(0)).await.expect("create new suite");
+        suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
+        suite_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
+            .expect("stop suite");
+        suite_reporter.finished().await.expect("finish suite");
 
         let (intermediate_run_result, intermediate_suite_results) =
             parse_json_in_output(dir.path());
@@ -831,8 +866,11 @@ mod test {
             &vec![ExpectedSuite::new("suite", directory::Outcome::Passed)],
         );
 
-        run_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop test run");
-        run_reporter.finished().expect("finish test run");
+        run_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
+            .expect("stop test run");
+        run_reporter.finished().await.expect("finish test run");
 
         let (final_run_result, final_suite_results) = parse_json_in_output(dir.path());
         assert_run_result(
@@ -847,8 +885,8 @@ mod test {
         );
     }
 
-    #[test]
-    fn early_finish_ok() {
+    #[fuchsia::test]
+    async fn early_finish_ok() {
         // This test verifies that a suite is saved if finished() is called before an outcome is
         // reported. This could happen if some error causes test execution to terminate early.
         let dir = tempdir().expect("create temp directory");
@@ -856,24 +894,24 @@ mod test {
             DirectoryReporter::new(dir.path().to_path_buf()).expect("create run reporter"),
         );
 
-        run_reporter.started(Timestamp::Unknown).expect("start test run");
+        run_reporter.started(Timestamp::Unknown).await.expect("start test run");
 
         // Add a suite and case that start, but don't stop.
         let suite_reporter =
-            run_reporter.new_suite("suite", &SuiteId(0)).expect("create new suite");
-        suite_reporter.started(Timestamp::Unknown).expect("start suite");
-        let case_reporter = suite_reporter.new_case("case", &CaseId(0)).expect("create case");
-        case_reporter.started(Timestamp::Unknown).expect("start case");
+            run_reporter.new_suite("suite", &SuiteId(0)).await.expect("create new suite");
+        suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
+        let case_reporter = suite_reporter.new_case("case", &CaseId(0)).await.expect("create case");
+        case_reporter.started(Timestamp::Unknown).await.expect("start case");
         // finish run without reporting result
-        case_reporter.finished().expect("finish case");
-        suite_reporter.finished().expect("finish suite");
+        case_reporter.finished().await.expect("finish case");
+        suite_reporter.finished().await.expect("finish suite");
 
         // Add a suite that doesn't start.
         let no_start_suite_reporter =
-            run_reporter.new_suite("no-start-suite", &SuiteId(1)).expect("create new suite");
-        no_start_suite_reporter.finished().expect("finish suite");
+            run_reporter.new_suite("no-start-suite", &SuiteId(1)).await.expect("create new suite");
+        no_start_suite_reporter.finished().await.expect("finish suite");
 
-        run_reporter.finished().expect("finish test run");
+        run_reporter.finished().await.expect("finish test run");
 
         let (run_result, suite_results) = parse_json_in_output(dir.path());
         assert_run_result(

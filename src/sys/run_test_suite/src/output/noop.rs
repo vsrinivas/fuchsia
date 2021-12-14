@@ -6,30 +6,37 @@ use crate::output::{
     ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
     EntityId, ReportedOutcome, Reporter, Timestamp,
 };
+use async_trait::async_trait;
 use std::{io::Error, path::Path};
 
 /// A reporter that acts as a data sink and does not save results or artifacts.
 pub struct NoopReporter;
 pub(super) struct NoopDirectoryWriter;
 
+#[async_trait]
 impl Reporter for NoopReporter {
-    fn new_entity(&self, _: &EntityId, _: &str) -> Result<(), Error> {
+    async fn new_entity(&self, _: &EntityId, _: &str) -> Result<(), Error> {
         Ok(())
     }
 
-    fn entity_started(&self, _: &EntityId, _: Timestamp) -> Result<(), Error> {
+    async fn entity_started(&self, _: &EntityId, _: Timestamp) -> Result<(), Error> {
         Ok(())
     }
 
-    fn entity_stopped(&self, _: &EntityId, _: &ReportedOutcome, _: Timestamp) -> Result<(), Error> {
+    async fn entity_stopped(
+        &self,
+        _: &EntityId,
+        _: &ReportedOutcome,
+        _: Timestamp,
+    ) -> Result<(), Error> {
         Ok(())
     }
 
-    fn entity_finished(&self, _: &EntityId) -> Result<(), Error> {
+    async fn entity_finished(&self, _: &EntityId) -> Result<(), Error> {
         Ok(())
     }
 
-    fn new_artifact(
+    async fn new_artifact(
         &self,
         _entity: &EntityId,
         _type: &ArtifactType,
@@ -37,7 +44,7 @@ impl Reporter for NoopReporter {
         Ok(Box::new(std::io::sink()))
     }
 
-    fn new_directory_artifact(
+    async fn new_directory_artifact(
         &self,
         _entity: &EntityId,
         _artifact_type: &DirectoryArtifactType,

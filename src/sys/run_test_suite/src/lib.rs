@@ -177,7 +177,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
             // stream completes normally.
             Either::Right((None, _)) => break,
             Either::Right((Some(Err(e)), _)) => {
-                suite_reporter.stopped(&output::ReportedOutcome::Error, Timestamp::Unknown)?;
+                suite_reporter.stopped(&output::ReportedOutcome::Error, Timestamp::Unknown).await?;
                 return Err(e);
             }
             Either::Right((Some(Ok(event)), _)) => {
@@ -188,7 +188,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                         identifier,
                     }) => {
                         let case_reporter =
-                            suite_reporter.new_case(&test_case_name, &CaseId(identifier))?;
+                            suite_reporter.new_case(&test_case_name, &CaseId(identifier)).await?;
                         test_cases.insert(identifier, test_case_name);
                         test_case_reporters.insert(identifier, case_reporter);
                     }
@@ -200,7 +200,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                         let reporter = test_case_reporters.get(&identifier).unwrap();
                         // TODO(fxbug.dev/79712): Record per-case runtime once we have an
                         // accurate way to measure it.
-                        reporter.started(Timestamp::Unknown)?;
+                        reporter.started(Timestamp::Unknown).await?;
                         if test_cases_in_progress.contains(&identifier) {
                             return Err(UnexpectedEventError::CaseStartedTwice {
                                 test_case_name,
@@ -222,7 +222,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                                 test_diagnostics::collect_and_send_string_output(socket, sender),
                             );
                             let reporter = test_case_reporters.get(&identifier).unwrap();
-                            let mut stdout = reporter.new_artifact(&ArtifactType::Stdout)?;
+                            let mut stdout = reporter.new_artifact(&ArtifactType::Stdout).await?;
                             let stdout_task = fuchsia_async::Task::spawn(async move {
                                 while let Some(msg) = recv.next().await {
                                     stdout.write_all(msg.as_bytes())?;
@@ -239,7 +239,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                                 test_diagnostics::collect_and_send_string_output(socket, sender),
                             );
                             let reporter = test_case_reporters.get_mut(&identifier).unwrap();
-                            let mut stderr = reporter.new_artifact(&ArtifactType::Stderr)?;
+                            let mut stderr = reporter.new_artifact(&ArtifactType::Stderr).await?;
                             let stderr_task = fuchsia_async::Task::spawn(async move {
                                 while let Some(msg) = recv.next().await {
                                     stderr.write_all(msg.as_bytes())?;
@@ -304,11 +304,11 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                         let reporter = test_case_reporters.get(&identifier).unwrap();
                         // TODO(fxbug.dev/79712): Record per-case runtime once we have an
                         // accurate way to measure it.
-                        reporter.stopped(&status.into(), Timestamp::Unknown)?;
+                        reporter.stopped(&status.into(), Timestamp::Unknown).await?;
                     }
                     ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished { identifier }) => {
                         let reporter = test_case_reporters.remove(&identifier).unwrap();
-                        reporter.finished()?;
+                        reporter.finished().await?;
                     }
                     ftest_manager::SuiteEventPayload::SuiteArtifact(SuiteArtifact { artifact }) => {
                         match artifact {
@@ -321,7 +321,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                             ftest_manager::Artifact::Log(syslog) => {
                                 let log_stream = test_diagnostics::LogStream::from_syslog(syslog)?;
                                 let mut log_artifact =
-                                    suite_reporter.new_artifact(&ArtifactType::Syslog)?;
+                                    suite_reporter.new_artifact(&ArtifactType::Syslog).await?;
                                 let log_opts_clone = log_opts.clone();
                                 suite_log_tasks.push(fuchsia_async::Task::spawn(async move {
                                     let (send, mut recv) = mpsc::channel(32);
@@ -350,10 +350,12 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                             }) => {
                                 let ftest_manager::DirectoryAndToken { directory, token } =
                                     directory_and_token.unwrap();
-                                let directory_artifact = suite_reporter.new_directory_artifact(
-                                    &DirectoryArtifactType::Custom,
-                                    component_moniker,
-                                )?;
+                                let directory_artifact = suite_reporter
+                                    .new_directory_artifact(
+                                        &DirectoryArtifactType::Custom,
+                                        component_moniker,
+                                    )
+                                    .await?;
 
                                 let directory = directory.into_proxy()?;
                                 let directory_copy_task = async move {
@@ -449,7 +451,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
                         }
                     }
                     ftest_manager::SuiteEventPayload::SuiteStarted(_) => {
-                        suite_reporter.started(timestamp)?;
+                        suite_reporter.started(timestamp).await?;
                     }
                     ftest_manager::SuiteEventPayload::SuiteStopped(SuiteStopped { status }) => {
                         successful_completion = true;
@@ -485,7 +487,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
             Ok(r) => match r {
                 diagnostics::LogCollectionOutcome::Error { restricted_logs } => {
                     let mut log_artifact =
-                        suite_reporter.new_artifact(&ArtifactType::RestrictedLog)?;
+                        suite_reporter.new_artifact(&ArtifactType::RestrictedLog).await?;
                     for log in restricted_logs.iter() {
                         writeln!(log_artifact, "{}", log)?;
                     }
@@ -541,7 +543,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()>>(
         }
     }
 
-    suite_reporter.stopped(&outcome.clone().into(), suite_finish_timestamp)?;
+    suite_reporter.stopped(&outcome.clone().into(), suite_finish_timestamp).await?;
 
     Ok(SuiteRunResult { url: running_suite.url().to_string(), outcome })
 }
@@ -663,7 +665,8 @@ async fn run_test<'a, F: 'a + Future<Output = ()>>(
         };
 
         let suite_id = SuiteId(suite_id_raw as u32);
-        suite_reporters.insert(suite_id, run_reporter.new_suite(&params.test_url, &suite_id)?);
+        suite_reporters
+            .insert(suite_id, run_reporter.new_suite(&params.test_url, &suite_id).await?);
         let (suite_controller, suite_server_end) = fidl::endpoints::create_proxy()?;
         let suite_and_id_fut = RunningSuite::wait_for_start(
             suite_controller,
@@ -720,7 +723,7 @@ async fn run_test<'a, F: 'a + Future<Output = ()>>(
                 )
                 .await;
                 // We should always persist results, even if something failed.
-                suite_reporter.finished()?;
+                suite_reporter.finished().await?;
                 let result = result?;
 
                 let accumulated_failures = match result.outcome {
@@ -742,9 +745,9 @@ async fn run_test<'a, F: 'a + Future<Output = ()>>(
                     // Drop remaining controllers, which is the same as calling kill on
                     // each controller.
                     unstarted_suites = vec![];
-                    args.suite_reporters
-                        .drain()
-                        .try_for_each(|(_id, reporter)| reporter.finished())?;
+                    for (_id, reporter) in args.suite_reporters.drain() {
+                        reporter.finished().await?;
+                    }
                 }
                 let next_args = FoldArgs {
                     suite_start_futs: unstarted_suites,
@@ -831,11 +834,11 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
         println!("One or more test runs failed.");
     }
 
-    let report_result = match run_reporter.stopped(&test_outcome.clone().into(), Timestamp::Unknown)
-    {
-        Ok(()) => run_reporter.finished(),
-        Err(e) => Err(e),
-    };
+    let report_result =
+        match run_reporter.stopped(&test_outcome.clone().into(), Timestamp::Unknown).await {
+            Ok(()) => run_reporter.finished().await,
+            Err(e) => Err(e),
+        };
     if let Err(e) = report_result {
         println!("Failed to record results: {:?}", e);
     }

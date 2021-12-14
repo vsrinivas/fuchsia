@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async_trait::async_trait;
 use std::io::{Error, Write};
 use std::path::Path;
 
@@ -89,34 +90,48 @@ impl RunReporter {
     }
 
     /// Create a new artifact scoped to the test run.
-    pub fn new_artifact(&self, artifact_type: &ArtifactType) -> Result<Box<DynArtifact>, Error> {
+    pub async fn new_artifact(
+        &self,
+        artifact_type: &ArtifactType,
+    ) -> Result<Box<DynArtifact>, Error> {
         self.reporter
             .new_artifact(&EntityId::TestRun, artifact_type)
+            .await
             .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
     }
 
     /// Create a new directory artifact scoped to the test run.
-    pub fn new_directory_artifact(
+    pub async fn new_directory_artifact(
         &self,
         artifact_type: &DirectoryArtifactType,
         component_moniker: Option<String>,
     ) -> Result<Box<DynDirectoryArtifact>, Error> {
-        self.reporter.new_directory_artifact(&EntityId::TestRun, artifact_type, component_moniker)
+        self.reporter
+            .new_directory_artifact(&EntityId::TestRun, artifact_type, component_moniker)
+            .await
     }
 
     /// Record that the test run has started.
-    pub fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
-        self.reporter.entity_started(&EntityId::TestRun, timestamp)
+    pub async fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_started(&EntityId::TestRun, timestamp).await
     }
 
     /// Record the outcome of the test run.
-    pub fn stopped(&self, outcome: &ReportedOutcome, timestamp: Timestamp) -> Result<(), Error> {
-        self.reporter.entity_stopped(&EntityId::TestRun, outcome, timestamp)
+    pub async fn stopped(
+        &self,
+        outcome: &ReportedOutcome,
+        timestamp: Timestamp,
+    ) -> Result<(), Error> {
+        self.reporter.entity_stopped(&EntityId::TestRun, outcome, timestamp).await
     }
 
     /// Record a new suite under the test run.
-    pub fn new_suite(&self, url: &str, suite_id: &SuiteId) -> Result<SuiteReporter<'_>, Error> {
-        self.reporter.new_entity(&EntityId::Suite(*suite_id), url)?;
+    pub async fn new_suite(
+        &self,
+        url: &str,
+        suite_id: &SuiteId,
+    ) -> Result<SuiteReporter<'_>, Error> {
+        self.reporter.new_entity(&EntityId::Suite(*suite_id), url).await?;
         Ok(SuiteReporter {
             reporter: self.reporter.as_ref(),
             artifact_wrapper: self.artifact_wrapper.as_ref(),
@@ -125,46 +140,56 @@ impl RunReporter {
     }
 
     /// Finalize and persist the test run.
-    pub fn finished(self) -> Result<(), Error> {
-        self.reporter.entity_finished(&EntityId::TestRun)
+    pub async fn finished(self) -> Result<(), Error> {
+        self.reporter.entity_finished(&EntityId::TestRun).await
     }
 }
 
 impl<'a> SuiteReporter<'a> {
     /// Create a new artifact scoped to the suite.
-    pub fn new_artifact(&self, artifact_type: &ArtifactType) -> Result<Box<DynArtifact>, Error> {
+    pub async fn new_artifact(
+        &self,
+        artifact_type: &ArtifactType,
+    ) -> Result<Box<DynArtifact>, Error> {
         self.reporter
             .new_artifact(&EntityId::Suite(self.suite_id), artifact_type)
+            .await
             .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
     }
 
     /// Create a new directory artifact scoped to the suite.
-    pub fn new_directory_artifact(
+    pub async fn new_directory_artifact(
         &self,
         artifact_type: &DirectoryArtifactType,
         component_moniker: Option<String>,
     ) -> Result<Box<DynDirectoryArtifact>, Error> {
-        self.reporter.new_directory_artifact(
-            &EntityId::Suite(self.suite_id),
-            artifact_type,
-            component_moniker,
-        )
+        self.reporter
+            .new_directory_artifact(
+                &EntityId::Suite(self.suite_id),
+                artifact_type,
+                component_moniker,
+            )
+            .await
     }
 
     /// Record that the suite has started.
-    pub fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
-        self.reporter.entity_started(&EntityId::Suite(self.suite_id), timestamp)
+    pub async fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_started(&EntityId::Suite(self.suite_id), timestamp).await
     }
 
     /// Record the outcome of the suite.
-    pub fn stopped(&self, outcome: &ReportedOutcome, timestamp: Timestamp) -> Result<(), Error> {
-        self.reporter.entity_stopped(&EntityId::Suite(self.suite_id), outcome, timestamp)
+    pub async fn stopped(
+        &self,
+        outcome: &ReportedOutcome,
+        timestamp: Timestamp,
+    ) -> Result<(), Error> {
+        self.reporter.entity_stopped(&EntityId::Suite(self.suite_id), outcome, timestamp).await
     }
 
     /// Record a new suite under the suite.
-    pub fn new_case(&self, name: &str, case_id: &CaseId) -> Result<CaseReporter<'_>, Error> {
+    pub async fn new_case(&self, name: &str, case_id: &CaseId) -> Result<CaseReporter<'_>, Error> {
         let entity_id = EntityId::Case { suite: self.suite_id, case: *case_id };
-        self.reporter.new_entity(&entity_id, name)?;
+        self.reporter.new_entity(&entity_id, name).await?;
         Ok(CaseReporter {
             reporter: self.reporter,
             artifact_wrapper: self.artifact_wrapper,
@@ -173,41 +198,51 @@ impl<'a> SuiteReporter<'a> {
     }
 
     /// Finalize and persist the test run.
-    pub fn finished(self) -> Result<(), Error> {
-        self.reporter.entity_finished(&EntityId::Suite(self.suite_id))
+    pub async fn finished(self) -> Result<(), Error> {
+        self.reporter.entity_finished(&EntityId::Suite(self.suite_id)).await
     }
 }
 
 impl<'a> CaseReporter<'a> {
     /// Create a new artifact scoped to the test case.
-    pub fn new_artifact(&self, artifact_type: &ArtifactType) -> Result<Box<DynArtifact>, Error> {
+    pub async fn new_artifact(
+        &self,
+        artifact_type: &ArtifactType,
+    ) -> Result<Box<DynArtifact>, Error> {
         self.reporter
             .new_artifact(&self.entity_id, artifact_type)
+            .await
             .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
     }
 
     /// Create a new directory artifact scoped to the test case
-    pub fn new_directory_artifact(
+    pub async fn new_directory_artifact(
         &self,
         artifact_type: &DirectoryArtifactType,
         component_moniker: Option<String>,
     ) -> Result<Box<DynDirectoryArtifact>, Error> {
-        self.reporter.new_directory_artifact(&self.entity_id, artifact_type, component_moniker)
+        self.reporter
+            .new_directory_artifact(&self.entity_id, artifact_type, component_moniker)
+            .await
     }
 
     /// Record that the case has started.
-    pub fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
-        self.reporter.entity_started(&self.entity_id, timestamp)
+    pub async fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
+        self.reporter.entity_started(&self.entity_id, timestamp).await
     }
 
     /// Record the outcome of the test case.
-    pub fn stopped(&self, outcome: &ReportedOutcome, timestamp: Timestamp) -> Result<(), Error> {
-        self.reporter.entity_stopped(&self.entity_id, outcome, timestamp)
+    pub async fn stopped(
+        &self,
+        outcome: &ReportedOutcome,
+        timestamp: Timestamp,
+    ) -> Result<(), Error> {
+        self.reporter.entity_stopped(&self.entity_id, outcome, timestamp).await
     }
 
     /// Record the outcome of the test case.
-    pub fn finished(self) -> Result<(), Error> {
-        self.reporter.entity_finished(&self.entity_id)
+    pub async fn finished(self) -> Result<(), Error> {
+        self.reporter.entity_finished(&self.entity_id).await
     }
 }
 
@@ -317,15 +352,16 @@ pub enum EntityId {
 
 /// A trait for structs that report test results.
 /// Implementations of `Reporter` serve as the backend powering `RunReporter`.
-pub trait Reporter {
+#[async_trait]
+pub trait Reporter: Send + Sync {
     /// Record a new test suite or test case. This should be called once per entity.
-    fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error>;
+    async fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error>;
 
     /// Record that a test run, suite or case has started.
-    fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error>;
+    async fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error>;
 
     /// Record that a test run, suite, or case has stopped.
-    fn entity_stopped(
+    async fn entity_stopped(
         &self,
         entity: &EntityId,
         outcome: &ReportedOutcome,
@@ -334,17 +370,17 @@ pub trait Reporter {
 
     /// Record that a test run, suite, or case has stopped. After this method is called for
     /// an entity, no additional events or artifacts may be added to the entity.
-    fn entity_finished(&self, entity: &EntityId) -> Result<(), Error>;
+    async fn entity_finished(&self, entity: &EntityId) -> Result<(), Error>;
 
     /// Create a new artifact scoped to the referenced entity.
-    fn new_artifact(
+    async fn new_artifact(
         &self,
         entity: &EntityId,
         artifact_type: &ArtifactType,
     ) -> Result<Box<DynArtifact>, Error>;
 
     /// Create a new artifact consisting of multiple files.
-    fn new_directory_artifact(
+    async fn new_directory_artifact(
         &self,
         entity: &EntityId,
         artifact_type: &DirectoryArtifactType,

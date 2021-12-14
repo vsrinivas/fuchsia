@@ -6,6 +6,8 @@ use crate::output::{
     ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
     EntityId, ReportedOutcome, Reporter, Timestamp,
 };
+use async_trait::async_trait;
+use futures::future::try_join;
 use std::{
     io::{Error, Write},
     path::Path,
@@ -50,53 +52,69 @@ impl<A: Reporter, B: Reporter> MultiplexedReporter<A, B> {
     }
 }
 
+/// A stub that maps ((), ()) to ().
+fn map_void(_: ((), ())) {
+    ()
+}
+
+#[async_trait]
 impl<A: Reporter, B: Reporter> Reporter for MultiplexedReporter<A, B> {
-    fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error> {
-        self.a.new_entity(entity, name)?;
-        self.b.new_entity(entity, name)
+    async fn new_entity(&self, entity: &EntityId, name: &str) -> Result<(), Error> {
+        try_join(self.a.new_entity(entity, name), self.b.new_entity(entity, name))
+            .await
+            .map(map_void)
     }
 
-    fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {
-        self.a.entity_started(entity, timestamp)?;
-        self.b.entity_started(entity, timestamp)
+    async fn entity_started(&self, entity: &EntityId, timestamp: Timestamp) -> Result<(), Error> {
+        try_join(self.a.entity_started(entity, timestamp), self.b.entity_started(entity, timestamp))
+            .await
+            .map(map_void)
     }
 
-    fn entity_stopped(
+    async fn entity_stopped(
         &self,
         entity: &EntityId,
         outcome: &ReportedOutcome,
         timestamp: Timestamp,
     ) -> Result<(), Error> {
-        self.a.entity_stopped(entity, outcome, timestamp)?;
-        self.b.entity_stopped(entity, outcome, timestamp)
+        try_join(
+            self.a.entity_stopped(entity, outcome, timestamp),
+            self.b.entity_stopped(entity, outcome, timestamp),
+        )
+        .await
+        .map(map_void)
     }
 
-    fn entity_finished(&self, entity: &EntityId) -> Result<(), Error> {
-        self.a.entity_finished(entity)?;
-        self.b.entity_finished(entity)
+    async fn entity_finished(&self, entity: &EntityId) -> Result<(), Error> {
+        try_join(self.a.entity_finished(entity), self.b.entity_finished(entity)).await.map(map_void)
     }
 
-    fn new_artifact(
+    async fn new_artifact(
         &self,
         entity: &EntityId,
         artifact_type: &ArtifactType,
     ) -> Result<Box<DynArtifact>, Error> {
-        Ok(Box::new(MultiplexedWriter::new(
-            self.a.new_artifact(entity, artifact_type)?,
-            self.b.new_artifact(entity, artifact_type)?,
-        )))
+        let (a, b) = try_join(
+            self.a.new_artifact(entity, artifact_type),
+            self.b.new_artifact(entity, artifact_type),
+        )
+        .await?;
+        Ok(Box::new(MultiplexedWriter::new(a, b)))
     }
 
-    fn new_directory_artifact(
+    async fn new_directory_artifact(
         &self,
         entity: &EntityId,
         artifact_type: &DirectoryArtifactType,
         component_moniker: Option<String>,
     ) -> Result<Box<DynDirectoryArtifact>, Error> {
-        Ok(Box::new(MultiplexedDirectoryWriter {
-            a: self.a.new_directory_artifact(entity, artifact_type, component_moniker.clone())?,
-            b: self.b.new_directory_artifact(entity, artifact_type, component_moniker)?,
-        }))
+        let (a, b) = try_join(
+            self.a.new_directory_artifact(entity, artifact_type, component_moniker.clone()),
+            self.b.new_directory_artifact(entity, artifact_type, component_moniker),
+        )
+        .await?;
+
+        Ok(Box::new(MultiplexedDirectoryWriter { a, b }))
     }
 }
 
@@ -123,7 +141,7 @@ mod test {
         ExpectedSuite, ExpectedTestRun,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn multiplexed_writer() {
         const WRITTEN: &str = "test output";
 
@@ -136,8 +154,8 @@ mod test {
         assert_eq!(std::str::from_utf8(&buf_2).unwrap(), WRITTEN);
     }
 
-    #[test]
-    fn multiplexed_reporter() {
+    #[fuchsia::test]
+    async fn multiplexed_reporter() {
         let tempdir_1 = tempdir().expect("create temp directory");
         let reporter_1 =
             DirectoryReporter::new(tempdir_1.path().to_path_buf()).expect("Create reporter");
@@ -147,26 +165,31 @@ mod test {
         let multiplexed_reporter = MultiplexedReporter::new(reporter_1, reporter_2);
 
         let run_reporter = RunReporter::new_for_test(multiplexed_reporter);
-        run_reporter.started(Timestamp::Unknown).expect("start run");
+        run_reporter.started(Timestamp::Unknown).await.expect("start run");
         let mut run_artifact =
-            run_reporter.new_artifact(&ArtifactType::Stdout).expect("create artifact");
+            run_reporter.new_artifact(&ArtifactType::Stdout).await.expect("create artifact");
         writeln!(run_artifact, "run artifact contents").expect("write to run artifact");
         run_artifact.flush().expect("flush run artifact");
 
-        let suite_reporter = run_reporter.new_suite("suite", &SuiteId(0)).expect("create suite");
-        suite_reporter.started(Timestamp::Unknown).expect("start suite");
-        suite_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("start suite");
+        let suite_reporter =
+            run_reporter.new_suite("suite", &SuiteId(0)).await.expect("create suite");
+        suite_reporter.started(Timestamp::Unknown).await.expect("start suite");
+        suite_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .await
+            .expect("start suite");
         let suite_dir_artifact = suite_reporter
             .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .await
             .expect("new artifact");
         let mut suite_artifact =
             suite_dir_artifact.new_file("test.txt".as_ref()).expect("create suite artifact file");
         writeln!(suite_artifact, "suite artifact contents").expect("write to suite artifact");
         suite_artifact.flush().expect("flush suite artifact");
-        suite_reporter.finished().expect("finish suite");
+        suite_reporter.finished().await.expect("finish suite");
 
-        run_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).expect("stop run");
-        run_reporter.finished().expect("finish run");
+        run_reporter.stopped(&ReportedOutcome::Passed, Timestamp::Unknown).await.expect("stop run");
+        run_reporter.finished().await.expect("finish run");
 
         let expected_run = ExpectedTestRun::new(directory::Outcome::Passed).with_artifact(
             directory::ArtifactType::Stdout,
