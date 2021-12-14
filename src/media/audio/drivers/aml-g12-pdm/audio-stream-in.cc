@@ -18,6 +18,7 @@
 #include <utility>
 
 #include "src/media/audio/drivers/aml-g12-pdm/aml_g12_pdm_bind.h"
+#include "src/media/lib/memory_barriers/memory_barriers.h"
 
 namespace audio::aml_g12 {
 
@@ -314,9 +315,16 @@ zx_status_t AudioStreamIn::AddFormats() {
 }
 
 zx_status_t AudioStreamIn::InitBuffer(size_t size) {
+  lib_->Stop();
+  // Make sure that all reads/writes have gone through.
+  BarrierBeforeRelease();
+  zx_status_t status = bti_.release_quarantine();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "could not release quarantine bti - %d", status);
+    return status;
+  }
   pinned_ring_buffer_.Unpin();
-  auto status =
-      zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
+  status = zx_vmo_create_contiguous(bti_.get(), size, 0, ring_buffer_vmo_.reset_and_get_address());
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to allocate ring buffer vmo - %d", status);
     return status;

@@ -92,7 +92,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     int step = 0;  // Track of the expected sequence of reads and writes.
     mmio_.reg(0x000).SetReadCallback([]() -> uint32_t { return 0; });
     mmio_.reg(0x000).SetWriteCallback([&step, &mute_mask](size_t value) {
-      if (step == 8) {
+      if (step == 9) {
         EXPECT_EQ(mute_mask << 20, value);
       }
       step++;
@@ -129,7 +129,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
     server->DdkAsyncRemove();
     EXPECT_TRUE(tester_.Ok());
     server->DdkRelease();
-    EXPECT_EQ(step, 12);
+    EXPECT_EQ(step, 13);
   }
 
   void TestRingBufferSize(uint8_t number_of_channels, uint32_t frames_req,

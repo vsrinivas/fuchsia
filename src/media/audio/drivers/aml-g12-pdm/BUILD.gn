@@ -36,6 +36,7 @@ fuchsia_driver("aml-g12-pdm-driver") {
     "//src/media/audio/drivers/lib/audio-driver-proto",
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/lib/simple-audio-stream",
+    "//src/media/lib/memory_barriers:memory_barriers",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
