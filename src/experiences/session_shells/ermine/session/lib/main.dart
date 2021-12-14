@@ -2,10 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_component/fidl_async.dart';
 import 'package:fidl_fuchsia_component_decl/fidl_async.dart';
-import 'package:fidl_fuchsia_identity_account/fidl_async.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_session_scene/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
@@ -15,7 +13,6 @@ import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as shortcut;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:fuchsia_vfs/vfs.dart';
 import 'package:zircon/zircon.dart';
 
 const kLoginShellName = 'login_shell';
@@ -59,52 +56,6 @@ void main(List args) async {
     Incoming.fromSvcPath().connectToService(focusChainRegistry);
     await focusChainRegistry
         .register(FocusChainListenerBinding().wrap(_FocusChainListener()));
-
-    // Connect to AccountManager.
-    final accountManager = AccountManagerProxy();
-    Incoming.fromSvcPath().connectToService(accountManager);
-
-    // Get all account ids.
-    final accountIds = await accountManager.getAccountIds();
-    if (accountIds.length > 1) {
-      log.shout(
-          'Multiple (${accountIds.length}) accounts found, cannot get data directory');
-      return;
-    } else {
-      final metadata = AccountMetadata(name: kAccountName);
-      final account = AccountProxy();
-
-      // If no accounts exist, create a new one.
-      if (accountIds.isEmpty) {
-        log.info('Creating a new account through AccountManager');
-
-        await accountManager.deprecatedProvisionNewAccount(
-          kAccountPassword,
-          metadata,
-          account.ctrl.request(),
-        );
-      } else {
-        log.info('Getting existing account with ID ${accountIds.first}');
-
-        // Get the account for the first id.
-        await accountManager.deprecatedGetAccount(
-          accountIds.first,
-          kAccountPassword,
-          account.ctrl.request(),
-        );
-      }
-
-      // Get the data directory for the account.
-      log.info('Getting data directory for account');
-      final directory = ChannelPair();
-      await account.getDataDirectory(InterfaceRequest(directory.second));
-
-      // Add account directory to outgoing /out and serve it.
-      ComponentContext.create().outgoing
-        ..addRemoteDirectory(
-            kAccountDirectory, directory.first)
-        ..serveFromStartupInfo();
-    }
     // ignore: avoid_catches_without_on_clauses
   } catch (e) {
     log.severe('Caught exception during workstation session setup: $e');
@@ -143,14 +94,4 @@ class _FocusChainListener extends FocusChainListener {
 extension _ViewRefDuplicator on ViewRef {
   ViewRef duplicate() =>
       ViewRef(reference: reference.duplicate(ZX.RIGHT_SAME_RIGHTS));
-}
-
-extension _ServeDirectory on Outgoing {
-  int addRemoteDirectory(String name, Channel? channel) {
-    if (channel == null) {
-      log.severe('Attempting to serve remote directory but got invalid channel');
-      return ZX.ERR_INVALID_ARGS;
-    }
-    return rootDir().addNode(name, RemoteDir(channel));
-  }
 }

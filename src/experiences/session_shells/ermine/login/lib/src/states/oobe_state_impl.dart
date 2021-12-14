@@ -13,6 +13,7 @@ import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:internationalization/strings.dart';
 import 'package:mobx/mobx.dart';
+import 'package:login/src/services/auth_service.dart';
 import 'package:login/src/services/channel_service.dart';
 import 'package:login/src/services/device_service.dart';
 import 'package:login/src/services/privacy_consent_service.dart';
@@ -26,6 +27,7 @@ class OobeStateImpl with Disposable implements OobeState {
   static const kStartupConfigJson = '/data/startup_config.json';
 
   final ComponentContext componentContext;
+  final AuthService authService;
   final ChannelService channelService;
   final DeviceService deviceService;
   final SshKeysService sshKeysService;
@@ -33,6 +35,7 @@ class OobeStateImpl with Disposable implements OobeState {
   final PrivacyConsentService privacyConsentService;
 
   OobeStateImpl({
+    required this.authService,
     required this.deviceService,
     required this.shellService,
     required this.channelService,
@@ -40,7 +43,11 @@ class OobeStateImpl with Disposable implements OobeState {
     required this.privacyConsentService,
   })  : componentContext = ComponentContext.create(),
         _localeStream = channelService.stream.asObservable() {
+    authService.outgoing = componentContext.outgoing;
     privacyPolicy = privacyConsentService.privacyPolicy;
+    shellService.onShellExit = _onErmineShellExit;
+
+    componentContext.outgoing.serveFromStartupInfo();
 
     channelService.onConnected = (connected) => runInAction(() async {
           if (connected) {
@@ -51,7 +58,6 @@ class OobeStateImpl with Disposable implements OobeState {
           }
           _updateChannelsAvailable.value = connected;
         });
-    componentContext.outgoing.serveFromStartupInfo();
 
     // We cannot load MaterialIcons font file from pubspec.yaml. So load it
     // explicitly.
@@ -69,6 +75,7 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   void dispose() {
     super.dispose();
+    authService.dispose();
     channelService.dispose();
     privacyConsentService.dispose();
     sshKeysService.dispose();
@@ -78,7 +85,15 @@ class OobeStateImpl with Disposable implements OobeState {
   @override
   bool get launchOobe => _launchOobe.value;
   set launchOobe(bool value) => runInAction(() => _launchOobe.value = value);
-  final Observable<bool> _launchOobe = Observable<bool>(() {
+  late final Observable<bool> _launchOobe = Observable<bool>(() {
+    // This should be called only after startup services are ready.
+    assert(ready, 'Startup services are not initialized.');
+
+    // Skip OOBE if an account already exists on the device.
+    if (authService.hasAccount) {
+      return false;
+    }
+
     File config = File(kStartupConfigJson);
     // If startup config does not exist, open the default config.
     if (!config.existsSync()) {
@@ -94,10 +109,14 @@ class OobeStateImpl with Disposable implements OobeState {
   }());
 
   @override
-  bool get ready => shellService.ready;
+  bool get ready => _ready.value;
+  late final _ready = (() {
+    return shellService.ready && authService.ready;
+  }).asComputed();
 
   @override
   bool get loginDone => _loginDone.value;
+  // TODO(http://fxb/85576): Initialize to false when password authentication is enabled.
   final _loginDone = true.asObservable();
 
   @override
@@ -111,7 +130,7 @@ class OobeStateImpl with Disposable implements OobeState {
 
   @override
   OobeScreen get screen => _screen.value;
-  final Observable<OobeScreen> _screen = OobeScreen.channel.asObservable();
+  final Observable<OobeScreen> _screen = OobeScreen.password.asObservable();
 
   @override
   bool get updateChannelsAvailable => _updateChannelsAvailable.value;
@@ -180,6 +199,14 @@ class OobeStateImpl with Disposable implements OobeState {
 
   @override
   late final String privacyPolicy;
+
+  @override
+  String get authError => _authError.value;
+  final _authError = ''.asObservable();
+
+  @override
+  bool get wait => _wait.value;
+  final _wait = false.asObservable();
 
   @override
   void setCurrentChannel(String channel) => runInAction(() async {
@@ -289,19 +316,50 @@ class OobeStateImpl with Disposable implements OobeState {
 
         // Persistently record OOBE done.
         File(kStartupConfigJson).writeAsStringSync('{"launch_oobe":false}');
-
-        // Clean up.
-        dispose();
       });
 
   @override
-  // TODO(http://fxb/81598): Implement create password functionality.
-  void setPassword(String password) => nextScreen();
+  void setPassword(String password) async {
+    try {
+      _authError.value = '';
+      _wait.value = true;
+      await authService.createAccountWithPassword(password);
+      _wait.value = false;
+      nextScreen();
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      log.shout('Caught exception during account creation: $e');
+      _authError.value = e.toString();
+    }
+  }
 
   @override
-  // TODO(http://fxb/81598): Implement login functionality.
-  void login(String password) => finish();
+  void login(String password) async {
+    try {
+      _authError.value = '';
+      _wait.value = true;
+      await authService.loginWithPassword(password);
+      _wait.value = false;
+      finish();
+      // ignore: avoid_catches_without_on_clauses
+    } catch (e) {
+      log.shout('Caught exception during login: $e');
+      _authError.value = e.toString();
+    }
+  }
 
   @override
   void shutdown() => deviceService.shutdown();
+
+  void _onErmineShellExit() {
+    runInAction(() {
+      authService.logout().catchError((e) {
+        log.shout('Caught exception during logout: $e');
+      });
+      shellService.disposeErmineShell();
+
+      _ermineViewConnection = null;
+      _loginDone.value = false;
+    });
+  }
 }

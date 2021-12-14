@@ -967,6 +967,11 @@ class Strings {
         name: 'increase volume',
         desc: 'Keyboard shortcut description to increase sound volume.',
       );
+  static String get logoutKeyboardShortcut => Intl.message(
+        'Logout',
+        name: 'logout',
+        desc: 'Keyboard shortcut description to logout.',
+      );
   static String get update => Intl.message(
         'Update',
         name: 'update',

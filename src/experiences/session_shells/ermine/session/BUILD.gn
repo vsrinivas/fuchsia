@@ -21,7 +21,6 @@ dart_library("lib") {
     "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.component.decl",
-    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.session.scene",
     "//sdk/fidl/fuchsia.ui.app",

@@ -11,16 +11,18 @@ import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_app/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_scenic/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' hide FocusState;
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
+import 'package:flutter/material.dart';
 import 'package:zircon/zircon.dart';
 
 /// Defines a service to launch and support Ermine user shell.
 class ShellService {
-  late final FuchsiaViewConnection _fuchsiaViewConnection;
-  bool _focusRequested = false;
   late final StreamSubscription<bool> _focusSubscription;
-  bool _useFlatland = false;
+  late final VoidCallback onShellExit;
+  late final bool _useFlatland;
+  _ErmineViewConnection? _ermine;
 
   ShellService() {
     ScenicProxy scenic = ScenicProxy();
@@ -29,8 +31,11 @@ class ShellService {
       _useFlatland = scenicUsesFlatland;
       _ready.value = true;
     });
+    WidgetsFlutterBinding.ensureInitialized();
+    _focusSubscription = FocusState.instance.stream().listen(_onFocusChanged);
   }
 
+  /// Returns [true] after call to [Scenic.usesFlatland] completes.
   bool get ready => _ready.value;
   final _ready = false.asObservable();
 
@@ -40,8 +45,33 @@ class ShellService {
 
   /// Launch Ermine shell and return [FuchsiaViewConnection].
   FuchsiaViewConnection launchErmineShell() {
-    _focusSubscription = FocusState.instance.stream().listen(_onFocusChanged);
+    assert(_ermine == null, 'Instance of ermine shell already exists.');
+    _ermine = _ErmineViewConnection(
+      useFlatland: _useFlatland,
+      onExit: onShellExit,
+    );
+    return _ermine!.fuchsiaViewConnection;
+  }
 
+  void disposeErmineShell() {
+    _ermine = null;
+  }
+
+  // Transfer focus to Ermine shell whenever login shell receives focus.
+  void _onFocusChanged(bool focused) {
+    if (focused) {
+      _ermine?.setFocus();
+    }
+  }
+}
+
+class _ErmineViewConnection {
+  final bool useFlatland;
+  final VoidCallback onExit;
+  late final FuchsiaViewConnection fuchsiaViewConnection;
+  bool _focusRequested = false;
+
+  _ErmineViewConnection({required this.useFlatland, required this.onExit}) {
     // Connect to the Realm.
     final realm = RealmProxy();
     Incoming.fromSvcPath().connectToService(realm);
@@ -54,8 +84,21 @@ class ShellService {
     // Get the ermine shell's view provider.
     final viewProvider = ViewProviderProxy();
     Incoming.withDirectory(exposedDir).connectToService(viewProvider);
+    viewProvider.ctrl.whenClosed.then((_) => onExit());
 
-    if (_useFlatland) {
+    fuchsiaViewConnection = _launch(viewProvider);
+  }
+
+  void setFocus() {
+    if (_focusRequested) {
+      fuchsiaViewConnection.requestFocus().catchError((e) {
+        log.shout(e);
+      });
+    }
+  }
+
+  FuchsiaViewConnection _launch(ViewProvider viewProvider) {
+    if (useFlatland) {
       final viewTokens = ChannelPair();
       assert(viewTokens.status == ZX.OK);
       final viewportCreationToken =
@@ -65,54 +108,41 @@ class ShellService {
       final createViewArgs =
           CreateView2Args(viewCreationToken: viewCreationToken);
       viewProvider.createView2(createViewArgs);
-      viewProvider.ctrl.close();
 
-      return _fuchsiaViewConnection = FuchsiaViewConnection.flatland(
+      return FuchsiaViewConnection.flatland(
         viewportCreationToken,
-        onViewStateChanged: (_, state) {
-          if (state == true && !_focusRequested) {
-            _focusRequested = true;
-            _fuchsiaViewConnection.requestFocus();
-          }
-        },
+        onViewStateChanged: _onViewStateChanged,
+      );
+    } else {
+      final viewTokens = EventPairPair();
+      assert(viewTokens.status == ZX.OK);
+      final viewHolderToken = ViewHolderToken(value: viewTokens.first!);
+      final viewToken = ViewToken(value: viewTokens.second!);
+
+      final viewRefPair = EventPairPair();
+      final viewRef =
+          ViewRef(reference: viewRefPair.first!.duplicate(ZX.RIGHTS_BASIC));
+      final viewRefControl = ViewRefControl(
+          reference: viewRefPair.second!
+              .duplicate(ZX.DEFAULT_EVENTPAIR_RIGHTS & (~ZX.RIGHT_DUPLICATE)));
+      final viewRefInject =
+          ViewRef(reference: viewRefPair.first!.duplicate(ZX.RIGHTS_BASIC));
+
+      viewProvider.createViewWithViewRef(
+          viewToken.value, viewRefControl, viewRef);
+
+      return FuchsiaViewConnection(
+        viewHolderToken,
+        viewRef: viewRefInject,
+        onViewStateChanged: _onViewStateChanged,
       );
     }
-
-    final viewTokens = EventPairPair();
-    assert(viewTokens.status == ZX.OK);
-    final viewHolderToken = ViewHolderToken(value: viewTokens.first!);
-    final viewToken = ViewToken(value: viewTokens.second!);
-
-    final viewRefPair = EventPairPair();
-    final viewRef =
-        ViewRef(reference: viewRefPair.first!.duplicate(ZX.RIGHTS_BASIC));
-    final viewRefControl = ViewRefControl(
-        reference: viewRefPair.second!
-            .duplicate(ZX.DEFAULT_EVENTPAIR_RIGHTS & (~ZX.RIGHT_DUPLICATE)));
-    final viewRefInject =
-        ViewRef(reference: viewRefPair.first!.duplicate(ZX.RIGHTS_BASIC));
-
-    viewProvider.createViewWithViewRef(
-        viewToken.value, viewRefControl, viewRef);
-    viewProvider.ctrl.close();
-
-    return _fuchsiaViewConnection = FuchsiaViewConnection(
-      viewHolderToken,
-      viewRef: viewRefInject,
-      onViewStateChanged: (_, state) {
-        // Wait until ermine shell has rendered before focusing it.
-        if (state == true && !_focusRequested) {
-          _focusRequested = true;
-          _fuchsiaViewConnection.requestFocus();
-        }
-      },
-    );
   }
 
-  void _onFocusChanged(bool focused) {
-    if (_focusRequested && focused) {
-      // ignore: unawaited_futures
-      _fuchsiaViewConnection.requestFocus();
+  void _onViewStateChanged(FuchsiaViewController _, bool? state) {
+    if (state == true && !_focusRequested) {
+      _focusRequested = true;
+      setFocus();
     }
   }
 }

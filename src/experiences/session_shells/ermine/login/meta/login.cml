@@ -17,6 +17,17 @@
         {
             protocol: [ "fuchsia.ui.app.ViewProvider" ],
         },
+        {
+            directory: "account_dir",
+            rights: [ "rw*" ],
+            path: "/account_data",
+        },
+        {
+            storage: "account",
+            from: "self",
+            backing_dir: "account_dir",
+            storage_id: "static_instance_id_or_moniker",
+        },
     ],
     use: [
         {
@@ -29,6 +40,7 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Privacy",

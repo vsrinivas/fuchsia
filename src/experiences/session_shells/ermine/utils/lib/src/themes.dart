@@ -48,6 +48,7 @@ class AppTheme {
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             primary: Colors.black,
+            onSurface: Colors.grey,
             side: BorderSide(color: Colors.black),
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape:
@@ -133,6 +134,7 @@ class AppTheme {
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
             primary: Colors.white,
+            onSurface: Colors.grey,
             side: BorderSide(color: Colors.white),
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape:

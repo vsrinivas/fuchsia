@@ -57,6 +57,7 @@ abstract class AppState {
   void setTheme({bool darkTheme});
   void restart();
   void shutdown();
+  void logout();
   void launchFeedback();
   void launchLicense();
   void checkingForUpdatesAlert();

@@ -5,6 +5,7 @@
 import 'dart:ui';
 
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
+import 'package:login/src/services/auth_service.dart';
 import 'package:login/src/services/channel_service.dart';
 import 'package:login/src/services/device_service.dart';
 import 'package:login/src/services/privacy_consent_service.dart';
@@ -41,6 +42,8 @@ abstract class OobeState {
   bool get launchOobe;
   bool get ready;
   bool get loginDone;
+  bool get wait;
+  String get authError;
 
   FuchsiaViewConnection get ermineViewConnection;
   String get privacyPolicy;
@@ -63,6 +66,7 @@ abstract class OobeState {
 
   factory OobeState.fromEnv() {
     return OobeStateImpl(
+      authService: AuthService(),
       deviceService: DeviceService(),
       shellService: ShellService(),
       channelService: ChannelService(),

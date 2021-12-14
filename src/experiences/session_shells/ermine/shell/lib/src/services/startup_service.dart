@@ -13,6 +13,7 @@ import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_activity/fidl_async.dart' as activity;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:fuchsia/fuchsia.dart' as fuchsia;
 import 'package:fuchsia_inspect/inspect.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -201,6 +202,13 @@ class StartupService extends activity.Listener {
 
   /// Shutdown the device.
   void shutdownDevice() => _hardwareAdmin.poweroff();
+
+  /// Logout of the user shell.
+  void logout() {
+    // Exit the current isolate, which allows the parent to treat it as a logout
+    // action.
+    fuchsia.exit(0);
+  }
 
   Stream<Locale> get stream => LocaleSource(_intl).stream();
 

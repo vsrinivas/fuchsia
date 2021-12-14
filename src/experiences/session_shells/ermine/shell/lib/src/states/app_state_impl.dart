@@ -364,6 +364,13 @@ class AppStateImpl with Disposable implements AppState {
   void shutdown() => runInAction(startupService.shutdownDevice);
 
   @override
+  void logout() {
+    startupService.logout();
+    // Clean up.
+    dispose();
+  }
+
+  @override
   void checkingForUpdatesAlert() {
     runInAction(() {
       final key = Key(
@@ -414,6 +421,7 @@ class AppStateImpl with Disposable implements AppState {
         'increaseVolume': () => settingsState.increaseVolume(),
         'decreaseVolume': () => settingsState.decreaseVolume(),
         'muteVolume': () => settingsState.toggleMute(),
+        'logout': logout,
       };
 
   final _focusedView = Observable<ViewHandle?>(null);

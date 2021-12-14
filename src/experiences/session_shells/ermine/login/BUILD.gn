@@ -8,7 +8,7 @@ import("//build/fidl/fidl.gni")
 import("//build/flutter/flutter_component.gni")
 
 declare_args() {
-  # Whether or not to launch OOBE workflow on startup.
+  # TODO(http://fxb/85576): Whether or not to launch OOBE workflow on startup.
   start_oobe = false
 }
 
@@ -19,6 +19,7 @@ dart_library("lib") {
   entrypoints = [ "main.dart" ]
 
   services = [
+    "src/services/auth_service.dart",
     "src/services/channel_service.dart",
     "src/services/device_service.dart",
     "src/services/privacy_consent_service.dart",
@@ -52,12 +53,14 @@ dart_library("lib") {
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_scenic_flutter",
     "//sdk/dart/fuchsia_services",
+    "//sdk/dart/fuchsia_vfs",
     "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
+    "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.mem",

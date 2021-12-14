@@ -13,19 +13,6 @@
             startup: "eager",
         },
     ],
-    capabilities: [
-        {
-            directory: "account_dir",
-            rights: [ "rw*" ],
-            path: "/account_data",
-        },
-        {
-            storage: "account",
-            from: "self",
-            backing_dir: "account_dir",
-            storage_id: "static_instance_id_or_moniker",
-        },
-    ],
     use: [
         {
             protocol: "fuchsia.component.Realm",
@@ -33,7 +20,6 @@
         },
         {
             protocol: [
-                "fuchsia.identity.account.AccountManager",
                 "fuchsia.session.scene.Manager",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.keyboard.focus.Controller",

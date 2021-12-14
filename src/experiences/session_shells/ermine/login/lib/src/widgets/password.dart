@@ -57,7 +57,7 @@ class Password extends StatelessWidget {
                             labelText: Strings.passwordHint,
                           ),
                           validator: (value) {
-                            // TODO(http://fxb/81598): Uncomment once
+                            // TODO(http://fxb/85576): Uncomment once
                             // login functionality is ready.
                             // if (value == null ||
                             //     value.isEmpty ||
@@ -80,7 +80,7 @@ class Password extends StatelessWidget {
                             labelText: Strings.confirmPasswordHint,
                           ),
                           validator: (value) {
-                            // TODO(http://fxb/81598): Uncomment once
+                            // TODO(http://fxb/85576): Uncomment once
                             // login functionality is ready.
                             // if (value == null ||
                             //     value.isEmpty ||
@@ -112,7 +112,22 @@ class Password extends StatelessWidget {
                             Text(Strings.showPassword)
                           ],
                         ),
-                      )
+                      ),
+                      SizedBox(height: 40),
+                      // Show spinning indicator if waiting or api errors,
+                      // if any.
+                      SizedBox(
+                        height: 40,
+                        width: kOobeBodyFieldWidth,
+                        child: oobe.wait
+                            ? Center(child: CircularProgressIndicator())
+                            : oobe.authError.isNotEmpty
+                                ? Text(
+                                    oobe.authError,
+                                    style: TextStyle(color: Colors.red),
+                                  )
+                                : Offstage(),
+                      ),
                     ],
                   ),
                 ),
@@ -127,13 +142,13 @@ class Password extends StatelessWidget {
                   children: [
                     // Back button.
                     OutlinedButton(
-                      onPressed: oobe.prevScreen,
+                      onPressed: oobe.wait ? null : oobe.prevScreen,
                       child: Text(Strings.back.toUpperCase()),
                     ),
                     SizedBox(width: 24),
                     // Set password button.
                     ElevatedButton(
-                      onPressed: () => _validate()
+                      onPressed: () => _validate() && !oobe.wait
                           ? oobe.setPassword(_confirmPasswordController.text)
                           : null,
                       child: Text(Strings.setPassword.toUpperCase()),

@@ -147,7 +147,22 @@ class Login extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                              )
+                              ),
+                              SizedBox(height: 40),
+                              // Show spinning indicator if waiting or api
+                              // errors, if any.
+                              SizedBox(
+                                height: 40,
+                                width: kOobeBodyFieldWidth,
+                                child: oobe.wait
+                                    ? Center(child: CircularProgressIndicator())
+                                    : oobe.authError.isNotEmpty
+                                        ? Text(
+                                            oobe.authError,
+                                            style: TextStyle(color: Colors.red),
+                                          )
+                                        : Offstage(),
+                              ),
                             ],
                           ),
                         ),
@@ -162,13 +177,13 @@ class Login extends StatelessWidget {
                           children: [
                             // Shutdown button.
                             OutlinedButton(
-                              onPressed: oobe.shutdown,
+                              onPressed: oobe.wait ? null : oobe.shutdown,
                               child: Text(Strings.shutdown.toUpperCase()),
                             ),
                             SizedBox(width: 24),
                             // Login button.
                             ElevatedButton(
-                              onPressed: () => _validate()
+                              onPressed: () => _validate() && !oobe.wait
                                   ? oobe.login(_passwordController.text)
                                   : null,
                               child: Text(Strings.login.toUpperCase()),

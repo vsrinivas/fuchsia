@@ -17,9 +17,8 @@ import 'package:login/src/widgets/ssh_keys.dart';
 /// Defines a widget that handles the OOBE flow.
 class Oobe extends StatelessWidget {
   final OobeState oobe;
-  final VoidCallback onFinish;
 
-  const Oobe(this.oobe, {required this.onFinish});
+  const Oobe(this.oobe);
 
   @override
   Widget build(BuildContext context) {
