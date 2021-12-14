@@ -856,17 +856,6 @@ Whether to compress the blobfs image.
 
 From //build/images/args.gni:119
 
-### concurrent_dart_jobs
-Maximum number of Dart processes to run in parallel.
-
-Dart analyzer uses a lot of memory which may cause issues when building
-with many parallel jobs e.g. when using goma. To avoid out-of-memory
-errors we explicitly reduce the number of jobs.
-
-**Current value (from the default):** `32`
-
-From //build/dart/BUILD.gn:17
-
 ### config_have_heap
 Tells openweave to include files that require heap access.
 
@@ -3212,7 +3201,7 @@ also set, both lists are used.  Use that option with a file constructed
 separately instead to use more complex selection features such as
 per-function selection, file name patterns, or exclusion.
 
-**Current value (from the default):** `[]`
+**Current value (from the default):** `["//*"]`
 
 From //build/config/profile/config.gni:11
 
@@ -3223,7 +3212,7 @@ and functions to be instrumented by `profile` variants.  Note that if
 
 **Current value (from the default):** `[]`
 
-From //build/config/profile/config.gni:16
+From //build/config/profile/config.gni:20
 
 ### rbe_exec_strategy
 One of {local,remote}:
