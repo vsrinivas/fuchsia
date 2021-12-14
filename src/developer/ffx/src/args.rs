@@ -15,11 +15,11 @@ use {
 /// Fuchsia's developer tool
 pub struct Ffx {
     #[argh(option, short = 'c')]
-    /// override default configuration
+    /// override configuration values (key=value or json)
     pub config: Vec<String>,
 
     #[argh(option, short = 'e')]
-    /// override default environment settings
+    /// override the path to the environment configuration file (file path)
     pub env: Option<String>,
 
     #[argh(option)]
