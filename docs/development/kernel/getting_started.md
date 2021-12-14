@@ -20,9 +20,9 @@ fx set bringup.arm64
 ```
 
 Fuchsia uses the concept of
-[products](/docs/concepts/build_system/boards_and_products.md#products) to
+[products](/docs/development/build/concepts/build_system/boards_and_products.md#products) to
 create a collection of build targets. The
-[bringup product](/docs/concepts/build_system/boards_and_products.md#bringup-product)
+[bringup product](/docs/development/build/concepts/build_system/boards_and_products.md#bringup-product)
 is the smallest product with a minimal feature set.
 
 The following command prints a list of other product configurations:

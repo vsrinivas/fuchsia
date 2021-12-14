@@ -371,7 +371,7 @@ the [component instance tree][glossary.component-instance-tree]
 [concepts]: /docs/concepts/fidl/overview.md
 [fidl-crates]: /docs/development/languages/fidl/tutorials/rust/basics/using-fidl.md
 [building-components]: /docs/development/components/build.md
-[products]: /docs/concepts/build_system/boards_and_products.md
+[products]: /docs/development/build/concepts/build_system/boards_and_products.md
 [control-handle]: /docs/reference/fidl/bindings/rust-bindings.md#protocol-control-handle
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [component-manager]: /docs/concepts/components/v2/component_manager.md

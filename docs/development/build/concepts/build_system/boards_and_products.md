@@ -80,7 +80,7 @@ cannot use the `fx` commands, such as
 <code>[fx shell](/docs/development/build/fx.md#connect-to-a-target-shell)</code>,
 that require network connectivity.
 
-For more see [Bringup Product Definition](/docs/concepts/build_system/bringup.md)
+For more see [Bringup Product Definition](/docs/development/build/concepts/build_system/bringup.md)
 
 ### Core {#core-product}
 `core` is a minimal feature set that can install additional software (such as

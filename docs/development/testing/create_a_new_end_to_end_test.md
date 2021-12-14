@@ -143,7 +143,7 @@ Do the following:
     ```
 
     This
-    <code>[BUILD.gn](/docs/concepts/build_system/fuchsia_build_system_overview.md#build_targets)</code>
+    <code>[BUILD.gn](/docs/development/build/concepts/build_system/fuchsia_build_system_overview.md#build_targets)</code>
     file defines the <code>test</code> target group to include
     <code>my_new_e2e_test</code>.
 

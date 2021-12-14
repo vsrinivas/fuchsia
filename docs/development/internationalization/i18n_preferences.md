@@ -147,7 +147,7 @@ A basic C++ library implementing `fuchsia.intl.PropertyProvider` is found at
 [`//src/lib/intl/intl_property_provider_impl`](/src/lib/intl/intl_property_provider_impl).
 
 The
-[`core`](/docs/concepts/build_system/boards_and_products.md#key_product_configurations)
+[`core`](/docs/development/build/concepts/build_system/boards_and_products.md#key_product_configurations)
 product configuration includes [`intl_services`](/src/intl/intl_services), a
 component that wraps this implementation.
 

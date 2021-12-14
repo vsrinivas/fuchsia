@@ -12,7 +12,7 @@ To declare a host-target interaction test in GN:
 2.  Specify one or more [environments](/docs/concepts/testing/environments.md)
     that include Fuchsia (target) devices.
 3.  Add a dependency between a
-    [tests bundle](/docs/concepts/build_system/bundles.md) and the test
+    [tests bundle](/docs/development/build/concepts/build_system/bundles.md) and the test
     executable, *specifying `host_toolchain`*.
 
 For example:

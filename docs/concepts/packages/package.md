@@ -30,7 +30,7 @@ The packages that comprise the Fuchsia operating system are categorized into
 three groups, which affect how they are managed:
 
 Note: To understand how these packages work in a Fuchsia build, see
-[Dependency sets](/docs/concepts/build_system/boards_and_products.md#dependency_sets)
+[Dependency sets](/docs/development/build/concepts/build_system/boards_and_products.md#dependency_sets)
 
 * [Base packages](#base-packages)
 * [Cached packages](#cached-packages)

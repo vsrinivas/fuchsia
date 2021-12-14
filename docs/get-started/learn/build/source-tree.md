@@ -68,19 +68,19 @@ an overview of a local Fuchsia checkout, with a summary of the various elements
 you can expect to find along the way:
 
 * `boards`: Contains all the default
-  [board configurations](/docs/concepts/build_system/boards_and_products.md)
+  [board configurations](/docs/development/build/concepts/build_system/boards_and_products.md)
   supported and maintained by the Fuchsia team.
 * `build`: Shared configurations and default templates for the
-  [Fuchsia build system](/docs/concepts/build_system/index.md).
+  [Fuchsia build system](/docs/development/build/concepts/build_system/index.md).
 * `bundles`: Top-level groupings of build target labels typically included
   together in a build configuration. See
-  [Bundles](/docs/concepts/build_system/bundles.md) for more details.
+  [Bundles](/docs/development/build/concepts/build_system/bundles.md) for more details.
 * `docs`: The Fuchsia documentation, including the source material for the
   [Fuchsia.dev](https://fuchsia.dev/) developer site.
 * `examples`: Sample software components showcasing various aspects of the
   Fuchsia platform.
 * `products`: Contains all the default
-  [product configurations](/docs/concepts/build_system/boards_and_products.md)
+  [product configurations](/docs/development/build/concepts/build_system/boards_and_products.md)
   supported and maintained by the Fuchsia team.
 * `scripts`: Various developer tools to simplify working with the Fuchsia
   source tree, including the subcommands used in

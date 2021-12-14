@@ -193,7 +193,7 @@ N/A
 
 The following documentation will need to be updated to reflect the policy here:
 
-* `//docs/concepts/build_system/policies.md`
+* `//docs/development/build/concepts/build_system/policies.md`
 * `//docs/development/languages/python/python_style.md`
 * `//docs/get-started/get_fuchsia_source.md`
 

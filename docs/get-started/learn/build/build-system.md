@@ -60,7 +60,7 @@ example, the `hello-world` target might have a label that looks like
 this: `//src/examples/basic:hello-world`.
 
 Note: For more details on the mechanics of building with GN, see
-[Introduction to GN](/docs/concepts/build_system/intro.md).
+[Introduction to GN](/docs/development/build/concepts/build_system/intro.md).
 
 ## Build configuration
 

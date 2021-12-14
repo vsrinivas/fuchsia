@@ -102,7 +102,7 @@ fx build
 ```
 
 You now have a build that includes the example tests that can be
-[fetched and launched on demand](/docs/concepts/build_system/boards_and_products.md#universe).
+[fetched and launched on demand](/docs/development/build/concepts/build_system/boards_and_products.md#universe).
 
 ## Run the test suite {#run-the-test-suite}
 

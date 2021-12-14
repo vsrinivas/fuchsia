@@ -5,7 +5,7 @@ Vulkan Development
 
 The magma driver and libraries should already be built into a complete Fuchsia
 image. The correct driver will be built and loaded based on the
-[board](/docs/concepts/build_system/boards_and_products.md) that is selected
+[board](/docs/development/build/concepts/build_system/boards_and_products.md) that is selected
 when building.
 
 ### Add Vulkan driver support

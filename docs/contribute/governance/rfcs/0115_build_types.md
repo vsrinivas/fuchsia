@@ -454,7 +454,7 @@ and user consent MUST be provided to upload crash, logs, and metrics.
 ## Documentation
 
 The build types will be further documented in
-[Fuchsia > Concepts > Build System](/docs/concepts/build_system/index.md)
+[Fuchsia > Concepts > Build System](/docs/development/build/concepts/build_system/index.md)
 so there is a canonical reference for the different attributes and
 behaviors as they apply to products in Fuchsia.
 
@@ -560,12 +560,12 @@ The Android operating system:
 [doc-auto-update]: /docs/gen/build_arguments.md#auto_update_packages
 [doc-base-packages]: /docs/concepts/packages/package.md#base-packages
 [doc-debugger]: /docs/development/idk/documentation/debugger.md
-[doc-dependency-sets]: /docs/concepts/build_system/boards_and_products.md#dependency_sets
+[doc-dependency-sets]: /docs/development/build/concepts/build_system/boards_and_products.md#dependency_sets
 [doc-iquery]: /docs/reference/diagnostics/consumers/iquery.md
 [doc-otas]: /docs/concepts/packages/ota.md
 [doc-package-flavor]: /docs/gen/build_arguments.md#package_flavor_selections
 [doc-paving]: /docs/development/hardware/paving.md
-[doc-products]: /docs/concepts/build_system/boards_and_products.md
+[doc-products]: /docs/development/build/concepts/build_system/boards_and_products.md
 [doc-zircon]: /docs/concepts/kernel/README.md
 [doc-zx-assert]: /docs/gen/build_arguments.md#zx_assert_level
 [docs-femu]: /docs/get-started/set_up_femu.md

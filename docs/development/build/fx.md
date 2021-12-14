@@ -165,7 +165,7 @@ important configurations to be familiar with:
 ### Key additional build targets {#key-bundles}
 
 The `--with` flag for `fx set` takes in arbitrary
-[build targets](/docs/concepts/build_system/fuchsia_build_system_overview.md#build_targets).
+[build targets](/docs/development/build/concepts/build_system/fuchsia_build_system_overview.md#build_targets).
 For convenience, a number of bundles are defined, which include a variety of
 commonly used build targets. It is important to be familiarized with the
 following bundles:
@@ -569,5 +569,5 @@ in `fx`, as well as documentation for `fx` global flags.
 
 To view Fuchsia's integration dashboard, see [Builders](https://luci-milo.appspot.com/p/fuchsia).
 
-[build-overview]: /docs/concepts/build_system/fuchsia_build_system_overview.md
+[build-overview]: /docs/development/build/concepts/build_system/fuchsia_build_system_overview.md
 [executing-tests]: /docs/development/testing/run_fuchsia_tests.md

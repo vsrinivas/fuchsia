@@ -402,13 +402,13 @@ A great Jedi once said: "Only a Sith deals in absolutes."
 [chroot]: https://en.wikipedia.org/wiki/Chroot
 [fidl]: /docs/development/languages/fidl/README.md
 [fidlc]: /docs/development/languages/fidl/guides/cli.md
-[fuchsia-build]: /docs/concepts/build_system/fuchsia_build_system_overview.md
+[fuchsia-build]: /docs/development/build/concepts/build_system/fuchsia_build_system_overview.md
 [fuse]: https://github.com/bazelbuild/sandboxfs
 [fxb-75437-c4]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=75437#c4
 [fxb-75451]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=75451
 [fxr-545687]: https://fuchsia-review.googlesource.com/c/fuchsia/+/545687
 [gn]: https://gn.googlesource.com/gn/
-[gn-best-rebase-path]: /docs/concepts/build_system/best_practices.md#prefer-relative-paths-from-rebase-path
+[gn-best-rebase-path]: /docs/development/build/concepts/build_system/best_practices.md#prefer-relative-paths-from-rebase-path
 [gn-dev-thread]: https://groups.google.com/a/chromium.org/g/gn-dev/c/WOFiYgcGgjw/m/89f3H7nnAQAJ
 [gn-rebase-path]: https://gn.googlesource.com/gn/+/refs/heads/main/docs/reference.md#func_rebase_path
 [gn-root-build-dir]: https://gn.googlesource.com/gn/+/refs/heads/main/docs/reference.md#var_root_build_dir

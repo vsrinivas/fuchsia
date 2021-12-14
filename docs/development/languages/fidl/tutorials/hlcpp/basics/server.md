@@ -308,7 +308,7 @@ the [component instance tree][glossary.component-instance-tree]
 [glossary.moniker]: /docs/glossary/README.md#moniker
 [fidl-intro]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
 [building-components]: /docs/development/components/build.md
-[products]: /docs/concepts/build_system/boards_and_products.md
+[products]: /docs/development/build/concepts/build_system/boards_and_products.md
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [depending-fidl]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
 [component-manager]: /docs/concepts/components/v2/component_manager.md

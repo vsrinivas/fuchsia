@@ -59,7 +59,7 @@ Most third-party dependencies are stored in separate repositories. These
 repositories are included in a local checkout only when needed to support one of
 the following source tree configurations:
 
- * [Bringup](/docs/concepts/build_system/boards_and_products.md#bringup-product).
+ * [Bringup](/docs/development/build/concepts/build_system/boards_and_products.md#bringup-product).
    This source tree configuration contains enough code to build the
    [bringup](/products/bringup.gni) product.
  * Open Source. This source tree configuration contains all the open source code

@@ -448,7 +448,7 @@ preprocessor on a given file and prints the postprocessed result. See:
 [cs-shards]: https://cs.opensource.google/search?q=file:%5C.shard.cm&sq=&ss=fuchsia
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [elf-runner-streams]: /docs/concepts/components/v2/elf_runner.md#forwarding_stdout_and_stderr_streams
-[fuchsia-build-system]: /docs/concepts/build_system/fuchsia_build_system_overview.md
+[fuchsia-build-system]: /docs/development/build/concepts/build_system/fuchsia_build_system_overview.md
 [fx-cmc]: https://fuchsia.dev/reference/tools/fx/cmd/cmc
 [fxb-77007]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=77007
 [fxr-401013]: https://fuchsia-review.googlesource.com/c/fuchsia/+/401013

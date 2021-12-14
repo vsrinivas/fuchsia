@@ -291,7 +291,7 @@ Additional `fx fuzz` commands can be used to [run a fuzzer](run-a-fuzzer.md).
 [asan-uar]: https://github.com/google/sanitizers/wiki/AddressSanitizerExampleUseAfterReturn
 [cpp_fuzzer.gni]: /build/cpp/cpp_fuzzer.gni
 [dictionary]: https://llvm.org/docs/LibFuzzer.html#dictionaries
-[fuchsia-gn]: /docs/concepts/build_system/intro.md
+[fuchsia-gn]: /docs/development/build/concepts/build_system/intro.md
 [fuzz-target]: https://llvm.org/docs/LibFuzzer.html#fuzz-target
 [fuzzer.gni]: /build/fuzzing/fuzzer.gni
 [fx-build]: /docs/development/build/fx.md#execute-a-build
@@ -310,4 +310,4 @@ Additional `fx fuzz` commands can be used to [run a fuzzer](run-a-fuzzer.md).
 [ubsan]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
 [ubsan-sio]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#usage
 [ubsan-all]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks
-[variants]: /docs/concepts/build_system/variants.md
+[variants]: /docs/development/build/concepts/build_system/variants.md

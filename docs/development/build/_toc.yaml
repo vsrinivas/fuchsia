@@ -26,3 +26,6 @@ toc:
     path: /docs/development/build/ninja_no_op.md
   - title: "Hermetic actions check"
     path: /docs/development/build/hermetic_actions.md
+- title: "Build system concepts"
+  section:
+  - include: /docs/development/build/concepts/build_system/_toc.yaml

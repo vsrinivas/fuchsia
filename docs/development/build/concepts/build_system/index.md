@@ -10,4 +10,4 @@ structure.
 - [Runtime Build Information](/docs/development/build/build_information.md)
 - [Variants](variants.md)
 - [Toolchain](/docs/development/build/toolchain.md)
-- [Policies](/docs/concepts/build_system/policies.md)
+- [Policies](/docs/development/build/concepts/build_system/policies.md)

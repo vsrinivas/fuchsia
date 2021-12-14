@@ -213,7 +213,7 @@ fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx access
 <!-- link labels -->
 [sdk]: /sdk/fidl/fuchsia.settings/
 [fidl]: /docs/concepts/fidl/overview.md
-[build]: /docs/concepts/build_system/fuchsia_build_system_overview.md
+[build]: /docs/development/build/concepts/build_system/fuchsia_build_system_overview.md
 [sysmgr]: /src/sys/sysmgr/README.md
 [accessibility]: /sdk/fidl/fuchsia.settings/accessibility.fidl
 [manifest]: /docs/concepts/components/v2/component_manifests.md

@@ -24,7 +24,7 @@ If you have `fx` mapped into your command path you can follow these instructions
 don't have fx in your path, it can be found at `//scripts/fx` and you'll need
 to use the appropriate relative path in the supplied commands.
 
-Many `fx` commands are wrappers around build actions in [GN](/docs/concepts/build_system/intro.md)
+Many `fx` commands are wrappers around build actions in [GN](/docs/development/build/concepts/build_system/intro.md)
 coupled with tool invocations.
 
 Assuming that the target system is x86-based and that you want to build a
@@ -34,7 +34,7 @@ complete Fuchsia system, you can set Fuchsia with the following command:
 fx set {product_name}.x64`
 ```
 
-Note: For more information on supported products, see [product and board](/docs/concepts/build_system/boards_and_products.md).
+Note: For more information on supported products, see [product and board](/docs/development/build/concepts/build_system/boards_and_products.md).
 
 Then build Fuchsia:
 

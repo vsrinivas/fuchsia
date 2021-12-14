@@ -288,7 +288,7 @@ The target `//src/fonts/groups:roboto-slab` contains a `group` of all of the
 ## Product-specific font configurations {#product-specific}
 
 Finally, every
-[product target](/docs/concepts/build_system/boards_and_products.md#products)
+[product target](/docs/development/build/concepts/build_system/boards_and_products.md#products)
 that uses fonts needs to be configured with the specific font assets and
 metadata that it will include.
 
