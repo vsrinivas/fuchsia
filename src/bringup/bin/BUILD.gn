@@ -12,6 +12,6 @@ group("tests") {
     "netsvc:tests",
     "ptysvc:tests",
     "pwrbtn-monitor:tests",
-    "virtcon2:tests",
+    "virtcon:tests",
   ]
 }

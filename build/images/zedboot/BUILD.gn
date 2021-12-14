@@ -72,7 +72,7 @@ assemble_system("zedboot_assembly") {
 
   # For debugging.
   bootfs_labels += [
-    "//src/bringup/bin/virtcon2:bootfs",
+    "//src/bringup/bin/virtcon:bootfs",
     "//src/connectivity/network/bin/ping",
     "//src/devices/nand/bin/nand-util",
     "//src/devices/nand/drivers/broker:nand-broker",

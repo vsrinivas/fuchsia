@@ -116,4 +116,4 @@ converted to the new version of Virtcon.
 ## Documentation
 
 At this stage, we plan to document Carnelian-based Virtcon through this RFC,
-and this [README.md](/src/bringup/bin/virtcon2/README.md).
+and this [README.md](/src/bringup/bin/virtcon/README.md).

@@ -46,5 +46,5 @@ group("debugging") {
 }
 
 group("virtcon") {
-  deps = [ "//src/bringup/bin/virtcon2:bootfs" ]
+  deps = [ "//src/bringup/bin/virtcon:bootfs" ]
 }

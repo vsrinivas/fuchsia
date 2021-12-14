@@ -7,7 +7,7 @@ import("//build/dist/component_manifest_resources.gni")
 import("//build/drivers.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//src/bringup/bin/virtcon2/virtcon_args.gni")
+import("//src/bringup/bin/virtcon/virtcon_args.gni")
 
 group("bootfs") {
   deps = [

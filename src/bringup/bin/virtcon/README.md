@@ -26,7 +26,7 @@ minimal hardware requirements.
 
 Configure
 
-    fx set core.x64 --with //src/bringup/bin/virtcon2:tests
+    fx set core.x64 --with //src/bringup/bin/virtcon:tests
 
 Then test
 
