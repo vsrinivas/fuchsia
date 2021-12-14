@@ -118,6 +118,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void SendStartConfLocked(wlan_start_result_t result_code) __TA_REQUIRES(lock_);
 
   std::mutex lock_;
+  std::mutex get_iface_histogram_stats_lock_;
 
   zx_device_t* parent_ = nullptr;
   zx_device_t* device_ = nullptr;

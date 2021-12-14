@@ -641,8 +641,6 @@ void Device::StatsQueryReq() {
 }
 
 void Device::GetIfaceCounterStats(GetIfaceCounterStatsCallback cb) {
-  std::lock_guard<std::mutex> lock(lock_);
-
   auto status = ZX_ERR_BAD_STATE;
   wlanif_iface_counter_stats_t out_stats = {};
   if (wlanif_impl_.ops->get_iface_counter_stats != nullptr) {
@@ -662,7 +660,7 @@ void Device::GetIfaceCounterStats(GetIfaceCounterStatsCallback cb) {
 }
 
 void Device::GetIfaceHistogramStats(GetIfaceHistogramStatsCallback cb) {
-  std::lock_guard<std::mutex> lock(lock_);
+  std::lock_guard<std::mutex> lock(get_iface_histogram_stats_lock_);
 
   auto status = ZX_ERR_BAD_STATE;
   wlanif_iface_histogram_stats_t out_stats = {};

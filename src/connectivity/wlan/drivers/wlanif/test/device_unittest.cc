@@ -627,6 +627,12 @@ struct EthernetTestFixture : public DeviceTestFixture {
         .state = ::fuchsia::wlan::mlme::ControlledPortState::CLOSED});
     ASSERT_EQ(ethernet_status_, expected_status);
   }
+  void CallDataRecv() {
+    // Doesn't matter what we put in as argument here (except for device_).
+    // The main thing we want to do is make this call `Device::EthRecv` so we can test this
+    // doesn't deadlock.
+    wlanif_impl_ifc_.ops->data_recv(device_, nullptr, 0, 0);
+  }
 
   ethernet_ifc_protocol_ops_t eth_ops_{};
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
@@ -635,6 +641,8 @@ struct EthernetTestFixture : public DeviceTestFixture {
   uint32_t driver_features_{0};
   std::optional<bool> link_state_;
   std::function<void(const wlanif_start_req_t*)> start_req_cb_;
+
+  volatile std::atomic<bool> eth_recv_called_ = false;
 };
 
 #define ETH_DEV(c) static_cast<EthernetTestFixture*>(c)
@@ -643,13 +651,15 @@ static void hook_query(void* ctx, wlanif_query_info_t* info) {
   info->driver_features = ETH_DEV(ctx)->driver_features_;
 }
 static void hook_eth_status(void* ctx, uint32_t status) { ETH_DEV(ctx)->ethernet_status_ = status; }
+static void hook_eth_recv(void* ctx, const uint8_t* buffer, size_t data_size, uint32_t flags) {
+  ETH_DEV(ctx)->eth_recv_called_ = true;
+}
 
 static void hook_start_req(void* ctx, const wlanif_start_req_t* req) {
   if (ETH_DEV(ctx)->start_req_cb_) {
     ETH_DEV(ctx)->start_req_cb_(req);
   }
 }
-#undef ETH_DEV
 
 void EthernetTestFixture::InitDeviceWithRole(wlan_info_mac_role_t role) {
   role_ = role;
@@ -657,6 +667,7 @@ void EthernetTestFixture::InitDeviceWithRole(wlan_info_mac_role_t role) {
   proto_ops_.query = hook_query;
   proto_ops_.start_req = hook_start_req;
   eth_proto_.ops->status = hook_eth_status;
+  eth_proto_.ops->recv = hook_eth_recv;
   ASSERT_EQ(device_->Bind(), ZX_OK);
 }
 
@@ -853,3 +864,31 @@ TEST_F(EthernetTestFixture, NotifyOnline) {
   SetEthernetOffline();
   EXPECT_FALSE(link_state_.has_value());
 }
+
+TEST_F(EthernetTestFixture, GetIfaceCounterStatsReqDoesNotDeadlockWithEthRecv) {
+  proto_ops_.get_iface_counter_stats = [](void* ctx,
+                                          wlanif_iface_counter_stats_t* out_stats) -> int32_t {
+    ETH_DEV(ctx)->CallDataRecv();
+    return ZX_OK;
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  device_->GetIfaceCounterStats([](auto resp) {});
+  ASSERT_TRUE(eth_recv_called_);
+}
+
+TEST_F(EthernetTestFixture, GetIfaceHistogramStatsReqDoesNotDeadlockWithEthRecv) {
+  proto_ops_.get_iface_histogram_stats = [](void* ctx,
+                                            wlanif_iface_histogram_stats_t* out_stats) -> int32_t {
+    ETH_DEV(ctx)->CallDataRecv();
+    return ZX_OK;
+  };
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+  device_->EthStart(&eth_proto_);
+
+  device_->GetIfaceHistogramStats([](auto resp) {});
+  ASSERT_TRUE(eth_recv_called_);
+}
+
+#undef ETH_DEV

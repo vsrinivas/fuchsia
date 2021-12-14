@@ -4552,6 +4552,12 @@ send_resp:
 
 zx_status_t brcmf_if_get_iface_counter_stats(net_device* ndev,
                                              wlanif_iface_counter_stats_t* out_stats) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping get iface counter stats");
+    return ZX_ERR_INTERNAL;
+  }
+
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
   if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
@@ -4587,6 +4593,11 @@ zx_status_t brcmf_if_get_iface_counter_stats(net_device* ndev,
 
 zx_status_t brcmf_if_get_iface_histogram_stats(net_device* ndev,
                                                wlanif_iface_histogram_stats_t* out_stats) {
+  std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
+  if (ndev->if_proto.ops == nullptr) {
+    BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping get iface histogram stats");
+    return ZX_ERR_INTERNAL;
+  }
   struct brcmf_if* ifp = ndev_to_if(ndev);
 
   ndev->stats.noise_floor_histograms = {};
