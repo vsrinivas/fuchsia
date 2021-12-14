@@ -21,6 +21,7 @@ use {
         collections::HashMap,
         convert::TryInto,
         future::Future,
+        hash::{Hash, Hasher},
         ops::DerefMut,
         pin::Pin,
         sync::{
@@ -246,7 +247,7 @@ impl VmoId {
     }
 
     pub fn is_valid(&self) -> bool {
-        self.0.load(Ordering::Relaxed) != BLOCK_VMOID_INVALID
+        self.id() != BLOCK_VMOID_INVALID
     }
 
     /// Takes the ID.  The caller assumes responsibility for detaching.
@@ -261,7 +262,7 @@ impl VmoId {
 
 impl PartialEq for VmoId {
     fn eq(&self, other: &Self) -> bool {
-        self.0.load(Ordering::Relaxed) == other.0.load(Ordering::Relaxed)
+        self.id() == other.id()
     }
 }
 
@@ -274,6 +275,12 @@ impl Drop for VmoId {
             BLOCK_VMOID_INVALID,
             "Did you forget to detach?"
         );
+    }
+}
+
+impl Hash for VmoId {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id().hash(state);
     }
 }
 
