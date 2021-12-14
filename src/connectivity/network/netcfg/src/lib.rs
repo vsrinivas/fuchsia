@@ -126,36 +126,11 @@ type DnsServerWatchers<'a> = async_utils::stream::StreamMap<
 
 /// Defines log levels.
 #[derive(Debug, Copy, Clone)]
-pub enum LogLevel {
-    /// TRACE log level.
-    Trace,
+pub struct LogLevel(diagnostics_log::Severity);
 
-    /// DEBUG log level.
-    Debug,
-
-    /// INFO log level.
-    Info,
-
-    /// WARN log level.
-    Warn,
-
-    /// ERROR log level.
-    Error,
-
-    /// FATAL log level.
-    Fatal,
-}
-
-impl Into<diagnostics_log::Severity> for LogLevel {
-    fn into(self) -> diagnostics_log::Severity {
-        match self {
-            LogLevel::Trace => diagnostics_log::Severity::Trace,
-            LogLevel::Debug => diagnostics_log::Severity::Debug,
-            LogLevel::Info => diagnostics_log::Severity::Info,
-            LogLevel::Warn => diagnostics_log::Severity::Warn,
-            LogLevel::Error => diagnostics_log::Severity::Error,
-            LogLevel::Fatal => diagnostics_log::Severity::Fatal,
-        }
+impl Default for LogLevel {
+    fn default() -> Self {
+        Self(diagnostics_log::Severity::Info)
     }
 }
 
@@ -164,12 +139,12 @@ impl FromStr for LogLevel {
 
     fn from_str(s: &str) -> Result<Self, anyhow::Error> {
         match s.to_uppercase().as_str() {
-            "TRACE" => Ok(LogLevel::Trace),
-            "DEBUG" => Ok(LogLevel::Debug),
-            "INFO" => Ok(LogLevel::Info),
-            "WARN" => Ok(LogLevel::Warn),
-            "ERROR" => Ok(LogLevel::Error),
-            "FATAL" => Ok(LogLevel::Fatal),
+            "TRACE" => Ok(Self(diagnostics_log::Severity::Trace)),
+            "DEBUG" => Ok(Self(diagnostics_log::Severity::Debug)),
+            "INFO" => Ok(Self(diagnostics_log::Severity::Info)),
+            "WARN" => Ok(Self(diagnostics_log::Severity::Warn)),
+            "ERROR" => Ok(Self(diagnostics_log::Severity::Error)),
+            "FATAL" => Ok(Self(diagnostics_log::Severity::Fatal)),
             _ => Err(anyhow::anyhow!("unrecognized log level = {}", s)),
         }
     }
@@ -187,7 +162,7 @@ struct Opt {
     allow_virtual_devices: bool,
 
     /// minimum severity for logs
-    #[argh(option, default = "LogLevel::Info")]
+    #[argh(option, default = "Default::default()")]
     min_severity: LogLevel,
 
     /// config file to use
@@ -1661,7 +1636,7 @@ impl<'a> NetCfg<'a> {
 
 pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
     let opt: Opt = argh::from_env();
-    let Opt { allow_virtual_devices, min_severity, config_data } = &opt;
+    let Opt { allow_virtual_devices, min_severity: LogLevel(min_severity), config_data } = &opt;
 
     // Use the diagnostics_log library directly rather than e.g. the #[fuchsia::component] macro on
     // the main function, so that we can specify the logging severity level at runtime based on a
@@ -1669,7 +1644,7 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
     diagnostics_log::init!(
         &[],
         diagnostics_log::Interest {
-            min_severity: Some((*min_severity).into()),
+            min_severity: Some(*min_severity),
             ..diagnostics_log::Interest::EMPTY
         }
     );
