@@ -106,7 +106,7 @@ impl Drop for DebugAgentSocket {
 
 /// This mimics tempfile::util::create_helper but unfortunately that function is private.
 fn make_temp_unix_socket() -> std::io::Result<(PathBuf, UnixListener)> {
-    use {rand::distributions::Alphanumeric, rand::Rng};
+    use rand::distributions::{Alphanumeric, DistString};
 
     let retries = 10;
     let prefix = "debug_agent_";
@@ -114,10 +114,7 @@ fn make_temp_unix_socket() -> std::io::Result<(PathBuf, UnixListener)> {
     let suffix = ".socket";
 
     for _ in 0..retries {
-        // This particular version of rand has Alphanumeric implements Distribution<char> rather
-        // than Distribution<u8>.
-        let rand_str: String =
-            rand::thread_rng().sample_iter(&Alphanumeric).take(rand_str_length).collect();
+        let rand_str = Alphanumeric.sample_string(&mut rand::thread_rng(), rand_str_length);
 
         let mut path = env::temp_dir().into_os_string();
         path.extend(["/".as_ref(), prefix.as_ref(), rand_str.as_ref(), suffix.as_ref()]);

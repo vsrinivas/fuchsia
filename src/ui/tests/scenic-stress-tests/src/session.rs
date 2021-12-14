@@ -114,15 +114,15 @@ impl Circle {
     fn new(rng: &mut SmallRng, session: scenic::SessionPtr) -> Self {
         // Create a circle with random radius and translation
         let shape_node = scenic::ShapeNode::new(session.clone());
-        let radius = rng.gen_range(MIN_CIRCLE_RADIUS, MAX_CIRCLE_RADIUS);
+        let radius = rng.gen_range(MIN_CIRCLE_RADIUS..MAX_CIRCLE_RADIUS);
         let circle = scenic::Circle::new(session.clone(), radius as f32);
         let material = scenic::Material::new(session.clone());
         material.set_color(fgfx::ColorRgba { red: 255, blue: 0, green: 0, alpha: 255 });
         shape_node.set_shape(&circle);
         shape_node.set_material(&material);
 
-        let x = rng.gen_range(0, DISPLAY_WIDTH);
-        let y = rng.gen_range(0, DISPLAY_HEIGHT);
+        let x = rng.gen_range(0..DISPLAY_WIDTH);
+        let y = rng.gen_range(0..DISPLAY_HEIGHT);
         shape_node.set_translation(x as f32, y as f32, 0.0);
 
         Self { shape_node, _material: material, _circle: circle }
@@ -280,7 +280,7 @@ impl Session {
         };
 
         let num_sessions = child_sessions.len();
-        let index = rng.gen_range(0, num_sessions);
+        let index = rng.gen_range(0..num_sessions);
         let (_, holder) = child_sessions.remove(index);
         holder.detach();
     }

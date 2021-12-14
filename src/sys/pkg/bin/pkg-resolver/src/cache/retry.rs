@@ -35,7 +35,7 @@ impl Backoff<FetchError> for HttpErrors {
                     .checked_shl(self.backoffs)
                     .map(Duration::from_secs)
                     .unwrap_or(MAX_RATE_LIMIT_RETRY_DELAY);
-                let jitter = Duration::from_millis(rand::thread_rng().gen_range(0, 1001));
+                let jitter = Duration::from_millis(rand::thread_rng().gen_range(0..1001));
                 self.backoffs += 1;
 
                 Some(std::cmp::min(delay + jitter, MAX_RATE_LIMIT_RETRY_DELAY))

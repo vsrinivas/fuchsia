@@ -32,21 +32,21 @@ impl VSliceRange {
     // Returns a subrange that ends at the same position, but
     // may be smaller.
     pub fn shrink_from_start(&self, rng: &mut SmallRng) -> VSliceRange {
-        let start = rng.gen_range(self.start, self.end);
+        let start = rng.gen_range(self.start..self.end);
         VSliceRange::new(start, self.end)
     }
 
     // Returns a subrange that starts at the same position, but
     // may be smaller.
     pub fn shrink_from_end(&self, rng: &mut SmallRng) -> VSliceRange {
-        let end = rng.gen_range(self.start, self.end) + 1;
+        let end = rng.gen_range(self.start..self.end) + 1;
         VSliceRange::new(self.start, end)
     }
 
     // Returns a subrange that may be smaller
     pub fn subrange(&self, rng: &mut SmallRng) -> VSliceRange {
-        let start = rng.gen_range(self.start, self.end);
-        let end = rng.gen_range(start, self.end) + 1;
+        let start = rng.gen_range(self.start..self.end);
+        let end = rng.gen_range(start..self.end) + 1;
         VSliceRange::new(start, end)
     }
 }
@@ -165,6 +165,6 @@ impl VSliceRanges {
     }
 
     pub fn random_index(&self, rng: &mut SmallRng) -> usize {
-        rng.gen_range(0, self.ranges.len())
+        rng.gen_range(0..self.ranges.len())
     }
 }

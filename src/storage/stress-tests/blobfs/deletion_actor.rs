@@ -39,7 +39,7 @@ impl Actor for DeletionActor {
             return Err(ActorError::DoNotCount);
         }
 
-        let num_blobs_to_delete = self.rng.gen_range(0, blobs.len());
+        let num_blobs_to_delete = self.rng.gen_range(0..blobs.len());
         debug!("Deleting {} blobs", num_blobs_to_delete);
 
         // Randomly select blobs from the list and remove them

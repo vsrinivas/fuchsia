@@ -214,14 +214,17 @@ pub async fn create_randomly_named_file(
     prefix: &str,
     flags: u32,
 ) -> Result<(String, FileProxy), OpenError> {
-    use rand::{distributions::Alphanumeric, FromEntropy, Rng};
+    use rand::{
+        distributions::{Alphanumeric, DistString as _},
+        SeedableRng as _,
+    };
     let mut rng = rand::rngs::SmallRng::from_entropy();
 
     let flags =
         flags | fidl_fuchsia_io::OPEN_FLAG_CREATE | fidl_fuchsia_io::OPEN_FLAG_CREATE_IF_ABSENT;
 
     loop {
-        let random_string: String = rng.sample_iter(&Alphanumeric).take(6).collect();
+        let random_string = Alphanumeric.sample_string(&mut rng, 6);
         let path = prefix.to_string() + &random_string;
 
         match open_file(dir, &path, flags).await {

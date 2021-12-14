@@ -49,10 +49,10 @@ impl ReadActor {
         }
 
         // Choose an offset
-        let offset = self.rng.gen_range(0, data_size_bytes - 1);
+        let offset = self.rng.gen_range(0..data_size_bytes - 1);
 
         // Determine the length of this read
-        let end_pos = self.rng.gen_range(offset, data_size_bytes);
+        let end_pos = self.rng.gen_range(offset..data_size_bytes);
 
         assert!(end_pos >= offset);
         let length = end_pos - offset;

@@ -237,7 +237,7 @@ mod tests {
     use super::*;
     use anyhow::Result;
     use proptest::prelude::*;
-    use rand::*;
+    use rand::{RngCore as _, SeedableRng as _};
 
     fn gen_index(num_instances: u32) -> Index {
         Index {

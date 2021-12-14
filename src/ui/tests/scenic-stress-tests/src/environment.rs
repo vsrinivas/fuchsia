@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_io as fio, fidl_fuchsia_ui_scenic as fscenic,
     fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
     futures::lock::Mutex,
-    rand::{rngs::SmallRng, Rng, SeedableRng},
+    rand::{rngs::SmallRng, SeedableRng},
     std::sync::Arc,
     std::time::Duration,
     stress_test::{actor::ActorRunner, environment::Environment, random_seed},
@@ -61,7 +61,7 @@ impl Environment for ScenicEnvironment {
 
     fn actor_runners(&mut self) -> Vec<ActorRunner> {
         let seed = random_seed();
-        let mut rng = SmallRng::from_seed(seed.to_le_bytes());
+        let mut rng = SmallRng::seed_from_u64(seed);
 
         // Connect to the Scenic protocol
         let scenic_proxy =
@@ -77,8 +77,7 @@ impl Environment for ScenicEnvironment {
 
         let input_runner = {
             // Create the input actor
-            let seed = rng.gen::<u128>();
-            let rng = SmallRng::from_seed(seed.to_le_bytes());
+            let rng = SmallRng::from_rng(&mut rng).unwrap();
             let input_actor =
                 Arc::new(Mutex::new(InputActor::new(rng, session_ptr, compositor_id)));
             ActorRunner::new("input_actor", Some(Duration::from_millis(16)), input_actor)
@@ -86,8 +85,7 @@ impl Environment for ScenicEnvironment {
 
         let session_runner = {
             // Create the session actor
-            let seed = rng.gen::<u128>();
-            let rng = SmallRng::from_seed(seed.to_le_bytes());
+            let rng = SmallRng::from_rng(&mut rng).unwrap();
             let session_actor = Arc::new(Mutex::new(SessionActor::new(rng, root_session)));
             ActorRunner::new("session_actor", Some(Duration::from_millis(250)), session_actor)
         };

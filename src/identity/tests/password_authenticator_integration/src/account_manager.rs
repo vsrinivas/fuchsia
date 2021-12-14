@@ -19,7 +19,7 @@ use {
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon::{sys::zx_status_t, Status},
     ramdevice_client::{RamdiskClient, RamdiskClientBuilder},
-    rand::{rngs::SmallRng, FromEntropy, Rng},
+    rand::{rngs::SmallRng, Rng, SeedableRng},
     std::{fs, os::raw::c_int, time::Duration},
     storage_isolated_driver_manager::bind_fvm,
 };

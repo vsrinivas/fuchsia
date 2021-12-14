@@ -37,7 +37,7 @@ impl Actor for DeletionActor {
             return Err(ActorError::DoNotCount);
         }
 
-        let num_files_to_delete = self.rng.gen_range(0, files.len());
+        let num_files_to_delete = self.rng.gen_range(0..files.len());
         debug!("Deleting {} files", num_files_to_delete);
 
         // Randomly select files from the list and remove them

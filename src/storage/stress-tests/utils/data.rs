@@ -30,7 +30,7 @@ fn generate_compressible_data_bytes(rng: &mut SmallRng, size_bytes: u64) -> Vec<
     let mut ptr = 0;
     while ptr < size_bytes {
         // A run is 10..1024 bytes long
-        let mut run_length = rng.gen_range(10, 1024);
+        let mut run_length = rng.gen_range(10..1024);
 
         // In case the run goes past the file size
         run_length = min(run_length, size_bytes - ptr);
@@ -100,7 +100,7 @@ impl FileFactory {
     pub fn generate_bytes(&mut self) -> Vec<u8> {
         let size_bytes = match self.uncompressed_size {
             UncompressedSize::Exact(size_bytes) => size_bytes,
-            UncompressedSize::InRange(min, max) => self.rng.gen_range(min, max),
+            UncompressedSize::InRange(min, max) => self.rng.gen_range(min..max),
         };
 
         match self.compressibility {

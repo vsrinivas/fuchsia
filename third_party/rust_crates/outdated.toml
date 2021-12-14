@@ -83,8 +83,6 @@ skip_updating = [
     "proptest-derive",
     "pulldown-cmark",
     "quote",
-    "rand",
-    "rand_xorshift",
     "rayon",
     "regex",
     "regex-syntax",

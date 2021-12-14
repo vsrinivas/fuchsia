@@ -65,7 +65,7 @@ pub struct VolumeActor {
     vslice_ranges: VSliceRanges,
 
     // Seeds used to generate the data for each slice
-    slice_seeds: HashMap<u64, u128>,
+    slice_seeds: HashMap<u64, u64>,
 
     // Random number generator used for all operations
     rng: SmallRng,
@@ -76,8 +76,8 @@ pub struct VolumeActor {
     pending_op: Option<VolumeOperation>,
 }
 
-fn generate_data(seed: u128, size: usize) -> Vec<u8> {
-    let mut rng = SmallRng::from_seed(seed.to_le_bytes());
+fn generate_data(seed: u64, size: usize) -> Vec<u8> {
+    let mut rng = SmallRng::seed_from_u64(seed);
     let mut data = Vec::with_capacity(size as usize);
     for _ in 0..size {
         data.push(rng.gen());
@@ -100,7 +100,7 @@ impl VolumeActor {
         actor
     }
 
-    async fn fill_range(&mut self, range: &VSliceRange) -> Result<Vec<u128>, Status> {
+    async fn fill_range(&mut self, range: &VSliceRange) -> Result<Vec<u64>, Status> {
         let slice_size = self.volume.slice_size() as usize;
         let mut seeds = vec![];
 
@@ -127,7 +127,7 @@ impl VolumeActor {
         }
     }
 
-    fn insert_seeds(&mut self, range: &VSliceRange, seeds: Vec<u128>) {
+    fn insert_seeds(&mut self, range: &VSliceRange, seeds: Vec<u64>) {
         assert_eq!(range.len(), seeds.len() as u64);
 
         let offsets = range.start..range.end;

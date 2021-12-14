@@ -547,7 +547,7 @@ impl<D: EventDispatcher> IpSocketContext<Ipv6> for Ctx<D> {
 ///
 /// [RFC 6437 Section 2]: https://tools.ietf.org/html/rfc6437#section-2
 fn gen_ipv6_flowlabel<R: Rng>(rng: &mut R) -> u32 {
-    rng.gen_range(1, 1 << Ipv6::FLOW_LABEL_BITS)
+    rng.gen_range(1..1 << Ipv6::FLOW_LABEL_BITS)
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv4, B> for Ctx<D> {

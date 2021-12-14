@@ -17,7 +17,7 @@ use {
         StreamExt,
     },
     log::{error, info, set_logger, set_max_level, LevelFilter},
-    rand::{rngs::SmallRng, FromEntropy, Rng},
+    rand::{rngs::SmallRng, Rng, SeedableRng},
     std::{
         io::{stdout, Write},
         time::Duration,
@@ -61,7 +61,7 @@ impl log::Log for StdoutLogger {
 }
 
 /// Use entropy to generate a random seed
-pub fn random_seed() -> u128 {
+pub fn random_seed() -> u64 {
     let mut temp_rng = SmallRng::from_entropy();
     temp_rng.gen()
 }

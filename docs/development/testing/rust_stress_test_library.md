@@ -139,7 +139,7 @@ valuable for reproducing the test, such as the random seed used.
 #[derive(Debug)]
 pub struct FilesystemEnvironment {
     fs_actor: Arc<Mutex<FilesystemActor>>,
-    seed: u128,
+    seed: u64,
     ...
 }
 

@@ -90,8 +90,7 @@ where
         // randomize poll timings somewhat so polls across devices will not be synchronized
         let random_factor = 1f32
             + rand::thread_rng().gen_range(
-                -MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION,
-                MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION,
+                -MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION..MAX_TIME_BETWEEN_SAMPLES_RANDOMIZATION,
             );
         let converge_time_between_samples =
             mult_duration(self.retry_strategy.converge_time_between_samples, random_factor);

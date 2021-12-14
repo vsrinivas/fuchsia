@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon::Duration;
-use rand::distributions::Alphanumeric;
-use rand::{thread_rng, Rng};
+use rand::{
+    distributions::{Alphanumeric, DistString as _},
+    thread_rng,
+};
 
 pub const TOKEN_LIFETIME_SECONDS: u64 = 3600; // one hour lifetime
 pub const USER_PROFILE_INFO_ID_DOMAIN: &str = "@example.com";
@@ -16,7 +18,7 @@ const RANDOM_STRING_LENGTH: usize = 10;
 /// Generate random alphanumeric string of fixed length RANDOM_STRING_LENGTH
 /// for creating unique tokens or id.
 pub fn generate_random_string() -> String {
-    thread_rng().sample_iter(&Alphanumeric).take(RANDOM_STRING_LENGTH).collect()
+    Alphanumeric.sample_string(&mut thread_rng(), RANDOM_STRING_LENGTH)
 }
 
 /// Calculate expiry time for a token that expires in `TOKEN_LIFETIME_SECONDS`.

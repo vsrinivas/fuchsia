@@ -167,7 +167,7 @@ mod test_build_with_file_system {
     use maplit::{btreemap, hashmap};
     use matches::assert_matches;
     use proptest::prelude::*;
-    use rand::SeedableRng;
+    use rand::{Rng as _, SeedableRng as _};
     use std::collections::{HashMap, HashSet};
     use std::fs::File;
     use std::io;
@@ -198,7 +198,7 @@ mod test_build_with_file_system {
                     meta_package.serialize(&mut v).unwrap();
                     content_map.insert(host_path.to_string(), v);
                 } else {
-                    let file_size = rng.gen_range(0, 6000);
+                    let file_size = rng.gen_range(0..6000);
                     content_map.insert(
                         host_path.to_string(),
                         rng.sample_iter(&rand::distributions::Standard).take(file_size).collect(),
@@ -413,7 +413,7 @@ mod test_build {
     use super::*;
     use crate::test::*;
     use proptest::prelude::*;
-    use rand::SeedableRng;
+    use rand::{Rng as _, SeedableRng as _};
     use std::fs;
     use std::io::Write;
     use std::path::PathBuf;
@@ -446,7 +446,7 @@ mod test_build {
                     );
                     meta_package.serialize(f).unwrap();
                 } else {
-                    let file_size = rng.gen_range(0, 6000);
+                    let file_size = rng.gen_range(0..6000);
                     f.write_all(
                         rng.sample_iter(&rand::distributions::Standard)
                             .take(file_size)

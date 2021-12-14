@@ -14,7 +14,7 @@ use {
 #[fasync::run_singlethreaded]
 pub async fn main() {
     let mut rng = thread_rng();
-    let timeout = rng.gen_range(0, 10);
+    let timeout = rng.gen_range(0..10);
     let timeout = Duration::from_secs(timeout);
     run_echo_service().on_timeout(timeout, || ()).await;
 }

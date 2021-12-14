@@ -31,7 +31,7 @@ fn write_blob(root: &str, i: u64) -> Result<String, Error> {
     let mut data = vec![];
     data.write_u64::<NativeEndian>(i)?;
     // length of extra random data in bytes
-    let rand_length: usize = rng.gen_range(0, 6000);
+    let rand_length: usize = rng.gen_range(0..6000);
     data.extend(rng.sample_iter::<u8, _>(&Standard).take(rand_length));
 
     // generate merkle root for new blob
@@ -148,7 +148,7 @@ async fn test(blobfs: &mut Filesystem<Blobfs>) -> Result<(), Error> {
         //      - 50% chance we delete it
         // Obviously this isn't a "realistic" workload - blobs in the wild are going to spend a lot
         // of time getting read before they are deleted - but we want things to change a lot.
-        let slot_num = rng.gen_range(0, half_slots as usize) * 2;
+        let slot_num = rng.gen_range(0..half_slots as usize) * 2;
         let maybe_new_slot = match &slots[slot_num] {
             Slot::Empty => {
                 let path = write_blob(&root, slot_num as u64)?;

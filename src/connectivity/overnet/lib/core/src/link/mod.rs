@@ -414,7 +414,7 @@ pub(crate) fn new_link(
 ) -> (LinkSender, LinkReceiver) {
     let forwarding_table = Arc::new(Mutex::new(ForwardingTable::empty()));
     let (tx_control, rx_control) = mpsc::channel(0);
-    let first_seq = rand::thread_rng().gen_range(1u64, 0xff00_0000_0000_0000);
+    let first_seq = rand::thread_rng().gen_range(1u64..0xff00_0000_0000_0000);
     let (tx_send_closed, rx_send_closed) = oneshot::channel();
     let (tx_recv_closed, rx_recv_closed) = oneshot::channel();
     let output = Arc::new(LinkOutput {

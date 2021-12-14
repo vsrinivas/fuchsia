@@ -46,10 +46,7 @@ pub fn target_to_gn_conditional(target: &str) -> Result<String, Error> {
             target_arch, target_os
         ))
     } else {
-        Err(anyhow!(
-            "Unknown platform-specific dependency target syntax: {}",
-            target
-        ))
+        Err(anyhow!("Unknown platform-specific dependency target syntax: {}", target))
     }
 }
 
@@ -120,6 +117,8 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
         Ok(String::from("current_os == \"mac\""))
     } else if cfg == "target_os = \"linux\"" {
         Ok(String::from("current_os == \"linux\""))
+    } else if cfg == "target_os = \"unknown\"" {
+        Ok(String::from("current_os == \"unknown\""))
     } else if cfg == "unix" {
         // all our platforms are unix
         Ok(String::from("true"))
@@ -130,6 +129,8 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
         Ok(String::from("current_cpu == \"arm64\""))
     } else if cfg == "target_arch = \"x86_64\"" {
         Ok(String::from("current_cpu == \"x64\""))
+    } else if cfg == "target_arch = \"wasm32\"" {
+        Ok(String::from("current_cpu == \"wasm32\""))
     } else if cfg == "windows" {
         // don't support host builds on windows right now
         Ok(String::from("false"))
@@ -226,8 +227,5 @@ fn target_unknown_syntax() {
     // No leading "cfg", no hyphens.
     let target_str = r#"fizzbuzz"#;
     let err = target_to_gn_conditional(target_str).unwrap_err();
-    assert_eq!(
-        err.to_string(),
-        "Unknown platform-specific dependency target syntax: fizzbuzz",
-    );
+    assert_eq!(err.to_string(), "Unknown platform-specific dependency target syntax: fizzbuzz");
 }

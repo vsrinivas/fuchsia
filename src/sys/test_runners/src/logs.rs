@@ -188,7 +188,10 @@ mod tests {
         fuchsia_async::{self as fasync, futures::try_join},
         fuchsia_zircon as zx,
         matches::assert_matches,
-        rand::{distributions::Alphanumeric, thread_rng, Rng},
+        rand::{
+            distributions::{Alphanumeric, DistString as _},
+            thread_rng,
+        },
         std::mem::drop,
         test_case::test_case,
     };
@@ -357,6 +360,6 @@ mod tests {
     }
 
     fn get_random_string(size: usize) -> String {
-        thread_rng().sample_iter(&Alphanumeric).take(size).collect::<String>()
+        Alphanumeric.sample_string(&mut thread_rng(), size)
     }
 }

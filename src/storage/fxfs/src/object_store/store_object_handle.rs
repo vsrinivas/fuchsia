@@ -1647,7 +1647,7 @@ mod tests {
             });
             let cloned_object = object.clone();
             let reader = fasync::Task::spawn(async move {
-                let wait_time = rand::thread_rng().gen_range(0, 5);
+                let wait_time = rand::thread_rng().gen_range(0..5);
                 fasync::Timer::new(Duration::from_millis(wait_time)).await;
                 let mut buf = cloned_object.allocate_buffer(10);
                 buf.as_mut_slice().fill(23);

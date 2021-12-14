@@ -42,7 +42,7 @@ pub fn open_dir_at_minfs_root(subdir: &str) -> Directory {
 
 /// Describes the environment that this minfs stress test will run under.
 pub struct MinfsEnvironment {
-    seed: u128,
+    seed: u64,
     args: Args,
     vmo: Vmo,
     volume_guid: Guid,
@@ -79,7 +79,7 @@ impl MinfsEnvironment {
             None => random_seed(),
         };
 
-        let mut rng = SmallRng::from_seed(seed.to_le_bytes());
+        let mut rng = SmallRng::seed_from_u64(seed);
 
         // Make a home directory for file actor and deletion actor
         let root_dir =

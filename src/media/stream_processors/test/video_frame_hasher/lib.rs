@@ -463,18 +463,22 @@ mod test {
             yv12_packet.data.iter_mut().enumerate().for_each(|(i, b)| *b = nv12_packet.data[i]);
 
             // Change a random display byte.
-            let x = rng.gen_range(0, nv12_spec.display_width);
+            let x = rng.gen_range(0..nv12_spec.display_width);
             let y = {
                 let y_range = [
                     // Luminance plane rows.
-                    (0, nv12_spec.display_height),
+                    (0..nv12_spec.display_height),
                     // Chrominance plane rows.
-                    (nv12_spec.coded_height(), nv12_spec.display_height / 2),
+                    {
+                        let start = nv12_spec.coded_height();
+                        let end = start + (nv12_spec.display_height / 2);
+                        start..end
+                    },
                 ]
                 .choose(&mut rng)
                 .expect("Sampling from nonempty slice")
                 .clone();
-                rng.gen_range(y_range.0, y_range.0 + y_range.1)
+                rng.gen_range(y_range)
             };
             let idx = y * (nv12_spec.bytes_per_row as usize) + x;
             nv12_packet.data[idx] = nv12_packet.data[idx].overflowing_add(1).0;

@@ -22,7 +22,7 @@ pub fn generate_channel(channel: u8) -> fidl_common::WlanChannel {
     let mut rng = rand::thread_rng();
     fidl_common::WlanChannel {
         primary: channel,
-        cbw: match rng.gen_range(0, 5) {
+        cbw: match rng.gen_range(0..5) {
             0 => fidl_common::ChannelBandwidth::Cbw20,
             1 => fidl_common::ChannelBandwidth::Cbw40,
             2 => fidl_common::ChannelBandwidth::Cbw40Below,
@@ -47,10 +47,10 @@ pub fn generate_random_sme_scan_result() -> fidl_sme::ScanResult {
 pub fn generate_random_bss() -> types::Bss {
     let mut rng = rand::thread_rng();
     let bssid: Bssid = Bssid(rng.gen());
-    let rssi = rng.gen_range(-100, 20);
+    let rssi = rng.gen_range(-100..20);
     let channel = generate_random_channel();
     let timestamp = zx::Time::from_nanos(rng.gen());
-    let snr_db = rng.gen_range(-20, 50);
+    let snr_db = rng.gen_range(-20..50);
 
     types::Bss {
         bssid,
@@ -77,7 +77,7 @@ pub fn generate_random_scan_result() -> types::ScanResult {
         ssid,
         security_type_detailed: types::SecurityTypeDetailed::Wpa1,
         entries: vec![generate_random_bss(), generate_random_bss()],
-        compatibility: match rng.gen_range(0, 2) {
+        compatibility: match rng.gen_range(0..2) {
             0 => types::Compatibility::Supported,
             1 => types::Compatibility::DisallowedNotSupported,
             2 => types::Compatibility::DisallowedInsecure,
@@ -90,7 +90,7 @@ pub fn generate_disconnect_info(is_sme_reconnecting: bool) -> fidl_sme::Disconne
     let mut rng = rand::thread_rng();
     fidl_sme::DisconnectInfo {
         is_sme_reconnecting,
-        disconnect_source: match rng.gen_range(0, 2) {
+        disconnect_source: match rng.gen_range(0..2) {
             0 => fidl_sme::DisconnectSource::Ap(generate_random_disconnect_cause()),
             1 => fidl_sme::DisconnectSource::User(generate_random_user_disconnect_reason()),
             2 => fidl_sme::DisconnectSource::Mlme(generate_random_disconnect_cause()),
@@ -101,7 +101,7 @@ pub fn generate_disconnect_info(is_sme_reconnecting: bool) -> fidl_sme::Disconne
 
 pub fn generate_random_user_disconnect_reason() -> fidl_sme::UserDisconnectReason {
     let mut rng = rand::thread_rng();
-    match rng.gen_range(0, 14) {
+    match rng.gen_range(0..14) {
         0 => fidl_sme::UserDisconnectReason::Unknown,
         1 => fidl_sme::UserDisconnectReason::FailedToConnect,
         2 => fidl_sme::UserDisconnectReason::FidlConnectRequest,
@@ -130,7 +130,7 @@ pub fn generate_random_disconnect_cause() -> fidl_sme::DisconnectCause {
 pub fn generate_random_reason_code() -> fidl_ieee80211::ReasonCode {
     let mut rng = rand::thread_rng();
     // This is just a random subset from the first few reason codes
-    match rng.gen_range(0, 10) {
+    match rng.gen_range(0..10) {
         0 => fidl_ieee80211::ReasonCode::UnspecifiedReason,
         1 => fidl_ieee80211::ReasonCode::InvalidAuthentication,
         2 => fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
@@ -147,7 +147,7 @@ pub fn generate_random_reason_code() -> fidl_ieee80211::ReasonCode {
 
 pub fn generate_random_disconnect_mlme_event_name() -> fidl_sme::DisconnectMlmeEventName {
     let mut rng = rand::thread_rng();
-    match rng.gen_range(0, 2) {
+    match rng.gen_range(0..2) {
         0 => fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
         1 => fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
         _ => panic!(),

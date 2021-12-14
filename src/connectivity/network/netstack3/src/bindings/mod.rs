@@ -88,10 +88,7 @@ impl BindingsDispatcher {
         BindingsDispatcher {
             devices: Devices::default(),
             timers: timers::TimerDispatcher::new(),
-            // TODO(joshlf): Is unwrapping safe here? Alternatively,
-            // wait until we upgrade to rand 0.7, where OsRng is an
-            // empty struct.
-            rng: OsRng::new().unwrap(),
+            rng: Default::default(),
             udp_sockets: Default::default(),
         }
     }

@@ -467,7 +467,7 @@ fn compute_timer_expiration<I: Instant, P: ProtocolSpecific, R: Rng>(
 ///
 /// `random_report_timeout` may panic if `period.as_micros()` overflows `u64`.
 fn random_report_timeout<R: Rng>(rng: &mut R, period: Duration) -> Duration {
-    let micros = rng.gen_range(0, u64::try_from(period.as_micros()).unwrap()) + 1;
+    let micros = rng.gen_range(0..u64::try_from(period.as_micros()).unwrap()) + 1;
     // u64 will be enough here because the only input of the function is from
     // the `MaxRespTime` field of the GMP query packets. The representable
     // number of microseconds is bounded by 2^33.

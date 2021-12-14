@@ -231,10 +231,13 @@ impl SavedNetworksManager {
     #[cfg(test)]
     pub async fn new_for_test() -> Result<Self, anyhow::Error> {
         use crate::util::testing::cobalt::create_mock_cobalt_sender;
-        use rand::{distributions::Alphanumeric, thread_rng};
+        use rand::{
+            distributions::{Alphanumeric, DistString as _},
+            thread_rng,
+        };
 
-        let stash_id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
-        let path: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
+        let stash_id = Alphanumeric.sample_string(&mut thread_rng(), 20);
+        let path = Alphanumeric.sample_string(&mut thread_rng(), 20);
         Self::new_with_stash_or_paths(stash_id, Path::new(&path), create_mock_cobalt_sender()).await
     }
 
@@ -244,9 +247,12 @@ impl SavedNetworksManager {
     #[cfg(test)]
     pub async fn new_and_stash_server() -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
         use crate::util::testing::cobalt::create_mock_cobalt_sender;
-        use rand::{distributions::Alphanumeric, thread_rng};
+        use rand::{
+            distributions::{Alphanumeric, DistString as _},
+            thread_rng,
+        };
 
-        let id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
+        let id = Alphanumeric.sample_string(&mut thread_rng(), 20);
         use fidl::endpoints::create_proxy;
         let (store_client, _stash_server) = create_proxy::<fidl_fuchsia_stash::StoreMarker>()
             .expect("failed to create stash proxy");
@@ -588,12 +594,12 @@ pub fn select_subset_potentially_hidden_networks(
     saved_networks
         .into_iter()
         .filter(|saved_network| {
-            // Roll a dice to see if we should scan for it. The function gen_range(low, high)
+            // Roll a dice to see if we should scan for it. The function gen_range(low..high)
             // has an inclusive lower bound and exclusive upper bound, so using it as
-            // `hidden_probability > gen_range(0, 1)` means that:
+            // `hidden_probability > gen_range(0..1)` means that:
             // - hidden_probability of 1 will _always_ be selected
             // - hidden_probability of 0 will _never_ be selected
-            saved_network.hidden_probability > rand::thread_rng().gen_range(0.0, 1.0)
+            saved_network.hidden_probability > rand::thread_rng().gen_range(0.0..1.0)
         })
         .map(|network| types::NetworkIdentifier {
             ssid: network.ssid,
@@ -713,7 +719,10 @@ mod tests {
         fuchsia_cobalt::cobalt_event_builder::CobaltEventExt,
         futures::{task::Poll, TryStreamExt},
         pin_utils::pin_mut,
-        rand::{distributions::Alphanumeric, thread_rng, Rng},
+        rand::{
+            distributions::{Alphanumeric, DistString as _},
+            thread_rng,
+        },
         std::{convert::TryFrom, io::Write},
         tempfile::TempDir,
         test_case::test_case,
@@ -1724,7 +1733,7 @@ mod tests {
     }
 
     fn rand_string() -> String {
-        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
+        Alphanumeric.sample_string(&mut thread_rng(), 20)
     }
 
     #[fuchsia::test]

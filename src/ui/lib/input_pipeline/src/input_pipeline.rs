@@ -488,7 +488,7 @@ mod tests {
     /// - `sender`: The channel to send the InputEvent over.
     fn send_input_event(mut sender: Sender<input_device::InputEvent>) -> input_device::InputEvent {
         let mut rng = rand::thread_rng();
-        let offset = Position { x: rng.gen_range(0, 10) as f32, y: rng.gen_range(0, 10) as f32 };
+        let offset = Position { x: rng.gen_range(0..10) as f32, y: rng.gen_range(0..10) as f32 };
         let input_event = input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent::new(
                 mouse_binding::MouseLocation::Relative(offset),

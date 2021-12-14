@@ -90,6 +90,7 @@ futures-sink = "=0.3.15"
 futures-task = "=0.3.15"
 futures-test = "=0.3.15"
 futures-util = "=0.3.15"
+getrandom = { features = ["js"] }
 glob = "0.3.0"
 gpt = "2.0.0"
 heck = "0.3.1"
@@ -134,8 +135,8 @@ prettytable-rs = "0.8.0"
 proc-macro-hack = "0.5.19"
 proptest = "0.9.3"
 proptest-derive = "0.1.1"
-rand = "0.6"
-rand_xorshift = "0.1.1"
+rand = { version = "0.8", features = ["small_rng"] }
+rand_xorshift = "0.3"
 rayon = "1.2.1"
 regex = "1.0.6"
 regex-syntax = "0.6.5"
@@ -182,7 +183,7 @@ url = "2.1"
 uuid = { version = "0.7.2", features = ["serde", "v4"] } # move ?
 valico = "2.4.2"
 vte = "0.3"
-wasm-bindgen = "0.2.60"
+wasm-bindgen = "0.2.63"
 webpki = "0.21"
 xml-rs = "0.8"
 unic-char-range = "0.9"
@@ -407,10 +408,14 @@ rustflags = [ "--cfg=fn_like_proc_macro" ]
 rustflags = [ "--cfg=relaxed_coherence" ]
 
 [gn.package.getrandom."0.2.2"]
+env_vars = [ "CARGO_PKG_NAME=getrandom", "CARGO_PKG_VERSION=0.2.2", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/getrandom" ]
 rustflags = []
 
 [gn.package.httparse."1.5.1"]
 rustflags = ["--cfg=httparse_simd"]
+
+[gn.package.js-sys."0.3.39"]
+env_vars = [ "CARGO_PKG_NAME=js-sys", "CARGO_PKG_VERSION=0.3.39", "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/js-sys" ]
 
 [gn.package.libc."0.2.101"]
 rustflags = ["--cfg=libc_priv_mod_use", "--cfg=libc_union", "--cfg=libc_const_size_of", "--cfg=libc_align", "--cfg=libc_core_cvoid", "--cfg=libc_packedN", "--cfg=libc_cfg_target_vendor"]
@@ -569,9 +574,9 @@ env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-char-pr
 [gn.package.unic-ucd-block."0.9.0"]
 env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-ucd-block\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]
 
-[gn.package.wasm-bindgen-shared."0.2.60"]
+[gn.package.wasm-bindgen-shared."0.2.63"]
 # Do not quote, this is embedded directly in .wasm sections and is needed by wasm-bindgen.
-env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
+env_vars = [ "CARGO_PKG_VERSION=0.2.63" ]
 
 # These dependencies have build.rs scripts, but dummy invocations indicating they
 # do not need to be run are sufficient for our build
@@ -596,7 +601,7 @@ env_vars = [ "CARGO_PKG_VERSION=0.2.60" ]
 rustflags = ["--cfg=limb_width_64"]
 [gn.package.syn."1.0.74"]
 [gn.package.test-case."1.1.0"]
-[gn.package.wasm-bindgen."0.2.60"]
+[gn.package.wasm-bindgen."0.2.63"]
 
 
 # This section defines GN binary targets that should be generated from Cargo binary targets. (By

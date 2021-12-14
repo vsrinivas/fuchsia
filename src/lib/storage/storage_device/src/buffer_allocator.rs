@@ -387,10 +387,9 @@ mod tests {
                             // then pick a size within that. For example, we might pick order 3,
                             // which would give us 8 * 512..16 * 512 as our possible range.
                             // This way we don't bias towards larger allocations too much.
-                            let order: usize = rng.gen_range(order(1, bs), order(65536 + 1, bs));
+                            let order: usize = rng.gen_range(order(1, bs)..order(65536 + 1, bs));
                             let size: usize = rng.gen_range(
-                                bs * 2_usize.pow(order as u32),
-                                bs * 2_usize.pow(order as u32 + 1),
+                                bs * 2_usize.pow(order as u32)..bs * 2_usize.pow(order as u32 + 1),
                             );
                             if let Some(mut buf) = allocator.try_allocate_buffer(size) {
                                 let val = rng.gen::<u8>();
@@ -402,7 +401,7 @@ mod tests {
                             }
                         }
                         Op::Dealloc if !buffers.is_empty() => {
-                            let idx = rng.gen_range(0, buffers.len());
+                            let idx = rng.gen_range(0..buffers.len());
                             buffers.remove(idx);
                         }
                         _ => {}

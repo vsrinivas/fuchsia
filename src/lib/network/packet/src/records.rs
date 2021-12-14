@@ -2657,9 +2657,9 @@ pub mod options {
             use rand::{thread_rng, Rng};
             let mut rng = thread_rng();
             for _ in 0..100_000 {
-                let x = rng.gen_range(1usize, 256);
-                let y = rng.gen_range(0, x);
-                let pos = rng.gen_range(0usize, 65536);
+                let x = rng.gen_range(1usize..256);
+                let y = rng.gen_range(0..x);
+                let pos = rng.gen_range(0usize..65536);
                 let new_pos = align_up_to(pos, x, y);
                 // 1)
                 assert!(new_pos >= pos);

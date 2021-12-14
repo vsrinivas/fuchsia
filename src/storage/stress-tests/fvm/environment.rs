@@ -24,7 +24,7 @@ const TYPE_GUID: Guid = Guid {
 
 /// Describes the environment that this blobfs stress test will run under.
 pub struct FvmEnvironment {
-    seed: u128,
+    seed: u64,
     args: Args,
     vmo: Vmo,
     instance_actor: Arc<Mutex<InstanceActor>>,
@@ -46,7 +46,7 @@ impl FvmEnvironment {
             Some(seed) => seed,
             None => random_seed(),
         };
-        let mut rng = SmallRng::from_seed(seed.to_le_bytes());
+        let mut rng = SmallRng::seed_from_u64(seed);
 
         let mut volume_actors = vec![];
         for i in 0..args.num_volumes {

@@ -1028,7 +1028,7 @@ mod tests {
 
             let parent = open_parent().await;
             let deleter = fasync::Task::spawn(async move {
-                let wait_time = rand::thread_rng().gen_range(0, 5);
+                let wait_time = rand::thread_rng().gen_range(0..5);
                 fasync::Timer::new(Duration::from_millis(wait_time)).await;
                 match parent
                     .unlink(CHILD, UnlinkOptions::EMPTY)

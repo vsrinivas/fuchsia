@@ -26,7 +26,7 @@ use {
     matches::assert_matches,
     packet::ParsablePacket,
     packet_formats_dhcp::v6,
-    rand::{rngs::StdRng, FromEntropy},
+    rand::{rngs::StdRng, SeedableRng},
     std::{
         collections::{
             hash_map::{DefaultHasher, Entry},

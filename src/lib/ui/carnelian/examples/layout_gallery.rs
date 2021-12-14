@@ -339,7 +339,7 @@ fn main() -> Result<(), Error> {
 
 fn random_color_element() -> u8 {
     let mut rng = thread_rng();
-    let e: u8 = rng.gen_range(0, 128);
+    let e: u8 = rng.gen_range(0..128);
     e + 128
 }
 

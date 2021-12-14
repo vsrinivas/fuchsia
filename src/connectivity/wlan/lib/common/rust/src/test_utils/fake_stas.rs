@@ -237,7 +237,7 @@ pub enum FakeProtectionCfg {
 
 impl Distribution<FakeProtectionCfg> for Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> FakeProtectionCfg {
-        let r = rng.gen_range(0, LAST_FAKE_PROTECTION_CFG_VALUE + 1);
+        let r = rng.gen_range(0..LAST_FAKE_PROTECTION_CFG_VALUE + 1);
         FromPrimitive::from_isize(r)
             .unwrap_or_else(|| panic!("Out of range random value for FakeProtectionCfg: {:?}", r))
     }
@@ -298,8 +298,8 @@ pub fn build_fake_bss_description_creator__(
 }
 
 fn random_ecw_min_max(rng: &mut rand::prelude::ThreadRng) -> ie::EcwMinMax {
-    let min = rng.gen_range(0x0, 0xf);
-    let max = rng.gen_range(min, 0xf);
+    let min = rng.gen_range(0x0..0xf);
+    let max = rng.gen_range(min..0xf);
     ie::EcwMinMax((max << 4) | min)
 }
 
@@ -313,7 +313,7 @@ pub fn build_random_bss_description_creator__(
 
     // Random rates
     let mut rates: Vec<u8> = vec![];
-    for _ in 0..rng.gen_range(1, ie::SUPPORTED_RATES_MAX_LEN + ie::EXTENDED_SUPPORTED_RATES_MAX_LEN)
+    for _ in 0..rng.gen_range(1..ie::SUPPORTED_RATES_MAX_LEN + ie::EXTENDED_SUPPORTED_RATES_MAX_LEN)
     {
         rates.push(rng.gen());
     }
@@ -336,7 +336,7 @@ pub fn build_random_bss_description_creator__(
         beacon_period: rng.gen::<u16>(),
         // TODO(fxbug.dev/81978): Purely random valid channel values is not implemented.
         channel: fidl_common::WlanChannel {
-            primary: rng.gen_range(1, 255),
+            primary: rng.gen_range(1..255),
             cbw: fidl_common::ChannelBandwidth::Cbw20,
             secondary80: 0,
         },
@@ -356,27 +356,27 @@ pub fn build_random_bss_description_creator__(
             Some(ie::WmmParam {
                 wmm_info: ie::WmmInfo(0).with_ap_wmm_info(
                     ie::ApWmmInfo(0)
-                        .with_parameter_set_count(rng.gen_range(0x00, 0xf))
+                        .with_parameter_set_count(rng.gen_range(0x00..0xf))
                         .with_uapsd(rng.gen()),
                 ),
                 _reserved: rng.gen(),
                 ac_be_params: ie::WmmAcParams {
-                    aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(rng.gen_range(2, 0xf)).with_aci(0),
+                    aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(rng.gen_range(2..0xf)).with_aci(0),
                     ecw_min_max: random_ecw_min_max(&mut rng),
                     txop_limit: rng.gen(),
                 },
                 ac_bk_params: ie::WmmAcParams {
-                    aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(rng.gen_range(2, 0xf)).with_aci(1),
+                    aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(rng.gen_range(2..0xf)).with_aci(1),
                     ecw_min_max: random_ecw_min_max(&mut rng),
                     txop_limit: rng.gen(),
                 },
                 ac_vi_params: ie::WmmAcParams {
-                    aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(rng.gen_range(2, 0xf)).with_aci(2),
+                    aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(rng.gen_range(2..0xf)).with_aci(2),
                     ecw_min_max: random_ecw_min_max(&mut rng),
                     txop_limit: rng.gen(),
                 },
                 ac_vo_params: ie::WmmAcParams {
-                    aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(rng.gen_range(2, 0xf)).with_aci(3),
+                    aci_aifsn: ie::WmmAciAifsn(0).with_aifsn(rng.gen_range(2..0xf)).with_aci(3),
                     ecw_min_max: random_ecw_min_max(&mut rng),
                     txop_limit: rng.gen(),
                 },

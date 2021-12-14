@@ -185,8 +185,10 @@ mod tests {
     use super::*;
     use fuchsia_async as fasync;
     use lazy_static::lazy_static;
-    use rand::distributions::Alphanumeric;
-    use rand::{thread_rng, Rng};
+    use rand::{
+        distributions::{Alphanumeric, DistString as _},
+        thread_rng,
+    };
 
     lazy_static! {
         static ref TEST_STATE: State = State::SingleEnrollment {
@@ -196,7 +198,7 @@ mod tests {
     }
 
     fn random_store_id() -> String {
-        let rand_string: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
+        let rand_string = Alphanumeric.sample_string(&mut thread_rng(), 20);
         format!("pre_auth_test_{}", &rand_string)
     }
 

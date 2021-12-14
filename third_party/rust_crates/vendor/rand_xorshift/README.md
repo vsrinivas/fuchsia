@@ -1,12 +1,12 @@
 # rand_xorshift
 
-[![Build Status](https://travis-ci.org/rust-random/rand.svg)](https://travis-ci.org/rust-random/rand)
-[![Build Status](https://ci.appveyor.com/api/projects/status/github/rust-random/rand?svg=true)](https://ci.appveyor.com/project/rust-random/rand)
+[![Build Status](https://travis-ci.org/rust-random/rngs.svg)](https://travis-ci.org/rust-random/rngs)
+[![Build Status](https://ci.appveyor.com/api/projects/status/github/rust-random/rngs?svg=true)](https://ci.appveyor.com/project/rust-random/rngs)
 [![Latest version](https://img.shields.io/crates/v/rand_xorshift.svg)](https://crates.io/crates/rand_xorshift)
 [![Book](https://img.shields.io/badge/book-master-yellow.svg)](https://rust-random.github.io/book/)
 [![API](https://img.shields.io/badge/api-master-yellow.svg)](https://rust-random.github.io/rand/rand_xorshift)
 [![API](https://docs.rs/rand_xorshift/badge.svg)](https://docs.rs/rand_xorshift)
-[![Minimum rustc version](https://img.shields.io/badge/rustc-1.22+-lightgray.svg)](https://github.com/rust-random/rand#rust-version-requirements)
+[![Minimum rustc version](https://img.shields.io/badge/rustc-1.32+-lightgray.svg)](https://github.com/rust-random/rngs#rust-version-requirements)
 
 Implements the Xorshift random number generator.
 
@@ -22,7 +22,7 @@ Links:
 
 -   [API documentation (master)](https://rust-random.github.io/rand/rand_xorshift)
 -   [API documentation (docs.rs)](https://docs.rs/rand_xorshift)
--   [Changelog](CHANGELOG.md)
+-   [Changelog](https://github.com/rust-random/rngs/blob/master/rand_xorshift/CHANGELOG.md)
 
 [rand]: https://crates.io/crates/rand
 

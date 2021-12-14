@@ -49,7 +49,7 @@ impl EntryDistribution {
     /// creates a bernoulli distribution where the likelyhood is progressively decreased at further
     /// depths until it's 0% at max_depth.
     fn directory_distribution(&self) -> distributions::Bernoulli {
-        distributions::Bernoulli::from_ratio(self.max_depth - self.depth, self.max_depth)
+        distributions::Bernoulli::from_ratio(self.max_depth - self.depth, self.max_depth).unwrap()
     }
 }
 
@@ -63,7 +63,7 @@ pub struct FileEntry {
 
 impl distributions::Distribution<FileEntry> for distributions::Standard {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> FileEntry {
-        let size = rng.gen_range(1, 1 << 16);
+        let size = rng.gen_range(1..1 << 16);
         // unfortunately, we can't use sample_iter to generate the content here. the trait
         // definition for distribution requires the Rng type parameter to have ?Sized (or "maybe
         // sized"), but the sample_iter function requires the provided Rng be Sized, either through
@@ -97,7 +97,7 @@ pub struct DirectoryEntry {
 impl distributions::Distribution<DirectoryEntry> for EntryDistribution {
     fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> DirectoryEntry {
         // each directory has a random number of entries in the range [0, 6)
-        let num_entries = rng.gen_range(0, 6);
+        let num_entries = rng.gen_range(0..6);
         let mut entries = vec![];
         let entry_dist = self.next_level();
         for _ in 0..num_entries {

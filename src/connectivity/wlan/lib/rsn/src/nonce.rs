@@ -8,7 +8,7 @@ use bytes::{BufMut, BytesMut};
 use fuchsia_zircon as zx;
 use num::bigint::BigUint;
 use parking_lot::Mutex;
-use rand::{OsRng, Rng as _};
+use rand::{rngs::OsRng, Rng as _};
 use std::sync::Arc;
 
 pub type Nonce = [u8; 32];
@@ -33,7 +33,7 @@ impl NonceReader {
         let epoch_nanos = zx::Time::get_monotonic().into_nanos();
         buf.put_i64_le(epoch_nanos);
         buf.put_slice(sta_addr);
-        let k = OsRng::new()?.gen::<[u8; 32]>();
+        let k = OsRng.gen::<[u8; 32]>();
         let init = prf::prf(&k[..], "Init Counter", &buf[..], 8 * std::mem::size_of_val(&k))?;
         Ok(Arc::new(NonceReader { key_counter: Mutex::new(BigUint::from_bytes_le(&init[..])) }))
     }

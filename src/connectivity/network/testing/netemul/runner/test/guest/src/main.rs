@@ -12,15 +12,17 @@ use {
     fuchsia_zircon as zx,
     futures::io::AsyncReadExt,
     netemul_guest_lib::{file_to_client, wait_for_command_completion},
-    rand::distributions::Alphanumeric,
-    rand::{thread_rng, Rng},
+    rand::{
+        distributions::{Alphanumeric, DistString as _},
+        thread_rng,
+    },
     std::fs::File,
     std::io::prelude::*,
     std::io::Read,
 };
 
 fn create_test_data(file_path: String, file_size: usize) -> Result<(), Error> {
-    let file_contents: String = thread_rng().sample_iter(&Alphanumeric).take(file_size).collect();
+    let file_contents = Alphanumeric.sample_string(&mut thread_rng(), file_size);
     let mut test_file = File::create(file_path)?;
     test_file.write_all(file_contents.as_bytes())?;
     return Ok(());

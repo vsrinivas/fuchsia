@@ -13,7 +13,7 @@ use {
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::{sys::zx_status_t, AsHandleRef, Rights, Status, Vmo},
     ramdevice_client::{RamdiskClient, VmoRamdiskClientBuilder},
-    rand::{rngs::SmallRng, FromEntropy, Rng},
+    rand::{rngs::SmallRng, Rng, SeedableRng},
     std::{
         fs::OpenOptions,
         os::{raw::c_int, unix::io::AsRawFd},

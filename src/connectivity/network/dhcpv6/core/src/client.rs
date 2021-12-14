@@ -163,7 +163,7 @@ fn retransmission_timeout<R: Rng>(
     max_retrans_timeout: Duration,
     rng: &mut R,
 ) -> Duration {
-    let rand = rng.gen_range(RANDOMIZATION_FACTOR_MIN, RANDOMIZATION_FACTOR_MAX);
+    let rand = rng.gen_range(RANDOMIZATION_FACTOR_MIN..RANDOMIZATION_FACTOR_MAX);
 
     let next_rt = if prev_retrans_timeout.as_nanos() == 0 {
         let irt = initial_retrans_timeout.as_secs_f64();

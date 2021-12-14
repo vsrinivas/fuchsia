@@ -370,7 +370,7 @@ impl Device<FidlConnection, OsRng> {
     pub async fn new(path: String) -> Result<Option<Device<FidlConnection, OsRng>>, Error> {
         let (proxy, server) = create_proxy::<DeviceMarker>().context("Failed to create proxy")?;
         service_connect(&path, server.into_channel()).context("Failed to connect to device")?;
-        Device::new_from_connection(path, FidlConnection::new(proxy), OsRng::new()?).await
+        Device::new_from_connection(path, FidlConnection::new(proxy), Default::default()).await
     }
 }
 

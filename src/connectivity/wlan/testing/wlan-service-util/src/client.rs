@@ -277,7 +277,7 @@ mod tests {
             rssi_dbm: rng.gen::<i8>(),
             channel: fidl_common::WlanChannel {
                 primary: rng.gen::<u8>(),
-                cbw: match rng.gen_range(0, 5) {
+                cbw: match rng.gen_range(0..5) {
                     0 => fidl_common::ChannelBandwidth::Cbw20,
                     1 => fidl_common::ChannelBandwidth::Cbw40,
                     2 => fidl_common::ChannelBandwidth::Cbw40Below,

@@ -182,18 +182,18 @@ impl Flower {
         const FLOWER_MAX_R2: f32 = 60.0;
 
         let mut rng = thread_rng();
-        let petal_count: usize = rng.gen_range(FLOWER_MIN_PETALS, FLOWER_MAX_PETALS);
-        let r1: f32 = rng.gen_range(FLOWER_MIN_R1, FLOWER_MAX_R1);
-        let r2: f32 = rng.gen_range(FLOWER_MIN_R2, FLOWER_MAX_R2);
+        let petal_count: usize = rng.gen_range(FLOWER_MIN_PETALS..FLOWER_MAX_PETALS);
+        let r1: f32 = rng.gen_range(FLOWER_MIN_R1..FLOWER_MAX_R1);
+        let r2: f32 = rng.gen_range(FLOWER_MIN_R2..FLOWER_MAX_R2);
         // Random location in canvas.
         let offset = vec2(
-            rng.gen_range(FLOWER_SIZE, width - FLOWER_SIZE),
-            rng.gen_range(FLOWER_SIZE, height - FLOWER_SIZE),
+            rng.gen_range(FLOWER_SIZE..width - FLOWER_SIZE),
+            rng.gen_range(FLOWER_SIZE..height - FLOWER_SIZE),
         );
 
         let mut points = Vec::new();
-        let u: f32 = rng.gen_range(10.0, FLOWER_SIZE) / FLOWER_SIZE;
-        let v: f32 = rng.gen_range(0.0, FLOWER_SIZE - 10.0) / FLOWER_SIZE;
+        let u: f32 = rng.gen_range(10.0..FLOWER_SIZE) / FLOWER_SIZE;
+        let v: f32 = rng.gen_range(0.0..FLOWER_SIZE - 10.0) / FLOWER_SIZE;
         let dt: f32 = f32::consts::PI / (petal_count as f32);
         let mut t: f32 = 0.0;
 

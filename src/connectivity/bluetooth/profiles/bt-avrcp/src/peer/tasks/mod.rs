@@ -152,7 +152,7 @@ fn handle_notification(
 async fn make_connection(peer: Arc<RwLock<RemotePeer>>) {
     let random_delay: zx::Duration = zx::Duration::from_nanos(
         rand::thread_rng()
-            .gen_range(MIN_CONNECTION_EST_TIME.into_nanos(), MAX_CONNECTION_EST_TIME.into_nanos()),
+            .gen_range(MIN_CONNECTION_EST_TIME.into_nanos()..MAX_CONNECTION_EST_TIME.into_nanos()),
     );
     trace!("AVRCP waiting {:?} millis before establishing connection", random_delay.into_millis());
     fuchsia_async::Timer::new(random_delay.after_now()).await;

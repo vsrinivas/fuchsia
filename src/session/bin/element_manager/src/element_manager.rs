@@ -20,7 +20,10 @@ use {
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component, fuchsia_scenic as scenic, fuchsia_zircon as zx,
     futures::{lock::Mutex, select, FutureExt, StreamExt, TryStreamExt},
-    rand::{distributions::Alphanumeric, thread_rng, Rng},
+    rand::{
+        distributions::{Alphanumeric, DistString},
+        thread_rng,
+    },
     realm_management,
     std::sync::Arc,
     tracing::{error, info},
@@ -513,7 +516,7 @@ impl ElementManager {
             felement::ProposeElementError::InvalidArgs
         })?;
 
-        let mut child_name: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+        let mut child_name = Alphanumeric.sample_string(&mut thread_rng(), 16);
         child_name.make_ascii_lowercase();
 
         let mut element = self

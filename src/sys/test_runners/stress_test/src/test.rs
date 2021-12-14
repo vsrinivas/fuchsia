@@ -16,7 +16,7 @@ use {
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     futures::FutureExt,
     log::{debug, info},
-    rand::{rngs::SmallRng, seq::SliceRandom, FromEntropy, Rng, SeedableRng},
+    rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     std::str::FromStr,
     std::time::Duration,
 };
@@ -189,8 +189,8 @@ impl StressTest {
         let realm_proxy = connect_to_realm_proxy(ns)?;
 
         // Optional
-        let rng = if let Some(seed) = get_and_parse::<u128>("seed", &dictionary) {
-            SmallRng::from_seed(seed.to_le_bytes())
+        let rng = if let Some(seed) = get_and_parse::<u64>("seed", &dictionary) {
+            SmallRng::seed_from_u64(seed)
         } else {
             SmallRng::from_entropy()
         };

@@ -21,7 +21,7 @@ use {
 pub struct Args {
     /// seed to use for this stressor instance
     #[argh(option, short = 's')]
-    seed: Option<u128>,
+    seed: Option<u64>,
 
     /// number of operations to complete before exiting.
     #[argh(option, short = 'o')]

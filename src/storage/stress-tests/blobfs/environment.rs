@@ -35,7 +35,7 @@ const FOUR_MIB: u64 = 4 * ONE_MIB;
 
 /// Describes the environment that this blobfs stress test will run under.
 pub struct BlobfsEnvironment {
-    seed: u128,
+    seed: u64,
     args: Args,
     vmo: Vmo,
     volume_guid: Guid,
@@ -85,7 +85,7 @@ impl BlobfsEnvironment {
         // Create the instance actor
         let instance_actor = Arc::new(Mutex::new(InstanceActor::new(fvm, blobfs)));
 
-        let mut rng = SmallRng::from_seed(seed.to_le_bytes());
+        let mut rng = SmallRng::seed_from_u64(seed);
 
         // Create the blob actors
         let small_blob_actor = {

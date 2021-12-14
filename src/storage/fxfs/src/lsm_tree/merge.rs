@@ -860,7 +860,7 @@ mod tests {
         let skip_lists: Vec<_> = (0..10).map(|_| SkipListLayer::new(100)).collect();
         let mut rng = rand::thread_rng();
         for i in 0..100 {
-            skip_lists[rng.gen_range(0, 10) as usize].insert(Item::new(TestKey(i..i), i)).await;
+            skip_lists[rng.gen_range(0..10) as usize].insert(Item::new(TestKey(i..i), i)).await;
         }
         let mut merger =
             Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);

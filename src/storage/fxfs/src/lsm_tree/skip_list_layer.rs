@@ -565,7 +565,7 @@ impl<K: Key + Clone, V: Value + Clone> LayerIteratorMut<K, V> for SkipListLayerI
         // pointers of the previous one.
         let pointer_count = max_pointers
             - min(
-                (rng.gen_range(0, 2u32.pow(max_pointers as u32) - 1) as f32).log2() as usize,
+                (rng.gen_range(0..2u32.pow(max_pointers as u32) - 1) as f32).log2() as usize,
                 max_pointers - 1,
             );
         let node = Box::leak(self.skip_list.alloc_node(item, pointer_count));

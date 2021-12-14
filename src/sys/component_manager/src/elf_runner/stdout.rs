@@ -206,7 +206,10 @@ mod tests {
         futures::{FutureExt, SinkExt, StreamExt},
         log::Level,
         matches::assert_matches,
-        rand::{distributions::Alphanumeric, thread_rng, Rng},
+        rand::{
+            distributions::{Alphanumeric, DistString as _},
+            thread_rng,
+        },
         std::{
             convert::TryFrom,
             sync::{Arc, Mutex},
@@ -277,14 +280,12 @@ mod tests {
     async fn drain_lines_splits_at_newline() -> Result<(), Error> {
         let (tx, rx) = create_sockets()?;
         let (mut sender, recv) = create_mock_logger();
-        let msg = thread_rng()
-            .sample_iter(&Alphanumeric)
-            .take(MAX_MESSAGE_SIZE - 1)
-            .chain(std::iter::once('\n'))
-            .chain(thread_rng().sample_iter(&Alphanumeric).take(MAX_MESSAGE_SIZE - 1))
-            .chain(std::iter::once('\n'))
-            .chain(thread_rng().sample_iter(&Alphanumeric).take(MAX_MESSAGE_SIZE - 1))
-            .collect::<String>();
+        let msg = std::iter::repeat_with(|| {
+            Alphanumeric.sample_string(&mut thread_rng(), MAX_MESSAGE_SIZE - 1)
+        })
+        .take(3)
+        .collect::<Vec<_>>()
+        .join("\n");
 
         let () = take_and_write_to_socket(tx, &msg)?;
         let (actual, ()) =
@@ -418,6 +419,6 @@ mod tests {
     }
 
     fn get_random_string(size: usize) -> String {
-        thread_rng().sample_iter(&Alphanumeric).take(size).collect::<String>()
+        Alphanumeric.sample_string(&mut thread_rng(), size)
     }
 }
