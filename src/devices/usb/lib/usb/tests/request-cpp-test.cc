@@ -611,22 +611,23 @@ TEST(UsbRequestTest, VmoOffsetBoundsTest) {
   ASSERT_OK(Request::Alloc(&request, 0, 0, kParentReqSize));
 
   uint64_t offset = 0;
-  uint64_t length = ZX_PAGE_SIZE;
+  uint64_t length = zx_system_get_page_size();
   EXPECT_OK(request->Init(vmo, offset, 0, 0));
   EXPECT_OK(request->Init(vmo, offset, length, 0));
-  EXPECT_OK(request->Init(vmo, offset, length-1, 0));
-  EXPECT_EQ(request->Init(vmo, offset, length+1, 0), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(request->Init(vmo, offset+1, length, 0), ZX_ERR_INVALID_ARGS);
-  EXPECT_OK(request->Init(vmo, offset+1, length-1, 0));
+  EXPECT_OK(request->Init(vmo, offset, length - 1, 0));
+  EXPECT_EQ(request->Init(vmo, offset, length + 1, 0), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(request->Init(vmo, offset + 1, length, 0), ZX_ERR_INVALID_ARGS);
+  EXPECT_OK(request->Init(vmo, offset + 1, length - 1, 0));
 
-  offset = ZX_PAGE_SIZE;
+  offset = zx_system_get_page_size();
   length = 1;
-  EXPECT_EQ(request->Init(vmo, offset, length-1, 0), ZX_OK);
-  EXPECT_EQ(request->Init(vmo, offset-1, length, 0), ZX_OK);
-  EXPECT_EQ(request->Init(vmo, offset+1, length, 0), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(request->Init(vmo, offset, length - 1, 0), ZX_OK);
+  EXPECT_EQ(request->Init(vmo, offset - 1, length, 0), ZX_OK);
+  EXPECT_EQ(request->Init(vmo, offset + 1, length, 0), ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(request->Init(vmo, offset, length, 0), ZX_ERR_INVALID_ARGS);
 
-  EXPECT_EQ(request->Init(vmo, ZX_PAGE_SIZE, ZX_PAGE_SIZE, 0), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(request->Init(vmo, zx_system_get_page_size(), zx_system_get_page_size(), 0),
+            ZX_ERR_INVALID_ARGS);
   free(request->take());
 }
 
