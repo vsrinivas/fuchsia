@@ -1,0 +1,35 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.identity.credential;
+
+using zx;
+
+/// A unique label for a given credential.
+alias Label = uint64;
+/// A low entropy secret key a PIN.
+alias LeSecret = vector<bytes>:1024;
+/// A high entropy secret.
+alias HeSecret = vector<bytes>:1024;
+
+/// The delay schedule for a given credential. This is composed of two options
+/// the `attempt_count` which is the number of attempts that are allowed before
+/// the `time_delay` in seconds is activated before the next attempt can occur.
+type DelayScheduleEntry = struct {
+    attempt_count uint32;
+    time_delay zx.duration;
+};
+
+/// Specific error codes that can be returned by the credential manager.
+type CredentialError = flexible enum : uint32 {
+    // Check failed due to incorrect Low Entropy(LE) secret.
+    INVALID_SECRET = 1;
+    // Check failed due to too many attempts as per delay schedule.
+    TOO_MANY_ATTEMPTS = 2;
+    // The metadata retrieved was corrupted.
+    CORRUPTED_METADATA = 3;
+    // Label provided isn't present.
+    INVALID_LABEL = 4;
+    // No free labels available.
+    NO_FREE_LABEL = 5;
+};
