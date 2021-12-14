@@ -71,12 +71,27 @@ class GnTarget:
 
     @property
     def src_path(self):
-        """The absolute path to the directory containing this target's BUILD.gn file."""
+        """The path to the directory containing this target's BUILD.gn file."""
         return ROOT_PATH / self.label_path
 
     def gen_dir(self, build_dir=None):
-        """The absolute path to the directory containing this target's generated files."""
-        return (build_dir or FUCHSIA_BUILD_DIR) / "gen" / self.label_path
+        """The path to the directory containing this target's generated files.
+
+        Note: this function uses a heuristic to differentiate between default and
+        non-default toolchains. The gen_dir for the default toolchain is
+        <build_dir>/gen but otherwise it's <build_dir>/<toolchain>/gen. For the
+        purpose of most rust targets, saying that a toolchain that includes "fuchsia"
+        is default is usually good enough for finding generated_files, however this
+        could result in incorrect paths for any toolchain that contains "fuchsia" but
+        doesn't happen to be the default.
+        """
+        tc = self.explicit_toolchain
+        return (
+            (build_dir or FUCHSIA_BUILD_DIR)
+            / (tc.split(":")[-1] if tc and "fuchsia" not in tc else "")
+            / "gen"
+            / self.label_path
+        )
 
     def manifest_path(self, build_dir=None):
         """The path to Cargo.toml for this target."""

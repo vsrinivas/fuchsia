@@ -180,6 +180,9 @@ template("rustc_test_internal") {
 
       deps += [ "//build/rust:rust_test_metadata" ]
       deps += [ "//sdk/lib/syslog/cpp:backend_fuchsia_lib_rust" ]
+      if (generate_clippy && !disable_clippy) {
+        gen_deps = [ ":$target_name.clippy" ]
+      }
       metadata = {
         cmx_patches_walk = [ "//build/rust:rust_test_metadata" ]
 
@@ -194,6 +197,8 @@ template("rustc_test_internal") {
             {
               clippy =
                   get_label_info(":$target_name.clippy", "label_with_toolchain")
+              output = rebase_path(get_target_outputs(":$target_name.clippy"),
+                                   root_build_dir)
               src = []
               foreach(s, _sources) {
                 src += [ rebase_path(s, root_build_dir) ]

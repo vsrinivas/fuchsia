@@ -257,11 +257,14 @@ template("rustc_library") {
       ]
     }
     if (generate_clippy && !disable_clippy) {
+      gen_deps = [ ":$target_name.clippy" ]
       metadata = {
         rust_source_map = [
           {
             clippy =
                 get_label_info(":$target_name.clippy", "label_with_toolchain")
+            output = rebase_path(get_target_outputs(":$target_name.clippy"),
+                                 root_build_dir)
             src = []
             foreach(s, _sources) {
               src += [ rebase_path(s, root_build_dir) ]

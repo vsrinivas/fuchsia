@@ -13,8 +13,8 @@ output="$1"
 deps=( $(<"$output.deps") )
 transdeps=( $(sort -u "$output.transdeps") )
 
-"${@:2}" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen ${deps[@]} ${transdeps[@]} \
-    --emit metadata="$output.rmeta" --emit dep-info="$output.d" \
+RUSTC_LOG=error "${@:2}" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen \
+    ${deps[@]} ${transdeps[@]} --emit metadata="$output.rmeta" \
     --error-format=json --json=diagnostic-rendered-ansi 2>"$output"
 result=$?
 

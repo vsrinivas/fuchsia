@@ -34,13 +34,13 @@ def main():
         clippy_targets = []
         for target in args.input:
             gn_target = rust.GnTarget(target, args.fuchsia_dir)
-            if gn_target.toolchain_suffix:
-                print("Warning: Clippy doesn't work on non-default toolchains yet")
-                continue  # TODO: fxb/591046
             gn_target.label_name += ".clippy"
             clippy_targets.append(gn_target)
 
-    output_files = [t.gen_dir(build_dir).joinpath(t.label_name) for t in clippy_targets]
+    output_files = [
+        os.path.relpath(t.gen_dir(build_dir).joinpath(t.label_name), build_dir)
+        for t in clippy_targets
+    ]
     if args.get_outputs:
         print(*output_files, sep="\n")
         return 0
@@ -55,7 +55,7 @@ def main():
 
     lints = {}
     for clippy_output in output_files:
-        with open(clippy_output) as f:
+        with open(build_dir / clippy_output) as f:
             for line in f:
                 lint = json.loads(line)
                 # filter out "n warnings emitted" messages
@@ -79,11 +79,7 @@ def build_targets(output_files, build_dir, fuchsia_dir, verbose):
     ninja = [prebuilt / "ninja" / HOST_PLATFORM / "ninja", "-C", build_dir]
     if verbose:
         ninja += ["-v"]
-    subprocess.run(
-        ninja + [os.path.relpath(f, build_dir) for f in output_files],
-        stdout=sys.stderr,
-        check=True,
-    )
+    subprocess.run(ninja + output_files, stdout=sys.stderr, check=True)
 
 
 def get_targets(source_map, input_files, build_dir, get_all=False):
@@ -92,8 +88,6 @@ def get_targets(source_map, input_files, build_dir, get_all=False):
         raw = json.load(f)
     for target in raw:
         clippy_target = rust.GnTarget(target["clippy"], build_dir)
-        if clippy_target.toolchain_suffix:
-            continue  # TODO run clippy on non-default toolchains: fxb/591046
         if get_all or any(f in input_files for f in target["src"]):
             targets.add(clippy_target)
     return targets

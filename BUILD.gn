@@ -948,6 +948,10 @@ group("rbe_config.metadata") {
 #     - Required: The label of a clippy target.
 #     - Type: label_with_toolchain
 #
+#   output
+#     - Required: The path to the clippy output relative to $root_build_dir
+#     - Type: path
+#
 #   src
 #     - Required: The list of rust source files for that target.
 #     - Type: List[path] (all relative to $root_build_dir)
