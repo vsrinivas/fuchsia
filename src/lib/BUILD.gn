@@ -92,6 +92,7 @@ group("tests") {
     "fidl_table_validation:tests",
     "files:tests",
     "fostr:tests",
+    "fuchsia:tests",
     "fuchsia-async:tests",
     "fuchsia-async-testloop:tests",
     "fuchsia-component:tests",
