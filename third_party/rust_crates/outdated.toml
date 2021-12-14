@@ -89,7 +89,6 @@ skip_updating = [
     "regex",
     "regex-syntax",
     "ring",
-    "rouille",
     "rustc-demangle",
     "rustc-hash",
     "semver",
