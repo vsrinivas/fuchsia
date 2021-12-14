@@ -516,4 +516,30 @@ TEST(ModuleSymbols, ElfSymbols) {
   EXPECT_EQ(result[0].address(), symbol_context.RelativeToAbsolute(elf_symbol->relative_address()));
 }
 
+// Loads the stripped binary and ensures that exported symbols can still be found (these symbols
+// will be present only in the ELF ".dynsym" table).
+TEST(ModuleSymbols, StrippedElfSymbols) {
+  // Supply only the stripped binary name.
+  TestSymbolModule setup(TestSymbolModule::GetStrippedCheckedInTestFileName(),
+                         TestSymbolModule::GetStrippedCheckedInTestFileName());
+  ASSERT_TRUE(setup.Init().ok());
+
+  // Give it a non-relative context to make sure that things are relative-ized going in and out.
+  SymbolContext symbol_context(0x1000000);
+
+  const char kSymName[] = "_Z9GetIntPtrv";
+  std::vector<Location> result = setup.symbols()->ResolveInputLocation(
+      symbol_context,
+      InputLocation(Identifier(IdentifierComponent(SpecialIdentifier::kElf, kSymName))),
+      ResolveOptions());
+  ASSERT_EQ(1u, result.size());
+
+  // It should have found the ELF symbol.
+  ASSERT_TRUE(result[0].symbol());
+  auto elf_symbol = result[0].symbol().Get()->As<ElfSymbol>();
+  ASSERT_TRUE(elf_symbol);
+  EXPECT_EQ(kSymName, elf_symbol->linkage_name());
+  EXPECT_EQ("GetIntPtr()", elf_symbol->GetFullName());
+}
+
 }  // namespace zxdb

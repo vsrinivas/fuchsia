@@ -34,6 +34,29 @@ uint64_t ComputeMappedLength(elflib::ElfLib& elf) {
   return max;
 }
 
+// Merges the "symbols" and "dynamic symbols" into a single map. Returns an empty map if the symbols
+// couldn't be loaded.
+//
+// The ".dynsym" table is normally described as containing a subset of the information (just the
+// global symbols) in the ".symtab" section. But in a stripped binary, there will be only a
+// ".dynsym" section. To handle all the cases, this merges both tables. If a name is the same, this
+// assumes the symbols are the same. The non-dynamic one will be used in the case of duplicates.
+std::map<std::string, elflib::Elf64_Sym> GetMergedElfSymbols(elflib::ElfLib& elf) {
+  std::map<std::string, elflib::Elf64_Sym> result;
+
+  if (auto dyn = elf.GetAllDynamicSymbols())
+    result = std::move(*dyn);
+
+  // Merge in the ".symtab" section, overwriting any definitions that are duplicates.
+  if (auto sym = elf.GetAllSymbols()) {
+    for (const auto& pair : *sym) {
+      result.insert(pair);
+    }
+  }
+
+  return result;
+}
+
 }  // namespace
 
 DwarfBinaryImpl::DwarfBinaryImpl(const std::string& name, const std::string& binary_name,
@@ -65,16 +88,12 @@ Err DwarfBinaryImpl::Load() {
     if (debug->ProbeHasProgramBits()) {
       // Found in ".debug" file.
       plt_symbols_ = debug->GetPLTOffsets();
-      if (const auto opt_syms = debug->GetAllSymbols())
-        elf_symbols_ = std::move(*opt_syms);
-
+      elf_symbols_ = GetMergedElfSymbols(*debug);
       mapped_length_ = ComputeMappedLength(*debug);
     } else if (auto elf = elflib::ElfLib::Create(binary_name_)) {
       // Found in binary file.
       plt_symbols_ = elf->GetPLTOffsets();
-      if (const auto opt_syms = elf->GetAllSymbols())
-        elf_symbols_ = std::move(*opt_syms);
-
+      elf_symbols_ = GetMergedElfSymbols(*elf);
       mapped_length_ = ComputeMappedLength(*elf);
     }
   }

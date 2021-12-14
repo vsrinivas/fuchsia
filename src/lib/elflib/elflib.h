@@ -74,16 +74,21 @@ class ElfLib {
   // symbol. Pointer should live as long as the memory accessor.
   const Elf64_Sym* GetSymbol(const std::string& name);
 
-  // Get a map of all symbols and their string names. Returns nullopt if the
-  // symbols could not be loaded.
+  // Get a map of the symbols in the ".symtab" section and their string names. Returns nullopt if
+  // the symbols could not be loaded. This section may be missing or very small for stripped
+  // binaries, see also GetAllDynamicSymbols().
   std::optional<std::map<std::string, Elf64_Sym>> GetAllSymbols();
 
   // Get a symbol from the symbol table. Return nullptr if there is no such
   // symbol. Pointer should live as long as the memory accessor.
   const Elf64_Sym* GetDynamicSymbol(const std::string& name);
 
-  // Get a map of all symbols and their string names. Returns nullopt if the
-  // symbols could not be loaded.
+  // Get a map of all dynamic symbols and their string names. Returns nullopt if the symbols could
+  // not be loaded.
+  //
+  // The ".dynsym" table is normally described as containing a subset of the information (just the
+  // global symbols) in the ".symtab" section. But in a stripped binary, there might be only a
+  // ".dynsym" section.
   std::optional<std::map<std::string, Elf64_Sym>> GetAllDynamicSymbols();
 
   // Attempt to discern whether this file has debug symbols (otherwise it is
