@@ -45,7 +45,7 @@ const BLOCKIO_READ: u32 = 1;
 const BLOCKIO_WRITE: u32 = 2;
 const BLOCKIO_FLUSH: u32 = 3;
 const BLOCKIO_TRIM: u32 = 4;
-const BLOCKIO_CLOSE_VMO: u32 = 5;
+pub const BLOCKIO_CLOSE_VMO: u32 = 5;
 
 fn op_code_str(op_code: u32) -> &'static str {
     match op_code {
@@ -77,11 +77,11 @@ pub struct BlockFifoResponse {
     pub status: i32,
     pub request_id: u32,
     pub group_id: u16,
-    reserved1: u16,
+    pub reserved1: u16,
     pub count: u32,
-    reserved2: u64,
-    reserved3: u64,
-    reserved4: u64,
+    pub reserved2: u64,
+    pub reserved3: u64,
+    pub reserved4: u64,
 }
 
 unsafe impl fasync::FifoEntry for BlockFifoRequest {}
@@ -237,7 +237,8 @@ impl Drop for ResponseFuture {
 pub struct VmoId(AtomicU16);
 
 impl VmoId {
-    fn new(id: u16) -> Self {
+    /// VmoIds will normally be vended by attach_vmo, but this might be used in some tests
+    pub fn new(id: u16) -> Self {
         Self(AtomicU16::new(id))
     }
 
@@ -255,7 +256,7 @@ impl VmoId {
         self.0.swap(BLOCK_VMOID_INVALID, Ordering::Relaxed)
     }
 
-    fn id(&self) -> u16 {
+    pub fn id(&self) -> u16 {
         self.0.load(Ordering::Relaxed)
     }
 }

@@ -4,7 +4,7 @@
 use {
     anyhow::{bail, Error},
     fidl_fuchsia_hardware_block::{self as block, BlockRequest},
-    fuchsia_async::{self as fasync, FifoReadable},
+    fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
     fuchsia_zircon as zx,
     futures::{stream::TryStreamExt, try_join},
     remote_block_device::{BlockFifoRequest, BlockFifoResponse},
@@ -15,6 +15,7 @@ use {
 pub struct BlockServer {
     server_channel: Option<zx::Channel>,
     vmos: Mutex<BTreeMap<u16, zx::Vmo>>,
+    // TODO(fxbug.dev/89873) include fxfs file, file: Arc<FxFile>
 }
 
 impl BlockServer {
@@ -49,9 +50,6 @@ impl BlockServer {
         request: BlockRequest,
         maybe_server_fifo: &Mutex<Option<zx::Fifo>>,
     ) -> Result<(), Error> {
-        // Print request for now ...
-        println!("{:?}", request);
-
         match request {
             BlockRequest::GetInfo { responder } => {
                 let mut block_info = block::BlockInfo {
@@ -94,8 +92,25 @@ impl BlockServer {
         // Handling requests from fifo
         let fifo_future = async {
             let fifo = fasync::Fifo::<BlockFifoRequest, BlockFifoResponse>::from_fifo(server_fifo)?;
-            while let Some(_request) = fifo.read_entry().await? {
-                // TODO(fxbug.dev/89873): handle requests from fifo (... handle detach VMO)
+            while let Some(request) = fifo.read_entry().await? {
+                match request.op_code {
+                    remote_block_device::BLOCKIO_CLOSE_VMO => {
+                        let status = {
+                            let mut vmos = self.vmos.lock().unwrap();
+                            match vmos.remove(&request.vmoid) {
+                                Some(_vmo) => zx::Status::OK.into_raw(),
+                                None => zx::Status::NOT_FOUND.into_raw(),
+                            }
+                        };
+                        let response = BlockFifoResponse {
+                            status,
+                            request_id: request.request_id,
+                            ..Default::default()
+                        };
+                        fifo.write_entries(std::slice::from_ref(&response)).await?;
+                    }
+                    _ => panic!("Unexpected message"),
+                }
             }
             Result::<_, Error>::Ok(())
         };
@@ -122,7 +137,7 @@ mod tests {
         super::BlockServer,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::try_join,
-        remote_block_device::{BlockClient, RemoteBlockClient},
+        remote_block_device::{BlockClient, RemoteBlockClient, VmoId},
         std::collections::HashSet,
     };
 
@@ -173,4 +188,28 @@ mod tests {
         )
         .expect("client failed");
     }
+
+    #[fasync::run(10, test)]
+    async fn test_detach_vmo() {
+        let (client, server) = zx::Channel::create().expect("Channel::create failed");
+        try_join!(
+            async {
+                let remote_block_device = RemoteBlockClient::new(client).await?;
+                let vmo = zx::Vmo::create(1)?;
+                let vmo_id = remote_block_device.attach_vmo(&vmo).await?;
+                let vmo_id_copy = VmoId::new(vmo_id.id());
+                remote_block_device.detach_vmo(vmo_id).await.expect("detach failed");
+                remote_block_device.detach_vmo(vmo_id_copy).await.expect_err("detach succeeded");
+                Result::<_, anyhow::Error>::Ok(())
+            },
+            async {
+                let mut server = BlockServer::new(server);
+                server.run().await.expect("server failed");
+                Ok(())
+            }
+        )
+        .expect("client failed");
+    }
+
+    // TODO(fxbug.dev/89873): test reading/writing to fxfs file
 }
