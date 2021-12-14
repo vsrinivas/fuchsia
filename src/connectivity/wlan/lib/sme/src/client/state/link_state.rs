@@ -39,6 +39,14 @@ pub struct EstablishingRsna {
     // the beginning of the RSNA when no frame has been exchanged yet, or at the end of the
     // RSNA when all the key frames have finished exchanging.
     pub resp_timeout: Option<EventId>,
+
+    // The following conditions must all be satisfied to consider an RSNA established. They
+    // may be satisfied in multiple orders, so we represent them as a threshold rather than
+    // as additional link states.
+    // Indicates that all handshake frames have been sent or received.
+    pub handshake_complete: bool,
+    // If empty, indicates that we have received confirms for all keys we've installed.
+    pub pending_key_ids: std::collections::HashSet<u16>,
 }
 
 #[derive(Debug)]
@@ -59,31 +67,54 @@ statemachine!(
 
 #[derive(Debug)]
 enum RsnaStatus {
-    Established,
     Failed(EstablishRsnaFailureReason),
     Unchanged,
-    Progressed { new_resp_timeout: Option<EventId> },
+    Progressed { new_resp_timeout: Option<EventId>, handshake_complete: bool, sent_keys: Vec<u16> },
+}
+
+#[derive(Debug)]
+enum RsnaProgressed {
+    Complete(LinkUp),
+    InProgress(EstablishingRsna),
 }
 
 impl EstablishingRsna {
-    fn on_rsna_established(self, bss: &BssDescription, context: &mut Context) -> LinkUp {
-        context.mlme_sink.send(MlmeRequest::SetCtrlPort(fidl_mlme::SetControlledPortRequest {
-            peer_sta_address: bss.bssid.0,
-            state: fidl_mlme::ControlledPortState::Open,
-        }));
-
-        let now = now();
-        let info = ConnectionPingInfo::first_connected(now);
-        let ping_event = Some(report_ping(info, context));
-        LinkUp { protection: Protection::Rsna(self.rsna), since: now, ping_event }
-    }
-
-    fn on_rsna_progressed(mut self, new_resp_timeout: Option<EventId>) -> Self {
+    fn on_rsna_progressed(
+        mut self,
+        new_resp_timeout: Option<EventId>,
+        handshake_complete: bool,
+        sent_keys: Vec<u16>,
+    ) -> Self {
+        sent_keys.into_iter().for_each(|key| {
+            self.pending_key_ids.insert(key);
+        });
+        self.handshake_complete |= handshake_complete;
         cancel(&mut self.resp_timeout);
         if let Some(id) = new_resp_timeout {
             self.resp_timeout.replace(id);
         }
         self
+    }
+
+    /// Establish the RSNA if all conditions are met.
+    fn try_establish(self, bss: &BssDescription, context: &mut Context) -> RsnaProgressed {
+        if self.handshake_complete && self.pending_key_ids.is_empty() {
+            context.mlme_sink.send(MlmeRequest::SetCtrlPort(fidl_mlme::SetControlledPortRequest {
+                peer_sta_address: bss.bssid.0,
+                state: fidl_mlme::ControlledPortState::Open,
+            }));
+
+            let now = now();
+            let info = ConnectionPingInfo::first_connected(now);
+            let ping_event = Some(report_ping(info, context));
+            RsnaProgressed::Complete(LinkUp {
+                protection: Protection::Rsna(self.rsna),
+                since: now,
+                ping_event,
+            })
+        } else {
+            RsnaProgressed::InProgress(self)
+        }
     }
 
     fn handle_establishing_rsna_timeout(
@@ -135,6 +166,8 @@ impl LinkState {
                                 rsna,
                                 rsna_timeout,
                                 resp_timeout: None,
+                                handshake_complete: false,
+                                pending_key_ids: Default::default(),
                             })
                             .into())
                     }
@@ -186,15 +219,20 @@ impl LinkState {
             Self::EstablishingRsna(state) => {
                 let (transition, mut state) = state.release_data();
                 match process_eapol_event(context, &mut state.rsna, &eapol_event) {
-                    RsnaStatus::Established => {
-                        let link_up = state.on_rsna_established(bss, context);
-                        state_change_msg.set_msg("RSNA established".to_string());
-                        Ok(transition.to(link_up).into())
-                    }
                     RsnaStatus::Failed(failure_reason) => Err(failure_reason),
-                    RsnaStatus::Progressed { new_resp_timeout } => {
-                        let still_establishing_rsna = state.on_rsna_progressed(new_resp_timeout);
-                        Ok(transition.to(still_establishing_rsna).into())
+                    RsnaStatus::Progressed { new_resp_timeout, sent_keys, handshake_complete } => {
+                        match state
+                            .on_rsna_progressed(new_resp_timeout, handshake_complete, sent_keys)
+                            .try_establish(bss, context)
+                        {
+                            RsnaProgressed::Complete(link_up) => {
+                                state_change_msg.set_msg("RSNA established".to_string());
+                                Ok(transition.to(link_up).into())
+                            }
+                            RsnaProgressed::InProgress(still_establishing_rsna) => {
+                                Ok(transition.to(still_establishing_rsna).into())
+                            }
+                        }
                     }
                     RsnaStatus::Unchanged => Ok(transition.to(state).into()),
                 }
@@ -209,7 +247,13 @@ impl LinkState {
                         // Timeout is ignored because only one RX frame is
                         // needed in the exchange, so we are not waiting for
                         // another one.
-                        RsnaStatus::Progressed { new_resp_timeout: _ } => {}
+                        // sent_keys is ignored because we're not waiting for key installations
+                        // to complete the RSNA.
+                        RsnaStatus::Progressed {
+                            new_resp_timeout: _,
+                            handshake_complete: _,
+                            sent_keys: _,
+                        } => {}
                         // Once re-keying is supported, the RSNA can fail in
                         // LinkUp as well and cause deauthentication.
                         s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
@@ -241,6 +285,40 @@ impl LinkState {
         self.on_eapol_event(eapol_conf, process_eapol_conf, bss, state_change_msg, context)
     }
 
+    pub fn on_set_keys_conf(
+        self,
+        set_keys_conf: fidl_mlme::SetKeysConfirm,
+        bss: &BssDescription,
+        state_change_msg: &mut Option<StateChangeContext>,
+        context: &mut Context,
+    ) -> Result<Self, EstablishRsnaFailureReason> {
+        for key_result in &set_keys_conf.results {
+            if key_result.status != zx::Status::OK.into_raw() {
+                state_change_msg.set_msg("Failed to set key in driver".to_string());
+                return Err(EstablishRsnaFailureReason::InternalError);
+            }
+        }
+
+        match self {
+            Self::EstablishingRsna(state) => {
+                let (transition, mut state) = state.release_data();
+                for key_result in set_keys_conf.results {
+                    state.pending_key_ids.remove(&key_result.key_id);
+                }
+                match state.try_establish(bss, context) {
+                    RsnaProgressed::Complete(link_up) => {
+                        state_change_msg.set_msg("RSNA established".to_string());
+                        Ok(transition.to(link_up).into())
+                    }
+                    RsnaProgressed::InProgress(still_establishing_rsna) => {
+                        Ok(transition.to(still_establishing_rsna).into())
+                    }
+                }
+            }
+            _ => Ok(self),
+        }
+    }
+
     pub fn handle_timeout(
         self,
         event_id: EventId,
@@ -268,14 +346,17 @@ impl LinkState {
                     match process_eapol_key_frame_timeout(context, timeout, &mut state.rsna) {
                         RsnaStatus::Failed(failure_reason) => Err(failure_reason),
                         RsnaStatus::Unchanged => Ok(transition.to(state).into()),
-                        RsnaStatus::Progressed { new_resp_timeout } => {
-                            let still_establishing_rsna =
-                                state.on_rsna_progressed(new_resp_timeout);
+                        RsnaStatus::Progressed {
+                            new_resp_timeout,
+                            sent_keys,
+                            handshake_complete,
+                        } => {
+                            let still_establishing_rsna = state.on_rsna_progressed(
+                                new_resp_timeout,
+                                handshake_complete,
+                                sent_keys,
+                            );
                             Ok(transition.to(still_establishing_rsna).into())
-                        }
-                        _ => {
-                            error!("Unexpected RsnaStatus after key frame exchange timeout");
-                            Err(EstablishRsnaFailureReason::InternalError)
                         }
                     }
                 }
@@ -319,51 +400,48 @@ fn inspect_log_key(context: &mut Context, key: &Key) {
     });
 }
 
-fn send_keys(mlme_sink: &MlmeSink, bssid: Bssid, key: Key) {
-    match key {
-        Key::Ptk(ptk) => {
-            mlme_sink.send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
-                keylist: vec![fidl_mlme::SetKeyDescriptor {
-                    key_type: fidl_mlme::KeyType::Pairwise,
-                    key: ptk.tk().to_vec(),
-                    key_id: 0,
-                    address: bssid.0,
-                    cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
-                    cipher_suite_type: ptk.cipher.suite_type,
-                    rsc: 0,
-                }],
-            }));
-        }
-        Key::Gtk(gtk) => {
-            mlme_sink.send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
-                keylist: vec![fidl_mlme::SetKeyDescriptor {
-                    key_type: fidl_mlme::KeyType::Group,
-                    key: gtk.tk().to_vec(),
-                    key_id: gtk.key_id() as u16,
-                    address: WILDCARD_BSSID.0,
-                    cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
-                    cipher_suite_type: gtk.cipher.suite_type,
-                    rsc: gtk.rsc,
-                }],
-            }));
-        }
+fn send_keys(mlme_sink: &MlmeSink, bssid: Bssid, key: Key) -> Option<u16> {
+    let key_descriptor = match key {
+        Key::Ptk(ptk) => fidl_mlme::SetKeyDescriptor {
+            key_type: fidl_mlme::KeyType::Pairwise,
+            key: ptk.tk().to_vec(),
+            key_id: 0,
+            address: bssid.0,
+            cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
+            cipher_suite_type: ptk.cipher.suite_type,
+            rsc: 0,
+        },
+        Key::Gtk(gtk) => fidl_mlme::SetKeyDescriptor {
+            key_type: fidl_mlme::KeyType::Group,
+            key: gtk.tk().to_vec(),
+            key_id: gtk.key_id() as u16,
+            address: WILDCARD_BSSID.0,
+            cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
+            cipher_suite_type: gtk.cipher.suite_type,
+            rsc: gtk.rsc,
+        },
         Key::Igtk(igtk) => {
             let mut rsc = [0u8; 8];
             rsc[2..].copy_from_slice(&igtk.ipn[..]);
-            mlme_sink.send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
-                keylist: vec![fidl_mlme::SetKeyDescriptor {
-                    key_type: fidl_mlme::KeyType::Igtk,
-                    key: igtk.igtk,
-                    key_id: igtk.key_id,
-                    address: [0xFFu8; 6],
-                    cipher_suite_oui: eapol::to_array(&igtk.cipher.oui[..]),
-                    cipher_suite_type: igtk.cipher.suite_type,
-                    rsc: u64::from_be_bytes(rsc),
-                }],
-            }));
+            fidl_mlme::SetKeyDescriptor {
+                key_type: fidl_mlme::KeyType::Igtk,
+                key: igtk.igtk,
+                key_id: igtk.key_id,
+                address: [0xFFu8; 6],
+                cipher_suite_oui: eapol::to_array(&igtk.cipher.oui[..]),
+                cipher_suite_type: igtk.cipher.suite_type,
+                rsc: u64::from_be_bytes(rsc),
+            }
         }
-        _ => error!("derived unexpected key"),
+        _ => {
+            error!("derived unexpected key");
+            return None;
+        }
     };
+    let key_id = key_descriptor.key_id;
+    mlme_sink
+        .send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest { keylist: vec![key_descriptor] }));
+    return Some(key_id);
 }
 
 /// Sends an eapol frame, and optionally schedules a timeout for the response.
@@ -485,6 +563,8 @@ fn process_eapol_updates(
 ) -> RsnaStatus {
     let sta_addr = context.device_info.sta_addr;
     let mut new_resp_timeout = None;
+    let mut handshake_complete = false;
+    let mut sent_keys = vec![];
     for update in updates {
         match update {
             // ESS Security Association requests to send an EAPOL frame.
@@ -497,14 +577,11 @@ fn process_eapol_updates(
             // Configure key in MLME.
             SecAssocUpdate::Key(key) => {
                 inspect_log_key(context, &key);
-                send_keys(&context.mlme_sink, bssid, key)
+                if let Some(key_id) = send_keys(&context.mlme_sink, bssid, key) {
+                    sent_keys.push(key_id);
+                }
             }
             // Received a status update.
-            // TODO(hahnr): Rework this part.
-            // As of now, we depend on the fact that the status is always the last update.
-            // However, this fact is not clear from the API.
-            // We should fix the API and make this more explicit.
-            // Then we should rework this part.
             SecAssocUpdate::Status(status) => {
                 inspect_log!(
                     context.inspect.rsn_events.lock(),
@@ -512,7 +589,9 @@ fn process_eapol_updates(
                 );
                 match status {
                     // ESS Security Association was successfully established. Link is now up.
-                    SecAssocStatus::EssSaEstablished => return RsnaStatus::Established,
+                    SecAssocStatus::EssSaEstablished => {
+                        handshake_complete = true;
+                    }
                     SecAssocStatus::WrongPassword => {
                         return RsnaStatus::Failed(EstablishRsnaFailureReason::InternalError);
                     }
@@ -524,5 +603,5 @@ fn process_eapol_updates(
         }
     }
 
-    RsnaStatus::Progressed { new_resp_timeout }
+    RsnaStatus::Progressed { new_resp_timeout, handshake_complete, sent_keys }
 }

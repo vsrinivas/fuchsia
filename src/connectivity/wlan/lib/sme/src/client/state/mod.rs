@@ -764,6 +764,15 @@ impl Associated {
         self.process_link_state_update(resp, LinkState::on_eapol_conf, context, state_change_ctx)
     }
 
+    fn on_set_keys_conf(
+        self,
+        conf: fidl_mlme::SetKeysConfirm,
+        state_change_ctx: &mut Option<StateChangeContext>,
+        context: &mut Context,
+    ) -> Result<Self, Idle> {
+        self.process_link_state_update(conf, LinkState::on_set_keys_conf, context, state_change_ctx)
+    }
+
     fn on_channel_switched(&mut self, info: fidl_internal::ChannelSwitchInfo) {
         self.connect_txn_sink.send(ConnectTransactionEvent::OnChannelSwitched { info });
         self.latest_ap_state.channel.primary = info.new_channel;
@@ -954,6 +963,13 @@ impl ClientState {
                 MlmeEvent::EapolConf { resp } => {
                     let (transition, associated) = state.release_data();
                     match associated.on_eapol_conf(resp, &mut state_change_ctx, context) {
+                        Ok(associated) => transition.to(associated).into(),
+                        Err(idle) => transition.to(idle).into(),
+                    }
+                }
+                MlmeEvent::SetKeysConf { conf } => {
+                    let (transition, associated) = state.release_data();
+                    match associated.on_set_keys_conf(conf, &mut state_change_ctx, context) {
                         Ok(associated) => transition.to(associated).into(),
                         Err(idle) => transition.to(idle).into(),
                     }
@@ -1632,6 +1648,8 @@ mod tests {
         expect_set_wpa1_ptk(&mut h.mlme_stream, bssid);
         expect_set_wpa1_gtk(&mut h.mlme_stream);
 
+        let state = on_set_keys_conf(state, &mut h, vec![0, 2]);
+
         // (mlme->sme) Send an EapolInd, mock supplicant with completion status
         let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
@@ -1695,6 +1713,8 @@ mod tests {
 
         expect_set_ptk(&mut h.mlme_stream, bssid);
         expect_set_gtk(&mut h.mlme_stream);
+
+        let state = on_set_keys_conf(state, &mut h, vec![0, 2]);
 
         // (mlme->sme) Send an EapolInd, mock supplicant with completion status
         let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
@@ -1794,6 +1814,88 @@ mod tests {
                 code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
             }
             .into());
+        });
+    }
+
+    #[test]
+    fn set_keys_failure() {
+        let mut h = TestHelper::new();
+        let (supplicant, suppl_mock) = mock_psk_supplicant();
+
+        let state = idle_state();
+        let (command, mut connect_txn_stream) = connect_command_wpa2(supplicant);
+        let bssid = command.bss.bssid.clone();
+
+        // Issue a "connect" command
+        let state = state.connect(command, &mut h.context);
+
+        expect_join_request(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send a JoinConf as a response
+        let join_conf = create_join_conf(fidl_ieee80211::StatusCode::Success);
+        let state = state.on_mlme_event(join_conf, &mut h.context);
+
+        expect_auth_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an AuthenticateConf as a response
+        let auth_conf = create_auth_conf(bssid.clone(), fidl_ieee80211::StatusCode::Success);
+        let state = state.on_mlme_event(auth_conf, &mut h.context);
+
+        expect_assoc_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an AssociateConf
+        let assoc_conf = create_assoc_conf(fidl_ieee80211::StatusCode::Success);
+        let state = state.on_mlme_event(assoc_conf, &mut h.context);
+        expect_finalize_association_req(
+            &mut h.mlme_stream,
+            fake_negotiated_channel_and_capabilities(),
+        );
+
+        assert!(suppl_mock.is_supplicant_started());
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with key frame
+        let update = SecAssocUpdate::TxEapolKeyFrame {
+            frame: test_utils::eapol_key_frame(),
+            expect_response: false,
+        };
+        let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
+
+        expect_eapol_req(&mut h.mlme_stream, bssid);
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with keys
+        let ptk = SecAssocUpdate::Key(Key::Ptk(test_utils::ptk()));
+        let gtk = SecAssocUpdate::Key(Key::Gtk(test_utils::gtk()));
+        let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![ptk, gtk]);
+
+        expect_set_ptk(&mut h.mlme_stream, bssid);
+        expect_set_gtk(&mut h.mlme_stream);
+
+        // (mlme->sme) Send an EapolInd, mock supplicant with completion status
+        let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
+        let state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
+
+        // No update until all key confs are received.
+        assert!(connect_txn_stream.try_next().is_err());
+
+        // One key fails to set
+        state.on_mlme_event(
+            MlmeEvent::SetKeysConf {
+                conf: fidl_mlme::SetKeysConfirm {
+                    results: vec![
+                        fidl_mlme::SetKeyResult { key_id: 0, status: zx::Status::OK.into_raw() },
+                        fidl_mlme::SetKeyResult {
+                            key_id: 2,
+                            status: zx::Status::INTERNAL.into_raw(),
+                        },
+                    ],
+                },
+            },
+            &mut h.context,
+        );
+
+        assert_variant!(connect_txn_stream.try_next(),
+        Ok(Some(ConnectTransactionEvent::OnConnectResult { result, is_reconnect: false })) => {
+            assert_variant!(result, ConnectResult::Failed(_))
         });
     }
 
@@ -3066,6 +3168,27 @@ mod tests {
         state.on_mlme_event(eapol_ind, &mut helper.context)
     }
 
+    fn on_set_keys_conf(
+        state: ClientState,
+        helper: &mut TestHelper,
+        key_ids: Vec<u16>,
+    ) -> ClientState {
+        state.on_mlme_event(
+            MlmeEvent::SetKeysConf {
+                conf: fidl_mlme::SetKeysConfirm {
+                    results: key_ids
+                        .into_iter()
+                        .map(|key_id| fidl_mlme::SetKeyResult {
+                            key_id,
+                            status: zx::Status::OK.into_raw(),
+                        })
+                        .collect(),
+                },
+            },
+            &mut helper.context,
+        )
+    }
+
     fn create_eapol_ind(bssid: Bssid, data: Vec<u8>) -> MlmeEvent {
         MlmeEvent::EapolInd {
             ind: fidl_mlme::EapolIndication {
@@ -3375,9 +3498,14 @@ mod tests {
     fn establishing_rsna_state(cmd: ConnectCommand) -> ClientState {
         let auth_method = cmd.protection.get_rsn_auth_method();
         let rsna = assert_variant!(cmd.protection, Protection::Rsna(rsna) => rsna);
-        let link_state =
-            testing::new_state(EstablishingRsna { rsna, rsna_timeout: None, resp_timeout: None })
-                .into();
+        let link_state = testing::new_state(EstablishingRsna {
+            rsna,
+            rsna_timeout: None,
+            resp_timeout: None,
+            handshake_complete: false,
+            pending_key_ids: Default::default(),
+        })
+        .into();
         testing::new_state(Associated {
             cfg: ClientConfig::default(),
             latest_ap_state: cmd.bss,
