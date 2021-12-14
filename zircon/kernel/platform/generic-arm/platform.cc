@@ -18,7 +18,6 @@
 #include <lib/memory_limit.h>
 #include <lib/persistent-debuglog.h>
 #include <lib/system-topology.h>
-#include <lib/zbitl/items/cpu-topology.h>
 #include <mexec.h>
 #include <platform.h>
 #include <reg.h>
@@ -67,6 +66,8 @@
 
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
+#include <lib/zbitl/items/cpu-topology.h>
+#include <lib/zbitl/memory.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
@@ -224,36 +225,36 @@ static void topology_cpu_init(void) {
   warning_thread->DetachAndResume();
 }
 
-static void process_mem_range(const zbi_mem_range_t& mem_range) {
-  switch (mem_range.type) {
+static void process_mem_range(const zbi_mem_range_t* mem_range) {
+  switch (mem_range->type) {
     case ZBI_MEM_RANGE_RAM:
-      dprintf(INFO, "ZBI: mem arena base %#" PRIx64 " size %#" PRIx64 "\n", mem_range.paddr,
-              mem_range.length);
+      dprintf(INFO, "ZBI: mem arena base %#" PRIx64 " size %#" PRIx64 "\n", mem_range->paddr,
+              mem_range->length);
       if (arena_count >= kNumArenas) {
         printf("ZBI: Warning, too many memory arenas, dropping additional\n");
         break;
       }
-      mem_arena[arena_count] = pmm_arena_info_t{"ram", 0, mem_range.paddr, mem_range.length};
+      mem_arena[arena_count] = pmm_arena_info_t{"ram", 0, mem_range->paddr, mem_range->length};
       arena_count++;
       break;
     case ZBI_MEM_RANGE_PERIPHERAL: {
-      dprintf(INFO, "ZBI: peripheral range base %#" PRIx64 " size %#" PRIx64 "\n", mem_range.paddr,
-              mem_range.length);
-      auto status = add_periph_range(mem_range.paddr, mem_range.length);
+      dprintf(INFO, "ZBI: peripheral range base %#" PRIx64 " size %#" PRIx64 "\n", mem_range->paddr,
+              mem_range->length);
+      auto status = add_periph_range(mem_range->paddr, mem_range->length);
       ASSERT(status == ZX_OK);
       break;
     }
     case ZBI_MEM_RANGE_RESERVED:
-      dprintf(INFO, "ZBI: reserve mem range base %#" PRIx64 " size %#" PRIx64 "\n", mem_range.paddr,
-              mem_range.length);
-      boot_reserve_add_range(mem_range.paddr, mem_range.length);
+      dprintf(INFO, "ZBI: reserve mem range base %#" PRIx64 " size %#" PRIx64 "\n",
+              mem_range->paddr, mem_range->length);
+      boot_reserve_add_range(mem_range->paddr, mem_range->length);
       break;
     default:
       // Treat unknown memory range types as reserved.
       dprintf(INFO,
               "ZBI: unknown mem range base %#" PRIx64 " size %#" PRIx64 " (type %" PRIu32 ")\n",
-              mem_range.paddr, mem_range.length, mem_range.type);
-      boot_reserve_add_range(mem_range.paddr, mem_range.length);
+              mem_range->paddr, mem_range->length, mem_range->type);
+      boot_reserve_add_range(mem_range->paddr, mem_range->length);
       break;
   }
 }
@@ -387,10 +388,6 @@ void ProcessPhysHandoff() {
     allocate_persistent_ram(nvram.base, nvram.length);
     boot_reserve_add_range(nvram.base, nvram.length);
   }
-
-  for (const zbi_mem_range_t& range : gPhysHandoff->mem_config.get()) {
-    process_mem_range(range);
-  }
 }
 
 // Called during platform_init_early, the heap is not yet present.
@@ -409,7 +406,21 @@ void ProcessZbiEarly() {
           gCmdline.Append(reinterpret_cast<const char*>(payload.data()));
         }
         break;
-    }
+
+      case ZBI_TYPE_MEM_CONFIG: {
+        zbi_mem_range_t* mem_range = reinterpret_cast<zbi_mem_range_t*>(payload.data());
+        size_t count = payload.size() / sizeof(zbi_mem_range_t);
+        for (size_t i = 0; i < count; i++) {
+          process_mem_range(mem_range++);
+        }
+
+        auto result = mexec_data_image.Append(*header, zbitl::AsBytes(payload));
+        if (result.is_error()) {
+          printf("ProcessZbiEarly: failed to append memory ranges to mexec data ZBI: ");
+          zbitl::PrintViewError(result.error_value());
+        }
+      }
+    };
   }
 
   if (auto result = view.take_error(); result.is_error()) {
