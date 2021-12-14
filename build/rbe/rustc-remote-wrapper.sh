@@ -199,6 +199,7 @@ target_triple=
 
 extra_filename=
 llvm_ir_output="no"
+llvm_bc_output="no"
 
 # Paths to direct dependencies.
 extern_paths=()
@@ -323,6 +324,7 @@ EOF
           case "$emit_arg" in
             dep-info=*) depfile="$emit_value" ;;
             llvm-ir) llvm_ir_output="yes" ;;
+            llvm-bc) llvm_bc_output="yes" ;;
           esac
         done
       }
@@ -586,6 +588,10 @@ extra_outputs+=( "${extra_linker_outputs[@]}" )
 test "$llvm_ir_output" = "no" || {
   # Expect a llvm-ir .ll file when building a .rlib crate or executable.
   extra_outputs+=( "$(dirname "$output")/$(basename "$output" .rlib)$extra_filename".ll )
+}
+test "$llvm_bc_output" = "no" || {
+  # Expect a llvm-bc .bc file when building a .rlib crate or executable.
+  extra_outputs+=( "$(dirname "$output")/$(basename "$output" .rlib)$extra_filename".bc )
 }
 
 test "$save_analysis" = 0 || {

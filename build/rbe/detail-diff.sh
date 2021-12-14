@@ -68,11 +68,12 @@ function binary_diff() {
 }
 
 case "$1" in
-  *.d | *.map)
+  *.d | *.map | *.ll)
     echo "text diff (first $diff_limit lines):"
     diff -u "$1" "$2" | head -n "$diff_limit"
     ;;
-  *.a | *.o | *.so )
+  # TODO: .bc LLVM bitcode
+  *.a | *.o | *.so | *.rlib)
     binary_diff "$1" "$2"
     ;;
   *)
