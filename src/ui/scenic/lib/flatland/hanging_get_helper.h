@@ -11,6 +11,8 @@
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <mutex>
+
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 namespace flatland {
@@ -44,6 +46,8 @@ class HangingGetHelper {
   }
 
   void Update(Data data) {
+    std::lock_guard<std::mutex> guard(mutex_);
+
     if (last_data_ && fidl::Equals(last_data_.value(), data)) {
       return;
     }
@@ -53,11 +57,16 @@ class HangingGetHelper {
   }
 
   void SetCallback(Callback callback) {
+    std::lock_guard<std::mutex> guard(mutex_);
+
     callback_ = std::move(callback);
     SendIfReady();
   }
 
-  bool HasPendingCallback() { return static_cast<bool>(callback_); }
+  bool HasPendingCallback() {
+    std::lock_guard<std::mutex> guard(mutex_);
+    return static_cast<bool>(callback_);
+  }
 
  private:
   void SendIfReady() {
@@ -79,6 +88,7 @@ class HangingGetHelper {
   }
 
   std::shared_ptr<utils::DispatcherHolder> dispatcher_holder_;
+  std::mutex mutex_;
   std::optional<Data> data_;
   std::optional<Data> last_data_;
   Callback callback_;
