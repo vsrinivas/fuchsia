@@ -107,7 +107,7 @@ libm = "0.2.1"
 linked-hash-map = "0.5.3"
 log = { version = "0.4.11", features = ["std"] }
 maplit = "1.0"
-matches = "0.1.8"
+matches = "0.1.9"
 maybe-owned = "0.3.2"
 memchr = "2.0"
 # TODO(fxbug.dev/66092) limit to tests

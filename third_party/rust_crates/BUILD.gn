@@ -387,7 +387,7 @@ group("maplit") {
 }
 
 group("matches") {
-  deps = [ ":matches-v0_1_8" ]
+  deps = [ ":matches-v0_1_9" ]
 }
 
 group("maybe-owned") {
@@ -4700,7 +4700,7 @@ rust_library("idna-v0_1_5") {
   ]
 
   deps = []
-  deps += [ ":matches-v0_1_8" ]
+  deps += [ ":matches-v0_1_9" ]
   deps += [ ":unicode-bidi-v0_3_4" ]
   deps += [ ":unicode-normalization-v0_1_19" ]
 
@@ -4724,7 +4724,7 @@ rust_library("idna-v0_2_3") {
   ]
 
   deps = []
-  deps += [ ":matches-v0_1_8" ]
+  deps += [ ":matches-v0_1_9" ]
   deps += [ ":unicode-bidi-v0_3_4" ]
   deps += [ ":unicode-normalization-v0_1_19" ]
 
@@ -5312,10 +5312,10 @@ rust_library("maplit-v1_0_1") {
   ]
 }
 
-rust_library("matches-v0_1_8") {
+rust_library("matches-v0_1_9") {
   crate_name = "matches"
   crate_root = "//third_party/rust_crates/vendor/matches/lib.rs"
-  output_name = "matches-5301f47ad84dbc66"
+  output_name = "matches-c708e0b8aa4fcca4"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -5328,8 +5328,8 @@ rust_library("matches-v0_1_8") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=5301f47ad84dbc66",
-    "-Cextra-filename=-5301f47ad84dbc66",
+    "-Cmetadata=c708e0b8aa4fcca4",
+    "-Cextra-filename=-c708e0b8aa4fcca4",
   ]
 }
 
@@ -10777,7 +10777,7 @@ rust_library("unicode-bidi-v0_3_4") {
   ]
 
   deps = []
-  deps += [ ":matches-v0_1_8" ]
+  deps += [ ":matches-v0_1_9" ]
 
   rustenv = []
 
@@ -10979,7 +10979,7 @@ rust_library("url-v1_7_2") {
 
   deps = []
   deps += [ ":idna-v0_1_5" ]
-  deps += [ ":matches-v0_1_8" ]
+  deps += [ ":matches-v0_1_9" ]
   deps += [ ":percent-encoding-v1_0_1" ]
 
   rustenv = []
@@ -11003,7 +11003,7 @@ rust_library("url-v2_1_0") {
 
   deps = []
   deps += [ ":idna-v0_2_3" ]
-  deps += [ ":matches-v0_1_8" ]
+  deps += [ ":matches-v0_1_9" ]
   deps += [ ":percent-encoding-v2_1_0" ]
 
   rustenv = []
