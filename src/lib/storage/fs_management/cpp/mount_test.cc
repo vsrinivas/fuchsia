@@ -31,11 +31,8 @@
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
-#include <iterator>
 #include <utility>
 
-#include <fbl/string.h>
-#include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>

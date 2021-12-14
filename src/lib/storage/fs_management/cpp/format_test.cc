@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/directory.h>
-#include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 
 #include <fs-management/format.h>
