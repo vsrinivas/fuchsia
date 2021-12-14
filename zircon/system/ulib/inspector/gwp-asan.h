@@ -17,6 +17,8 @@ struct GwpAsanInfo {
   const char* error_type = nullptr;
   // The access address that causes the exception.
   uintptr_t faulting_addr = 0;
+  // The address of the allocation.
+  uintptr_t allocation_address;
   // The size of the allocation.
   size_t allocation_size;
   // The allocation trace if there's an error.

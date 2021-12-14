@@ -125,6 +125,7 @@ bool inspector_get_gwp_asan_info(const zx::process& process,
   if (!metadata) {
     return false;
   }
+  info->allocation_address = __gwp_asan_get_allocation_address(metadata);
   info->allocation_size = __gwp_asan_get_allocation_size(metadata);
 
   // TODO: Also include the thread id after gwp_asan::getThreadID() is supported on Fuchsia,
