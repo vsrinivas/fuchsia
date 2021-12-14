@@ -1144,7 +1144,9 @@ class MultiVmoTestInstance : public TestInstance {
             op_size = uniform_rand(mapping.value().size_bytes() - op_off, rng);
             use_map = true;
           }
-          buffer.resize(op_size);
+          // Avoid ubsan complaints by making the size at least 1, so that &buffer[start] works
+          // below.
+          buffer.resize(std::max(1ul, op_size));
           // pre-commit some portion of the buffer
           const size_t end = uniform_rand(op_size, rng);
           const size_t start = uniform_rand(op_size, rng);
@@ -1165,7 +1167,9 @@ class MultiVmoTestInstance : public TestInstance {
             op_size = uniform_rand(mapping.value().size_bytes() - op_off, rng);
             use_map = true;
           }
-          buffer.resize(op_size);
+          // Avoid ubsan complaints by making the size at least 1, so that &buffer[start] works
+          // below.
+          buffer.resize(std::max(1ul, op_size));
           // write some portion of the buffer with 'random' data.
           const size_t end = uniform_rand(op_size, rng);
           const size_t start = uniform_rand(op_size, rng);
