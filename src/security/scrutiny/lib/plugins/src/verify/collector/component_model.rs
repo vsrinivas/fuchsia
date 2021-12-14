@@ -14,7 +14,7 @@ use {
     cm_fidl_analyzer::component_model::ModelBuilderForAnalyzer,
     cm_rust::{ComponentDecl, FidlIntoNative, RegistrationSource, RunnerRegistration},
     fidl::encoding::decode_persistent,
-    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys2,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     fuchsia_url::boot_url::BootUrl,
     lazy_static::lazy_static,
     log::{error, info, warn},
@@ -66,7 +66,7 @@ impl V2ComponentModelDataCollector {
             if let ManifestData::Version2(decl_base64) = &manifest.manifest {
                 match urls.remove(&manifest.component_id) {
                     Some(url) => {
-                        let result: Result<fsys2::ComponentDecl, fidl::Error> = decode_persistent(
+                        let result: Result<fdecl::Component, fidl::Error> = decode_persistent(
                             &base64::decode(&decl_base64)
                                 .context("Unable to decode base64 v2 manifest")?,
                         );
