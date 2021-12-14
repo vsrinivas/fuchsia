@@ -23,7 +23,7 @@
 #include <cobalt-client/cpp/in_memory_logger.h>
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "fs-manager.h"
 #include "fshost-fs-provider.h"
@@ -77,8 +77,9 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                               std::move(admin_endpoints->client), nullptr, watcher));
+  ASSERT_EQ(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                               std::move(admin_endpoints->client), nullptr, watcher),
+            ZX_OK);
 
   // The manager should not have exited yet: No one has asked for the shutdown.
   EXPECT_FALSE(manager.IsShutdown());
@@ -86,11 +87,11 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
   // Once we trigger shutdown, we expect a shutdown signal.
   sync_completion_t callback_called;
   manager.Shutdown([callback_called = &callback_called](zx_status_t status) {
-    EXPECT_OK(status);
+    EXPECT_EQ(status, ZX_OK);
     sync_completion_signal(callback_called);
   });
   manager.WaitForShutdown();
-  EXPECT_OK(sync_completion_wait(&callback_called, ZX_TIME_INFINITE));
+  EXPECT_EQ(sync_completion_wait(&callback_called, ZX_TIME_INFINITE), ZX_OK);
   EXPECT_TRUE(driver_admin.UnregisterWasCalled());
 
   // It's an error if shutdown gets called twice, but we expect the callback to still get called
@@ -100,14 +101,14 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
     EXPECT_EQ(status, ZX_ERR_INTERNAL);
     sync_completion_signal(callback_called);
   });
-  EXPECT_OK(sync_completion_wait(&callback_called, ZX_TIME_INFINITE));
+  EXPECT_EQ(sync_completion_wait(&callback_called, ZX_TIME_INFINITE), ZX_OK);
 }
 
 // Test that the manager shuts down the filesystems given a call on the lifecycle channel
 TEST(FsManagerTestCase, LifecycleStop) {
   zx::channel dir_request, lifecycle_request, lifecycle;
   zx_status_t status = zx::channel::create(0, &lifecycle_request, &lifecycle);
-  ASSERT_OK(status);
+  ASSERT_EQ(status, ZX_OK);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
@@ -120,8 +121,9 @@ TEST(FsManagerTestCase, LifecycleStop) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                               std::move(admin_endpoints->client), nullptr, watcher));
+  ASSERT_EQ(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                               std::move(admin_endpoints->client), nullptr, watcher),
+            ZX_OK);
 
   // The manager should not have exited yet: No one has asked for an unmount.
   EXPECT_FALSE(manager.IsShutdown());
@@ -129,12 +131,13 @@ TEST(FsManagerTestCase, LifecycleStop) {
   // Call stop on the lifecycle channel
   fidl::WireSyncClient<fuchsia_process_lifecycle::Lifecycle> client(std::move(lifecycle));
   auto result = client->Stop();
-  ASSERT_OK(result.status());
+  ASSERT_EQ(result.status(), ZX_OK);
 
   // the lifecycle channel should be closed now
   zx_signals_t pending;
-  EXPECT_OK(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                                   &pending));
+  EXPECT_EQ(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                   &pending),
+            ZX_OK);
   EXPECT_TRUE(pending & ZX_CHANNEL_PEER_CLOSED);
 
   // Now we expect a shutdown signal.
@@ -145,7 +148,7 @@ TEST(FsManagerTestCase, LifecycleStop) {
 class MockDirectoryAdminOpener : public fuchsia_io_admin::testing::DirectoryAdmin_TestBase {
  public:
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
-    ADD_FAILURE("Unexpected call to MockDirectoryAdminOpener: %s", name.c_str());
+    ADD_FAILURE() << "Unexpected call to MockDirectoryAdminOpener: " << name;
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -173,12 +176,12 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   fdio_ns_t* ns;
-  ASSERT_OK(fdio_ns_get_installed(&ns));
+  ASSERT_EQ(fdio_ns_get_installed(&ns), ZX_OK);
 
   // Mock out an object that implements DirectoryOpen and records some state;
   // bind it to the server handle.  Install it at /fs.
   auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
-  ASSERT_OK(admin.status_value());
+  ASSERT_EQ(admin.status_value(), ZX_OK);
 
   auto server = std::make_shared<MockDirectoryAdminOpener>();
   fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
@@ -195,14 +198,14 @@ TEST(FshostFsProviderTestCase, CloneBlobExec) {
   int fd;
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, fdio_fd_create(blobexec.release(), &fd));
 
-  EXPECT_EQ(1, server->saved_open_count);
+  EXPECT_EQ(server->saved_open_count, 1u);
   uint32_t expected_flags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE | ZX_FS_RIGHT_EXECUTABLE |
                             ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
   EXPECT_EQ(expected_flags, server->saved_open_flags);
-  EXPECT_STR_EQ("blob", server->saved_path);
+  EXPECT_EQ("blob", server->saved_path);
 
   // Tear down.
-  ASSERT_OK(fdio_ns_unbind(ns, "/fs"));
+  ASSERT_EQ(fdio_ns_unbind(ns, "/fs"), ZX_OK);
 }
 
 TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
@@ -218,20 +221,21 @@ TEST(FsManagerTestCase, InstallFsAfterShutdownWillFail) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                               std::move(admin_endpoints->client), nullptr, watcher));
+  ASSERT_EQ(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                               std::move(admin_endpoints->client), nullptr, watcher),
+            ZX_OK);
 
-  manager.Shutdown([](zx_status_t status) { EXPECT_OK(status); });
+  manager.Shutdown([](zx_status_t status) { EXPECT_EQ(status, ZX_OK); });
   manager.WaitForShutdown();
 
   auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
-  ASSERT_OK(admin.status_value());
+  ASSERT_EQ(admin.status_value(), ZX_OK);
 
   auto server = std::make_shared<MockDirectoryAdminOpener>();
   fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
 
-  EXPECT_STATUS(manager.InstallFs(FsManager::MountPoint::kData, admin->client.TakeChannel()),
-                ZX_ERR_BAD_STATE);
+  EXPECT_EQ(manager.InstallFs(FsManager::MountPoint::kData, admin->client.TakeChannel()),
+            ZX_ERR_BAD_STATE);
 }
 
 TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
@@ -247,11 +251,12 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   FsManager manager(nullptr, std::make_unique<FsHostMetricsCobalt>(MakeCollector()));
   Config config;
   BlockWatcher watcher(manager, &config);
-  ASSERT_OK(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                               std::move(admin_endpoints->client), nullptr, watcher));
+  ASSERT_EQ(manager.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                               std::move(admin_endpoints->client), nullptr, watcher),
+            ZX_OK);
 
   auto admin = fidl::CreateEndpoints<fuchsia_io_admin::DirectoryAdmin>();
-  ASSERT_OK(admin.status_value());
+  ASSERT_EQ(admin.status_value(), ZX_OK);
   auto server = std::make_shared<MockDirectoryAdminOpener>();
   server->unmount_status_ = ZX_ERR_ACCESS_DENIED;
   fidl::BindServer(loop.dispatcher(), std::move(admin->server), server);
@@ -262,7 +267,7 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   manager.Shutdown([&shutdown_status](zx_status_t status) { shutdown_status = status; });
   manager.WaitForShutdown();
 
-  ASSERT_STATUS(shutdown_status, ZX_ERR_ACCESS_DENIED);
+  ASSERT_EQ(shutdown_status, ZX_ERR_ACCESS_DENIED);
 }
 
 }  // namespace

@@ -11,7 +11,7 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <zxtest/zxtest.h>
+#include <gtest/gtest.h>
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 
@@ -24,14 +24,14 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   auto delayed_outdir = DelayedOutdir();
 
   auto delayed = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_OK(delayed.status_value());
+  ASSERT_EQ(delayed.status_value(), ZX_OK);
 
   auto remote_dir = delayed_outdir.Initialize(std::move(delayed->client));
 
   // Put the remote_dir we received from DelayedOutDir in a vfs and run it
 
   auto root = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_OK(root.status_value());
+  ASSERT_EQ(root.status_value(), ZX_OK);
 
   auto loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto vfs = fs::ManagedVfs(loop.dispatcher());
@@ -42,10 +42,10 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   // "foo" into the channel we provided above.
 
   auto foo = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  ASSERT_OK(foo.status_value());
+  ASSERT_EQ(foo.status_value(), ZX_OK);
   zx_status_t status = fdio_open_at(root->client.channel().get(), "fs/foo", ZX_FS_RIGHT_READABLE,
                                     foo->server.channel().release());
-  ASSERT_OK(status);
+  ASSERT_EQ(status, ZX_OK);
 
   // If we attempt to read from the channel behind DelayedOutdir, we should see
   // ZX_ERR_SHOULD_WAIT because the DelayedOutdir isn't running yet, and thus
@@ -67,7 +67,7 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   zx_signals_t observed;
   status = delayed->server.channel().wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(10)),
                                               &observed);
-  ASSERT_OK(status);
+  ASSERT_EQ(status, ZX_OK);
   ASSERT_TRUE(observed & ZX_CHANNEL_READABLE);
 
   // Shut down the managed VFS to get it to close active connections, otherwise
@@ -80,7 +80,7 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   fpromise::result<zx_status_t, void> result =
       fpromise::run_single_threaded(std::move(promise_shutdown));
   ASSERT_TRUE(result.is_ok());
-  ASSERT_OK(result.value());
+  ASSERT_EQ(result.value(), ZX_OK);
 }
 
 }  // namespace

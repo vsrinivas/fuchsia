@@ -269,12 +269,12 @@ test("fshost_test") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fit-promise",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
-    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

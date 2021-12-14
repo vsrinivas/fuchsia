@@ -16,8 +16,8 @@
 #include <map>
 #include <memory>
 
+#include <gtest/gtest.h>
 #include <mock-boot-arguments/server.h>
-#include <zxtest/zxtest.h>
 
 namespace fshost {
 namespace {
@@ -29,7 +29,7 @@ class FshostBootArgsForTest : public FshostBootArgs {
       : FshostBootArgs(std::move(boot_args)) {}
 };
 
-class FshostBootArgsTest : public zxtest::Test {
+class FshostBootArgsTest : public testing::Test {
  public:
   FshostBootArgsTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
@@ -38,7 +38,7 @@ class FshostBootArgsTest : public zxtest::Test {
     fidl::WireSyncClient<fuchsia_boot::Arguments> client;
     boot_args_server_.CreateClient(loop_.dispatcher(), &client);
 
-    ASSERT_OK(loop_.StartThread());
+    ASSERT_EQ(loop_.StartThread(), ZX_OK);
     boot_args_ = std::make_unique<FshostBootArgsForTest>(std::move(client));
   }
 
@@ -51,7 +51,7 @@ class FshostBootArgsTest : public zxtest::Test {
 };
 
 TEST_F(FshostBootArgsTest, GetDefaultBools) {
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs({}));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs({}));
 
   EXPECT_EQ(false, boot_args().netboot());
   EXPECT_EQ(false, boot_args().check_filesystems());
@@ -65,7 +65,7 @@ TEST_F(FshostBootArgsTest, GetNonDefaultBools) {
       {"zircon.system.filesystem-check", ""},
       {"zircon.system.wait-for-data", "false"},
   };
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(config));
 
   EXPECT_EQ(true, boot_args().netboot());
   EXPECT_EQ(true, boot_args().check_filesystems());
@@ -78,7 +78,7 @@ TEST_F(FshostBootArgsTest, GetPkgfsFile) {
       {"zircon.system.pkgfs.file.bin/foobaz", "bbb"},
       {"zircon.system.pkgfs.file.lib/foobar", "ccc"},
   };
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(config));
 
   EXPECT_EQ("aaa", boot_args().pkgfs_file_with_path("foobar"));
   EXPECT_EQ("bbb", boot_args().pkgfs_file_with_path("bin/foobaz"));
@@ -87,7 +87,7 @@ TEST_F(FshostBootArgsTest, GetPkgfsFile) {
 
 TEST_F(FshostBootArgsTest, GetPkgfsCmd) {
   std::map<std::string, std::string> config = {{"zircon.system.pkgfs.cmd", "foobar"}};
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(config));
 
   EXPECT_EQ("foobar", boot_args().pkgfs_cmd());
 }
@@ -95,13 +95,13 @@ TEST_F(FshostBootArgsTest, GetPkgfsCmd) {
 TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm) {
   std::map<std::string, std::string> config = {
       {"blobfs.write-compression-algorithm", "ZSTD_CHUNKED"}};
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(config));
 
   EXPECT_EQ("ZSTD_CHUNKED", boot_args().blobfs_write_compression_algorithm());
 }
 
 TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm_Unspecified) {
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs({}));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs({}));
 
   EXPECT_EQ(std::nullopt, boot_args().blobfs_write_compression_algorithm());
 }
@@ -109,7 +109,7 @@ TEST_F(FshostBootArgsTest, GetBlobfsCompressionAlgorithm_Unspecified) {
 TEST_F(FshostBootArgsTest, GetBlockVeritySeal) {
   std::map<std::string, std::string> config = {
       {"factory_verity_seal", "ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7"}};
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(config));
 
   EXPECT_EQ("ad7facb2586fc6e966c004d7d1d16b024f5805ff7cb47c7a85dabd8b48892ca7",
             boot_args().block_verity_seal());
@@ -117,13 +117,13 @@ TEST_F(FshostBootArgsTest, GetBlockVeritySeal) {
 
 TEST_F(FshostBootArgsTest, GetBlobfsEvictionPolicy) {
   std::map<std::string, std::string> config = {{"blobfs.cache-eviction-policy", "NEVER_EVICT"}};
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs(config));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(config));
 
   EXPECT_EQ("NEVER_EVICT", boot_args().blobfs_eviction_policy());
 }
 
 TEST_F(FshostBootArgsTest, GetBlobfsEvictionPolicy_Unspecified) {
-  ASSERT_NO_FATAL_FAILURES(CreateFshostBootArgs({}));
+  ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs({}));
 
   EXPECT_EQ(std::nullopt, boot_args().blobfs_eviction_policy());
 }
