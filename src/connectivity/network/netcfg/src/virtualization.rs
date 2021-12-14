@@ -9,6 +9,7 @@ use std::pin::Pin;
 use fidl::endpoints::Proxy as _;
 use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net_debug as fnet_debug;
+use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
@@ -512,11 +513,7 @@ impl<B: BridgeHandler> Virtualization<B> {
                     // upstream connectivity is removed entirely.
                     warn!("upstream interface {} went offline", id);
                 } else if !guests.contains(&id) && allowed_for_upstream {
-                    assert!(
-                        upstream_candidates.remove(&id),
-                        "upstream candidate {} not found",
-                        id
-                    );
+                    assert!(upstream_candidates.remove(&id), "upstream candidate {} not found", id);
                 }
                 BridgeState::Bridged { bridge_id, upstream, upstream_candidates, guests }
             }
@@ -759,6 +756,30 @@ impl BridgeHandlerImpl {
     ) -> Self {
         Self { stack, netstack, debug }
     }
+
+    // Starts a DHCPv4 client.
+    async fn start_dhcpv4_client(&self, bridge_id: u32) -> Result<(), errors::Error> {
+        let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
+            .context("create dhcp::Client endpoints")
+            .map_err(errors::Error::NonFatal)?;
+        let () = self
+            .netstack
+            .get_dhcp_client(bridge_id, server_end)
+            .await
+            .context("call get DHCPv4 client")
+            .map_err(errors::Error::Fatal)?
+            .map_err(zx::Status::from_raw)
+            .context("failed to get DHCPv4 client")
+            .map_err(errors::Error::NonFatal)?;
+        dhcp_client
+            .start()
+            .await
+            .context("call start on DHCPv4 client")
+            .map_err(errors::Error::Fatal)?
+            .map_err(zx::Status::from_raw)
+            .context("failed to start DHCPv4 client")
+            .map_err(errors::Error::NonFatal)
+    }
 }
 
 #[async_trait(?Send)]
@@ -792,6 +813,16 @@ impl BridgeHandler for BridgeHandlerImpl {
                 }
             }
         };
+
+        // Start a DHCPv4 client.
+        match self.start_dhcpv4_client(bridge_id).await {
+            Ok(()) => {}
+            Err(errors::Error::NonFatal(e)) => {
+                error!("failed to start DHCPv4 client on bridge: {}", e)
+            }
+            Err(errors::Error::Fatal(e)) => return Err(errors::Error::Fatal(e)),
+        }
+
         let bridge_id = u64::from(bridge_id);
 
         // Enable the bridge we just created.

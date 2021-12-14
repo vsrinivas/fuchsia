@@ -22,6 +22,7 @@ use netstack_testing_common::{
     },
 };
 use netstack_testing_macros::variants_test;
+use packet::ParseBuffer as _;
 use test_case::test_case;
 
 #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
@@ -102,6 +103,52 @@ impl<'a> std::fmt::Debug for Guest<'a> {
     }
 }
 
+impl<'a> Guest<'a> {
+    async fn new<E: netemul::Endpoint, S: Into<String>>(
+        sandbox: &'a netemul::TestSandbox,
+        network_proxy: &fnet_virtualization::NetworkProxy,
+        realm_name: S,
+        interface: Interface,
+        ipv4_addr: fnet::Subnet,
+    ) -> Guest<'a> {
+        let realm = sandbox
+            .create_netstack_realm::<Netstack2, _>(realm_name.into())
+            .expect("failed to create guest netstack realm");
+        let net = sandbox
+            .create_network(format!("net{}", interface))
+            .await
+            .expect("failed to create network between guest and host");
+        let guest_if = realm
+            .join_network::<E, _>(
+                &net,
+                format!("guest{}", interface),
+                &netemul::InterfaceConfig::StaticIp(ipv4_addr),
+            )
+            .await
+            .expect("failed to join network as guest");
+
+        let ep = net
+            .create_endpoint::<netemul::NetworkDevice, _>(format!("host{}", interface))
+            .await
+            .expect("failed to create endpoint on host realm connected to guest");
+        let () = ep.set_link_up(true).await.expect("failed to enable endpoint");
+
+        let (device, mut port_id) = ep.get_netdevice().await.expect("failed to get netdevice");
+        let device =
+            device.into_proxy().expect("fuchsia.hardware.network/Device into_proxy failed");
+        let (port, server_end) =
+            fidl::endpoints::create_endpoints::<fhardware_network::PortMarker>()
+                .expect("failed to create fuchsia.hardware.network/Port endpoints");
+        let () = device.get_port(&mut port_id, server_end).expect("get_port");
+
+        let (interface_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fnet_virtualization::InterfaceMarker>()
+                .expect("failed to create fuchsia.net.virtualization/Interface proxy");
+        let () = network_proxy.add_port(port, server_end).expect("add_port");
+        Self { interface_proxy, realm, _net: net, _ep: ep, guest_if }
+    }
+}
+
 struct NetworkClient<'a> {
     network_proxy: fnet_virtualization::NetworkProxy,
     interface_map: HashMap<Interface, Guest<'a>>,
@@ -114,6 +161,29 @@ impl<'a> std::fmt::Debug for NetworkClient<'a> {
             .field("interface_map", interface_map)
             .finish_non_exhaustive()
     }
+}
+
+impl<'a> NetworkClient<'a> {
+    fn new(network_proxy: fnet_virtualization::NetworkProxy) -> Self {
+        Self { network_proxy, interface_map: HashMap::new() }
+    }
+}
+
+fn create_bridged_network(
+    virtualization_control: &fnet_virtualization::ControlProxy,
+) -> fnet_virtualization::NetworkProxy {
+    let (network_proxy, server_end) =
+        fidl::endpoints::create_proxy::<fnet_virtualization::NetworkMarker>()
+            .expect("failed to create fuchsia.net.virtualization/Network proxy");
+    virtualization_control
+        .create_network(
+            &mut fnet_virtualization::Config::Bridged(fnet_virtualization::Bridged {
+                ..fnet_virtualization::Bridged::EMPTY
+            }),
+            server_end,
+        )
+        .expect("create network");
+    network_proxy
 }
 
 // Tests netcfg's implementation of fuchsia.net.virtualization.
@@ -287,22 +357,9 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
                         panic!("test step to add network but it already exists: {:?}", occupied);
                     }
                     std::collections::hash_map::Entry::Vacant(vacant) => {
-                        let (network_proxy, server_end) = fidl::endpoints::create_proxy::<
-                            fnet_virtualization::NetworkMarker,
-                        >()
-                        .expect("failed to create fuchsia.net.virtualization/Network proxy");
-                        virtualization_control
-                            .create_network(
-                                &mut fnet_virtualization::Config::Bridged(
-                                    fnet_virtualization::Bridged {
-                                        ..fnet_virtualization::Bridged::EMPTY
-                                    },
-                                ),
-                                server_end,
-                            )
-                            .expect("create network");
-                        let _: &mut NetworkClient<'_> = vacant
-                            .insert(NetworkClient { network_proxy, interface_map: HashMap::new() });
+                        let _: &mut NetworkClient<'_> = vacant.insert(NetworkClient::new(
+                            create_bridged_network(&virtualization_control),
+                        ));
                     }
                 }
             }
@@ -321,63 +378,21 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
                     }
                     std::collections::hash_map::Entry::Vacant(vacant) => {
                         // Create a new netstack and a new network between it and the host.
-                        let realm = sandbox
-                            .create_netstack_realm::<Netstack2, _>(format!(
-                                "{}_{}_guest{}",
-                                name, sub_name, interface
-                            ))
-                            .expect("failed to create guest netstack realm");
-                        let net = sandbox
-                            .create_network(format!("net{}", interface))
-                            .await
-                            .expect("failed to create network between guest and host");
-                        let guest_if = realm
-                            .join_network::<E, _>(
-                                &net,
-                                format!("guest{}", interface),
-                                &netemul::InterfaceConfig::StaticIp(fnet::Subnet {
+                        let _: &mut Guest<'_> = vacant.insert(
+                            Guest::new::<E, _>(
+                                &sandbox,
+                                &network_proxy,
+                                format!("{}_{}_guest{}", name, sub_name, interface),
+                                interface,
+                                fnet::Subnet {
                                     addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address {
                                         addr: [192, 168, interface.id(), 1],
                                     }),
                                     prefix_len: 16,
-                                }),
+                                },
                             )
-                            .await
-                            .expect("failed to join network as guest");
-
-                        let ep = net
-                            .create_endpoint::<netemul::NetworkDevice, _>(format!(
-                                "host{}",
-                                interface
-                            ))
-                            .await
-                            .expect("failed to create endpoint on host realm connected to guest");
-                        let () = ep.set_link_up(true).await.expect("failed to enable endpoint");
-
-                        let (device, mut port_id) =
-                            ep.get_netdevice().await.expect("failed to get netdevice");
-                        let device = device
-                            .into_proxy()
-                            .expect("fuchsia.hardware.network/Device into_proxy failed");
-
-                        let (port, server_end) =
-                            fidl::endpoints::create_endpoints::<fhardware_network::PortMarker>()
-                                .expect("failed to create fuchsia.hardware.network/Port endpoints");
-                        let () = device.get_port(&mut port_id, server_end).expect("FIDL error");
-
-                        let (interface_proxy, server_end) = fidl::endpoints::create_proxy::<
-                            fnet_virtualization::InterfaceMarker,
-                        >()
-                        .expect("failed to create fuchsia.net.virtualization/Interface proxy");
-                        let () = network_proxy.add_port(port, server_end).expect("add_port");
-
-                        let _: &mut Guest<'_> = vacant.insert(Guest {
-                            interface_proxy,
-                            realm,
-                            _net: net,
-                            _ep: ep,
-                            guest_if,
-                        });
+                            .await,
+                        );
                     }
                 }
             }
@@ -494,4 +509,80 @@ async fn virtualization<E: netemul::Endpoint>(name: &str, sub_name: &str, steps:
             }
         }
     }
+}
+
+#[variants_test]
+async fn dhcpv4_client_started<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let host_realm = sandbox
+        .create_netstack_realm_with::<Netstack2, _, _>(
+            format!("{}_host", name),
+            &[
+                KnownServiceProvider::Manager(ManagementAgent::NetCfg(NetCfgVersion::Advanced)),
+                KnownServiceProvider::DnsResolver,
+                // TODO(https://fxbug.dev/89142): Don't start DHCP server since
+                // it's not necessary for the test.
+                KnownServiceProvider::DhcpServer { persistent: false },
+                KnownServiceProvider::Dhcpv6Client,
+                KnownServiceProvider::SecureStash,
+            ],
+        )
+        .expect("failed to create host netstack realm");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
+    let fake_ep = net.create_fake_endpoint().expect("failed to create fake endpoint on net");
+    let _upstream_if = host_realm
+        .join_network::<E, _>(&net, "ep_host", &netemul::InterfaceConfig::None)
+        .await
+        .expect("failed to join network in host realm");
+
+    // Create a virtualized network and attach a device.
+    let virtualization_control = host_realm
+        .connect_to_protocol::<fnet_virtualization::ControlMarker>()
+        .expect("failed to connect to fuchsia.net.virtualization/Control in host realm");
+    let network_proxy = create_bridged_network(&virtualization_control);
+    let _guest = Guest::new::<E, _>(
+        &sandbox,
+        &network_proxy,
+        "guest",
+        Interface::A,
+        fidl_subnet!("192.168.1.1/16"),
+    )
+    .await;
+
+    // Expect a DHCPv4 packet.
+    fake_ep
+        .frame_stream()
+        .filter_map(|r| {
+            let (buf, dropped) = r.expect("fake_ep frame stream error");
+            assert_eq!(dropped, 0);
+            futures::future::ready(
+                match packet_formats::testutil::parse_ip_packet_in_ethernet_frame::<
+                    net_types::ip::Ipv4,
+                >(&buf)
+                {
+                    Ok((mut body, _src_mac, _dst_mac, src_ip, dst_ip, _proto, _ttl)) => {
+                        match (&mut body).parse_with::<_, packet_formats::udp::UdpPacket<_>>(
+                            packet_formats::udp::UdpParseArgs::new(src_ip, dst_ip),
+                        ) {
+                            Ok(udp) => {
+                                const DHCPV4_SERVER_PORT: std::num::NonZeroU16 =
+                                    nonzero_ext::nonzero!(67u16);
+                                (udp.dst_port() == DHCPV4_SERVER_PORT).then(|| ())
+                            }
+                            Err(packet_formats::error::ParseError::NotExpected) => None,
+                            Err(e) => panic!("failed to parse UDP packet: {}", e),
+                        }
+                    }
+                    Err(packet_formats::error::IpParseError::Parse {
+                        error: packet_formats::error::ParseError::NotExpected,
+                    }) => None,
+                    Err(e) => {
+                        panic!("failed to parse IPv4 packet: {}", e);
+                    }
+                },
+            )
+        })
+        .next()
+        .await
+        .expect("fake endpoint frame stream ended unexpectedly");
 }
