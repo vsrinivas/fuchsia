@@ -27,7 +27,7 @@ rustc_test("basic_integration_tests") {
 
   deps = [
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/sys/lib/cm_rust",

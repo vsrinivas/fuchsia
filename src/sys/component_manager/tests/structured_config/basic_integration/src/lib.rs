@@ -10,7 +10,8 @@ use fidl_fuchsia_component_config::ValuesData;
 fn manually_resolve_structured_config() {
     // read the config declaration
     let manifest_raw = std::fs::read("/pkg/meta/basic_config_receiver.cm").unwrap();
-    let manifest: fidl_fuchsia_sys2::ComponentDecl = decode_persistent(&manifest_raw[..]).unwrap();
+    let manifest: fidl_fuchsia_component_decl::Component =
+        decode_persistent(&manifest_raw[..]).unwrap();
     let manifest = manifest.fidl_into_native();
     let _config = manifest.config.as_ref().unwrap();
 
