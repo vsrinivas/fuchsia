@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod config_data;
-pub mod create_update;
-pub mod image;
-pub mod product;
+use anyhow::Result;
+use ffx_assembly_args::ProductArgs;
+
+pub fn assemble(_args: ProductArgs) -> Result<()> {
+    Ok(())
+}

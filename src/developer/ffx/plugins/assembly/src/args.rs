@@ -23,6 +23,7 @@ pub enum OperationClass {
     Image(ImageArgs),
     CreateUpdate(CreateUpdateArgs),
     ConfigData(ConfigDataArgs),
+    Product(ProductArgs),
 }
 
 /// perform the assembly of images
@@ -139,6 +140,11 @@ fn config_data_change(value: &str) -> Result<ConfigDataChange, String> {
         Err(e) => Err(e.to_string()),
     }
 }
+
+/// Arguments for performing a high-level product assembly operation.
+#[derive(Debug, FromArgs, PartialEq)]
+#[argh(subcommand, name = "product")]
+pub struct ProductArgs {}
 
 #[cfg(test)]
 mod tests {
