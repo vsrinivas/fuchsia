@@ -682,10 +682,10 @@ impl ViewAssistant for VirtualConsoleViewAssistant {
                 terminal
                     .write_all(string.as_bytes())
                     .unwrap_or_else(|e| println!("failed to write to terminal: {}", e));
-            }
 
-            // Scroll to bottom on input.
-            self.scroll_active_terminal(Scroll::Bottom);
+                // Scroll to bottom on input.
+                self.scroll_active_terminal(Scroll::Bottom);
+            }
         }
 
         Ok(())
