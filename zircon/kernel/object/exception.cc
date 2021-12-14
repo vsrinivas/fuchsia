@@ -260,13 +260,14 @@ zx_status_t dispatch_user_exception(uint exception_type,
   if (status != ZX_ERR_INTERNAL_INTR_KILLED) {
     auto process = thread->process();
 
+    char pname[ZX_MAX_NAME_LEN];
+    process->get_name(pname);
+
 #if TRACE_EXCEPTIONS
     // If no handlers even saw the exception, dump some info. Normally at least
     // crashsvc will handle the exception and make a smarter decision about what
     // to do with it, but in case it doesn't, dump some info to the kernel logs.
     if (!processed) {
-      char pname[ZX_MAX_NAME_LEN];
-      process->get_name(pname);
       char tname[ZX_MAX_NAME_LEN];
       thread->get_name(tname);
       printf("KERN: exception_handler_worker returned %d\n", status);
@@ -277,7 +278,7 @@ zx_status_t dispatch_user_exception(uint exception_type,
     }
 #endif
 
-    printf("KERN: terminating process\n");
+    printf("KERN: terminating process '%s' (%lu)\n", pname, process->get_koid());
     process->Kill(ZX_TASK_RETCODE_EXCEPTION_KILL);
   }
 
