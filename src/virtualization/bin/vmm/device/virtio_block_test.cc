@@ -43,11 +43,9 @@ class VirtioBlockTest : public TestWithDevice {
     char path_template[] = "/tmp/block.XXXXXX";
     fd_ = CreateBlockFile(path_template);
     ASSERT_TRUE(fd_);
-    zx_handle_t handle;
-    status = fdio_get_service_handle(fd_.release(), &handle);
+    zx::channel client;
+    status = fdio_get_service_handle(fd_.release(), client.reset_and_get_address());
     ASSERT_EQ(ZX_OK, status);
-    fuchsia::io::FilePtr file;
-    file.Bind(zx::channel(handle));
     fd_ = fbl::unique_fd(open(path_template, O_RDWR));
     ASSERT_TRUE(fd_);
 
@@ -58,7 +56,7 @@ class VirtioBlockTest : public TestWithDevice {
     uint64_t size;
     status = block_->Start(std::move(start_info), kVirtioBlockId,
                            fuchsia::virtualization::BlockMode::READ_WRITE,
-                           fuchsia::virtualization::BlockFormat::FILE, std::move(file), &size);
+                           fuchsia::virtualization::BlockFormat::FILE, std::move(client), &size);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(kBlockSectorSize * kNumSectors, size);
 

@@ -90,7 +90,12 @@ zx_status_t parse(const OpenAt& open_at, const std::string& name, const std::str
   if (path.empty()) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return open_at(path, out->file.NewRequest());
+  zx::channel server;
+  zx_status_t status = zx::channel::create(0, &out->client, &server);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return open_at(path, fidl::InterfaceRequest<fuchsia::io::File>(std::move(server)));
 }
 
 std::vector<std::string> split(const std::string& spec, char delim) {

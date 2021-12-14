@@ -397,8 +397,8 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
     if (!fd.is_valid()) {
       return ZX_ERR_BAD_STATE;
     }
-    zx::channel channel;
-    zx_status_t status = fdio_get_service_handle(fd.get(), channel.reset_and_get_address());
+    zx::channel client;
+    zx_status_t status = fdio_get_service_handle(fd.get(), client.reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }
@@ -406,7 +406,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
         "linux_tests",
         fuchsia::virtualization::BlockMode::READ_ONLY,
         fuchsia::virtualization::BlockFormat::FILE,
-        fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
+        std::move(client),
     });
   }
   {
@@ -415,8 +415,8 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
     if (!fd.is_valid()) {
       return ZX_ERR_BAD_STATE;
     }
-    zx::channel channel;
-    zx_status_t status = fdio_get_service_handle(fd.get(), channel.reset_and_get_address());
+    zx::channel client;
+    zx_status_t status = fdio_get_service_handle(fd.get(), client.reset_and_get_address());
     if (status != ZX_OK) {
       return status;
     }
@@ -424,7 +424,7 @@ zx_status_t TerminaEnclosedGuest::LaunchInfo(std::string* url,
         "extras",
         fuchsia::virtualization::BlockMode::READ_ONLY,
         fuchsia::virtualization::BlockFormat::FILE,
-        fidl::InterfaceHandle<fuchsia::io::File>(std::move(channel)),
+        std::move(client),
     });
   }
 

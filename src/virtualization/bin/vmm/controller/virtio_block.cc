@@ -28,9 +28,8 @@ VirtioBlock::VirtioBlock(const PhysMem& phys_mem, fuchsia::virtualization::Block
       mode_(mode) {}
 
 zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
-                               fuchsia::virtualization::BlockFormat format,
-                               fuchsia::io::FileHandle file, fuchsia::sys::Launcher* launcher,
-                               async_dispatcher_t* dispatcher) {
+                               fuchsia::virtualization::BlockFormat format, zx::channel client,
+                               fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kVirtioBlockUrl;
   auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
@@ -43,7 +42,7 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
     return status;
   }
   uint64_t size;
-  status = block_->Start(std::move(start_info), id, mode_, format, std::move(file), &size);
+  status = block_->Start(std::move(start_info), id, mode_, format, std::move(client), &size);
   if (status != ZX_OK) {
     return status;
   } else if (size % kBlockSectorSize != 0) {

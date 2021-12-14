@@ -285,7 +285,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
   // |fuchsia::virtualization::hardware::VirtioBlock|
   void Start(fuchsia::virtualization::hardware::StartInfo start_info, std::string id,
              fuchsia::virtualization::BlockMode mode, fuchsia::virtualization::BlockFormat format,
-             fidl::InterfaceHandle<fuchsia::io::File> file, StartCallback callback) override {
+             zx::channel client, StartCallback callback) override {
     read_only_ = mode == fuchsia::virtualization::BlockMode::READ_ONLY;
     PrepStart(std::move(start_info));
 
@@ -316,6 +316,7 @@ class VirtioBlockImpl : public DeviceBase<VirtioBlockImpl>,
     if (mode == fuchsia::virtualization::BlockMode::READ_WRITE) {
       vmo_flags |= fuchsia::io::VMO_FLAG_WRITE;
     }
+    fuchsia::io::FileHandle file(std::move(client));
     CreateVmoBlockDispatcher(dispatcher_, file.Bind(), vmo_flags, std::move(nested));
   }
 

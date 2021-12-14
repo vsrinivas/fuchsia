@@ -81,42 +81,42 @@ constexpr DiskImage kExtrasImage = DiskImage{
     .read_only = true,
 };
 
-// Get the underlying fuchsia::io::File handle for the given file descriptor.
+// Get the underlying zx::channel for the given file descriptor.
 //
 // Takes ownership of `fd`.
-fidl::InterfaceHandle<fuchsia::io::File> GetFileInterfaceFromFd(fbl::unique_fd fd) {
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_get_service_handle(fd.release(), &handle);
+zx::channel GetFileInterfaceFromFd(fbl::unique_fd fd) {
+  zx::channel channel;
+  zx_status_t status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to get service handle: " << status;
-    return nullptr;
+    return {};
   }
-  return fidl::InterfaceHandle<fuchsia::io::File>(zx::channel(handle));
+  return channel;
 }
 
 // Open the given disk image.
-fidl::InterfaceHandle<fuchsia::io::File> GetPartition(const DiskImage& image) {
+zx::channel GetPartition(const DiskImage& image) {
   TRACE_DURATION("linux_runner", "GetPartition");
   fbl::unique_fd fd(open(image.path, image.read_only ? O_RDONLY : O_RDWR));
   if (!fd.is_valid()) {
-    return nullptr;
+    return {};
   }
   return GetFileInterfaceFromFd(std::move(fd));
 }
 
 // Create the given disk image.
-fidl::InterfaceHandle<fuchsia::io::File> CreateRawPartition(const char* path, size_t image_size) {
+zx::channel CreateRawPartition(const char* path, size_t image_size) {
   TRACE_DURATION("linux_runner", "CreatePartition");
 
   // Create the image.
   fbl::unique_fd fd(open(path, O_RDWR | O_CREAT));
   if (!fd.is_valid()) {
     FX_LOGS(ERROR) << "Failed to create image: " << path << ": " << strerror(errno);
-    return nullptr;
+    return {};
   }
   if (ftruncate(fd.get(), image_size) < 0) {
     FX_LOGS(ERROR) << "Failed to truncate image: " << path << ": " << strerror(errno);
-    return nullptr;
+    return {};
   }
 
   return GetFileInterfaceFromFd(std::move(fd));
@@ -128,32 +128,32 @@ std::vector<fuchsia::virtualization::BlockSpec> GetBlockDevices(size_t stateful_
   std::vector<fuchsia::virtualization::BlockSpec> devices;
 
   // Get/create the stateful partition.
-  fidl::InterfaceHandle<fuchsia::io::File> stateful_handle = GetPartition(kStatefulImage);
-  if (!stateful_handle.is_valid() && !kStatefulImage.read_only) {
+  zx::channel stateful = GetPartition(kStatefulImage);
+  if (!stateful.is_valid() && !kStatefulImage.read_only) {
     static_assert(kStatefulImage.read_only ||
                       kStatefulImage.format == fuchsia::virtualization::BlockFormat::FILE,
-                  "Read/write images must be in RAW format");
+                  "Read/write images must be in FILE or BLOCK format");
     FX_LOGS(INFO) << "Creating stateful partition: " << kStatefulImage.path;
-    stateful_handle = CreateRawPartition(kStatefulImage.path, stateful_image_size);
+    stateful = CreateRawPartition(kStatefulImage.path, stateful_image_size);
   }
-  FX_CHECK(stateful_handle) << "Failed to open or create stateful file";
+  FX_CHECK(stateful) << "Failed to open or create stateful file";
   devices.push_back({
       .id = "stateful",
       .mode = (kStatefulImage.read_only || kForceVolatileWrites)
                   ? fuchsia::virtualization::BlockMode::VOLATILE_WRITE
                   : fuchsia::virtualization::BlockMode::READ_WRITE,
       .format = kStatefulImage.format,
-      .file = std::move(stateful_handle),
+      .client = std::move(stateful),
   });
 
   // Add the extras partition if it exists.
-  fidl::InterfaceHandle<fuchsia::io::File> extras_handle = GetPartition(kExtrasImage);
-  if (extras_handle) {
+  zx::channel extras = GetPartition(kExtrasImage);
+  if (extras) {
     devices.push_back({
         .id = "extras",
         .mode = fuchsia::virtualization::BlockMode::VOLATILE_WRITE,
         .format = kExtrasImage.format,
-        .file = std::move(extras_handle),
+        .client = std::move(extras),
     });
   }
 

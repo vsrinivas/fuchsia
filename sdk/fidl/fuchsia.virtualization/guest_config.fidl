@@ -61,14 +61,14 @@ type BlockFormat = strict enum {
 
 /// Properties describing a block device.
 type BlockSpec = resource struct {
-    /// A label used to identify the block device.
+    /// The ID used to identify the block device.
     id string:MAX_BLOCK_DEVICE_ID;
-    /// The access mode for the block backing file.
+    /// The access mode for the block device.
     mode BlockMode;
-    /// The data format of the backing file.
+    /// The data format of the block device.
     format BlockFormat;
-    /// The underlying file that stores the drive contents.
-    file client_end:fuchsia.io.File;
+    /// The client channel for the block device.
+    client zx.handle:CHANNEL;
 };
 
 /// Properites describing a network device.

@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
       return status;
     }
     status = block->Start(guest.object(), std::move(block_device.id), block_device.format,
-                          std::move(block_device.file), launcher.get(), device_loop.dispatcher());
+                          std::move(block_device.client), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start block device";
       return status;

@@ -148,7 +148,7 @@ static zx_status_t create_test_device(TestDevice* test_device,
   block_spec->id = test_device->id;
   block_spec->format = test_device->format;
   block_spec->mode = test_device->mode;
-  block_spec->file.set_channel(std::move(channel));
+  block_spec->client = std::move(channel);
 
   return ZX_OK;
 }

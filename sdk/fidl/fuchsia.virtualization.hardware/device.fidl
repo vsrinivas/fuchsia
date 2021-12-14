@@ -4,7 +4,6 @@
 library fuchsia.virtualization.hardware;
 
 using fuchsia.hardware.ethernet;
-using fuchsia.io;
 using fuchsia.sysmem;
 using fuchsia.ui.composition;
 using fuchsia.ui.gfx;
@@ -101,7 +100,7 @@ protocol VirtioBlock {
         id string:fuchsia.virtualization.MAX_BLOCK_DEVICE_ID;
         mode fuchsia.virtualization.BlockMode;
         format fuchsia.virtualization.BlockFormat;
-        file client_end:fuchsia.io.File;
+        client zx.handle:CHANNEL;
     }) -> (struct {
         size uint64;
     });
