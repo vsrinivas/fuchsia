@@ -1731,6 +1731,33 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
+        // Log connect duration for roaming, non-roaming, not including manual disconnects
+        // triggered by a user.
+        let duration_minutes = disconnect_info.connected_duration.into_minutes();
+        if let fidl_sme::DisconnectSource::User(reason) = disconnect_info.disconnect_source {
+            // Log duration for roaming/total disconnects if the disconnect is for roaming, but not
+            // if it is another user reason such as an unsaved network.
+            if is_roam_disconnect(reason) {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::CONNECTED_DURATION_BEFORE_ROAMING_DISCONNECT_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::IntegerValue(duration_minutes),
+                });
+            }
+        } else {
+            metric_events.push(MetricEvent {
+                metric_id: metrics::CONNECTED_DURATION_BEFORE_NON_ROAMING_DISCONNECT_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(duration_minutes),
+            });
+        }
+
+        metric_events.push(MetricEvent {
+            metric_id: metrics::CONNECTED_DURATION_BEFORE_DISCONNECT_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::IntegerValue(duration_minutes),
+        });
+
         log_cobalt_1dot1_batch!(
             self.cobalt_1dot1_proxy,
             &mut metric_events.iter_mut(),
@@ -2027,6 +2054,28 @@ fn append_device_connected_channel_cobalt_metrics(
         event_codes: vec![channel_band_dim as u32],
         payload: MetricEventPayload::Count(1),
     });
+}
+
+// Return whether the user disconnect reason indicates that the disconnect was for a roam.
+// This enumerates all enum options in order to cause a compile error if the enum changes.
+fn is_roam_disconnect(reason: fidl_sme::UserDisconnectReason) -> bool {
+    use fidl_sme::UserDisconnectReason;
+    match reason {
+        UserDisconnectReason::ProactiveNetworkSwitch => true,
+        UserDisconnectReason::Unknown
+        | UserDisconnectReason::FailedToConnect
+        | UserDisconnectReason::FidlStopClientConnectionsRequest
+        | UserDisconnectReason::DisconnectDetectedFromSme
+        | UserDisconnectReason::RegulatoryRegionChange
+        | UserDisconnectReason::Startup
+        | UserDisconnectReason::NetworkUnsaved
+        | UserDisconnectReason::NetworkConfigUpdated
+        | UserDisconnectReason::FidlConnectRequest
+        | UserDisconnectReason::WlanstackUnitTesting
+        | UserDisconnectReason::WlanSmeUnitTesting
+        | UserDisconnectReason::WlanServiceUtilTesting
+        | UserDisconnectReason::WlanDevTool => false,
+    }
 }
 
 enum StatOp {
@@ -3788,6 +3837,103 @@ mod tests {
         assert_eq!(breakdowns_by_channel.len(), 1);
         assert_eq!(breakdowns_by_channel[0].event_codes, vec![channel.primary as u32]);
         assert_eq!(breakdowns_by_channel[0].payload, MetricEventPayload::Count(1));
+
+        // Check that non-roaming and total disconnects are logged but not a roaming disconnect.
+        let roam_connected_duration = test_helper
+            .get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_ROAMING_DISCONNECT_METRIC_ID);
+        assert_eq!(roam_connected_duration.len(), 0);
+
+        let non_roam_connected_duration = test_helper.get_logged_metrics(
+            metrics::CONNECTED_DURATION_BEFORE_NON_ROAMING_DISCONNECT_METRIC_ID,
+        );
+        assert_eq!(non_roam_connected_duration.len(), 1);
+        assert_eq!(non_roam_connected_duration[0].payload, MetricEventPayload::IntegerValue(300));
+
+        let total_connected_duration =
+            test_helper.get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_DISCONNECT_METRIC_ID);
+        assert_eq!(total_connected_duration.len(), 1);
+        assert_eq!(total_connected_duration[0].payload, MetricEventPayload::IntegerValue(300));
+    }
+
+    #[fuchsia::test]
+    fn test_log_roam_disconnect_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.advance_by(3.hours(), test_fut.as_mut());
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        const DUR_MIN: i64 = 125;
+        test_helper.advance_by(DUR_MIN.minutes(), test_fut.as_mut());
+
+        // Send a disconnect event.
+        let info = DisconnectInfo {
+            connected_duration: DUR_MIN.minutes(),
+            disconnect_source: fidl_sme::DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch,
+            ),
+            ..fake_disconnect_info()
+        };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        // Check that a roam and total disconnect is logged, and not a non-roaming disconnect.
+        let roam_connected_duration = test_helper
+            .get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_ROAMING_DISCONNECT_METRIC_ID);
+        assert_eq!(roam_connected_duration.len(), 1);
+        assert_eq!(roam_connected_duration[0].payload, MetricEventPayload::IntegerValue(DUR_MIN));
+
+        let non_roam_connected_duration = test_helper.get_logged_metrics(
+            metrics::CONNECTED_DURATION_BEFORE_NON_ROAMING_DISCONNECT_METRIC_ID,
+        );
+        assert_eq!(non_roam_connected_duration.len(), 0);
+
+        let total_connected_duration =
+            test_helper.get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_DISCONNECT_METRIC_ID);
+        assert_eq!(total_connected_duration.len(), 1);
+        assert_eq!(total_connected_duration[0].payload, MetricEventPayload::IntegerValue(DUR_MIN));
+    }
+
+    #[fuchsia::test]
+    fn test_log_user_disconnect_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.advance_by(3.hours(), test_fut.as_mut());
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        const DUR_MIN: i64 = 250;
+        test_helper.advance_by(DUR_MIN.minutes(), test_fut.as_mut());
+
+        // Send a disconnect event.
+        let info = DisconnectInfo {
+            connected_duration: DUR_MIN.minutes(),
+            disconnect_source: fidl_sme::DisconnectSource::User(
+                fidl_sme::UserDisconnectReason::NetworkUnsaved,
+            ),
+            ..fake_disconnect_info()
+        };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        // Check that nothing was logged for connected durations before roaming and non-roaming
+        // disconnects.
+        let roam_connected_duration = test_helper
+            .get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_ROAMING_DISCONNECT_METRIC_ID);
+        assert_eq!(roam_connected_duration.len(), 0);
+
+        let non_roam_connected_duration = test_helper.get_logged_metrics(
+            metrics::CONNECTED_DURATION_BEFORE_NON_ROAMING_DISCONNECT_METRIC_ID,
+        );
+        assert_eq!(non_roam_connected_duration.len(), 0);
+
+        // Check that a connected duration was logged for overall disconnects.
+        let total_connected_duration =
+            test_helper.get_logged_metrics(metrics::CONNECTED_DURATION_BEFORE_DISCONNECT_METRIC_ID);
+        assert_eq!(total_connected_duration.len(), 1);
+        assert_eq!(total_connected_duration[0].payload, MetricEventPayload::IntegerValue(DUR_MIN));
     }
 
     #[fuchsia::test]
