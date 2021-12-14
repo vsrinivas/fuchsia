@@ -48,6 +48,46 @@ impl FileSystemRepository {
     pub fn new(metadata_repo_path: PathBuf, blob_repo_path: PathBuf) -> Self {
         Self { metadata_repo_path, blob_repo_path }
     }
+
+    async fn fetch(
+        &self,
+        repo_path: &Path,
+        resource_path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
+        let file_path = sanitize_path(repo_path, resource_path)?;
+
+        let mut file = async_fs::File::open(&file_path).await?;
+        let total_len = file.metadata().await?.len();
+
+        match range {
+            ResourceRange::Range { start, end: _ } => file.seek(SeekFrom::Start(start)).await?,
+            ResourceRange::RangeFrom { start } => file.seek(SeekFrom::Start(start)).await?,
+            ResourceRange::RangeFull | ResourceRange::RangeTo { .. } => total_len,
+        };
+
+        let content_len = match range {
+            ResourceRange::Range { start, end } => {
+                if start > end || end > total_len {
+                    return Err(Error::RangeNotSatisfiable);
+                }
+                end - start
+            }
+            ResourceRange::RangeTo { end } => {
+                if end > total_len {
+                    return Err(Error::RangeNotSatisfiable);
+                }
+                end
+            }
+            ResourceRange::RangeFull | ResourceRange::RangeFrom { .. } => total_len,
+        };
+
+        Ok(Resource {
+            content_len,
+            total_len,
+            stream: Box::pin(file_stream(file_path, content_len as usize, file)),
+        })
+    }
 }
 
 #[async_trait::async_trait]
@@ -59,36 +99,20 @@ impl RepositoryBackend for FileSystemRepository {
         }
     }
 
-    async fn fetch(&self, resource_path: &str, range: ResourceRange) -> Result<Resource, Error> {
-        let file_path =
-            sanitize_path(&self.metadata_repo_path, &self.blob_repo_path, resource_path)?;
+    async fn fetch_metadata(
+        &self,
+        resource_path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
+        self.fetch(&self.metadata_repo_path, resource_path, range).await
+    }
 
-        let mut file = async_fs::File::open(&file_path).await?;
-        let len = file.metadata().await?.len();
-
-        match range {
-            ResourceRange::Range { start, end: _ } => file.seek(SeekFrom::Start(start)).await?,
-            ResourceRange::RangeFrom { start } => file.seek(SeekFrom::Start(start)).await?,
-            ResourceRange::RangeFull | ResourceRange::RangeTo { .. } => len,
-        };
-
-        let len = match range {
-            ResourceRange::Range { start, end } => {
-                if start > end || end > len {
-                    return Err(Error::RangeNotSatisfiable);
-                }
-                end - start
-            }
-            ResourceRange::RangeTo { end } => {
-                if end > len {
-                    return Err(Error::RangeNotSatisfiable);
-                }
-                end
-            }
-            ResourceRange::RangeFull | ResourceRange::RangeFrom { .. } => len,
-        };
-
-        Ok(Resource { len, stream: Box::pin(file_stream(file_path, len as usize, file)) })
+    async fn fetch_blob(
+        &self,
+        resource_path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
+        self.fetch(&self.blob_repo_path, resource_path, range).await
     }
 
     fn supports_watch(&self) -> bool {
@@ -141,8 +165,8 @@ impl RepositoryBackend for FileSystemRepository {
         Ok(WatchStream { _watcher: watcher, receiver }.boxed())
     }
 
-    async fn target_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
-        let file_path = sanitize_path(&self.metadata_repo_path, &self.blob_repo_path, path)?;
+    async fn blob_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
+        let file_path = sanitize_path(&self.blob_repo_path, path)?;
         Ok(Some(async_fs::metadata(&file_path).await?.modified()?))
     }
 
@@ -169,26 +193,11 @@ impl Stream for WatchStream {
 }
 
 /// Make sure the resource is inside the repo_path.
-fn sanitize_path(
-    metadata_repo_path: &Path,
-    blob_repo_path: &Path,
-    resource_path: &str,
-) -> Result<PathBuf, Error> {
+fn sanitize_path(repo_path: &Path, resource_path: &str) -> Result<PathBuf, Error> {
     let resource_path = Path::new(resource_path);
-    let mut components = resource_path.components().peekable();
-
-    // Blobs live in a virtual subdirectory `blobs/`, so strip it off if it's
-    // the first component.
-    let is_blob = match components.peek() {
-        Some(Component::Normal(part)) if part == Path::new("blobs") => {
-            components.next();
-            true
-        }
-        _ => false,
-    };
 
     let mut parts = vec![];
-    for component in components {
+    for component in resource_path.components() {
         match component {
             Component::Normal(part) => {
                 parts.push(part);
@@ -201,12 +210,7 @@ fn sanitize_path(
     }
 
     let path = parts.into_iter().collect::<PathBuf>();
-
-    if is_blob {
-        Ok(blob_repo_path.join(path))
-    } else {
-        Ok(metadata_repo_path.join(path))
-    }
+    Ok(repo_path.join(path))
 }
 
 /// Read a file and return a stream of [Bytes].
@@ -287,17 +291,13 @@ mod tests {
 
         async fn read_metadata(&self, path: &str, range: ResourceRange) -> Result<Vec<u8>, Error> {
             let mut body = vec![];
-            self.repo.fetch(path, range).await?.read_to_end(&mut body).await?;
+            self.repo.fetch_metadata(path, range).await?.read_to_end(&mut body).await?;
             Ok(body)
         }
 
         async fn read_blob(&self, path: &str, range: ResourceRange) -> Result<Vec<u8>, Error> {
             let mut body = vec![];
-            self.repo
-                .fetch(&format!("blobs/{}", path), range)
-                .await?
-                .read_to_end(&mut body)
-                .await?;
+            self.repo.fetch_blob(path, range).await?.read_to_end(&mut body).await?;
             Ok(body)
         }
 
@@ -343,21 +343,12 @@ mod tests {
     async fn test_timestamp() {
         let env = TestEnv::new();
 
-        let f = File::create(env.metadata_path.join("empty-meta")).unwrap();
-        let meta_mtime = f.metadata().unwrap().modified().unwrap();
-        drop(f);
-
         let f = File::create(env.blob_path.join("empty-blob")).unwrap();
         let blob_mtime = f.metadata().unwrap().modified().unwrap();
         drop(f);
 
         assert_matches!(
-            env.repo.target_modification_time("empty-meta").await,
-            Ok(Some(t)) if t == meta_mtime
-        );
-
-        assert_matches!(
-            env.repo.target_modification_time("blobs/empty-blob").await,
+            env.repo.blob_modification_time("empty-blob").await,
             Ok(Some(t)) if t == blob_mtime
         );
     }

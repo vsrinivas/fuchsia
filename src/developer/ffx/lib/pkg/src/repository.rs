@@ -162,8 +162,11 @@ impl From<std::io::Error> for Error {
 /// [Resource] represents some resource as a stream of [Bytes] as provided from
 /// a repository server.
 pub struct Resource {
-    /// The length of the file in bytes.
-    pub len: u64,
+    /// The length of the file range in bytes.
+    pub content_len: u64,
+
+    /// The length of the total file in bytes.
+    pub total_len: u64,
 
     /// A stream of bytes representing the resource.
     pub stream: BoxStream<'static, io::Result<Bytes>>,
@@ -171,7 +174,7 @@ pub struct Resource {
 
 impl Resource {
     async fn read_to_end(&mut self, buf: &mut Vec<u8>) -> Result<(), Error> {
-        buf.reserve(self.len as usize);
+        buf.reserve(self.content_len as usize);
         while let Some(chunk) = self.stream.next().await.transpose()? {
             buf.extend_from_slice(&chunk);
         }
@@ -181,7 +184,11 @@ impl Resource {
 
 impl std::fmt::Debug for Resource {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("resource").field("len", &self.len).field("stream", &"..").finish()
+        f.debug_struct("resource")
+            .field("content_len", &self.content_len)
+            .field("total_len", &self.total_len)
+            .field("stream", &"..")
+            .finish()
     }
 }
 
@@ -189,7 +196,8 @@ impl TryFrom<RepositoryConfig> for Resource {
     type Error = Error;
     fn try_from(config: RepositoryConfig) -> Result<Resource, Error> {
         let json = Bytes::from(serde_json::to_vec(&config).map_err(|e| anyhow::anyhow!(e))?);
-        Ok(Resource { len: json.len() as u64, stream: once(ready(Ok(json))).boxed() })
+        let len = json.len() as u64;
+        Ok(Resource { content_len: len, total_len: len, stream: once(ready(Ok(json))).boxed() })
     }
 }
 
@@ -282,14 +290,32 @@ impl Repository {
         self.backend.watch()
     }
 
-    /// Return a stream of bytes for the resource.
-    pub async fn fetch(&self, path: &str) -> Result<Resource, Error> {
-        self.fetch_range(path, ResourceRange::RangeFull).await
+    /// Return a stream of bytes for the metadata resource.
+    pub async fn fetch_metadata(&self, path: &str) -> Result<Resource, Error> {
+        self.fetch_metadata_range(path, ResourceRange::RangeFull).await
     }
 
-    /// Return a stream of bytes for the resource in given range.
-    pub async fn fetch_range(&self, path: &str, range: ResourceRange) -> Result<Resource, Error> {
-        self.backend.fetch(path, range).await
+    /// Return a stream of bytes for the metadata resource in given range.
+    pub async fn fetch_metadata_range(
+        &self,
+        path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
+        self.backend.fetch_metadata(path, range).await
+    }
+
+    /// Return a stream of bytes for the blob resource.
+    pub async fn fetch_blob(&self, path: &str) -> Result<Resource, Error> {
+        self.fetch_blob_range(path, ResourceRange::RangeFull).await
+    }
+
+    /// Return a stream of bytes for the blob resource in given range.
+    pub async fn fetch_blob_range(
+        &self,
+        path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
+        self.backend.fetch_blob(path, range).await
     }
 
     pub async fn get_config(
@@ -414,7 +440,7 @@ impl Repository {
                 let path = format!("blobs/{}", hash);
                 Some(async move {
                     let mut bytes = vec![];
-                    self.fetch(&path).await?.read_to_end(&mut bytes).await?;
+                    self.fetch_blob(&hash).await?.read_to_end(&mut bytes).await?;
                     let mut archive = AsyncReader::new(Adapter::new(Cursor::new(bytes))).await?;
                     let contents = archive.read_file("meta/contents").await?;
                     let contents = MetaContents::deserialize(contents.as_slice())?;
@@ -422,9 +448,7 @@ impl Repository {
                     let size = size
                         + try_join_all(contents.contents().into_iter().map(
                             |(_, hash)| async move {
-                                self.fetch(&format!("blobs/{}", hash.to_string()))
-                                    .await
-                                    .map(|x| x.len)
+                                self.fetch_blob(&hash.to_string()).await.map(|x| x.content_len)
                             },
                         ))
                         .await?
@@ -433,7 +457,7 @@ impl Repository {
 
                     let modified = self
                         .backend
-                        .target_modification_time(&path)
+                        .blob_modification_time(&path)
                         .await?
                         .map(|x| -> anyhow::Result<u64> {
                             Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
@@ -523,12 +547,12 @@ impl Repository {
 
         // Read the meta.far.
         let mut meta_far_bytes = vec![];
-        self.fetch(&format!("blobs/{}", &hash)).await?.read_to_end(&mut meta_far_bytes).await?;
+        self.fetch_blob(&hash).await?.read_to_end(&mut meta_far_bytes).await?;
         let mut archive = AsyncReader::new(Adapter::new(Cursor::new(meta_far_bytes))).await?;
 
         let modified = self
             .backend
-            .target_modification_time(&package_name)
+            .blob_modification_time(&hash)
             .await?
             .map(|x| -> anyhow::Result<u64> {
                 Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
@@ -556,11 +580,10 @@ impl Repository {
                 let contents = MetaContents::deserialize(c.as_slice())?;
                 for (name, hash) in contents.contents() {
                     let hash_string = hash.to_string();
-                    let path = format!("blobs/{}", &hash_string);
-                    let size = self.fetch(&path).await?.len;
+                    let size = self.fetch_blob(&hash_string).await?.content_len;
                     let modified = self
                         .backend
-                        .target_modification_time(&path)
+                        .blob_modification_time(&hash_string)
                         .await?
                         .map(|x| -> anyhow::Result<u64> {
                             Ok(x.duration_since(SystemTime::UNIX_EPOCH)?.as_secs())
@@ -606,8 +629,11 @@ pub trait RepositoryBackend: std::fmt::Debug {
     /// Get a [RepositorySpec] for this [Repository]
     fn spec(&self) -> RepositorySpec;
 
-    /// Fetch a [Resource] from this repository.
-    async fn fetch(&self, path: &str, range: ResourceRange) -> Result<Resource, Error>;
+    /// Fetch a metadata [Resource] from this repository.
+    async fn fetch_metadata(&self, path: &str, range: ResourceRange) -> Result<Resource, Error>;
+
+    /// Fetch a blob [Resource] from this repository.
+    async fn fetch_blob(&self, path: &str, range: ResourceRange) -> Result<Resource, Error>;
 
     /// Whether or not the backend supports watching for file changes.
     fn supports_watch(&self) -> bool {
@@ -619,8 +645,8 @@ pub trait RepositoryBackend: std::fmt::Debug {
         Err(anyhow::anyhow!("Watching not supported for this repo type"))
     }
 
-    /// Get the modification time of a path in this repository if available.
-    async fn target_modification_time(&self, path: &str) -> anyhow::Result<Option<SystemTime>>;
+    /// Get the modification time of a blob in this repository if available.
+    async fn blob_modification_time(&self, path: &str) -> anyhow::Result<Option<SystemTime>>;
 
     /// Produces the backing TUF [RepositoryProvider] for this repository.
     fn get_tuf_repo(&self) -> Result<Box<dyn RepositoryProvider<Json>>, Error>;

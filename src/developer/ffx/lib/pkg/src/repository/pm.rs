@@ -35,8 +35,20 @@ impl RepositoryBackend for PmRepository {
         RepositorySpec::Pm { path: self.pm_repo_path.clone() }
     }
 
-    async fn fetch(&self, resource_path: &str, range: ResourceRange) -> Result<Resource, Error> {
-        self.repo.fetch(resource_path, range).await
+    async fn fetch_metadata(
+        &self,
+        resource_path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
+        self.repo.fetch_metadata(resource_path, range).await
+    }
+
+    async fn fetch_blob(
+        &self,
+        resource_path: &str,
+        range: ResourceRange,
+    ) -> Result<Resource, Error> {
+        self.repo.fetch_blob(resource_path, range).await
     }
 
     fn supports_watch(&self) -> bool {
@@ -51,7 +63,7 @@ impl RepositoryBackend for PmRepository {
         self.repo.get_tuf_repo()
     }
 
-    async fn target_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
-        self.repo.target_modification_time(path).await
+    async fn blob_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
+        self.repo.blob_modification_time(path).await
     }
 }

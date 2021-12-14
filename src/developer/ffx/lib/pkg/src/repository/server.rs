@@ -229,58 +229,62 @@ async fn handle_request(
                 return status_response(StatusCode::NOT_FOUND);
             }
         }
-        _ => match repo.fetch_range(resource_path, range.clone()).await {
-            Ok(file) => file,
-            Err(Error::NotFound) => {
-                warn!("could not find resource: {}", resource_path);
-                return status_response(StatusCode::NOT_FOUND);
+        _ => {
+            let res = if let Some(resource_path) = resource_path.strip_prefix("blobs/") {
+                repo.fetch_blob_range(resource_path, range.clone()).await
+            } else {
+                repo.fetch_metadata_range(resource_path, range.clone()).await
+            };
+
+            match res {
+                Ok(file) => file,
+                Err(Error::NotFound) => {
+                    warn!("could not find resource: {}", resource_path);
+                    return status_response(StatusCode::NOT_FOUND);
+                }
+                Err(Error::InvalidPath(path)) => {
+                    warn!("invalid path: {}", path.display());
+                    return status_response(StatusCode::BAD_REQUEST);
+                }
+                Err(Error::RangeNotSatisfiable) => {
+                    warn!("invalid range: {:?}", range);
+                    return status_response(StatusCode::RANGE_NOT_SATISFIABLE);
+                }
+                Err(err) => {
+                    error!("error fetching file {}: {:?}", resource_path, err);
+                    return status_response(StatusCode::INTERNAL_SERVER_ERROR);
+                }
             }
-            Err(Error::InvalidPath(path)) => {
-                warn!("invalid path: {}", path.display());
-                return status_response(StatusCode::BAD_REQUEST);
-            }
-            Err(Error::RangeNotSatisfiable) => {
-                warn!("invalid range: {:?}", range);
-                return status_response(StatusCode::RANGE_NOT_SATISFIABLE);
-            }
-            Err(err) => {
-                error!("error fetching file {}: {:?}", resource_path, err);
-                return status_response(StatusCode::INTERNAL_SERVER_ERROR);
-            }
-        },
+        }
     };
-    let total_len = repo.fetch(resource_path).await.unwrap().len;
-    generate_response_from_range(range, resource, total_len)
+
+    generate_response_from_range(range, resource)
 }
 
-fn generate_response_from_range(
-    range: ResourceRange,
-    resource: Resource,
-    total_len: u64,
-) -> Response<Body> {
+fn generate_response_from_range(range: ResourceRange, resource: Resource) -> Response<Body> {
     match range {
         ResourceRange::RangeFull => Response::builder()
             .status(200)
-            .header("Content-Length", resource.len)
+            .header("Content-Length", resource.content_len)
             .header("Accept-Ranges", "bytes")
             .body(Body::wrap_stream(resource.stream))
             .unwrap(),
         ResourceRange::RangeFrom { start } => Response::builder()
             .status(206)
-            .header("Content-Length", resource.len - start)
-            .header("Content-Range", format!("bytes={}-/{}", start, total_len))
+            .header("Content-Length", resource.content_len - start)
+            .header("Content-Range", format!("bytes={}-/{}", start, resource.total_len))
             .body(Body::wrap_stream(resource.stream))
             .unwrap(),
         ResourceRange::Range { start, end } => Response::builder()
             .status(206)
             .header("Content-Length", end - start)
-            .header("Content-Range", format!("bytes={}-{}/{}", start, end, total_len))
+            .header("Content-Range", format!("bytes={}-{}/{}", start, end, resource.total_len))
             .body(Body::wrap_stream(resource.stream))
             .unwrap(),
         ResourceRange::RangeTo { end } => Response::builder()
             .status(206)
             .header("Content-Length", end)
-            .header("Content-Range", format!("bytes=-{}/{}", end, total_len))
+            .header("Content-Range", format!("bytes=-{}/{}", end, resource.total_len))
             .body(Body::wrap_stream(resource.stream))
             .unwrap(),
     }
@@ -421,7 +425,7 @@ async fn read_timestamp_version(repo: Arc<Repository>) -> Option<u32> {
         //
         // FIXME: We should be using the TUF client to get the latest
         // timestamp in order to make sure the metadata is valid.
-        match repo.fetch("timestamp.json").await {
+        match repo.fetch_metadata("timestamp.json").await {
             Ok(mut file) => {
                 let mut bytes = vec![];
                 match file.read_to_end(&mut bytes).await {
