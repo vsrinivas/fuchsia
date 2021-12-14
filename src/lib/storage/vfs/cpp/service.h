@@ -57,6 +57,7 @@ class Service : public Vnode {
   zx_status_t ConnectService(zx::channel channel) final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
+  bool IsService() const override { return true; }
 
  protected:
   friend fbl::internal::MakeRefCountedHelper<Service>;

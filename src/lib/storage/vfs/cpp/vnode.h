@@ -373,6 +373,12 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // on host builds to simplify platform handling.
   virtual bool IsRemote() const;
 
+  // Returns true if this node is a service.  One implication of this is that read/write connections
+  // will be allowed (services are typically connected in this way using fdio_connect_service) to
+  // this node even if the filesystem is considered read-only (although the parent connection rights
+  // are still honored).
+  virtual bool IsService() const { return false; }
+
 #ifdef __Fuchsia__
   // Return information about the underlying filesystem, if desired.
   virtual zx_status_t QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out);

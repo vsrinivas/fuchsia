@@ -119,7 +119,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
     return OpenResult::RemoteRoot{.vnode = std::move(vn)};
   }
 
-  if (ReadonlyLocked() && options.rights.write) {
+  if (!vn->IsService() && ReadonlyLocked() && options.rights.write) {
     return ZX_ERR_ACCESS_DENIED;
   }
 
