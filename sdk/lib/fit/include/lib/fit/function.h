@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_FUNCTION_H_
-#define LIB_FIT_FUNCTION_H_
+#ifndef LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_H_
+#define LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_H_
 
 #include "function_internal.h"
 #include "utility_internal.h"
@@ -483,11 +483,32 @@ bool operator!=(decltype(nullptr),
 }
 
 // Returns a Callable object that invokes a member function of an object.
+// When used in a fit::function, this heap allocates (the returned lambda is
+// 3*sizeof(void*)).
+//
+// Deprecated in favor of the bind_member definition below that will inline into a
+// fit::function without heap allocating. The new bind_member definition is only
+// supported on C++17 and up. On C++14, a plain lambda should be used instead.
 template <typename R, typename T, typename... Args>
 auto bind_member(T* instance, R (T::*fn)(Args...)) {
   return [instance, fn](Args... args) { return (instance->*fn)(std::forward<Args>(args)...); };
 }
 
+// C++17 due to use of 'auto' template parameters and lambda parameters.
+#if __cplusplus >= 201703L
+// Returns a Callable object that invokes a member function of an object.
+// In other words, returns a closure 'f' for which calling f(args) is equivalent to
+// calling obj.method(args).
+//
+// Usage: fit::bind_member<&ObjType::MethodName>(&obj)
+template <auto method, typename T>
+auto bind_member(T* instance) {
+  return [instance](auto... args) {
+    return (instance->*method)(std::forward<decltype(args)>(args)...);
+  };
+}
+#endif  //  __cplusplus >= 201703L
+
 }  // namespace fit
 
-#endif  // LIB_FIT_FUNCTION_H_
+#endif  // LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_H_

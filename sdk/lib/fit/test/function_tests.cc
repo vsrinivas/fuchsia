@@ -694,14 +694,28 @@ struct Obj {
   uint32_t calls = 0;
 };
 
-TEST(FunctionTests, bind_member) {
+TEST(FunctionTests, deprecated_bind_member) {
   Obj obj;
   auto move_only_value = std::make_unique<int>(4);
 
+  static_assert(sizeof(fit::bind_member(&obj, &Obj::AddOne)) == 3 * sizeof(void*));
   fit::bind_member(&obj, &Obj::Call)();
   EXPECT_EQ(23, fit::bind_member(&obj, &Obj::AddOne)(22));
   EXPECT_EQ(6, fit::bind_member(&obj, &Obj::Sum)(1, 2, 3));
   move_only_value = fit::bind_member(&obj, &Obj::AddAndReturn)(std::move(move_only_value));
+  EXPECT_EQ(5, *move_only_value);
+  EXPECT_EQ(3, obj.calls);
+}
+
+TEST(FunctionTests, bind_member) {
+  Obj obj;
+  auto move_only_value = std::make_unique<int>(4);
+
+  static_assert(sizeof(fit::bind_member<&Obj::AddOne>(&obj)) == sizeof(void*));
+  fit::bind_member<&Obj::Call> (&obj)();
+  EXPECT_EQ(23, fit::bind_member<&Obj::AddOne>(&obj)(22));
+  EXPECT_EQ(6, fit::bind_member<&Obj::Sum>(&obj)(1, 2, 3));
+  move_only_value = fit::bind_member<&Obj::AddAndReturn>(&obj)(std::move(move_only_value));
   EXPECT_EQ(5, *move_only_value);
   EXPECT_EQ(3, obj.calls);
 }
