@@ -3062,6 +3062,9 @@ class IOMethod {
   ssize_t executeIO(const int fd, char* const buf, const size_t len) const {
     // Vectorize the provided buffer into multiple differently-sized iovecs.
     std::vector<struct iovec> iov;
+
+// TODO(https://fxbug.dev/90418): Enable tests with > 1 iovecs on Fuchsia.
+#if !defined(__Fuchsia__)
     {
       char* iov_start = buf;
       size_t len_remaining = len;
@@ -3085,6 +3088,9 @@ class IOMethod {
                                               .iov_len = 0,
                                           });
     }
+#else
+    { iov.push_back({.iov_base = buf, .iov_len = len}); }
+#endif
 
     msghdr msg = {
         .msg_iov = iov.data(),
