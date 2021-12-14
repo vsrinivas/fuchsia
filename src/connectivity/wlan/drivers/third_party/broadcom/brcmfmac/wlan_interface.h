@@ -13,6 +13,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WLAN_INTERFACE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_WLAN_INTERFACE_H_
 
+#include <fuchsia/hardware/wlan/fullmac/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <zircon/types.h>
 
@@ -72,6 +73,8 @@ class WlanInterface {
   void DelKeysReq(const wlanif_del_keys_req_t* req);
   void EapolReq(const wlanif_eapol_req_t* req);
   void StatsQueryReq();
+  zx_status_t GetIfaceCounterStats(wlanif_iface_counter_stats_t* out_stats);
+  zx_status_t GetIfaceHistogramStats(wlanif_iface_histogram_stats_t* out_stats);
   void StartCaptureFrames(const wlanif_start_capture_frames_req_t* req,
                           wlanif_start_capture_frames_resp_t* resp);
   void StopCaptureFrames();

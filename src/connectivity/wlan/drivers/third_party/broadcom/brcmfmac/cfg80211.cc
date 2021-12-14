@@ -4550,6 +4550,107 @@ send_resp:
   wlanif_impl_ifc_stats_query_resp(&ndev->if_proto, &response);
 }
 
+zx_status_t brcmf_if_get_iface_counter_stats(net_device* ndev,
+                                             wlanif_iface_counter_stats_t* out_stats) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    // MFG builds do not support many of the stats iovars.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+    return ZX_ERR_NOT_CONNECTED;
+  }
+
+  brcmf_pktcnt_le pktcnt;
+  bcme_status_t fw_err;
+  zx_status_t status =
+      brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_GET_PKTCNTS, &pktcnt, sizeof(pktcnt), &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("could not get pkt cnts: %s, fw err %s", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
+    return status;
+  }
+
+  BRCMF_DBG(DATA, "Cntrs: rxgood:%d rxbad:%d txgood:%d txbad:%d rxocast:%d", pktcnt.rx_good_pkt,
+            pktcnt.rx_bad_pkt, pktcnt.tx_good_pkt, pktcnt.tx_bad_pkt, pktcnt.rx_ocast_good_pkt);
+
+  out_stats->rx_unicast_total = pktcnt.rx_good_pkt + pktcnt.rx_bad_pkt + ndev->stats.rx_errors;
+  out_stats->rx_unicast_drop = pktcnt.rx_bad_pkt + ndev->stats.rx_errors;
+  out_stats->rx_multicast = pktcnt.rx_ocast_good_pkt;
+  out_stats->tx_total = pktcnt.tx_good_pkt + pktcnt.tx_bad_pkt + ndev->stats.tx_dropped;
+  out_stats->tx_drop = pktcnt.tx_bad_pkt + ndev->stats.tx_dropped;
+
+  return ZX_OK;
+}
+
+zx_status_t brcmf_if_get_iface_histogram_stats(net_device* ndev,
+                                               wlanif_iface_histogram_stats_t* out_stats) {
+  struct brcmf_if* ifp = ndev_to_if(ndev);
+
+  ndev->stats.noise_floor_histograms = {};
+  ndev->stats.noise_floor_samples = {};
+  ndev->stats.rssi_histograms = {};
+  ndev->stats.rssi_samples = {};
+  ndev->stats.rx_rate_index_histograms = {};
+  ndev->stats.rx_rate_index_samples = {};
+  ndev->stats.snr_histograms = {};
+  ndev->stats.snr_samples = {};
+
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MFG)) {
+    // MFG builds do not support many of the stats iovars.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // If detailed histogram feature is not enabled, do nothing.
+  if (!brcmf_feat_is_enabled(ifp->drvr, BRCMF_FEAT_DHIST)) {
+    return ZX_ERR_NOT_CONNECTED;
+  }
+
+  if (!brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
+    return ZX_ERR_NOT_CONNECTED;
+  }
+
+  histograms_report_t histograms_report;
+  const auto hist_status = brcmf_get_histograms_report(ifp, &histograms_report);
+  if (hist_status != ZX_OK) {
+    return hist_status;
+  }
+  wlanif_antenna_id_t antenna_id;
+  const auto antenna_id_status = brcmf_convert_antenna_id(histograms_report, &antenna_id);
+  if (antenna_id_status != ZX_OK) {
+    BRCMF_ERR("Invalid antenna ID, freq: %d idx: %d", histograms_report.antennaid.freq,
+              histograms_report.antennaid.idx);
+    return antenna_id_status;
+  }
+  ndev->stats.noise_floor_histograms.resize(1);
+  brcmf_convert_histograms_report_noise_floor(histograms_report, antenna_id,
+                                              ndev->stats.noise_floor_histograms.data(),
+                                              &ndev->stats.noise_floor_samples);
+  ndev->stats.rx_rate_index_histograms.resize(1);
+  brcmf_convert_histograms_report_rx_rate_index(histograms_report, antenna_id,
+                                                ndev->stats.rx_rate_index_histograms.data(),
+                                                &ndev->stats.rx_rate_index_samples);
+  ndev->stats.rssi_histograms.resize(1);
+  brcmf_convert_histograms_report_rssi(
+      histograms_report, antenna_id, ndev->stats.rssi_histograms.data(), &ndev->stats.rssi_samples);
+  ndev->stats.snr_histograms.resize(1);
+  brcmf_convert_histograms_report_snr(histograms_report, antenna_id,
+                                      ndev->stats.snr_histograms.data(), &ndev->stats.snr_samples);
+
+  out_stats->noise_floor_histograms_count = ndev->stats.noise_floor_histograms.size();
+  out_stats->noise_floor_histograms_list = ndev->stats.noise_floor_histograms.data();
+  out_stats->rssi_histograms_count = ndev->stats.rssi_histograms.size();
+  out_stats->rssi_histograms_list = ndev->stats.rssi_histograms.data();
+  out_stats->rx_rate_index_histograms_count = ndev->stats.rx_rate_index_histograms.size();
+  out_stats->rx_rate_index_histograms_list = ndev->stats.rx_rate_index_histograms.data();
+  out_stats->snr_histograms_count = ndev->stats.snr_histograms.size();
+  out_stats->snr_histograms_list = ndev->stats.snr_histograms.data();
+
+  return ZX_OK;
+}
+
 void brcmf_if_data_queue_tx(net_device* ndev, uint32_t options, ethernet_netbuf_t* netbuf,
                             ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
   auto b = std::make_unique<wlan::brcmfmac::EthernetNetbuf>(netbuf, completion_cb, cookie);
