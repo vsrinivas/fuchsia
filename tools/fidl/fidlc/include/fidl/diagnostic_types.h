@@ -6,6 +6,7 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTIC_TYPES_H_
 
 #include <cassert>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <string_view>
@@ -56,44 +57,56 @@ std::string Display(T val) {
   return std::to_string(val);
 }
 
-inline std::string FormatErr(std::string_view msg) {
-  // This assert should never fail, because FormatErr is only called by
-  // ReportError -- and calls to ReportError fail at compile time if the # of
-  // args passed in != the number of args in the Error definition.
-  assert(msg.find(kFormatMarker) == std::string::npos &&
-         "number of format string parameters '{}' != number of supplied arguments");
-  return std::string(msg);
+inline void FormatHelper(std::stringstream& out, std::string_view msg) {
+  assert(msg.find(kFormatMarker) == std::string::npos);
+  out << msg;
 }
 
 template <typename T, typename... Rest>
-std::string FormatErr(std::string_view msg, T t, Rest... rest) {
-  size_t i = msg.find(kFormatMarker);
-  // This assert should never fail (see non-template FormatErr)
-  assert(i != std::string::npos &&
-         "number of format string parameters '{}' != number of supplied arguments");
-
-  // Split string at marker, insert formatted parameter
-  std::stringstream s;
-  s << msg.substr(0, i) << Display(t)
-    << msg.substr(i + kFormatMarker.length(), msg.length() - i - kFormatMarker.length());
-
-  return FormatErr(s.str(), rest...);
+void FormatHelper(std::stringstream& out, std::string_view msg, T t, const Rest&... rest) {
+  auto i = msg.find(kFormatMarker);
+  assert(i != std::string::npos);
+  out << msg.substr(0, i) << Display(t);
+  auto remaining_msg = msg.substr(i + kFormatMarker.size());
+  FormatHelper(out, remaining_msg, rest...);
 }
 
-constexpr size_t count_format_args(std::string_view s) {
+template <typename... Args>
+std::string FormatDiagnostic(std::string_view msg, const Args&... args) {
+  std::stringstream s;
+  FormatHelper(s, msg, args...);
+  return s.str();
+}
+
+constexpr size_t CountFormatArgs(std::string_view s) {
   size_t i = s.find(kFormatMarker, 0);
   size_t total = 0;
-  while (i != std::string::npos && i < s.size()) {
+  while (i != std::string::npos) {
     total++;
     i = s.find(kFormatMarker, i + kFormatMarker.size());
   }
   return total;
 }
 
+template <typename... Args>
+constexpr void CheckFormatArgs(std::string_view msg) {
+  static_assert(
+      (std::is_same_v<Args, std::remove_const_t<std::remove_reference_t<Args>>> && ...),
+      "Remove redundant `const` or `&`; DiagnosticDef args are always passed by const reference");
+
+  // This can't be a static_assert because the compiler doesn't know msg is
+  // always constexpr. If the condition is true, the assert evaluates to a
+  // no-op. If the condition is false, it evaluates to a (non-constexpr) abort,
+  // resulting in a "must be initialized by a constant expression" error.
+  assert(sizeof...(Args) == internal::CountFormatArgs(msg) &&
+         "Number of format string parameters '{}' != number of template arguments");
+}
+
 }  // namespace internal
 
 struct DiagnosticDef {
-  constexpr DiagnosticDef(std::string_view msg) : msg(msg) {}
+  constexpr explicit DiagnosticDef(std::string_view msg) : msg(msg) {}
+  DiagnosticDef(const DiagnosticDef&) = delete;
 
   std::string_view msg;
 };
@@ -101,22 +114,18 @@ struct DiagnosticDef {
 // The definition of an error. All instances of ErrorDef are in diagnostics.h.
 // Template args define format parameters in the error message.
 template <typename... Args>
-struct ErrorDef : DiagnosticDef {
-  constexpr ErrorDef(std::string_view msg) : DiagnosticDef(msg) {
-    // This can't be a static assert because msg is not constexpr.
-    assert(sizeof...(Args) == internal::count_format_args(msg) &&
-           "number of format string parameters '{}' != number of template arguments");
+struct ErrorDef final : DiagnosticDef {
+  constexpr explicit ErrorDef(std::string_view msg) : DiagnosticDef(msg) {
+    internal::CheckFormatArgs<Args...>(msg);
   }
 };
 
 // The definition of a warning. All instances of WarningDef are in
 // diagnostics.h. Template args define format parameters in the warning message.
 template <typename... Args>
-struct WarningDef : DiagnosticDef {
-  constexpr WarningDef(std::string_view msg) : DiagnosticDef(msg) {
-    // This can't be a static assert because msg is not constexpr.
-    assert(sizeof...(Args) == internal::count_format_args(msg) &&
-           "number of format string parameters '{}' != number of template arguments");
+struct WarningDef final : DiagnosticDef {
+  constexpr explicit WarningDef(std::string_view msg) : DiagnosticDef(msg) {
+    internal::CheckFormatArgs<Args...>(msg);
   }
 };
 
@@ -127,37 +136,38 @@ enum class DiagnosticKind {
   kWarning,
 };
 
-// Represents a given instance of an error. Points to the error type it is an
-// instance of. Holds a SourceSpan indicating where the error occurred and a
-// formatted error message, built from the ErrorDef's message template and
-// format parameters passed in to Error's constructor.
-// Exists in order to allow deferral of error reporting and to be able to pass
-// around errors.
+// A Diagnostic is the result of instantiating a DiagnosticDef with arguments.
+// It stores a formatted std::string where "{}" markers have been replaced by
+// arguments. It also stores a SourceSpan indicating where the problem occurred.
 struct Diagnostic {
-  Diagnostic(DiagnosticKind kind, const DiagnosticDef& err, const std::optional<SourceSpan>& span,
-             const std::string msg)
-      : kind(kind), err(err), span(span), msg(msg) {}
-  Diagnostic(DiagnosticKind kind, const DiagnosticDef& err, const Token& token,
-             const std::string msg)
-      : kind(kind), err(err), span(token.span()), msg(msg) {}
-  virtual ~Diagnostic() {}
+  template <typename... Args>
+  Diagnostic(DiagnosticKind kind, const DiagnosticDef& def, std::optional<SourceSpan> span,
+             const Args&... args)
+      : kind(kind), def(def), span(span), msg(internal::FormatDiagnostic(def.msg, args...)) {}
+  Diagnostic(const Diagnostic&) = delete;
+
+  // The factory functions below could be constructors, and std::make_unique
+  // would work fine. However, template error messages are better with static
+  // functions because it doesn't have to try every constructor.
+
+  template <typename... Args>
+  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& def,
+                                               std::optional<SourceSpan> span,
+                                               const Args&... args) {
+    return std::make_unique<Diagnostic>(DiagnosticKind::kError, def, span, args...);
+  }
+
+  template <typename... Args>
+  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& def,
+                                                 std::optional<SourceSpan> span,
+                                                 const Args&... args) {
+    return std::make_unique<Diagnostic>(DiagnosticKind::kWarning, def, span, args...);
+  }
 
   DiagnosticKind kind;
-  const DiagnosticDef& err;
+  const DiagnosticDef& def;
   std::optional<SourceSpan> span;
   std::string msg;
-};
-
-template <typename... Args>
-struct Error : Diagnostic {
-  Error(const ErrorDef<Args...>& err, std::optional<SourceSpan> span, Args... args)
-      : Diagnostic(DiagnosticKind::kError, err, span, internal::FormatErr(err.msg, args...)) {}
-};
-
-template <typename... Args>
-struct Warning : Diagnostic {
-  Warning(const WarningDef<Args...>& warn, std::optional<SourceSpan> span, Args... args)
-      : Diagnostic(DiagnosticKind::kWarning, warn, span, internal::FormatErr(warn.msg, args...)) {}
 };
 
 }  // namespace diagnostics

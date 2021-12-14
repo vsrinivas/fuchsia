@@ -20,9 +20,7 @@
 namespace fidl::reporter {
 
 using diagnostics::Diagnostic;
-using diagnostics::Error;
 using diagnostics::ErrorDef;
-using diagnostics::Warning;
 using diagnostics::WarningDef;
 
 std::string Format(std::string_view qualifier, const std::optional<SourceSpan>& span,
@@ -48,29 +46,26 @@ class Reporter {
     const size_t num_warnings_;
   };
 
-  // Used to create a std::unique_ptr<Error> or std::unique_ptr<Warning> rather than
-  // std::make_unique to avoid having to specify the Args... template parameters on Error
-  // explicitly.
+  // TODO(fxbug.dev/90095): Remove these.
   template <typename... Args>
-  static std::unique_ptr<Error<Args...>> MakeError(const ErrorDef<Args...>& err,
-                                                   const std::optional<SourceSpan>& span,
-                                                   Args... args) {
-    return std::make_unique<Error<Args...>>(err, span, args...);
+  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& err,
+                                               const std::optional<SourceSpan>& span,
+                                               Args... args) {
+    return Diagnostic::MakeError(err, span, args...);
   }
   template <typename... Args>
-  static std::unique_ptr<Error<Args...>> MakeError(const ErrorDef<Args...>& err, Args... args) {
-    return std::make_unique<Error<Args...>>(err, std::nullopt, args...);
+  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& err, Args... args) {
+    return Diagnostic::MakeError(err, std::nullopt, args...);
   }
   template <typename... Args>
-  static std::unique_ptr<Warning<Args...>> MakeWarning(const WarningDef<Args...>& warn,
-                                                       const std::optional<SourceSpan>& span,
-                                                       Args... args) {
-    return std::make_unique<Warning<Args...>>(warn, span, args...);
+  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& warn,
+                                                 const std::optional<SourceSpan>& span,
+                                                 Args... args) {
+    return Diagnostic::MakeWarning(warn, span, args...);
   }
   template <typename... Args>
-  static std::unique_ptr<Warning<Args...>> MakeWarning(const WarningDef<Args...>& warn,
-                                                       Args... args) {
-    return std::make_unique<Warning<Args...>>(warn, std::nullopt, args...);
+  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& warn, Args... args) {
+    return Diagnostic::MakeWarning(warn, std::nullopt, args...);
   }
 
   template <typename... Args>
