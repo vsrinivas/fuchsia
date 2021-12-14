@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_component::client,
     futures::future,
-    log::*,
+    tracing::*,
 };
 
 /// Name of the collection that contains BankAccount service providers.

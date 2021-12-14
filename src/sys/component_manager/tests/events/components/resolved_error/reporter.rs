@@ -8,15 +8,12 @@ use {
         matcher::EventMatcher,
     },
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
     fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
-    fuchsia_syslog as syslog,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["resolveed_error_reporter"])]
 async fn main() {
-    syslog::init_with_tags(&["resolved_error_reporter"]).unwrap();
-
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source

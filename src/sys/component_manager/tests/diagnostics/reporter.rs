@@ -4,7 +4,7 @@
 
 use {
     diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect},
-    fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_syslog as syslog, io_util,
+    fidl_fuchsia_io as fio, io_util,
     std::path::Path,
 };
 
@@ -16,10 +16,8 @@ async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> St
     res.expect("Unable to read file.")
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    syslog::init().unwrap();
-
     let data = ArchiveReader::new()
         .add_selector("<component_manager>:root")
         .snapshot::<Inspect>()

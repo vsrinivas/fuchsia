@@ -7,10 +7,9 @@ use {
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata, fidl_fuchsia_io as fio,
     fidl_fuchsia_mem as fmem,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
-    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
-    log::*,
+    tracing::*,
 };
 
 /// Wraps all hosted protocols into a single type that can be matched against
@@ -87,9 +86,8 @@ fn build_decl() -> fmem::Data {
     fmem::Data::Bytes(fidl::encoding::encode_persistent(&mut component_decl).expect("encoded"))
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init().expect("failed to initialize logging");
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(IncomingRequest::ResolverProtocol);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;

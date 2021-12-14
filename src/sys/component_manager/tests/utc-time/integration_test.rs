@@ -9,10 +9,9 @@ use component_events::{
 };
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
-use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
-use log::*;
 use test_utils_lib::opaque_test::OpaqueTestBuilder;
+use tracing::*;
 use vfs::{
     directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::vmo::read_only_static,
     pseudo_directory,
@@ -21,11 +20,8 @@ use vfs::{
 // This value must be kept consistent with the value in maintainer.rs
 const EXPECTED_BACKSTOP_TIME_SEC_STR: &str = "1589910459";
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_minimum_severity = "warn")]
 async fn builtin_time_service_and_clock_routed() {
-    fuchsia_syslog::init().unwrap();
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::WARN);
-
     // Construct a pseudo-directory to mock the component manager's configured
     // backstop time.
     let dir = pseudo_directory! {

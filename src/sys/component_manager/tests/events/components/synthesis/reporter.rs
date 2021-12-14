@@ -9,10 +9,10 @@ use {
     },
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component_test::ScopedInstance,
-    log::*,
     matches::assert_matches,
     regex::Regex,
     std::{collections::BTreeSet, convert::TryFrom, iter::FromIterator},
+    tracing::*,
 };
 
 #[fuchsia::component]

@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use std::fs::*;
-fn main() {
-    fuchsia_syslog::init().unwrap();
 
+#[fuchsia::component]
+fn main() {
     // Write a file to the storage directory of this component
     let expected_content = "hippos_are_neat";
     write("/data/hippo", expected_content).unwrap();

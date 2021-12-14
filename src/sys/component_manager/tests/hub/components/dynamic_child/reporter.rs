@@ -9,13 +9,11 @@ use {
     fidl_fuchsia_io::DirectoryMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog as syslog,
     hub_report::*,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    syslog::init().unwrap();
     let event_source = EventSource::new().unwrap();
 
     // Subscribe to relevant events

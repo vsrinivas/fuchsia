@@ -7,7 +7,7 @@ use {
     files_async::readdir,
     fuchsia_component::client::connect_to_protocol_at_path,
     io_util::{open_directory_in_namespace, open_file_in_namespace},
-    log::info,
+    tracing::info,
 };
 
 pub async fn expect_dir_listing(path: &str, mut expected_listing: Vec<&str>) {

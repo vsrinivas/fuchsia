@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     futures::{StreamExt, TryStreamExt},
-    log::*,
+    tracing::*,
 };
 
 #[fuchsia::component]

@@ -5,10 +5,9 @@
 use {
     anyhow::{Context, Error},
     fidl_fidl_test_components::{TriggerRequest, TriggerRequestStream},
-    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{StreamExt, TryStreamExt},
-    log::*,
+    tracing::*,
 };
 
 /// Wraps all hosted protocols into a single type that can be matched against
@@ -18,7 +17,7 @@ enum IncomingRequest {
     TriggerProtocol(TriggerRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(IncomingRequest::TriggerProtocol);

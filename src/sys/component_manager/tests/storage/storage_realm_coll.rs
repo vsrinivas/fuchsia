@@ -6,15 +6,13 @@ use {
     component_events::{events::*, matcher::*},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
     fuchsia_component::client::connect_to_protocol,
     std::fs::{read_dir, DirEntry},
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    fuchsia_syslog::init().unwrap();
-
     // Create the dynamic child
     let realm = connect_to_protocol::<fcomponent::RealmMarker>().unwrap();
     let mut collection_ref = fdecl::CollectionRef { name: String::from("coll") };

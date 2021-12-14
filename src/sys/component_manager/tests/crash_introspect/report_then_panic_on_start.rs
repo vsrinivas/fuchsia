@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_test as ftest, fuchsia_component::client as fclient, fuchsia_runtime as fruntime,
-    fuchsia_zircon::AsHandleRef, log::*,
+    fuchsia_zircon::AsHandleRef, tracing::*,
 };
 
 #[fuchsia::component]

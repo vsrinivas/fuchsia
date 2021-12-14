@@ -67,7 +67,7 @@ rustc_binary("use_dir_rights_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "use_dir_rights.rs" ]
@@ -88,7 +88,7 @@ rustc_binary("use_storage_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "use_storage.rs" ]

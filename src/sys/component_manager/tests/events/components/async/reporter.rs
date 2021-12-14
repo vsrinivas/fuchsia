@@ -7,15 +7,11 @@ use {
         events::{Event, EventMode, EventSource, EventSubscription, Purged, Started},
         matcher::EventMatcher,
     },
-    fuchsia_async as fasync,
     fuchsia_component_test::ScopedInstance,
-    fuchsia_syslog as syslog,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["async_reporter"])]
 async fn main() {
-    syslog::init_with_tags(&["async_reporter"]).unwrap();
-
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
     let mut event_stream = event_source

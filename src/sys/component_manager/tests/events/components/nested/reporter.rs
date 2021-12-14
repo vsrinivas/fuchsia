@@ -2,19 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    component_events::{
-        events::{Event, EventMode, EventSource, EventSubscription, Started},
-        matcher::EventMatcher,
-        sequence::*,
-    },
-    fuchsia_async as fasync, fuchsia_syslog as syslog,
+use component_events::{
+    events::{Event, EventMode, EventSource, EventSubscription, Started},
+    matcher::EventMatcher,
+    sequence::*,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["nested_reporter"])]
 async fn main() {
-    syslog::init_with_tags(&["nested_reporter"]).unwrap();
-
     // Track all the starting child components.
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source

@@ -23,7 +23,7 @@ rustc_binary("service-routing-branch-bin") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   source_root = "src/branch.rs"
@@ -49,7 +49,7 @@ rustc_test("service-routing-test-bin") {
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   source_root = "src/service_routing_test.rs"

@@ -8,9 +8,9 @@ use {
     crate::hub::Hub,
     anyhow::Result,
     futures::{future::BoxFuture, FutureExt},
-    log::warn,
     rand::rngs::SmallRng,
     stress_test_actor::{actor_loop, Action},
+    tracing::warn,
 };
 
 #[fuchsia::component]

@@ -5,14 +5,13 @@
 use {
     fidl::endpoints, fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io::DirectoryMarker,
-    fuchsia_async as fasync, fuchsia_component::client, fuchsia_syslog as syslog, log::*,
+    fuchsia_component::client, tracing::*,
 };
 
 // `echo_client` is a child of this component and uses the `Echo` protocol from component
 // manager's namespace.
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    syslog::init_with_tags(&[]).expect("could not initialize logging");
     info!("Started");
     let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("could not connect to Realm service");

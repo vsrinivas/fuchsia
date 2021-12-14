@@ -42,7 +42,7 @@ cts_rustc_test("reboot_on_terminate_test_bin") {
     "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   source_root = "src/integration_test.rs"
@@ -62,7 +62,7 @@ cts_rustc_binary("reboot_on_terminate_success_bin") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   source_root = "src/reboot_on_terminate_success.rs"
@@ -83,8 +83,8 @@ cts_rustc_binary("reboot_on_terminate_policy_bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:tracing",
   ]
 
   source_root = "src/reboot_on_terminate_policy.rs"

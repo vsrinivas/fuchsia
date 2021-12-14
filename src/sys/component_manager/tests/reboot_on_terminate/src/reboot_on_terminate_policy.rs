@@ -5,8 +5,8 @@
 use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fuchsia_component::client, fuchsia_zircon as zx, futures::StreamExt, log::*,
-    matches::assert_matches,
+    fuchsia_component::client, fuchsia_zircon as zx, futures::StreamExt, matches::assert_matches,
+    tracing::*,
 };
 
 #[fuchsia::component]

@@ -12,8 +12,7 @@ rustc_binary("advanced_routing_reporter_bin") {
   testonly = true
   deps = [
     ":hub_report_lib",
-    "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/fuchsia",
   ]
 
   sources = [ "advanced_routing/reporter.rs" ]
@@ -25,10 +24,9 @@ rustc_binary("simple_component_bin") {
   source_root = "simple_component/main.rs"
   testonly = true
   deps = [
-    "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "simple_component/main.rs" ]
@@ -45,9 +43,9 @@ rustc_binary("dynamic_child_reporter_bin") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:futures",
   ]
@@ -62,8 +60,7 @@ rustc_binary("visibility_reporter_bin") {
   testonly = true
   deps = [
     ":hub_report_lib",
-    "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/fuchsia",
   ]
 
   sources = [ "visibility/reporter.rs" ]
@@ -76,8 +73,7 @@ rustc_binary("resolver_bin") {
   testonly = true
   deps = [
     ":hub_report_lib",
-    "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
+    "//src/lib/fuchsia",
   ]
 
   sources = [ "resolver/main.rs" ]
@@ -94,7 +90,7 @@ rustc_library("hub_report_lib") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "hub_report.rs" ]

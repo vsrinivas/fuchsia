@@ -2,12 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_async as fasync, hub_report::*};
+use hub_report::*;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    fuchsia_syslog::init().unwrap();
-
     expect_dir_listing("/parent_hub/children", vec!["echo_server", "reporter"]).await;
 
     expect_file_content("/parent_hub/children/reporter/exec/runtime/args/0", "Hippos").await;

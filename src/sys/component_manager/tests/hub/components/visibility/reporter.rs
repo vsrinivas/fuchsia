@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_async as fasync, hub_report::*};
+use hub_report::*;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    fuchsia_syslog::init().unwrap();
     expect_dir_listing("/hub/children", vec!["child"]).await;
     expect_dir_listing(
         "/hub/children/child",

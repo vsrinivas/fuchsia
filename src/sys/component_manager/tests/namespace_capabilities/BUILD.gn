@@ -20,12 +20,12 @@ rustc_binary("trigger_bin") {
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/io_util",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "trigger.rs" ]
@@ -65,11 +65,10 @@ rustc_binary("integration_test_root_bin") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "integration_test_root.rs" ]

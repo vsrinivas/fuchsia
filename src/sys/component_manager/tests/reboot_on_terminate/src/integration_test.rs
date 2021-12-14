@@ -10,8 +10,8 @@ use {
     },
     futures::channel::mpsc,
     futures::prelude::*,
-    log::*,
     std::env,
+    tracing::*,
 };
 
 #[fuchsia::test]

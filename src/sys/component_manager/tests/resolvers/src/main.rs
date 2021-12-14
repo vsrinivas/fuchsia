@@ -8,7 +8,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     futures::{StreamExt, TryStreamExt},
-    log::*,
+    tracing::*,
 };
 
 /// Wraps all hosted protocols into a single type that can be matched against

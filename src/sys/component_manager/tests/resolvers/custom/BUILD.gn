@@ -31,13 +31,12 @@ rustc_binary("resolver_bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/resolver.rs" ]
@@ -50,13 +49,12 @@ rustc_test("integration_test_bin") {
   source_root = "src/integration_test.rs"
 
   deps = [
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/integration_test.rs" ]

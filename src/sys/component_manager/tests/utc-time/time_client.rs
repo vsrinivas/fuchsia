@@ -6,13 +6,10 @@ use fidl_componentmanager_test as ftest;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use fuchsia_zircon::{Rights, Signals};
-use log::*;
+use tracing::*;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_minimum_severity = "warn")]
 async fn main() {
-    fuchsia_syslog::init().unwrap();
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::WARN);
-
     let clock = fuchsia_runtime::duplicate_utc_clock_handle(Rights::READ | Rights::WAIT).unwrap();
     fasync::OnSignals::new(&clock, Signals::CLOCK_STARTED).await.unwrap();
     let details = clock.get_details().unwrap();

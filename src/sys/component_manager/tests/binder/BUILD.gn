@@ -28,7 +28,6 @@ rustc_test("binder_integration_test_bin") {
     "//src/lib/diagnostics/data/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust",
     "//src/sys/lib/component-events",
   ]
 

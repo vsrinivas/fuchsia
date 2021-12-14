@@ -17,9 +17,8 @@ rustc_binary("reporter_bin") {
     "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/diagnostics/reader/rust",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
   ]
 
   sources = [ "reporter.rs" ]

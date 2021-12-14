@@ -14,9 +14,9 @@ use {
     },
     fidl_fidl_test_components as test_protocol, fuchsia_async as fasync,
     fuchsia_component_test::ScopedInstance,
-    fuchsia_syslog::fx_log_info,
     futures_util::stream::TryStreamExt,
     std::sync::{Arc, Mutex},
+    tracing::info,
 };
 
 #[fuchsia::test]
@@ -144,7 +144,7 @@ impl RendezvousService {
                         let mut count = self.call_count.lock().unwrap();
                         *count += 1;
                     }
-                    fx_log_info!("Received rendezvous from target");
+                    info!("Received rendezvous from target");
                     responder.send("").unwrap();
                 }
             }

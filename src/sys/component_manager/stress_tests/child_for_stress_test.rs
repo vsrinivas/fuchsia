@@ -8,18 +8,16 @@ use {
     fidl::endpoints::RequestStream,
     fidl_test_componentmanager_stresstests as fstresstests, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::fx_log_debug,
     futures::prelude::*,
     std::sync::{Arc, Mutex},
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["child_for_stress_test"])]
 async fn main() -> Result<(), Error> {
     const URL: &str =
         "fuchsia-pkg://fuchsia.com/component-manager-stress-tests#meta/child-for-stress-test.cm";
     const COL: &str = "children";
-    fuchsia_syslog::init_with_tags(&["child_for_stress_test"])?;
-    fx_log_debug!("started");
+    tracing::debug!("started");
     let mut fs = ServiceFs::new_local();
     let children_vec = Arc::new(Mutex::new(vec![]));
     fs.dir("svc").add_fidl_service(move |mut stream: fstresstests::ChildRealmRequestStream| {
@@ -63,7 +61,6 @@ async fn main() -> Result<(), Error> {
                             })
                             .await;
                         children_vec.lock().unwrap().append(&mut children);
-                        // fuchsia_syslog::fx_log_info!("Added {} children", children_vec.lock().unwrap().len());
                         responder.send().unwrap();
                     }
                     fstresstests::ChildRealmRequest::StopChildren { responder } => {

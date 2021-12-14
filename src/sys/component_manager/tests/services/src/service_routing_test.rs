@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_examples_services as fexamples,
     fuchsia_component::client,
     fuchsia_component_test::ScopedInstance,
-    log::*,
+    tracing::*,
 };
 
 /// Name of the collection that contains branch components.

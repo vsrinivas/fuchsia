@@ -6,14 +6,12 @@ use {
     fidl_fidl_examples_routing_echo as fecho, fidl_fidl_test_components as ftest,
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
-    fuchsia_syslog as syslog,
     futures::{StreamExt, TryStreamExt},
-    log::*,
+    tracing::*,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    syslog::init_with_tags(&[]).expect("could not initialize logging");
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(async move {
@@ -26,7 +24,8 @@ async fn main() {
 }
 
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) {
-    let echo = client::connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
+    let echo =
+        client::connect_to_protocol::<fecho::EchoMarker>().expect("error connecting to echo");
     while let Some(event) = stream.try_next().await.expect("failed to serve trigger service") {
         info!("Received trigger invocation");
         let ftest::TriggerRequest::Run { responder } = event;

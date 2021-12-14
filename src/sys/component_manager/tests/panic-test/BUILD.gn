@@ -17,7 +17,6 @@ rustc_test("component_manager_panic_test_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/component-events",
   ]
 

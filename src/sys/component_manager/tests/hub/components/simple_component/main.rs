@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_async as fasync, fuchsia_syslog as syslog, futures::future::pending, log::info};
+use {futures::future::pending, tracing::info};
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = ["simple_component"])]
 /// Simple program that never terminates
 async fn main() {
-    syslog::init_with_tags(&["simple_component"]).unwrap();
     info!("Child created!");
     pending::<()>().await;
 }

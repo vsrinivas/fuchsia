@@ -8,14 +8,12 @@ use {
         matcher::EventMatcher,
         sequence::*,
     },
-    fidl_fidl_test_components as ftest, fuchsia_async as fasync,
+    fidl_fidl_test_components as ftest,
     fuchsia_component::client::connect_to_protocol,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    fuchsia_syslog::init().unwrap();
-
     // Track all the starting components.
     let event_source = EventSource::new().unwrap();
     let event_stream = event_source

@@ -10,15 +10,14 @@ use {
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_syslog as syslog, fuchsia_zircon as zx,
+    fuchsia_zircon as zx,
     io_util::{self, OPEN_RIGHT_READABLE},
-    log::*,
     std::path::PathBuf,
+    tracing::*,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() {
-    syslog::init().expect("could not initialize logging");
     info!("Started collection realm");
     let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("could not connect to Realm service");

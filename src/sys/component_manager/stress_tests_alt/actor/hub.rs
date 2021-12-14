@@ -11,9 +11,9 @@ use {
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
     io_util::node::OpenError,
-    log::debug,
     rand::{prelude::SliceRandom, rngs::SmallRng, Rng},
     std::path::Path,
+    tracing::debug,
 };
 
 const COLLECTION_NAME: &'static str = "dynamic_children";

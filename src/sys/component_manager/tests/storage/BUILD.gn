@@ -16,7 +16,6 @@ rustc_test("storage_integration_test_bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/testing:test_utils_lib",
     "//src/sys/component_manager/tests/fidl:components-rustc",
@@ -67,9 +66,8 @@ rustc_binary("storage_realm_coll_bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/component-events",
   ]
 
@@ -88,7 +86,6 @@ rustc_binary("storage_realm_coll_invalid_route_bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/component-events",
   ]
 
@@ -99,7 +96,7 @@ rustc_binary("storage_user_bin") {
   name = "storage_user"
   edition = "2018"
   source_root = "storage_user.rs"
-  deps = [ "//src/lib/syslog/rust:syslog" ]
+  deps = [ "//src/lib/fuchsia" ]
 
   sources = [ "storage_user.rs" ]
 }

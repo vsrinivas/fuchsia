@@ -8,8 +8,8 @@ use fuchsia_async::{self as fasync, TimeoutExt};
 use fuchsia_component::{client, server};
 use fuchsia_zircon::{ClockUpdate, Duration, Signals, Status, Time};
 use futures::StreamExt;
-use log::*;
 use test_util::assert_geq;
+use tracing::*;
 
 enum ExposedServices {
     TestOutcome(ftest::TestOutcomeReportRequestStream),
@@ -21,11 +21,8 @@ const EXPECTED_BACKSTOP_TIME_NANOS: i64 = 1589910459000000000;
 /// Time to set in the UTC clock, as an offset above backstop time.
 const TEST_OFFSET: Duration = Duration::from_minutes(2);
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_minimum_severity = "warn")]
 async fn main() {
-    fuchsia_syslog::init().unwrap();
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::WARN);
-
     debug!("requesting fuchsia.time.Maintenance");
     let time_maintenance_proxy = client::connect_to_protocol::<ftime::MaintenanceMarker>().unwrap();
 

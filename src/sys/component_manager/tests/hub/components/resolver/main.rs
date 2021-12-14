@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_async as fasync, fuchsia_syslog as syslog, hub_report::*};
+use hub_report::*;
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component(logging_tags = [ "resolver" ])]
 async fn main() {
-    syslog::init_with_tags(&["resolver"]).unwrap();
     expect_dir_listing(
         "/hub/children/child_a",
         vec!["children", "component_type", "debug", "id", "url"],

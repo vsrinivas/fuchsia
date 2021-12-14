@@ -19,9 +19,8 @@ rustc_binary("report_then_panic_on_start_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
-    "//src/lib/syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
   name = "report_then_panic_on_start"
   edition = "2018"
