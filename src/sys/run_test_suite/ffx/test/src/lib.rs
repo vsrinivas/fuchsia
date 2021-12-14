@@ -82,7 +82,9 @@ pub async fn test(
         remote_control_result.map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
 
     match cmd.subcommand {
-        TestSubcommand::Run(run) => run_test(RunBuilderConnector::new(remote_control), run).await,
+        TestSubcommand::Run(run) => {
+            run_test(RunBuilderConnector::new(remote_control), writer, run).await
+        }
         TestSubcommand::List(list) => get_tests(query_proxy, writer, list).await,
         TestSubcommand::Result(result) => result_command(result, writer).await,
     }
@@ -100,7 +102,11 @@ async fn get_directory_manager() -> Result<DirectoryManager> {
     Ok(DirectoryManager::new(output_path_config, save_count_config)?)
 }
 
-async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) -> Result<()> {
+async fn run_test<W: 'static + Write + Send + Sync>(
+    builder_connector: Box<RunBuilderConnector>,
+    writer: W,
+    cmd: RunCommand,
+) -> Result<()> {
     // Whether or not the experimental structured output is enabled.
     // When the experiment is disabled and the user attempts to use a strucutured output option,
     // we bail.
@@ -164,13 +170,13 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
             }
         }
     });
+    let reporter = create_reporter(filter_ansi, output_directory, writer)?;
     match run_test_suite_lib::run_tests_and_get_outcome(
         builder_connector.connect().await,
         test_definitions,
         run_params,
         min_log_severity,
-        filter_ansi,
-        output_directory,
+        reporter,
         cancel_receiver.map(|_| ()),
     )
     .await
@@ -256,6 +262,26 @@ where
             ])
         }
     }
+}
+
+fn create_reporter<W: 'static + Write + Send + Sync>(
+    filter_ansi: bool,
+    dir: Option<PathBuf>,
+    writer: W,
+) -> Result<run_test_suite_lib::output::RunReporter> {
+    let stdout_reporter = run_test_suite_lib::output::ShellReporter::new(writer);
+    let dir_reporter = dir.map(run_test_suite_lib::output::DirectoryReporter::new).transpose()?;
+    let reporter = match (dir_reporter, filter_ansi) {
+        (Some(dir_reporter), false) => run_test_suite_lib::output::RunReporter::new(
+            run_test_suite_lib::output::MultiplexedReporter::new(stdout_reporter, dir_reporter),
+        ),
+        (Some(dir_reporter), true) => run_test_suite_lib::output::RunReporter::new_ansi_filtered(
+            run_test_suite_lib::output::MultiplexedReporter::new(stdout_reporter, dir_reporter),
+        ),
+        (None, false) => run_test_suite_lib::output::RunReporter::new(stdout_reporter),
+        (None, true) => run_test_suite_lib::output::RunReporter::new_ansi_filtered(stdout_reporter),
+    };
+    Ok(reporter)
 }
 
 async fn get_tests<W: Write>(

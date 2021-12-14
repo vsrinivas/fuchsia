@@ -4,13 +4,13 @@
 
 use diagnostics_data::Severity;
 use fidl_fuchsia_test_manager::{LaunchError, RunBuilderMarker};
-use futures::prelude::*;
 use matches::assert_matches;
+use parking_lot::Mutex;
 use regex::Regex;
-use run_test_suite_lib::{output, Outcome, RunTestSuiteError, SuiteRunResult, TestParams};
+use run_test_suite_lib::{output, Outcome, RunTestSuiteError, TestParams};
 use std::convert::TryInto;
-use std::io::Write;
 use std::str::from_utf8;
+use std::sync::Arc;
 use test_output_directory::{
     self as directory,
     testing::{ExpectedDirectory, ExpectedSuite, ExpectedTestCase, ExpectedTestRun},
@@ -73,41 +73,62 @@ fn new_run_params() -> run_test_suite_lib::RunParams {
     }
 }
 
-/// run specified test once.
-async fn run_test_once<W: Write + Send>(
+type TestShellReporter = run_test_suite_lib::output::ShellReporter<Vec<u8>>;
+type TestMuxReporter = run_test_suite_lib::output::MultiplexedReporter<
+    TestShellReporter,
+    run_test_suite_lib::output::DirectoryReporter,
+>;
+
+fn create_shell_reporter() -> (TestShellReporter, Arc<Mutex<Vec<u8>>>) {
+    let output = Arc::new(parking_lot::Mutex::new(vec![]));
+    let shell_reporter = run_test_suite_lib::output::ShellReporter::new_from_arc(output.clone());
+    (shell_reporter, output)
+}
+
+fn create_dir_reporter() -> (run_test_suite_lib::output::DirectoryReporter, tempfile::TempDir) {
+    let tmp_dir = tempfile::tempdir().unwrap();
+    let dir_reporter =
+        run_test_suite_lib::output::DirectoryReporter::new(tmp_dir.path().to_path_buf()).unwrap();
+    (dir_reporter, tmp_dir)
+}
+
+fn create_shell_and_dir_reporter() -> (TestMuxReporter, Arc<Mutex<Vec<u8>>>, tempfile::TempDir) {
+    let (shell_reporter, output) = create_shell_reporter();
+    let (dir_reporter, tmp_dir) = create_dir_reporter();
+    (
+        run_test_suite_lib::output::MultiplexedReporter::new(shell_reporter, dir_reporter),
+        output,
+        tmp_dir,
+    )
+}
+
+/// run specified test once. Returns suite result and output to shell.
+async fn run_test_once(
     test_params: TestParams,
     min_log_severity: Option<Severity>,
-    writer: &mut W,
-) -> Result<SuiteRunResult, RunTestSuiteError> {
-    let test_result = {
-        let mut reporter = output::RunReporter::new(output::NoopReporter);
-        let streams = run_test_suite_lib::run_test(
-            fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
-                .expect("connecting to RunBuilderProxy"),
-            vec![test_params],
-            new_run_params(),
-            min_log_severity,
-            writer,
-            &mut reporter,
-            futures::future::pending(),
-        )
-        .await?;
-        let mut results = streams.collect::<Vec<_>>().await;
-        assert_eq!(results.len(), 1, "{:?}", results);
-        results.pop().unwrap()
-    };
-    test_result
+) -> Result<(Outcome, Arc<Mutex<Vec<u8>>>, tempfile::TempDir), RunTestSuiteError> {
+    let (reporter, output, tmp_dir) = create_shell_and_dir_reporter();
+    let run_reporter = run_test_suite_lib::output::RunReporter::new(reporter);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        vec![test_params],
+        new_run_params(),
+        min_log_severity,
+        run_reporter,
+        futures::future::pending(),
+    )
+    .await;
+    Ok((outcome, output, tmp_dir))
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_no_clean_exit() {
-    let mut output: Vec<u8> = vec![];
-    let run_result = run_test_once(
+    let (outcome, output, output_dir) = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
             ),
         None,
-        &mut output
     )
     .await
     .expect("Running test should not fail");
@@ -127,25 +148,42 @@ log1 for Example.Test3
 log2 for Example.Test3
 log3 for Example.Test3
 [PASSED]	Example.Test3
+
+3 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm completed with result: INCONCLUSIVE
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Inconclusive);
-    assert_eq!(run_result.executed, run_result.passed);
+    assert_eq!(outcome, Outcome::Inconclusive);
 
-    let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 
-    assert_eq!(run_result.executed, expected);
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Inconclusive),
+    );
+
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-onfinished-after-test-example.cm",
+                directory::Outcome::Inconclusive,
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
+        ],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_v2_test() {
-    let output_dir = tempfile::tempdir().expect("create temp directory");
-    let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new(
-        output::DirectoryReporter::new(output_dir.path().to_path_buf()).unwrap(),
-    );
-    let streams = run_test_suite_lib::run_test(
+    let (reporter, output, output_dir) = create_shell_and_dir_reporter();
+    let reporter = output::RunReporter::new(reporter);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
         vec![new_test_params(
@@ -153,16 +191,10 @@ async fn launch_and_test_passing_v2_test() {
         )],
         new_run_params(),
         None,
-        &mut output,
-        &mut reporter,
+        reporter,
         futures::future::pending(),
     )
-    .await
-    .expect("run test");
-    let run_result = streams.collect::<Vec<_>>().await.pop().unwrap().unwrap();
-
-    reporter.stopped(&output::ReportedOutcome::Passed, output::Timestamp::Unknown).unwrap();
-    reporter.finished().unwrap();
+    .await;
 
     let expected_output = "[RUNNING]	Example.Test1
 log1 for Example.Test1
@@ -179,15 +211,13 @@ log1 for Example.Test3
 log2 for Example.Test3
 log3 for Example.Test3
 [PASSED]	Example.Test3
+
+3 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_ref(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Passed);
-    assert_eq!(run_result.executed, run_result.passed);
-
-    let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
-
-    assert_eq!(run_result.executed, expected);
+    assert_eq!(outcome, Outcome::Passed);
 
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
@@ -233,12 +263,9 @@ log3 for Example.Test3
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_stderr_test() {
-    let output_dir = tempfile::tempdir().expect("create temp directory");
-    let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new(
-        output::DirectoryReporter::new(output_dir.path().to_path_buf()).unwrap(),
-    );
-    let streams = run_test_suite_lib::run_test(
+    let (reporter, output, output_dir) = create_shell_and_dir_reporter();
+    let reporter = output::RunReporter::new(reporter);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![new_test_params(
@@ -246,16 +273,10 @@ async fn launch_and_test_stderr_test() {
         )],
         new_run_params(),
         None,
-        &mut output,
-        &mut reporter,
+        reporter,
         futures::future::pending(),
     )
-    .await
-    .expect("run test");
-    let run_result = streams.collect::<Vec<_>>().await.pop().unwrap().unwrap();
-
-    reporter.stopped(&output::ReportedOutcome::Passed, output::Timestamp::Unknown).unwrap();
-    reporter.finished().unwrap();
+    .await;
 
     let expected_output = "[RUNNING]	Example.Test1
 log1 for Example.Test1
@@ -276,11 +297,13 @@ log3 for Example.Test3
 stderr msg1 for Example.Test3
 stderr msg2 for Example.Test3
 [PASSED]	Example.Test3
-";
-    assert_output!(output, expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Passed);
-    assert_eq!(run_result.executed, run_result.passed);
+3 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm completed with result: PASSED
+";
+    assert_output!(output.lock().as_ref(), expected_output);
+
+    assert_eq!(outcome, Outcome::Passed);
 
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
@@ -334,59 +357,30 @@ stderr msg2 for Example.Test3
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_passing_v2_test_multiple_times() {
-    let mut output: Vec<u8> = vec![];
-    let output_dir = tempfile::tempdir().expect("Create temp directory");
-    let mut reporter = output::RunReporter::new(
-        output::DirectoryReporter::new(output_dir.path().to_path_buf()).expect("Create reporter"),
-    );
-    let streams = run_test_suite_lib::run_test(
+    let (reporter, _, output_dir) = create_shell_and_dir_reporter();
+    let reporter = output::RunReporter::new(reporter);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
             vec![new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
                 ); 10],
                 new_run_params(),
-            None,&mut output,
-            &mut reporter,
+            None,
+            reporter,
             futures::future::pending(),
         )
-    .await.expect("run test");
-    let run_results = streams.collect::<Vec<_>>().await;
-    reporter.stopped(&output::ReportedOutcome::Passed, output::Timestamp::Unknown).unwrap();
-    reporter.finished().unwrap();
-
-    assert_eq!(run_results.len(), 10);
-    for run_result in run_results {
-        let run_result = run_result.expect("Running test should not fail");
-        assert_eq!(run_result.outcome, Outcome::Passed);
-        assert_eq!(run_result.executed, run_result.passed);
-
-        let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
-
-        assert_eq!(run_result.executed, expected);
-    }
+    .await;
+    assert_eq!(outcome, Outcome::Passed);
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
     let expected_test_suite = ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
         directory::Outcome::Passed,
     )
-    .with_case(
-        ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
-            .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
-    )
-    .with_case(
-        ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed)
-            .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
-    )
-    .with_case(
-        ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
-            .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
-    )
-    .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |_| ());
+    .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+    .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+    .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed));
 
     let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 
@@ -404,12 +398,9 @@ async fn launch_and_test_passing_v2_test_multiple_times() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_multiple_passing_tests() {
-    let mut output: Vec<u8> = vec![];
-    let output_dir = tempfile::tempdir().expect("Create temp directory");
-    let mut reporter = output::RunReporter::new(
-        output::DirectoryReporter::new(output_dir.path().to_path_buf()).expect("Create reporter"),
-    );
-    let streams = run_test_suite_lib::run_test(
+    let (reporter, _, output_dir) = create_shell_and_dir_reporter();
+    let reporter = output::RunReporter::new(reporter);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
             vec![new_test_params(
@@ -420,25 +411,12 @@ async fn launch_and_test_multiple_passing_tests() {
                 )
             ],
             new_run_params(),
-            None, &mut output,
-            &mut reporter,
+            None,
+            reporter,
             futures::future::pending(),
         )
-    .await.expect("run test");
-    let run_results = streams.collect::<Vec<_>>().await;
-    reporter.stopped(&output::ReportedOutcome::Passed, output::Timestamp::Unknown).unwrap();
-    reporter.finished().unwrap();
-
-    assert_eq!(run_results.len(), 2);
-    for run_result in run_results {
-        let run_result = run_result.expect("Running test should not fail");
-        assert_eq!(run_result.outcome, Outcome::Passed);
-        assert_eq!(run_result.executed, run_result.passed);
-
-        let expected = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
-
-        assert_eq!(run_result.executed, expected);
-    }
+    .await;
+    assert_eq!(outcome, Outcome::Passed);
 
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
     let expected_test_suites = vec![
@@ -446,42 +424,16 @@ async fn launch_and_test_multiple_passing_tests() {
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
             directory::Outcome::Passed,
         )
-        .with_case(
-            ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
-                .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-                .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
-        )
-        .with_case(
-            ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed)
-                .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-                .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
-        )
-        .with_case(
-            ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
-                .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-                .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
-        )
-        .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |_| ()),
+        .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+        .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+        .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)),
         ExpectedSuite::new(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
             directory::Outcome::Passed,
         )
-        .with_case(
-            ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
-                .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-                .with_matching_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), |_| ()),
-        )
-        .with_case(
-            ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed)
-                .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-                .with_matching_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), |_| ()),
-        )
-        .with_case(
-            ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
-                .with_matching_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), |_| ())
-                .with_matching_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), |_| ()),
-        )
-        .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |_| ()),
+        .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+        .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+        .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
     ];
 
     let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
@@ -496,41 +448,56 @@ async fn launch_and_test_multiple_passing_tests() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_with_filter() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
     );
 
     test_params.test_filters = Some(vec!["*Test3".to_string()]);
-    let run_result =
-        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
+    let (outcome, output, output_dir) =
+        run_test_once(test_params, None).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test3
 log1 for Example.Test3
 log2 for Example.Test3
 log3 for Example.Test3
 [PASSED]	Example.Test3
+
+1 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Passed);
-    assert_eq!(run_result.executed, run_result.passed);
+    assert_eq!(outcome, Outcome::Passed);
 
-    let expected = vec!["Example.Test3"];
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 
-    assert_eq!(run_result.executed, expected);
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Passed),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+                directory::Outcome::Passed
+            )
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
+        ],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_with_multiple_filter() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
     );
 
     test_params.test_filters = Some(vec!["*Test3".to_string(), "*Test1".to_string()]);
-    let run_result =
-        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
+    let (outcome, output, output_dir) =
+        run_test_once(test_params, None).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
 log1 for Example.Test1
@@ -542,75 +509,131 @@ log1 for Example.Test3
 log2 for Example.Test3
 log3 for Example.Test3
 [PASSED]	Example.Test3
+
+2 out of 2 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Passed);
-    assert_eq!(run_result.executed, run_result.passed);
+    assert_eq!(outcome, Outcome::Passed);
 
-    let expected = vec!["Example.Test1", "Example.Test3"];
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 
-    assert_eq!(run_result.executed, expected);
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Passed),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+                directory::Outcome::Passed
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
+        ],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_with_filter_no_matching_cases() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
     );
 
     test_params.test_filters = Some(vec!["matches-nothing".to_string()]);
-    let run_result = run_test_once(test_params, None, &mut output).await.unwrap_err();
+    let (outcome, _, _) = run_test_once(test_params, None).await.unwrap();
 
-    assert_matches!(run_result, RunTestSuiteError::Launch(LaunchError::NoMatchingCases));
-    assert!(!run_result.is_internal_error());
+    match outcome {
+        Outcome::Error { origin } => {
+            assert_matches!(
+                origin.as_ref(),
+                RunTestSuiteError::Launch(LaunchError::NoMatchingCases)
+            );
+            assert!(!origin.is_internal_error());
+        }
+        _ => panic!("Expected error but got {:?}", outcome),
+    }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_empty_test() {
-    let mut output: Vec<u8> = vec![];
-    let run_result = run_test_once(
+    let (outcome, _, output_dir) = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
         ),
         None,
-        &mut output,
     )
     .await
-    .expect("Running test should not fail");
+    .unwrap();
 
-    assert_eq!(run_result.executed.len(), 0);
-    assert_eq!(run_result.passed.len(), 0);
+    assert_eq!(outcome, Outcome::Passed);
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Passed),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![ExpectedSuite::new(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/no-test-example.cm",
+            directory::Outcome::Passed,
+        )],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_huge_test() {
-    let mut output: Vec<u8> = vec![];
-
-    let run_result = run_test_once(
+    let (outcome, _, output_dir) = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm",
         ),
         None,
-        &mut output,
     )
     .await
-    .expect("Running test should not fail");
+    .unwrap();
 
-    assert_eq!(run_result.executed.len(), 1_000);
-    assert_eq!(run_result.passed.len(), 1_000);
+    assert_eq!(outcome, Outcome::Passed);
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    let mut expected_test_suite = ExpectedSuite::new(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/huge-test-example.cm",
+        directory::Outcome::Passed,
+    );
+    for i in 1..1001 {
+        expected_test_suite = expected_test_suite.with_case(ExpectedTestCase::new(
+            format!("FooTest{:?}", i),
+            directory::Outcome::Passed,
+        ));
+    }
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Passed),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![expected_test_suite],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_disabled_test_exclude_disabled() {
-    let mut output: Vec<u8> = vec![];
-    let run_result = run_test_once(
+    let (outcome, output, output_dir) = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
             ),
             None,
-            &mut output,
         )
     .await
     .expect("Running test should not fail");
@@ -624,28 +647,44 @@ log3 for Example.Test1
 [SKIPPED]	Example.Test2
 [RUNNING]	Example.Test3
 [SKIPPED]	Example.Test3
+
+1 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_eq!(outcome, Outcome::Passed);
 
-    // "skipped" is a form of "executed"
-    let expected_executed = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
-    let expected_passed = vec!["Example.Test1"];
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 
-    assert_eq!(run_result.executed, expected_executed);
-    assert_eq!(run_result.passed, expected_passed);
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Passed),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
+                directory::Outcome::Passed
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Skipped))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Skipped))
+        ],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_disabled_test_include_disabled() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
     );
     test_params.also_run_disabled_tests = true;
-    let run_result =
-        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
+    let (outcome, output, output_dir) =
+        run_test_once(test_params, None).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	Example.Test1
 log1 for Example.Test1
@@ -662,28 +701,44 @@ log1 for Example.Test3
 log2 for Example.Test3
 log3 for Example.Test3
 [FAILED]	Example.Test3
+
+Failed tests: Example.Test3
+2 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm completed with result: FAILED
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Failed);
+    assert_eq!(outcome, Outcome::Failed);
 
-    // "skipped" is a form of "executed"
-    let expected_executed = vec!["Example.Test1", "Example.Test2", "Example.Test3"];
-    let expected_passed = vec!["Example.Test1", "Example.Test2"];
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 
-    assert_eq!(run_result.executed, expected_executed);
-    assert_eq!(run_result.passed, expected_passed);
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Failed),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/disabled-test-example.cm",
+                directory::Outcome::Failed
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Failed))
+        ],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_test() {
-    let mut output: Vec<u8> = vec![];
-    let run_result = run_test_once(
+    let (outcome, output, output_dir) = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
             ),
             None,
-            &mut output,
         )
     .await
     .expect("Running test should not fail");
@@ -703,50 +758,83 @@ log1 for Example.Test3
 log2 for Example.Test3
 log3 for Example.Test3
 [PASSED]	Example.Test3
+
+Failed tests: Example.Test2
+2 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm completed with result: FAILED
 ";
 
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Failed);
+    assert_eq!(outcome, Outcome::Failed);
 
-    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
-    assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Failed),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
+                directory::Outcome::Failed
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Failed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
+        ],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_failing_v2_test_multiple_times() {
-    let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new(output::NoopReporter);
-    let streams = run_test_suite_lib::run_test(
+    let (dir_reporter, output_dir) = create_dir_reporter();
+    let reporter = output::RunReporter::new(dir_reporter);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
         vec![new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
                 ); 10],
                 new_run_params(),
-                None,&mut output, &mut reporter, futures::future::pending(),
+                None, reporter, futures::future::pending(),
         )
-    .await.expect("run test");
-    let run_results = streams.collect::<Vec<_>>().await;
+    .await;
 
-    assert_eq!(run_results.len(), 10);
-    for run_result in run_results {
-        let run_result = run_result.expect("Running test should not fail");
-        assert_eq!(run_result.outcome, Outcome::Failed);
-        assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
-        assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
+    assert_eq!(outcome, Outcome::Failed);
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Failed),
+    );
+
+    let expected_suite = ExpectedSuite::new(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
+        directory::Outcome::Failed,
+    )
+    .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+    .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Failed))
+    .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed));
+
+    for suite_result in suite_results {
+        directory::testing::assert_suite_result(output_dir.path(), &suite_result, &expected_suite);
     }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_incomplete_test() {
-    let mut output: Vec<u8> = vec![];
-    let run_result = run_test_once(
+    let (outcome, output, output_dir) = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
             ),
             None,
-            &mut output,
         )
     .await
     .expect("Running test should not fail");
@@ -768,26 +856,44 @@ log3 for Example.Test3
 The following test(s) never completed:
 Example.Test1
 Example.Test3
+
+1 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm did not complete successfully.
 ";
 
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::DidNotFinish);
+    assert_eq!(outcome, Outcome::DidNotFinish);
 
-    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
-    assert_eq!(run_result.passed, vec!["Example.Test2"]);
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Inconclusive),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/incomplete-test-example.cm",
+                directory::Outcome::Inconclusive
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
+        ],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_invalid_test() {
-    let mut output: Vec<u8> = vec![];
-    let run_result = run_test_once(
+    let (outcome, output, output_dir) = run_test_once(
             new_test_params(
                 "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
-
             ),
             None,
-            &mut output,
         )
     .await
     .expect("Running test should not fail");
@@ -809,13 +915,34 @@ log3 for Example.Test3
 The following test(s) never completed:
 Example.Test1
 Example.Test3
+
+1 out of 3 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm did not complete successfully.
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::DidNotFinish);
+    assert_eq!(outcome, Outcome::DidNotFinish);
 
-    assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
-    assert_eq!(run_result.passed, vec!["Example.Test2"]);
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Inconclusive),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![
+            ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/invalid-test-example.cm",
+                directory::Outcome::Inconclusive
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Error))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Error))
+        ],
+    );
 }
 
 // This test also acts an example on how to right a v2 test.
@@ -823,84 +950,120 @@ Example.Test3
 // then test that server out and return back results.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_run_echo_test() {
-    let mut output: Vec<u8> = vec![];
-    let run_result = run_test_once(
+    let (outcome, output, _) = run_test_once(
         new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
         ),
         None,
-        &mut output,
     )
     .await
     .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	EchoTest
 [PASSED]	EchoTest
+
+1 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Passed);
-
-    assert_eq!(run_result.executed, vec!["EchoTest"]);
-    assert_eq!(run_result.passed, vec!["EchoTest"]);
+    assert_eq!(outcome, Outcome::Passed);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_timeout() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
-    let run_result =
-        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
+    let (outcome, output, _) =
+        run_test_once(test_params, None).await.expect("Running test should not fail");
     let expected_output = "[RUNNING]	LongRunningTest.LongRunning
 [TIMED_OUT]	LongRunningTest.LongRunning
-";
-    assert_output!(output, expected_output);
-    assert_eq!(run_result.outcome, Outcome::Timedout);
 
-    assert_eq!(run_result.passed, Vec::<String>::new());
+Failed tests: LongRunningTest.LongRunning
+0 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm completed with result: TIMED_OUT
+";
+    assert_output!(output.lock().as_slice(), expected_output);
+    assert_eq!(outcome, Outcome::Timedout);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 // when a test times out, we should not run it again.
 async fn test_timeout_multiple_times() {
-    let mut output: Vec<u8> = vec![];
-    let mut reporter = output::RunReporter::new(output::NoopReporter);
+    let (reporter, output, output_dir) = create_shell_and_dir_reporter();
+    let reporter = output::RunReporter::new(reporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(1);
-    let streams = run_test_suite_lib::run_test(
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         vec![test_params; 10],
         new_run_params(),
         None,
-        &mut output,
-        &mut reporter,
+        reporter,
         futures::future::pending(),
     )
-    .await
-    .expect("run test");
-    let mut run_results = streams.collect::<Vec<_>>().await;
-    assert_eq!(run_results.len(), 1);
-    let run_result = run_results.pop().unwrap().unwrap();
-    assert_eq!(run_result.outcome, Outcome::Timedout);
+    .await;
+    assert_eq!(outcome, Outcome::Timedout);
 
     let expected_output = "[RUNNING]	LongRunningTest.LongRunning
 [TIMED_OUT]	LongRunningTest.LongRunning
-";
-    assert_output!(output, expected_output);
 
-    assert_eq!(run_result.passed, Vec::<String>::new());
+Failed tests: LongRunningTest.LongRunning
+0 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm completed with result: TIMED_OUT
+";
+    assert_output!(output.lock().as_ref(), expected_output);
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Timedout),
+    );
+
+    let (timed_out_suites, not_started_suites): (Vec<_>, Vec<_>) = suite_results
+        .into_iter()
+        .partition(|&directory::SuiteResult::V0 { ref outcome, .. }| {
+            *outcome == directory::Outcome::Timedout
+        });
+
+    assert_eq!(timed_out_suites.len(), 1);
+    directory::testing::assert_suite_result(
+        output_dir.path(),
+        &timed_out_suites[0],
+        &ExpectedSuite::new(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
+            directory::Outcome::Timedout,
+        )
+        .with_case(ExpectedTestCase::new(
+            "LongRunningTest.LongRunning",
+            directory::Outcome::Timedout,
+        )),
+    );
+
+    assert_eq!(not_started_suites.len(), 9);
+    for suite_result in not_started_suites {
+        directory::testing::assert_suite_result(
+            output_dir.path(),
+            &suite_result,
+            &ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
+                directory::Outcome::NotStarted
+            )
+        );
+    }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_coninue_on_timeout() {
-    let mut output = std::io::sink();
-    let mut reporter = output::RunReporter::new(output::NoopReporter);
+async fn test_continue_on_timeout() {
+    let (reporter, _, output_dir) = create_shell_and_dir_reporter();
+    let reporter = output::RunReporter::new(reporter);
     let mut long_test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
@@ -915,7 +1078,7 @@ async fn test_coninue_on_timeout() {
         test_params.push(short_test_params.clone());
     }
 
-    let streams = run_test_suite_lib::run_test(
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
             .expect("connecting to RunBuilderProxy"),
         test_params,
@@ -924,32 +1087,61 @@ async fn test_coninue_on_timeout() {
             stop_after_failures: None,
         },
         None,
-        &mut output,
-        &mut reporter,
+        reporter,
         futures::future::pending(),
     )
-    .await
-    .expect("run test");
-    let run_results = streams.collect::<Vec<_>>().await;
-    assert_eq!(run_results.len(), 11);
+    .await;
+    assert_eq!(outcome, Outcome::Timedout);
 
-    let (timed_out, others): (Vec<_>, Vec<_>) = run_results
-        .into_iter()
-        .map(|result| result.unwrap())
-        .partition(|result| result.outcome == Outcome::Timedout);
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
 
-    // Note - this is a somewhat weak assertion as we generally do not know the order in which the
-    // tests are executed.
-    assert_eq!(timed_out.len(), 1);
-    assert_eq!(others.len(), 10);
-    assert!(others.iter().all(|result| result.outcome == Outcome::Passed));
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Timedout),
+    );
+
+    let (timed_out_suites, passing_suites): (Vec<_>, Vec<_>) =
+        suite_results.into_iter().partition(|result| {
+            let directory::SuiteResult::V0 { ref outcome, .. } = result;
+            *outcome == directory::Outcome::Timedout
+        });
+
+    assert_eq!(timed_out_suites.len(), 1);
+    directory::testing::assert_suite_result(
+        output_dir.path(),
+        &timed_out_suites[0],
+        &ExpectedSuite::new(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
+            directory::Outcome::Timedout,
+        )
+        .with_case(ExpectedTestCase::new(
+            "LongRunningTest.LongRunning",
+            directory::Outcome::Timedout,
+        )),
+    );
+
+    assert_eq!(passing_suites.len(), 10);
+    for suite_result in passing_suites {
+        directory::testing::assert_suite_result(
+            output_dir.path(),
+            &suite_result,
+            &ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+                directory::Outcome::Passed
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)),
+        );
+    }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_stop_after_n_failures() {
-    let mut output = std::io::sink();
-    let mut reporter = output::RunReporter::new(output::NoopReporter);
-    let streams = run_test_suite_lib::run_test(
+    let (reporter, _, output_dir) = create_shell_and_dir_reporter();
+    let reporter = output::RunReporter::new(reporter);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
                     .expect("connecting to RunBuilderProxy"),
         vec![new_test_params(
@@ -959,71 +1151,130 @@ async fn test_stop_after_n_failures() {
                     timeout_behavior: run_test_suite_lib::TimeoutBehavior::Continue,
                     stop_after_failures: Some(5u16.try_into().unwrap()),
                 },
-                None, &mut output, &mut reporter, futures::future::pending(),
+                None, reporter, futures::future::pending(),
         )
-    .await.expect("run test");
-    let run_results = streams.collect::<Vec<_>>().await;
+    .await;
+    assert_eq!(outcome, Outcome::Failed);
 
-    assert_eq!(run_results.len(), 5);
-    for run_result in run_results {
-        let run_result = run_result.expect("Running test should not fail");
-        assert_eq!(run_result.outcome, Outcome::Failed);
-        assert_eq!(run_result.executed, vec!["Example.Test1", "Example.Test2", "Example.Test3"]);
-        assert_eq!(run_result.passed, vec!["Example.Test1", "Example.Test3"]);
-        assert_eq!(run_result.failed, vec!["Example.Test2"]);
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Failed),
+    );
+
+    let (failed_suites, not_started_suites): (Vec<_>, Vec<_>) = suite_results
+        .into_iter()
+        .partition(|&directory::SuiteResult::V0 { ref outcome, .. }| {
+            *outcome == directory::Outcome::Failed
+        });
+
+    assert_eq!(failed_suites.len(), 5);
+    assert_eq!(not_started_suites.len(), 5);
+    for failed_suite in failed_suites {
+        directory::testing::assert_suite_result(
+            output_dir.path(),
+            &failed_suite,
+            &ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
+                directory::Outcome::Failed
+            )
+            .with_case(ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed))
+            .with_case(ExpectedTestCase::new("Example.Test2", directory::Outcome::Failed))
+            .with_case(ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed))
+        );
+    }
+
+    for not_started_suite in not_started_suites {
+        directory::testing::assert_suite_result(
+            output_dir.path(),
+            &not_started_suite,
+            &ExpectedSuite::new(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/failing-test-example.cm",
+                directory::Outcome::NotStarted
+            )
+        );
     }
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_passes_with_large_timeout() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let run_result =
-        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
+    let (outcome, output, _) =
+        run_test_once(test_params, None).await.expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	EchoTest
 [PASSED]	EchoTest
+
+1 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
+    assert_output!(output.lock().as_slice(), expected_output);
 
-    assert_eq!(run_result.outcome, Outcome::Passed);
-
-    assert_eq!(run_result.executed, vec!["EchoTest"]);
-    assert_eq!(run_result.passed, vec!["EchoTest"]);
+    assert_eq!(outcome, Outcome::Passed);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_logging_component() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let run_result =
-        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
+    let (outcome, output, output_dir) =
+        run_test_once(test_params, None).await.expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: Logging initialized\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: my debug message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] INFO: my info message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message\n\
-[PASSED]	log_and_exit
+    let expected_logs =
+        "[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: Logging initialized
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: my debug message
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] INFO: my info message
+[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message
 ";
-    assert_output!(output, expected_output);
-    assert_eq!(run_result.outcome, Outcome::Passed);
+
+    let expected_output = format!("[RUNNING]	log_and_exit
+{}[PASSED]	log_and_exit
+
+1 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm completed with result: PASSED
+", expected_logs);
+    assert_output!(output.lock().as_slice(), expected_output.as_str());
+    assert_eq!(outcome, Outcome::Passed);
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(
+        output_dir.path(),
+        &run_result,
+        &ExpectedTestRun::new(directory::Outcome::Passed),
+    );
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &vec![ExpectedSuite::new(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
+            directory::Outcome::Passed,
+        )
+        .with_matching_artifact(
+            directory::ArtifactType::Syslog,
+            "syslog.txt".into(),
+            move |contents| {
+                assert_output!(contents.as_bytes(), expected_logs);
+            },
+        )
+        .with_case(ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed))],
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_logging_component_min_severity() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let run_result = run_test_once(test_params, Some(Severity::Info), &mut output)
+    let (outcome, output, _) = run_test_once(test_params, Some(Severity::Info))
         .await
         .expect("Running test should not fail");
 
@@ -1031,19 +1282,21 @@ async fn test_logging_component_min_severity() {
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] INFO: my info message\n\
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message\n\
 [PASSED]	log_and_exit
+
+1 out of 1 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
-    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_output!(output.lock().as_slice(), expected_output);
+    assert_eq!(outcome, Outcome::Passed);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_stdout_and_log_ansi() {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
-    let run_result = run_test_once(test_params, Some(Severity::Info), &mut output)
+    let (outcome, output, _) = run_test_once(test_params, Some(Severity::Info))
         .await
         .expect("Running test should not fail");
 
@@ -1053,39 +1306,33 @@ async fn test_stdout_and_log_ansi() {
 [RUNNING]	stdout_ansi_test
 \u{1b}[31mred stdout\u{1b}[0m
 [PASSED]	stdout_ansi_test
+
+2 out of 2 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
-    assert_eq!(run_result.outcome, Outcome::Passed);
+    assert_output!(output.lock().as_slice(), expected_output);
+    assert_eq!(outcome, Outcome::Passed);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_stdout_and_log_filter_ansi() {
-    let mut output: Vec<u8> = vec![];
-    let mut ansi_filter = output::AnsiFilterWriter::new(&mut output);
-    let mut reporter = output::RunReporter::new(output::NoopReporter);
+    let (reporter, output, _) = create_shell_and_dir_reporter();
+    let reporter = output::RunReporter::new_ansi_filtered(reporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
 
-    let test_result = {
-        let streams = run_test_suite_lib::run_test(
-            fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
-                .expect("connecting to RunBuilderProxy"),
-            vec![test_params],
-            new_run_params(),
-            Some(Severity::Info),
-            &mut ansi_filter,
-            &mut reporter,
-            futures::future::pending(),
-        )
-        .await
-        .unwrap();
-        let mut results = streams.collect::<Vec<_>>().await;
-        assert_eq!(results.len(), 1, "{:?}", results);
-        results.pop().unwrap().unwrap()
-    };
-    drop(ansi_filter);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        vec![test_params],
+        new_run_params(),
+        Some(Severity::Info),
+        reporter,
+        futures::future::pending(),
+    )
+    .await;
 
     let expected_output = "[RUNNING]	log_ansi_test
 [TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: red log
@@ -1093,9 +1340,12 @@ async fn test_stdout_and_log_filter_ansi() {
 [RUNNING]	stdout_ansi_test
 red stdout
 [PASSED]	stdout_ansi_test
+
+2 out of 2 tests passed...
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm completed with result: PASSED
 ";
-    assert_output!(output, expected_output);
-    assert_eq!(test_result.outcome, Outcome::Passed);
+    assert_output!(output.lock().as_ref(), expected_output);
+    assert_eq!(outcome, Outcome::Passed);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1114,74 +1364,83 @@ async fn test_logging_component_max_severity_error() {
 }
 
 async fn test_max_severity(max_severity: Severity) {
-    let mut output: Vec<u8> = vec![];
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
     );
     test_params.timeout = std::num::NonZeroU32::new(600);
     test_params.max_severity_logs = Some(max_severity);
-    let run_result =
-        run_test_once(test_params, None, &mut output).await.expect("Running test should not fail");
+    let (outcome, output, _output_dir) =
+        run_test_once(test_params, None).await.expect("Running test should not fail");
 
-    let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] DEBUG: Logging initialized\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] INFO: my info message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message\n\
-[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message\n\
+    let expected_output_prefix = "[RUNNING]	log_and_exit
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] DEBUG: Logging initialized
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] INFO: my info message
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message
 [PASSED]	log_and_exit
+
+1 out of 1 tests passed...
+
 ";
+    let (expected_outcome, expected_output_postfix) = match max_severity {
+        Severity::Info => (
+                Outcome::Failed,
+                "Test fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm produced unexpected high-severity logs:
+----------------xxxxx----------------
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message
 
-    assert_output!(output, expected_output);
-    assert_eq!(run_result.outcome, Outcome::Passed);
+----------------xxxxx----------------
+Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity
 
-    match max_severity {
-        Severity::Info => {
-            assert!(run_result.restricted_logs.len() > 0, "expected logs to fail the test");
-            let logs = run_result
-                .restricted_logs
-                .into_iter()
-                .filter(|log| !is_debug_data_warning(log))
-                .map(sanitize_log_for_comparison)
-                .collect::<Vec<_>>();
-            assert_eq!(
-                logs,
-                vec![
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] WARN: my warn message".to_owned(),
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message".to_owned(),
-                ]
-            );
-        }
-        Severity::Warn => {
-            assert!(run_result.restricted_logs.len() > 0, "expected logs to fail the test");
-            assert_eq!(
-                run_result.restricted_logs.into_iter().map(sanitize_log_for_comparison).collect::<Vec<_>>(),
-                vec![
-                    "[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message".to_owned(),
-                ]
-            );
-        }
-        Severity::Error => {
-            assert_eq!(run_result.restricted_logs.len(), 0);
-        }
-        _ => unreachable!("Not used"),
-    }
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm completed with result: FAILED
+"
+        ),
+        Severity::Warn => (
+            Outcome::Failed,
+            "Test fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm produced unexpected high-severity logs:
+----------------xxxxx----------------
+[TIMESTAMP][PID][TID][<root>][log_and_exit,error_logging_test] ERROR: [../../src/sys/run_test_suite/tests/error_logging_test.rs(12)] my error message
+
+----------------xxxxx----------------
+Failing this test. See: https://fuchsia.dev/fuchsia-src/concepts/testing/logs#restricting_log_severity
+
+fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm completed with result: FAILED
+"
+        ),
+        Severity::Error => (
+            Outcome::Passed,
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm completed with result: PASSED"
+        ),
+        _ => panic!("unexpected severity")
+    };
+    let expected_output = format!("{}{}", expected_output_prefix, expected_output_postfix);
+    assert_output!(output.lock().as_slice(), expected_output);
+    assert_eq!(outcome, expected_outcome);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_does_not_resolve() {
-    let mut output: Vec<u8> = vec![];
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/nonexistant_test.cm",
     );
     let log_opts = None;
-    let run_err = run_test_once(test_params, log_opts, &mut output).await.unwrap_err();
-    assert_matches!(run_err, RunTestSuiteError::Launch(LaunchError::InstanceCannotResolve));
-    assert!(!run_err.is_internal_error());
+    let (outcome, _, _) = run_test_once(test_params, log_opts).await.unwrap();
+    let origin_error = match outcome {
+        Outcome::Error { origin } => origin,
+        other => panic!("Expected an error outcome but got {:?}", other),
+    };
+    assert!(!origin_error.is_internal_error());
+    assert_matches!(
+        Arc::try_unwrap(origin_error).unwrap(),
+        RunTestSuiteError::Launch(LaunchError::InstanceCannotResolve)
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_stdout_to_directory() {
-    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let (dir_reporter, output_dir) = create_dir_reporter();
+    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
     );
@@ -1193,8 +1452,7 @@ async fn test_stdout_to_directory() {
         vec![test_params],
         new_run_params(),
         None,
-        false,
-        Some(output_dir.path().to_path_buf()),
+        reporter,
         futures::future::pending(),
     )
     .await;
@@ -1248,7 +1506,8 @@ async fn test_stdout_to_directory() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_syslog_to_directory() {
-    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let (dir_reporter, output_dir) = create_dir_reporter();
+    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
     );
@@ -1261,8 +1520,7 @@ async fn test_syslog_to_directory() {
         vec![test_params],
         new_run_params(),
         None,
-        false,
-        Some(output_dir.path().to_path_buf()),
+        reporter,
         futures::future::pending(),
     )
     .await;
@@ -1277,7 +1535,7 @@ async fn test_syslog_to_directory() {
     let expected_test_run = ExpectedTestRun::new(directory::Outcome::Failed);
     let expected_test_suites = vec![ExpectedSuite::new(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
-        directory::Outcome::Passed,
+        directory::Outcome::Failed,
     )
     .with_case(
         ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)
@@ -1308,7 +1566,8 @@ async fn test_syslog_to_directory() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_custom_artifacts_to_directory() {
-    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let (dir_reporter, output_dir) = create_dir_reporter();
+    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/custom_artifact_user.cm",
     );
@@ -1319,8 +1578,7 @@ async fn test_custom_artifacts_to_directory() {
         vec![test_params],
         new_run_params(),
         None,
-        false,
-        Some(output_dir.path().to_path_buf()),
+        reporter,
         futures::future::pending(),
     )
     .await;
@@ -1364,7 +1622,8 @@ async fn test_custom_artifacts_to_directory() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_terminate_signal() {
-    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let (dir_reporter, output_dir) = create_dir_reporter();
+    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
@@ -1375,8 +1634,7 @@ async fn test_terminate_signal() {
         vec![test_params],
         new_run_params(),
         None,
-        false,
-        Some(output_dir.path().to_path_buf()),
+        reporter,
         futures::future::ready(()),
     )
     .await;
@@ -1407,7 +1665,8 @@ async fn test_terminate_signal() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_terminate_signal_multiple_suites() {
-    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let (dir_reporter, output_dir) = create_dir_reporter();
+    let reporter = run_test_suite_lib::output::RunReporter::new(dir_reporter);
     let test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/long_running_test.cm",
     );
@@ -1418,8 +1677,7 @@ async fn test_terminate_signal_multiple_suites() {
         vec![test_params; 10],
         new_run_params(),
         None,
-        false,
-        Some(output_dir.path().to_path_buf()),
+        reporter,
         futures::future::ready(()),
     )
     .await;

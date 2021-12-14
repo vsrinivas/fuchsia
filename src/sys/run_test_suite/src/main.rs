@@ -80,6 +80,11 @@ async fn main() {
     }
 
     let test_filters = if test_filter.len() == 0 { None } else { Some(test_filter) };
+    let reporter = run_test_suite_lib::output::ShellReporter::new(std::io::stdout());
+    let run_reporter = match filter_ansi {
+        true => run_test_suite_lib::output::RunReporter::new_ansi_filtered(reporter),
+        false => run_test_suite_lib::output::RunReporter::new(reporter),
+    };
 
     match run_test_suite_lib::run_tests_and_get_outcome(
         fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
@@ -101,8 +106,7 @@ async fn main() {
             stop_after_failures: None,
         },
         min_severity_logs,
-        filter_ansi,
-        None,
+        run_reporter,
         futures::future::pending(),
     )
     .await
