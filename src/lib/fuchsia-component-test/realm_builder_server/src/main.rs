@@ -20,7 +20,10 @@ use {
         fmt::{self, Display},
         ops::{Deref, DerefMut},
         path::PathBuf,
-        sync::Arc,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
     },
     thiserror::{self, Error},
     tracing::*,
@@ -124,6 +127,8 @@ async fn handle_realm_builder_factory_stream(
                     .into_stream()
                     .context("failed to convert realm_server_end to stream")?;
 
+                let realm_has_been_built = Arc::new(AtomicBool::new(false));
+
                 let realm = Realm {
                     pkg_dir: Clone::clone(&pkg_dir),
                     realm_node: new_realm.clone(),
@@ -132,6 +137,7 @@ async fn handle_realm_builder_factory_stream(
                     runner_proxy_placeholder: runner_proxy_placeholder.clone(),
                     realm_path: vec![],
                     execution_scope: execution_scope.clone(),
+                    realm_has_been_built: realm_has_been_built.clone(),
                 };
 
                 execution_scope.spawn(async move {
@@ -149,6 +155,7 @@ async fn handle_realm_builder_factory_stream(
                     realm_node: new_realm.clone(),
                     registry: registry.clone(),
                     runner_proxy_placeholder: runner_proxy_placeholder.clone(),
+                    realm_has_been_built: realm_has_been_built,
                 };
                 execution_scope.spawn(async move {
                     if let Err(e) = builder.handle_stream(builder_stream).await {
@@ -167,6 +174,7 @@ struct Builder {
     realm_node: RealmNode2,
     registry: Arc<resolver::Registry>,
     runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
+    realm_has_been_built: Arc<AtomicBool>,
 }
 
 impl Builder {
@@ -177,6 +185,10 @@ impl Builder {
         while let Some(req) = stream.try_next().await? {
             match req {
                 ftest::BuilderRequest::Build { runner, responder } => {
+                    if self.realm_has_been_built.swap(true, Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     let runner_proxy = runner
                         .into_proxy()
                         .context("failed to convert runner ClientEnd into proxy")?;
@@ -206,6 +218,7 @@ struct Realm {
     registry: Arc<resolver::Registry>,
     runner: Arc<runner::Runner>,
     runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
+    realm_has_been_built: Arc<AtomicBool>,
     realm_path: Vec<String>,
     execution_scope: ExecutionScope,
 }
@@ -218,6 +231,10 @@ impl Realm {
         while let Some(req) = stream.try_next().await? {
             match req {
                 ftest::RealmRequest::AddChild { name, url, options, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.add_child(name.clone(), url.clone(), options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
@@ -230,6 +247,10 @@ impl Realm {
                     }
                 }
                 ftest::RealmRequest::AddLegacyChild { name, legacy_url, options, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.add_legacy_child(name.clone(), legacy_url.clone(), options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
@@ -242,6 +263,10 @@ impl Realm {
                     }
                 }
                 ftest::RealmRequest::AddChildFromDecl { name, decl, options, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.add_child_from_decl(name.clone(), decl, options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
@@ -250,8 +275,11 @@ impl Realm {
                         }
                     }
                 }
-                // TODO(88423)
                 ftest::RealmRequest::AddLocalChild { name, options, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.add_local_child(name.clone(), options).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
@@ -261,6 +289,10 @@ impl Realm {
                     }
                 }
                 ftest::RealmRequest::AddChildRealm { name, options, child_realm, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.add_child_realm(name.clone(), options, child_realm).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
@@ -269,8 +301,11 @@ impl Realm {
                         }
                     }
                 }
-                // TODO(dgonyeo): add a test for this
                 ftest::RealmRequest::GetComponentDecl { name, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.get_component_decl(name.clone()).await {
                         Ok(decl) => responder.send(&mut Ok(decl))?,
                         Err(e) => {
@@ -279,8 +314,11 @@ impl Realm {
                         }
                     }
                 }
-                // TODO(dgonyeo): add a test for this
                 ftest::RealmRequest::ReplaceComponentDecl { name, component_decl, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.replace_component_decl(name.clone(), component_decl).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
@@ -290,9 +328,17 @@ impl Realm {
                     }
                 }
                 ftest::RealmRequest::GetRealmDecl { responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     responder.send(&mut Ok(self.get_realm_decl().await))?;
                 }
                 ftest::RealmRequest::ReplaceRealmDecl { component_decl, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.replace_realm_decl(component_decl).await {
                         Ok(()) => responder.send(&mut Ok(()))?,
                         Err(e) => {
@@ -302,6 +348,10 @@ impl Realm {
                     }
                 }
                 ftest::RealmRequest::AddRoute { capabilities, from, to, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError2::BuildAlreadyCalled))?;
+                        continue;
+                    }
                     match self.realm_node.route_capabilities(capabilities, from, to).await {
                         Ok(()) => {
                             responder.send(&mut Ok(()))?;
@@ -405,6 +455,7 @@ impl Realm {
             runner_proxy_placeholder: self.runner_proxy_placeholder.clone(),
             realm_path: child_path.clone(),
             execution_scope: self.execution_scope.clone(),
+            realm_has_been_built: self.realm_has_been_built.clone(),
         };
 
         let self_realm_node = self.realm_node.clone();
@@ -501,10 +552,6 @@ struct RealmNodeState {
     /// Suitable `ChildDecl`s for the contents of `mutable_children` are generated and added to
     /// `decl.children` when `commit()` is called.
     mutable_children: HashMap<String, (ftest::ChildOptions, RealmNode2)>,
-
-    // TODO: comment better
-    // set to true when this node has been processed by Builder.Build
-    finalized: bool,
 }
 
 impl RealmNodeState {
@@ -588,9 +635,6 @@ impl RealmNode2 {
         new_decl: cm_rust::ComponentDecl,
     ) -> Result<(), RealmBuilderError> {
         let mut state_guard = self.state.lock().await;
-        if state_guard.finalized {
-            return Err(RealmBuilderError::BuildAlreadyCalled);
-        }
         for child in &new_decl.children {
             if state_guard.mutable_children.contains_key(&child.name) {
                 return Err(RealmBuilderError::ChildAlreadyExists(child.name.clone()));
@@ -614,9 +658,6 @@ impl RealmNode2 {
         node: RealmNode2,
     ) -> Result<(), RealmBuilderError> {
         let mut state_guard = self.state.lock().await;
-        if state_guard.finalized {
-            return Err(RealmBuilderError::BuildAlreadyCalled);
-        }
         if state_guard.contains_child(&child_name) {
             return Err(RealmBuilderError::ChildAlreadyExists(child_name));
         }
@@ -631,9 +672,6 @@ impl RealmNode2 {
         child_options: ftest::ChildOptions,
     ) -> Result<(), RealmBuilderError> {
         let mut state_guard = self.state.lock().await;
-        if state_guard.finalized {
-            return Err(RealmBuilderError::BuildAlreadyCalled);
-        }
         if state_guard.contains_child(&child_name) {
             return Err(RealmBuilderError::ChildAlreadyExists(child_name));
         }
@@ -778,10 +816,6 @@ impl RealmNode2 {
         let self_state = self.state.clone();
         async move {
             let mut state_guard = self_state.lock().await;
-            if state_guard.finalized {
-                return Err(RealmBuilderError::BuildAlreadyCalled);
-            }
-            state_guard.finalized = true;
             // Expose the fuchsia.component.Binder protocol from root in order to give users the ability to manually
             // start the realm.
             if walked_path.is_empty() {
@@ -2588,11 +2622,18 @@ mod tests {
         realm_node: RealmNode2,
         registry: Arc<resolver::Registry>,
         runner_proxy_placeholder: Arc<Mutex<Option<fcrunner::ComponentRunnerProxy>>>,
+        realm_has_been_built: Arc<AtomicBool>,
     ) -> (ftest::BuilderProxy, fasync::Task<()>) {
         let (pkg_dir, pkg_dir_stream) = create_proxy_and_stream::<fio::DirectoryMarker>().unwrap();
         drop(pkg_dir_stream);
 
-        let builder = Builder { pkg_dir, realm_node, registry, runner_proxy_placeholder };
+        let builder = Builder {
+            pkg_dir,
+            realm_node,
+            registry,
+            runner_proxy_placeholder,
+            realm_has_been_built,
+        };
 
         let (builder_proxy, builder_stream) =
             create_proxy_and_stream::<ftest::BuilderMarker>().unwrap();
@@ -2609,8 +2650,12 @@ mod tests {
         let realm_node = tree_to_realm_node(tree).await;
 
         let registry = resolver::Registry::new();
-        let (builder_proxy, _builder_stream_task) =
-            launch_builder_task(realm_node, registry.clone(), Arc::new(Mutex::new(None)));
+        let (builder_proxy, _builder_stream_task) = launch_builder_task(
+            realm_node,
+            registry.clone(),
+            Arc::new(Mutex::new(None)),
+            Arc::new(AtomicBool::new(false)),
+        );
 
         let (runner_client_end, runner_server_end) = create_endpoints().unwrap();
         drop(runner_server_end);
@@ -2650,10 +2695,13 @@ mod tests {
             let runner = runner::Runner::new();
             let runner_proxy_placeholder = Arc::new(Mutex::new(None));
 
+            let realm_has_been_built = Arc::new(AtomicBool::new(false));
+
             let (builder_proxy, builder_task) = launch_builder_task(
                 realm_root.clone(),
                 registry.clone(),
                 runner_proxy_placeholder.clone(),
+                realm_has_been_built.clone(),
             );
 
             let realm = Realm {
@@ -2664,6 +2712,7 @@ mod tests {
                 runner_proxy_placeholder,
                 realm_path: vec![],
                 execution_scope: ExecutionScope::new(),
+                realm_has_been_built,
             };
 
             let realm_and_builder_task = fasync::Task::local(async move {
@@ -2729,8 +2778,12 @@ mod tests {
     async fn build_called_twice() {
         let realm_node = RealmNode2::new();
 
-        let (builder_proxy, _builder_stream_task) =
-            launch_builder_task(realm_node, resolver::Registry::new(), Arc::new(Mutex::new(None)));
+        let (builder_proxy, _builder_stream_task) = launch_builder_task(
+            realm_node,
+            resolver::Registry::new(),
+            Arc::new(Mutex::new(None)),
+            Arc::new(AtomicBool::new(false)),
+        );
 
         let (runner_client_end, runner_server_end) = create_endpoints().unwrap();
         drop(runner_server_end);
@@ -4341,7 +4394,70 @@ mod tests {
             .await
             .expect("failed to call replace_realm_decl")
             .expect_err("replace_realm_decl did not return an error");
-        assert_eq!(err, ftest::RealmBuilderError2::InvalidComponentDecl,);
+        assert_eq!(err, ftest::RealmBuilderError2::InvalidComponentDecl);
+    }
+
+    #[fuchsia::test]
+    async fn all_functions_error_after_build() {
+        let mut rabt = RealmAndBuilderTask::new();
+        let (child_realm_proxy, child_realm_server_end) =
+            create_proxy::<ftest::RealmMarker>().unwrap();
+        rabt.realm_proxy
+            .add_child_realm("a", ftest::ChildOptions::EMPTY, child_realm_server_end)
+            .await
+            .expect("failed to call add_child_realm")
+            .expect("add_child_realm returned an error");
+        child_realm_proxy
+            .add_local_child("b", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_child")
+            .expect("add_child returned an error");
+        let _tree_from_resolver = rabt.call_build_and_get_tree().await;
+
+        async fn assert_err<V: std::fmt::Debug>(
+            fut: impl futures::Future<
+                Output = Result<Result<V, ftest::RealmBuilderError2>, fidl::Error>,
+            >,
+        ) {
+            assert_eq!(
+                ftest::RealmBuilderError2::BuildAlreadyCalled,
+                fut.await.expect("failed to call function").expect_err("expected an error"),
+            );
+        }
+        let empty_opts = || ftest::ChildOptions::EMPTY;
+        let empty_decl = || fcdecl::Component::EMPTY;
+
+        assert_err(rabt.realm_proxy.add_child("a", "test:///a", empty_opts())).await;
+        assert_err(rabt.realm_proxy.add_legacy_child("a", "test:///a.cmx", empty_opts())).await;
+        assert_err(rabt.realm_proxy.add_child_from_decl("a", empty_decl(), empty_opts())).await;
+        assert_err(rabt.realm_proxy.add_local_child("a", empty_opts())).await;
+        let (_child_realm_proxy, server_end) = create_proxy::<ftest::RealmMarker>().unwrap();
+        assert_err(rabt.realm_proxy.add_child_realm("a", empty_opts(), server_end)).await;
+        assert_err(rabt.realm_proxy.get_component_decl("b")).await;
+        assert_err(rabt.realm_proxy.replace_component_decl("b", empty_decl())).await;
+        assert_err(rabt.realm_proxy.replace_realm_decl(empty_decl())).await;
+        assert_err(rabt.realm_proxy.add_route(
+            &mut vec![].iter_mut(),
+            &mut fcdecl::Ref::Self_(fcdecl::SelfRef {}),
+            &mut vec![].iter_mut(),
+        ))
+        .await;
+
+        assert_err(child_realm_proxy.add_child("a", "test:///a", empty_opts())).await;
+        assert_err(child_realm_proxy.add_legacy_child("a", "test:///a.cmx", empty_opts())).await;
+        assert_err(child_realm_proxy.add_child_from_decl("a", empty_decl(), empty_opts())).await;
+        assert_err(child_realm_proxy.add_local_child("a", empty_opts())).await;
+        let (_child_realm_proxy, server_end) = create_proxy::<ftest::RealmMarker>().unwrap();
+        assert_err(child_realm_proxy.add_child_realm("a", empty_opts(), server_end)).await;
+        assert_err(child_realm_proxy.get_component_decl("b")).await;
+        assert_err(child_realm_proxy.replace_component_decl("b", empty_decl())).await;
+        assert_err(child_realm_proxy.replace_realm_decl(empty_decl())).await;
+        assert_err(child_realm_proxy.add_route(
+            &mut vec![].iter_mut(),
+            &mut fcdecl::Ref::Self_(fcdecl::SelfRef {}),
+            &mut vec![].iter_mut(),
+        ))
+        .await;
     }
 
     // TODO(88429): The following test is impossible to write until sub-realms are supported
