@@ -547,6 +547,22 @@ pub enum RouteEnum {
     Del(RouteDel),
 }
 
+fn parse_netmask_or_prefix_length(s: &str) -> Result<u8, String> {
+    let netmask_parse_result = s.parse::<std::net::IpAddr>();
+    let prefix_len_parse_result = s.parse::<u8>();
+    match (netmask_parse_result, prefix_len_parse_result) {
+        (Err(netmask_parse_error), Err(prefix_len_parse_error)) => Err(format!(
+            "Failed to parse as netmask (error: {}) or prefix length (error: {})",
+            netmask_parse_error, prefix_len_parse_error,
+        )),
+        (Ok(_), Ok(_)) => Err(format!(
+            "Input parses both as netmask and as prefix length. This should never happen."
+        )),
+        (Ok(netmask), Err(_)) => Ok(subnet_mask_to_prefix_length(netmask)),
+        (Err(_), Ok(prefix_len)) => Ok(prefix_len),
+    }
+}
+
 fn subnet_mask_to_prefix_length(addr: std::net::IpAddr) -> u8 {
     use core::convert::TryInto as _;
 
@@ -576,10 +592,14 @@ macro_rules! route_struct {
             #[argh(option)]
             /// the network id of the destination network
             pub destination: std::net::IpAddr,
-            #[argh(option)]
-            /// the netmask corresponding to destination
-            // TODO(https://fxbug.dev/80235): parse CIDR instead.
-            pub netmask: std::net::IpAddr,
+            #[argh(
+                option,
+                arg_name = "netmask or prefix length",
+                from_str_fn(parse_netmask_or_prefix_length),
+                long = "netmask"
+            )]
+            /// the netmask or prefix length corresponding to destination
+            pub prefix_len: u8,
             #[argh(option)]
             /// the ip address of the first hop router
             pub gateway: Option<std::net::IpAddr>,
@@ -591,13 +611,13 @@ macro_rules! route_struct {
             pub metric: u32,
         }
 
-        impl Into<fidl_fuchsia_netstack::RouteTableEntry> for $ty_name {
-            fn into(self) -> fidl_fuchsia_netstack::RouteTableEntry {
-                let Self { destination, netmask, gateway, nicid, metric } = self;
+        impl From<$ty_name> for fidl_fuchsia_netstack::RouteTableEntry {
+            fn from(entry: $ty_name) -> fidl_fuchsia_netstack::RouteTableEntry {
+                let $ty_name { destination, prefix_len, gateway, nicid, metric } = entry;
                 fidl_fuchsia_netstack::RouteTableEntry {
                     destination: fidl_fuchsia_net::Subnet {
                         addr: fidl_fuchsia_net_ext::IpAddress(destination).into(),
-                        prefix_len: subnet_mask_to_prefix_length(netmask),
+                        prefix_len,
                     },
                     gateway: gateway
                         .map(|gateway| Box::new(fidl_fuchsia_net_ext::IpAddress(gateway).into())),
@@ -668,4 +688,29 @@ pub struct DhcpStart {
 pub struct DhcpStop {
     #[argh(positional)]
     pub id: u32,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use matches::assert_matches;
+    use test_case::test_case;
+
+    #[test_case("24", 24 ; "from prefix length")]
+    #[test_case("255.255.254.0", 23 ; "from ipv4 netmask")]
+    #[test_case("ffff:fff0::", 28 ; "from ipv6 netmask")]
+    #[test]
+    fn parse_prefix_len(to_parse: &str, want: u8) {
+        let got = parse_netmask_or_prefix_length(to_parse).unwrap();
+        assert_eq!(got, want)
+    }
+
+    proptest::proptest! {
+        #[test]
+        fn cant_parse_as_both_netmask_and_prefix_len(s: String) {
+            let netmask_parse_result = s.parse::<std::net::IpAddr>();
+            let prefix_len_parse_result = s.parse::<u8>();
+            assert_matches!((netmask_parse_result, prefix_len_parse_result), (Ok(_), Err(_)) | (Err(_), Ok(_)) | (Err(_), Err(_)));
+        }
+    }
 }

@@ -1714,7 +1714,7 @@ status      ENABLED | LINK_UP"#,
         // Test arguments have been arbitrarily selected.
         let () = test_modify_route(opts::RouteEnum::Add(opts::RouteAdd {
             destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
-            netmask: std::net::IpAddr::V4(std::net::Ipv4Addr::new(255, 255, 255, 0)),
+            prefix_len: 24,
             gateway: None,
             nicid: 2,
             metric: 100,
@@ -1727,7 +1727,7 @@ status      ENABLED | LINK_UP"#,
         // Test arguments have been arbitrarily selected.
         let () = test_modify_route(opts::RouteEnum::Del(opts::RouteDel {
             destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
-            netmask: std::net::IpAddr::V4(std::net::Ipv4Addr::new(255, 255, 255, 0)),
+            prefix_len: 24,
             gateway: None,
             nicid: 2,
             metric: 100,

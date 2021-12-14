@@ -47,6 +47,8 @@ rustc_library("lib") {
 
   test_deps = [
     "//src/connectivity/lib/net-declare",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:test-case",
   ]
 
