@@ -35,6 +35,11 @@ namespace memalloc {
 // that are lexicographically ordered, mutually disjoint, and for which
 // addr + size does not overflow.
 //
+// kReserved ranges merely exist for the convenience of bootloaders: they
+// represent holes to be punched out of kFreeRam ranges during normalization
+// and do not have intrinsic value in and of themselves. Accordingly, Pool does
+// not explicitly track them after initialization.
+//
 // Pool dynamically uses ranges of the free RAM it encodes for bookkeeping
 // space. On initialization, it will attempt to find initial chunks to cover
 // space to track the first crop of normalized ranges. With further allocation,
