@@ -158,19 +158,14 @@ async fn main() -> Result<(), Error> {
     Ok(fs.collect().await)
 }
 
-/// Creates and starts a new userspace clock for use in the monitor track, set to the same
-/// backstop time as the supplied primary clock.
+/// Creates a new userspace clock for use in the monitor track, set to the same backstop time as
+/// the supplied primary clock.
 fn create_monitor_clock(primary_clock: &zx::Clock) -> zx::Clock {
     // Note: Failure should not be possible from a valid zx::Clock.
     let backstop = primary_clock.get_details().expect("failed to get UTC clock details").backstop;
     // Note: Only failure mode is an OOM which we handle via panic.
-    let clock = zx::Clock::create(zx::ClockOpts::empty(), Some(backstop))
-        .expect("failed to create new monitor clock");
-    // Note: Failure should not be possible from a freshly created zx::Clock.
-    clock
-        .update(zx::ClockUpdate::builder().approximate_value(backstop))
-        .expect("failed to start monitor clock");
-    clock
+    zx::Clock::create(zx::ClockOpts::empty(), Some(backstop))
+        .expect("failed to create new monitor clock")
 }
 
 /// Determines whether the supplied clock has previously been set.
