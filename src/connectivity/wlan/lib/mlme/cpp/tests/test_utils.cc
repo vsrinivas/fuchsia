@@ -4,7 +4,7 @@
 
 #include "test_utils.h"
 
-#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 
 #include <wlan/common/channel.h>
 

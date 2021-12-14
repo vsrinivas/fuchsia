@@ -48,7 +48,7 @@ type Band = strict enum : uint8 {
     WLAN_BAND_COUNT = 2;
 };
 
-// LINT.ThenChange(//zircon/system/banjo/fuchsia.hardware.wlanassocinfo/info.banjo)
+// LINT.ThenChange(//zircon/system/banjo/fuchsia.hardware.wlan.associnfo/info.banjo)
 
 type ScanType = strict enum {
     ACTIVE = 1;

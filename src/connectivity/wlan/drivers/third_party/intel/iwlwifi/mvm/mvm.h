@@ -37,7 +37,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_MVM_H_
 
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/time.h>

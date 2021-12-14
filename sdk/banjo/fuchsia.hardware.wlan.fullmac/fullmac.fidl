@@ -4,9 +4,9 @@
 library fuchsia.hardware.wlan.fullmac;
 
 using ddk.hw.wlan.ieee80211;
-using fuchsia.hardware.wlanphyinfo;
+using fuchsia.hardware.wlan.phyinfo;
 using fuchsia.hardware.ethernet;
-using fuchsia.hardware.wlanassocinfo;
+using fuchsia.hardware.wlan.associnfo;
 using fuchsia.wlan.internal;
 using fuchsia.wlan.ieee80211 as ieee80211;
 using zx;
@@ -136,7 +136,7 @@ type WlanifStopReq = struct {
 type SetKeyDescriptor = struct {
     key vector<uint8>:MAX;
     key_id uint16;
-    key_type fuchsia.hardware.wlanassocinfo.WlanKeyType;
+    key_type fuchsia.hardware.wlan.associnfo.WlanKeyType;
     address ieee80211.MacAddr;
     rsc uint64;
     cipher_suite_oui array<uint8, 3>;
@@ -157,7 +157,7 @@ type WlanifSetKeysResp = struct {
 
 type DeleteKeyDescriptor = struct {
     key_id uint16;
-    key_type fuchsia.hardware.wlanassocinfo.WlanKeyType;
+    key_type fuchsia.hardware.wlan.associnfo.WlanKeyType;
     address ieee80211.MacAddr;
 };
 
@@ -373,10 +373,10 @@ type WlanifBandCapabilities = struct {
     /// Values from enum Band (WLAN_BAND_*)
     band_id uint8;
     num_rates uint64;
-    rates array<uint16, fuchsia.hardware.wlanphyinfo.WLAN_INFO_BAND_INFO_MAX_RATES>;
+    rates array<uint16, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_BAND_INFO_MAX_RATES>;
     base_frequency uint16;
     num_channels uint64;
-    channels array<uint8, fuchsia.hardware.wlanphyinfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
+    channels array<uint8, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS>;
     ht_supported bool;
     ht_caps ddk.hw.wlan.ieee80211.Ieee80211HtCapabilities;
     vht_supported bool;
@@ -393,11 +393,11 @@ type WlanifFeature = strict enum : uint32 {
 type WlanifQueryInfo = struct {
     sta_addr ieee80211.MacAddr;
     /// WLAN_MAC_ROLE_*
-    role fuchsia.hardware.wlanphyinfo.WlanInfoMacRole;
+    role fuchsia.hardware.wlan.phyinfo.WlanInfoMacRole;
     /// WLANIF_FEATURE_*
     features uint32;
     num_bands uint64;
-    bands array<WlanifBandCapabilities, fuchsia.hardware.wlanphyinfo.WLAN_INFO_MAX_BANDS>;
+    bands array<WlanifBandCapabilities, fuchsia.hardware.wlan.phyinfo.WLAN_INFO_MAX_BANDS>;
     /// WLAN_DRIVER_FEATURE_*
     driver_features uint32;
 };
@@ -719,7 +719,7 @@ protocol WlanifImplIfc {
     }) -> ();
     OnWmmStatusResp(struct {
         s zx.status;
-        wmm_params fuchsia.hardware.wlanassocinfo.WlanWmmParams;
+        wmm_params fuchsia.hardware.wlan.associnfo.WlanWmmParams;
     }) -> ();
 
     // Data operations

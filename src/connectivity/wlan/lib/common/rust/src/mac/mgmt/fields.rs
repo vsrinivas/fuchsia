@@ -8,7 +8,7 @@ use {
         SequenceControl, StatusCode,
     },
     crate::TimeUnit,
-    banjo_fuchsia_hardware_wlanphyinfo as banjo_ddk_wlanphyinfo,
+    banjo_fuchsia_hardware_wlan_phyinfo as banjo_ddk_wlanphyinfo,
     wlan_bitfield::bitfield,
     zerocopy::{AsBytes, FromBytes, Unaligned},
 };

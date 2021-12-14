@@ -1247,7 +1247,7 @@ mod tests {
             test_utils::{fake_control_handle, MockWlanRxInfo},
         },
         akm::AkmAlgorithm,
-        banjo_fuchsia_hardware_wlanassocinfo as banjo_wlanassocinfo,
+        banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
         banjo_fuchsia_wlan_common as banjo_common, fidl_fuchsia_wlan_common as fidl_common,
         fuchsia_async as fasync,
         fuchsia_zircon::{self as zx, DurationNum},
@@ -1360,7 +1360,7 @@ mod tests {
         }
     }
 
-    fn fake_ddk_assoc_ctx() -> banjo_wlanassocinfo::WlanAssocCtx {
+    fn fake_ddk_assoc_ctx() -> banjo_wlan_associnfo::WlanAssocCtx {
         ddk::build_ddk_assoc_ctx(
             BSSID,
             42,
@@ -2834,7 +2834,7 @@ mod tests {
         let assoc_ctx = m.fake_device.assocs.get(&BSSID.0).unwrap();
 
         assert_eq!(assoc_ctx.aid, 0);
-        assert_eq!(assoc_ctx.phy, banjo_fuchsia_hardware_wlanassocinfo::WlanPhyType::VHT);
+        assert_eq!(assoc_ctx.phy, banjo_fuchsia_hardware_wlan_associnfo::WlanPhyType::VHT);
         assert_eq!(assoc_ctx.qos, true);
         assert_eq!(assoc_ctx.rates_cnt, 6);
         assert_eq!(assoc_ctx.rates[..6], [125, 126, 127, 128, 129, 130]);
@@ -3336,7 +3336,7 @@ mod tests {
     fn rx_info_with_dbm(rssi_dbm: i8) -> banjo_wlan_softmac::WlanRxInfo {
         let mut rx_info: banjo_wlan_softmac::WlanRxInfo =
             MockWlanRxInfo { rssi_dbm, ..Default::default() }.into();
-        rx_info.valid_fields |= banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0;
+        rx_info.valid_fields |= banjo_wlan_associnfo::WlanRxInfoValid::RSSI.0;
         rx_info
     }
 

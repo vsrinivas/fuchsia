@@ -44,7 +44,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_MVM_APIGROUPDATAPATH_H_
 
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 
 /* ***************************************************************************
  * 0x0F - GRP_DATAPATH_TLC_MNG_CONFIG_CMD

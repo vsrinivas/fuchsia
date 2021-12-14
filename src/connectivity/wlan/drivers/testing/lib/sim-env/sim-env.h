@@ -29,7 +29,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_ENV_H_
 
-#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/time.h>
 #include <netinet/if_ether.h>

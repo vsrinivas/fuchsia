@@ -22,8 +22,8 @@ pub use {ddk_converter::*, wlan_common as common};
 
 use {
     anyhow::{anyhow, bail, Error},
+    banjo_fuchsia_hardware_wlan_phyinfo as ddk_wlaninfo,
     banjo_fuchsia_hardware_wlan_softmac as banjo_wlan_softmac,
-    banjo_fuchsia_hardware_wlanphyinfo as ddk_wlaninfo,
     device::{Device, DeviceInterface},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
@@ -408,7 +408,7 @@ impl<T: 'static + MlmeImpl> Mlme<T> {
 #[cfg(test)]
 mod test_utils {
     use {
-        super::*, banjo_fuchsia_hardware_wlanassocinfo as banjo_wlanassocinfo,
+        super::*, banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
         banjo_fuchsia_wlan_common as banjo_common, fidl::endpoints::RequestStream,
         std::default::Default,
     };
@@ -428,9 +428,9 @@ mod test_utils {
     impl Default for MockWlanRxInfo {
         fn default() -> Self {
             Self {
-                valid_fields: banjo_wlanassocinfo::WlanRxInfoValid::CHAN_WIDTH.0
-                    | banjo_wlanassocinfo::WlanRxInfoValid::RSSI.0
-                    | banjo_wlanassocinfo::WlanRxInfoValid::SNR.0,
+                valid_fields: banjo_wlan_associnfo::WlanRxInfoValid::CHAN_WIDTH.0
+                    | banjo_wlan_associnfo::WlanRxInfoValid::RSSI.0
+                    | banjo_wlan_associnfo::WlanRxInfoValid::SNR.0,
                 channel: banjo_common::WlanChannel {
                     primary: 1,
                     cbw: banjo_common::ChannelBandwidth::CBW20,

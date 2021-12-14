@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 
 #include <memory>
 

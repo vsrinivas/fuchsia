@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <zircon/errors.h>

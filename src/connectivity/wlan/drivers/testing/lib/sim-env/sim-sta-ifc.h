@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_STA_IFC_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_LIB_SIM_ENV_SIM_STA_IFC_H_
 
-#include <fuchsia/hardware/wlanassocinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/associnfo/c/banjo.h>
 #include <net/ethernet.h>
 
 #include <wlan/common/macaddr.h>

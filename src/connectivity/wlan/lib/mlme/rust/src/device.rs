@@ -4,10 +4,10 @@
 
 use {
     crate::{buffer::OutBuf, key},
+    banjo_fuchsia_hardware_wlan_associnfo::*,
     banjo_fuchsia_hardware_wlan_softmac::{
         self as banjo_wlan_softmac, WlanRxPacket, WlanTxPacket, WlanTxStatus, WlanmacInfo,
     },
-    banjo_fuchsia_hardware_wlanassocinfo::*,
     banjo_fuchsia_wlan_common as banjo_common,
     banjo_fuchsia_wlan_internal::BssConfig,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
@@ -490,7 +490,7 @@ mod test_utils {
             test_utils::fake_control_handle,
         },
         banjo_ddk_hw_wlan_ieee80211::*,
-        banjo_fuchsia_hardware_wlanphyinfo::*,
+        banjo_fuchsia_hardware_wlan_phyinfo::*,
         banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211, fuchsia_async as fasync,
         fuchsia_zircon as zircon,
     };
@@ -972,7 +972,7 @@ mod tests {
         super::*,
         crate::ddk_converter::{self, cssid_from_ssid_unchecked},
         banjo_ddk_hw_wlan_ieee80211::*,
-        banjo_fuchsia_hardware_wlanphyinfo::*,
+        banjo_fuchsia_hardware_wlan_phyinfo::*,
         banjo_fuchsia_wlan_ieee80211 as banjo_ieee80211,
         banjo_fuchsia_wlan_internal as banjo_internal,
         fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fuchsia_async as fasync,

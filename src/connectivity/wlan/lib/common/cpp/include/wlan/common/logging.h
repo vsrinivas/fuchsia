@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_LOGGING_H_
 
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 
 #include <cstdint>
 #include <cstdio>

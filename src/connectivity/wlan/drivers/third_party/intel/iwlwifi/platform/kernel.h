@@ -9,7 +9,7 @@
 // routines that are typically provided by the Linux kernel API.
 
 #include <fuchsia/hardware/pci/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <limits.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>

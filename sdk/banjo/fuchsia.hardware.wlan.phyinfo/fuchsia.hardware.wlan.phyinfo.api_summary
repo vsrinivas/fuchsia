@@ -1,0 +1,50 @@
+const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_BAND_2GHZ uint32 0
+const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_BAND_5GHZ uint32 1
+const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_BAND_INFO_MAX_RATES uint32 12
+const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS uint32 64
+const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_MAX_BANDS uint32 2
+const fuchsia.hardware.wlan.phyinfo/WLAN_INFO_PHY_TYPE_OFDM uint32 4
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.COUNT 2
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.FIVE_GHZ 1
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoBand.TWO_GHZ 0
+strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoBand uint32
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.band fuchsia.hardware.wlan.phyinfo/WlanInfoBand
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.ht_caps ddk.hw.wlan.ieee80211/Ieee80211HtCapabilities
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.ht_supported bool
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.rates array<uint8,12>
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.supported_channels fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.vht_caps ddk.hw.wlan.ieee80211/Ieee80211VhtCapabilities
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo.vht_supported bool
+struct fuchsia.hardware.wlan.phyinfo/WlanInfoBandInfo
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList.base_freq uint16
+struct/member fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList.channels array<uint8,64>
+struct fuchsia.hardware.wlan.phyinfo/WlanInfoChannelList
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.DFS 16
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.MFP 256
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.PROBE_RESP_OFFLOAD 32
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.RATE_SELECTION 2
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.SAE_DRIVER_AUTH 128
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.SAE_SME_AUTH 64
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.SCAN_OFFLOAD 1
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.SYNTH 4
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature.TX_STATUS_REPORT 8
+strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoDriverFeature uint32
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.QOS 512
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.RADIO_MSMT 4096
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SHORT_PREAMBLE 32
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SHORT_SLOT_TIME 1024
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SIMULTANEOUS_CLIENT_AP 65536
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability.SPECTRUM_MGMT 256
+strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoHardwareCapability uint32
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoMacRole.AP 2
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoMacRole.CLIENT 1
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoMacRole.MESH 4
+strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoMacRole uint8
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.CCK 2
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.DSSS 1
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.ERP 4
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.HEW 32
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.HT 8
+enum/member fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType.VHT 16
+strict enum fuchsia.hardware.wlan.phyinfo/WlanInfoPhyType uint32
+library fuchsia.hardware.wlan.phyinfo

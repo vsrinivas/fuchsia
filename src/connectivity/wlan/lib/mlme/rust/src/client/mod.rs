@@ -1168,7 +1168,7 @@ mod tests {
             device::FakeDevice,
             test_utils::{fake_control_handle, MockWlanRxInfo},
         },
-        banjo_fuchsia_hardware_wlanphyinfo as banjo_ddk_wlanphyinfo,
+        banjo_fuchsia_hardware_wlan_phyinfo as banjo_ddk_wlanphyinfo,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
         futures::{task::Poll, StreamExt},

@@ -5,8 +5,8 @@
 use {
     crate::ie::SupportedRate,
     anyhow::{bail, Error},
+    banjo_fuchsia_hardware_wlan_associnfo as hw_wlan_info,
     banjo_fuchsia_hardware_wlan_softmac as hw_wlan_softmac,
-    banjo_fuchsia_hardware_wlanassocinfo as hw_wlan_info,
     banjo_fuchsia_wlan_common as banjo_common,
 };
 

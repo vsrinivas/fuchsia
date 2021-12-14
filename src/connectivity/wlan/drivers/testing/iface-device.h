@@ -5,8 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
 
+#include <fuchsia/hardware/wlan/phyinfo/c/banjo.h>
 #include <fuchsia/hardware/wlan/softmac/c/banjo.h>
-#include <fuchsia/hardware/wlanphyinfo/c/banjo.h>
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <zircon/types.h>
