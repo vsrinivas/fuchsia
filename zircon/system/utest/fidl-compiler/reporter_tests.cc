@@ -15,9 +15,9 @@ using fidl::ErrorDef;
 using fidl::Reporter;
 using fidl::WarningDef;
 
-constexpr ErrorDef<std::string, std::string> ErrTest(
+constexpr ErrorDef<std::string_view, std::string_view> ErrTest(
     "This test error has one string param '{}' and another '{}'.");
-constexpr WarningDef<std::string, std::string> WarnTest(
+constexpr WarningDef<std::string_view, std::string_view> WarnTest(
     "This test warning has one string param '{}' and another '{}'.");
 
 TEST(ReporterTests, ReportErrorFormatParams) {

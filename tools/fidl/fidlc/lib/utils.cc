@@ -2,11 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/utils.h>
+#include "fidl/utils.h"
 
 #include <cassert>
 
 #include <re2/re2.h>
+
+#include "fidl/reporter.h"
 
 namespace fidl::utils {
 

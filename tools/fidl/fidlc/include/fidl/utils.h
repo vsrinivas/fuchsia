@@ -6,8 +6,6 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_UTILS_H_
 
 #include <errno.h>
-#include <fidl/findings.h>
-#include <fidl/reporter.h>
 
 #include <clocale>
 #include <cstring>
@@ -17,10 +15,35 @@
 
 #include <re2/re2.h>
 
+#include "findings.h"
+
 namespace fidl::utils {
 
-template <class>
-inline constexpr bool always_false_v = false;
+// Identity function for types, equivalent to C++20 std::type_identity. Often
+// used to prevent arguments from participating in template argument deduction.
+// https://en.cppreference.com/w/cpp/language/template_argument_deduction#Non-deduced_contexts
+//
+// We use this to make error reporting more ergonomic. For example:
+//
+//     template <typename Args...>
+//     void Fail(const ErrorDef<Args...>& err, const identity_t<Args...>& args);
+//
+//     ErrorDef<const Foo*> ErrOops("...");
+//
+//     Foo* foo = /* ... */;
+//     Fail(ErrOops, foo);
+//
+// Without the identity wrapper, both `err` and `args` participate in deduction
+// for Args, so the compiler complains that `const Foo*` and `Foo*` don't match.
+// With the identity wrapper, it deduces Args to be <const Foo*> solely based on
+// `err`, and instantiates `Fail(const ErrorDef<const Foo*>&, const Foo*&)`.
+// From there, `Fail(ErrOops, foo)` works because of implicit conversions.
+template <typename T>
+struct identity {
+  using type = T;
+};
+template <typename T>
+using identity_t = typename identity<T>::type;
 
 // Helper object for creating a callable argument to std::visit by passing in
 // lambdas for handling each variant (code comes from
@@ -31,8 +54,6 @@ struct matchers : Ts... {
 };
 template <class... Ts>
 matchers(Ts...) -> matchers<Ts...>;
-
-using reporter::Reporter;
 
 constexpr char kWhitespaceChars[] = " \t\n\v\f\r";
 constexpr char kWhitespaceNoNewlineChars[] = " \t\v\f\r";

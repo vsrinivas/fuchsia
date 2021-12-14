@@ -74,12 +74,13 @@ std::nullptr_t Parser::Fail(std::unique_ptr<Diagnostic> err) {
 }
 
 template <typename... Args>
-std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const Args&... args) {
+std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const identity_t<Args>&... args) {
   return Fail(err, last_token_, args...);
 }
 
 template <typename... Args>
-std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token, const Args&... args) {
+std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token,
+                            const identity_t<Args>&... args) {
   if (Ok()) {
     reporter_->Report(err, token, args...);
   }
@@ -88,7 +89,7 @@ std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token, const Arg
 
 template <typename... Args>
 std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-                            const Args&... args) {
+                            const identity_t<Args>&... args) {
   if (Ok()) {
     reporter_->Report(err, span, args...);
   }
@@ -311,11 +312,11 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
       case Token::Kind::kEqual: {
         // This attribute has multiple arguments.
         if (maybe_constant->kind != raw::Constant::Kind::kIdentifier) {
-          return Fail(ErrInvalidIdentifier, std::string(maybe_constant->span().data()));
+          return Fail(ErrInvalidIdentifier, maybe_constant->span().data());
         }
         auto constant = static_cast<raw::IdentifierConstant*>(maybe_constant.get());
         if (constant->identifier->components.size() > 1) {
-          return Fail(ErrInvalidIdentifier, std::string(maybe_constant->span().data()));
+          return Fail(ErrInvalidIdentifier, maybe_constant->span().data());
         }
 
         ConsumeToken(OfKind(Token::Kind::kEqual));

@@ -16,12 +16,14 @@
 #include "diagnostics.h"
 #include "source_span.h"
 #include "token.h"
+#include "utils.h"
 
 namespace fidl::reporter {
 
 using diagnostics::Diagnostic;
 using diagnostics::ErrorDef;
 using diagnostics::WarningDef;
+using utils::identity_t;
 
 std::string Format(std::string_view qualifier, const std::optional<SourceSpan>& span,
                    std::string_view message, bool color, size_t squiggle_size = 0u);
@@ -50,49 +52,51 @@ class Reporter {
   template <typename... Args>
   static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& err,
                                                const std::optional<SourceSpan>& span,
-                                               Args... args) {
+                                               const identity_t<Args>&... args) {
     return Diagnostic::MakeError(err, span, args...);
   }
   template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& err, Args... args) {
+  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& err,
+                                               const identity_t<Args>&... args) {
     return Diagnostic::MakeError(err, std::nullopt, args...);
   }
   template <typename... Args>
   static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& warn,
                                                  const std::optional<SourceSpan>& span,
-                                                 Args... args) {
+                                                 const identity_t<Args>&... args) {
     return Diagnostic::MakeWarning(warn, span, args...);
   }
   template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& warn, Args... args) {
+  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& warn,
+                                                 const identity_t<Args>&... args) {
     return Diagnostic::MakeWarning(warn, std::nullopt, args...);
   }
 
   template <typename... Args>
-  void Report(const ErrorDef<Args...>& err, const Args&... args) {
+  void Report(const ErrorDef<Args...>& err, const identity_t<Args>&... args) {
     Report(std::move(MakeError(err, args...)));
   }
   template <typename... Args>
   void Report(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-              const Args&... args) {
+              const identity_t<Args>&... args) {
     Report(std::move(MakeError(err, span, args...)));
   }
   template <typename... Args>
-  void Report(const ErrorDef<Args...>& err, const Token& token, const Args&... args) {
+  void Report(const ErrorDef<Args...>& err, const Token& token, const identity_t<Args>&... args) {
     Report(std::move(MakeError(err, token.span(), args...)));
   }
 
   template <typename... Args>
-  void Report(const WarningDef<Args...>& err, const Args&... args) {
+  void Report(const WarningDef<Args...>& err, const identity_t<Args>&... args) {
     Report(std::move(MakeWarning(err, args...)));
   }
   template <typename... Args>
   void Report(const WarningDef<Args...>& warn, const std::optional<SourceSpan>& span,
-              const Args&... args) {
+              const identity_t<Args>&... args) {
     Report(std::move(MakeWarning(warn, span, args...)));
   }
   template <typename... Args>
-  void Report(const WarningDef<Args...>& err, const Token& token, const Args&... args) {
+  void Report(const WarningDef<Args...>& err, const Token& token, const identity_t<Args>&... args) {
     Report(std::move(MakeWarning(err, token.span(), args...)));
   }
 

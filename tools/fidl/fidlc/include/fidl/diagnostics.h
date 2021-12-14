@@ -17,15 +17,15 @@ constexpr ErrorDef<std::string_view> ErrInvalidCharacter("invalid character '{}'
 // ---------------------------------------------------------------------------
 // Parser
 // ---------------------------------------------------------------------------
-constexpr ErrorDef<std::basic_string_view<char>> ErrExpectedDeclaration(
-    "invalid declaration type {}");
+constexpr ErrorDef<std::string_view> ErrExpectedDeclaration("invalid declaration type {}");
 constexpr ErrorDef ErrUnexpectedToken("found unexpected token");
 constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedTokenOfKind(
     "unexpected token {}, was expecting {}");
 constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedIdentifier(
     "unexpected identifier {}, was expecting {}");
-constexpr ErrorDef<std::string> ErrInvalidIdentifier("invalid identifier '{}'");
-constexpr ErrorDef<std::string> ErrInvalidLibraryNameComponent("Invalid library name component {}");
+constexpr ErrorDef<std::string_view> ErrInvalidIdentifier("invalid identifier '{}'");
+constexpr ErrorDef<std::string_view> ErrInvalidLibraryNameComponent(
+    "Invalid library name component {}");
 
 // start new_syntax
 constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
@@ -81,13 +81,13 @@ constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrConflictingM
 // ---------------------------------------------------------------------------
 constexpr ErrorDef<flat::Name, SourceSpan> ErrNameCollision(
     "multiple declarations of '{}'; also declared at {}");
-constexpr ErrorDef<flat::Name, flat::Name, SourceSpan, std::string> ErrNameCollisionCanonical(
+constexpr ErrorDef<flat::Name, flat::Name, SourceSpan, std::string_view> ErrNameCollisionCanonical(
     "declaration name '{}' conflicts with '{}' from {}; both are represented "
     "by the canonical form '{}'");
 constexpr ErrorDef<flat::Name> ErrDeclNameConflictsWithLibraryImport(
     "Declaration name '{}' conflicts with a library import. Consider using the "
     "'as' keyword to import the library under a different name.");
-constexpr ErrorDef<flat::Name, std::string> ErrDeclNameConflictsWithLibraryImportCanonical(
+constexpr ErrorDef<flat::Name, std::string_view> ErrDeclNameConflictsWithLibraryImportCanonical(
     "Declaration name '{}' conflicts with a library import due to its "
     "canonical form '{}'. Consider using the 'as' keyword to import the "
     "library under a different name.");
@@ -100,7 +100,7 @@ constexpr ErrorDef<std::vector<std::string_view>> ErrConflictingLibraryImport(
 constexpr ErrorDef<std::vector<std::string_view>, std::string_view>
     ErrConflictingLibraryImportAlias(
         "import of library '{}' under alias '{}' conflicts with another library import");
-constexpr ErrorDef<raw::AttributeList *> ErrAttributesNotAllowedOnLibraryImport(
+constexpr ErrorDef<const raw::AttributeList *> ErrAttributesNotAllowedOnLibraryImport(
     "no attributes allowed on library import, found: {}");
 constexpr ErrorDef<std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");
@@ -139,7 +139,7 @@ constexpr ErrorDef<std::string_view> ErrUnknownBitsMember("unknown bits member '
 constexpr ErrorDef<flat::Name, std::string_view> ErrNewTypesNotAllowed(
     "newtypes not allowed: type declaration {} defines a new type of the existing {} type, which "
     "is not yet supported");
-constexpr ErrorDef<> ErrAnonymousTypesNotAllowed(
+constexpr ErrorDef ErrAnonymousTypesNotAllowed(
     "anonymous layouts are not yet supported: layouts must be specified in a `type MyLayout = ...` "
     "layout introduction statement.");
 constexpr ErrorDef<flat::Name> ErrExpectedValueButGotType("{} is a type, but a value was expected");
@@ -152,7 +152,7 @@ constexpr ErrorDef<const flat::Constant *, const flat::Type *> ErrConstantOverfl
     "{} overflows type {}");
 constexpr ErrorDef ErrCouldNotResolveIdentifierToType("could not resolve identifier to a type");
 constexpr ErrorDef ErrBitsMemberMustBePowerOfTwo("bits members must be powers of two");
-constexpr ErrorDef<std::string> ErrFlexibleEnumMemberWithMaxValue(
+constexpr ErrorDef<std::string_view> ErrFlexibleEnumMemberWithMaxValue(
     "flexible enums must not have a member with a value of {}, which is "
     "reserved for the unknown value. either: remove the member, change its "
     "value to something else, or explicitly specify the unknown value with "
@@ -171,9 +171,9 @@ constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol")
 constexpr ErrorDef ErrNamedParameterListTypesNotYetSupported(
     "using named types in this position is not yet allowed, use `struct { ... }` instead "
     "(http://fxbug.dev/76349)");
-constexpr ErrorDef<flat::Decl *> ErrInvalidParameterListType(
+constexpr ErrorDef<const flat::Decl *> ErrInvalidParameterListType(
     "'{}' cannot be used as a parameter list");
-constexpr ErrorDef<flat::Decl *> ErrNotYetSupportedParameterListType(
+constexpr ErrorDef<const flat::Decl *> ErrNotYetSupportedParameterListType(
     "'{}' cannot be yet be used as a parameter list (http://fxbug.dev/76349)");
 constexpr ErrorDef<SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
@@ -181,12 +181,12 @@ constexpr ErrorDef<std::string_view> ErrEmptyPayloadStructs(
     "method '{}' cannot have an empty struct as a payload, prefer omitting the payload altogether");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateMethodName(
     "multiple protocol methods named '{}'; previous was at {}");
-constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateMethodNameCanonical(
         "protocol method '{}' conflicts with method '{}' from {}; both are "
         "represented by the canonical form '{}'");
 constexpr ErrorDef ErrGeneratedZeroValueOrdinal("Ordinal value 0 disallowed.");
-constexpr ErrorDef<SourceSpan, std::string> ErrDuplicateMethodOrdinal(
+constexpr ErrorDef<SourceSpan, std::string_view> ErrDuplicateMethodOrdinal(
     "Multiple methods with the same ordinal in a protocol; previous was at {}. "
     "Consider using attribute @selector(\"{}\") to change the name used to "
     "calculate the ordinal.");
@@ -196,34 +196,34 @@ constexpr ErrorDef ErrFuchsiaIoExplicitOrdinals(
     "fuchsia.io must have explicit ordinals (https://fxbug.dev/77623)");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateMethodParameterName(
     "multiple method parameters named '{}'; previous was at {}");
-constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateMethodParameterNameCanonical(
         "method parameter '{}' conflicts with parameter '{}' from {}; both are "
         "represented by the canonical form '{}'s");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateServiceMemberName(
     "multiple service members named '{}'; previous was at {}");
-constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateServiceMemberNameCanonical(
         "service member '{}' conflicts with member '{}' from {}; both are "
         "represented by the canonical form '{}'");
 constexpr ErrorDef ErrNullableServiceMember("service members cannot be nullable");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateStructMemberName(
     "multiple struct fields named '{}'; previous was at {}");
-constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateStructMemberNameCanonical(
         "struct field '{}' conflicts with field '{}' from {}; both are represented "
         "by the canonical form '{}'");
-constexpr ErrorDef<std::string, const flat::Type *> ErrInvalidStructMemberType(
+constexpr ErrorDef<std::string_view, const flat::Type *> ErrInvalidStructMemberType(
     "struct field {} has an invalid default type {}");
-constexpr ErrorDef<> ErrTooManyTableOrdinals(
+constexpr ErrorDef ErrTooManyTableOrdinals(
     "table contains too many ordinals; tables are limited to 64 ordinals");
-constexpr ErrorDef<> ErrMaxOrdinalNotTable(
+constexpr ErrorDef ErrMaxOrdinalNotTable(
     "the 64th ordinal of a table may only contain a table type");
 constexpr ErrorDef<SourceSpan> ErrDuplicateTableFieldOrdinal(
     "multiple table fields with the same ordinal; previous was at {}");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateTableFieldName(
     "multiple table fields named '{}'; previous was at {}");
-constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateTableFieldNameCanonical(
         "table field '{}' conflicts with field '{}' from {}; both are represented "
         "by the canonical form '{}'");
@@ -231,20 +231,21 @@ constexpr ErrorDef<SourceSpan> ErrDuplicateUnionMemberOrdinal(
     "multiple union fields with the same ordinal; previous was at {}");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateUnionMemberName(
     "multiple union members named '{}'; previous was at {}");
-constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateUnionMemberNameCanonical(
         "union member '{}' conflicts with member '{}' from {}; both are represented "
         "by the canonical form '{}'");
 constexpr ErrorDef<uint64_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
 constexpr ErrorDef ErrCouldNotParseSizeBound("unable to parse size bound");
-constexpr ErrorDef<std::string> ErrCouldNotResolveMember("unable to resolve {} member");
-constexpr ErrorDef<std::string> ErrCouldNotResolveMemberDefault(
+constexpr ErrorDef<std::string_view> ErrCouldNotResolveMember("unable to resolve {} member");
+constexpr ErrorDef<std::string_view> ErrCouldNotResolveMemberDefault(
     "unable to resolve {} default value");
 constexpr ErrorDef ErrCouldNotResolveAttributeArg("unable to resolve attribute argument");
 constexpr ErrorDef<std::string_view, std::string_view, SourceSpan> ErrDuplicateMemberName(
     "multiple {} members named '{}'; previous was at {}");
-constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<std::string_view, std::string_view, std::string_view, SourceSpan,
+                   std::string_view>
     ErrDuplicateMemberNameCanonical(
         "{} member '{}' conflicts with member '{}' from {}; both are "
         "represented by the canonical form '{}'");
@@ -262,10 +263,10 @@ constexpr ErrorDef ErrInlineSizeExceeds64k(
 // TODO(fxbug.dev/70399): As part of consolidating name resolution, these should
 // be grouped into a single "expected foo but got bar" error, along with
 // ErrExpectedValueButGotType.
-constexpr ErrorDef<> ErrCannotUseService("cannot use services in other declarations");
-constexpr ErrorDef<> ErrCannotUseProtocol("cannot use protocol in this context");
-constexpr ErrorDef<> ErrCannotUseType("cannot use type in this context");
-constexpr ErrorDef<> ErrOnlyClientEndsInServices("service members must be client_end:P");
+constexpr ErrorDef ErrCannotUseService("cannot use services in other declarations");
+constexpr ErrorDef ErrCannotUseProtocol("cannot use protocol in this context");
+constexpr ErrorDef ErrCannotUseType("cannot use type in this context");
+constexpr ErrorDef ErrOnlyClientEndsInServices("service members must be client_end:P");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints
@@ -275,32 +276,33 @@ constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributePlacement(
 constexpr ErrorDef<const flat::Attribute *> ErrDeprecatedAttribute("attribute '{}' is deprecated");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateAttribute(
     "duplicate attribute '{}'; previous was at {}");
-constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateAttributeCanonical(
         "attribute '{}' conflicts with attribute '{}' from {}; both are "
         "represented by the canonical form '{}'");
-constexpr ErrorDef<flat::AttributeArg *, flat::Attribute *> ErrCanOnlyUseStringOrBool(
+constexpr ErrorDef<const flat::AttributeArg *, const flat::Attribute *> ErrCanOnlyUseStringOrBool(
     "argument '{}' on user-defined attribute '{}' cannot be a numeric "
     "value; use a bool or string instead");
 constexpr ErrorDef ErrAttributeArgMustNotBeNamed(
     "attributes that take a single argument must not name that argument");
-constexpr ErrorDef<flat::AttributeArg *> ErrAttributeArgNotNamed(
+constexpr ErrorDef<const flat::AttributeArg *> ErrAttributeArgNotNamed(
     "attributes that take multiple arguments must name all of them explicitly, but '{}' was not");
-constexpr ErrorDef<flat::Attribute *, std::string> ErrMissingRequiredAttributeArg(
+constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrMissingRequiredAttributeArg(
     "attribute '{}' is missing the required '{}' argument");
-constexpr ErrorDef<flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
+constexpr ErrorDef<const flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
     "attribute '{}' is missing its required argument");
-constexpr ErrorDef<flat::Attribute *, std::string_view> ErrUnknownAttributeArg(
+constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrUnknownAttributeArg(
     "attribute '{}' does not support the '{}' argument");
-constexpr ErrorDef<flat::Attribute *, std::string_view, SourceSpan> ErrDuplicateAttributeArg(
+constexpr ErrorDef<const flat::Attribute *, std::string_view, SourceSpan> ErrDuplicateAttributeArg(
     "attribute '{}' provides the '{}' argument multiple times; previous was at {}");
-constexpr ErrorDef<flat::Attribute *, std::string_view, std::string_view, SourceSpan, std::string>
+constexpr ErrorDef<const flat::Attribute *, std::string_view, std::string_view, SourceSpan,
+                   std::string_view>
     ErrDuplicateAttributeArgCanonical(
         "attribute '{}' argument '{}' conflicts with argument '{}' from {}; both "
         "are represented by the canonical form '{}'");
-constexpr ErrorDef<flat::Attribute *> ErrAttributeDisallowsArgs(
+constexpr ErrorDef<const flat::Attribute *> ErrAttributeDisallowsArgs(
     "attribute '{}' does not support arguments");
-constexpr ErrorDef<std::string_view, flat::Attribute *> ErrAttributeArgRequiresLiteral(
+constexpr ErrorDef<std::string_view, const flat::Attribute *> ErrAttributeArgRequiresLiteral(
     "argument '{}' of attribute '{}' does not support referencing constants; "
     "please use a literal instead");
 constexpr ErrorDef<const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
@@ -313,7 +315,7 @@ constexpr ErrorDef<uint32_t, uint32_t> ErrTooManyHandles(
     "too many handles: only {} allowed, but {} found");
 constexpr ErrorDef ErrInvalidErrorType(
     "invalid error type: must be int32, uint32 or an enum thereof");
-constexpr ErrorDef<std::string, std::set<std::string>> ErrInvalidTransportType(
+constexpr ErrorDef<std::string_view, std::set<std::string>> ErrInvalidTransportType(
     "invalid transport type: got {} expected one of {}");
 constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributeType(
     "attribute '{}' has an invalid type");
@@ -321,9 +323,9 @@ constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrBoundIsTooBig(
     "'{}' bound of '{}' is too big");
 constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrUnableToParseBound(
     "unable to parse '{}' bound of '{}'");
-constexpr WarningDef<std::string_view, std::string> WarnAttributeTypo(
+constexpr WarningDef<std::string_view, std::string_view> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
-constexpr ErrorDef<> ErrInvalidGeneratedName("generated name must be a valid identifier");
+constexpr ErrorDef ErrInvalidGeneratedName("generated name must be a valid identifier");
 
 // ---------------------------------------------------------------------------
 // Type Templates
@@ -350,7 +352,7 @@ constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrWrongNumberOfL
     "{} expected {} layout parameter(s), but got {}");
 constexpr ErrorDef<const flat::TypeTemplate *, size_t, size_t> ErrTooManyConstraints(
     "{} expected at most {} constraints, but got {}");
-constexpr ErrorDef<> ErrExpectedType("expected type but got a literal or constant");
+constexpr ErrorDef ErrExpectedType("expected type but got a literal or constant");
 constexpr ErrorDef<const flat::TypeTemplate *> ErrUnexpectedConstraint(
     "{} failed to resolve constraint");
 // TODO(fxbug.dev/74193): Remove this error and allow re-constraining.
@@ -360,9 +362,9 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrProtocolConstraintRequired(
     "{} requires a protocol as its first constraint");
 // The same error as ErrCannotBeNullable, but with a more specific message since the
 // optionality of boxes may be confusing
-constexpr ErrorDef<> ErrBoxCannotBeNullable(
+constexpr ErrorDef ErrBoxCannotBeNullable(
     "cannot specify optionality for box, boxes are optional by default");
-constexpr ErrorDef<> ErrBoxedTypeCannotBeNullable(
+constexpr ErrorDef ErrBoxedTypeCannotBeNullable(
     "no double optionality, boxes are already optional");
 constexpr ErrorDef<flat::Name> ErrCannotBeBoxed(
     "type {} cannot be boxed, try using optional instead");
@@ -377,7 +379,7 @@ constexpr ErrorDef<flat::Name> ErrResourceMissingRightsProperty(
     "resource {} expected to have the rights property, but it was missing");
 constexpr ErrorDef<flat::Name> ErrResourceSubtypePropertyMustReferToEnum(
     "the subtype property must be an enum, but wasn't in resource {}");
-constexpr ErrorDef<> ErrHandleSubtypeMustReferToResourceSubtype(
+constexpr ErrorDef ErrHandleSubtypeMustReferToResourceSubtype(
     "the subtype must be a constant referring to the resource's subtype enum");
 constexpr ErrorDef<flat::Name> ErrResourceRightsPropertyMustReferToBits(
     "the rights property must be a bits, but wasn't in resource {}");

@@ -49,6 +49,7 @@ constexpr size_t kMaxTableOrdinals = 64;
 using diagnostics::Diagnostic;
 using diagnostics::ErrorDef;
 using reporter::Reporter;
+using utils::identity_t;
 
 template <typename T>
 struct PtrCompare {
@@ -872,7 +873,7 @@ class LibraryMediator {
 
   template <typename... Args>
   bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-            const Args&... args) const;
+            const identity_t<Args>&... args) const;
 
   // Used specifically in TypeAliasTypeTemplates to recursively compile the next
   // type alias.
@@ -906,10 +907,10 @@ class TypeTemplate {
  protected:
   template <typename... Args>
   bool Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
-            const std::optional<SourceSpan>& span, const Args&... args) const;
+            const std::optional<SourceSpan>& span, const identity_t<Args>&... args) const;
   // TODO(fxbug.dev/89213): Remove, all failures should report spans.
   template <typename... Args>
-  bool FailNoSpan(const ErrorDef<Args...>& err, const Args&... args) const;
+  bool FailNoSpan(const ErrorDef<Args...>& err, const identity_t<Args>&... args) const;
 
   Typespace* typespace_;
 
@@ -1227,16 +1228,16 @@ class Library : Attributable {
   // with appropriate span information, but other cases should be relatively
   // direct to improve.
   template <typename... Args>
-  bool FailNoSpan(const ErrorDef<Args...>& err, const Args&... args);
+  bool FailNoSpan(const ErrorDef<Args...>& err, const identity_t<Args>&... args);
   template <typename... Args>
   bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-            const Args&... args);
+            const identity_t<Args>&... args);
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const Name& name, const Args&... args) {
+  bool Fail(const ErrorDef<Args...>& err, const Name& name, const identity_t<Args>&... args) {
     return Fail(err, name.span(), args...);
   }
   template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const Decl& decl, const Args&... args) {
+  bool Fail(const ErrorDef<Args...>& err, const Decl& decl, const identity_t<Args>&... args) {
     return Fail(err, decl.name, args...);
   }
 

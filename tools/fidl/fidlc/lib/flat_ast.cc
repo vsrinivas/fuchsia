@@ -353,13 +353,14 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
 
 template <typename... Args>
 bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
-                        const std::optional<SourceSpan>& span, const Args&... args) const {
+                        const std::optional<SourceSpan>& span,
+                        const identity_t<Args>&... args) const {
   reporter_->Report(err, span, this, args...);
   return false;
 }
 
 template <typename... Args>
-bool TypeTemplate::FailNoSpan(const ErrorDef<Args...>& err, const Args&... args) const {
+bool TypeTemplate::FailNoSpan(const ErrorDef<Args...>& err, const identity_t<Args>&... args) const {
   reporter_->Report(err, args...);
   return false;
 }
@@ -377,7 +378,7 @@ class PrimitiveTypeTemplate : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
                   num_params);
     }
 
@@ -402,7 +403,7 @@ bool PrimitiveType::ApplyConstraints(const flat::LibraryMediator& lib,
   if (num_constraints == 1)
     return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
   if (num_constraints > 1)
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(0), num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 0, num_constraints);
   *out_type = std::make_unique<PrimitiveType>(name, subtype);
   return true;
 }
@@ -449,7 +450,7 @@ bool ArrayType::ApplyConstraints(const flat::LibraryMediator& lib,
   if (num_constraints == 1)
     return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
   if (num_constraints > 1)
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(0), num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 0, num_constraints);
   *out_type = std::make_unique<ArrayType>(name, element_type, element_count);
   return true;
 }
@@ -464,7 +465,7 @@ class BytesTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
                   num_params);
     }
 
@@ -513,7 +514,7 @@ bool VectorBaseType::ResolveSizeAndNullability(const LibraryMediator& lib,
     }
     out_params->nullability = types::Nullability::kNullable;
   } else if (num_constraints >= 3) {
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(2), num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 2, num_constraints);
   }
   return true;
 }
@@ -531,7 +532,7 @@ class VectorTypeTemplate final : public TypeTemplate {
     if (num_params != 1) {
       // TODO(fxbug.dev/87619): If num_params is 0, parameters->span will be
       // null, so we should use the overall type constructor's span instead.
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(1),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 1,
                   num_params);
     }
 
@@ -578,7 +579,7 @@ class StringTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
                   num_params);
     }
 
@@ -619,7 +620,7 @@ class HandleTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = !unresolved_args.parameters->items.empty();
     if (num_params) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
                   num_params);
     }
 
@@ -715,7 +716,7 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
     out_params->nullability = types::Nullability::kNullable;
     applied_nullability_span = constraints.items[2]->span;
   } else {
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(3), num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 3, num_constraints);
   }
 
   bool has_obj_type = subtype != types::HandleSubtype::kHandle;
@@ -762,7 +763,7 @@ class TransportSideTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = !unresolved_args.parameters->items.empty();
     if (num_params)
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
                   num_params);
 
     TransportSideType type(name_, end_);
@@ -817,7 +818,7 @@ bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
     out_params->nullability = types::Nullability::kNullable;
     applied_nullability_span = constraints.items[1]->span;
   } else if (num_constraints > 2) {
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(2), num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 2, num_constraints);
   }
 
   if (protocol_decl && out_params->protocol_decl)
@@ -860,7 +861,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
 
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
                   num_params);
     }
 
@@ -889,8 +890,7 @@ bool IdentifierType::ApplyConstraints(const flat::LibraryMediator& lib,
       if (num_constraints == 1)
         return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
       if (num_constraints > 1) {
-        return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(0),
-                        num_constraints);
+        return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 0, num_constraints);
       }
       break;
 
@@ -901,8 +901,7 @@ bool IdentifierType::ApplyConstraints(const flat::LibraryMediator& lib,
     case Decl::Kind::kStruct:
     case Decl::Kind::kUnion:
       if (num_constraints > 1) {
-        return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(1),
-                        num_constraints);
+        return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 1, num_constraints);
       }
       break;
 
@@ -957,7 +956,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
 
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0)
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(0),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
                   num_params);
 
     // Compilation failed while trying to resolve something farther up the chain;
@@ -990,7 +989,7 @@ class BoxTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 1) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, size_t(1),
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 1,
                   num_params);
     }
 
@@ -1033,7 +1032,7 @@ bool BoxType::ApplyConstraints(const flat::LibraryMediator& lib, const TypeConst
   if (num_constraints == 1)
     return lib.Fail(ErrBoxCannotBeNullable, constraints.items[0]->span);
   if (num_constraints > 1)
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, size_t(0), num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 0, num_constraints);
   *out_type = std::make_unique<BoxType>(name, boxed_type);
   return true;
 }
@@ -1970,14 +1969,14 @@ bool Library::Fail(std::unique_ptr<Diagnostic> err) {
 }
 
 template <typename... Args>
-bool Library::FailNoSpan(const ErrorDef<Args...>& err, const Args&... args) {
+bool Library::FailNoSpan(const ErrorDef<Args...>& err, const identity_t<Args>&... args) {
   reporter_->Report(err, args...);
   return false;
 }
 
 template <typename... Args>
 bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-                   const Args&... args) {
+                   const identity_t<Args>&... args) {
   reporter_->Report(err, span, args...);
   return false;
 }
@@ -3133,8 +3132,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           }
         }
         if (!const_val) {
-          return Fail(ErrUnknownEnumMember, identifier_constant->name.span(),
-                      std::string_view(*member_name));
+          return Fail(ErrUnknownEnumMember, identifier_constant->name.span(), *member_name);
         }
         break;
       }
@@ -3154,8 +3152,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           }
         }
         if (!const_val) {
-          return Fail(ErrUnknownBitsMember, identifier_constant->name.span(),
-                      std::string_view(*member_name));
+          return Fail(ErrUnknownBitsMember, identifier_constant->name.span(), *member_name);
         }
         break;
       }
@@ -3249,9 +3246,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   return true;
 
 fail_cannot_convert:
-  return Fail(ErrTypeCannotBeConvertedToType, identifier_constant->name.span(),
-              static_cast<const flat::Constant*>(identifier_constant),
-              static_cast<const flat::Type*>(const_type), type);
+  return Fail(ErrTypeCannotBeConvertedToType, identifier_constant->name.span(), identifier_constant,
+              const_type, type);
   return false;
 }
 
@@ -3260,8 +3256,8 @@ bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant,
   auto inferred_type = InferType(static_cast<flat::Constant*>(literal_constant));
   const Type* type = opt_type ? opt_type.value() : inferred_type;
   if (!TypeIsConvertibleTo(inferred_type, type)) {
-    return Fail(ErrTypeCannotBeConvertedToType, literal_constant->literal->span(),
-                static_cast<const flat::Constant*>(literal_constant), inferred_type, type);
+    return Fail(ErrTypeCannotBeConvertedToType, literal_constant->literal->span(), literal_constant,
+                inferred_type, type);
   }
   switch (literal_constant->literal->kind) {
     case raw::Literal::Kind::kDocComment: {
@@ -3334,8 +3330,7 @@ bool Library::ResolveLiteralConstantKindNumericLiteral(LiteralConstant* literal_
       // to the data being too large, rather than bad input.
       [[fallthrough]];
     case utils::ParseNumericResult::kOutOfBounds:
-      return Fail(ErrConstantOverflowsType, span,
-                  static_cast<const flat::Constant*>(literal_constant), type);
+      return Fail(ErrConstantOverflowsType, span, literal_constant, type);
   }
 }
 
@@ -3932,8 +3927,8 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
         for (const auto& member : struct_decl->members) {
           if (EffectiveResourceness(member.type_ctor->type) == types::Resourceness::kResource) {
             library_->reporter_->Report(ErrTypeMustBeResource, struct_decl->name.span(),
-                                        struct_decl->name, member.name.data(),
-                                        std::string_view("struct"), struct_decl->name);
+                                        struct_decl->name, member.name.data(), "struct",
+                                        struct_decl->name);
           }
         }
       }
@@ -3947,8 +3942,8 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
             const auto& used = *member.maybe_used;
             if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
               library_->reporter_->Report(ErrTypeMustBeResource, table_decl->name.span(),
-                                          table_decl->name, used.name.data(),
-                                          std::string_view("table"), table_decl->name);
+                                          table_decl->name, used.name.data(), "table",
+                                          table_decl->name);
             }
           }
         }
@@ -3963,8 +3958,8 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
             const auto& used = *member.maybe_used;
             if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
               library_->reporter_->Report(ErrTypeMustBeResource, union_decl->name.span(),
-                                          union_decl->name, used.name.data(),
-                                          std::string_view("union"), union_decl->name);
+                                          union_decl->name, used.name.data(), "union",
+                                          union_decl->name);
             }
           }
         }
@@ -4848,16 +4843,16 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
       const auto previous_span = name_result.previous_occurrence();
       // We can log the error and then continue validating for other issues in the decl
       if (original_name == name_result.previous_occurrence().data()) {
-        success = Fail(ErrDuplicateMemberName, member.name, std::string_view(decl_type),
-                       original_name, previous_span);
+        success =
+            Fail(ErrDuplicateMemberName, member.name, decl_type, original_name, previous_span);
       } else {
-        success = Fail(ErrDuplicateMemberNameCanonical, member.name, std::string_view(decl_type),
-                       original_name, previous_span.data(), previous_span, canonical_name);
+        success = Fail(ErrDuplicateMemberNameCanonical, member.name, decl_type, original_name,
+                       previous_span.data(), previous_span, canonical_name);
       }
     }
 
     if (!ResolveConstant(member.value.get(), decl->subtype_ctor->type)) {
-      success = Fail(ErrCouldNotResolveMember, member.name, std::string(decl_type));
+      success = Fail(ErrCouldNotResolveMember, member.name, decl_type);
       continue;
     }
 
@@ -4867,8 +4862,8 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
     if (!value_result.ok()) {
       const auto previous_span = value_result.previous_occurrence();
       // We can log the error and then continue validating other members for other bugs
-      success = Fail(ErrDuplicateMemberValue, member.name, std::string_view(decl_type),
-                     original_name, previous_span.data(), previous_span);
+      success = Fail(ErrDuplicateMemberValue, member.name, decl_type, original_name,
+                     previous_span.data(), previous_span);
     }
 
     auto err = validator(value, member.attributes.get());
@@ -5165,7 +5160,7 @@ bool LibraryMediator::ResolveAsProtocol(const Constant* constant, const Protocol
 
 template <typename... Args>
 bool LibraryMediator::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-                           const Args&... args) const {
+                           const identity_t<Args>&... args) const {
   return library_->Fail(err, span, args...);
 }
 

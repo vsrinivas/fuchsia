@@ -13,6 +13,7 @@
 
 #include "source_span.h"
 #include "token.h"
+#include "utils.h"
 
 namespace fidl {
 
@@ -93,6 +94,10 @@ constexpr void CheckFormatArgs(std::string_view msg) {
   static_assert(
       (std::is_same_v<Args, std::remove_const_t<std::remove_reference_t<Args>>> && ...),
       "Remove redundant `const` or `&`; DiagnosticDef args are always passed by const reference");
+  static_assert(((!std::is_pointer_v<Args> || std::is_const_v<std::remove_pointer_t<Args>>)&&...),
+                "Use a const pointer; DiagnosticDef args should not be mutable pointers");
+  static_assert(((!std::is_same_v<Args, std::string>)&&...),
+                "Use std::string_view, not std::string");
 
   // This can't be a static_assert because the compiler doesn't know msg is
   // always constexpr. If the condition is true, the assert evaluates to a
@@ -103,6 +108,8 @@ constexpr void CheckFormatArgs(std::string_view msg) {
 }
 
 }  // namespace internal
+
+using utils::identity_t;
 
 struct DiagnosticDef {
   constexpr explicit DiagnosticDef(std::string_view msg) : msg(msg) {}
@@ -153,14 +160,14 @@ struct Diagnostic {
   template <typename... Args>
   static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& def,
                                                std::optional<SourceSpan> span,
-                                               const Args&... args) {
+                                               const identity_t<Args>&... args) {
     return std::make_unique<Diagnostic>(DiagnosticKind::kError, def, span, args...);
   }
 
   template <typename... Args>
   static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& def,
                                                  std::optional<SourceSpan> span,
-                                                 const Args&... args) {
+                                                 const identity_t<Args>&... args) {
     return std::make_unique<Diagnostic>(DiagnosticKind::kWarning, def, span, args...);
   }
 

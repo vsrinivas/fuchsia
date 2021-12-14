@@ -11,6 +11,8 @@
 
 namespace fidl::flat {
 
+struct Type;
+
 // ConstantValue represents the concrete _value_ of a constant. (For the
 // _declaration_, see Const. For the _use_, see Constant.) ConstantValue has
 // derived classes for all the different kinds of constants.

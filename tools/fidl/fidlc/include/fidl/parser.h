@@ -13,11 +13,13 @@
 #include "raw_ast.h"
 #include "reporter.h"
 #include "types.h"
+#include "utils.h"
 
 namespace fidl {
 
 using namespace diagnostics;
 using reporter::Reporter;
+using utils::identity_t;
 
 // See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#_parsing
 // for additional context
@@ -230,12 +232,12 @@ class Parser {
   std::nullptr_t Fail();
   std::nullptr_t Fail(std::unique_ptr<Diagnostic> err);
   template <typename... Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, const Args&... args);
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, const identity_t<Args>&... args);
   template <typename... Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, Token token, const Args&... args);
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, Token token, const identity_t<Args>&... args);
   template <typename... Args>
   std::nullptr_t Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-                      const Args&... args);
+                      const identity_t<Args>&... args);
 
   // Reports an error if |modifiers| contains a modifier whose type is not
   // included in |Allowlist|. The |decl_token| should be "struct", "enum", etc.
