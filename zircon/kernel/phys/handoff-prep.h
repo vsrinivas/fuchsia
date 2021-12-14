@@ -19,10 +19,6 @@
 #include <ktl/span.h>
 #include <phys/handoff-ptr.h>
 
-namespace memalloc {
-class Pool;
-}  // namespace memalloc
-
 struct PhysHandoff;
 class PhysBootTimes;
 
@@ -64,9 +60,6 @@ class HandoffPrep {
     }
     return {};
   }
-
-  // Fills in handoff()->mem_config by normalizing the pool's ranges.
-  void SetMemConfig(const memalloc::Pool& pool);
 
   // Summarizes the provided data ZBI's miscellaneous simple items for the
   // kernel, filling in corresponding handoff()->item fields.

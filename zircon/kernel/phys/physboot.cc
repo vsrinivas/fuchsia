@@ -146,8 +146,6 @@ ChainBoot LoadZirconZbi(KernelStorage::Bootfs kernelfs) {
 
   prep.SummarizeMiscZbiItems(boot.DataZbi().storage());
 
-  prep.SetMemConfig(Allocation::GetPool());
-
   prep.SetInstrumentation();
 
   gBootTimes.SampleNow(PhysBootTimes::kZbiDone);

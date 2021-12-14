@@ -77,16 +77,6 @@ void ConstructMexecDataZbi(uint level) {
 
   ktl::visit(append_uart_item, gBootOptions->serial);
 
-  if (ktl::span mem_config = gPhysHandoff->mem_config.get(); !mem_config.empty()) {
-    auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_MEM_CONFIG},
-                                         zbitl::AsBytes(mem_config));
-    if (result.is_error()) {
-      printf("mexec: could not append memory ranges: ");
-      zbitl::PrintViewError(result.error_value());
-      abort();
-    }
-  }
-
   if (ktl::span topology = gPhysHandoff->cpu_topology.get(); !topology.empty()) {
     auto result = gImageAtHandoff.Append(zbi_header_t{.type = ZBI_TYPE_CPU_TOPOLOGY},
                                          zbitl::AsBytes(topology));

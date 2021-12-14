@@ -19,6 +19,7 @@
 
 struct pc_bootloader_info_t {
   uint64_t acpi_rsdp;
+  ktl::span<zbi_mem_range_t> memory_ranges;
   zbi_swfb_t fb;
 };
 
