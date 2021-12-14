@@ -10,7 +10,14 @@
     ],
     collections: [
         {
+            // This collection is being phased out in favor of "#realm_builder".
+            // Please refrrain from adding new dependencies on this name.
             name: "fuchsia_component_test_collection",
+            environment: "#realm_builder_env",
+            durability: "transient",
+        },
+        {
+            name: "realm_builder",
             environment: "#realm_builder_env",
             durability: "transient",
         },
@@ -36,7 +43,10 @@
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [
+                "#fuchsia_component_test_collection",
+                "#realm_builder",
+            ],
         },
 
         // [END collection_offers]
@@ -55,13 +65,19 @@
             protocol: "fuchsia.component.runner.ComponentRunner",
             from: "#realm_builder_server",
             as: "fuchsia.component.runner.RealmBuilder",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [
+                "#fuchsia_component_test_collection",
+                "#realm_builder",
+            ],
         },
         {
             protocol: "fuchsia.sys2.ComponentResolver",
             from: "#realm_builder_server",
             as: "fuchsia.component.resolver.RealmBuilder",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [
+                "#fuchsia_component_test_collection",
+                "#realm_builder",
+            ],
         },
     ],
     environments: [

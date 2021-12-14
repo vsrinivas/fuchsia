@@ -925,7 +925,7 @@ impl ScopedInstanceFactory {
         url: impl Into<String>,
     ) -> Result<ScopedInstance, anyhow::Error> {
         let id: u64 = rand::thread_rng().gen();
-        let child_name = format!("auto-{}", id);
+        let child_name = format!("auto-{:x}", id);
         self.new_named_instance(child_name, url).await
     }
 
