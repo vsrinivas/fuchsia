@@ -301,4 +301,6 @@ toc:
   path: /docs/contribute/governance/rfcs/0143_userspace_top_byte_ignore.md
 - title: "RFC-0144: Size Check Tool"
   path: /docs/contribute/governance/rfcs/0144_size_check_tool.md
+- title: "RFC-0145: Eager Package Updates"
+  path: /docs/contribute/governance/rfcs/0145_eager_package_updates.md
 

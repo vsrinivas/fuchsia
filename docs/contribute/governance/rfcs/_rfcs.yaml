@@ -1877,3 +1877,15 @@
   submitted: '2021-11-22'
   reviewed: '2021-12-10'
 
+- name: 'RFC-0145'
+  title: 'Eager package updates'
+  short_description: 'Eager updates to packages outside of the system monolith.'
+  authors: ['wittrock@google.com', 'computerdruid@google.com']
+  file: '0145_eager_package_updates.md'
+  area: ['Software Delivery']
+  issue: ['83496']
+  gerrit_change_id: ['583842']
+  status: 'Accepted'
+  reviewers: ['hjfreyer@google.com', 'geb@google.com', 'ampearce@google.com', 'computerdruid@google.com', 'senj@google.com', 'jsankey@google.com', 'marvinpaul@google.com', 'camrdale@google.com']
+  submitted: '2021-10-15'
+  reviewed: '2021-12-13'
