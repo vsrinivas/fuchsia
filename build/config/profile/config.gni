@@ -8,7 +8,11 @@ declare_args() {
   # also set, both lists are used.  Use that option with a file constructed
   # separately instead to use more complex selection features such as
   # per-function selection, file name patterns, or exclusion.
-  profile_source_files = []
+  profile_source_files = [
+    # Default: profile all sources under //.
+    # See: fxbug.dev/89451 for context.
+    "//*",
+  ]
 
   # List GN path to files in Clang's `-fprofile-list` format describing files
   # and functions to be instrumented by `profile` variants.  Note that if

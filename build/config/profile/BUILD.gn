@@ -5,28 +5,29 @@
 import("//build/config/profile/config.gni")
 import("//build/toolchain/variant.gni")
 
-if (profile_source_files != []) {
-  # This can't use a generated_file() target because there's no way to
-  # express the deps to make GN accept the file in the inputs list if it's
-  # the output of some target.
-  _profile_source_files_file = "$root_out_dir/profile-source-files.list"
-  _profile_source_files_lines = []
-  foreach(file, profile_source_files) {
-    _profile_source_files_lines +=
-        [ "src:" + rebase_path(file, root_build_dir) ]
-  }
-  write_file(_profile_source_files_file,
-             _profile_source_files_lines,
-             "list lines")
-  profile_source_files_list_files += [ _profile_source_files_file ]
-}
-
 # Common flags for all coverage-based variants defined below.
 # IMPORTANT: This should not include any rust or linker flags!
 _coverage_common_flags = [
   "-fprofile-instr-generate",
   "-fcoverage-mapping",
 ]
+
+if (profile_source_files != []) {
+  _profile_source_files_lines = []
+  foreach(file, profile_source_files) {
+    _profile_source_files_lines +=
+        [ "src:" + rebase_path(file, root_build_dir) ]
+  }
+
+  # This can't use a generated_file() target because there's no way to
+  # express the deps to make GN accept the file in the inputs list if it's
+  # the output of some target.
+  _profile_source_files_file = "$root_out_dir/profile-source-files.list"
+  write_file(_profile_source_files_file,
+             _profile_source_files_lines,
+             "list lines")
+  profile_source_files_list_files += [ _profile_source_files_file ]
+}
 
 _coverage_inputs = profile_source_files_list_files
 foreach(file, profile_source_files_list_files) {
