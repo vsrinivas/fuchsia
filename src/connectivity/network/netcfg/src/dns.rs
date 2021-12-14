@@ -7,7 +7,7 @@ use fuchsia_zircon as zx;
 
 use anyhow::Context as _;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource};
-use log::trace;
+use tracing::trace;
 
 use crate::errors;
 

@@ -44,7 +44,6 @@ use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
 use fuchsia_component::client::{clone_namespace_svc, new_protocol_connector_in_dir};
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
-use fuchsia_syslog as fsyslog;
 use fuchsia_vfs_watcher as fvfs_watcher;
 use fuchsia_zircon::{self as zx, DurationNum as _};
 
@@ -54,9 +53,9 @@ use async_utils::stream::TryFlattenUnorderedExt as _;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
 use futures::{StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
-use log::{debug, error, info, trace, warn};
 use net_declare::fidl_ip_v4;
 use serde::Deserialize;
+use tracing::{debug, error, info, trace, warn};
 
 use self::devices::DeviceInfo;
 use self::errors::ContextExt as _;
@@ -128,9 +127,6 @@ type DnsServerWatchers<'a> = async_utils::stream::StreamMap<
 /// Defines log levels.
 #[derive(Debug, Copy, Clone)]
 pub enum LogLevel {
-    /// ALL log level.
-    All,
-
     /// TRACE log level.
     Trace,
 
@@ -150,16 +146,15 @@ pub enum LogLevel {
     Fatal,
 }
 
-impl Into<fsyslog::levels::LogLevel> for LogLevel {
-    fn into(self) -> fsyslog::levels::LogLevel {
+impl Into<diagnostics_log::Severity> for LogLevel {
+    fn into(self) -> diagnostics_log::Severity {
         match self {
-            LogLevel::All => fsyslog::levels::ALL,
-            LogLevel::Trace => fsyslog::levels::TRACE,
-            LogLevel::Debug => fsyslog::levels::DEBUG,
-            LogLevel::Info => fsyslog::levels::INFO,
-            LogLevel::Warn => fsyslog::levels::WARN,
-            LogLevel::Error => fsyslog::levels::ERROR,
-            LogLevel::Fatal => fsyslog::levels::FATAL,
+            LogLevel::Trace => diagnostics_log::Severity::Trace,
+            LogLevel::Debug => diagnostics_log::Severity::Debug,
+            LogLevel::Info => diagnostics_log::Severity::Info,
+            LogLevel::Warn => diagnostics_log::Severity::Warn,
+            LogLevel::Error => diagnostics_log::Severity::Error,
+            LogLevel::Fatal => diagnostics_log::Severity::Fatal,
         }
     }
 }
@@ -169,7 +164,6 @@ impl FromStr for LogLevel {
 
     fn from_str(s: &str) -> Result<Self, anyhow::Error> {
         match s.to_uppercase().as_str() {
-            "ALL" => Ok(LogLevel::All),
             "TRACE" => Ok(LogLevel::Trace),
             "DEBUG" => Ok(LogLevel::Debug),
             "INFO" => Ok(LogLevel::Info),
@@ -1669,8 +1663,16 @@ pub async fn run<M: Mode>() -> Result<(), anyhow::Error> {
     let opt: Opt = argh::from_env();
     let Opt { allow_virtual_devices, min_severity, config_data } = &opt;
 
-    let () = fuchsia_syslog::init().context("cannot init logger")?;
-    fuchsia_syslog::set_severity((*min_severity).into());
+    // Use the diagnostics_log library directly rather than e.g. the #[fuchsia::component] macro on
+    // the main function, so that we can specify the logging severity level at runtime based on a
+    // command line argument.
+    diagnostics_log::init!(
+        &[],
+        diagnostics_log::Interest {
+            min_severity: Some((*min_severity).into()),
+            ..diagnostics_log::Interest::EMPTY
+        }
+    );
     info!("starting");
     debug!("starting with options = {:?}", opt);
 

@@ -21,7 +21,7 @@ use fuchsia_zircon as zx;
 use anyhow::{anyhow, Context as _};
 use async_trait::async_trait;
 use futures::{channel::oneshot, future, FutureExt as _, StreamExt as _, TryStreamExt as _};
-use log::{debug, error, info, warn};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     errors::{self, ContextExt as _},
