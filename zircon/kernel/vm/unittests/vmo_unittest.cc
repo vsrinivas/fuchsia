@@ -490,8 +490,8 @@ static bool vmo_contiguous_decommit_test() {
 
   paddr_t base_pa = static_cast<paddr_t>(-1);
   status = vmo->Lookup(0, PAGE_SIZE, [&base_pa](size_t offset, paddr_t pa) {
-    DEBUG_ASSERT(base_pa == static_cast<paddr_t>(-1));
-    DEBUG_ASSERT(offset == 0);
+    ASSERT(base_pa == static_cast<paddr_t>(-1));
+    ASSERT(offset == 0);
     base_pa = pa;
     return ZX_ERR_NEXT;
   });
@@ -507,11 +507,11 @@ static bool vmo_contiguous_decommit_test() {
   }
   // Make sure expected pages (and only expected pages) are present and consistent with start
   // physical address of contiguous VMO.
-  auto verify_expected_pages = [vmo, base_pa, &borrowed_seen, &page_expected]() {
+  auto verify_expected_pages = [vmo, base_pa, &borrowed_seen, &page_expected]() -> void {
     auto cow = vmo->DebugGetCowPages();
     bool page_seen[alloc_size / PAGE_SIZE] = {};
     auto lookup_func = [base_pa, &page_seen](size_t offset, paddr_t pa) {
-      DEBUG_ASSERT(!page_seen[offset / PAGE_SIZE]);
+      ASSERT(!page_seen[offset / PAGE_SIZE]);
       page_seen[offset / PAGE_SIZE] = true;
       if (pa - base_pa != offset) {
         return ZX_ERR_BAD_STATE;
@@ -519,42 +519,36 @@ static bool vmo_contiguous_decommit_test() {
       return ZX_ERR_NEXT;
     };
     zx_status_t status = vmo->Lookup(0, alloc_size, lookup_func);
-    if (status != ZX_OK) {
-      printf("vmo->Lookup() failed - status: %d\n", status);
-      return false;
-    }
+    ASSERT_MSG(status == ZX_OK, "vmo->Lookup() failed - status: %d\n", status);
     for (uint64_t offset = 0; offset < alloc_size; offset += PAGE_SIZE) {
       uint64_t page_index = offset / PAGE_SIZE;
-      if (page_expected[page_index] != page_seen[page_index]) {
-        printf("page_expected[page_index] != page_seen[page_index]\n");
-        return false;
-      }
+      ASSERT_MSG(page_expected[page_index] == page_seen[page_index],
+                 "page_expected[page_index] != page_seen[page_index]\n");
       vm_page_t* page_from_cow = cow->DebugGetPage(offset);
       vm_page_t* page_from_pmm = paddr_to_vm_page(base_pa + offset);
-      DEBUG_ASSERT(page_from_pmm);
+      ASSERT(page_from_pmm);
       if (page_expected[page_index]) {
-        DEBUG_ASSERT(page_from_cow);
-        DEBUG_ASSERT(page_from_cow == page_from_pmm);
-        DEBUG_ASSERT(cow->DebugIsPage(offset));
-        DEBUG_ASSERT(!page_from_pmm->loaned);
+        ASSERT(page_from_cow);
+        ASSERT(page_from_cow == page_from_pmm);
+        ASSERT(cow->DebugIsPage(offset));
+        ASSERT(!page_from_pmm->loaned);
       } else {
-        DEBUG_ASSERT(!page_from_cow);
-        DEBUG_ASSERT(cow->DebugIsEmpty(offset));
-        DEBUG_ASSERT(page_from_pmm->loaned);
+        ASSERT(!page_from_cow);
+        ASSERT(cow->DebugIsEmpty(offset));
+        ASSERT(page_from_pmm->loaned);
         if (!page_from_pmm->is_free()) {
           // It's not in cow, and it's not free, so note that we observed a borrowed page.
           borrowed_seen = true;
         }
       }
-      DEBUG_ASSERT(!page_from_pmm->loan_cancelled);
+      ASSERT(!page_from_pmm->loan_cancelled);
     }
-    return true;
   };
   verify_expected_pages();
   auto track_decommit = [vmo, &page_expected, &verify_expected_pages](uint64_t start_offset,
                                                                       uint64_t size) {
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+    ASSERT(IS_PAGE_ALIGNED(start_offset));
+    ASSERT(IS_PAGE_ALIGNED(size));
     uint64_t end_offset = start_offset + size;
     for (uint64_t offset = start_offset; offset < end_offset; offset += PAGE_SIZE) {
       page_expected[offset / PAGE_SIZE] = false;
@@ -563,8 +557,8 @@ static bool vmo_contiguous_decommit_test() {
   };
   auto track_commit = [vmo, &page_expected, &verify_expected_pages](uint64_t start_offset,
                                                                     uint64_t size) {
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(start_offset));
-    DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
+    ASSERT(IS_PAGE_ALIGNED(start_offset));
+    ASSERT(IS_PAGE_ALIGNED(size));
     uint64_t end_offset = start_offset + size;
     for (uint64_t offset = start_offset; offset < end_offset; offset += PAGE_SIZE) {
       page_expected[offset / PAGE_SIZE] = true;
@@ -585,6 +579,10 @@ static bool vmo_contiguous_decommit_test() {
   ASSERT_EQ(status, ZX_OK, "decommit at end of contiguous VMO works\n");
   track_decommit(alloc_size - PAGE_SIZE, PAGE_SIZE);
 
+  status = vmo->DecommitRange(0, alloc_size);
+  ASSERT_EQ(status, ZX_OK, "decommit all overlapping non-present pages\n");
+  track_decommit(0, alloc_size);
+
   // Due to concurrent activity of the system, we may not be able to allocate the loaned pages into
   // a VMO we're creating here, and depending on timing, we may also not observe the pages being
   // borrowed.  However, it shouldn't take many tries, if we continue to allocate non-pinned pages
@@ -594,8 +592,13 @@ static bool vmo_contiguous_decommit_test() {
   // pages being put on the head (normal) or tail (ASAN) of the free list
   // (PmmNode::free_loaned_list_).
 
+  // Reset borrowed_seen since we should be able to see borrowing _within_ the loop below, mainly
+  // so we can also have the loop below do a CommitRange() to reclaim before the borrowing VMO is
+  // deleted.
+  borrowed_seen = false;
   zx_time_t complain_deadline = current_time() + ZX_SEC(5);
-  while (!borrowed_seen) {
+  uint32_t loop_count = 0;
+  while (!borrowed_seen || loop_count < 5) {
     // Not super small, in case we end up needing to do multiple iterations of the loop to see the
     // pages being borrowed, and ASAN is enabled which could require more iterations of this loop
     // if this size were smaller.  Also hopefully not big enough to fail on small-ish devices.
@@ -609,7 +612,13 @@ static bool vmo_contiguous_decommit_test() {
     // borrowing_vmo, or maybe by some other VMO; we don't care which here).
     verify_expected_pages();
 
-    if (!borrowed_seen) {
+    // We want the last iteration of the loop to have seen borrowing itself, so we're sure the else
+    // case below runs (to commit) before the borrowing VMO is deleted.
+    if (loop_count < 5) {
+      borrowed_seen = false;
+    }
+
+    if (!borrowed_seen || loop_count < 5) {
       if constexpr (!__has_feature(address_sanitizer)) {
         // By committing and de-committing in the loop, we put the pages we're paying attention to
         // back at the head of the free_loaned_list_, so the next iteration of the loop is more
@@ -631,11 +640,20 @@ static bool vmo_contiguous_decommit_test() {
         dprintf(INFO, "!borrowed_seen is persisting longer than expected; still trying...\n");
         complain_deadline = now + ZX_SEC(5);
       }
+    } else {
+      // This covers the case where a page is reclaimed before being freed from the borrowing VMO.
+      // And by forcing an iteration with loop_count >= 1 with the last iteration of the loop seeing
+      // borrowing durign the last iteration, we cover the case where we free the pages from the
+      // borrowing VMO before reclaiming.
+      status = vmo->CommitRange(0, alloc_size);
+      ASSERT_EQ(status, ZX_OK, "committed pages back into contiguous VMO\n");
+      track_commit(0, alloc_size);
     }
+    ++loop_count;
   }
 
   status = vmo->DecommitRange(0, alloc_size);
-  ASSERT_EQ(status, ZX_OK, "decommit after cancel loan\n");
+  ASSERT_EQ(status, ZX_OK, "decommit from contiguous VMO\n");
 
   status = vmo->CommitRange(0, alloc_size);
   ASSERT_EQ(status, ZX_OK, "committed pages back into contiguous VMO\n");
