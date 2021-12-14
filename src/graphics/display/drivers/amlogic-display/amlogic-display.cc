@@ -131,12 +131,6 @@ void AmlogicDisplay::DisplayControllerImplSetDisplayControllerInterface(
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t AmlogicDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
-                                                                size_t offset) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
                                                              zx_unowned_handle_t handle,
                                                              uint32_t index) {

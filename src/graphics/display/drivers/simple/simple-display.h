@@ -53,7 +53,6 @@ class SimpleDisplay : public DeviceType,
 
   void DisplayControllerImplSetDisplayControllerInterface(
       const display_controller_interface_protocol_t* intf);
-  zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
   zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t handle,
                                                uint32_t index);
   void DisplayControllerImplReleaseImage(image_t* image);
@@ -71,8 +70,6 @@ class SimpleDisplay : public DeviceType,
   zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
   zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
                                                                   uint32_t collection);
-  zx_status_t DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
-                                                              uint32_t* out_stride);
 
  private:
   void OnPeriodicVSync();

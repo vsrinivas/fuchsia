@@ -801,11 +801,6 @@ void Controller::DisplayControllerImplSetDisplayControllerInterface(
   }
 }
 
-zx_status_t Controller::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
-                                                            size_t offset) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 static bool ConvertPixelFormatToType(fuchsia_sysmem::wire::PixelFormat format, uint32_t* type_out) {
   if (format.type != fuchsia_sysmem::wire::PixelFormatType::kBgra32 &&
       format.type != fuchsia_sysmem::wire::PixelFormatType::kR8G8B8A8) {

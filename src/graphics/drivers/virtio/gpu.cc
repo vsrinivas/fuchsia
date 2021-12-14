@@ -81,11 +81,6 @@ void GpuDevice::DisplayControllerImplSetDisplayControllerInterface(
   display_controller_interface_on_displays_changed(intf, &args, 1, nullptr, 0, nullptr, 0, nullptr);
 }
 
-zx_status_t GpuDevice::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
-                                                           size_t offset) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t GpuDevice::GetVmoAndStride(image_t* image, zx_unowned_handle_t handle, uint32_t index,
                                        zx::vmo* vmo_out, size_t* offset_out,
                                        uint32_t* pixel_size_out, uint32_t* row_bytes_out) {
@@ -297,11 +292,6 @@ zx_status_t GpuDevice::DisplayControllerImplSetBufferCollectionConstraints(
   }
 
   return ZX_OK;
-}
-
-zx_status_t GpuDevice::DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
-                                                                       uint32_t* out_stride) {
-  return ZX_ERR_NOT_SUPPORTED;
 }
 
 GpuDevice::GpuDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)

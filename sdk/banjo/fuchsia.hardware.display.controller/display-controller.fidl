@@ -418,17 +418,6 @@ protocol DisplayControllerImpl {
         intf client_end:DisplayControllerInterface;
     }) -> ();
 
-    /// Imports a VMO backed image into the driver. The driver should set image->handle. The
-    /// driver does not own the vmo handle passed to this function.
-    ImportVmoImage(resource struct {
-        @in_out
-        image Image;
-        vmo zx.handle:VMO;
-        offset uint64;
-    }) -> (struct {
-        s zx.status;
-    });
-
     /// Imports an image from a buffer collection into the driver. The driver should set
     /// image->handle.
     ImportImage(struct {
@@ -533,13 +522,5 @@ protocol DisplayControllerImpl {
         collection ZxUnownedHandle;
     }) -> (struct {
         s zx.status;
-    });
-
-    // If the system only supports single-buffered mode with a single framebuffer, then this returns
-    // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
-    GetSingleBufferFramebuffer() -> (resource struct {
-        res zx.status;
-        vmo zx.handle:VMO;
-        stride uint32;
     });
 };

@@ -267,21 +267,6 @@ protocol Controller {
         removed vector<uint64>:MAX;
     });
 
-    // Imports a VMO backed image. If tiling is not TYPE_SIMPLE, it is up to
-    // the driver and client to agree on its meaning through some mechanism
-    // outside the scope of this API.
-    //
-    // DEPRECATED: This should not be used with buffer collections - ImportImage
-    // should be used instead.
-    ImportVmoImage(resource struct {
-        image_config ImageConfig;
-        vmo zx.handle:VMO;
-        offset int32;
-    }) -> (struct {
-        res zx.status;
-        image_id uint64;
-    });
-
     // Imports a Buffer-Collection backed image. If tiling is not TYPE_SIMPLE,
     // it is up to the driver and client to agree on its meaning through some
     // mechanism outside the scope of this API. The ImageConfig must be
@@ -696,14 +681,6 @@ protocol Controller {
         config ImageConfig;
     }) -> (struct {
         res zx.status;
-    });
-
-    // If the system only supports single-buffered mode with a single framebuffer, then this returns
-    // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
-    GetSingleBufferFramebuffer() -> (resource struct {
-        res zx.status;
-        vmo zx.handle:<VMO, optional>;
-        stride uint32;
     });
 
     /// Returns true if Capture is supported on the platform.

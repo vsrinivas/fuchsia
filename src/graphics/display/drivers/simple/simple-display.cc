@@ -89,27 +89,6 @@ void SimpleDisplay::DisplayControllerImplSetDisplayControllerInterface(
   intf_.OnDisplaysChanged(&args, 1, nullptr, 0, nullptr, 0, nullptr);
 }
 
-// TODO(fxb/81875): Remove support when no longer used.
-zx_status_t SimpleDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo,
-                                                               size_t offset) {
-  zx_info_handle_basic_t import_info;
-  size_t actual, avail;
-  zx_status_t status =
-      vmo.get_info(ZX_INFO_HANDLE_BASIC, &import_info, sizeof(import_info), &actual, &avail);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (import_info.koid != framebuffer_koid_) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  if (image->width != width_ || image->height != height_ || image->pixel_format != format_ ||
-      offset != 0) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  image->handle = kImageHandle;
-  return ZX_OK;
-}
-
 zx_status_t SimpleDisplay::DisplayControllerImplImportImage(image_t* image,
                                                             zx_unowned_handle_t handle,
                                                             uint32_t index) {
@@ -292,39 +271,6 @@ zx_status_t SimpleDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     return result.status();
   }
 
-  return ZX_OK;
-}
-
-// TODO(fxb/81875): Remove support when no longer used.
-zx_status_t SimpleDisplay::DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* vmo_out,
-                                                                           uint32_t* stride_out) {
-  zx_info_handle_count handle_count;
-  size_t actual, avail;
-  zx_status_t status = framebuffer_mmio_.get_vmo()->get_info(ZX_INFO_HANDLE_COUNT, &handle_count,
-                                                             sizeof(handle_count), &actual, &avail);
-  if (status != ZX_OK) {
-    return status;
-  }
-  if (handle_count.handle_count != 1) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-  zx_info_handle_basic_t framebuffer_info;
-  status = framebuffer_mmio_.get_vmo()->get_info(ZX_INFO_HANDLE_BASIC, &framebuffer_info,
-                                                 sizeof(framebuffer_info), &actual, &avail);
-  if (status != ZX_OK) {
-    return status;
-  }
-  zx::vmo vmo;
-  status = framebuffer_mmio_.get_vmo()->duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-  zx_koid_t expect = ZX_KOID_INVALID;
-  if (!framebuffer_koid_.compare_exchange_strong(expect, framebuffer_info.koid)) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-  *vmo_out = std::move(vmo);
-  *stride_out = stride_;
   return ZX_OK;
 }
 

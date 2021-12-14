@@ -69,46 +69,6 @@ void DisplayConfig::InitializeInspect(inspect::Node* parent) {
       node_.CreateBool("pending_apply_layer_change", pending_apply_layer_change_);
 }
 
-void Client::ImportVmoImage(ImportVmoImageRequestView request,
-                            ImportVmoImageCompleter::Sync& _completer) {
-  if (!single_buffer_framebuffer_stride_) {
-    _completer.Reply(ZX_ERR_INVALID_ARGS, 0);
-    return;
-  }
-
-  image_t dc_image;
-  dc_image.height = request->image_config.height;
-  dc_image.width = request->image_config.width;
-  dc_image.pixel_format = request->image_config.pixel_format;
-  dc_image.type = request->image_config.type;
-
-  zx::vmo dup_vmo;
-  zx_status_t status = request->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
-  if (status == ZX_OK) {
-    status = controller_->dc()->ImportVmoImage(&dc_image, std::move(dup_vmo), request->offset);
-  }
-
-  if (status != ZX_OK) {
-    _completer.Reply(status, 0);
-    return;
-  }
-  if (status == ZX_OK) {
-    fbl::AllocChecker ac;
-    auto image =
-        fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(request->vmo),
-                                      single_buffer_framebuffer_stride_, &proxy_->node(), id_));
-    if (!ac.check()) {
-      controller_->dc()->ReleaseImage(&dc_image);
-      _completer.Reply(ZX_ERR_NO_MEMORY, 0);
-      return;
-    }
-
-    image->id = next_image_id_++;
-    _completer.Reply(0, image->id);
-    images_.insert(std::move(image));
-  }
-}
-
 void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::Sync& _completer) {
   auto it = collection_map_.find(request->collection_id);
   if (it == collection_map_.end()) {
@@ -801,15 +761,6 @@ void Client::SetVirtconMode(SetVirtconModeRequestView request,
   }
   controller_->SetVcMode(request->mode);
   // no Reply defined
-}
-
-void Client::GetSingleBufferFramebuffer(GetSingleBufferFramebufferRequestView request,
-                                        GetSingleBufferFramebufferCompleter::Sync& _completer) {
-  zx::vmo vmo;
-  uint32_t stride = 0;
-  zx_status_t status = controller_->dc()->GetSingleBufferFramebuffer(&vmo, &stride);
-  single_buffer_framebuffer_stride_ = stride;
-  _completer.Reply(status, std::move(vmo), stride);
 }
 
 void Client::IsCaptureSupported(IsCaptureSupportedRequestView request,

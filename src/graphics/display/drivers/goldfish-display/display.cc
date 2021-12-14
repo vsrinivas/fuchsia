@@ -791,11 +791,6 @@ zx_status_t Display::DisplayControllerImplSetBufferCollectionConstraints(const i
   return ZX_OK;
 }
 
-zx_status_t Display::DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
-                                                                     uint32_t* out_stride) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t Display::WriteLocked(uint32_t cmd_size) {
   TRACE_DURATION("gfx", "Display::Write", "cmd_size", cmd_size);
 

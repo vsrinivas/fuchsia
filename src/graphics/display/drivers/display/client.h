@@ -220,8 +220,6 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   size_t GetGammaTableSize() const { return gamma_table_map_.size(); }
 
  private:
-  void ImportVmoImage(ImportVmoImageRequestView request,
-                      ImportVmoImageCompleter::Sync& _completer) override;
   void ImportImage(ImportImageRequestView request, ImportImageCompleter::Sync& _completer) override;
   void ReleaseImage(ReleaseImageRequestView request,
                     ReleaseImageCompleter::Sync& _completer) override;
@@ -262,8 +260,6 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   void EnableVsync(EnableVsyncRequestView request, EnableVsyncCompleter::Sync& _completer) override;
   void SetVirtconMode(SetVirtconModeRequestView request,
                       SetVirtconModeCompleter::Sync& _completer) override;
-  void GetSingleBufferFramebuffer(GetSingleBufferFramebufferRequestView request,
-                                  GetSingleBufferFramebufferCompleter::Sync& _completer) override;
   void ImportBufferCollection(ImportBufferCollectionRequestView request,
                               ImportBufferCollectionCompleter::Sync& _completer) override;
   void SetBufferCollectionConstraints(
@@ -300,7 +296,6 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   const bool use_kernel_framebuffer_;
   uint64_t console_fb_display_id_ = -1;
   const uint32_t id_;
-  uint32_t single_buffer_framebuffer_stride_ = 0;
   zx_handle_t server_handle_;
   uint64_t next_image_id_ = 1;         // Only INVALID_ID == 0 is invalid
   uint64_t next_capture_image_id = 1;  // Only INVALID_ID == 0 is invalid

@@ -54,8 +54,6 @@ class GpuDevice : public Device,
   void DisplayControllerImplSetDisplayControllerInterface(
       const display_controller_interface_protocol_t* intf);
 
-  zx_status_t DisplayControllerImplImportVmoImage(image_t* image, zx::vmo vmo, size_t offset);
-
   zx_status_t DisplayControllerImplImportImage(image_t* image, zx_unowned_handle_t collection,
                                                uint32_t index);
 
@@ -76,9 +74,6 @@ class GpuDevice : public Device,
 
   zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
                                                                   zx_unowned_handle_t collection);
-
-  zx_status_t DisplayControllerImplGetSingleBufferFramebuffer(zx::vmo* out_vmo,
-                                                              uint32_t* out_stride);
 
  private:
   // Internal routines
