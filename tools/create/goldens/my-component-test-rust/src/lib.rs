@@ -16,7 +16,7 @@ async fn my_component_test_rust_test() -> Result<(), Error> {
     // ```
     // use fuchsia_component::client as fclient;
     // use fidl_fuchsia_component as fcomponent;
-    // use fidl_fuchsia_sys2 as fsys;
+    // use fidl_fuchsia_component_decl as fdecl;
     // use fidl_fuchsia_io as fio;
     // use fidl::endpoints;
     //
@@ -24,7 +24,7 @@ async fn my_component_test_rust_test() -> Result<(), Error> {
     // let (exposed_directory, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>()?;
     // let () = realm_proxy
     //     .open_exposed_dir(
-    //         &mut fsys::ChildRef { name: "hello-world".to_string(), collection: None },
+    //         &mut fdecl::ChildRef { name: "hello-world".to_string(), collection: None },
     //         server_end,
     //     )
     //     .await?;
