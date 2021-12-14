@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/87645): implement AudioInput types
-#![allow(unused)]
-
 use {
     crate::notification::Notification,
     crate::reply::*,
     crate::sequencer,
+    crate::sequencer::Sequencer,
     crate::wire,
     crate::wire_convert,
     anyhow::{anyhow, Context, Error},
@@ -20,11 +18,10 @@ use {
     futures::TryStreamExt,
     mapped_vmo::Mapping,
     scopeguard,
-    std::cell::{Cell, RefCell},
+    std::cell::RefCell,
     std::collections::{HashMap, VecDeque},
     std::ffi::CString,
     std::ops::Range,
-    std::rc::Rc,
     tracing,
 };
 
@@ -94,7 +91,14 @@ pub fn create_audio_output<'a>(
 pub fn create_audio_input<'a>(
     audio: &'a fidl_fuchsia_media::AudioProxy,
 ) -> Box<dyn AudioStream<'a> + 'a> {
-    Box::new(AudioInput { audio, conn: RefCell::new(None) })
+    let (s, r) = tokio::sync::watch::channel(false);
+    Box::new(AudioInput {
+        audio,
+        inner: RefCell::new(None),
+        running_send: s,
+        running_recv: r,
+        reply_sequencer: RefCell::new(Sequencer::new()),
+    })
 }
 
 /// Represents a payload buffer used by an AudioRenderer or AudioCapturer.
@@ -207,6 +211,30 @@ impl<T> AudioStreamConn<T> {
             }
         }
     }
+
+    fn validate_packet<'b, 'c>(&self, data_buffer_size: usize) -> Result<(), Error> {
+        // See comments at PayloadBuffer: we assume the total size of each data buffer
+        // is no bigger than period_bytes, allowing each buffer to fit in one packet.
+        if data_buffer_size > self.params.period_bytes {
+            return Err(anyhow!(
+                "received buffer with {} bytes, want < {} bytes",
+                data_buffer_size,
+                self.params.period_bytes
+            ));
+        }
+
+        // Must have an integral number of frames per packet.
+        let frame_bytes = wire_convert::bytes_per_frame(self.params.stream_type);
+        if data_buffer_size % frame_bytes != 0 {
+            return Err(anyhow!(
+                "received buffer with {} bytes, want multiple of frame size ({} bytes)",
+                data_buffer_size,
+                frame_bytes,
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 type AudioOutputConn = AudioStreamConn<fidl_fuchsia_media::AudioRendererProxy>;
@@ -238,10 +266,10 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             fidl::endpoints::create_endpoints::<fidl_fuchsia_media::AudioRendererMarker>()?;
         self.audio.create_audio_renderer(server_end)?;
         let fidl_proxy = client_end.into_proxy()?;
-        fidl_proxy.add_payload_buffer(0, payload_vmo)?;
         fidl_proxy.set_usage(fidl_fuchsia_media::AudioRenderUsage::Media)?;
         fidl_proxy.set_pcm_stream_type(&mut params.stream_type)?;
         fidl_proxy.enable_min_lead_time_events(true)?;
+        fidl_proxy.add_payload_buffer(0, payload_vmo)?;
 
         // Start a bg job to watch for lead time changes.
         let (lead_time_send, mut lead_time_recv) =
@@ -300,7 +328,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             Some(conn) => {
                 conn.closing.set();
                 futures::future::join_all(
-                    conn.packets_pending.iter().map(|(id, n)| n.clone().when_set()),
+                    conn.packets_pending.iter().map(|(_, n)| n.clone().when_set()),
                 )
             }
             None => panic!("called disconnect() without a connection"),
@@ -348,7 +376,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             return reply_txq::err(chain, wire::VIRTIO_SND_S_IO_ERR, 0);
         }
 
-        if let Err(err) = self.validate_packet(conn, &chain) {
+        if let Err(err) = conn.validate_packet(chain.remaining()?) {
             tracing::warn!("{}", err);
             return reply_txq::err(chain, wire::VIRTIO_SND_S_BAD_MSG, conn.latency_bytes());
         }
@@ -384,7 +412,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
 
         while let Some(range) = chain.next().transpose()? {
             // This fails only if the buffer is empty, in which case we can ignore the buffer.
-            let ptr = match range.try_mut_ptr::<u8>() {
+            let ptr = match range.try_ptr::<u8>() {
                 Some(ptr) => ptr,
                 None => continue,
             };
@@ -393,7 +421,7 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             //
             // SAFETY: The range comes from a chain, so by construction it refers to a valid
             // range of memory and we are appropriately synchronized with a well-behaved driver.
-            // `try_ptr_mut` verifies the pointer is correctly aligned. The worst a buggy driver
+            // `try_ptr` verifies the pointer is correctly aligned. The worst a buggy driver
             // could do is write to this buffer concurrently, causing us to read garbage bytes,
             // which would produce garbage audio at the speaker.
             let buf = unsafe { std::slice::from_raw_parts(ptr, range.len()) };
@@ -485,11 +513,12 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
                                 use fidl_fuchsia_media::AudioRendererEvent::OnMinLeadTimeChanged;
                                 match event {
                                     Some(OnMinLeadTimeChanged { min_lead_time_nsec }) => {
-                                        job.lead_time.broadcast(zx::Duration::from_nanos(min_lead_time_nsec));
+                                        job.lead_time.broadcast(zx::Duration::from_nanos(min_lead_time_nsec))?;
                                     },
-                                    // Should get an end-of-stream Err before Ok(None).
-                                    None => tracing::warn!("AudioRenderer event stream: unexpected end-of-stream"),
-                                    _ => tracing::warn!("AudioRenderer event stream: unhandled event {:?}", event),
+                                    None => {
+                                        // FIDL connection closed by peer.
+                                        break;
+                                    }
                                 }
                             },
                             Err(err) => {
@@ -513,77 +542,316 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
     }
 }
 
-impl<'a> AudioOutput<'a> {
-    fn validate_packet<'b, 'c>(
-        &self,
-        conn: &AudioOutputConn,
-        chain: &ReadableChain<'b, 'c>,
-    ) -> Result<(), Error> {
-        // See comments at PayloadBuffer: we assume the total size of the chain is no
-        // bigger than period_bytes, allowing the chain to fit in one packet.
-        let total_size = chain.remaining()?;
-        if total_size > conn.params.period_bytes {
-            return Err(anyhow!(
-                "AudioOutput received buffer with {} bytes, want < {} bytes",
-                total_size,
-                conn.params.period_bytes
-            ));
-        }
-
-        // Must have an integral number of frames per packet.
-        let frame_bytes = wire_convert::bytes_per_frame(conn.params.stream_type);
-        if total_size % frame_bytes != 0 {
-            return Err(anyhow!(
-                "AudioOutput received buffer with {} bytes, want multiple of frame size ({} bytes)",
-                total_size,
-                frame_bytes,
-            ));
-        }
-
-        Ok(())
-    }
-}
-
 /// Wraps a connection to a FIDL AudioCapturer.
 struct AudioInput<'a> {
     audio: &'a fidl_fuchsia_media::AudioProxy,
-    conn: RefCell<Option<AudioInputConn>>,
+    inner: RefCell<Option<AudioInputInner>>,
+    running_send: tokio::sync::watch::Sender<bool>,
+    running_recv: tokio::sync::watch::Receiver<bool>,
+    reply_sequencer: RefCell<Sequencer>,
 }
 
-// TODO(fxbug.dev/87645): implement
+struct AudioInputInner {
+    conn: AudioInputConn,
+    lead_time: tokio::sync::watch::Sender<zx::Duration>,
+}
+
 #[async_trait(?Send)]
 impl<'a> AudioStream<'a> for AudioInput<'a> {
-    async fn connect(&self, _params: AudioStreamParams) -> Result<(), Error> {
-        tracing::warn!("AudioInput is not implemented");
+    async fn connect(&self, mut params: AudioStreamParams) -> Result<(), Error> {
+        // Allocate a payload buffer.
+        let (payload_buffer, payload_vmo) =
+            PayloadBuffer::new(params.buffer_bytes, params.period_bytes, "AudioRendererBuffer")
+                .context("failed to create payload buffer for AudioRenderer")?;
+
+        // Configure the capturer.
+        // Must call SetPcmStreamType before AddPayloadBuffer.
+        let (client_end, server_end) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_media::AudioCapturerMarker>()?;
+        self.audio.create_audio_capturer(server_end, false /* not loopback */)?;
+        let fidl_proxy = client_end.into_proxy()?;
+        fidl_proxy.set_usage(fidl_fuchsia_media::AudioCaptureUsage::Foreground)?;
+        fidl_proxy.set_pcm_stream_type(&mut params.stream_type)?;
+        fidl_proxy.add_payload_buffer(0, payload_vmo)?;
+
+        let (lead_time_send, lead_time_recv) =
+            tokio::sync::watch::channel(zx::Duration::from_nanos(0));
+
+        *self.inner.borrow_mut() = Some(AudioInputInner {
+            conn: AudioInputConn {
+                fidl_proxy,
+                params,
+                payload_buffer,
+                lead_time: lead_time_recv,
+                packets_received: 0,
+                packets_pending: HashMap::new(),
+                closing: Notification::new(),
+            },
+            lead_time: lead_time_send,
+        });
         Ok(())
     }
 
     async fn disconnect(&self) -> Result<(), Error> {
-        tracing::warn!("AudioInput is not implemented");
+        // 5.14.6.6.5.1 Device Requirements: Stream Release
+        // - The device MUST complete all pending I/O messages for the specified stream ID.
+        // - The device MUST NOT complete the control request while there are pending I/O
+        //   messages for the specified stream ID.
+        //
+        // To implement this requirement, we set the `closing` notification, which will cause
+        // all pending and future on_receive_data calls to fail with an IO_ERR. Then, we wait
+        // until all pending on_receive_data calls have completed before disconnecting.
+        let futs = match &mut *self.inner.borrow_mut() {
+            Some(AudioInputInner { conn, .. }) => {
+                conn.closing.set();
+                futures::future::join_all(
+                    conn.packets_pending.iter().map(|(_, n)| n.clone().when_set()),
+                )
+            }
+            None => panic!("called disconnect() without a connection"),
+        };
+        futs.await;
+        // Writing None here will deallocate all per-connection state, including the
+        // FIDL channel and the payload buffer mapping.
+        *self.inner.borrow_mut() = None;
         Ok(())
     }
 
     async fn start(&self) -> Result<(), Error> {
-        tracing::warn!("AudioInput is not implemented");
+        // This will cause on_receive_data to start sending capture requests.
+        self.running_send.broadcast(true)?;
         Ok(())
     }
 
     async fn stop(&self) -> Result<(), Error> {
-        tracing::warn!("AudioInput is not implemented");
+        // This will cause on_receive_data to stop sending capture requests.
+        self.running_send.broadcast(false)?;
         Ok(())
     }
 
     async fn on_receive_data<'b, 'c>(
         &self,
-        _chain: ReadableChain<'b, 'c>,
-        _lock: sequencer::Lock,
+        chain: ReadableChain<'b, 'c>,
+        lock: sequencer::Lock,
     ) -> Result<(), Error> {
-        tracing::warn!("AudioInput is not implemented");
+        let mut inner_option = self.inner.borrow_mut();
+        let conn = match &mut *inner_option {
+            Some(AudioInputInner { conn, .. }) => conn,
+            None => panic!("called on_receive_data() without a connection"),
+        };
+
+        let mut chain = WritableChain::from_readable(chain)?;
+        let buffer_size = reply_rxq::buffer_size(&chain)?;
+        if let Err(err) = conn.validate_packet(buffer_size) {
+            tracing::warn!("{}", err);
+            return reply_rxq::err_from_writable(
+                chain,
+                wire::VIRTIO_SND_S_BAD_MSG,
+                conn.latency_bytes(),
+            );
+        }
+
+        let closing = conn.closing.clone();
+        let mut running = self.running_recv.clone();
+
+        // Before we await, drop these borrowed refs so that other async tasks can borrow
+        // the conn while we're waiting.
+        std::mem::drop(conn);
+        std::mem::drop(inner_option);
+
+        // Wait until capture starts or the connection closes.
+        loop {
+            let closing = closing.clone();
+            futures::select! {
+                running = running.recv().fuse() => match running {
+                    Some(true) => break,
+                    Some(false) => continue,
+                    None => {
+                        // Cannot happen: None means the sender was dropped, but self
+                        // must outlive the sender.
+                        panic!("impossible");
+                    }
+                },
+                _ = closing.when_set().fuse() => {
+                    // Disconnected before capture started.
+                    return reply_rxq::err_from_writable(chain, wire::VIRTIO_SND_S_IO_ERR, 0);
+                }
+            };
+        }
+
+        let mut inner_option = self.inner.borrow_mut();
+        let conn = match &mut *inner_option {
+            Some(AudioInputInner { conn, .. }) => conn,
+            None => {
+                // This can happen when the driver starts capture then immediately disconnects:
+                // We may hit this case instead of the closing_fut case above because both futures
+                // can be ready at the same time and select! is not deterministic.
+                return reply_rxq::err_from_writable(chain, wire::VIRTIO_SND_S_IO_ERR, 0);
+            }
+        };
+
+        // Get a packet to capture into.
+        let packet_range = match conn.payload_buffer.packets_avail.pop_front() {
+            Some(range) => range,
+            None => {
+                tracing::warn!(
+                    "AudioInput ran out of packets (latest buffer has size {} bytes, period is {} bytes)",
+                    buffer_size,
+                    conn.params.period_bytes
+                );
+                return reply_rxq::err_from_writable(
+                    chain,
+                    wire::VIRTIO_SND_S_IO_ERR,
+                    conn.latency_bytes(),
+                );
+            }
+        };
+
+        // Always return this packet when we're done.
+        scopeguard::defer!(
+            // Need to reacquire this borrow since we don't hold it across the await.
+            match &mut *self.inner.borrow_mut() {
+                Some(AudioInputInner { conn, .. }) => {
+                    conn.payload_buffer.packets_avail.push_back(packet_range.clone());
+                    ()
+                }
+                None => (), // ignore: disconnected while before our await completed
+            }
+        );
+
+        // A notification that is signalled when the packet is done.
+        let when_done = Notification::new();
+        scopeguard::defer!(when_done.set());
+
+        // Add to the pending set.
+        let packet_id = conn.packets_received;
+        conn.packets_received += 1;
+        conn.packets_pending.insert(packet_id, when_done.clone());
+        scopeguard::defer!(
+            // Need to reacquire this borrow since we don't hold it across the await.
+            match &mut *self.inner.borrow_mut() {
+                Some(AudioInputInner { conn, .. }) => {
+                    conn.packets_pending.remove(&packet_id);
+                    ()
+                }
+                None => (), // ignore: disconnected while before our await completed
+            }
+        );
+
+        // Capture data into this packet.
+        let bytes_per_frame = wire_convert::bytes_per_frame(conn.params.stream_type);
+        let resp_fut = conn.fidl_proxy.capture_at(
+            0,                                             // payload_buffer_id
+            (packet_range.start / bytes_per_frame) as u32, // offset in frames
+            (buffer_size / bytes_per_frame) as u32,        // num frames
+        );
+
+        // Before we await, drop these borrowed refs so that other async tasks can borrow
+        // the conn while we're waiting.
+        std::mem::drop(conn);
+        std::mem::drop(inner_option);
+
+        // We need to send CaptureAt requests in order, then process those replies in
+        // the same order. Holding `lock` ensures that we send requests in the correct order.
+        // We release `lock` here so that other packets can be queued concurrently.
+        //
+        // To ensure we process replies in the correct order, we obtain a reply sequencer token.
+        // This reply token is often not necessary in practice: the audio server will respond to
+        // CaptureAt calls in the expected order, at the rate of one response per period. Hence,
+        // as long as our thread is scheduled in a timely manner, there should be exactly one
+        // outsanding reply at any time. However, there may be multiple replies if we are scheduled
+        // late, and also in tests, which don't use real time and hence can reply to multiple
+        // CaptureAt calls simultaneously.
+        let reply_sequence = self.reply_sequencer.borrow_mut().next();
+        std::mem::drop(lock);
+
+        // Wait until the packet capture completes or the connection is closed.
+        let resp = {
+            let closing = closing.clone();
+            futures::select! {
+                resp = resp_fut.fuse() =>
+                    match &*self.inner.borrow() {
+                        Some(AudioInputInner {conn, ..}) => match resp {
+                            Ok(resp) => resp,
+                            Err(err) =>{
+                                tracing::warn!("AudioInput failed to capture packet: {}", err);
+                                return reply_rxq::err_from_writable(chain, wire::VIRTIO_SND_S_IO_ERR, conn.latency_bytes());
+                            },
+                        },
+                        None => {
+                            // Disconnected before the packet completed. We may hit this case
+                            // instead of the closing_fut case below because both futures can
+                            // be ready at the same time and select! is not deterministic.
+                            return reply_rxq::err_from_writable(chain, wire::VIRTIO_SND_S_IO_ERR, 0);
+                        },
+                    },
+                _ = closing.when_set().fuse() => {
+                    // Disconnected before the packet completed.
+                    return reply_rxq::err_from_writable(chain, wire::VIRTIO_SND_S_IO_ERR, 0);
+                }
+            }
+        };
+
+        // Wait for our turn to reply.
+        // As discussed above, in most cases this should be instantaneous.
+        let _lock = futures::select! {
+            lock = reply_sequence.wait_turn().fuse() => lock,
+            _ = closing.when_set().fuse() => {
+                // Disconnected.
+                return reply_rxq::err_from_writable(chain, wire::VIRTIO_SND_S_IO_ERR, 0);
+            }
+        };
+
+        // Validate that the response matches our expected packet.
+        if resp.payload_buffer_id != 0
+            || resp.payload_offset != (packet_range.start as u64)
+            || resp.payload_size != (buffer_size as u64)
+        {
+            tracing::warn!("skipping captured packet {:?}, expected {{.payload_buffer_id=0, .payload_offset={}, .payload_size={}}}",
+                resp, packet_range.start, buffer_size);
+            return Ok(());
+        }
+
+        let inner_option = self.inner.borrow();
+        let inner = inner_option.as_ref().unwrap();
+
+        // Copy the captured packet into the audio buffer.
+        let mut offset = 0;
+        let packet = inner.conn.payload_buffer.mapping.slice(packet_range.clone());
+
+        while let Some(range) = chain.next_with_limit(buffer_size - offset).transpose()? {
+            // This fails only if the buffer is empty, in which case we can ignore the buffer.
+            let ptr = match range.try_mut_ptr::<u8>() {
+                Some(ptr) => ptr,
+                None => continue,
+            };
+
+            // Cast to a &mut [u8], then copy from the packet.
+            //
+            // SAFETY: The range comes from a chain, so by construction it refers to a valid
+            // range of memory and we are appropriately synchronized with a well-behaved driver.
+            // `try_ptr_mut` verifies the pointer is correctly aligned. The worst a buggy driver
+            // could do is write to this buffer concurrently, which may garble the captured audio.
+            let buf = unsafe { std::slice::from_raw_parts_mut(ptr, range.len()) };
+            let written = packet.read_at(offset, buf);
+            chain.add_written(written as u32);
+            offset += written;
+            if offset > buffer_size {
+                panic!("wrote past the end of the buffer: {} > {}", offset, buffer_size);
+            }
+            if offset == buffer_size {
+                break;
+            }
+        }
+
+        let latency = zx::Time::get_monotonic() - zx::Time::from_nanos(resp.pts);
+        inner.lead_time.broadcast(latency)?;
+        reply_rxq::success(chain, inner.conn.latency_bytes())?;
         Ok(())
     }
 
     async fn do_background_work(&self) -> Result<(), Error> {
-        tracing::warn!("AudioInput is not implemented");
+        // No-op.
         Ok(())
     }
 }
