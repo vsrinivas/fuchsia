@@ -64,15 +64,6 @@ Parser::Parser(Lexer* lexer, Reporter* reporter, ExperimentalFlags experimental_
 
 std::nullptr_t Parser::Fail() { return Fail(ErrUnexpectedToken); }
 
-std::nullptr_t Parser::Fail(std::unique_ptr<Diagnostic> err) {
-  assert(err && "should not report nullptr error");
-  if (Ok()) {
-    err->span = last_token_.span();
-    reporter_->Report(std::move(err));
-  }
-  return nullptr;
-}
-
 template <typename... Args>
 std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const identity_t<Args>&... args) {
   return Fail(err, last_token_, args...);
@@ -81,17 +72,14 @@ std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const identity_t<Args>
 template <typename... Args>
 std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, Token token,
                             const identity_t<Args>&... args) {
-  if (Ok()) {
-    reporter_->Report(err, token, args...);
-  }
-  return nullptr;
+  return Fail(err, token.span(), args...);
 }
 
 template <typename... Args>
-std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
+std::nullptr_t Parser::Fail(const ErrorDef<Args...>& err, SourceSpan span,
                             const identity_t<Args>&... args) {
   if (Ok()) {
-    reporter_->Report(err, span, args...);
+    reporter_->Fail(err, span, args...);
   }
   return nullptr;
 }
@@ -398,7 +386,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
       // disallow any blank lines between this doc comment and the previous one
       std::string_view trailing_whitespace = last_token_.previous_end().data();
       if (std::count(trailing_whitespace.cbegin(), trailing_whitespace.cend(), '\n') > 1)
-        reporter_->Report(WarnBlankLinesWithinDocCommentBlock, previous_token_);
+        reporter_->Warn(WarnBlankLinesWithinDocCommentBlock, previous_token_.span());
     }
 
     doc_line = ConsumeToken(OfKind(Token::Kind::kDocComment));
@@ -412,7 +400,7 @@ std::unique_ptr<raw::Attribute> Parser::ParseDocComment() {
   auto literal = std::make_unique<raw::DocCommentLiteral>(scope.GetSourceElement());
   auto constant = std::make_unique<raw::LiteralConstant>(std::move(literal));
   if (Peek().kind() == Token::Kind::kEndOfFile)
-    reporter_->Report(WarnDocCommentMustBeFollowedByDeclaration, previous_token_);
+    reporter_->Warn(WarnDocCommentMustBeFollowedByDeclaration, previous_token_.span());
 
   std::vector<std::unique_ptr<raw::AttributeArg>> args;
   args.emplace_back(
@@ -1599,8 +1587,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       case CASE_IDENTIFIER(Token::Subkind::kUsing): {
         add(&using_list, [&] { return ParseUsing(std::move(attributes), scope); });
         if (Ok() && done_with_library_imports) {
-          reporter_->Report(diagnostics::ErrLibraryImportsMustBeGroupedAtTopOfFile,
-                            using_list.back()->span());
+          Fail(ErrLibraryImportsMustBeGroupedAtTopOfFile, using_list.back()->span());
         }
         return More;
       }
@@ -1637,7 +1624,7 @@ bool Parser::ConsumeTokensUntil(std::set<Token::Kind> exit_tokens) {
     for (const auto& exit_token : exit_tokens) {
       if (token.kind() == exit_token)
         // signal to ReadToken to stop by returning an error
-        return Reporter::MakeError(ErrUnexpectedToken);
+        return Diagnostic::MakeError(ErrUnexpectedToken, std::nullopt);
     }
     // nullptr return value indicates -> yes, consume to ReadToken
     return nullptr;

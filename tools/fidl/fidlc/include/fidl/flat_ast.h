@@ -49,6 +49,7 @@ constexpr size_t kMaxTableOrdinals = 64;
 using diagnostics::Diagnostic;
 using diagnostics::ErrorDef;
 using reporter::Reporter;
+using reporter::ReporterMixin;
 using utils::identity_t;
 
 template <typename T>
@@ -389,6 +390,15 @@ struct LayoutParameterList {
       : items(std::move(items)), span(span) {}
 
   std::vector<std::unique_ptr<LayoutParameter>> items;
+
+  // Span of all parameters, or of the type constructor's name if there are none
+  // (used for "too few parameters" errors when 0 are given). For example:
+  //
+  //     string    vector<bool>    array<uint32, 3>
+  //     ^~~~~~          ^~~~~~         ^~~~~~~~~~~
+  //
+  // It is null for generated types where no span is available. In these cases
+  // we should never attempt to access it for an error message.
   const std::optional<SourceSpan> span;
 };
 
@@ -398,6 +408,7 @@ struct TypeConstraints {
       : items(std::move(items)), span(span) {}
 
   std::vector<std::unique_ptr<Constant>> items;
+  // Similar to LayoutParameterList's span but for constraints.
   const std::optional<SourceSpan> span;
 };
 
@@ -818,9 +829,12 @@ struct TypeAlias final : public Decl {
 // Unlike making a direct friend relationship, this approach:
 // 1. avoids having to declare every TypeTemplate subclass as a friend
 // 2. only exposes the methods that are needed from the Library to the TypeTemplate.
-class LibraryMediator {
+class LibraryMediator : private ReporterMixin {
  public:
-  explicit LibraryMediator(Library* library) : library_(library) {}
+  explicit LibraryMediator(Library* library, Reporter* reporter)
+      : ReporterMixin(reporter), library_(library) {}
+
+  using ReporterMixin::Fail;
 
   // Top level methods for resolving layout parameters. These are used by
   // TypeTemplates.
@@ -871,10 +885,6 @@ class LibraryMediator {
   bool ResolveAsProtocol(const Constant* size_constant, const Protocol** out_decl) const;
   Decl* LookupDeclByName(Name::Key name) const;
 
-  template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-            const identity_t<Args>&... args) const;
-
   // Used specifically in TypeAliasTypeTemplates to recursively compile the next
   // type alias.
   void CompileDecl(Decl* decl) const;
@@ -883,10 +893,10 @@ class LibraryMediator {
   Library* library_;
 };
 
-class TypeTemplate {
+class TypeTemplate : protected ReporterMixin {
  public:
   TypeTemplate(Name name, Typespace* typespace, Reporter* reporter)
-      : typespace_(typespace), name_(std::move(name)), reporter_(reporter) {}
+      : ReporterMixin(reporter), typespace_(typespace), name_(std::move(name)) {}
 
   TypeTemplate(TypeTemplate&& type_template) = default;
 
@@ -905,18 +915,9 @@ class TypeTemplate {
   bool HasGeneratedName() const;
 
  protected:
-  template <typename... Args>
-  bool Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
-            const std::optional<SourceSpan>& span, const identity_t<Args>&... args) const;
-  // TODO(fxbug.dev/89213): Remove, all failures should report spans.
-  template <typename... Args>
-  bool FailNoSpan(const ErrorDef<Args...>& err, const identity_t<Args>&... args) const;
-
   Typespace* typespace_;
 
   Name name_;
-
-  Reporter* reporter_;
 };
 
 // Typespace provides builders for all types (e.g. array, vector, string), and
@@ -924,9 +925,9 @@ class TypeTemplate {
 // shared amongst all uses of said type. For instance, while the text
 // `vector<uint8>:7` may appear multiple times in source, these all indicate
 // the same type.
-class Typespace {
+class Typespace : private ReporterMixin {
  public:
-  explicit Typespace(Reporter* reporter) : reporter_(reporter) {}
+  explicit Typespace(Reporter* reporter) : ReporterMixin(reporter) {}
 
   bool Create(const LibraryMediator& lib, const flat::Name& name,
               const std::unique_ptr<LayoutParameterList>& parameters,
@@ -970,7 +971,6 @@ class Typespace {
   std::map<Name::Key, std::unique_ptr<TypeTemplate>> templates_;
   std::vector<std::unique_ptr<Size>> sizes_;
   std::vector<std::unique_ptr<Type>> types_;
-  Reporter* reporter_;
 
   static const Name kBoolTypeName;
   static const Name kInt8TypeName;
@@ -1195,7 +1195,7 @@ using MethodHasher = fit::function<raw::Ordinal64(
 
 struct LibraryComparator;
 
-class Library : Attributable {
+class Library : private Attributable, private ReporterMixin {
   friend AttributeSchema;
   friend AttributeArgSchema;
   friend StepBase;
@@ -1208,8 +1208,8 @@ class Library : Attributable {
   Library(const Libraries* all_libraries, Reporter* reporter, Typespace* typespace,
           MethodHasher method_hasher, ExperimentalFlags experimental_flags)
       : Attributable(AttributePlacement::kLibrary, nullptr),
+        ReporterMixin(reporter),
         all_libraries_(all_libraries),
-        reporter_(reporter),
         typespace_(typespace),
         method_hasher_(std::move(method_hasher)),
         experimental_flags_(experimental_flags) {}
@@ -1222,25 +1222,6 @@ class Library : Attributable {
   const AttributeList* GetAttributes() const { return attributes.get(); }
 
  private:
-  bool Fail(std::unique_ptr<Diagnostic> err);
-  // TODO(fxbug.dev/89213): Remove, all failures should report spans. There is
-  // one error ErrIncludeCycle for which a major change is required to report
-  // with appropriate span information, but other cases should be relatively
-  // direct to improve.
-  template <typename... Args>
-  bool FailNoSpan(const ErrorDef<Args...>& err, const identity_t<Args>&... args);
-  template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-            const identity_t<Args>&... args);
-  template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const Name& name, const identity_t<Args>&... args) {
-    return Fail(err, name.span(), args...);
-  }
-  template <typename... Args>
-  bool Fail(const ErrorDef<Args...>& err, const Decl& decl, const identity_t<Args>&... args) {
-    return Fail(err, decl.name, args...);
-  }
-
   // TODO(fxbug.dev/7920): Rationalize the use of names. Here, a simple name is
   // one that is not scoped, it is just text. An anonymous name is one that
   // is guaranteed to be unique within the library, and a derived name is one
@@ -1432,7 +1413,6 @@ class Library : Attributable {
   // keyed by `utils::canonicalize(name.decl_name())` rather than `name.key()`.
   std::map<std::string, Decl*> declarations_by_canonical_name_;
 
-  Reporter* reporter_;
   Typespace* typespace_;
   const MethodHasher method_hasher_;
   const ExperimentalFlags experimental_flags_;
@@ -1451,10 +1431,13 @@ struct LibraryComparator {
   }
 };
 
-class StepBase {
+class StepBase : protected ReporterMixin {
  public:
   StepBase(Library* library)
-      : library_(library), checkpoint_(library->reporter_->Checkpoint()), done_(false) {}
+      : ReporterMixin(library->reporter()),
+        library_(library),
+        checkpoint_(reporter()->Checkpoint()),
+        done_(false) {}
 
   ~StepBase() { assert(done_ && "Step must be completed before destructor is called"); }
 

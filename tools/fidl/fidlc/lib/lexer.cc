@@ -342,7 +342,7 @@ Token Lexer::Lex() {
             return LexCommentOrDocComment();
           default: {
             SourceSpan span(std::string_view(token_start_, token_size_), source_file_);
-            reporter_->Report(ErrInvalidCharacter, span, span.data());
+            Fail(ErrInvalidCharacter, span, span.data());
             continue;
           }
         }  // switch
@@ -385,7 +385,7 @@ Token Lexer::Lex() {
 
       default: {
         SourceSpan span(std::string_view(token_start_, token_size_), source_file_);
-        reporter_->Report(ErrInvalidCharacter, span, span.data());
+        Fail(ErrInvalidCharacter, span, span.data());
         continue;
       }
     }  // switch

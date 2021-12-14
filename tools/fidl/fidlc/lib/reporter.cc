@@ -28,7 +28,7 @@ static std::string MakeSquiggle(std::string_view surrounding_line, int column) {
   return squiggle;
 }
 
-std::string Format(std::string_view qualifier, const std::optional<SourceSpan>& span,
+std::string Format(std::string_view qualifier, std::optional<SourceSpan> span,
                    std::string_view message, bool color, size_t squiggle_size) {
   const std::string_view bold = color ? "\033[1m" : "";
   const std::string_view bold_red = color ? "\033[1;31m" : "";
@@ -141,12 +141,12 @@ std::vector<Diagnostic*> Reporter::Diagnostics() const {
   return diagnostics;
 }
 
-void Reporter::PrintReports() const {
+void Reporter::PrintReports(bool enable_color) const {
   const auto diags = Diagnostics();
   for (const auto& diag : diags) {
     size_t squiggle_size = diag->span ? diag->span->data().size() : 0;
     std::string qualifier = diag->kind == DiagnosticKind::kError ? "error" : "warning";
-    auto msg = Format(qualifier, diag->span, diag->msg, enable_color_, squiggle_size);
+    auto msg = Format(qualifier, diag->span, diag->msg, enable_color, squiggle_size);
     fprintf(stderr, "%s\n", msg.c_str());
   }
 

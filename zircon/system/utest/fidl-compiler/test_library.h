@@ -316,7 +316,7 @@ class TestLibrary final {
     return &owned_shared_;
   }
 
-  void PrintReports() { reporter_->PrintReports(); }
+  void PrintReports() { reporter_->PrintReports(/* enable_color = */ false); }
 
  protected:
   SharedAmongstLibraries owned_shared_;

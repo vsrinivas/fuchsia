@@ -9,6 +9,7 @@
 #include <fidl/parser.h>
 #include <fidl/source_file.h>
 #include <fidl/tables_generator.h>
+#include <unistd.h>
 
 #include <perftest/perftest.h>
 
@@ -35,16 +36,17 @@ bool RunBenchmark(perftest::RepeatState* state, const char* fidl) {
     fidl::flat::Library library(&all_libraries, &reporter, &typespace,
                                 fidl::ordinals::GetGeneratedOrdinal64, experimental_flags);
     auto ast = parser.Parse();
+    bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
     if (!parser.Success()) {
-      reporter.PrintReports();
+      reporter.PrintReports(enable_color);
       return false;
     }
     if (!library.ConsumeFile(std::move(ast))) {
-      reporter.PrintReports();
+      reporter.PrintReports(enable_color);
       return false;
     }
     if (!library.Compile()) {
-      reporter.PrintReports();
+      reporter.PrintReports(enable_color);
       return false;
     }
     fidl::JSONGenerator json_generator(&library);

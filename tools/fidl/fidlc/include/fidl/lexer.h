@@ -17,19 +17,17 @@
 
 namespace fidl {
 
-using reporter::Reporter;
-
 // The lexer does not own the data it operates on. It merely takes a
 // std::string_view and produces a stream of tokens and possibly a failure
 // partway through.
 // See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/compiler#_lexing
 // for additional context
-class Lexer {
+class Lexer : private reporter::ReporterMixin {
  public:
   // The Lexer assumes the final character is 0. This substantially
   // simplifies advancing to the next character.
-  Lexer(const SourceFile& source_file, Reporter* reporter)
-      : source_file_(source_file), reporter_(reporter) {
+  Lexer(const SourceFile& source_file, reporter::Reporter* reporter)
+      : ReporterMixin(reporter), source_file_(source_file) {
     token_subkinds = {
 #define TOKEN_SUBKIND(Name, Spelling) {Spelling, Token::Subkind::k##Name},
 #include "fidl/token_definitions.inc"
@@ -63,7 +61,6 @@ class Lexer {
 
   const SourceFile& source_file_;
   std::map<std::string_view, Token::Subkind> token_subkinds;
-  Reporter* reporter_;
 
   const char* current_ = nullptr;
   const char* end_of_file_ = nullptr;

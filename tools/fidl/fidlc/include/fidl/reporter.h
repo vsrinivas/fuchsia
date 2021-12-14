@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "diagnostics.h"
@@ -25,13 +26,14 @@ using diagnostics::ErrorDef;
 using diagnostics::WarningDef;
 using utils::identity_t;
 
-std::string Format(std::string_view qualifier, const std::optional<SourceSpan>& span,
+std::string Format(std::string_view qualifier, std::optional<SourceSpan> span,
                    std::string_view message, bool color, size_t squiggle_size = 0u);
 
 class Reporter {
  public:
-  explicit Reporter(bool warnings_as_errors = false, bool enable_color = false)
-      : warnings_as_errors_(warnings_as_errors), enable_color_(enable_color) {}
+  Reporter() = default;
+  Reporter(const Reporter&) = delete;
+  Reporter(Reporter&&) = default;
 
   class Counts {
    public:
@@ -48,56 +50,25 @@ class Reporter {
     const size_t num_warnings_;
   };
 
-  // TODO(fxbug.dev/90095): Remove these.
   template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& err,
-                                               const std::optional<SourceSpan>& span,
-                                               const identity_t<Args>&... args) {
-    return Diagnostic::MakeError(err, span, args...);
+  bool Fail(const ErrorDef<Args...>& def, SourceSpan span, const identity_t<Args>&... args) {
+    Report(Diagnostic::MakeError(def, span, args...));
+    return false;
   }
+
+  // TODO(fxbug.dev/89213): Remove, all failures should report spans. There is
+  // one error ErrIncludeCycle for which a major change is required to report
+  // with appropriate span information, but other cases should be relatively
+  // direct to improve.
   template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeError(const ErrorDef<Args...>& err,
-                                               const identity_t<Args>&... args) {
-    return Diagnostic::MakeError(err, std::nullopt, args...);
-  }
-  template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& warn,
-                                                 const std::optional<SourceSpan>& span,
-                                                 const identity_t<Args>&... args) {
-    return Diagnostic::MakeWarning(warn, span, args...);
-  }
-  template <typename... Args>
-  static std::unique_ptr<Diagnostic> MakeWarning(const WarningDef<Args...>& warn,
-                                                 const identity_t<Args>&... args) {
-    return Diagnostic::MakeWarning(warn, std::nullopt, args...);
+  bool FailNoSpan(const ErrorDef<Args...>& def, const identity_t<Args>&... args) {
+    Report(Diagnostic::MakeError(def, std::nullopt, args...));
+    return false;
   }
 
   template <typename... Args>
-  void Report(const ErrorDef<Args...>& err, const identity_t<Args>&... args) {
-    Report(std::move(MakeError(err, args...)));
-  }
-  template <typename... Args>
-  void Report(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-              const identity_t<Args>&... args) {
-    Report(std::move(MakeError(err, span, args...)));
-  }
-  template <typename... Args>
-  void Report(const ErrorDef<Args...>& err, const Token& token, const identity_t<Args>&... args) {
-    Report(std::move(MakeError(err, token.span(), args...)));
-  }
-
-  template <typename... Args>
-  void Report(const WarningDef<Args...>& err, const identity_t<Args>&... args) {
-    Report(std::move(MakeWarning(err, args...)));
-  }
-  template <typename... Args>
-  void Report(const WarningDef<Args...>& warn, const std::optional<SourceSpan>& span,
-              const identity_t<Args>&... args) {
-    Report(std::move(MakeWarning(warn, span, args...)));
-  }
-  template <typename... Args>
-  void Report(const WarningDef<Args...>& err, const Token& token, const identity_t<Args>&... args) {
-    Report(std::move(MakeWarning(err, token.span(), args...)));
+  void Warn(const WarningDef<Args...>& def, SourceSpan span, const identity_t<Args>&... args) {
+    Report(Diagnostic::MakeWarning(def, span, args...));
   }
 
   // Reports an error or warning.
@@ -106,8 +77,8 @@ class Reporter {
   // Combines errors and warnings and sorts by (file, span).
   std::vector<Diagnostic*> Diagnostics() const;
   // Prints a report based on Diagnostics() in text format, with ANSI color
-  // escape codes if color is enabled.
-  void PrintReports() const;
+  // escape codes if enable_color is true.
+  void PrintReports(bool enable_color) const;
   // Prints a report based on Diagnostics() in JSON format.
   void PrintReportsJson() const;
   // Creates a checkpoint. This lets you detect if new errors or warnings have
@@ -122,14 +93,54 @@ class Reporter {
   void AddError(std::unique_ptr<Diagnostic> error);
   void AddWarning(std::unique_ptr<Diagnostic> warning);
 
-  bool warnings_as_errors_;
-  bool enable_color_;
+  bool warnings_as_errors_ = false;
 
   // The reporter collects error and warnings separately so that we can easily
   // keep track of the current number of errors during compilation. The number
   // of errors is used to determine whether the parser is in an `Ok` state.
   std::vector<std::unique_ptr<Diagnostic>> errors_;
   std::vector<std::unique_ptr<Diagnostic>> warnings_;
+};
+
+// ReporterMixin enables classes to call certain Reporter methods unqualified.
+// It is meant to be used with private or protected inheritance. For example:
+//
+//     class Foo : private ReporterMixin {
+//         Foo(Reporter* r) : ReporterMixin(r) {}
+//         void DoSomething() {
+//             if (/* ... */) Fail(...);  // instead of reporter_->Fail(...);
+//         }
+//     };
+//
+// Note: All ReporterMixin methods must be const, otherwise classes using the
+// mixin would not be able to call them in const contexts.
+class ReporterMixin {
+ public:
+  explicit ReporterMixin(Reporter* reporter) : reporter_(reporter) {}
+
+  Reporter* reporter() const { return reporter_; }
+
+  void Report(std::unique_ptr<Diagnostic> diag) const { reporter_->Report(std::move(diag)); }
+
+  template <typename... Args>
+  bool Fail(const ErrorDef<Args...>& def, SourceSpan span, const identity_t<Args>&... args) const {
+    return reporter_->Fail(def, span, args...);
+  }
+
+  // TODO(fxbug.dev/89213): Remove.
+  template <typename... Args>
+  bool FailNoSpan(const ErrorDef<Args...>& def, const identity_t<Args>&... args) const {
+    return reporter_->FailNoSpan(def, args...);
+  }
+
+  template <typename... Args>
+  void Warn(const WarningDef<Args...>& def, SourceSpan span,
+            const identity_t<Args>&... args) const {
+    reporter_->Warn(def, span, args...);
+  }
+
+ private:
+  Reporter* reporter_;
 };
 
 }  // namespace fidl::reporter

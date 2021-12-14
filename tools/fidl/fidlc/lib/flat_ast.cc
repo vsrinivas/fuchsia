@@ -243,9 +243,8 @@ bool IsSimple(const Type* type, Reporter* reporter) {
             LibraryName(identifier_type->name.library(), "."), identifier_type->name.decl_name());
         if (allowed_simple_unions.find(union_name) == allowed_simple_unions.end()) {
           // Any unions not in the allow-list are treated as non-simple.
-          reporter->Report(ErrUnionCannotBeSimple, identifier_type->name.span(),
-                           identifier_type->name);
-          return false;
+          return reporter->Fail(ErrUnionCannotBeSimple, identifier_type->name.span().value(),
+                                identifier_type->name);
         }
       }
       // TODO(fxbug.dev/70186): This only applies to nullable structs, which should
@@ -313,12 +312,10 @@ bool Typespace::CreateNotOwned(const LibraryMediator& lib, const flat::Name& nam
 
   auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
-    reporter_->Report(ErrUnknownType, name.span(), name);
-    return false;
+    return Fail(ErrUnknownType, name.span().value(), name);
   }
   if (type_template->HasGeneratedName() && (name.as_anonymous() == nullptr)) {
-    reporter_->Report(ErrAnonymousNameReference, name.span(), name);
-    return false;
+    return Fail(ErrAnonymousNameReference, name.span().value(), name);
   }
   return type_template->Create(lib, {.parameters = parameters, .constraints = constraints},
                                out_type, out_params);
@@ -351,20 +348,6 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   return nullptr;
 }
 
-template <typename... Args>
-bool TypeTemplate::Fail(const ErrorDef<const TypeTemplate*, Args...>& err,
-                        const std::optional<SourceSpan>& span,
-                        const identity_t<Args>&... args) const {
-  reporter_->Report(err, span, this, args...);
-  return false;
-}
-
-template <typename... Args>
-bool TypeTemplate::FailNoSpan(const ErrorDef<Args...>& err, const identity_t<Args>&... args) const {
-  reporter_->Report(err, args...);
-  return false;
-}
-
 bool TypeTemplate::HasGeneratedName() const { return name_.as_anonymous() != nullptr; }
 
 class PrimitiveTypeTemplate : public TypeTemplate {
@@ -378,8 +361,8 @@ class PrimitiveTypeTemplate : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
-                  num_params);
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  0, num_params);
     }
 
     // TODO(fxbug.dev/76219): Should instead use the static const types provided
@@ -403,7 +386,7 @@ bool PrimitiveType::ApplyConstraints(const flat::LibraryMediator& lib,
   if (num_constraints == 1)
     return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
   if (num_constraints > 1)
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 0, num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span.value(), layout, 0, num_constraints);
   *out_type = std::make_unique<PrimitiveType>(name, subtype);
   return true;
 }
@@ -418,7 +401,7 @@ class ArrayTypeTemplate final : public TypeTemplate {
     size_t num_params = unresolved_args.parameters->items.size();
     size_t expected_params = 2;
     if (num_params != expected_params) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span,
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
                   expected_params, num_params);
     }
 
@@ -450,7 +433,7 @@ bool ArrayType::ApplyConstraints(const flat::LibraryMediator& lib,
   if (num_constraints == 1)
     return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
   if (num_constraints > 1)
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 0, num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span.value(), layout, 0, num_constraints);
   *out_type = std::make_unique<ArrayType>(name, element_type, element_count);
   return true;
 }
@@ -465,8 +448,8 @@ class BytesTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
-                  num_params);
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  0, num_params);
     }
 
     VectorType type(name_, &uint8_type_);
@@ -514,7 +497,7 @@ bool VectorBaseType::ResolveSizeAndNullability(const LibraryMediator& lib,
     }
     out_params->nullability = types::Nullability::kNullable;
   } else if (num_constraints >= 3) {
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 2, num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span.value(), layout, 2, num_constraints);
   }
   return true;
 }
@@ -530,10 +513,8 @@ class VectorTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 1) {
-      // TODO(fxbug.dev/87619): If num_params is 0, parameters->span will be
-      // null, so we should use the overall type constructor's span instead.
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 1,
-                  num_params);
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  1, num_params);
     }
 
     const Type* element_type = nullptr;
@@ -557,13 +538,13 @@ bool VectorType::ApplyConstraints(const flat::LibraryMediator& lib,
   bool is_already_nullable = nullability == types::Nullability::kNullable;
   bool is_nullability_applied = out_params->nullability == types::Nullability::kNullable;
   if (is_already_nullable && is_nullability_applied)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span, layout);
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(), layout);
   auto merged_nullability = is_already_nullable || is_nullability_applied
                                 ? types::Nullability::kNullable
                                 : types::Nullability::kNonnullable;
 
   if (element_count != &kMaxSize && out_params->size_resolved)
-    return lib.Fail(ErrCannotBoundTwice, constraints.span, layout);
+    return lib.Fail(ErrCannotBoundTwice, constraints.span.value(), layout);
   auto merged_size = out_params->size_resolved ? out_params->size_resolved : element_count;
 
   *out_type = std::make_unique<VectorType>(name, element_type, merged_size, merged_nullability);
@@ -579,8 +560,8 @@ class StringTypeTemplate final : public TypeTemplate {
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
-                  num_params);
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  0, num_params);
     }
 
     StringType type(name_);
@@ -598,13 +579,13 @@ bool StringType::ApplyConstraints(const flat::LibraryMediator& lib,
   bool is_already_nullable = nullability == types::Nullability::kNullable;
   bool is_nullability_applied = out_params->nullability == types::Nullability::kNullable;
   if (is_already_nullable && is_nullability_applied)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span, layout);
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(), layout);
   auto merged_nullability = is_already_nullable || is_nullability_applied
                                 ? types::Nullability::kNullable
                                 : types::Nullability::kNonnullable;
 
   if (max_size != &kMaxSize && out_params->size_resolved)
-    return lib.Fail(ErrCannotBoundTwice, constraints.span, layout);
+    return lib.Fail(ErrCannotBoundTwice, constraints.span.value(), layout);
   auto merged_size = out_params->size_resolved ? out_params->size_resolved : max_size;
 
   *out_type = std::make_unique<StringType>(name, merged_size, merged_nullability);
@@ -619,9 +600,9 @@ class HandleTypeTemplate final : public TypeTemplate {
   bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = !unresolved_args.parameters->items.empty();
-    if (num_params) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
-                  num_params);
+    if (num_params != 0) {
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  0, num_params);
     }
 
     HandleType type(name_, resource_decl_);
@@ -716,7 +697,7 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
     out_params->nullability = types::Nullability::kNullable;
     applied_nullability_span = constraints.items[2]->span;
   } else {
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 3, num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span.value(), layout, 3, num_constraints);
   }
 
   bool has_obj_type = subtype != types::HandleSubtype::kHandle;
@@ -731,7 +712,7 @@ bool HandleType::ApplyConstraints(const flat::LibraryMediator& lib,
 
   bool has_nullability = nullability == types::Nullability::kNullable;
   if (has_nullability && out_params->nullability == types::Nullability::kNullable)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span, layout);
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span.value(), layout);
   auto merged_nullability =
       has_nullability || out_params->nullability == types::Nullability::kNullable
           ? types::Nullability::kNullable
@@ -762,9 +743,10 @@ class TransportSideTypeTemplate final : public TypeTemplate {
   bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = !unresolved_args.parameters->items.empty();
-    if (num_params)
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
-                  num_params);
+    if (num_params != 0) {
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  0, num_params);
+    }
 
     TransportSideType type(name_, end_);
     return type.ApplyConstraints(lib, *unresolved_args.constraints, this, out_type, out_params);
@@ -818,20 +800,20 @@ bool TransportSideType::ApplyConstraints(const flat::LibraryMediator& lib,
     out_params->nullability = types::Nullability::kNullable;
     applied_nullability_span = constraints.items[1]->span;
   } else if (num_constraints > 2) {
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 2, num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span.value(), layout, 2, num_constraints);
   }
 
   if (protocol_decl && out_params->protocol_decl)
     return lib.Fail(ErrCannotConstrainTwice, constraints.items[0]->span, layout);
   if (!protocol_decl && !out_params->protocol_decl)
-    return lib.Fail(ErrProtocolConstraintRequired, constraints.span, layout);
+    return lib.Fail(ErrProtocolConstraintRequired, constraints.span.value(), layout);
   const Decl* merged_protocol = protocol_decl;
   if (out_params->protocol_decl)
     merged_protocol = out_params->protocol_decl;
 
   bool has_nullability = nullability == types::Nullability::kNullable;
   if (has_nullability && out_params->nullability == types::Nullability::kNullable)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span, layout);
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, applied_nullability_span.value(), layout);
   auto merged_nullability =
       has_nullability || out_params->nullability == types::Nullability::kNullable
           ? types::Nullability::kNullable
@@ -861,8 +843,8 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
 
     size_t num_params = unresolved_args.parameters->items.size();
     if (num_params != 0) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
-                  num_params);
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  0, num_params);
     }
 
     IdentifierType type(name_, type_decl_);
@@ -890,7 +872,8 @@ bool IdentifierType::ApplyConstraints(const flat::LibraryMediator& lib,
       if (num_constraints == 1)
         return lib.Fail(ErrCannotBeNullable, constraints.items[0]->span, layout);
       if (num_constraints > 1) {
-        return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 0, num_constraints);
+        return lib.Fail(ErrTooManyConstraints, constraints.span.value(), layout, 0,
+                        num_constraints);
       }
       break;
 
@@ -901,7 +884,8 @@ bool IdentifierType::ApplyConstraints(const flat::LibraryMediator& lib,
     case Decl::Kind::kStruct:
     case Decl::Kind::kUnion:
       if (num_constraints > 1) {
-        return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 1, num_constraints);
+        return lib.Fail(ErrTooManyConstraints, constraints.span.value(), layout, 1,
+                        num_constraints);
       }
       break;
 
@@ -930,7 +914,7 @@ bool IdentifierType::ApplyConstraints(const flat::LibraryMediator& lib,
 
   if (nullability == types::Nullability::kNullable &&
       applied_nullability == types::Nullability::kNullable)
-    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span, layout);
+    return lib.Fail(ErrCannotIndicateNullabilityTwice, constraints.span.value(), layout);
   auto merged_nullability = nullability;
   if (applied_nullability == types::Nullability::kNullable)
     merged_nullability = applied_nullability;
@@ -955,9 +939,10 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     }
 
     size_t num_params = unresolved_args.parameters->items.size();
-    if (num_params != 0)
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 0,
-                  num_params);
+    if (num_params != 0) {
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  0, num_params);
+    }
 
     // Compilation failed while trying to resolve something farther up the chain;
     // exit early
@@ -988,9 +973,9 @@ class BoxTypeTemplate final : public TypeTemplate {
   bool Create(const LibraryMediator& lib, const ParamsAndConstraints& unresolved_args,
               std::unique_ptr<Type>* out_type, LayoutInvocation* out_params) const override {
     size_t num_params = unresolved_args.parameters->items.size();
-    if (num_params != 1) {
-      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span, 1,
-                  num_params);
+    if (num_params == 0) {
+      return Fail(ErrWrongNumberOfLayoutParameters, unresolved_args.parameters->span.value(), this,
+                  1, num_params);
     }
 
     const Type* boxed_type = nullptr;
@@ -1000,8 +985,7 @@ class BoxTypeTemplate final : public TypeTemplate {
       return FailNoSpan(ErrCannotBeBoxed, boxed_type->name);
     const auto* inner = static_cast<const IdentifierType*>(boxed_type);
     if (inner->nullability == types::Nullability::kNullable) {
-      reporter_->Report(ErrBoxedTypeCannotBeNullable, unresolved_args.parameters->items[0]->span);
-      return false;
+      return Fail(ErrBoxedTypeCannotBeNullable, unresolved_args.parameters->items[0]->span);
     }
     // We disallow specifying the boxed type as nullable in FIDL source but
     // then mark the boxed type as nullable, so that internally it shares the
@@ -1032,7 +1016,7 @@ bool BoxType::ApplyConstraints(const flat::LibraryMediator& lib, const TypeConst
   if (num_constraints == 1)
     return lib.Fail(ErrBoxCannotBeNullable, constraints.items[0]->span);
   if (num_constraints > 1)
-    return lib.Fail(ErrTooManyConstraints, constraints.span, layout, 0, num_constraints);
+    return lib.Fail(ErrTooManyConstraints, constraints.span.value(), layout, 0, num_constraints);
   *out_type = std::make_unique<BoxType>(name, boxed_type);
   return true;
 }
@@ -1222,7 +1206,7 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
              "use-early and compile-early schemas should not have a constraint");
       break;
     case Kind::kDeprecated:
-      reporter->Report(ErrDeprecatedAttribute, attribute->span, attribute);
+      reporter->Fail(ErrDeprecatedAttribute, attribute->span, attribute);
       return;
     case Kind::kUserDefined:
       return;
@@ -1233,7 +1217,7 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
       break;
     case Placement::kSpecific:
       if (specific_placements_.count(attributable->placement) == 0) {
-        reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
+        reporter->Fail(ErrInvalidAttributePlacement, attribute->span, attribute);
         return;
       }
       break;
@@ -1250,7 +1234,7 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
           }
           [[fallthrough]];
         default:
-          reporter->Report(ErrInvalidAttributePlacement, attribute->span, attribute);
+          reporter->Fail(ErrInvalidAttributePlacement, attribute->span, attribute);
           return;
       }
       break;
@@ -1266,7 +1250,7 @@ void AttributeSchema::Validate(Reporter* reporter, const Attribute* attribute,
     return;
   }
   if (check.NoNewErrors()) {
-    reporter->Report(ErrAttributeConstraintNotSatisfied, attribute->span, attribute);
+    reporter->Fail(ErrAttributeConstraintNotSatisfied, attribute->span, attribute);
   }
 }
 
@@ -1470,7 +1454,7 @@ bool SimpleLayoutConstraint(Reporter* reporter, const Attribute* attr,
       auto struct_decl = static_cast<const Struct*>(attributable);
       for (const auto& member : struct_decl->members) {
         if (!IsSimple(member.type_ctor->type, reporter)) {
-          reporter->Report(ErrMemberMustBeSimple, member.name, member.name.data());
+          reporter->Fail(ErrMemberMustBeSimple, member.name, member.name.data());
           ok = false;
         }
       }
@@ -1487,10 +1471,10 @@ bool ParseBound(Reporter* reporter, const Attribute* attribute, std::string_view
   auto result = utils::ParseNumeric(input, out_value, 10);
   switch (result) {
     case utils::ParseNumericResult::kOutOfBounds:
-      reporter->Report(ErrBoundIsTooBig, attribute->span, attribute, input);
+      reporter->Fail(ErrBoundIsTooBig, attribute->span, attribute, input);
       return false;
     case utils::ParseNumericResult::kMalformed: {
-      reporter->Report(ErrUnableToParseBound, attribute->span, attribute, input);
+      reporter->Fail(ErrUnableToParseBound, attribute->span, attribute, input);
       return false;
     }
     case utils::ParseNumericResult::kSuccess:
@@ -1500,7 +1484,7 @@ bool ParseBound(Reporter* reporter, const Attribute* attribute, std::string_view
 
 bool Library::VerifyInlineSize(const Struct* struct_decl) {
   if (struct_decl->typeshape(WireFormat::kV1NoEe).InlineSize() >= 65536) {
-    return Library::Fail(ErrInlineSizeExceeds64k, *struct_decl);
+    return Fail(ErrInlineSizeExceeds64k, struct_decl->name.span().value());
   }
   return true;
 }
@@ -1573,7 +1557,7 @@ bool MaxBytesConstraint(Reporter* reporter, const Attribute* attribute,
       return false;
   }
   if (max_bytes > bound) {
-    reporter->Report(ErrTooManyBytes, attribute->span, bound, max_bytes);
+    reporter->Fail(ErrTooManyBytes, attribute->span, bound, max_bytes);
     return false;
   }
   return true;
@@ -1644,7 +1628,7 @@ bool MaxHandlesConstraint(Reporter* reporter, const Attribute* attribute,
       return false;
   }
   if (max_handles > bound) {
-    reporter->Report(ErrTooManyHandles, attribute->span, bound, max_handles);
+    reporter->Fail(ErrTooManyHandles, attribute->span, bound, max_handles);
     return false;
   }
   return true;
@@ -1674,7 +1658,7 @@ bool ResultShapeConstraint(Reporter* reporter, const Attribute* attribute,
 
   if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
                            error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-    reporter->Report(ErrInvalidErrorType, union_decl->name.span());
+    reporter->Fail(ErrInvalidErrorType, union_decl->name.span().value());
     return false;
   }
 
@@ -1723,7 +1707,7 @@ bool TransportConstraint(Reporter* reporter, const Attribute* attribute,
   // Validate that they're ok
   for (const auto& transport : transports) {
     if (kValidTransports->count(transport) == 0) {
-      reporter->Report(ErrInvalidTransportType, attribute->span, transport, *kValidTransports);
+      reporter->Fail(ErrInvalidTransportType, attribute->span, transport, *kValidTransports);
       return false;
     }
   }
@@ -1877,7 +1861,7 @@ const AttributeSchema& Libraries::RetrieveAttributeSchema(Reporter* reporter,
       auto supplied_name = attribute_name;
       auto edit_distance = EditDistance(supplied_name, suspected_name);
       if (0 < edit_distance && edit_distance < 2) {
-        reporter->Report(WarnAttributeTypo, attribute->span, supplied_name, suspected_name);
+        reporter->Warn(WarnAttributeTypo, attribute->span, supplied_name, suspected_name);
       }
     }
   }
@@ -1941,8 +1925,8 @@ bool Dependencies::VerifyAllDependenciesWereUsed(const Library& for_library, Rep
   for (const auto& [filename, per_file] : by_filename_) {
     for (const auto& [name, ref] : per_file->refs) {
       if (!ref->used) {
-        reporter->Report(ErrUnusedImport, ref->span, for_library.name(), ref->library->name(),
-                         ref->library->name());
+        reporter->Fail(ErrUnusedImport, ref->span, for_library.name(), ref->library->name(),
+                       ref->library->name());
       }
     }
   }
@@ -1962,30 +1946,11 @@ std::string LibraryName(const Library* library, std::string_view separator) {
   return std::string();
 }
 
-bool Library::Fail(std::unique_ptr<Diagnostic> err) {
-  assert(err && "should not report nullptr error");
-  reporter_->Report(std::move(err));
-  return false;
-}
-
-template <typename... Args>
-bool Library::FailNoSpan(const ErrorDef<Args...>& err, const identity_t<Args>&... args) {
-  reporter_->Report(err, args...);
-  return false;
-}
-
-template <typename... Args>
-bool Library::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-                   const identity_t<Args>&... args) {
-  reporter_->Report(err, span, args...);
-  return false;
-}
-
 void Library::ValidateAttributes(const Attributable* attributable) {
   for (const auto& attribute : attributable->attributes->attributes) {
     const AttributeSchema& schema =
-        all_libraries_->RetrieveAttributeSchema(reporter_, attribute.get());
-    schema.Validate(reporter_, attribute.get(), attributable);
+        all_libraries_->RetrieveAttributeSchema(reporter(), attribute.get());
+    schema.Validate(reporter(), attribute.get(), attributable);
   }
 }
 
@@ -2104,8 +2069,7 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     const auto it = declarations_.emplace(name, decl_ptr);
     if (!it.second) {
       const auto previous_name = it.first->second->name;
-      assert(previous_name.span() && "declarations_ has a name with no span");
-      return Fail(ErrNameCollision, name.span(), name, *previous_name.span());
+      return Fail(ErrNameCollision, name.span().value(), name, previous_name.span().value());
     }
   }
 
@@ -2114,18 +2078,18 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     const auto it = declarations_by_canonical_name_.emplace(canonical_decl_name, decl_ptr);
     if (!it.second) {
       const auto previous_name = it.first->second->name;
-      assert(previous_name.span() && "declarations_by_canonical_name_ has a name with no span");
-      return Fail(ErrNameCollisionCanonical, name.span(), name, previous_name,
-                  *previous_name.span(), canonical_decl_name);
+      return Fail(ErrNameCollisionCanonical, name.span().value(), name, previous_name,
+                  previous_name.span().value(), canonical_decl_name);
     }
   }
 
   if (name.span()) {
     if (dependencies_.Contains(name.span()->source_file().filename(), {name.span()->data()})) {
-      return Fail(ErrDeclNameConflictsWithLibraryImport, name, name);
+      return Fail(ErrDeclNameConflictsWithLibraryImport, name.span().value(), name);
     }
     if (dependencies_.Contains(name.span()->source_file().filename(), {canonical_decl_name})) {
-      return Fail(ErrDeclNameConflictsWithLibraryImportCanonical, name, name, canonical_decl_name);
+      return Fail(ErrDeclNameConflictsWithLibraryImportCanonical, name.span().value(), name,
+                  canonical_decl_name);
     }
   }
 
@@ -2139,21 +2103,21 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     case Decl::Kind::kProtocol: {
       auto type_decl = static_cast<TypeDecl*>(decl_ptr);
       auto type_template =
-          std::make_unique<TypeDeclTypeTemplate>(name, typespace_, reporter_, this, type_decl);
+          std::make_unique<TypeDeclTypeTemplate>(name, typespace_, reporter(), this, type_decl);
       typespace_->AddTemplate(std::move(type_template));
       break;
     }
     case Decl::Kind::kResource: {
       auto resource_decl = static_cast<Resource*>(decl_ptr);
       auto type_template =
-          std::make_unique<HandleTypeTemplate>(name, typespace_, reporter_, resource_decl);
+          std::make_unique<HandleTypeTemplate>(name, typespace_, reporter(), resource_decl);
       typespace_->AddTemplate(std::move(type_template));
       break;
     }
     case Decl::Kind::kTypeAlias: {
       auto type_alias_decl = static_cast<TypeAlias*>(decl_ptr);
       auto type_alias_template =
-          std::make_unique<TypeAliasTypeTemplate>(name, typespace_, reporter_, type_alias_decl);
+          std::make_unique<TypeAliasTypeTemplate>(name, typespace_, reporter(), type_alias_decl);
       typespace_->AddTemplate(std::move(type_alias_template));
       break;
     }
@@ -2435,7 +2399,7 @@ void Library::ConsumeProtocolDeclaration(
     if (!composed_protocol_name)
       return;
     if (!seen_composed_protocols.insert(composed_protocol_name.value()).second) {
-      Fail(ErrProtocolComposedMultipleTimes, composed_protocol_name->span());
+      Fail(ErrProtocolComposedMultipleTimes, composed_protocol_name->span().value());
       return;
     }
 
@@ -2828,7 +2792,8 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
                                      bool is_request_or_response,
                                      std::unique_ptr<TypeConstructor>* out_type_ctor) {
   std::vector<std::unique_ptr<LayoutParameter>> params;
-  std::optional<SourceSpan> params_span;
+  // Fallback to name span. See LayoutParameterList's comment on `span`.
+  SourceSpan params_span = raw_type_ctor->layout_ref->span();
   if (raw_type_ctor->parameters) {
     params_span = raw_type_ctor->parameters->span();
     for (auto& p : raw_type_ctor->parameters->items) {
@@ -2874,7 +2839,8 @@ bool Library::ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_t
   }
 
   std::vector<std::unique_ptr<Constant>> constraints;
-  std::optional<SourceSpan> constraints_span;
+  // Fallback to name span. See TypeConstraints's comment on `span`.
+  SourceSpan constraints_span = raw_type_ctor->layout_ref->span();
   if (raw_type_ctor->constraints) {
     constraints_span = raw_type_ctor->constraints->span();
     for (auto& c : raw_type_ctor->constraints->items) {
@@ -3132,7 +3098,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           }
         }
         if (!const_val) {
-          return Fail(ErrUnknownEnumMember, identifier_constant->name.span(), *member_name);
+          return Fail(ErrUnknownEnumMember, identifier_constant->name.span().value(), *member_name);
         }
         break;
       }
@@ -3152,14 +3118,14 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
           }
         }
         if (!const_val) {
-          return Fail(ErrUnknownBitsMember, identifier_constant->name.span(), *member_name);
+          return Fail(ErrUnknownBitsMember, identifier_constant->name.span().value(), *member_name);
         }
         break;
       }
       [[fallthrough]];
     }
     default: {
-      return Fail(ErrExpectedValueButGotType, identifier_constant->name.span(),
+      return Fail(ErrExpectedValueButGotType, identifier_constant->name.span().value(),
                   identifier_constant->name);
     }
   }
@@ -3246,9 +3212,8 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
   return true;
 
 fail_cannot_convert:
-  return Fail(ErrTypeCannotBeConvertedToType, identifier_constant->name.span(), identifier_constant,
-              const_type, type);
-  return false;
+  return Fail(ErrTypeCannotBeConvertedToType, identifier_constant->name.span().value(),
+              identifier_constant, const_type, type);
 }
 
 bool Library::ResolveLiteralConstant(LiteralConstant* literal_constant,
@@ -3430,7 +3395,7 @@ void Library::CompileAttribute(Attribute* attribute) {
   }
 
   const AttributeSchema& schema =
-      all_libraries_->RetrieveAttributeSchema(reporter_, attribute,
+      all_libraries_->RetrieveAttributeSchema(reporter(), attribute,
                                               /* warn_on_typo = */ true);
   schema.ResolveArgs(this, attribute);
   attribute->compiled = true;
@@ -3538,7 +3503,7 @@ bool Library::AddConstantDependencies(const Constant* constant, std::set<const D
       auto identifier = static_cast<const flat::IdentifierConstant*>(constant);
       auto decl = LookupDeclByName(identifier->name.memberless_key());
       if (decl == nullptr) {
-        return Fail(ErrFailedConstantLookup, identifier->name, identifier->name);
+        return Fail(ErrFailedConstantLookup, identifier->name.span().value(), identifier->name);
       }
       out_edges->insert(decl);
       break;
@@ -3926,9 +3891,8 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
       if (struct_decl->resourceness == types::Resourceness::kValue) {
         for (const auto& member : struct_decl->members) {
           if (EffectiveResourceness(member.type_ctor->type) == types::Resourceness::kResource) {
-            library_->reporter_->Report(ErrTypeMustBeResource, struct_decl->name.span(),
-                                        struct_decl->name, member.name.data(), "struct",
-                                        struct_decl->name);
+            Fail(ErrTypeMustBeResource, struct_decl->name.span().value(), struct_decl->name,
+                 member.name.data(), "struct", struct_decl->name);
           }
         }
       }
@@ -3941,9 +3905,8 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
           if (member.maybe_used) {
             const auto& used = *member.maybe_used;
             if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
-              library_->reporter_->Report(ErrTypeMustBeResource, table_decl->name.span(),
-                                          table_decl->name, used.name.data(), "table",
-                                          table_decl->name);
+              Fail(ErrTypeMustBeResource, table_decl->name.span().value(), table_decl->name,
+                   used.name.data(), "table", table_decl->name);
             }
           }
         }
@@ -3957,9 +3920,8 @@ void VerifyResourcenessStep::ForDecl(const Decl* decl) {
           if (member.maybe_used) {
             const auto& used = *member.maybe_used;
             if (EffectiveResourceness(used.type_ctor->type) == types::Resourceness::kResource) {
-              library_->reporter_->Report(ErrTypeMustBeResource, union_decl->name.span(),
-                                          union_decl->name, used.name.data(), "union",
-                                          union_decl->name);
+              Fail(ErrTypeMustBeResource, union_decl->name.span().value(), union_decl->name,
+                   used.name.data(), "union", union_decl->name);
             }
           }
         }
@@ -4127,7 +4089,7 @@ void Library::CompileBits(Bits* bits_declaration) {
   }
 
   if (bits_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
+    Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, bits_declaration->name.span().value(),
          bits_declaration->subtype_ctor->type);
     return;
   }
@@ -4170,7 +4132,7 @@ void Library::CompileBits(Bits* bits_declaration) {
     case types::PrimitiveSubtype::kInt64:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-      Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, *bits_declaration,
+      Fail(ErrBitsTypeMustBeUnsignedIntegralPrimitive, bits_declaration->name.span().value(),
            bits_declaration->subtype_ctor->type);
       return;
   }
@@ -4184,9 +4146,9 @@ void Library::CompileConst(Const* const_declaration) {
     return;
   }
   if (!TypeCanBeConst(const_type)) {
-    Fail(ErrInvalidConstantType, *const_declaration, const_type);
+    Fail(ErrInvalidConstantType, const_declaration->name.span().value(), const_type);
   } else if (!ResolveConstant(const_declaration->value.get(), const_type)) {
-    Fail(ErrCannotResolveConstantValue, *const_declaration);
+    Fail(ErrCannotResolveConstantValue, const_declaration->name.span().value());
   }
 }
 
@@ -4202,7 +4164,7 @@ void Library::CompileEnum(Enum* enum_declaration) {
   }
 
   if (enum_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
+    Fail(ErrEnumTypeMustBeIntegralPrimitive, enum_declaration->name.span().value(),
          enum_declaration->subtype_ctor->type);
     return;
   }
@@ -4270,7 +4232,7 @@ void Library::CompileEnum(Enum* enum_declaration) {
     case types::PrimitiveSubtype::kBool:
     case types::PrimitiveSubtype::kFloat32:
     case types::PrimitiveSubtype::kFloat64:
-      Fail(ErrEnumTypeMustBeIntegralPrimitive, *enum_declaration,
+      Fail(ErrEnumTypeMustBeIntegralPrimitive, enum_declaration->name.span().value(),
            enum_declaration->subtype_ctor->type);
       break;
   }
@@ -4290,7 +4252,7 @@ void Library::CompileResource(Resource* resource_declaration) {
   }
 
   if (resource_declaration->subtype_ctor->type->kind != Type::Kind::kPrimitive) {
-    Fail(ErrEnumTypeMustBeIntegralPrimitive, *resource_declaration,
+    Fail(ErrEnumTypeMustBeIntegralPrimitive, resource_declaration->name.span().value(),
          resource_declaration->subtype_ctor->type);
     return;
   }
@@ -4381,11 +4343,11 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
     CompileAttributeList(composed_protocol.attributes.get());
     auto decl = LookupDeclByName(composed_protocol.name);
     if (!decl) {
-      Fail(ErrUnknownType, composed_protocol.name, composed_protocol.name);
+      Fail(ErrUnknownType, composed_protocol.name.span().value(), composed_protocol.name);
       continue;
     }
     if (decl->kind != Decl::Kind::kProtocol) {
-      Fail(ErrComposingNonProtocol, composed_protocol.name);
+      Fail(ErrComposingNonProtocol, composed_protocol.name.span().value());
       continue;
     }
     CompileDecl(decl);
@@ -4417,7 +4379,7 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
       CompileTypeConstructor(method.maybe_request.get());
       Decl* decl = LookupDeclByName(name);
       if (!method.maybe_request->type || !decl) {
-        Fail(ErrUnknownType, name, name);
+        Fail(ErrUnknownType, name.span().value(), name);
         continue;
       }
       CompileDecl(decl);
@@ -4427,7 +4389,7 @@ void Library::CompileProtocol(Protocol* protocol_declaration) {
       CompileTypeConstructor(method.maybe_response.get());
       Decl* decl = LookupDeclByName(name);
       if (!method.maybe_response->type || !decl) {
-        Fail(ErrUnknownType, name, name);
+        Fail(ErrUnknownType, name.span().value(), name);
         continue;
       }
       CompileDecl(decl);
@@ -4503,8 +4465,8 @@ void Library::CompileStruct(Struct* struct_declaration) {
     if (member.maybe_default_value) {
       const auto* default_value_type = member.type_ctor->type;
       if (!TypeCanBeConst(default_value_type)) {
-        Fail(ErrInvalidStructMemberType, *struct_declaration, NameIdentifier(member.name),
-             default_value_type);
+        Fail(ErrInvalidStructMemberType, struct_declaration->name.span().value(),
+             NameIdentifier(member.name), default_value_type);
       } else if (!ResolveConstant(member.maybe_default_value.get(), default_value_type)) {
         Fail(ErrCouldNotResolveMemberDefault, member.name, NameIdentifier(member.name));
       }
@@ -4677,22 +4639,22 @@ bool Library::Compile() {
     }
   }
 
-  if (!dependencies_.VerifyAllDependenciesWereUsed(*this, reporter_))
+  if (!dependencies_.VerifyAllDependenciesWereUsed(*this, reporter()))
     return false;
 
-  return reporter_->errors().size() == 0;
+  return reporter()->errors().empty();
 }
 
 void Library::CompileTypeConstructor(TypeConstructor* type_ctor) {
   if (type_ctor->type != nullptr) {
     return;
   }
-  if (!typespace_->Create(LibraryMediator(this), type_ctor->name, type_ctor->parameters,
+  if (!typespace_->Create(LibraryMediator(this, reporter()), type_ctor->name, type_ctor->parameters,
                           type_ctor->constraints, &type_ctor->type, &type_ctor->resolved_params)) {
     return;
   }
 
-  // // postcondition: compilation sets the Type of the TypeConstructor
+  // postcondition: compilation sets the Type of the TypeConstructor
   assert(type_ctor->type && "type constructors' type not resolved after compilation");
   VerifyTypeCategory(type_ctor->type, type_ctor->name.span(), AllowedCategories::kTypeOnly);
 }
@@ -4703,22 +4665,23 @@ bool Library::VerifyTypeCategory(const Type* type, std::optional<SourceSpan> spa
   if (type->kind != Type::Kind::kIdentifier) {
     // we assume that all non-identifier types (i.e. builtins) are actually
     // types (and not e.g. protocols or services).
-    return category == AllowedCategories::kProtocolOnly ? Fail(ErrCannotUseType, span) : true;
+    return category == AllowedCategories::kProtocolOnly ? Fail(ErrCannotUseType, span.value())
+                                                        : true;
   }
 
   auto identifier_type = static_cast<const IdentifierType*>(type);
   switch (identifier_type->type_decl->kind) {
     // services are never allowed in any context
     case Decl::Kind::kService:
-      return Fail(ErrCannotUseService, span);
+      return Fail(ErrCannotUseService, span.value());
       break;
     case Decl::Kind::kProtocol:
       if (category == AllowedCategories::kTypeOnly)
-        return Fail(ErrCannotUseProtocol, span);
+        return Fail(ErrCannotUseProtocol, span.value());
       break;
     default:
       if (category == AllowedCategories::kProtocolOnly)
-        return Fail(ErrCannotUseType, span);
+        return Fail(ErrCannotUseType, span.value());
       break;
   }
   return true;
@@ -4826,12 +4789,12 @@ bool Library::ResolveSizeBound(Constant* size_constant, const Size** out_size) {
 template <typename DeclType, typename MemberType>
 bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> validator) {
   assert(decl != nullptr);
+  auto checkpoint = reporter()->Checkpoint();
 
   constexpr const char* decl_type = std::is_same_v<DeclType, Enum> ? "enum" : "bits";
 
   Scope<std::string> name_scope;
   Scope<MemberType> value_scope;
-  bool success = true;
   for (const auto& member : decl->members) {
     assert(member.value != nullptr && "Compiler bug: member value is null!");
 
@@ -4843,16 +4806,15 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
       const auto previous_span = name_result.previous_occurrence();
       // We can log the error and then continue validating for other issues in the decl
       if (original_name == name_result.previous_occurrence().data()) {
-        success =
-            Fail(ErrDuplicateMemberName, member.name, decl_type, original_name, previous_span);
+        Fail(ErrDuplicateMemberName, member.name, decl_type, original_name, previous_span);
       } else {
-        success = Fail(ErrDuplicateMemberNameCanonical, member.name, decl_type, original_name,
-                       previous_span.data(), previous_span, canonical_name);
+        Fail(ErrDuplicateMemberNameCanonical, member.name, decl_type, original_name,
+             previous_span.data(), previous_span, canonical_name);
       }
     }
 
     if (!ResolveConstant(member.value.get(), decl->subtype_ctor->type)) {
-      success = Fail(ErrCouldNotResolveMember, member.name, decl_type);
+      Fail(ErrCouldNotResolveMember, member.name, decl_type);
       continue;
     }
 
@@ -4862,18 +4824,18 @@ bool Library::ValidateMembers(DeclType* decl, MemberValidator<MemberType> valida
     if (!value_result.ok()) {
       const auto previous_span = value_result.previous_occurrence();
       // We can log the error and then continue validating other members for other bugs
-      success = Fail(ErrDuplicateMemberValue, member.name, decl_type, original_name,
-                     previous_span.data(), previous_span);
+      Fail(ErrDuplicateMemberValue, member.name, decl_type, original_name, previous_span.data(),
+           previous_span);
     }
 
     auto err = validator(value, member.attributes.get());
     if (err) {
       err->span = member.name;
-      success = Fail(std::move(err));
+      Report(std::move(err));
     }
   }
 
-  return success;
+  return checkpoint.NoNewErrors();
 }
 
 template <typename T>
@@ -4895,7 +4857,7 @@ bool Library::ValidateBitsMembersAndCalcMask(Bits* bits_decl, MemberType* out_ma
   MemberType mask = 0u;
   auto validator = [&mask](MemberType member, const AttributeList*) -> std::unique_ptr<Diagnostic> {
     if (!IsPowerOfTwo(member)) {
-      return Reporter::MakeError(ErrBitsMemberMustBePowerOfTwo);
+      return Diagnostic::MakeError(ErrBitsMemberMustBePowerOfTwo, std::nullopt);
     }
     mask |= member;
     return nullptr;
@@ -4935,13 +4897,13 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
     switch (enum_decl->strictness) {
       case types::Strictness::kStrict:
         if (attributes->Get("unknown") != nullptr) {
-          return Reporter::MakeError(ErrUnknownAttributeOnStrictEnumMember);
+          return Diagnostic::MakeError(ErrUnknownAttributeOnStrictEnumMember, std::nullopt);
         }
         return nullptr;
       case types::Strictness::kFlexible:
         if (member == default_unknown_value && !explicit_unknown_value.has_value()) {
-          return Reporter::MakeError(ErrFlexibleEnumMemberWithMaxValue,
-                                     std::to_string(default_unknown_value));
+          return Diagnostic::MakeError(ErrFlexibleEnumMemberWithMaxValue, std::nullopt,
+                                       std::to_string(default_unknown_value));
         }
         return nullptr;
     }
@@ -5032,12 +4994,12 @@ bool LibraryMediator::ResolveParamAsType(const flat::TypeTemplate* layout,
                                          const std::unique_ptr<LayoutParameter>& param,
                                          const Type** out_type) const {
   auto type_ctor = param->AsTypeCtor();
-  auto check = library_->reporter_->Checkpoint();
+  auto check = reporter()->Checkpoint();
   if (!type_ctor || !ResolveType(type_ctor)) {
     // if there were no errors reported but we couldn't resolve to a type, it must
     // mean that the parameter referred to a non-type, so report a new error here.
     if (check.NoNewErrors()) {
-      return library_->Fail(ErrExpectedType, param->span);
+      return Fail(ErrExpectedType, param->span);
     }
     // otherwise, there was an error during the type resolution process, so we
     // should just report that rather than add an extra error here
@@ -5058,25 +5020,24 @@ bool LibraryMediator::ResolveParamAsSize(const flat::TypeTemplate* layout,
     case LayoutParameter::Kind::kLiteral: {
       auto literal_param = static_cast<LiteralLayoutParameter*>(param.get());
       if (!ResolveSizeBound(literal_param->literal.get(), out_size))
-        return library_->Fail(ErrCouldNotParseSizeBound, literal_param->span);
+        return Fail(ErrCouldNotParseSizeBound, literal_param->span);
       break;
     }
     case LayoutParameter::kType: {
       auto type_param = static_cast<TypeLayoutParameter*>(param.get());
-      return library_->Fail(ErrExpectedValueButGotType, type_param->span,
-                            type_param->type_ctor->name);
+      return Fail(ErrExpectedValueButGotType, type_param->span, type_param->type_ctor->name);
     }
     case LayoutParameter::Kind::kIdentifier: {
       auto ambig_param = static_cast<IdentifierLayoutParameter*>(param.get());
       auto as_constant = ambig_param->AsConstant();
       if (!ResolveSizeBound(as_constant, out_size))
-        return library_->Fail(ErrExpectedValueButGotType, ambig_param->span, ambig_param->name);
+        return Fail(ErrExpectedValueButGotType, ambig_param->span, ambig_param->name);
       break;
     }
   }
   assert(*out_size);
   if ((*out_size)->value == 0)
-    return library_->Fail(ErrMustHaveNonZeroSize, param->span, layout);
+    return Fail(ErrMustHaveNonZeroSize, param->span, layout);
   return true;
 }
 
@@ -5156,12 +5117,6 @@ bool LibraryMediator::ResolveAsProtocol(const Constant* constant, const Protocol
     return false;
   *out_decl = static_cast<const Protocol*>(decl);
   return true;
-}
-
-template <typename... Args>
-bool LibraryMediator::Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
-                           const identity_t<Args>&... args) const {
-  return library_->Fail(err, span, args...);
 }
 
 Decl* LibraryMediator::LookupDeclByName(Name::Key name) const {

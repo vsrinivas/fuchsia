@@ -389,15 +389,16 @@ int main(int argc, char* argv[]) {
   }
 
   // Ready. Set. Go.
-  bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
-  fidl::Reporter reporter(warnings_as_errors, enable_color);
+  fidl::Reporter reporter;
+  reporter.set_warnings_as_errors(warnings_as_errors);
   auto typespace = fidl::flat::Typespace::RootTypes(&reporter);
   auto status = compile(&reporter, &typespace, library_name, dep_file_path, source_list,
                         std::move(outputs), source_managers, std::move(experimental_flags));
   if (format == "json") {
     reporter.PrintReportsJson();
   } else {
-    reporter.PrintReports();
+    bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
+    reporter.PrintReports(enable_color);
   }
   return status;
 }

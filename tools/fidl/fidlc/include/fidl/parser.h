@@ -57,7 +57,7 @@ class Parser {
           break;
         case Token::Kind::kDocComment:
           if (state_ == State::kDocCommentThenComment)
-            reporter_->Report(WarnCommentWithinDocCommentBlock, last_token_);
+            reporter_->Warn(WarnCommentWithinDocCommentBlock, last_token_.span());
           state_ = State::kDocCommentLast;
           return token;
         default:
@@ -163,12 +163,13 @@ class Parser {
     assert(!ConsumedEOF() && "Already consumed EOF");
     std::unique_ptr<Diagnostic> error = p(Peek());
     if (error) {
+      error->span = last_token_.span();
       switch (on_no_match) {
         case OnNoMatch::kReportAndConsume:
-          Fail(std::move(error));
+          reporter_->Report(std::move(error));
           break;
         case OnNoMatch::kReportAndRecover:
-          Fail(std::move(error));
+          reporter_->Report(std::move(error));
           RecoverOneError();
           return std::nullopt;
         case OnNoMatch::kIgnore:
@@ -210,8 +211,8 @@ class Parser {
   static auto OfKind(Token::Kind expected_kind) {
     return [expected_kind](Token::KindAndSubkind actual) -> std::unique_ptr<Diagnostic> {
       if (actual.kind() != expected_kind) {
-        return Reporter::MakeError(ErrUnexpectedTokenOfKind, actual,
-                                   Token::KindAndSubkind(expected_kind, Token::Subkind::kNone));
+        return Diagnostic::MakeError(ErrUnexpectedTokenOfKind, std::nullopt, actual,
+                                     Token::KindAndSubkind(expected_kind, Token::Subkind::kNone));
       }
       return nullptr;
     };
@@ -221,22 +222,26 @@ class Parser {
     return [expected_subkind](Token::KindAndSubkind actual) -> std::unique_ptr<Diagnostic> {
       auto expected = Token::KindAndSubkind(Token::Kind::kIdentifier, expected_subkind);
       if (actual.combined() != expected.combined()) {
-        return Reporter::MakeError(
-            ErrUnexpectedIdentifier, actual,
+        return Diagnostic::MakeError(
+            ErrUnexpectedIdentifier, std::nullopt, actual,
             Token::KindAndSubkind(Token::Kind::kIdentifier, Token::Subkind::kNone));
       }
       return nullptr;
     };
   }
 
+  // Parser defines these methods rather than using ReporterMixin because:
+  // * They skip reporting if there are already unrecovered errors.
+  // * They use a default error, ErrUnexpectedToken.
+  // * They use a default span, last_token_.span().
+  // * They return nullptr rather than false.
   std::nullptr_t Fail();
-  std::nullptr_t Fail(std::unique_ptr<Diagnostic> err);
   template <typename... Args>
   std::nullptr_t Fail(const ErrorDef<Args...>& err, const identity_t<Args>&... args);
   template <typename... Args>
   std::nullptr_t Fail(const ErrorDef<Args...>& err, Token token, const identity_t<Args>&... args);
   template <typename... Args>
-  std::nullptr_t Fail(const ErrorDef<Args...>& err, const std::optional<SourceSpan>& span,
+  std::nullptr_t Fail(const ErrorDef<Args...>& err, SourceSpan span,
                       const identity_t<Args>&... args);
 
   // Reports an error if |modifiers| contains a modifier whose type is not

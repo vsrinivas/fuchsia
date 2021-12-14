@@ -15,13 +15,13 @@ namespace fidl::flat {
 
 namespace {
 
-bool TypespaceCreate(Library* library, Typespace* typespace, const Name& name,
+bool TypespaceCreate(Library* library, Typespace* typespace, Reporter* reporter, const Name& name,
                      const Type** out_type) {
   LayoutInvocation invocation;
   std::vector<std::unique_ptr<LayoutParameter>> no_params;
   std::vector<std::unique_ptr<Constant>> no_constraints;
   return typespace->Create(
-      LibraryMediator(library), name,
+      LibraryMediator(library, reporter), name,
       std::make_unique<LayoutParameterList>(std::move(no_params), std::nullopt),
       std::make_unique<TypeConstraints>(std::move(no_constraints), std::nullopt), out_type,
       &invocation);
@@ -31,15 +31,16 @@ void CheckPrimitiveType(Library* library, Typespace* typespace, const char* name
                         types::PrimitiveSubtype subtype) {
   ASSERT_NOT_NULL(typespace);
 
+  Reporter reporter;
   VirtualSourceFile placeholder{"placeholder"};
   auto the_type_name = Name::CreateSourced(library, placeholder.AddLine(name));
-  std::vector<std::unique_ptr<LayoutParameter>> no_params;
-  std::vector<std::unique_ptr<Constant>> no_constraints;
   const Type* the_type;
-  ASSERT_TRUE(TypespaceCreate(library, typespace, the_type_name, &the_type));
+  ASSERT_TRUE(TypespaceCreate(library, typespace, &reporter, the_type_name, &the_type));
   ASSERT_NOT_NULL(the_type, "%s", name);
   auto the_type_p = static_cast<const PrimitiveType*>(the_type);
   ASSERT_EQ(the_type_p->subtype, subtype, "%s", name);
+  ASSERT_EQ(reporter.errors().size(), 0);
+  ASSERT_EQ(reporter.warnings().size(), 0);
 }
 
 }  // namespace
@@ -547,6 +548,19 @@ type Foo = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
+TEST(NewSyntaxTests, BadZeroParameters) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+  foo array;
+};
+)FIDL");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
+  EXPECT_EQ(library.errors()[0]->span.value().data(), "array");
+}
+
 TEST(NewSyntaxTests, BadNotEnoughParameters) {
   TestLibrary library(R"FIDL(
 library example;
@@ -557,6 +571,7 @@ type Foo = struct {
 )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
+  EXPECT_EQ(library.errors()[0]->span.value().data(), "<8>");
 }
 
 TEST(NewSyntaxTests, BadTooManyConstraints) {
@@ -569,6 +584,7 @@ type Foo = struct {
 )FIDL");
 
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
+  EXPECT_EQ(library.errors()[0]->span.value().data(), "<1, 2, 3>");
 }
 
 TEST(NewSyntaxTests, BadParameterizedAnonymousLayout) {

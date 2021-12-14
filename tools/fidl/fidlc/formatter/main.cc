@@ -9,6 +9,7 @@
 #include <fidl/source_manager.h>
 #include <fidl/utils.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <fstream>
@@ -124,7 +125,8 @@ int main(int argc, char* argv[]) {
     if (!Format(*source_file, &reporter, output)) {
       // In the formatter, we do not print the report if there are only
       // warnings.
-      reporter.PrintReports();
+      bool enable_color = !std::getenv("NO_COLOR") && isatty(fileno(stderr));
+      reporter.PrintReports(enable_color);
       return 1;
     }
     FILE* out_file;
