@@ -254,8 +254,8 @@ std::unique_ptr<raw::AttributeArg> Parser::ParseSubsequentAttributeArg() {
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::AttributeArg>(scope.GetSourceElement(),
-                                             std::string(name->span().data()), std::move(value));
+  return std::make_unique<raw::AttributeArg>(scope.GetSourceElement(), std::move(name),
+                                             std::move(value));
 }
 
 std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
@@ -322,13 +322,13 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
         if (!Ok())
           return Fail();
 
-        auto arg_name = std::move(constant->identifier);
+        auto arg_name = std::move(constant->identifier->components.front());
         auto value = ParseConstant();
         if (!Ok())
           return Fail();
 
         args.emplace_back(std::make_unique<raw::AttributeArg>(
-            arg_scope.GetSourceElement(), std::string(arg_name->span().data()), std::move(value)));
+            arg_scope.GetSourceElement(), std::move(arg_name), std::move(value)));
         while (Peek().kind() == Token::Kind::kComma) {
           ConsumeToken(OfKind(Token::Kind::kComma));
           if (!Ok())
@@ -356,8 +356,8 @@ std::unique_ptr<raw::Attribute> Parser::ParseAttribute() {
     }
   }
 
-  return std::make_unique<raw::Attribute>(scope.GetSourceElement(),
-                                          std::string(name->span().data()), std::move(args));
+  return std::make_unique<raw::Attribute>(scope.GetSourceElement(), std::move(name),
+                                          std::move(args));
 }
 
 std::unique_ptr<raw::AttributeList> Parser::ParseAttributeList(
@@ -591,7 +591,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
           static_cast<const raw::InlineLayoutReference*>(type_ctor->layout_ref.get());
       if (layout->attributes != nullptr) {
         auto& attrs = layout->attributes->attributes;
-        if (!attrs.empty() && attrs[0]->name == "doc") {
+        if (!attrs.empty() && attrs[0]->provenance == raw::Attribute::Provenance::kDocComment) {
           auto& args = attrs[0]->args;
           if (!args.empty() && args[0]->value->kind == raw::Constant::Kind::kLiteral) {
             auto literal_constant = static_cast<raw::LiteralConstant*>(args[0]->value.get());

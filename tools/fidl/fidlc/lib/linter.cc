@@ -335,7 +335,6 @@ Linter::Linter()
           "// found in the LICENSE file.",
       }),
       kCopyrightBlock(MakeCopyrightBlock()),
-      kDocAttribute("doc"),
       kYearRegex(R"(\b(\d{4})\b)"),
       kDisallowedLibraryComponentRegex(R"(^(common|service|util|base|f[a-z]l|zx\w*)$)"),
       kPermittedLibraryPrefixes({
@@ -616,9 +615,7 @@ Linter::Linter()
        todo_regex = std::move(todo_regex)]
       //
       (const raw::Attribute& element) {
-        if (utils::to_lower_snake_case(element.name) == linter.kDocAttribute) {
-          if (element.args.empty() || element.provenance != raw::Attribute::kDocComment)
-            return;
+        if (element.provenance == raw::Attribute::kDocComment) {
           auto constant = static_cast<raw::LiteralConstant*>(element.args.front()->value.get());
           auto doc_comment = static_cast<raw::DocCommentLiteral*>(constant->literal.get());
           if (re2::RE2::PartialMatch(doc_comment->MakeContents(), *copyright_regex)) {

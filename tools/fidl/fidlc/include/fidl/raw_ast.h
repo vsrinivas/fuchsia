@@ -244,16 +244,17 @@ class BinaryOperatorConstant final : public Constant {
 class AttributeArg final : public SourceElement {
  public:
   // Constructor for cases where the arg name has been explicitly defined in the text.
-  AttributeArg(SourceElement const& element, std::string name, std::unique_ptr<Constant> value)
-      : SourceElement(element), name(std::move(name)), value(std::move(value)) {}
+  AttributeArg(SourceElement const& element, std::unique_ptr<Identifier> name,
+               std::unique_ptr<Constant> value)
+      : SourceElement(element), maybe_name(std::move(name)), value(std::move(value)) {}
 
   // Constructor for cases where the arg name is inferred.
   AttributeArg(SourceElement const& element, std::unique_ptr<Constant> value)
-      : SourceElement(element), name(std::nullopt), value(std::move(value)) {}
+      : SourceElement(element), maybe_name(nullptr), value(std::move(value)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  const std::optional<std::string> name;
+  std::unique_ptr<Identifier> maybe_name;
   std::unique_ptr<Constant> value;
 };
 
@@ -265,17 +266,17 @@ class Attribute final : public SourceElement {
   };
 
   // Constructor for cases where the name of the attribute is explicitly defined in the text.
-  Attribute(SourceElement const& element, std::string name,
+  Attribute(SourceElement const& element, std::unique_ptr<Identifier> maybe_name,
             std::vector<std::unique_ptr<AttributeArg>> args)
       : SourceElement(element),
         provenance(kDefault),
-        name(std::move(name)),
+        maybe_name(std::move(maybe_name)),
         args(std::move(args)) {}
 
-  // Static constructor for "///"-style doc comments, which always name the attribute "doc."
+  // Factory for "///"-style doc comments, which have no attribute name.
   static Attribute CreateDocComment(SourceElement const& element,
                                     std::vector<std::unique_ptr<AttributeArg>> args) {
-    auto attr = Attribute(element, "doc", std::move(args));
+    auto attr = Attribute(element, nullptr, std::move(args));
     attr.provenance = kDocComment;
     return attr;
   }
@@ -283,7 +284,7 @@ class Attribute final : public SourceElement {
   void Accept(TreeVisitor* visitor) const;
 
   Provenance provenance;
-  const std::string name;
+  std::unique_ptr<Identifier> maybe_name;
   std::vector<std::unique_ptr<AttributeArg>> args;
 };
 

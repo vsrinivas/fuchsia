@@ -138,7 +138,6 @@ class Linter {
 
   const std::vector<std::string> kCopyrightLines;
   const std::string kCopyrightBlock;
-  const std::string kDocAttribute;
   const re2::RE2 kYearRegex;
   const re2::RE2 kDisallowedLibraryComponentRegex;
 

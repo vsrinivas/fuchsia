@@ -28,7 +28,6 @@
 
 #include <safemath/checked_math.h>
 
-#include "attributes.h"
 #include "experimental_flags.h"
 #include "flat/name.h"
 #include "flat/object.h"
@@ -66,13 +65,14 @@ bool HasSimpleLayout(const Decl* decl);
 std::string LibraryName(const Library* library, std::string_view separator);
 
 struct AttributeArg final {
-  AttributeArg(std::optional<std::string> name, std::unique_ptr<Constant> value, SourceSpan span)
+  AttributeArg(std::optional<SourceSpan> name, std::unique_ptr<Constant> value, SourceSpan span)
       : name(std::move(name)), value(std::move(value)), span(span) {}
 
-  // Set during compilation (if it wasn't already set in the constructor).
-  std::optional<std::string> name;
+  // Span of just the argument name, e.g. "bar". This is initially null for
+  // arguments like `@foo("abc")`, but will be set during compilation.
+  std::optional<SourceSpan> name;
   std::unique_ptr<Constant> value;
-
+  // Span of the entire argument, e.g. `bar="abc"`, or `"abc"` if unnamed.
   const SourceSpan span;
 
   // Default name to use for arguments like `@foo("abc")` when there is no
@@ -82,10 +82,10 @@ struct AttributeArg final {
 
 struct Attribute final {
   // A constructor for synthetic attributes like @result.
-  explicit Attribute(std::string name) : name(std::move(name)) {}
+  explicit Attribute(SourceSpan name) : name(name) {}
 
-  Attribute(std::string name, SourceSpan span, std::vector<std::unique_ptr<AttributeArg>> args)
-      : name(std::move(name)), args(std::move(args)), span(span) {}
+  Attribute(SourceSpan name, std::vector<std::unique_ptr<AttributeArg>> args, SourceSpan span)
+      : name(name), args(std::move(args)), span(span) {}
 
   const AttributeArg* GetArg(std::string_view arg_name) const;
 
@@ -93,12 +93,18 @@ struct Attribute final {
   // example it returns non-null for `@foo("x")` but not for `@foo(bar="x")`.
   AttributeArg* GetStandaloneAnonymousArg();
 
-  const std::string name;
+  // Span of just the attribute name not including the "@", e.g. "foo".
+  const SourceSpan name;
   const std::vector<std::unique_ptr<AttributeArg>> args;
+  // Span of the entire attribute, e.g. `@foo(bar="abc")`.
   const SourceSpan span;
-
   // Set to true by Library::CompileAttribute.
   bool compiled = false;
+
+  // We parse `///` doc comments as nameless raw::Attribute with `provenance`
+  // set to raw::Attribute::Provenance::kDocComment. When consuming into a
+  // flat::Attribute, we set the name to kDocCommentName.
+  static constexpr std::string_view kDocCommentName = "doc";
 };
 
 // In the flat AST, "no attributes" is represented by an AttributeList
@@ -1274,8 +1280,10 @@ class Library : Attributable {
                           std::unique_ptr<TypeConstructor>* out_payload);
   void ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration> service_decl);
 
-  bool ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
+  void ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
                             std::unique_ptr<AttributeList>* out_attribute_list);
+  void ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute,
+                        std::unique_ptr<Attribute>* out_attribute);
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
   bool ConsumeTypeConstructor(std::unique_ptr<raw::TypeConstructor> raw_type_ctor,
                               const std::shared_ptr<NamingContext>& context,

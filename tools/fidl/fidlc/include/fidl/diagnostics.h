@@ -26,7 +26,6 @@ constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedId
     "unexpected identifier {}, was expecting {}");
 constexpr ErrorDef<std::string> ErrInvalidIdentifier("invalid identifier '{}'");
 constexpr ErrorDef<std::string> ErrInvalidLibraryNameComponent("Invalid library name component {}");
-constexpr ErrorDef<std::string> ErrDuplicateAttribute("duplicate attribute with name '{}'");
 
 // start new_syntax
 constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
@@ -274,6 +273,12 @@ constexpr ErrorDef<> ErrOnlyClientEndsInServices("service members must be client
 constexpr ErrorDef<const flat::Attribute *> ErrInvalidAttributePlacement(
     "placement of attribute '{}' disallowed here");
 constexpr ErrorDef<const flat::Attribute *> ErrDeprecatedAttribute("attribute '{}' is deprecated");
+constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateAttribute(
+    "duplicate attribute '{}'; previous was at {}");
+constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateAttributeCanonical(
+        "attribute '{}' conflicts with attribute '{}' from {}; both are "
+        "represented by the canonical form '{}'");
 constexpr ErrorDef<flat::AttributeArg *, flat::Attribute *> ErrCanOnlyUseStringOrBool(
     "argument '{}' on user-defined attribute '{}' cannot be a numeric "
     "value; use a bool or string instead");
@@ -285,13 +290,17 @@ constexpr ErrorDef<flat::Attribute *, std::string> ErrMissingRequiredAttributeAr
     "attribute '{}' is missing the required '{}' argument");
 constexpr ErrorDef<flat::Attribute *> ErrMissingRequiredAnonymousAttributeArg(
     "attribute '{}' is missing its required argument");
-constexpr ErrorDef<flat::Attribute *, std::string> ErrUnknownAttributeArg(
+constexpr ErrorDef<flat::Attribute *, std::string_view> ErrUnknownAttributeArg(
     "attribute '{}' does not support the '{}' argument");
-constexpr ErrorDef<flat::Attribute *, std::string> ErrDuplicateAttributeArg(
-    "attribute '{}' declares the '{}' argument multiple times");
+constexpr ErrorDef<flat::Attribute *, std::string_view, SourceSpan> ErrDuplicateAttributeArg(
+    "attribute '{}' provides the '{}' argument multiple times; previous was at {}");
+constexpr ErrorDef<flat::Attribute *, std::string_view, std::string_view, SourceSpan, std::string>
+    ErrDuplicateAttributeArgCanonical(
+        "attribute '{}' argument '{}' conflicts with argument '{}' from {}; both "
+        "are represented by the canonical form '{}'");
 constexpr ErrorDef<flat::Attribute *> ErrAttributeDisallowsArgs(
     "attribute '{}' does not support arguments");
-constexpr ErrorDef<std::string, flat::Attribute *> ErrAttributeArgRequiresLiteral(
+constexpr ErrorDef<std::string_view, flat::Attribute *> ErrAttributeArgRequiresLiteral(
     "argument '{}' of attribute '{}' does not support referencing constants; "
     "please use a literal instead");
 constexpr ErrorDef<const flat::Attribute *> ErrAttributeConstraintNotSatisfied(
@@ -312,7 +321,7 @@ constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrBoundIsTooBig(
     "'{}' bound of '{}' is too big");
 constexpr ErrorDef<const flat::Attribute *, std::string_view> ErrUnableToParseBound(
     "unable to parse '{}' bound of '{}'");
-constexpr WarningDef<std::string, std::string> WarnAttributeTypo(
+constexpr WarningDef<std::string_view, std::string> WarnAttributeTypo(
     "suspect attribute with name '{}'; did you mean '{}'?");
 constexpr ErrorDef<> ErrInvalidGeneratedName("generated name must be a valid identifier");
 

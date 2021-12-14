@@ -17,15 +17,14 @@ library example;
 protocol P {};
 protocol P {};              // Error: name collision
 
-@foo
-@foo("foo")                 // Error: attribute name collision
-type Foo = struct {};
+type foo = struct {};
+type Foo = struct {};       // Error: canonical name collision
 )FIDL");
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 2);
   EXPECT_ERR(errors[0], fidl::ErrNameCollision);
-  EXPECT_ERR(errors[1], fidl::ErrDuplicateAttribute);
+  EXPECT_ERR(errors[1], fidl::ErrNameCollisionCanonical);
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInLibraryCompile) {
@@ -95,6 +94,7 @@ library example;
 
 @foo(first="a", first="b")   // Error: duplicate args
 @bar(first=3, second=4)      // Error: x2 can only use string or bool
+@foo                         // Error: duplicate attribute
 type Enum = enum {
     FOO                      // Error: cannot resolve enum member
         = "not a number";    // Error: cannot be interpreted as uint32
@@ -103,12 +103,13 @@ type Enum = enum {
                       experimental_flags);
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 5);
+  ASSERT_EQ(errors.size(), 6);
   ASSERT_ERR(errors[0], fidl::ErrDuplicateAttributeArg);
   ASSERT_ERR(errors[1], fidl::ErrCanOnlyUseStringOrBool);
   ASSERT_ERR(errors[2], fidl::ErrCanOnlyUseStringOrBool);
-  ASSERT_ERR(errors[3], fidl::ErrTypeCannotBeConvertedToType);
-  ASSERT_ERR(errors[4], fidl::ErrCouldNotResolveMember);
+  ASSERT_ERR(errors[3], fidl::ErrDuplicateAttribute);
+  ASSERT_ERR(errors[4], fidl::ErrTypeCannotBeConvertedToType);
+  ASSERT_ERR(errors[5], fidl::ErrCouldNotResolveMember);
 }
 
 TEST(RecoverableCompilationTests, BadRecoverInConst) {

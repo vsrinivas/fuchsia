@@ -511,7 +511,7 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
 
   std::unique_ptr<fidl::raw::Attribute> attribute =
       std::move(ast->type_decls.front()->attributes->attributes.front());
-  ASSERT_STR_EQ(attribute->name.c_str(), "foo");
+  ASSERT_STR_EQ(attribute->maybe_name->span().data(), "foo");
   ASSERT_TRUE(attribute->args.size() == 1);
 
   std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);
@@ -535,7 +535,9 @@ TEST(ParsingTests, GoodMultilineCommentHasCorrectContents) {
 
   std::unique_ptr<fidl::raw::Attribute> attribute =
       std::move(ast->type_decls.front()->attributes->attributes.front());
-  ASSERT_STR_EQ(attribute->name.c_str(), "doc");
+  ASSERT_EQ(attribute->provenance, fidl::raw::Attribute::Provenance::kDocComment);
+  // We set the name to "doc" in the flat AST.
+  ASSERT_NULL(attribute->maybe_name);
   ASSERT_TRUE(attribute->args.size() == 1);
 
   std::unique_ptr<fidl::raw::AttributeArg> arg = std::move(attribute->args[0]);

@@ -234,7 +234,7 @@ void JSONGenerator::Generate(const flat::AttributeArg& value) {
 
 void JSONGenerator::Generate(const flat::Attribute& value) {
   GenerateObject([&]() {
-    const auto& name = fidl::utils::to_lower_snake_case(value.name);
+    const auto& name = fidl::utils::to_lower_snake_case(std::string(value.name.data()));
     GenerateObjectMember("name", name, Position::kFirst);
     GenerateObjectMember("arguments", value.args);
 

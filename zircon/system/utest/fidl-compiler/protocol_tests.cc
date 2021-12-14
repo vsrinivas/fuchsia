@@ -150,10 +150,11 @@ protocol Child {
   EXPECT_EQ(child_protocol->all_methods.size(), 3);
   ASSERT_EQ(child_protocol->composed_protocols.size(), 2);
   EXPECT_EQ(child_protocol->composed_protocols.front().attributes->attributes.size(), 1);
-  EXPECT_EQ(child_protocol->composed_protocols.front().attributes->attributes.front()->name,
+  EXPECT_EQ(child_protocol->composed_protocols.front().attributes->attributes.front()->name.data(),
             "this_is_allowed");
   EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.size(), 1);
-  EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->name, "doc");
+  EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->name.data(),
+            "doc");
   EXPECT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->span.data(),
             "/// This is also allowed.");
   ASSERT_EQ(child_protocol->composed_protocols.back().attributes->attributes.front()->args.size(),

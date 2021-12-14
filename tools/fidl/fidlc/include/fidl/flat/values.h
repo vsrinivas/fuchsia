@@ -5,6 +5,7 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VALUES_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_FLAT_VALUES_H_
 
+#include "../raw_ast.h"
 #include "../types.h"
 #include "../utils.h"
 

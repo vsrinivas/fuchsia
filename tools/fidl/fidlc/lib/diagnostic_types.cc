@@ -37,7 +37,15 @@ std::string Display(const raw::AttributeList* a) {
     if (it != a->attributes.cbegin()) {
       attributes_found << ", ";
     }
-    attributes_found << (*it)->name;
+    const raw::Attribute* attribute = it->get();
+    switch (attribute->provenance) {
+      case raw::Attribute::Provenance::kDefault:
+        attributes_found << (*it)->maybe_name->span().data();
+        break;
+      case raw::Attribute::Provenance::kDocComment:
+        attributes_found << "(doc comment)";
+        break;
+    }
   }
   return attributes_found.str();
 }
@@ -46,10 +54,10 @@ std::string Display(const std::vector<std::string_view>& library_name) {
   return NameLibrary(library_name);
 }
 
-std::string Display(const flat::Attribute* a) { return a->name; }
+std::string Display(const flat::Attribute* a) { return std::string(a->name.data()); }
 
 std::string Display(const flat::AttributeArg* a) {
-  return a->name.has_value() ? a->name.value() : "";
+  return a->name.has_value() ? std::string(a->name.value().data()) : "";
 }
 
 std::string Display(const flat::Constant* c) { return NameFlatConstant(c); }

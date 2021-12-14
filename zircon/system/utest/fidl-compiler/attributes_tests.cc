@@ -320,12 +320,12 @@ using we.should.not.care;
 }
 
 // Test that a duplicate attribute is caught, and nicely reported.
-TEST(AttributesTests, BadNoTwoSameAttributeTest) {
+TEST(AttributesTests, BadNoTwoSameAttribute) {
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
 @dup("first")
-@Dup("second")
+@dup("second")
 protocol A {
     MethodA();
 };
@@ -335,8 +335,24 @@ protocol A {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dup");
 }
 
+// Test that attributes with the same canonical form are considered duplicates.
+TEST(AttributesTests, BadNoTwoSameAttributeCanonical) {
+  TestLibrary library("dup_attributes.fidl", R"FIDL(
+library fidl.test.dupattributes;
+
+@TheSame("first")
+@The_same("second")
+protocol A {
+    MethodA();
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "canonical form 'the_same'");
+}
+
 // Test that doc comments and doc attributes clash are properly checked.
-TEST(AttributesTests, BadNoTwoSameDocAttributeTest) {
+TEST(AttributesTests, BadNoTwoSameDocAttribute) {
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 library fidl.test.dupattributes;
 
@@ -351,7 +367,7 @@ protocol A {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
 }
 
-TEST(AttributesTests, BadNoTwoSameAttributeOnLibraryTest) {
+TEST(AttributesTests, BadNoTwoSameAttributeOnLibrary) {
   TestLibrary library("dup_attributes.fidl", R"FIDL(
 @dup("first")
 library fidl.test.dupattributes;
@@ -367,7 +383,7 @@ library fidl.test.dupattributes;
 }
 
 // Test that a close attribute is caught.
-TEST(AttributesTests, WarnOnCloseAttributeTest) {
+TEST(AttributesTests, WarnOnCloseAttribute) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -387,7 +403,7 @@ protocol A {
 
 // This tests our ability to treat warnings as errors.  It is here because this
 // is the most convenient warning.
-TEST(AttributesTests, BadWarningsAsErrorsTest) {
+TEST(AttributesTests, BadWarningsAsErrors) {
   TestLibrary library(R"FIDL(
 library fidl.test;
 
@@ -907,12 +923,13 @@ TEST(AttributesTests, BadMultipleArgumentsDuplicateCanonicalNames) {
   TestLibrary library(R"FIDL(
 library example;
 
-@foo(bar_baz="abc", bar__baz="def")
+@foo(Bar_baz="abc", bar__baz="def")
 type MyStruct = struct {};
 
 )FIDL",
                       experimental_flags);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArg);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeArgCanonical);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "canonical form 'bar_baz'");
 }
 
 TEST(AttributesTests, GoodSingleArgumentIsNotNamed) {
@@ -1821,7 +1838,7 @@ type MyStruct = struct {};
   ASSERT_NOT_NULL(example_struct);
   ASSERT_EQ(example_struct->attributes->attributes.size(), 1);
   ASSERT_EQ(example_struct->attributes->attributes[0]->args.size(), 1);
-  EXPECT_EQ(example_struct->attributes->attributes[0]->args[0]->name, "value");
+  EXPECT_EQ(example_struct->attributes->attributes[0]->args[0]->name.value().data(), "value");
 }
 
 TEST(AttributesTests, GoodSingleNamedArgumentKeepsName) {
@@ -1841,7 +1858,7 @@ type MyStruct = struct {};
   ASSERT_NOT_NULL(example_struct);
   ASSERT_EQ(example_struct->attributes->attributes.size(), 1);
   ASSERT_EQ(example_struct->attributes->attributes[0]->args.size(), 1);
-  EXPECT_EQ(example_struct->attributes->attributes[0]->args[0]->name, "foo");
+  EXPECT_EQ(example_struct->attributes->attributes[0]->args[0]->name.value().data(), "foo");
 }
 
 TEST(AttributesTests, BadReferencesNonexistentConstWithoutSchema) {

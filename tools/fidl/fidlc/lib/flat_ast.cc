@@ -13,7 +13,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "fidl/attributes.h"
 #include "fidl/diagnostic_types.h"
 #include "fidl/diagnostics.h"
 #include "fidl/experimental_flags.h"
@@ -167,7 +166,7 @@ uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
 const AttributeArg* Attribute::GetArg(std::string_view arg_name) const {
   std::string name = utils::canonicalize(arg_name);
   for (const auto& arg : args) {
-    if (arg->name == name) {
+    if (arg->name.value().data() == name) {
       return arg.get();
     }
   }
@@ -185,7 +184,7 @@ AttributeArg* Attribute::GetStandaloneAnonymousArg() {
 
 const Attribute* AttributeList::Get(std::string_view attribute_name) const {
   for (const auto& attribute : attributes) {
-    if (attribute->name == attribute_name)
+    if (attribute->name.data() == attribute_name)
       return attribute.get();
   }
   return nullptr;
@@ -193,7 +192,7 @@ const Attribute* AttributeList::Get(std::string_view attribute_name) const {
 
 Attribute* AttributeList::Get(std::string_view attribute_name) {
   for (const auto& attribute : attributes) {
-    if (attribute->name == attribute_name)
+    if (attribute->name.data() == attribute_name)
       return attribute.get();
   }
   return nullptr;
@@ -1298,16 +1297,16 @@ void AttributeSchema::ResolveArgs(Library* library, Attribute* attribute) const 
       library->Fail(ErrAttributeArgNotNamed, attribute->span, anon_arg);
       return;
     }
-    anon_arg->name = arg_schemas_.begin()->first;
+    anon_arg->name = library->GeneratedSimpleName(arg_schemas_.begin()->first);
   } else if (arg_schemas_.size() == 1 && attribute->args.size() == 1) {
     library->Fail(ErrAttributeArgMustNotBeNamed, attribute->span);
   }
 
   // Resolve each argument by name.
   for (auto& arg : attribute->args) {
-    const auto it = arg_schemas_.find(arg->name.value());
+    const auto it = arg_schemas_.find(arg->name.value().data());
     if (it == arg_schemas_.end()) {
-      library->Fail(ErrUnknownAttributeArg, attribute->span, attribute, arg->name.value());
+      library->Fail(ErrUnknownAttributeArg, attribute->span, attribute, arg->name.value().data());
       continue;
     }
     const auto& [name, schema] = *it;
@@ -1333,7 +1332,8 @@ void AttributeArgSchema::ResolveArg(Library* library, Attribute* attribute, Attr
   Constant* constant = arg->value.get();
 
   if (literal_only && constant->kind != Constant::Kind::kLiteral) {
-    library->Fail(ErrAttributeArgRequiresLiteral, constant->span, arg->name.value(), attribute);
+    library->Fail(ErrAttributeArgRequiresLiteral, constant->span, arg->name.value().data(),
+                  attribute);
     return;
   }
 
@@ -1389,7 +1389,7 @@ void AttributeSchema::ResolveArgsWithoutSchema(Library* library, Attribute* attr
   // For attributes with a single, anonymous argument like `@foo("bar")`, assign
   // a default name so that arguments are always named after compilation.
   if (auto anon_arg = attribute->GetStandaloneAnonymousArg()) {
-    anon_arg->name = AttributeArg::kDefaultAnonymousName;
+    anon_arg->name = library->GeneratedSimpleName(AttributeArg::kDefaultAnonymousName);
   }
 
   // Try resolving each argument as string or bool. We don't allow numerics
@@ -1745,7 +1745,8 @@ Libraries::Libraries() {
       .RestrictTo({
           AttributePlacement::kProtocolDecl,
       });
-  AddAttributeSchema("doc").AddArg(AttributeArgSchema(ConstantValue::Kind::kString));
+  AddAttributeSchema(std::string(Attribute::kDocCommentName))
+      .AddArg(AttributeArgSchema(ConstantValue::Kind::kString));
   AddAttributeSchema("layout").Deprecate();
   AddAttributeSchema("for_deprecated_c_bindings")
       .RestrictTo({
@@ -1865,7 +1866,7 @@ static size_t EditDistance(std::string_view sequence1, std::string_view sequence
 const AttributeSchema& Libraries::RetrieveAttributeSchema(Reporter* reporter,
                                                           const Attribute* attribute,
                                                           bool warn_on_typo) const {
-  auto attribute_name = attribute->name;
+  auto attribute_name = attribute->name.data();
   auto iter = attribute_schemas_.find(attribute_name);
   if (iter != attribute_schemas_.end()) {
     return iter->second;
@@ -1873,17 +1874,14 @@ const AttributeSchema& Libraries::RetrieveAttributeSchema(Reporter* reporter,
 
   if (warn_on_typo) {
     // Match against all known attributes.
-    for (const auto& name_and_schema : attribute_schemas_) {
-      std::string supplied_name = attribute_name;
-      std::string suspected_name = name_and_schema.first;
-
+    for (const auto& [suspected_name, schema] : attribute_schemas_) {
+      auto supplied_name = attribute_name;
       auto edit_distance = EditDistance(supplied_name, suspected_name);
       if (0 < edit_distance && edit_distance < 2) {
         reporter->Report(WarnAttributeTypo, attribute->span, supplied_name, suspected_name);
       }
     }
   }
-
   return AttributeSchema::kUserDefined;
 }
 
@@ -2173,34 +2171,55 @@ VerifyResourcenessStep Library::StartVerifyResourcenessStep() {
 }
 VerifyAttributesStep Library::StartVerifyAttributesStep() { return VerifyAttributesStep(this); }
 
-bool Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
+void Library::ConsumeAttributeList(std::unique_ptr<raw::AttributeList> raw_attribute_list,
                                    std::unique_ptr<AttributeList>* out_attribute_list) {
-  AttributesBuilder<Attribute> attributes_builder(reporter_);
-  if (raw_attribute_list != nullptr) {
-    for (auto& raw_attribute : raw_attribute_list->attributes) {
-      [[maybe_unused]] bool all_named = true;
-      std::vector<std::unique_ptr<AttributeArg>> args;
-      for (auto& raw_arg : raw_attribute->args) {
-        std::unique_ptr<Constant> constant;
-        if (!ConsumeConstant(std::move(raw_arg->value), &constant)) {
-          return false;
-        }
-
-        all_named = all_named && raw_arg->name.has_value();
-        args.emplace_back(
-            std::make_unique<AttributeArg>(raw_arg->name, std::move(constant), raw_arg->span()));
-      }
-      assert(all_named ||
-             args.size() == 1 && "parser should not allow an anonymous arg with other args");
-      auto attribute =
-          std::make_unique<Attribute>(raw_attribute->name, raw_attribute->span(), std::move(args));
-      attributes_builder.Insert(std::move(attribute));
-    }
+  assert(out_attribute_list && "must provide out parameter");
+  // Usually *out_attribute_list is null and we create the AttributeList here.
+  // But for library declarations we consume attributes from each file into
+  // library->attributes. In this case it's only null for the first file.
+  if (*out_attribute_list == nullptr) {
+    *out_attribute_list =
+        std::make_unique<AttributeList>(std::vector<std::unique_ptr<Attribute>>());
   }
+  if (!raw_attribute_list) {
+    return;
+  }
+  auto& out_attributes = (*out_attribute_list)->attributes;
+  for (auto& raw_attribute : raw_attribute_list->attributes) {
+    std::unique_ptr<Attribute> attribute;
+    ConsumeAttribute(std::move(raw_attribute), &attribute);
+    out_attributes.push_back(std::move(attribute));
+  }
+}
 
-  auto attributes = attributes_builder.Done();
-  *out_attribute_list = std::make_unique<AttributeList>(std::move(attributes));
-  return true;
+void Library::ConsumeAttribute(std::unique_ptr<raw::Attribute> raw_attribute,
+                               std::unique_ptr<Attribute>* out_attribute) {
+  [[maybe_unused]] bool all_named = true;
+  std::vector<std::unique_ptr<AttributeArg>> args;
+  for (auto& raw_arg : raw_attribute->args) {
+    std::unique_ptr<Constant> constant;
+    if (!ConsumeConstant(std::move(raw_arg->value), &constant)) {
+      continue;
+    }
+    std::optional<SourceSpan> name;
+    if (raw_arg->maybe_name) {
+      name = raw_arg->maybe_name->span();
+    }
+    all_named = all_named && name.has_value();
+    args.emplace_back(std::make_unique<AttributeArg>(name, std::move(constant), raw_arg->span()));
+  }
+  assert(all_named ||
+         args.size() == 1 && "parser should not allow an anonymous arg with other args");
+  SourceSpan name;
+  switch (raw_attribute->provenance) {
+    case raw::Attribute::Provenance::kDefault:
+      name = raw_attribute->maybe_name->span();
+      break;
+    case raw::Attribute::Provenance::kDocComment:
+      name = GeneratedSimpleName(Attribute::kDocCommentName);
+      break;
+  }
+  *out_attribute = std::make_unique<Attribute>(name, std::move(args), raw_attribute->span());
 }
 
 bool Library::ConsumeConstant(std::unique_ptr<raw::Constant> raw_constant,
@@ -2297,9 +2316,7 @@ bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_decl
   assert(alias_declaration->alias && alias_declaration->type_ctor != nullptr);
 
   std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(alias_declaration->attributes), &attributes)) {
-    return false;
-  }
+  ConsumeAttributeList(std::move(alias_declaration->attributes), &attributes);
 
   auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
   std::unique_ptr<TypeConstructor> type_ctor_;
@@ -2316,9 +2333,7 @@ void Library::ConsumeConstDeclaration(std::unique_ptr<raw::ConstDeclaration> con
   auto span = const_declaration->identifier->span();
   auto name = Name::CreateSourced(this, span);
   std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(const_declaration->attributes), &attributes)) {
-    return;
-  }
+  ConsumeAttributeList(std::move(const_declaration->attributes), &attributes);
 
   std::unique_ptr<TypeConstructor> type_ctor;
   if (!ConsumeTypeConstructor(std::move(const_declaration->type_ctor), NamingContext::Create(name),
@@ -2372,7 +2387,7 @@ bool Library::CreateMethodResult(const std::shared_ptr<NamingContext>& err_varia
   result_members.push_back(std::move(success_member));
   result_members.push_back(std::move(error_member));
   std::vector<std::unique_ptr<Attribute>> result_attributes;
-  result_attributes.emplace_back(std::make_unique<Attribute>("result"));
+  result_attributes.emplace_back(std::make_unique<Attribute>(GeneratedSimpleName("result")));
 
   // TODO(fxbug.dev/8027): Join spans of response and error constructor for `result_name`.
   auto result_context = err_variant_context->parent();
@@ -2414,9 +2429,7 @@ void Library::ConsumeProtocolDeclaration(
   std::set<Name> seen_composed_protocols;
   for (auto& raw_composed : protocol_declaration->composed_protocols) {
     std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(raw_composed->attributes), &attributes)) {
-      return;
-    }
+    ConsumeAttributeList(std::move(raw_composed->attributes), &attributes);
 
     auto& raw_protocol_name = raw_composed->protocol_name;
     auto composed_protocol_name = CompileCompoundIdentifier(raw_protocol_name.get());
@@ -2434,9 +2447,7 @@ void Library::ConsumeProtocolDeclaration(
   std::vector<Protocol::Method> methods;
   for (auto& method : protocol_declaration->methods) {
     std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(method->attributes), &attributes)) {
-      return;
-    }
+    ConsumeAttributeList(std::move(method->attributes), &attributes);
 
     SourceSpan method_name = method->identifier->span();
     bool has_request = method->maybe_request != nullptr;
@@ -2521,9 +2532,7 @@ void Library::ConsumeProtocolDeclaration(
   }
 
   std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(protocol_declaration->attributes), &attributes)) {
-    return;
-  }
+  ConsumeAttributeList(std::move(protocol_declaration->attributes), &attributes);
 
   RegisterDecl(std::make_unique<Protocol>(std::move(attributes), std::move(protocol_name),
                                           std::move(composed_protocols), std::move(methods)));
@@ -2584,9 +2593,7 @@ bool Library::ConsumeResourceDeclaration(
   std::vector<Resource::Property> properties;
   for (auto& property : resource_declaration->properties) {
     std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(property->attributes), &attributes)) {
-      return false;
-    }
+    ConsumeAttributeList(std::move(property->attributes), &attributes);
 
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(property->type_ctor), NamingContext::Create(name),
@@ -2597,9 +2604,7 @@ bool Library::ConsumeResourceDeclaration(
   }
 
   std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(resource_declaration->attributes), &attributes)) {
-    return false;
-  }
+  ConsumeAttributeList(std::move(resource_declaration->attributes), &attributes);
 
   std::unique_ptr<TypeConstructor> type_ctor;
   if (resource_declaration->maybe_type_ctor != nullptr) {
@@ -2620,9 +2625,7 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
   std::vector<Service::Member> members;
   for (auto& member : service_decl->members) {
     std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
-      return;
-    }
+    ConsumeAttributeList(std::move(member->attributes), &attributes);
 
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(std::move(member->type_ctor), context->EnterMember(member->span()),
@@ -2632,9 +2635,7 @@ void Library::ConsumeServiceDeclaration(std::unique_ptr<raw::ServiceDeclaration>
   }
 
   std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(service_decl->attributes), &attributes)) {
-    return;
-  }
+  ConsumeAttributeList(std::move(service_decl->attributes), &attributes);
 
   RegisterDecl(
       std::make_unique<Service>(std::move(attributes), std::move(name), std::move(members)));
@@ -2674,9 +2675,7 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
     auto span = member->identifier->span();
 
     std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
-      return false;
-    }
+    ConsumeAttributeList(std::move(member->attributes), &attributes);
 
     std::unique_ptr<Constant> value;
     if (!ConsumeConstant(std::move(member->value), &value))
@@ -2696,9 +2695,7 @@ bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout,
   }
 
   std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
-    return false;
-  }
+  ConsumeAttributeList(std::move(raw_attribute_list), &attributes);
   MaybeOverrideName(*attributes, context.get());
 
   auto strictness = types::Strictness::kFlexible;
@@ -2723,9 +2720,7 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::OrdinaledLayoutMember*>(mem.get());
     std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
-      return false;
-    }
+    ConsumeAttributeList(std::move(member->attributes), &attributes);
     if (member->reserved) {
       members.emplace_back(std::move(member->ordinal), member->span(), std::move(attributes));
       continue;
@@ -2742,9 +2737,7 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout,
   }
 
   std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
-    return false;
-  }
+  ConsumeAttributeList(std::move(raw_attribute_list), &attributes);
   MaybeOverrideName(*attributes, context.get());
 
   auto strictness = types::Strictness::kFlexible;
@@ -2769,9 +2762,7 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
     auto member = static_cast<raw::StructLayoutMember*>(mem.get());
 
     std::unique_ptr<AttributeList> attributes;
-    if (!ConsumeAttributeList(std::move(member->attributes), &attributes)) {
-      return false;
-    }
+    ConsumeAttributeList(std::move(member->attributes), &attributes);
 
     std::unique_ptr<TypeConstructor> type_ctor;
     if (!ConsumeTypeConstructor(
@@ -2789,9 +2780,7 @@ bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout,
   }
 
   std::unique_ptr<AttributeList> attributes;
-  if (!ConsumeAttributeList(std::move(raw_attribute_list), &attributes)) {
-    return false;
-  }
+  ConsumeAttributeList(std::move(raw_attribute_list), &attributes);
   MaybeOverrideName(*attributes, context.get());
 
   auto resourceness = types::Resourceness::kValue;
@@ -2958,23 +2947,7 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
-  // Multiple files can have attributes on the library declaration, so we
-  // consume them into a separate list and merge with this->attributes below.
-  std::unique_ptr<AttributeList> consumed_attributes;
-  if (!ConsumeAttributeList(std::move(file->library_decl->attributes), &consumed_attributes)) {
-    return false;
-  }
-
-  if (!attributes) {
-    attributes = std::move(consumed_attributes);
-  } else {
-    AttributesBuilder attributes_builder(reporter_, std::move(attributes->attributes));
-    for (auto& attribute : consumed_attributes->attributes) {
-      if (!attributes_builder.Insert(std::move(attribute)))
-        return false;
-    }
-    attributes = std::make_unique<AttributeList>(attributes_builder.Done());
-  }
+  ConsumeAttributeList(std::move(file->library_decl->attributes), &attributes);
 
   // All fidl files in a library should agree on the library name.
   std::vector<std::string_view> new_name;
@@ -3419,7 +3392,20 @@ bool Library::ResolveAsOptional(Constant* constant) const {
 }
 
 void Library::CompileAttributeList(AttributeList* attributes) {
+  Scope<std::string> scope;
   for (auto& attribute : attributes->attributes) {
+    const auto original_name = attribute->name.data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto result = scope.Insert(canonical_name, attribute->name);
+    if (!result.ok()) {
+      const auto previous_span = result.previous_occurrence();
+      if (original_name == previous_span.data()) {
+        Fail(ErrDuplicateAttribute, attribute->name, original_name, previous_span);
+      } else {
+        Fail(ErrDuplicateAttributeCanonical, attribute->name, original_name, previous_span.data(),
+             previous_span, canonical_name);
+      }
+    }
     CompileAttribute(attribute.get());
   }
 }
@@ -3429,12 +3415,22 @@ void Library::CompileAttribute(Attribute* attribute) {
     return;
   }
 
-  // Check for duplicate args, and return early if we find them.
-  std::set<std::string> seen;
+  Scope<std::string> scope;
   for (auto& arg : attribute->args) {
-    if (arg->name.has_value() && !seen.insert(utils::canonicalize(arg->name.value())).second) {
-      Fail(ErrDuplicateAttributeArg, attribute->span, attribute, arg->name.value());
-      return;
+    if (!arg->name.has_value()) {
+      continue;
+    }
+    const auto original_name = arg->name.value().data();
+    const auto canonical_name = utils::canonicalize(original_name);
+    const auto result = scope.Insert(canonical_name, arg->name.value());
+    if (!result.ok()) {
+      const auto previous_span = result.previous_occurrence();
+      if (original_name == previous_span.data()) {
+        Fail(ErrDuplicateAttributeArg, attribute->span, attribute, original_name, previous_span);
+      } else {
+        Fail(ErrDuplicateAttributeArgCanonical, attribute->span, attribute, original_name,
+             previous_span.data(), previous_span, canonical_name);
+      }
     }
   }
 
