@@ -80,6 +80,7 @@ ZirconRebootReason ExtractZirconRebootInfo(const std::string& path,
   }
 
   *content = file_content;
+  (*content)->erase(std::find((*content)->begin(), (*content)->end(), '\0'), (*content)->end());
 
   const std::vector<std::string_view> lines =
       fxl::SplitString(content->value(), "\n", fxl::WhiteSpaceHandling::kTrimWhitespace,
