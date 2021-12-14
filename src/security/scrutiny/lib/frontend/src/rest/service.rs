@@ -3,21 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    crate::rest::{error::RestError, visualizer::*},
-    anyhow::{Error, Result},
+    crate::rest::visualizer::*,
+    anyhow::Error,
+    async_net::TcpListener,
+    fuchsia_async as fasync,
+    fuchsia_hyper::TcpStream,
+    futures::{FutureExt as _, TryStreamExt as _},
+    hyper::{header, Body, Request, Response, StatusCode},
     log::{info, warn},
-    rouille::{Request, Response, ResponseBody},
     scrutiny::{
         engine::dispatcher::{ControllerDispatcher, DispatcherError},
         model::controller::ConnectionMode,
     },
     serde_json::json,
     std::collections::HashMap,
-    std::io::{self, ErrorKind, Read},
-    std::net::TcpStream,
-    std::str,
+    std::convert::TryInto as _,
+    std::io::{self, ErrorKind},
+    std::net::{IpAddr, SocketAddr},
     std::sync::{Arc, RwLock},
-    std::thread,
 };
 
 /// Holds ownership of the thread that the REST service is running on.
@@ -25,40 +28,60 @@ pub struct RestService {}
 
 impl RestService {
     /// Spawns the RestService on a new thread.
+    ///
+    /// Runs the core REST service loop, parsing URLs and queries to their
+    /// respective controllers via the ControllerDispatcher. This function does
+    /// not exit.
     pub fn spawn(
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
         visualizer: Arc<RwLock<Visualizer>>,
         port: u16,
-    ) -> Result<()> {
-        let addr = format!("127.0.0.1:{}", port);
-        println!("• Server: http://{}\n", addr);
-
-        if TcpStream::connect(("127.0.0.1", port)).is_ok() {
-            Err(Error::new(RestError::port_in_use(addr)))
-        } else {
-            thread::spawn(move || RestService::run(dispatcher, visualizer, addr));
-            Ok(())
-        }
-    }
-
-    /// Runs the core REST service loop, parsing URLs and queries to their
-    /// respective controllers via the ControllerDispatcher. This function does
-    /// not exit.
-    fn run(
-        dispatcher: Arc<RwLock<ControllerDispatcher>>,
-        visualizer: Arc<RwLock<Visualizer>>,
-        addr: String,
     ) {
-        info!("Server starting: http://{}", addr);
-        rouille::start_server(addr, move |request| {
-            info!("Request: {} {}", request.method(), request.url());
-            // TODO: Change to allow each plugin to define its own visualizers.
-            if request.url().starts_with("/api") {
-                RestService::handle_controller_request(dispatcher.clone(), request)
-            } else {
-                visualizer.read().unwrap().serve_path_or_index(request)
+        use hyper::service::{make_service_fn, service_fn};
+        use std::convert::Infallible;
+
+        let addr = SocketAddr::new(IpAddr::V4(std::net::Ipv4Addr::LOCALHOST), port);
+
+        let make_svc = make_service_fn(move |_: &TcpStream| {
+            let dispatcher = dispatcher.clone();
+            let visualizer = visualizer.clone();
+            async move {
+                Ok::<_, Infallible>(service_fn(move |request| {
+                    let dispatcher = dispatcher.clone();
+                    let visualizer = visualizer.clone();
+                    async move {
+                        info!("Request: {} {}", request.method(), request.uri().path());
+                        // TODO: Change to allow each plugin to define its own visualizers.
+                        if request.uri().path().starts_with("/api") {
+                            RestService::handle_controller_request(dispatcher, request).await
+                        } else {
+                            visualizer.read().unwrap().serve_path_or_index(request)
+                        }
+                    }
+                    .map(Ok::<_, Infallible>)
+                }))
             }
         });
+
+        fasync::Task::spawn(async move {
+            async move {
+                let listener = TcpListener::bind(addr).await?;
+
+                let addr = listener.local_addr()?;
+
+                info!("Server starting: http://{}", addr);
+
+                let stream = listener.incoming().map_ok(|stream| TcpStream { stream });
+                let () = hyper::Server::builder(hyper::server::accept::from_stream(stream))
+                    .serve(make_svc)
+                    .await?;
+
+                Ok::<(), Error>(())
+            }
+            .await
+            .expect("http server exited")
+        })
+        .detach()
     }
 
     fn parse_get_params(query_str: &str) -> HashMap<String, String> {
@@ -84,85 +107,107 @@ impl RestService {
     }
 
     /// Converts a rust error into a JSON error response.
-    fn error_response(error: Error, status_code: Option<u16>) -> Response {
+    fn error_response(error: Error, status_code: Option<StatusCode>) -> Response<Body> {
         let result = json!({
             "status": "error",
             "description": error.to_string(),
         });
 
-        Response {
-            status_code: {
-                if let Some(code) = status_code {
-                    code
-                } else {
-                    500
-                }
-            },
-            headers: vec![("Content-Type".into(), "application/json".into())],
-            data: ResponseBody::from_string(result.to_string()),
-            upgrade: None,
-        }
+        let mut response = Response::new(result.to_string().into());
+        *response.status_mut() = status_code.unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            response
+                .headers_mut()
+                .insert(header::CONTENT_TYPE, "application/json".try_into().unwrap()),
+            None
+        );
+        response
     }
 
-    fn handle_controller_request(
+    async fn handle_controller_request(
         dispatcher: Arc<RwLock<ControllerDispatcher>>,
-        request: &Request,
-    ) -> Response {
-        let method = request.method();
-        let mut body = request.data().expect("RequestBody already retrieved");
+        request: Request<Body>,
+    ) -> Response<Body> {
+        use bytes::{buf::ext::BufExt as _, Buf as _};
+        use hyper::Method;
 
-        let query_val = match method {
-            "GET" => {
+        let path = request.uri().path().to_string();
+
+        let query_val = match request.method() {
+            &Method::GET => {
                 // TODO: Looking at the source for `get_param(&self, param_name: &str)` seems like it's not great to
                 // rely on that function since it doesn't match against the entire parameter name...
-                let query = request.raw_query_string();
+                let query = match request.uri().query() {
+                    Some(query) => query,
+                    None => {
+                        warn!("Failed to read request parameters.");
+                        return RestService::error_response(
+                            anyhow::anyhow!("missing request parameters"),
+                            Some(StatusCode::BAD_REQUEST),
+                        );
+                    }
+                };
                 let params = RestService::parse_get_params(query);
                 Ok(json!(params))
             }
-            "POST" => {
-                let mut query = String::new();
-                if let Err(e) = body.read_to_string(&mut query) {
-                    warn!("Failed to read request body.");
-                    return RestService::error_response(Error::new(e), Some(400));
-                }
-                if query.is_empty() {
+            &Method::POST => {
+                let query = match hyper::body::aggregate(request.into_body()).await {
+                    Ok(query) => query,
+                    Err(e) => {
+                        warn!("Failed to read request body.");
+                        return RestService::error_response(
+                            Error::new(e),
+                            Some(StatusCode::BAD_REQUEST),
+                        );
+                    }
+                };
+                if query.has_remaining() {
+                    serde_json::from_reader(query.reader())
+                } else {
                     // If there is no body, return a null value, since from_str will error.
                     Ok(json!(null))
-                } else {
-                    serde_json::from_str(&query)
                 }
             }
-            _ => {
+            method => {
                 // TODO: Should always serve HEAD requests.
                 warn!("Expected GET or POST method, received {}.", method);
                 return RestService::error_response(
                     Error::new(io::Error::new(ErrorKind::ConnectionRefused, "Unsupported method.")),
-                    Some(405),
+                    Some(StatusCode::METHOD_NOT_ALLOWED),
                 );
             }
         };
 
         let dispatch = dispatcher.read().unwrap();
         if let Ok(json_val) = query_val {
-            match dispatch.query(ConnectionMode::Remote, request.url(), json_val) {
-                Ok(result) => Response {
-                    status_code: 200,
-                    headers: vec![("Content-Type".into(), "application/json".into())],
-                    data: ResponseBody::from_string(serde_json::to_string_pretty(&result).unwrap()),
-                    upgrade: None,
-                },
+            match dispatch.query(ConnectionMode::Remote, path, json_val) {
+                Ok(result) => {
+                    let mut response =
+                        Response::new(serde_json::to_string_pretty(&result).unwrap().into());
+                    assert_eq!(
+                        response
+                            .headers_mut()
+                            .insert(header::CONTENT_TYPE, "application/json".try_into().unwrap()),
+                        None
+                    );
+                    response
+                }
                 Err(e) => {
                     if let Some(dispatch_error) = e.downcast_ref::<DispatcherError>() {
                         if let DispatcherError::NamespaceDoesNotExist(_) = dispatch_error {
                             warn!("Address not found.");
-                            return Response::empty_404();
+                            let mut response = Response::new(Body::empty());
+                            *response.status_mut() = StatusCode::NOT_FOUND;
+                            return response;
                         }
                     }
                     RestService::error_response(e, None)
                 }
             }
         } else {
-            return Response::empty_400();
+            let mut response = Response::new(Body::empty());
+            *response.status_mut() = StatusCode::BAD_REQUEST;
+            response
         }
     }
 }
@@ -207,57 +252,73 @@ mod tests {
         Arc::new(RwLock::new(dispatcher))
     }
 
-    #[test]
-    fn handle_controller_request_fails_non_get_or_post_request() {
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_controller_request_fails_non_get_or_post_request() {
         let dispatcher = setup_dispatcher();
-        let request = &Request::fake_http("HEAD", "/api/foo/bar", vec![], vec![]);
-        let response = RestService::handle_controller_request(dispatcher.clone(), request);
-        assert_eq!(response.status_code, 405);
+        let request =
+            Request::builder().method("HEAD").uri("/api/foo/bar").body(Body::empty()).unwrap();
+        let response = RestService::handle_controller_request(dispatcher.clone(), request).await;
+        assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
     }
 
-    #[test]
-    fn handle_controller_request_returns_500_on_controller_error() {
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_controller_request_returns_500_on_controller_error() {
         let dispatcher = setup_dispatcher();
-        let request = &Request::fake_http("GET", "/api/foo/baz", vec![], vec![]);
-        let response = RestService::handle_controller_request(dispatcher.clone(), request);
-        assert_eq!(response.status_code, 500);
+        let request = Request::builder()
+            .method("GET")
+            .uri("/api/foo/baz?foo=bar")
+            .body(Body::empty())
+            .unwrap();
+        let response = RestService::handle_controller_request(dispatcher.clone(), request).await;
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     }
 
-    #[test]
-    fn handle_controller_request_returns_404_on_non_matching_dispatcher() {
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_controller_request_returns_404_on_non_matching_dispatcher() {
         let dispatcher = setup_dispatcher();
-        let request = &Request::fake_http("GET", "/api/foo/bin", vec![], vec![]);
-        let response = RestService::handle_controller_request(dispatcher.clone(), request);
-        assert_eq!(response.status_code, 404);
+        let request = Request::builder()
+            .method("GET")
+            .uri("/api/foo/bin?foo=bar")
+            .body(Body::empty())
+            .unwrap();
+        let response = RestService::handle_controller_request(dispatcher.clone(), request).await;
+        assert_eq!(response.status(), StatusCode::NOT_FOUND);
     }
 
-    #[test]
-    fn handle_controller_request_serves_get_request() {
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_controller_request_serves_get_request() {
         let dispatcher = setup_dispatcher();
-        let request = &Request::fake_http("GET", "/api/foo/bar?hello=world", vec![], vec![]);
-        let response = RestService::handle_controller_request(dispatcher.clone(), request);
-        assert_eq!(response.status_code, 200);
-        let mut buffer = Vec::new();
-        let (mut reader, _) = response.data.into_reader_and_size();
-        reader.read_to_end(&mut buffer).unwrap();
+        let request = Request::builder()
+            .method("GET")
+            .uri("/api/foo/bar?hello=world")
+            .body(Body::empty())
+            .unwrap();
+        let response = RestService::handle_controller_request(dispatcher.clone(), request).await;
+        assert_eq!(response.status(), 200);
+        let buffer = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let response_str = std::str::from_utf8(&buffer).unwrap();
-        assert_eq!(response_str.contains("hello"), true);
-        assert_eq!(response_str.contains("world"), true);
+        assert!(
+            response_str.contains("hello") && response_str.contains("world"),
+            "{}",
+            response_str
+        );
     }
 
-    #[test]
-    fn handle_controller_request_serves_post_request() {
+    #[fasync::run_singlethreaded(test)]
+    async fn handle_controller_request_serves_post_request() {
         let dispatcher = setup_dispatcher();
         let bytes = b"{\"hello\":\"world\"}";
-        let request = &Request::fake_http("POST", "/api/foo/bar", vec![], bytes.to_vec());
-        let response = RestService::handle_controller_request(dispatcher.clone(), request);
-        assert_eq!(response.status_code, 200);
-        let mut buffer = Vec::new();
-        let (mut reader, _) = response.data.into_reader_and_size();
-        reader.read_to_end(&mut buffer).unwrap();
+        let request =
+            Request::builder().method("POST").uri("/api/foo/bar").body(bytes[..].into()).unwrap();
+        let response = RestService::handle_controller_request(dispatcher.clone(), request).await;
+        assert_eq!(response.status(), 200);
+        let buffer = hyper::body::to_bytes(response.into_body()).await.unwrap();
         let response_str = std::str::from_utf8(&buffer).unwrap();
-        assert_eq!(response_str.contains("hello"), true);
-        assert_eq!(response_str.contains("world"), true);
+        assert!(
+            response_str.contains("hello") && response_str.contains("world"),
+            "{}",
+            response_str
+        );
     }
 
     #[test]

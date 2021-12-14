@@ -2,20 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use rouille::{Request, Response};
-
-/// Returns a tuple consisting of (PATH_PREFIX_TO_REMOVE_FROM_REQUEST, PATH_RELATIVE_TO_FUCHSIA_ROOT)
-/// of the location of the file specified by the url.
-/// This is used in the case where asset files are not contained in the
-/// configured static directory.
-fn translate_hardcoded_path(url: &str) -> Option<(String, String)> {
-    match url {
-        "/static/js/third_party/d3.js" => {
-            Some(("/static/js/third_party/".to_string(), "/scripts/third_party/d3".to_string()))
-        }
-        _ => None,
-    }
-}
+use hyper::{Body, Request, Response, StatusCode};
+use std::fs::File;
+use std::io::Read as _;
+use std::path::Path;
 
 /// Serves up static files from the local fs based on a path relative to $FUCHSIA_DIR.
 pub struct Visualizer {
@@ -31,50 +21,72 @@ impl Visualizer {
             path = format!("{}/", path);
         }
         let static_root = format!("{}{}", fuchsia_path, path);
-        Self { fuchsia_root: fuchsia_path, static_root: static_root }
+        Self { fuchsia_root: fuchsia_path, static_root }
     }
 
     // If the file specified cannot be found because it does not exist, see
     // if there is an index.html at the specified path and serve that instead.
-    pub fn serve_path_or_index(&self, request: &Request) -> Response {
-        if let Some((prefix_to_remove, path)) = translate_hardcoded_path(&request.url()) {
-            // Hardcoded paths are relative to fuchsia_root.
-            let prefix_stripped_req = request
-                .remove_prefix(&prefix_to_remove)
-                .expect("Expected to be able to remove prefix, but was unable to.");
-            rouille::match_assets(&prefix_stripped_req, &format!("{}{}", self.fuchsia_root, path))
-        } else {
-            let response = rouille::match_assets(request, &self.static_root);
-            // Looking for a *.html file if we were unable to find a matching asset.
-            if response.status_code == 404 {
-                let mut modified_url = request.url();
-                if modified_url.is_empty() || modified_url == "/" {
-                    modified_url = "/index.html".to_string();
-                } else {
-                    modified_url = format!("{}.html", request.url());
-                }
-                let new_request = Request::fake_http_from(
-                    *request.remote_addr(),
-                    request.method(),
-                    modified_url,
-                    request
-                        .headers()
-                        .map(|(key, val)| (key.to_string(), val.to_string()))
-                        .collect(),
-                    vec![],
-                ); // Since this should be a GET request for an index.html, we never care about the body.
-                rouille::match_assets(&new_request, &self.static_root)
-            } else {
-                response
-            }
+    pub fn serve_path_or_index(&self, request: Request<Body>) -> Response<Body> {
+        fn empty_404() -> Response<Body> {
+            let mut response = Response::new(Body::empty());
+            *response.status_mut() = StatusCode::NOT_FOUND;
+            response
         }
+
+        let mut file = match request.uri().path() {
+            "/static/js/third_party/d3.js" => {
+                match File::open(Path::new(&self.fuchsia_root).join("scripts/third_party/d3/d3.js"))
+                {
+                    Ok(file) => file,
+                    Err(_) => return empty_404(),
+                }
+            }
+            "/" => match File::open(Path::new(&self.static_root).join("index.html")) {
+                Ok(file) => file,
+                Err(_) => return empty_404(),
+            },
+            path => {
+                let path = path.strip_prefix("/").unwrap_or(path);
+                let base = Path::new(&self.static_root);
+                let path = {
+                    let mut path = base.join(path);
+                    match path.canonicalize() {
+                        Ok(path) => path,
+                        Err(_) => {
+                            if path.set_extension("html") {
+                                match path.canonicalize() {
+                                    Ok(path) => path,
+                                    Err(_) => return empty_404(),
+                                }
+                            } else {
+                                return empty_404();
+                            }
+                        }
+                    }
+                };
+                if !path.starts_with(base) {
+                    return empty_404();
+                }
+                match File::open(&path) {
+                    Ok(file) => file,
+                    Err(_) => {
+                        return empty_404();
+                    }
+                }
+            }
+        };
+        let mut buf = Vec::new();
+        match file.read_to_end(&mut buf) {
+            Ok(_) => (),
+            Err(_) => return empty_404(),
+        }
+        Response::new(buf.into())
     }
 }
 
 #[cfg(test)]
 mod tests {
-
-    use {super::*, std::fs::File, std::io::Write, tempfile::tempdir};
+    use {super::*, fuchsia_async as fasync, std::fs::File, std::io::Write, tempfile::tempdir};
 
     fn setup_directory() -> String {
         let dir = tempdir().unwrap();
@@ -86,53 +98,51 @@ mod tests {
         dir.into_path().into_os_string().into_string().unwrap()
     }
 
-    #[test]
-    fn serve_path_or_index_reads_existing_file() {
+    #[fasync::run_singlethreaded(test)]
+    async fn serve_path_or_index_reads_existing_file() {
         let tmp_dir = setup_directory();
-        let viz = Visualizer::new("".to_string(), tmp_dir.clone());
+        let viz = Visualizer::new(String::new(), tmp_dir.clone());
 
-        let response =
-            viz.serve_path_or_index(&Request::fake_http("GET", "foo.html", vec![], vec![]));
-        assert_eq!(response.status_code, 200);
-        let mut buffer = Vec::new();
-        let (mut reader, _) = response.data.into_reader_and_size();
-        reader.read_to_end(&mut buffer).unwrap();
-        assert_eq!(buffer, b"Hello world!");
+        let request =
+            Request::builder().method("GET").uri("/foo.html").body(Body::empty()).unwrap();
+        let response = viz.serve_path_or_index(request);
+        assert_eq!(response.status(), 200);
+        let buffer = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert_eq!(buffer, b"Hello world!"[..]);
     }
 
-    #[test]
-    fn serve_path_or_index_reads_existing_file_with_rewrite() {
+    #[fasync::run_singlethreaded(test)]
+    async fn serve_path_or_index_reads_existing_file_with_rewrite() {
         let tmp_dir = setup_directory();
-        let viz = Visualizer::new("".to_string(), tmp_dir.clone());
+        let viz = Visualizer::new(String::new(), tmp_dir.clone());
 
-        let response = viz.serve_path_or_index(&Request::fake_http("GET", "foo", vec![], vec![]));
-        assert_eq!(response.status_code, 200);
-        let mut buffer = Vec::new();
-        let (mut reader, _) = response.data.into_reader_and_size();
-        reader.read_to_end(&mut buffer).unwrap();
-        assert_eq!(buffer, b"Hello world!");
+        let request = Request::builder().method("GET").uri("/foo").body(Body::empty()).unwrap();
+        let response = viz.serve_path_or_index(request);
+        assert_eq!(response.status(), 200);
+        let buffer = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert_eq!(buffer, b"Hello world!"[..]);
     }
 
-    #[test]
-    fn serve_path_or_index_defaults_to_index_file() {
+    #[fasync::run_singlethreaded(test)]
+    async fn serve_path_or_index_defaults_to_index_file() {
         let tmp_dir = setup_directory();
-        let viz = Visualizer::new("".to_string(), tmp_dir.clone());
+        let viz = Visualizer::new(String::new(), tmp_dir.clone());
 
-        let response = viz.serve_path_or_index(&Request::fake_http("GET", "", vec![], vec![]));
-        assert_eq!(response.status_code, 200);
-        let mut buffer = Vec::new();
-        let (mut reader, _) = response.data.into_reader_and_size();
-        reader.read_to_end(&mut buffer).unwrap();
-        assert_eq!(buffer, b"This is an index file.");
+        let request = Request::builder().method("GET").body(Body::empty()).unwrap();
+        let response = viz.serve_path_or_index(request);
+        assert_eq!(response.status(), 200);
+        let buffer = hyper::body::to_bytes(response.into_body()).await.unwrap();
+        assert_eq!(buffer, b"This is an index file."[..]);
     }
 
     #[test]
     fn serve_path_or_index_fails_on_missing_file() {
         let tmp_dir = setup_directory();
-        let viz = Visualizer::new("".to_string(), tmp_dir.clone());
+        let viz = Visualizer::new(String::new(), tmp_dir.clone());
 
-        let response =
-            viz.serve_path_or_index(&Request::fake_http("GET", "bar.html", vec![], vec![]));
-        assert_eq!(response.status_code, 404);
+        let request =
+            Request::builder().method("GET").uri("/bar.html").body(Body::empty()).unwrap();
+        let response = viz.serve_path_or_index(request);
+        assert_eq!(response.status(), 404);
     }
 }

@@ -255,7 +255,7 @@ impl Scrutiny {
                     self.dispatcher.clone(),
                     self.visualizer.clone().unwrap(),
                     server_config.port,
-                )?;
+                );
             }
             self.shell.run();
         }
