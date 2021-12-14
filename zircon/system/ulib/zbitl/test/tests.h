@@ -443,11 +443,27 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
   ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(fd), size, &context));
   zbitl::View view(context.TakeStorage());
 
-  // [begin(), begin() + 1).
+  // [begin(), begin())
   {
-    auto first = view.begin();
+    auto copy_result = view.Copy(view.begin(), view.begin());
+    EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
-    auto copy_result = view.Copy(first, std::next(first));
+    auto created = std::move(copy_result).value();
+    zbitl::View created_view(std::move(created));
+
+    // Should be empty.
+    EXPECT_EQ(created_view.end(), created_view.begin());
+
+    auto result = created_view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
+  }
+
+  // [begin(), begin() + 1)
+  if (view.begin() != view.end()) {
+    auto first = view.begin();
+    auto second = std::next(first);
+
+    auto copy_result = view.Copy(first, second);
     EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
     auto created = std::move(copy_result).value();
@@ -477,8 +493,10 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
   }
 
   // [begin() + 1, end()).
-  if (std::next(view.begin()) != view.end()) {
-    auto copy_result = view.Copy(std::next(view.begin()), view.end());
+  if (view.begin() != view.end()) {
+    auto second = std::next(view.begin());
+
+    auto copy_result = view.Copy(second, view.end());
     EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
     auto created = std::move(copy_result).value();
@@ -488,13 +506,13 @@ void TestCopyCreationByIteratorRange(TestDataZbiType type) {
     ASSERT_FALSE(container_result.is_error()) << ViewErrorString(container_result.error_value());
 
     // We might have filled slop with a single discard element; skip if so.
-    auto first = created_view.begin();
-    if ((*first).header->type == ZBI_TYPE_DISCARD) {
-      ++first;
+    auto it = created_view.begin();
+    if (it != created_view.end() && it->header->type == ZBI_TYPE_DISCARD) {
+      ++it;
     }
 
     size_t idx = 1;  // Corresponding to begin() + 1.
-    for (auto it = first; it != created_view.end(); ++it, ++idx) {
+    for (; it != created_view.end(); ++it, ++idx) {
       auto [header, payload] = *it;
       EXPECT_EQ(GetExpectedItemType(type), header->type);
 
@@ -574,6 +592,7 @@ void TestCopyingIntoSmallStorage() {
   }
 
 #define TEST_COPY_CREATION(suite_name, TestTraits)                                              \
+  TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, EmptyZbi, TestDataZbiType::kEmpty)         \
   TEST_COPY_CREATION_BY_TYPE(suite_name, TestTraits, OneItemZbi, TestDataZbiType::kOneItem)     \
   TEST_COPY_CREATION_BY_TYPE_AND_MODE(suite_name, TestTraits, CompressedItemZbi,                \
                                       TestDataZbiType::kCompressedItem, ItemCopyMode::kStorage, \
@@ -616,7 +635,7 @@ void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
     __UNREACHABLE;
   };
 
-  auto do_copy = [&mode, &view, &allocator ](auto&& storage, auto it) -> auto {
+  auto do_copy = [&mode, &view, &allocator ](auto&& storage, auto it) -> auto{
     using Storage = decltype(storage);
     switch (mode) {
       case ItemCopyMode::kRaw:
@@ -736,14 +755,38 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
   ASSERT_NO_FATAL_FAILURE(SrcTestTraits::Create(std::move(fd), size, &context));
   zbitl::View view(context.TakeStorage());
 
-  // [begin(), begin() + 1)
+  // [begin(), begin())
   {
     typename DestTestTraits::Context copy_context;
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(kMaxZbiSize, &copy_context));
     auto copy = copy_context.TakeStorage();
 
+    {
+      auto result = view.Copy(copy, view.begin(), view.begin());
+      EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
+    }
+
+    zbitl::View copy_view(std::move(copy));
+
+    // Should be empty.
+    EXPECT_EQ(copy_view.end(), copy_view.begin());
+
+    {
+      auto result = copy_view.take_error();
+      EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
+    }
+  }
+
+  // [begin(), begin() + 1)
+  if (view.begin() != view.end()) {
     auto first = view.begin();
-    auto copy_result = view.Copy(copy, first, std::next(view.begin()));
+    auto second = std::next(first);
+
+    typename DestTestTraits::Context copy_context;
+    ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(kMaxZbiSize, &copy_context));
+    auto copy = copy_context.TakeStorage();
+
+    auto copy_result = view.Copy(copy, first, second);
     EXPECT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
 
     zbitl::View copy_view(std::move(copy));
@@ -759,21 +802,21 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
       ASSERT_NO_FATAL_FAILURE(GetExpectedPayload(type, idx++, &expected));
       EXPECT_EQ(expected, actual);
     }
-    EXPECT_EQ(1u, idx);
+    EXPECT_EQ(first == view.end() ? 0u : 1u, idx);
 
     auto result = copy_view.take_error();
     EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
   }
 
-  // [begin() + 1, end()).
-  if (std::next(view.begin()) != view.end()) {
+  if (view.begin() != view.end()) {
+    auto second = std::next(view.begin());
+
     typename DestTestTraits::Context copy_context;
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(kMaxZbiSize, &copy_context));
     auto copy = copy_context.TakeStorage();
 
-    auto first = std::next(view.begin());
     {
-      auto result = view.Copy(copy, first, view.end());
+      auto result = view.Copy(copy, second, view.end());
       EXPECT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
     }
 
@@ -834,6 +877,8 @@ void TestCopyingByIteratorRange(TestDataZbiType type) {
   }
 
 #define TEST_COPYING(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name)               \
+  TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, EmptyZbi,   \
+                       TestDataZbiType::kEmpty)                                                    \
   TEST_COPYING_BY_TYPE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name, OneItemZbi, \
                        TestDataZbiType::kOneItem)                                                  \
   TEST_COPYING_BY_TYPE_AND_MODE(suite_name, SrcTestTraits, src_name, DestTestTraits, dest_name,    \

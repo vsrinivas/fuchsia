@@ -1050,10 +1050,13 @@ class View {
 
   // Returns [offset, length] in the storage to cover the given item range.
   auto RangeBounds(const iterator& first, const iterator& last) {
-    uint32_t offset = first.item_offset();
+    uint32_t offset = limit_;
     uint32_t limit = limit_;
-    if (last != end()) {
-      limit = last.item_offset();
+    if (first != end()) {
+      offset = first.item_offset();
+      if (last != end()) {
+        limit = last.item_offset();
+      }
     }
     return std::make_pair(offset, limit - offset);
   }
