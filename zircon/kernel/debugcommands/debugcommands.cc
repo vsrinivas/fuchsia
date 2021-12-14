@@ -47,6 +47,7 @@ static int cmd_stackstomp(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_recurse(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_cmdline(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_user_read(int argc, const cmd_args* argv, uint32_t flags);
+static int cmd_crash_user_execute(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_pmm_use_after_free(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_assert(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_crash_thread_lock(int argc, const cmd_args* argv, uint32_t flags);
@@ -70,6 +71,7 @@ STATIC_COMMAND("crash", "intentionally crash", &cmd_crash)
 STATIC_COMMAND("crash_stackstomp", "intentionally overrun the stack", &cmd_stackstomp)
 STATIC_COMMAND("crash_recurse", "intentionally overrun the stack by recursing", &cmd_recurse)
 STATIC_COMMAND("crash_user_read", "intentionally read user memory", &cmd_crash_user_read)
+STATIC_COMMAND("crash_user_execute", "intentionally execute user memory", &cmd_crash_user_execute)
 STATIC_COMMAND("crash_pmm_use_after_free", "intentionally corrupt the pmm free list",
                &cmd_crash_pmm_use_after_free)
 STATIC_COMMAND("crash_assert", "intentionally crash by failing an assert", &cmd_crash_assert)
@@ -381,6 +383,98 @@ static int cmd_stackstomp(int argc, const cmd_args* argv, uint32_t flags) {
 
   printf("survived.\n");
 
+  return 0;
+}
+
+// Define a little fragment of code that we can copy.
+extern "C" const uint8_t begin_func[], end_func[];
+__asm__(
+    ".pushsection .rodata.func\n"
+    "begin_func:"
+#if defined(__x86_64__) || defined(__aarch64__)
+    "ret\n"
+#else
+#error "what machine?"
+#endif
+    "end_func:"
+    ".popsection");
+
+static bool has_user_code_execution_protection() {
+#if defined(__x86_64__)
+  return x86_feature_test(X86_FEATURE_SMEP) || g_x86_feature_has_smap;
+#elif defined(__aarch64__)
+  // Privilege Execute Never (PXN) is available on all aarch64 machines.
+  return true;
+#else
+#error "what machine?"
+#endif
+}
+
+static int cmd_crash_user_execute(int argc, const cmd_args* argv, uint32_t flags) {
+  if (!has_user_code_execution_protection()) {
+    printf(
+        "missing protection to avoid executing userspace code from a privileged context; will not "
+        "crash.\n");
+    return -1;
+  }
+  constexpr size_t kUserMemorySize = PAGE_SIZE;
+
+  ktl::unique_ptr<testing::UserMemory> mem = testing::UserMemory::Create(kUserMemorySize);
+  if (mem == nullptr) {
+    printf("failed to allocate user memory; will not crash.\n");
+    return -1;
+  }
+
+  const size_t func_size = static_cast<size_t>(end_func - begin_func);
+  ASSERT_MSG(func_size <= kUserMemorySize, "function does not fit in allocated user memory");
+
+  zx_status_t status = mem->VmoWrite(begin_func, /* offset */ 0, func_size);
+  if (status != ZX_OK) {
+    printf("failed to copy payload (%d); will not crash.\n", status);
+    return -1;
+  }
+
+  status = mem->CommitAndMap(kUserMemorySize, /* offset */ 0);
+  if (status != ZX_OK) {
+    printf("failed to commit memory (%d); will not crash.\n", status);
+    return -1;
+  }
+
+  // Set the memory as executable. We need to also make it read-only because
+  // in arm64, writable user mappings imply Privileged Execute Never (PXN).
+  status = mem->MakeRX();
+  if (status != ZX_OK) {
+    printf("failed to make memory executable (%d); will not crash.\n", status);
+    return -1;
+  }
+
+  uint32_t mmu_flags;
+  status = mem->aspace()->arch_aspace().Query(mem->base(), nullptr, &mmu_flags);
+  if (status != ZX_OK) {
+    printf("failed to query mmu flags (%d); will not crash.\n", status);
+    return -1;
+  }
+
+  if ((mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
+      !(mmu_flags &
+        (ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE))) {
+    printf("incorrect memory permissions; will not crash.\n");
+    return -1;
+  }
+
+  const uint8_t* p = mem->user_in<uint8_t>().get();
+  if (p == nullptr) {
+    printf("failed to get pointer; will not crash.\n");
+    return -1;
+  }
+
+  auto user_func = reinterpret_cast<void (*)(void)>(reinterpret_cast<uintptr_t>(p));
+
+  arch_sync_cache_range(mem->base(), kUserMemorySize);
+
+  printf("about to crash..\n");
+  user_func();
+  printf("executed userspace code from a kernel context; did not crash.\n");
   return 0;
 }
 

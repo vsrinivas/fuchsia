@@ -236,7 +236,8 @@ func fuchsiaLogChecks() []FailureModeCheck {
 			&stringInLogCheck{String: "ZIRCON KERNEL PANIC", AttributeToTest: true, Type: lt, ExceptBlocks: []*logBlock{
 				// These tests intentionally trigger kernel panics.
 				{startString: "RUN   TestBasicCrash", endString: "PASS: TestBasicCrash"},
-				{startString: "RUN   TestSMAPViolation", endString: "PASS: TestSMAPViolation"},
+				{startString: "RUN   TestReadUserMemoryViolation", endString: "PASS: TestReadUserMemoryViolation"},
+				{startString: "RUN   TestExecuteUserMemoryViolation", endString: "PASS: TestExecuteUserMemoryViolation"},
 				{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: "PASS: TestPmmCheckerOopsAndPanic"},
 				{startString: "RUN   TestCrashAssert", endString: "PASS: TestCrashAssert"},
 				{startString: "RUN   TestKernelLockupDetectorFatalCriticalSection", endString: ": TestKernelLockupDetectorFatalCriticalSection"},

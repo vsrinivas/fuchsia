@@ -43,14 +43,15 @@ func TestBasicCrash(t *testing.T) {
 	i.WaitForLogMessage("{{{bt:0:")
 }
 
-// See that an SMAP violation is fatal.
-func TestSMAPViolation(t *testing.T) {
+// See that reading a userspace page from the kernel is fatal.
+func TestReadUserMemoryViolation(t *testing.T) {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
 		Emulator: emulator.Qemu,
 	})
 	arch := distro.TargetCPU()
 	if arch != emulator.X64 {
+		// TODO(fxbug.dev/59284): Enable this test once we have PAN support.
 		t.Skip("Skipping test. This test only supports x64 targets.")
 	}
 
@@ -62,12 +63,40 @@ func TestSMAPViolation(t *testing.T) {
 	// Wait for the system to finish booting.
 	i.WaitForLogMessage("usage: k <command>")
 
-	// Crash the kernel by violating SMAP.
+	// Crash the kernel by causing a userspace data read.
 	i.RunCommand("k crash_user_read")
 
 	// See that an SMAP failure was identified and that the kernel panicked.
 	i.WaitForLogMessageAssertNotSeen("SMAP failure", "cpu does not support smap; will not crash")
 	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
+	i.WaitForLogMessage("{{{bt:0:")
+}
+
+// See that executing a userspace page from the kernel is fatal.
+func TestExecuteUserMemoryViolation(t *testing.T) {
+	exDir := execDir(t)
+	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
+		Emulator: emulator.Qemu,
+	})
+	arch := distro.TargetCPU()
+
+	device := emulator.DefaultVirtualDevice(string(arch))
+	device.KernelArgs = append(device.KernelArgs, cmdline...)
+	i := distro.Create(device)
+	i.Start()
+
+	// Wait for the system to finish booting.
+	i.WaitForLogMessage("usage: k <command>")
+
+	// Crash the kernel by causing a userspace code execution.
+	i.RunCommand("k crash_user_execute")
+
+	i.WaitForLogMessage("ZIRCON KERNEL PANIC")
+	if arch == emulator.X64 {
+		i.WaitForLogMessage("page fault in kernel mode")
+	} else {
+		i.WaitForLogMessage("instruction abort in kernel mode")
+	}
 	i.WaitForLogMessage("{{{bt:0:")
 }
 

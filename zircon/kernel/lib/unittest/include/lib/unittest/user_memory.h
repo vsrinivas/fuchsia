@@ -70,6 +70,13 @@ class UserMemory {
     return mapping_->MapRange(offset, size, true);
   }
 
+  // Changes the mapping permissions to be a Read-Only Executable mapping.
+  zx_status_t MakeRX() {
+    return mapping_->Protect(
+        mapping_->base(), mapping_->size(),
+        ARCH_MMU_FLAG_PERM_USER | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE);
+  }
+
   // Read or write to the underlying VMO directly, bypassing the mapping.
   zx_status_t VmoRead(void* ptr, uint64_t offset, uint64_t len) {
     ASSERT(vmo_);
