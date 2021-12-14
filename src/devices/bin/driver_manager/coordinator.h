@@ -480,7 +480,4 @@ bool driver_is_bindable(const Driver* drv, uint32_t protocol_id,
                         const fbl::Array<const zx_device_prop_t>& props,
                         const fbl::Array<const StrProperty>& str_props, bool autobind);
 
-zx_status_t fidl_DirectoryWatch(void* ctx, uint32_t mask, uint32_t options, zx_handle_t raw_watcher,
-                                fidl_txn_t* txn);
-
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_
