@@ -235,7 +235,7 @@ pub(crate) async fn from_sdk<W: Write>(
             .await
         }
         None => ffx_bail!(
-            "Please supply the `--bundle` option to identify which product bundle to flash"
+            "Please supply the `--product-bundle` option to identify which product bundle to flash"
         ),
     }
 }
