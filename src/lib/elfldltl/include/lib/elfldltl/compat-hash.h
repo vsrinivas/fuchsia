@@ -107,7 +107,10 @@ class CompatHash<Word>::BucketIterator {
  private:
   // If a bogus index came out of the table, reset to end() state.
   constexpr uint32_t BucketIndex(uint32_t symndx) {
-    return std::min(symndx, static_cast<uint32_t>(chain_.size()));
+    if (symndx < chain_.size()) [[likely]] {
+      return symndx;
+    }
+    return 0;
   }
 
   cpp20::span<const Word> chain_;
