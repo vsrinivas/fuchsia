@@ -24,7 +24,7 @@ bool FifoWriteReadTest(perftest::RepeatState* state, uint32_t entry_size, uint32
 
   zx::fifo fifo1;
   zx::fifo fifo2;
-  ASSERT_OK(zx::fifo::create(PAGE_SIZE / entry_size, entry_size, 0, &fifo1, &fifo2));
+  ASSERT_OK(zx::fifo::create(ZX_FIFO_MAX_SIZE_BYTES / entry_size, entry_size, 0, &fifo1, &fifo2));
   // The buffer represents |batch_size| consecutive entries.
   std::vector<char> buffer(entry_size * batch_size);
 

@@ -224,6 +224,7 @@ bool VmoMapCloneTest(perftest::RepeatState* state, uint32_t copy_size) {
 //   - Destroy the clone.
 bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, bool do_write,
                              bool do_target_clone, bool do_full_op) {
+  const size_t kPageSize = zx_system_get_page_size();
   state->DeclareStep("clone");
   state->DeclareStep(do_write ? "write" : "read");
   state->DeclareStep("close");
@@ -251,12 +252,12 @@ bool VmoCloneReadOrWriteTest(perftest::RepeatState* state, uint32_t copy_size, b
       // There's no special meaning behind the particular value of this
       // constant. It just needs to result in a couple of writes into
       // the vmo without populating it too densely.
-      static constexpr uint64_t kWriteInterval = 8 * ZX_PAGE_SIZE;
+      const uint64_t kWriteInterval = 8 * kPageSize;
       for (uint64_t offset = 0; offset < copy_size; offset += kWriteInterval) {
         if (do_write) {
-          ASSERT_OK(target.write(buffer.data(), offset, PAGE_SIZE));
+          ASSERT_OK(target.write(buffer.data(), offset, kPageSize));
         } else {
-          ASSERT_OK(target.read(buffer.data(), offset, PAGE_SIZE));
+          ASSERT_OK(target.read(buffer.data(), offset, kPageSize));
         }
       }
     }

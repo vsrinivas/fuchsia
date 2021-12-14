@@ -21,7 +21,7 @@ bool StreamWriteAtTest(perftest::RepeatState* state, uint32_t message_size, size
   state->SetBytesProcessedPerRun(message_size);
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(std::max<size_t>(PAGE_SIZE, message_size), 0, &vmo));
+  ASSERT_OK(zx::vmo::create(std::max<size_t>(zx_system_get_page_size(), message_size), 0, &vmo));
   size_t content_size = message_size;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
 
@@ -51,7 +51,7 @@ bool StreamReadAtTest(perftest::RepeatState* state, uint32_t message_size, size_
   state->SetBytesProcessedPerRun(message_size);
 
   zx::vmo vmo;
-  ASSERT_OK(zx::vmo::create(std::max<size_t>(PAGE_SIZE, message_size), 0, &vmo));
+  ASSERT_OK(zx::vmo::create(std::max<size_t>(zx_system_get_page_size(), message_size), 0, &vmo));
   size_t content_size = message_size;
   ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
 

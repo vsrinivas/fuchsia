@@ -44,7 +44,7 @@ struct Helper {
 
   // Cyclically maps the first chunk_size bytes of |vmo| into the |length| bytes
   // of vmar, starting from offset 0.   Mapping is done |chunk_size| bytes at a
-  // time.  |chunk_size| and |length| must be multiples of PAGE_SIZE. As a
+  // time.  |chunk_size| and |length| must be multiples of zx_system_get_page_size(). As a
   // precondition, |vmar| should be empty.
   zx_status_t MapInChunks(size_t chunk_size, size_t length, bool force_into_mmu);
 
@@ -95,6 +95,7 @@ bool MmuMapUnmapTest(perftest::RepeatState* state) {
 // the kernel VM layer, page fault the mappings into the arch MMU layer, and
 // then remove the mappings from both.
 bool MmuMapUnmapWithFaultsTest(perftest::RepeatState* state) {
+  const size_t kPageSize = zx_system_get_page_size();
   state->DeclareStep("map");
   state->DeclareStep("fault_in");
   state->DeclareStep("unmap");
@@ -110,7 +111,7 @@ bool MmuMapUnmapWithFaultsTest(perftest::RepeatState* state) {
     state->NextStep();
     // Read fault everything in
     auto p = reinterpret_cast<volatile uint8_t*>(helper.vmar_base);
-    for (size_t offset = 0; offset < kSize; offset += PAGE_SIZE) {
+    for (size_t offset = 0; offset < kSize; offset += kPageSize) {
       p[offset];
     }
 
