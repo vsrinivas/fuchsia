@@ -216,12 +216,14 @@ static bool vmo_multiple_pin_test() {
   static const size_t alloc_size = PAGE_SIZE * 16;
   for (uint32_t is_ppb_enabled = 0; is_ppb_enabled < 2; ++is_ppb_enabled) {
     bool loaning_was_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
-    bool borrowing_was_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+    bool borrowing_was_enabled =
+        pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled();
     pmm_physical_page_borrowing_config()->set_loaning_enabled(is_ppb_enabled);
-    pmm_physical_page_borrowing_config()->set_borrowing_enabled(is_ppb_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(is_ppb_enabled);
     auto cleanup = fit::defer([loaning_was_enabled, borrowing_was_enabled] {
       pmm_physical_page_borrowing_config()->set_loaning_enabled(loaning_was_enabled);
-      pmm_physical_page_borrowing_config()->set_borrowing_enabled(borrowing_was_enabled);
+      pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(
+          borrowing_was_enabled);
     });
 
     fbl::RefPtr<VmObjectPaged> vmo;
@@ -279,12 +281,14 @@ static bool vmo_multiple_pin_contiguous_test() {
   static const size_t alloc_size = PAGE_SIZE * 16;
   for (uint32_t is_ppb_enabled = 0; is_ppb_enabled < 2; ++is_ppb_enabled) {
     bool loaning_was_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
-    bool borrowing_was_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+    bool borrowing_was_enabled =
+        pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled();
     pmm_physical_page_borrowing_config()->set_loaning_enabled(is_ppb_enabled);
-    pmm_physical_page_borrowing_config()->set_borrowing_enabled(is_ppb_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(is_ppb_enabled);
     auto cleanup = fit::defer([loaning_was_enabled, borrowing_was_enabled] {
       pmm_physical_page_borrowing_config()->set_loaning_enabled(loaning_was_enabled);
-      pmm_physical_page_borrowing_config()->set_borrowing_enabled(borrowing_was_enabled);
+      pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(
+          borrowing_was_enabled);
     });
 
     fbl::RefPtr<VmObjectPaged> vmo;
@@ -468,12 +472,14 @@ static bool vmo_contiguous_decommit_test() {
   BEGIN_TEST;
 
   bool loaning_was_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
-  bool borrowing_was_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+  bool borrowing_was_enabled =
+      pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled();
   pmm_physical_page_borrowing_config()->set_loaning_enabled(true);
-  pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+  pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(true);
   auto cleanup = fit::defer([loaning_was_enabled, borrowing_was_enabled] {
     pmm_physical_page_borrowing_config()->set_loaning_enabled(loaning_was_enabled);
-    pmm_physical_page_borrowing_config()->set_borrowing_enabled(borrowing_was_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(
+        borrowing_was_enabled);
   });
 
   static const size_t alloc_size = PAGE_SIZE * 16;
@@ -1454,12 +1460,14 @@ static bool vmo_always_need_evicts_loaned_test() {
   const uint32_t kTryCount = 30;
   for (uint32_t try_ordinal = 0; try_ordinal < kTryCount; ++try_ordinal) {
     bool loaning_was_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
-    bool borrowing_was_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+    bool borrowing_was_enabled =
+        pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled();
     pmm_physical_page_borrowing_config()->set_loaning_enabled(true);
-    pmm_physical_page_borrowing_config()->set_borrowing_enabled(true);
+    pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(true);
     auto cleanup = fit::defer([loaning_was_enabled, borrowing_was_enabled] {
       pmm_physical_page_borrowing_config()->set_loaning_enabled(loaning_was_enabled);
-      pmm_physical_page_borrowing_config()->set_borrowing_enabled(borrowing_was_enabled);
+      pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(
+          borrowing_was_enabled);
     });
 
     zx_status_t status;
@@ -1822,12 +1830,14 @@ static bool vmo_attribution_ops_test() {
     dprintf(INFO, "is_ppb_enabled: %u\n", is_ppb_enabled);
 
     bool loaning_was_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
-    bool borrowing_was_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+    bool borrowing_was_enabled =
+        pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled();
     pmm_physical_page_borrowing_config()->set_loaning_enabled(is_ppb_enabled);
-    pmm_physical_page_borrowing_config()->set_borrowing_enabled(is_ppb_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(is_ppb_enabled);
     auto cleanup = fit::defer([loaning_was_enabled, borrowing_was_enabled] {
       pmm_physical_page_borrowing_config()->set_loaning_enabled(loaning_was_enabled);
-      pmm_physical_page_borrowing_config()->set_borrowing_enabled(borrowing_was_enabled);
+      pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(
+          borrowing_was_enabled);
     });
 
     fbl::RefPtr<VmObjectPaged> vmo;
@@ -1951,12 +1961,14 @@ static bool vmo_attribution_ops_contiguous_test() {
     dprintf(INFO, "is_ppb_enabled: %u\n", is_ppb_enabled);
 
     bool loaning_was_enabled = pmm_physical_page_borrowing_config()->is_loaning_enabled();
-    bool borrowing_was_enabled = pmm_physical_page_borrowing_config()->is_borrowing_enabled();
+    bool borrowing_was_enabled =
+        pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled();
     pmm_physical_page_borrowing_config()->set_loaning_enabled(is_ppb_enabled);
-    pmm_physical_page_borrowing_config()->set_borrowing_enabled(is_ppb_enabled);
+    pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(is_ppb_enabled);
     auto cleanup = fit::defer([loaning_was_enabled, borrowing_was_enabled] {
       pmm_physical_page_borrowing_config()->set_loaning_enabled(loaning_was_enabled);
-      pmm_physical_page_borrowing_config()->set_borrowing_enabled(borrowing_was_enabled);
+      pmm_physical_page_borrowing_config()->set_borrowing_in_supplypages_enabled(
+          borrowing_was_enabled);
     });
 
     fbl::RefPtr<VmObjectPaged> vmo;

@@ -1445,7 +1445,8 @@ vm_page_t* VmCowPages::CloneCowPageLocked(uint64_t offset, list_node_t* alloc_li
       pmm_page_queues()->Remove(removed_page);
       DEBUG_ASSERT(removed_page == target_page);
     } else {
-      // Otherwise we need to fork the page.
+      // Otherwise we need to fork the page.  The page has no writable mappings so we don't need to
+      // remove write or unmap before copying the contents.
       vm_page_t* cover_page;
       alloc_failure = !AllocateCopyPage(pmm_alloc_flags_, page->paddr(), alloc_list, &cover_page);
       if (unlikely(alloc_failure)) {
@@ -1612,7 +1613,9 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
 
   // TODO(rashaeqbal): If the VMO does not require us to trap dirty transitions, simply mark the
   // pages dirty. And move it to the dirty page queue once implemented. Do this once MapRange and
-  // commit are handled correctly to not imply dirty.
+  // commit are handled correctly to not imply dirty.  When marking pages dirty directly, replace
+  // any loaned page with non-loaned (or we can replace instead of evicting when reclaiming a loaned
+  // page to allow dirty && loaned to just work, which may be simpler).
   if (!page_source_->ShouldTrapDirtyTransitions()) {
     return ZX_OK;
   }
@@ -3250,11 +3253,8 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
       src_page = VmPageOrMarker::Marker();
     }
 
-    // We don't technically need to check is_borrowing_enabled() here since pmm will check also, but
-    // by checking here, we minimize the amount of code that will run when !is_borrowing_enabled()
-    // (in case we have it disabled due to late discovery of a problem with borrowing).
-    if (pmm_physical_page_borrowing_config()->is_borrowing_enabled() && can_borrow_locked() &&
-        src_page.IsPage()) {
+    if (can_borrow_locked() && src_page.IsPage() &&
+        pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled()) {
       // Assert some things we implicitly know are true (currently).  We can avoid explicitly
       // checking these in the if condition for now.
       DEBUG_ASSERT(!is_source_supplying_specific_physical_pages_locked());
@@ -3268,7 +3268,8 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
       vm_page_t* new_page;
       zx_status_t alloc_status = pmm_alloc_page(pmm_alloc_flags, &new_page);
       // If we got a loaned page, replace the page in src_page, else just continue with src_page
-      // unmodified since pmm has no more loaned free pages or !is_borrowing_enabled().
+      // unmodified since pmm has no more loaned free pages or
+      // !is_borrowing_in_supplypages_enabled().
       if (alloc_status == ZX_OK) {
         InitializeVmPage(new_page);
         CopyPageForReplacementLocked(new_page, src_page.Page());
@@ -3620,7 +3621,7 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   // We could optimize this by doing what's needed to *p directly, but for now call this
   // common code.
   VmPageOrMarker new_vm_page = VmPageOrMarker::Page(new_page);
-  zx_status_t status = AddPageLocked(&new_vm_page, offset, /*do_range_update*/ false);
+  zx_status_t status = AddPageLocked(&new_vm_page, offset, /*do_range_update=*/false);
   // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only occur
   // if page_list_ had to allocate.  Here, page_list_ hasn't yet had a chance to clean up any
   // internal structures, so AddNewPagesLocked() didn't need to allocate, so we know that
@@ -3659,6 +3660,9 @@ zx_status_t VmCowPages::ReplacePageLocked(vm_page_t* before_page, uint64_t offse
   if (with_loaned) {
     if (!can_borrow_locked()) {
       return ZX_ERR_NOT_SUPPORTED;
+    }
+    if (old_page->object.dirty) {
+      return ZX_ERR_BAD_STATE;
     }
     pmm_alloc_flags |= PMM_ALLOC_FLAG_CAN_BORROW | PMM_ALLOC_FLAG_MUST_BORROW;
   } else {

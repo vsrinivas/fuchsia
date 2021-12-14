@@ -319,6 +319,15 @@ else zx_pager_supply_pages will install the supplied pages into the VMO.  If
 false, zx_pager_supply_pages will install the supplied pages into the VMO
 (regardless of whether they are already loaned or not).
 
+### kernel.ppb.borrow-on-mru=\<bool>
+**Default:** `false`
+
+This controls whether non-loaned pages will be replaced with loaned pages (if
+any loaned pages are available) when non-loaned pages are moved to the MRU
+queue.  This moving is done lazily under normal circumstances, but near OOM as
+eviction proceeds, any pages that should be in the MRU queue are moved to the
+MRU queue.
+
 ### kernel.ppb.loan=\<bool>
 **Default:** `false`
 

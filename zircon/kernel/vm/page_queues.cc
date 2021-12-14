@@ -446,7 +446,30 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessQueueHelper(
   // that the lock will be regularly dropped. As processing the DontNeed/LRU queue is not time
   // critical and can be somewhat inefficient in its operation we err on the side of doing less work
   // per lock acquisition.
-  static constexpr uint32_t kMaxQueueWork = 32;
+  //
+  // Also, we need to limit the number to avoid sweep_to_loaned taking up excessive stack space.
+  static constexpr uint32_t kMaxQueueWork = 16;
+
+  // Each page in this list can potentially be replaced with a loaned page, but we have to do this
+  // replacement outside the PageQueues::lock_, so we accumulate pages and then try to replace the
+  // pages after lock_ is released.
+  VmoBacklink sweep_to_loaned[kMaxQueueWork];
+  uint32_t sweep_to_loaned_count = 0;
+  // Only accumulate pages to try to replace with loaned pages if loaned pages are available and
+  // we're allowed to borrow at this code location.
+  bool do_sweeping = (pmm_count_loaned_free_pages() != 0) &&
+                     pmm_physical_page_borrowing_config()->is_borrowing_on_mru_enabled();
+  auto sweep_to_loaned_outside_lock =
+      fit::defer([do_sweeping, &sweep_to_loaned, &sweep_to_loaned_count] {
+        DEBUG_ASSERT(do_sweeping || sweep_to_loaned_count == 0);
+        for (uint32_t i = 0; i < sweep_to_loaned_count; ++i) {
+          DEBUG_ASSERT(sweep_to_loaned[i].cow);
+          // We ignore the return value because the page may have moved, become pinned, we may not
+          // have any free loaned pages any more, or the VmCowPages may not be able to borrow.
+          sweep_to_loaned[i].cow->ReplacePage(sweep_to_loaned[i].page, sweep_to_loaned[i].offset,
+                                              /*with_loaned=*/true);
+        }
+      });
 
   Guard<CriticalMutex> guard{&lock_};
   const uint64_t mru = mru_gen_.load(ktl::memory_order_relaxed);
@@ -503,15 +526,26 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessQueueHelper(
     // with the caveat that its queue could be invalid. The queue would be invalid if MarkAccessed
     // had raced. Should this happen we know that the page is actually *very* old, and so we will
     // fall back to the case of forcibly changing its age to the new lru gen.
-    if (page_queue != queue) {
-      if (queue_is_valid(page_queue, gen_to_queue(lru), gen_to_queue(mru))) {
-        list_delete(&page->queue_node);
-        list_add_head(&page_queues_[page_queue], &page->queue_node);
-      } else {
-        // A page in the DontNeed queue will never be allowed to age to the point that its queue
-        // becomes invalid, because we process *all* the DontNeed pages each time we change the lru.
-        // In other words, no DontNeed page will be left behind when lru advances.
-        DEBUG_ASSERT(processing_queue != ProcessingQueue::DontNeed);
+    const PageQueue mru_queue = gen_to_queue(mru);
+    // A page in the DontNeed queue will never be allowed to age to the point that its queue
+    // becomes invalid, because we process *all* the DontNeed pages each time we change the lru.
+    // In other words, no DontNeed page will be left behind when lru advances.
+    DEBUG_ASSERT(page_queue == queue || processing_queue != ProcessingQueue::DontNeed ||
+                 queue_is_valid(page_queue, gen_to_queue(lru), mru_queue));
+    if (page_queue != queue && queue_is_valid(page_queue, gen_to_queue(lru), mru_queue)) {
+      list_delete(&page->queue_node);
+      list_add_head(&page_queues_[page_queue], &page->queue_node);
+
+      if (queue_is_active(page_queue, mru_queue) && do_sweeping && !pmm_is_loaned(page)) {
+        DEBUG_ASSERT(sweep_to_loaned_count < kMaxQueueWork);
+        VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
+        uint64_t page_offset = page->object.get_page_offset();
+        DEBUG_ASSERT(cow);
+        sweep_to_loaned[sweep_to_loaned_count] =
+            VmoBacklink{fbl::MakeRefPtrUpgradeFromRaw(cow, lock_), page, page_offset};
+        if (sweep_to_loaned[sweep_to_loaned_count].cow) {
+          ++sweep_to_loaned_count;
+        }
       }
     } else if (peek) {
       VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
@@ -643,6 +677,10 @@ void PageQueues::MarkAccessed(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
 
   auto queue_ref = page->object.get_page_queue_ref();
+
+  // The page can be the zero page, but in that case we'll return early below.
+  DEBUG_ASSERT(page != vm_get_zero_page() ||
+               queue_ref.load(ktl::memory_order_relaxed) < PageQueuePagerBackedDontNeedA);
 
   // We need to check the current queue to see if it is in the pager backed range. Between checking
   // this and updating the queue it could change, however it would only change as a result of

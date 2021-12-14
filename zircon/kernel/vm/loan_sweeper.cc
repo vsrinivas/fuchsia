@@ -125,7 +125,7 @@ uint64_t LoanSweeper::SynchronousSweepInternal() {
     cached_arena = next_arena;
     return next_arena->base;
   };
-  bool ppb_enabled = ppb_config_->is_borrowing_enabled();
+  bool ppb_enabled = ppb_config_->is_any_borrowing_enabled();
   uint64_t replaced_non_loaned_page_count = 0;
   paddr_t iter;
   auto set_next_start_addr = fit::defer([this, &iter] { next_start_paddr_ = iter; });

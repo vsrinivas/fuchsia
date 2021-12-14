@@ -309,6 +309,14 @@ false, zx_pager_supply_pages will install the supplied pages into the VMO
 (regardless of whether they are already loaned or not).
 )""")
 
+DEFINE_OPTION("kernel.ppb.borrow-on-mru", bool, ppb_borrow_on_mru, {false}, R"""(
+This controls whether non-loaned pages will be replaced with loaned pages (if
+any loaned pages are available) when non-loaned pages are moved to the MRU
+queue.  This moving is done lazily under normal circumstances, but near OOM as
+eviction proceeds, any pages that should be in the MRU queue are moved to the
+MRU queue.
+)""")
+
 DEFINE_OPTION("kernel.ppb.loan", bool, ppb_loan, {false}, R"""(
 This controls whether ZX_VMO_OP_DECOMMIT is enabled on a contiguous VMO.  If
 true, decommit on a contiguous VMO can work and return ZX_OK.  The pages are

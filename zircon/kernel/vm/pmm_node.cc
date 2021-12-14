@@ -288,7 +288,7 @@ zx_status_t PmmNode::AllocPage(uint alloc_flags, vm_page_t** page_out, paddr_t* 
   // PMM_ALLOC_FLAG_CAN_BORROW.
   DEBUG_ASSERT(
       !((alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) && !(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)));
-  bool can_borrow = pmm_physical_page_borrowing_config()->is_borrowing_enabled() &&
+  bool can_borrow = pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
                     !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
   bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
 
@@ -345,7 +345,7 @@ zx_status_t PmmNode::AllocPages(size_t count, uint alloc_flags, list_node* list)
 
   DEBUG_ASSERT(
       !((alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW) && !(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW)));
-  bool can_borrow = pmm_physical_page_borrowing_config()->is_borrowing_enabled() &&
+  bool can_borrow = pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
                     !!(alloc_flags & PMM_ALLOC_FLAG_CAN_BORROW);
   bool must_borrow = can_borrow && !!(alloc_flags & PMM_ALLOC_FLAG_MUST_BORROW);
 
