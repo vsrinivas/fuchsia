@@ -134,11 +134,19 @@ group("runtime") {
 group("tests") {
   testonly = true
   deps = [
+    # ffx end to end tests, through `ffx self-test` invocations, one includes
+    # tests that must have a target present, the other can be run without a
+    # target present.
     ":ffx-e2e-with-target($host_toolchain)",
     ":ffx-e2e-without-target($host_toolchain)",
+
+    # Most ffx plugin test suites are included downstream of the group defined
+    # by the ffx template above.
     ":ffx_tests($host_toolchain)",
+
+    # Individual library tests, for libraries that are not plugins.
     "lib:tests($host_toolchain)",
+    "logger:tests($host_toolchain)",
     "plugins/packaging:tests($host_toolchain)",
-    "//src/developer/ffx/logger:tests($host_toolchain)",
   ]
 }
