@@ -154,7 +154,8 @@ class UnionWithHandle {
   UnionWithHandle()
       : ordinal_(::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::
                      Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   ~UnionWithHandle();
   UnionWithHandle(UnionWithHandle&& other) { _Move(std::move(other)); }

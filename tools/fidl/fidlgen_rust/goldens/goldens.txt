@@ -6,6 +6,8 @@ bits_constants.rs.golden
 byte_and_bytes.rs.golden
 consts.rs.golden
 doc_comments.rs.golden
+driver_one_way.rs.golden
+driver_two_way.rs.golden
 empty_struct.rs.golden
 encapsulated_structs.rs.golden
 enum.rs.golden

@@ -163,6 +163,14 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "driver_one_way"
+    target = "//tools/fidl/fidlc/testdata:fidl.test.driveroneway"
+  },
+  {
+    name = "driver_two_way"
+    target = "//tools/fidl/fidlc/testdata:fidl.test.drivertwoway"
+  },
+  {
     name = "empty_struct"
     target = "//tools/fidl/fidlc/testdata:fidl.test.emptystruct"
     host_build_denylist = [

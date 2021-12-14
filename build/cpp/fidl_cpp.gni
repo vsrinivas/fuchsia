@@ -398,19 +398,38 @@ template("fidl_cpp_family") {
 
   # Define LLCPP target, if requested.
   if (llcpp_public_deps != []) {
+    llcpp_wire_types_options = {
+      bindings_flavor = "llcpp_wire_types"
+      generated_headers = [
+        "fidl/$library_name/cpp/markers.h",
+        "fidl/$library_name/cpp/wire_types.h",
+      ]
+      generated_sources = [ "fidl/$library_name/cpp/wire_types.cc" ]
+    }
+    wire_types_target = "${target_name}_llcpp_wire_types"
+    fidl_cpp_codegen(wire_types_target) {
+      forward_variables_from(common_options, "*")
+      forward_variables_from(llcpp_wire_types_options, "*")
+      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
+    }
+    fidl_cpp_library(wire_types_target) {
+      forward_variables_from(invoker,
+                             [
+                               "public_deps",
+                               "visibility",
+                             ])
+      forward_variables_from(common_options, "*")
+      forward_variables_from(llcpp_wire_types_options, "*")
+      additional_public_deps = llcpp_public_deps
+    }
+
     llcpp_options = {
       bindings_flavor = "llcpp"
       generated_headers = [
-        "fidl/$library_name/cpp/markers.h",
         "fidl/$library_name/cpp/wire.h",
         "fidl/$library_name/cpp/wire_messaging.h",
-        "fidl/$library_name/cpp/wire_types.h",
-        "fidl/$library_name/cpp/wire_test_base.h",
       ]
-      generated_sources = [
-        "fidl/$library_name/cpp/wire_messaging.cc",
-        "fidl/$library_name/cpp/wire_types.cc",
-      ]
+      generated_sources = [ "fidl/$library_name/cpp/wire_messaging.cc" ]
     }
     fidl_cpp_codegen("${target_name}_llcpp") {
       forward_variables_from(common_options, "*")
@@ -425,7 +444,32 @@ template("fidl_cpp_family") {
                              ])
       forward_variables_from(common_options, "*")
       forward_variables_from(llcpp_options, "*")
-      additional_public_deps = llcpp_public_deps
+      additional_public_deps = llcpp_public_deps + [ ":" + wire_types_target ]
+    }
+
+    driver_options = {
+      bindings_flavor = "driver"
+      generated_headers = [
+        "fidl/$library_name/cpp/driver/wire.h",
+        "fidl/$library_name/cpp/driver/wire_messaging.h",
+        "fidl/$library_name/cpp/wire_test_base.h",
+      ]
+      generated_sources = [ "fidl/$library_name/cpp/driver/wire_messaging.cc" ]
+    }
+    fidl_cpp_codegen("${target_name}_driver") {
+      forward_variables_from(common_options, "*")
+      forward_variables_from(driver_options, "*")
+      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
+    }
+    fidl_cpp_library("${target_name}_driver") {
+      forward_variables_from(invoker,
+                             [
+                               "public_deps",
+                               "visibility",
+                             ])
+      forward_variables_from(common_options, "*")
+      forward_variables_from(driver_options, "*")
+      additional_public_deps = llcpp_public_deps + [ ":" + wire_types_target ]
     }
   }
 

@@ -35,7 +35,8 @@ class ExampleFooResult {
 
   ExampleFooResult()
       : ordinal_(::fidl_test_error::wire::ExampleFooResult::Ordinal::Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   ExampleFooResult(const ExampleFooResult&) = default;
   ExampleFooResult& operator=(const ExampleFooResult&) = default;

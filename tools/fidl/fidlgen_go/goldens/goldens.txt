@@ -6,6 +6,8 @@ bits_constants.go.golden
 byte_and_bytes.go.golden
 consts.go.golden
 doc_comments.go.golden
+driver_one_way.go.golden
+driver_two_way.go.golden
 empty_struct.go.golden
 encapsulated_structs.go.golden
 enum.go.golden

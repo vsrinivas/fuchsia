@@ -46,6 +46,14 @@
     <td> library comment #1</td>
 </tr>
 <tr>
+    <td><a href="fidl.test.driveroneway/index">fidl.test.driveroneway</a></td>
+    <td></td>
+</tr>
+<tr>
+    <td><a href="fidl.test.drivertwoway/index">fidl.test.drivertwoway</a></td>
+    <td></td>
+</tr>
+<tr>
     <td><a href="fidl.test.emptystruct/index">fidl.test.emptystruct</a></td>
     <td></td>
 </tr>

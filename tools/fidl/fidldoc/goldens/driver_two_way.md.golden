@@ -1,0 +1,61 @@
+<link rel="stylesheet" href="../style.css" />
+
+[TOC]
+
+# fidl.test.drivertwoway
+
+
+
+## **PROTOCOLS**
+
+## TwoWay {#TwoWay}
+*Defined in [fidl.test.drivertwoway/driver_two_way.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_two_way.test.fidl;l=8)*
+
+
+
+### Add {#TwoWay.Add}
+
+
+
+#### Request {#TwoWay.Add_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>addend1</code></td>
+            <td>
+                <code>uint16</code>
+            </td>
+        </tr><tr>
+            <td><code>addend2</code></td>
+            <td>
+                <code>uint16</code>
+            </td>
+        </tr></table>
+
+
+#### Response {#TwoWay.Add_Response}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>sum</code></td>
+            <td>
+                <code>uint16</code>
+            </td>
+        </tr></table>
+
+
+
+## **STRUCTS**
+
+
+
+
+
+
+
+
+
+
+
+
+

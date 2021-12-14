@@ -21,6 +21,10 @@ toc:
     path: /fidl.test.consts
   - title: fidl.test.doccomments
     path: /fidl.test.doccomments
+  - title: fidl.test.driveroneway
+    path: /fidl.test.driveroneway
+  - title: fidl.test.drivertwoway
+    path: /fidl.test.drivertwoway
   - title: fidl.test.emptystruct
     path: /fidl.test.emptystruct
   - title: fidl.test.encapsulatedstructs

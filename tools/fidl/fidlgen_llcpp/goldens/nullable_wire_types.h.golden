@@ -140,7 +140,8 @@ class SimpleUnion {
  public:
   SimpleUnion()
       : ordinal_(::fidl_test_nullable::wire::SimpleUnion::Ordinal::Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   SimpleUnion(const SimpleUnion&) = default;
   SimpleUnion& operator=(const SimpleUnion&) = default;

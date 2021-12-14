@@ -277,7 +277,8 @@ class Union {
  public:
   Union()
       : ordinal_(::fidl_test_versions::wire::Union::Ordinal::Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   Union(const Union&) = default;
   Union& operator=(const Union&) = default;

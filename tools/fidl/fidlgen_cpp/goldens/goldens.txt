@@ -14,6 +14,10 @@ consts.cc.golden
 consts.h.golden
 doc_comments.cc.golden
 doc_comments.h.golden
+driver_one_way.cc.golden
+driver_one_way.h.golden
+driver_two_way.cc.golden
+driver_two_way.h.golden
 empty_struct.cc.golden
 empty_struct.h.golden
 encapsulated_structs.cc.golden

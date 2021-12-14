@@ -24,8 +24,31 @@ func NewGenerator(name string, templates fs.FS, formatter Formatter, funcs templ
 		formatter,
 	}
 	gen.tmpls.Funcs(funcs)
-	template.Must(gen.tmpls.ParseFS(templates, "*"))
+
+	if hasDir(templates) {
+		template.Must(gen.tmpls.ParseFS(templates, "*.tmpl", "*/*.tmpl"))
+	} else {
+		template.Must(gen.tmpls.ParseFS(templates, "*.tmpl"))
+	}
+
 	return gen
+}
+
+func hasDir(r fs.FS) bool {
+	matches, err := fs.Glob(r, "*")
+	if err != nil {
+		panic(err)
+	}
+	for _, match := range matches {
+		info, err := fs.Stat(r, match)
+		if err != nil {
+			panic(err)
+		}
+		if info.IsDir() {
+			return true
+		}
+	}
+	return false
 }
 
 func (gen *Generator) ExecuteTemplate(tmpl string, data interface{}) ([]byte, error) {

@@ -32,7 +32,8 @@ class OnlyLlcpp {
   OnlyLlcpp()
       : ordinal_(
             ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::Invalid),
-        envelope_{} {}
+        envelope_ {}
+  {}
 
   OnlyLlcpp(const OnlyLlcpp&) = default;
   OnlyLlcpp& operator=(const OnlyLlcpp&) = default;

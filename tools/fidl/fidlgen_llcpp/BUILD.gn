@@ -18,6 +18,9 @@ if (is_host) {
     ]
     sources = [
       "codegen/codegen.go",
+      "codegen/driver/file_header.tmpl",
+      "codegen/driver/file_messaging_header.tmpl",
+      "codegen/driver/file_messaging_source.tmpl",
       "codegen/file_header.tmpl",
       "codegen/file_markers.tmpl",
       "codegen/file_messaging_header.tmpl",
@@ -102,6 +105,18 @@ if (is_host) {
             golden = "${info.name}_wire_messaging.cc.golden"
             generated = "$gen_dir/$include_path/wire_messaging.cc"
           },
+          {
+            golden = "${info.name}_driver.h.golden"
+            generated = "$gen_dir/$include_path/driver/wire.h"
+          },
+          {
+            golden = "${info.name}_driver_wire_messaging.h.golden"
+            generated = "$gen_dir/$include_path/driver/wire_messaging.h"
+          },
+          {
+            golden = "${info.name}_driver_wire_messaging.cc.golden"
+            generated = "$gen_dir/$include_path/driver/wire_messaging.cc"
+          },
         ]
       }
     }
@@ -126,6 +141,7 @@ group("goldens") {
     if (info[denylist_key] + [ "fidlgen_llcpp" ] - [ "fidlgen_llcpp" ] ==
         info[denylist_key]) {
       deps += [ "${info.target}_llcpp" ]
+      deps += [ "${info.target}_driver" ]
     }
   }
 }

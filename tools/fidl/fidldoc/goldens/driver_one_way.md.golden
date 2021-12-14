@@ -1,0 +1,65 @@
+<link rel="stylesheet" href="../style.css" />
+
+[TOC]
+
+# fidl.test.driveroneway
+
+
+
+## **PROTOCOLS**
+
+## OneWay {#OneWay}
+*Defined in [fidl.test.driveroneway/driver_one_way.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_one_way.test.fidl;l=12)*
+
+
+
+### Send {#OneWay.Send}
+
+
+
+#### Request {#OneWay.Send_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>payload</code></td>
+            <td>
+                <code><a class='link' href='#Payload'>Payload</a></code>
+            </td>
+        </tr></table>
+
+
+
+
+
+## **STRUCTS**
+
+### Payload  {#Payload data-text="Payload"}
+*Defined in [fidl.test.driveroneway/driver_one_way.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_one_way.test.fidl;l=7)*
+
+
+
+
+<table>
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Payload.value">
+            <td><code>value</code></td>
+            <td>
+                <code>uint32</code>
+            </td>
+            <td>
+</td>
+            <td>No default</td>
+        </tr>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+

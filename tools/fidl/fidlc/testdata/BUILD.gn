@@ -14,6 +14,8 @@ standalone_libraries = [
   "constants.test.fidl",
   "consts.test.fidl",
   "doc_comments.test.fidl",
+  "driver_one_way.test.fidl",
+  "driver_two_way.test.fidl",
   "empty_struct.test.fidl",
   "encapsulated_structs.test.fidl",
   "enum.test.fidl",

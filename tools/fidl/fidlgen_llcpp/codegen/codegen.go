@@ -113,7 +113,7 @@ var utilityFuncs = template.FuncMap{
 	},
 }
 
-//go:embed *.tmpl
+//go:embed *.tmpl driver/*.tmpl
 var templates embed.FS
 
 func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
