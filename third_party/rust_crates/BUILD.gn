@@ -10825,9 +10825,10 @@ rust_library("unicase-v2_5_1") {
     "--edition=2015",
     "-Cmetadata=be8b50383665a777",
     "-Cextra-filename=-be8b50383665a777",
-    "--cfg=__unicase__default_hasher",
-    "--cfg=__unicase__const_funs",
     "--cfg=__unicase__iter_cmp",
+    "--cfg=__unicase__default_hasher",
+    "--cfg=__unicase__const_fns",
+    "--cfg=__unicase__core_and_alloc",
   ]
 }
 

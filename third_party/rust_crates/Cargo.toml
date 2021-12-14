@@ -511,7 +511,12 @@ env_vars = [
 ]
 
 [gn.package.unicase."2.5.1"]
-rustflags = ["--cfg=__unicase__default_hasher", "--cfg=__unicase__const_funs", "--cfg=__unicase__iter_cmp"]
+rustflags = [
+  "--cfg=__unicase__iter_cmp",
+  "--cfg=__unicase__default_hasher",
+  "--cfg=__unicase__const_fns",
+  "--cfg=__unicase__core_and_alloc",
+]
 
 [gn.package.valico."2.4.2"]
 env_vars = ["OUT_DIR=../../../../compat/valico"]
