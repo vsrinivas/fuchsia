@@ -276,7 +276,7 @@ static zx_status_t WriteBufferData(const IptConfig& config, const ControllerSync
   }
 
   // TODO(dje): Fetch from vmo?
-  size_t chunk_size = (1 << buffer_config->chunk_order) * PAGE_SIZE;
+  size_t chunk_size = (1 << buffer_config->chunk_order) * zx_system_get_page_size();
   uint32_t num_chunks = buffer_config->num_chunks;
 
   // If using a circular buffer there's (currently) no way to know if
