@@ -20,7 +20,6 @@ test_scripts = [
   "femu-test.sh",
   "fpave-test.sh",
   "fserve-remote-test.sh",
-  "fserve-test.sh",
   "fuchsia-common-tests.sh",
   "femu-osx-test.sh",
 ]
@@ -52,7 +51,6 @@ host_script_test_data("gn_sdk_bash_tests") {
         "//scripts/sdk/gn/base/bin/femu.sh",
         "//scripts/sdk/gn/base/bin/fpave.sh",
         "//scripts/sdk/gn/base/bin/fserve-remote.sh",
-        "//scripts/sdk/gn/base/bin/fserve.sh",
         "//scripts/sdk/gn/base/bin/fuchsia-common.sh",
         "//scripts/sdk/gn/base/bin/devshell/lib/image_build_vars.sh",
       ]

@@ -21,10 +21,6 @@
       "type": "host_tool"
     },
     {
-      "meta": "bin/fserve-meta.json",
-      "type": "host_tool"
-    },
-    {
       "meta": "bin/fserve-remote-meta.json",
       "type": "host_tool"
     },

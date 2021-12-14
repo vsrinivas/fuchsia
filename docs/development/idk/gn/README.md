@@ -76,7 +76,7 @@ and run: `gsutil ls gs://fuchsia/development/$(gsutil cat gs://fuchsia/developme
 1. Start a package server from your host machine:
 
    ```shell
-   third_party/fuchsia-sdk/bin/fserve.sh --image generic-x64
+   third_party/fuchsia-sdk/tools/x64/fserve --image generic-x64
    ```
 
 1. To publish your packages open another another terminal window and run:

@@ -148,7 +148,7 @@ EOF
 
   # Check that femu.sh was called
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state.1"
+  source "${MOCKED_FSERVE}.mock_state.1"
 
   gn-test-check-mock-args _ANY_ --device-ip "fe80::5054:ff:fe63:5e7a%qemu" --image qemu-x64
 
@@ -164,12 +164,13 @@ BT_FILE_DEPS=(
 )
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
+  scripts/sdk/gn/base/tools/x64/fserve
+  scripts/sdk/gn/base/tools/arm64/fserve
   scripts/sdk/gn/base/tools/x64/fconfig
   scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/tools/x64/fssh
   scripts/sdk/gn/base/tools/arm64/fssh
   scripts/sdk/gn/base/bin/femu.sh
-  scripts/sdk/gn/base/bin/fserve.sh
   script.sh
   isolated/ps
   isolated/pgrep
@@ -184,6 +185,7 @@ BT_SET_UP() {
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
 
+  MOCKED_FSERVE="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fserve"
   MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
   MOCKED_FSSH="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fssh"
 }

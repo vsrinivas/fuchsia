@@ -72,7 +72,7 @@ function cleanup {
     echo "${msg}"
     kill "${FEMU_PID}"  > /dev/null 2>&1 || true
   fi
-  "${SCRIPT_SRC_DIR}/fserve.sh" --kill  > /dev/null 2>&1  || true
+  "${TOOL_DIR}/fserve" --kill  > /dev/null 2>&1  || true
 }
 
 HEADLESS=""
@@ -178,7 +178,7 @@ echo "Emulator pid ${FEMU_PID} is running and accepting connections"
 
 # Start the package server after the emulator is ready, so we know it is configured when we run commands
 echo "Starting package server"
-"${SCRIPT_SRC_DIR}/fserve.sh" --device-ip "${EMULATOR_ADDRESS}" --image "${IMAGE_NAME}"
+"${TOOL_DIR}/fserve" --device-ip "${EMULATOR_ADDRESS}" --image "${IMAGE_NAME}"
 
 # Execute the script specified on the command-line
 EXEC_RESULT=0

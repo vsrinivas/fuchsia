@@ -114,7 +114,7 @@ TEST_fserve_remote() {
       return "${rc}"
     fi
     # log the call to configure the settings
-    if [[ "$*" =~ "fserve.sh" ]]; then
+    if [[ "$*" =~ "fserve" ]]; then
       rc=0
       gn-test-log-mock "${0}.fserve" $rc $@
       return "${rc}"
@@ -170,7 +170,7 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.fserve"
   expected=("${ssh_common_expected[@]}" )
   expected+=("cd" "\$HOME" "&&"
-    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "./bin/fserve.sh" "&&" "sleep" "0")
+    "cd" "/home/path_to_samples/third_party/fuchsia-sdk" "&&" "${MOCKED_FSERVE}" "&&" "sleep" "0")
 
   # shellcheck disable=SC1090
   source "${SSH_MOCK_PATH}/ssh.tunnel"
@@ -272,7 +272,7 @@ EOF
       return "${rc}"
     fi
     # log the call to configure the settings
-    if [[ "$*" =~ "fserve.sh" ]]; then
+    if [[ "$*" =~ "fserve" ]]; then
       rc=0
       gn-test-log-mock "${0}.fserve" $rc $@
       return "${rc}"
@@ -329,7 +329,7 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.fserve"
   expected=("${ssh_common_expected[@]}" )
   expected+=("cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
-    "&&" "./bin/fserve.sh" "&&" "sleep" "0")
+    "&&" "${MOCKED_FSERVE}" "&&" "sleep" "0")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
@@ -430,7 +430,7 @@ TEST_fserve_remote_existing_session() {
       return "${rc}"
     fi
     # log the call to configure the settings
-    if [[ "$*" =~ "fserve.sh" ]]; then
+    if [[ "$*" =~ "fserve" ]]; then
       rc=0
       gn-test-log-mock "${0}.fserve" $rc $@
       return "${rc}"
@@ -509,7 +509,7 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.fserve"
   expected=("${ssh_common_expected[@]}" )
   expected+=("cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
-    "&&" "./bin/fserve.sh" "&&" "sleep" "0")
+    "&&" "${MOCKED_FSERVE}" "&&" "sleep" "0")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
@@ -615,7 +615,7 @@ TEST_fserve_remote_pm_running() {
       return "${rc}"
     fi
     # log the call to configure the settings
-    if [[ "$*" =~ "fserve.sh" ]]; then
+    if [[ "$*" =~ "fserve" ]]; then
       rc=0
       gn-test-log-mock "${0}.fserve" $rc $@
       return "${rc}"
@@ -684,7 +684,7 @@ EOF
   source "${SSH_MOCK_PATH}/ssh.fserve"
   expected=("${ssh_common_expected[@]}" )
   expected+=("cd" "\$HOME" "&&" "cd" "/home/path_to_samples/third_party/fuchsia-sdk"
-    "&&" "./bin/fserve.sh" "&&" "sleep" "0")
+    "&&" "${MOCKED_FSERVE}" "&&" "sleep" "0")
   gn-test-check-mock-args "${expected[@]}"
 
   # shellcheck disable=SC1090
@@ -748,6 +748,7 @@ BT_SET_UP() {
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
 
+  MOCKED_FSERVE="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fserve"
   MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
   MOCKED_FFX="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/ffx"
 

@@ -49,12 +49,12 @@ The above instructions is not what is run during testing and CQ. The GN build st
 
 ### Testing
 
-#### Execute GN SDK scripts
+#### Execute GN SDK scripts/tools
 
-The internal GN SDK helper scripts can be executed after the GN SDK has been generated.
+The internal GN SDK helper scripts/tools can be executed after the GN SDK has been generated.
 
 ```sh
-$ gn_sdk_dir/bin/fserve.sh
+$ gn_sdk_dir/tools/x64/fserve
 $ gn_sdk_dir/bin/fpave.sh
 $ gn_sdk_dir/bin/femu.sh
 ```

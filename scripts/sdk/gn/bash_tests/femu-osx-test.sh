@@ -99,9 +99,9 @@ TEST_femu_osx_networking() {
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
   gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
 
-  # Check that fserve.sh was called to download the needed system images
+  # Check that fserve was called to download the needed system images
   # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state"
+  source "${MOCKED_FSERVE}.mock_state"
   gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
 
   # Verify that zbi was called to add the authorized_keys
@@ -176,11 +176,12 @@ BT_MOCKED_TOOLS=(
   test-home/.fuchsia/emulator/aemu-linux-amd64-"${AEMU_LABEL}"/emulator
   test-home/.fuchsia/emulator/aemu-mac-amd64-"${AEMU_LABEL}"/emulator
   scripts/sdk/gn/base/bin/fpave.sh
-  scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/x64/zbi
   scripts/sdk/gn/base/tools/x64/fvm
   scripts/sdk/gn/base/tools/arm64/zbi
   scripts/sdk/gn/base/tools/arm64/fvm
+  scripts/sdk/gn/base/tools/x64/fserve
+  scripts/sdk/gn/base/tools/arm64/fserve
   scripts/sdk/gn/base/tools/x64/fconfig
   scripts/sdk/gn/base/tools/arm64/fconfig
   _isolated_path_for/ip
@@ -221,6 +222,7 @@ BT_SET_UP() {
   mkdir -p "${FUCHSIA_WORK_DIR}/image"
   dd if=/dev/zero of="${FUCHSIA_WORK_DIR}/image/storage-full.blk" bs=1024 count=1  > /dev/null 2>/dev/null
 
+  MOCKED_FSERVE="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fserve"
   MOCKED_FVM="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fvm"
   MOCKED_ZBI="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/zbi"
 

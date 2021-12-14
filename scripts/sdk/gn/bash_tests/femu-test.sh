@@ -46,11 +46,6 @@ TEST_femu_standalone() {
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
   gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
 
-  # Check that fserve.sh was called to download the needed system images
-  # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state"
-  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
-
   # Verify that zbi was called to add the authorized_keys
   # shellcheck disable=SC1090
   source "${MOCKED_ZBI}.mock_state"
@@ -72,11 +67,6 @@ TEST_femu_arm64() {
   # Check that fpave.sh was called to download the needed system images
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
-  gn-test-check-mock-args _ANY_ --prepare --image qemu-arm64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
-
-  # Check that fserve.sh was called to download the needed system images
-  # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state"
   gn-test-check-mock-args _ANY_ --prepare --image qemu-arm64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
 
   # Verify some of the arguments passed to the emulator binary
@@ -161,11 +151,6 @@ INPUT
   # Check that fpave.sh was called to download the needed system images
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fpave.sh.mock_state"
-  gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
-
-  # Check that fserve.sh was called to download the needed system images
-  # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fserve.sh.mock_state"
   gn-test-check-mock-args _ANY_ --prepare --image qemu-x64 --bucket fuchsia --work-dir "${FUCHSIA_WORK_DIR}"
 
   # Verify that zbi was called to add the authorized_keys
@@ -418,7 +403,6 @@ BT_MOCKED_TOOLS=(
   test-home/.fuchsia/emulator/grpcwebproxy-mac-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
   test-home/.fuchsia/emulator/grpcwebproxy-linux-amd64-"${GRPCWEBPROXY_LABEL}"/grpcwebproxy
   scripts/sdk/gn/base/bin/fpave.sh
-  scripts/sdk/gn/base/bin/fserve.sh
   scripts/sdk/gn/base/tools/x64/fconfig
   scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/tools/x64/zbi

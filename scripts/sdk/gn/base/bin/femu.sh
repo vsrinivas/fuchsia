@@ -191,7 +191,6 @@ fi
 # Download the system images and packages
 echo "Checking for system image and packages for image ${IMAGE_NAME} and SDK version $(get-sdk-version)"
 "${SCRIPT_SRC_DIR}/fpave.sh"  --prepare --image "${IMAGE_NAME}" --bucket "${FUCHSIA_BUCKET}" --work-dir "${FUCHSIA_IMAGE_WORK_DIR}"
-"${SCRIPT_SRC_DIR}/fserve.sh" --prepare --image "${IMAGE_NAME}" --bucket "${FUCHSIA_BUCKET}" --work-dir "${FUCHSIA_IMAGE_WORK_DIR}"
 
 # Do not create directory names with : otherwise LD_PRELOAD usage in aemu will fail.
 # Avoid / to prevent extra sub-directories being created.

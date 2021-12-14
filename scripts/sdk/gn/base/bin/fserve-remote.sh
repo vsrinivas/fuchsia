@@ -54,6 +54,8 @@ DEVICE_NAME="$(get-fuchsia-property device-name)"
 BUCKET="$(get-fuchsia-property bucket)"
 IMAGE="$(get-fuchsia-property image)"
 
+readonly TOOL_DIR="$(get-fuchsia-sdk-tools-dir)"
+
 while [[ $# -ne 0 ]]; do
   case "$1" in
   --help|-h)
@@ -288,11 +290,11 @@ if ((START_SERVE)); then
   fi
 
   # Starts a package server
-  args=(cd "\$HOME" "&&" cd "${REMOTE_DIR}" "&&" ./bin/fserve.sh)
+  args=(cd "\$HOME" "&&" cd "${REMOTE_DIR}" "&&" "${TOOL_DIR}/fserve")
   if [[ "${DEBUG_FLAG}" != "" ]]; then
     args+=("${DEBUG_FLAG}")
   fi
-  # fserve.sh runs in the background, keep the tunnel open by running sleep.
+  # fserve runs in the background, keep the tunnel open by running sleep.
   args+=("&&" "sleep ${TTL_TIME}")
 
   # shellcheck disable=SC2029
