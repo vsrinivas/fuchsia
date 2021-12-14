@@ -7,12 +7,13 @@ delivered on demand, like a web page. This enables a vulnerability patch to be
 pushed to all Fuchsia products at once without the need for individual product
 coordination.
 
-A package is not a single archive or image file, but rather a tree of
-**Binary Large Objects** (BLOBs) rooted in a single **Fuchsia Archive** (`.far`)
-known as the **package metadata**. The BLOBs inside Fuchsia packages are
-**content-addressable**, meaning they are referenced using a hash of their
-contents. The content-address of the package metadata is known as the
-**package hash**.
+A package is not a single archive or image file, but rather a tree of **Binary
+Large Objects** (BLOBs). The root of the tree is a BLOB called "meta.far" which
+contains metadata for the package, including a "meta/contents" file which
+contains references to the rest of the BLOBs. The BLOBs inside Fuchsia packages
+are **content-addressed**, meaning they are referenced using a hash of their
+contents. The content-address of the meta.far itself is known as the **package
+hash**.
 
 <aside class="key-point">
   </b>Merkle Roots</b>
@@ -25,7 +26,7 @@ contents. The content-address of the package metadata is known as the
   <a href="/docs/concepts/packages/merkleroot.md">Fuchsia package hash</a>.</p>
 </aside>
 
-The package metadata (`meta.far`) contains a `meta/` directory with at least the
+The meta.far contains a `meta/` directory with at least the
 following two items:
 
 * `meta/package`: JSON file containing the package's identity information
@@ -74,8 +75,8 @@ locally on the device.](images/package-resolver.png){: width="751"}
 
 Requests for software on a Fuchsia device are handled by the
 **package resolver**. The package resolver determines if the system already has
-the package cached locally. If not, the resolver fetches the package metadata
-from the repository and updates the necessary content BLOBs.
+the package cached locally. If not, the resolver fetches the meta.far from the
+repository and updates the necessary content BLOBs.
 
 ### Storing packages
 
