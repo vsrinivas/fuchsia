@@ -215,5 +215,6 @@ type DispatchPolicy = strict enum {
     /// Note: It's possible for no client to latch, if the hit test fails to
     ///       hit any surface in any sub-view of |Target|.
     /// Note: Each client will have its own copy of the viewport, placed
+    ///       accordingly in its own coordinate system.
     MOUSE_HOVER_AND_LATCH_IN_TARGET = 3;
 };
