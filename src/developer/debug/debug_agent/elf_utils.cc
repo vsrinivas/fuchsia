@@ -48,6 +48,18 @@ debug::Status ReadNullTerminatedString(const ProcessHandle& process, zx_vaddr_t 
   return debug::Status();
 }
 
+// Returns the fetch function for use by ElfLib for the given process. The ProcessHandle must
+// outlive the returned value.
+std::function<bool(uint64_t, std::vector<uint8_t>*)> GetElfLibReader(const ProcessHandle& process,
+                                                                     uint64_t load_address) {
+  return [&process, load_address](uint64_t offset, std::vector<uint8_t>* buf) {
+    size_t num_read = 0;
+    if (process.ReadMemory(load_address + offset, buf->data(), buf->size(), &num_read).has_error())
+      return false;
+    return num_read == buf->size();
+  };
+}
+
 }  // namespace
 
 debug::Status WalkElfModules(const ProcessHandle& process, uint64_t dl_debug_addr,
@@ -104,15 +116,7 @@ std::vector<debug_ipc::Module> GetElfModulesForProcess(const ProcessHandle& proc
     if (ReadNullTerminatedString(process, str_addr, &module.name).has_error())
       return false;
 
-    auto elf = elflib::ElfLib::Create(
-        [&process, base = module.base](uint64_t offset, std::vector<uint8_t>* buf) {
-          size_t num_read = 0;
-          if (process.ReadMemory(base + offset, buf->data(), buf->size(), &num_read).has_error())
-            return false;
-          return num_read == buf->size();
-        });
-
-    if (elf)
+    if (auto elf = elflib::ElfLib::Create(GetElfLibReader(process, module.base)))
       module.build_id = elf->GetGNUBuildID();
 
     modules.push_back(std::move(module));
