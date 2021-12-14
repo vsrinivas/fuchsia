@@ -399,7 +399,7 @@ class AsyncClientBinding final : public AsyncBinding {
  public:
   static std::shared_ptr<AsyncClientBinding> Create(
       async_dispatcher_t* dispatcher, std::shared_ptr<fidl::internal::AnyTransport> transport,
-      std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
+      std::shared_ptr<ClientBase> client, AsyncEventHandler* error_handler,
       AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   virtual ~AsyncClientBinding() = default;
@@ -409,7 +409,7 @@ class AsyncClientBinding final : public AsyncBinding {
  private:
   AsyncClientBinding(async_dispatcher_t* dispatcher,
                      std::shared_ptr<fidl::internal::AnyTransport> transport,
-                     std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
+                     std::shared_ptr<ClientBase> client, AsyncEventHandler* error_handler,
                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
   std::optional<DispatchError> Dispatch(
@@ -420,7 +420,7 @@ class AsyncClientBinding final : public AsyncBinding {
 
   std::shared_ptr<fidl::internal::AnyTransport> transport_;
   std::shared_ptr<ClientBase> client_;
-  AsyncEventHandler* event_handler_;
+  AsyncEventHandler* error_handler_;
   AnyTeardownObserver teardown_observer_;
 };
 

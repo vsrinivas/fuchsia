@@ -24,6 +24,7 @@ void ClientBase::Bind(std::shared_ptr<ClientBase> client, fidl::internal::AnyTra
       std::move(client), event_handler, std::move(teardown_observer), threading_policy);
   binding_ = binding;
   dispatcher_ = dispatcher;
+  event_handler_ = event_handler;
   binding->BeginFirstWait();
 }
 
@@ -137,8 +138,7 @@ void ClientBase::TryAsyncDeliverError(::fidl::Result error, ResponseContext* con
 }
 
 std::optional<UnbindInfo> ClientBase::Dispatch(
-    fidl::IncomingMessage& msg, AsyncEventHandler* maybe_event_handler,
-    internal::IncomingTransportContext* transport_context) {
+    fidl::IncomingMessage& msg, internal::IncomingTransportContext* transport_context) {
   if (fit::nullable epitaph = msg.maybe_epitaph(); unlikely(epitaph)) {
     return UnbindInfo::PeerClosed((*epitaph)->error);
   }
@@ -146,7 +146,7 @@ std::optional<UnbindInfo> ClientBase::Dispatch(
   auto* hdr = msg.header();
   if (hdr->txid == 0) {
     // Dispatch events (received messages with no txid).
-    return DispatchEvent(msg, maybe_event_handler, transport_context);
+    return DispatchEvent(msg, event_handler_, transport_context);
   }
 
   // If this is a response, look up the corresponding ResponseContext based on the txid.

@@ -306,7 +306,6 @@ class ClientBase {
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
   std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
-                                     AsyncEventHandler* maybe_event_handler,
                                      internal::IncomingTransportContext* transport_context);
 
   // Dispatches an incoming event.
@@ -365,6 +364,9 @@ class ClientBase {
 
   // The dispatcher that is monitoring FIDL messages.
   async_dispatcher_t* dispatcher_ = nullptr;
+
+  // The user supplied event handler.
+  AsyncEventHandler* event_handler_ = nullptr;
 
   // State for tracking outstanding transactions.
   std::mutex lock_;

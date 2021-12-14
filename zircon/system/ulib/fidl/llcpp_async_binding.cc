@@ -394,10 +394,10 @@ void AsyncServerBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
 
 std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
     async_dispatcher_t* dispatcher, std::shared_ptr<fidl::internal::AnyTransport> transport,
-    std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
+    std::shared_ptr<ClientBase> client, AsyncEventHandler* error_handler,
     AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
   auto binding = std::shared_ptr<AsyncClientBinding>(
-      new AsyncClientBinding(dispatcher, std::move(transport), std::move(client), event_handler,
+      new AsyncClientBinding(dispatcher, std::move(transport), std::move(client), error_handler,
                              std::move(teardown_observer), threading_policy));
   binding->InitKeepAlive();
   return binding;
@@ -406,18 +406,18 @@ std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
 AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
                                        std::shared_ptr<fidl::internal::AnyTransport> transport,
                                        std::shared_ptr<ClientBase> client,
-                                       AsyncEventHandler* event_handler,
+                                       AsyncEventHandler* error_handler,
                                        AnyTeardownObserver&& teardown_observer,
                                        ThreadingPolicy threading_policy)
     : AsyncBinding(dispatcher, transport->borrow(), threading_policy),
       transport_(std::move(transport)),
       client_(std::move(client)),
-      event_handler_(event_handler),
+      error_handler_(error_handler),
       teardown_observer_(std::move(teardown_observer)) {}
 
 std::optional<DispatchError> AsyncClientBinding::Dispatch(
     fidl::IncomingMessage& msg, bool*, internal::IncomingTransportContext* transport_context) {
-  std::optional<UnbindInfo> info = client_->Dispatch(msg, event_handler_, transport_context);
+  std::optional<UnbindInfo> info = client_->Dispatch(msg, transport_context);
   if (info.has_value()) {
     // A client binding does not propagate synchronous sending errors as part of
     // handling a message. All client callbacks return `void`.
@@ -433,7 +433,7 @@ void AsyncClientBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
 
   // Stash state required after deleting the binding.
   AnyTeardownObserver teardown_observer = std::move(teardown_observer_);
-  AsyncEventHandler* event_handler = event_handler_;
+  AsyncEventHandler* error_handler = error_handler_;
   std::shared_ptr<ClientBase> client = std::move(client_);
 
   // Delete the calling reference.
@@ -451,8 +451,8 @@ void AsyncClientBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_
 
   // Execute the error hook if specified.
   if (info.reason() != fidl::Reason::kUnbind) {
-    if (event_handler != nullptr)
-      event_handler->on_fidl_error(info);
+    if (error_handler != nullptr)
+      error_handler->on_fidl_error(info);
   }
 
   // Notify teardown.
