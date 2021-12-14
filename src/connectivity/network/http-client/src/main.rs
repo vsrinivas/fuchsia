@@ -12,7 +12,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef},
     futures::{future::BoxFuture, prelude::*, StreamExt},
     hyper,
-    log::{debug, error, info, trace},
+    tracing::{debug, error, info, trace},
     std::convert::TryFrom,
     std::str::FromStr as _,
 };
@@ -408,9 +408,8 @@ fn spawn_server(stream: net_http::LoaderRequestStream) {
     .detach();
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::component]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init()?;
     let mut fs = ServiceFs::new();
     let _: &mut ServiceFsDir<'_, _> = fs.dir("svc").add_fidl_service(spawn_server);
     let _: &mut ServiceFs<_> = fs.take_and_serve_directory_handle()?;
