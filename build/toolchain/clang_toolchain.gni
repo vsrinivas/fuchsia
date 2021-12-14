@@ -760,7 +760,7 @@ template("clang_toolchain") {
                                      "{{UNSTRIPPED_DIR}}",
                                      "lib.unstripped")
         outputs += [ depend_output ]
-        command += " && ${prefix}/llvm-ifs --output-format=IFS --write-if-changed --output=$depend_output $link_output"
+        command += " && ${prefix}/llvm-ifs --write-if-changed --output-ifs=$depend_output $link_output"
       }
     }
 

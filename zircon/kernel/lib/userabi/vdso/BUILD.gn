@@ -156,10 +156,9 @@ if (toolchain_environment == "user.vdso") {
       script = "$clang_tool_dir/llvm-ifs"
       args = [
         "--input-format=IFS",
-        "--output-format=IFS",
         "--strip-ifs-target",
         "--write-if-changed",
-        "--output=" + rebase_path(vdso_ifs, root_build_dir),
+        "--output-ifs=" + rebase_path(vdso_ifs, root_build_dir),
         rebase_path(vdso_ifs_unstripped, root_build_dir),
       ]
     }

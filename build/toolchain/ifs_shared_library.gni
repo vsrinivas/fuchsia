@@ -80,12 +80,11 @@ template("ifs_shared_library") {
     rebased_stub_file = rebase_path(stub_file, root_build_dir)
     args = [
       "--input-format=IFS",
-      "--output-format=ELF",
       "--arch=${clang_cpu}",
       "--endianness=little",
       "--bitwidth=64",
       "--write-if-changed",
-      "--output=${rebased_stub_file}",
+      "--output-elf=${rebased_stub_file}",
       rebase_path(invoker.abi, root_build_dir),
     ]
   }

@@ -602,7 +602,7 @@ template("zircon_toolchain") {
           restat = true
           depend_output = "${outfile}.ifs"
           outputs += [ depend_output ]
-          command += " && $llvm_ifs --output-format=IFS --write-if-changed --output=$depend_output $link_output"
+          command += " && $llvm_ifs --write-if-changed --output-ifs=$depend_output $link_output"
         }
       }
 
