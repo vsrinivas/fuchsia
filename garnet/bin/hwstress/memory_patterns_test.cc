@@ -32,7 +32,8 @@ TEST(Util, NegateWords) {
 
 TEST(WritePattern, Simple) {
   // Write out a simple pattern to memory.
-  uint8_t memory[ZX_PAGE_SIZE];
+  std::vector<uint8_t> memory;
+  memory.resize(zx_system_get_page_size());
   WritePattern(memory, SimplePattern(0x55555555'55555555ul));
 
   // Ensure it was written correctly.
@@ -43,7 +44,8 @@ TEST(WritePattern, Simple) {
 
 TEST(SimplePattern, EndianCheck) {
   // Write out a pattern to memory.
-  uint8_t memory[ZX_PAGE_SIZE];
+  std::vector<uint8_t> memory;
+  memory.resize(zx_system_get_page_size());
   WritePattern(memory, SimplePattern(0x00112233'44556677ul));
 
   // Ensure that bytes were written in the correct (big-endian) order.
@@ -61,7 +63,8 @@ TEST(SimplePattern, EndianCheck) {
 
 TEST(MultiWordPattern, EndianCheck) {
   // Write out a pattern to memory.
-  uint8_t memory[ZX_PAGE_SIZE];
+  std::vector<uint8_t> memory;
+  memory.resize(zx_system_get_page_size());
   WritePattern(memory, MultiWordPattern({0x00112233'44556677ul, 0x8899aabb'ccddeeff}));
 
   // Ensure that bytes were written in the correct (big-endian) order.
@@ -88,15 +91,16 @@ TEST(MultiWordPattern, EndianCheck) {
 
 TEST(VerifyPattern, Simple) {
   // Write out a pattern to memory, and ensure it verifies correctly.
-  uint8_t memory[ZX_PAGE_SIZE];
-  memset(memory, 0x55, ZX_PAGE_SIZE);
+  std::vector<uint8_t> memory;
+  memory.resize(zx_system_get_page_size());
+  memset(memory.data(), 0x55, memory.size());
   EXPECT_EQ(std::nullopt, VerifyPattern(memory, SimplePattern(0x55555555'55555555)));
 
   // Change the memory to have incorrect bytes at various locations, and ensure
   // we see the errors.
   for (int bad_byte_index :
        std::initializer_list<int>{0, 1, 2, 3, 4, 5, 6, 7, 8, ZX_PAGE_SIZE - 1}) {
-    memset(memory, 0x55, ZX_PAGE_SIZE);
+    memset(memory.data(), 0x55, memory.size());
     memory[bad_byte_index] = 0x0;
     EXPECT_TRUE(VerifyPattern(memory, SimplePattern(0x55555555'55555555)).has_value());
   }

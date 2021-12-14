@@ -12,15 +12,15 @@ namespace hwstress {
 namespace {
 
 TEST(MemoryRange, CreateDestroy) {
-  auto range = MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached).value();
+  auto range = MemoryRange::Create(zx_system_get_page_size(), CacheMode::kCached).value();
   ASSERT_NE(range, nullptr);
-  EXPECT_EQ(range->size_bytes(), ZX_PAGE_SIZE);
-  EXPECT_EQ(range->size_words(), ZX_PAGE_SIZE / sizeof(uint64_t));
+  EXPECT_EQ(range->size_bytes(), zx_system_get_page_size());
+  EXPECT_EQ(range->size_words(), zx_system_get_page_size() / sizeof(uint64_t));
 }
 
 TEST(MemoryRange, MemoryWrite) {
   // Create the range.
-  auto range = MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached);
+  auto range = MemoryRange::Create(zx_system_get_page_size(), CacheMode::kCached);
 
   // Make sure we can write to it.
   for (size_t i = 0; i < range->size_bytes(); i++) {
@@ -41,12 +41,12 @@ TEST(MemoryRange, CachedVsUncached) {
   // Check that the VMOs have the correct cache settings.
   {
     std::unique_ptr<MemoryRange> range =
-        MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached).value();
+        MemoryRange::Create(zx_system_get_page_size(), CacheMode::kCached).value();
     EXPECT_EQ(GetVmoCachePolicy(range->vmo()), ZX_CACHE_POLICY_CACHED);
   }
   {
     std::unique_ptr<MemoryRange> range =
-        MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kUncached).value();
+        MemoryRange::Create(zx_system_get_page_size(), CacheMode::kUncached).value();
     EXPECT_EQ(GetVmoCachePolicy(range->vmo()), ZX_CACHE_POLICY_UNCACHED);
   }
 }
@@ -55,7 +55,7 @@ TEST(MemoryRange, CacheOps) {
   // It is hard to reliably test that cache ops do what is written on the box,
   // so we just call them and assume the kernel is doing the operation.
   std::unique_ptr<MemoryRange> range =
-      MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached).value();
+      MemoryRange::Create(zx_system_get_page_size(), CacheMode::kCached).value();
   range->CleanCache();
   range->CleanInvalidateCache();
 }

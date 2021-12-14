@@ -22,7 +22,7 @@ TEST(Memory, GenerateMemoryWorkloads) {
 
   // Generate workloads, and exercise each on 4096 bytes of RAM.
   std::unique_ptr<MemoryRange> memory =
-      MemoryRange::Create(ZX_PAGE_SIZE, CacheMode::kCached).value();
+      MemoryRange::Create(zx_system_get_page_size(), CacheMode::kCached).value();
   for (const MemoryWorkload& workload : GenerateMemoryWorkloads()) {
     workload.exec(&status, /*max_duration=*/zx::msec(10), memory.get());
   }
