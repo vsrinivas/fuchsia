@@ -4016,13 +4016,6 @@ From //out/not-default/args.gn:8
 
 From //build/toolchain/goma.gni:11
 
-### use_legacy_virtcon
-Set to use legacy virtcon implementation.
-
-**Current value (from the default):** `false`
-
-From //src/bringup/bundles/BUILD.gn:7
-
 ### use_lto
 Use link time optimization (LTO).
 
@@ -4193,15 +4186,15 @@ From //build/images/args.gni:145
 
 ### virtcon_boot_animation_path
 
-**Current value (from the default):** `"//src/bringup/bin/virtcon2/data/boot-animation.riv"`
+**Current value (from the default):** `"//src/bringup/bin/virtcon/data/boot-animation.riv"`
 
-From //src/bringup/bin/virtcon2/virtcon_args.gni:12
+From //src/bringup/bin/virtcon/virtcon_args.gni:12
 
 ### virtcon_font_path
 
 **Current value (from the default):** `"//prebuilt/third_party/fonts/robotomono/RobotoMono-Regular.ttf"`
 
-From //src/bringup/bin/virtcon2/virtcon_args.gni:8
+From //src/bringup/bin/virtcon/virtcon_args.gni:8
 
 ### virtmagma_debug
 Enable verbose logging in virtmagma-related code
