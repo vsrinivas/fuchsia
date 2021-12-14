@@ -12,7 +12,6 @@
 #include <Weave/DeviceLayer/PlatformManager.h>
 #include <Weave/DeviceLayer/ThreadStackManager.h>
 #include <Weave/Support/TraitEventUtils.h>
-#include <Warm/Warm.h>
 // clang-format on
 
 #include "thread_stack_manager_delegate_impl.h"
@@ -96,11 +95,6 @@ constexpr zx::duration kJoinAtStartupRetryDelay{zx_duration_from_sec(10)};
 // synchronously within the Device Layer, these functions all use SyncPtrs for
 // interfacing with the LoWPAN FIDL protocols.
 
-ThreadStackManagerDelegateImpl::ThreadStackManagerDelegateImpl()
-    : lookup_watcher_backoff_(zx::duration(zx_duration_from_sec(5)) /*initial_delay*/,
-                              2 /*retry_factor*/,
-                              zx::duration(zx_duration_from_sec(60)) /*max_delay*/) {}
-
 WEAVE_ERROR ThreadStackManagerDelegateImpl::InitThreadStack() {
   // See note at top to explain these SyncPtrs.
   LookupSyncPtr lookup;
@@ -180,60 +174,11 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::InitThreadStack() {
 
   is_thread_supported_ = true;
 
-  WatchLowpanDeviceChange();
   if (!IsThreadProvisioned()) {
     return StartThreadJoining();
   }
+
   return WEAVE_NO_ERROR;
-}
-
-void ThreadStackManagerDelegateImpl::WatchLowpanDeviceChange() {
-  auto svc = PlatformMgrImpl().GetComponentContextForProcess()->svc();
-  zx_status_t status;
-
-  FX_LOGS(INFO) << "Begin watching for LoWPAN device changes.";
-  auto restart_callback = [this](zx_status_t error_status) {
-    if (error_status != ZX_OK) {
-      FX_LOGS(ERROR) << "Disconnected from fuchsia.lowpan.device, reconnecting: "
-                     << zx_status_get_string(error_status);
-      lookup_watcher_delayed_task_.set_handler([this]() { WatchLowpanDeviceChange(); });
-      lookup_watcher_delayed_task_.PostDelayed(PlatformMgrImpl().GetDispatcher(),
-                                               lookup_watcher_backoff_.GetNext());
-    }
-  };
-
-  status = svc->Connect(lookup_watcher_.NewRequest());
-  if (status != ZX_OK) {
-    restart_callback(status);
-    return;
-  }
-
-  lookup_watcher_.set_error_handler(restart_callback);
-  lookup_watcher_->WatchDevices(
-      fit::bind_member(this, &ThreadStackManagerDelegateImpl::OnLowpanDeviceChange));
-}
-
-void ThreadStackManagerDelegateImpl::OnLowpanDeviceChange(
-    fuchsia::lowpan::device::DeviceChanges changes) {
-  auto device_added = std::find(changes.added.begin(), changes.added.end(), interface_name_);
-  auto device_removed = std::find(changes.removed.begin(), changes.removed.end(), interface_name_);
-
-  bool added = device_added != changes.added.end();
-  bool removed = device_removed != changes.removed.end();
-
-  lookup_watcher_backoff_.Reset();
-  if (added) {
-    FX_LOGS(INFO) << "LoWPAN device added, notifying WARM.";
-    PlatformMgr().ScheduleWork(
-        [](intptr_t) { Warm::ThreadInterfaceStateChange(Warm::kInterfaceStateUp); });
-  } else if (removed) {
-    FX_LOGS(INFO) << "LoWPAN device removed, notifying WARM.";
-    PlatformMgr().ScheduleWork(
-        [](intptr_t) { Warm::ThreadInterfaceStateChange(Warm::kInterfaceStateDown); });
-  }
-
-  lookup_watcher_->WatchDevices(
-      fit::bind_member(this, &ThreadStackManagerDelegateImpl::OnLowpanDeviceChange));
 }
 
 bool ThreadStackManagerDelegateImpl::HaveRouteToAddress(const IPAddress& destAddr) {
