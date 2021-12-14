@@ -176,9 +176,10 @@ void FileTester::CheckChildrenFromReaddir(Dir *dir, std::unordered_set<std::stri
     auto entry = reinterpret_cast<const vdirent_t *>(buf_ptr);
     size_t entry_size = entry->size + sizeof(vdirent_t);
 
+    std::string_view entry_name(entry->name, entry->size);
     auto iter = childs.begin();
     for (; iter != childs.end(); ++iter) {
-      if (memcmp(entry->name, (*iter).c_str(), (*iter).length()) == 0) {
+      if (entry_name == *iter) {
         break;
       }
     }
@@ -215,9 +216,11 @@ void FileTester::CheckChildrenInBlock(Dir *vn, uint64_t bidx,
     DirEntry *de = &dentry_blk->dentry[bit_pos];
     uint32_t slots = (LeToCpu(de->name_len) + kNameLen - 1) / kNameLen;
 
+    std::string_view dir_entry_name(reinterpret_cast<char *>(dentry_blk->filename[bit_pos]),
+                                    LeToCpu(de->name_len));
     auto iter = childs.begin();
     for (; iter != childs.end(); ++iter) {
-      if (memcmp(dentry_blk->filename[bit_pos], (*iter).c_str(), (*iter).length()) == 0) {
+      if (dir_entry_name == *iter) {
         break;
       }
     }

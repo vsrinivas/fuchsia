@@ -179,9 +179,14 @@ TEST_F(DirectoryTest, MultiSlotDentry) {
     std::string name = FileTester::GetRandomName(namelen);
 
     unsigned int slots = (namelen + kNameLen - 1) / kNameLen;
-
-    if (child_set.find(name) != child_set.end())
+    // After creating child, at least one more slot is needed for further testing.
+    if (slots_filled + slots >= kNrDentryInBlock) {
       continue;
+    }
+
+    if (child_set.find(name) != child_set.end()) {
+      continue;
+    }
 
     FileTester::CreateChild(test_dir_ptr, S_IFDIR, name);
     child_set.insert(name);
