@@ -82,7 +82,7 @@ zx_status_t El2TranslationTable::Init() {
   for (size_t i = 0; i < num_arenas; i++) {
     pmm_arena_info_t arena;
     pmm_get_arena_info(/*count=*/1, i, &arena, sizeof(arena));
-    paddr_t arena_paddr = vaddr_to_paddr(reinterpret_cast<void*>(arena.base));
+    paddr_t arena_paddr = arena.base;
     size_t page_count = arena.size / PAGE_SIZE;
     status = el2_aspace_->MapContiguous(
         /*vaddr=*/arena_paddr, /*paddr=*/arena_paddr, page_count,
