@@ -96,11 +96,6 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContex
   ranges.reset();
   bool alloc_failure = false;
   auto process_range = [this, &alloc_failure](const Range& range) {
-    // Amongst normalized ranges, reserved ranges are just 'holes'.
-    if (range.type == Type::kReserved) {
-      return true;
-    }
-
     if (auto result = NewNode(range); result.is_error()) {
       alloc_failure = true;
       return false;
@@ -130,8 +125,6 @@ fitx::result<fitx::failed> Pool::Init(cpp20::span<internal::RangeIterationContex
 }
 
 fitx::result<fitx::failed, Pool::Node*> Pool::NewNode(const Range& range) {
-  ZX_DEBUG_ASSERT(range.type != Type::kReserved);  // Not tracked, by policy.
-
   if (unused_.is_empty()) {
     return fitx::failed();
   }

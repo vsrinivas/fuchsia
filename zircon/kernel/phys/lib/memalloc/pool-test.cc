@@ -359,11 +359,11 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
   {
     PoolContext ctx;
     Range ranges[] = {
-        // peripheral: [0, kChunkSize) relative to kUsableMemoryStart
+        // reserved: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
             .size = kChunkSize,
-            .type = Type::kPeripheral,
+            .type = Type::kReserved,
         },
         // RAM: [kChunkSize, 2*kChunkSize) relative to kUsableMemoryStart
         {
@@ -374,11 +374,11 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
     };
 
     const Range expected[] = {
-        // peripheral: [0, kChunkSize) relative to kUsableMemoryStart
+        // reserved: [0, kChunkSize) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart,
             .size = kChunkSize,
-            .type = Type::kPeripheral,
+            .type = Type::kReserved,
         },
         // bookkeeping: [kChunkSize, 2*kChunkSize) relative to kUsableMemoryStart
         {
@@ -390,7 +390,7 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
 
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | peripheral
+PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | reserved
 PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
 )""";
 
@@ -445,11 +445,11 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
             .size = 2 * kChunkSize,
             .type = Type::kFreeRam,
         },
-        // peripheral: [kChunkSize/2, 3*kChunkSize/2) relative to kUsableMemoryStart
+        // reserved: [kChunkSize/2, 3*kChunkSize/2) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart + kChunkSize / 2,
             .size = kChunkSize,
-            .type = Type::kPeripheral,
+            .type = Type::kReserved,
         },
         // RAM: [2*kChunkSize, 3*kChunkSize) relative to kUsableMemoryStart
         {
@@ -466,11 +466,11 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
             .size = kChunkSize / 2,
             .type = Type::kFreeRam,
         },
-        // peripheral: [kChunkSize/2, 3*kChunkSize/2) relative to kUsableMemoryStart
+        // reserved: [kChunkSize/2. 3*kChunkSize/2) relative to kUsableMemoryStart
         {
             .addr = kUsableMemoryStart + kChunkSize / 2,
             .size = kChunkSize,
-            .type = Type::kPeripheral,
+            .type = Type::kReserved,
         },
         // RAM: [3*kChunkSize/2. 2*kChunkSize) relative to kUsableMemoryStart
         {
@@ -489,7 +489,7 @@ PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
 PREFIX: | [0x0000000000010000, 0x0000000000010800) |      2k | free RAM
-PREFIX: | [0x0000000000010800, 0x0000000000011800) |      4k | peripheral
+PREFIX: | [0x0000000000010800, 0x0000000000011800) |      4k | reserved
 PREFIX: | [0x0000000000011800, 0x0000000000012000) |      2k | free RAM
 PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | bookkeeping
 )""";
@@ -547,11 +547,11 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
             .size = kChunkSize,
             .type = Type::kFreeRam,
         },
-        // peripheral: [kChunkSize, 2*kChunkSize)
+        // reserved: [kChunkSize, 2*kChunkSize)
         {
             .addr = kChunkSize,
             .size = kChunkSize,
-            .type = Type::kPeripheral,
+            .type = Type::kReserved,
         },
         // RAM: [5*kChunkSize, 7*kChunkSize)
         {
@@ -580,11 +580,11 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
             .size = kChunkSize,
             .type = Type::kNullPointerRegion,
         },
-        // peripheral: [kChunkSize, 2*kChunkSize)
+        // reserved: [kChunkSize, 2*kChunkSize)
         {
             .addr = kChunkSize,
             .size = kChunkSize,
-            .type = Type::kPeripheral,
+            .type = Type::kReserved,
         },
         // null pointer region: [5*kChunkSize, 7*kChunkSize)
         {
@@ -615,142 +615,11 @@ PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
     constexpr std::string_view kExpectedPrintOut =
         R"""(PREFIX: | Physical memory range                    | Size    | Type
 PREFIX: | [0x0000000000000000, 0x0000000000001000) |      4k | null pointer region
-PREFIX: | [0x0000000000001000, 0x0000000000002000) |      4k | peripheral
+PREFIX: | [0x0000000000001000, 0x0000000000002000) |      4k | reserved
 PREFIX: | [0x0000000000005000, 0x0000000000007000) |      8k | null pointer region
 PREFIX: | [0x0000000000009000, 0x000000000000a000) |      4k | peripheral
 PREFIX: | [0x000000000000f000, 0x0000000000010000) |      4k | null pointer region
 PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
-)""";
-
-    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
-    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
-    ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kExpectedPrintOut));
-  }
-}
-
-TEST(MemallocPoolTests, ReservedRangesAreNotExplicitlyTracked) {
-  {
-    PoolContext ctx;
-    Range ranges[] = {
-        // reserved: [0, kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart,
-            .size = kChunkSize,
-            .type = Type::kReserved,
-        },
-        // free RAM: [0, 3 * kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart,
-            .size = 3 * kChunkSize,
-            .type = Type::kFreeRam,
-        },
-    };
-
-    const Range expected[] = {
-        // bookkeeping: [kChunksize,  2 * kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart + kChunkSize,
-            .size = kChunkSize,
-            .type = Type::kPoolBookkeeping,
-        },
-        // RAM: [2 * kChunksize,  3 * kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart + 2 * kChunkSize,
-            .size = kChunkSize,
-            .type = Type::kFreeRam,
-        },
-    };
-
-    constexpr std::string_view kExpectedPrintOut =
-        R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | bookkeeping
-PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | free RAM
-)""";
-
-    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
-    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
-    ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kExpectedPrintOut));
-  }
-
-  {
-    PoolContext ctx;
-    Range ranges[] = {
-        // free RAM: [0, 3 * kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart,
-            .size = 3 * kChunkSize,
-            .type = Type::kFreeRam,
-        },
-        // reserved: [kChunkSize, 2* kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart + kChunkSize,
-            .size = kChunkSize,
-            .type = Type::kReserved,
-        },
-    };
-
-    const Range expected[] = {
-        // bookkeeping: [0, kChunksize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart,
-            .size = kChunkSize,
-            .type = Type::kPoolBookkeeping,
-        },
-        // RAM: [2 * kChunksize,  3 * kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart + 2 * kChunkSize,
-            .size = kChunkSize,
-            .type = Type::kFreeRam,
-        },
-    };
-
-    constexpr std::string_view kExpectedPrintOut =
-        R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
-PREFIX: | [0x0000000000012000, 0x0000000000013000) |      4k | free RAM
-)""";
-
-    ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));
-    ASSERT_NO_FATAL_FAILURE(TestPoolContents(ctx.pool, {expected}));
-    ASSERT_NO_FATAL_FAILURE(TestPoolPrintOut(ctx.pool, kPrintOutPrefix, kExpectedPrintOut));
-  }
-
-  {
-    PoolContext ctx;
-    Range ranges[] = {
-        // free RAM: [0, 3 * kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart,
-            .size = 3 * kChunkSize,
-            .type = Type::kFreeRam,
-        },
-        // reserved: [2 * kChunkSize, 3 * kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart + 2 * kChunkSize,
-            .size = kChunkSize,
-            .type = Type::kReserved,
-        },
-    };
-
-    const Range expected[] = {
-        // bookkeeping: [0, kChunksize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart,
-            .size = kChunkSize,
-            .type = Type::kPoolBookkeeping,
-        },
-        // RAM: [kChunksize,  2 * kChunkSize) relative to kUsableMemoryStart
-        {
-            .addr = kUsableMemoryStart + kChunkSize,
-            .size = kChunkSize,
-            .type = Type::kFreeRam,
-        },
-    };
-
-    constexpr std::string_view kExpectedPrintOut =
-        R"""(PREFIX: | Physical memory range                    | Size    | Type
-PREFIX: | [0x0000000000010000, 0x0000000000011000) |      4k | bookkeeping
-PREFIX: | [0x0000000000011000, 0x0000000000012000) |      4k | free RAM
 )""";
 
     ASSERT_NO_FATAL_FAILURE(TestPoolInit(ctx.pool, {ranges}));

@@ -70,7 +70,7 @@ TEST(BootShimTests, PoolMemConfigItem) {
       {
           .addr = kChunkSize * 50,
           .size = kChunkSize * 2,
-          .type = memalloc::Type::kPeripheral,
+          .type = memalloc::Type::kReserved,
       },
   };
   EXPECT_TRUE(pool.Init(std::array{cpp20::span<memalloc::Range>(test_pool_ranges)}).is_ok());
@@ -87,7 +87,7 @@ TEST(BootShimTests, PoolMemConfigItem) {
       {
           .paddr = kChunkSize * 50,
           .length = kChunkSize * 2,
-          .type = ZBI_MEM_RANGE_PERIPHERAL,
+          .type = ZBI_MEM_RANGE_RESERVED,
       },
       {
           .paddr = kChunkSize * 52,
