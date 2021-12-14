@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/host.gni")
 import("//build/python/python_binary.gni")
 
 assert(is_host, "Only include assembly build scripts via the host toolchain")
@@ -16,5 +17,20 @@ python_binary("make_legacy_config") {
 
 python_binary("assembly_input_bundle_tool") {
   main_source = "assembly_input_bundle_tool.py"
-  deps = [ "//build/python/modules/depfile" ]
+  deps = [
+    "//build/python/modules/assembly",
+    "//build/python/modules/depfile",
+  ]
+}
+
+# The standard `install_host_tools()` template doesn't work for this, because it
+# assumes that all binaries are at `${root_build_dir}/<tool>`, and the
+# `python_binary()` uses `$target_out_dir/<tool>`.  But the import is still
+# needed to have `${host_tools_dir}` defined.
+#
+copy("assembly_input_bundle_tool_install") {
+  testonly = true
+  deps = [ ":assembly_input_bundle_tool" ]
+  outputs = [ "${host_tools_dir}/assembly_input_bundle_tool" ]
+  sources = [ "${target_out_dir}/assembly_input_bundle_tool.pyz" ]
 }

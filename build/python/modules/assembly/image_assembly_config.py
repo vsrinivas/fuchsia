@@ -8,13 +8,16 @@ schema as `//src/developer/ffx/plugins/assembly`.
 """
 
 import json
-from typing import Dict, Set, Union
+from typing import Dict, Set, Type, TypeVar, Union
 
 __all__ = ["ImageAssemblyConfig", "KernelInfo"]
 
 from .common import FileEntry, FilePath
 from .utils import *
 from .utils import difference_field, intersect_field
+
+ExtendsImageAssemblyConfig = TypeVar(
+    'ExtendsImageAssemblyConfig', bound='ImageAssemblyConfig')
 
 
 class KernelInfo:
@@ -81,7 +84,9 @@ class ImageAssemblyConfig:
         self.bootfs_files: Set[FileEntry] = set()
 
     @classmethod
-    def from_dict(cls, dict: Dict) -> 'ImageAssemblyConfig':
+    def from_dict(
+            cls: Type[ExtendsImageAssemblyConfig],
+            dict: Dict) -> ExtendsImageAssemblyConfig:
         """Create an instance of ImageAssemblyConfig from a dict that was parsed
         """
         result = cls()
@@ -127,11 +132,16 @@ class ImageAssemblyConfig:
         """
         json.dump(self.to_dict(), fp, indent=2)
 
+    def __repr__(self) -> str:
+        """Serialize to a JSON string"""
+        return json.dumps(self.to_dict(), indent=2)
+
     def intersection(
-            self, other: 'ImageAssemblyConfig') -> 'ImageAssemblyConfig':
+            self: ExtendsImageAssemblyConfig,
+            other: 'ImageAssemblyConfig') -> ExtendsImageAssemblyConfig:
         """Return the intersection of the two ImageAssemblyConfiguration's
         """
-        result = ImageAssemblyConfig()
+        result = self.__class__()
         result.base = self.base.intersection(other.base)
         result.cache = self.cache.intersection(other.cache)
         result.system = self.system.intersection(other.system)
@@ -140,10 +150,12 @@ class ImageAssemblyConfig:
         result.bootfs_files = self.bootfs_files.intersection(other.bootfs_files)
         return result
 
-    def difference(self, other: 'ImageAssemblyConfig') -> 'ImageAssemblyConfig':
+    def difference(
+            self: ExtendsImageAssemblyConfig,
+            other: 'ImageAssemblyConfig') -> ExtendsImageAssemblyConfig:
         """Return the difference of the two ImageAssemblyConfiguration's
         """
-        result = ImageAssemblyConfig()
+        result = self.__class__()
         result.base = self.base.difference(other.base)
         result.cache = self.cache.difference(other.cache)
         result.system = self.system.difference(other.system)

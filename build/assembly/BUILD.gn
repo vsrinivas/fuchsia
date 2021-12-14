@@ -108,5 +108,9 @@ assembly_input_bundle_archive("legacy.tgz") {
 
 group("assembly") {
   testonly = true
-  public_deps = [ ":legacy.tgz" ]
+  public_deps = [
+    ":legacy",
+    ":legacy.tgz",
+    "scripts:assembly_input_bundle_tool_install($host_toolchain)",
+  ]
 }

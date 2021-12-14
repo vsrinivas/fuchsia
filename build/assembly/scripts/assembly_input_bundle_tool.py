@@ -10,6 +10,7 @@ import sys
 from typing import Set
 
 from depfile import DepFile
+from assembly import AssemblyInputBundle
 
 
 def generate_package_creation_manifest(args: argparse.Namespace) -> None:
@@ -92,14 +93,69 @@ def generate_archive(args: argparse.Namespace) -> None:
         DepFile.from_deps(args.output, deps).write_to(args.depfile)
 
 
+def diff_bundles(args: argparse.Namespace) -> None:
+    first = AssemblyInputBundle.load(args.first)
+    second = AssemblyInputBundle.load(args.second)
+    result = first.difference(second)
+    if args.output:
+        result.dump(args.output)
+    else:
+        print(result)
+
+
+def intersect_bundles(args: argparse.Namespace) -> None:
+    bundles = [AssemblyInputBundle.load(file) for file in args.bundles]
+    result = bundles[0]
+    for next_bundle in bundles[1:]:
+        result = result.intersection(next_bundle)
+    if args.output:
+        result.dump(args.output)
+    else:
+        print(result)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=
         "Tool for creating Assembly Input Bundles in-tree, for use with out-of-tree assembly"
     )
-    sub_parsers = parser.add_subparsers()
+    sub_parsers = parser.add_subparsers(
+        title="Commands",
+        description="Commands for working with Assembly Input Bundles")
+
+    diff_bundles_parser = sub_parsers.add_parser(
+        "diff",
+        help=
+        "Calculate the difference between the first and second bundles (A-B).")
+    diff_bundles_parser.add_argument(
+        "first", help='The first bundle (A)', type=argparse.FileType('r'))
+    diff_bundles_parser.add_argument(
+        "second", help='The second bundle (B)', type=argparse.FileType('r'))
+    diff_bundles_parser.add_argument(
+        "--output",
+        help='A file to write the output to, instead of stdout.',
+        type=argparse.FileType('w'))
+    diff_bundles_parser.set_defaults(handler=diff_bundles)
+
+    intersect_bundles_parser = sub_parsers.add_parser(
+        "intersect", help="Calculate the intersection of the provided bundles.")
+    intersect_bundles_parser.add_argument(
+        "bundles",
+        nargs="+",
+        action="extend",
+        help='Paths to the bundle configs.',
+        type=argparse.FileType('r'))
+    intersect_bundles_parser.add_argument(
+        "--output",
+        help='A file to write the output to, instead of stdout.',
+        type=argparse.FileType('w'))
+    intersect_bundles_parser.set_defaults(handler=intersect_bundles)
+
     package_creation_manifest_parser = sub_parsers.add_parser(
-        "generate-package-creation-manifest")
+        "generate-package-creation-manifest",
+        help=
+        "(build tool) Generate the creation manifest for the package that contains an Assembly Input Bundle."
+    )
     package_creation_manifest_parser.add_argument(
         "--contents-manifest", type=argparse.FileType('r'), required=True)
     package_creation_manifest_parser.add_argument("--name", required=True)
@@ -110,7 +166,11 @@ def main():
     package_creation_manifest_parser.set_defaults(
         handler=generate_package_creation_manifest)
 
-    archive_creation_parser = sub_parsers.add_parser("generate-archive")
+    archive_creation_parser = sub_parsers.add_parser(
+        "generate-archive",
+        help=
+        "(build tool) Generate the tarmaker creation manifest for the tgz that contains an Assembly Input Bundle."
+    )
     archive_creation_parser.add_argument("--tarmaker", required=True)
     archive_creation_parser.add_argument(
         "--contents-manifest", type=argparse.FileType('r'), required=True)
@@ -123,8 +183,15 @@ def main():
 
     args = parser.parse_args()
 
-    # Dispatch to the handler fn.
-    args.handler(args)
+    if "handler" in args:
+        # Dispatch to the handler fn.
+        args.handler(args)
+    else:
+        # argparse doesn't seem to automatically catch that not subparser was
+        # called, and so if there isn't a handler function (which is set by
+        # having specified a subcommand), then just display usage instead of
+        # a cryptic KeyError.
+        parser.print_help()
 
 
 if __name__ == "__main__":

@@ -5,7 +5,7 @@
 Utility functions for dealing with class members which are sets and lists.
 """
 
-from typing import Any, Dict, Iterable
+from typing import Any, Dict, Sequence, Set, Union
 
 __all__ = [
     "set_named_field", "set_if_not_empty", "set_if_named_member_not_empty",
@@ -27,14 +27,14 @@ def set_named_field(destination: Any, field: str, value: Any) -> None:
 def set_if_not_empty(
         destination: Dict[str, Any],
         field: str,
-        items: Iterable[Any],
+        items: Union[Set[Any], Sequence[Any], Dict[str, Any]],
         sort=False,
         transform=None) -> None:
     """Add the items to the destination container if items is not empty.
 
     If `sort` is `True`, sort the items.
     """
-    if len(items):
+    if items is not None and len(items):
         if transform is not None:
             items = [transform(item) for item in items]
         if sort:
@@ -91,7 +91,7 @@ def intersect_field(item_a, item_b, field: str, result) -> None:
     value_a = getattr(item_a, field)
     value_b = getattr(item_b, field)
     if value_a == value_b:
-        setattr(result, value_a)
+        setattr(result, field, value_a)
 
 
 def difference_field(item_a, item_b, field: str, result) -> None:
@@ -101,4 +101,4 @@ def difference_field(item_a, item_b, field: str, result) -> None:
     value_a = getattr(item_a, field)
     value_b = getattr(item_b, field)
     if value_a != value_b:
-        setattr(result, value_a)
+        setattr(result, field, value_a)

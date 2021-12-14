@@ -87,6 +87,21 @@ class AssemblyInputBundle(ImageAssemblyConfig):
         super().__init__()
         self.config_data: ConfigDataEntries = {}
 
+    @classmethod
+    def from_dict(cls, dict: Dict) -> 'AssemblyInputBundle':
+        result = super().from_dict(dict)
+        set_named_member_if_present(
+            result,
+            "bootfs_files",
+            dict,
+            transform=lambda items: set(
+                [FileEntry.from_dict(item) for item in items]))
+        if "config_data" in dict:
+            for (package, entries) in dict["config_data"].items():
+                result.config_data[package] = set(
+                    [FileEntry.from_dict(entry) for entry in entries])
+        return result
+
     def to_dict(self) -> Dict:
         """Dump the object out as a dict."""
         result = super().to_dict()
@@ -103,6 +118,39 @@ class AssemblyInputBundle(ImageAssemblyConfig):
     def write_to(self, file) -> None:
         """Write to a file (JSON format)"""
         json.dump(self.to_dict(), file, indent=2)
+
+    def __repr__(self) -> str:
+        """Serialize to a JSON string"""
+        return json.dumps(self.to_dict(), indent=2)
+
+    def intersection(
+            self, other: 'AssemblyInputBundle') -> 'AssemblyInputBundle':
+        """Return the intersection of the two ImageAssemblyConfiguration's
+        """
+        result = super().intersection(other)
+        config_data: ConfigDataEntries = {}
+        for package in self.config_data.keys():
+            if package in other.config_data:
+                entries = self.config_data[package]
+                other_entries = other.config_data[package]
+                entries = entries.intersection(other_entries)
+                config_data[package] = entries
+        if len(config_data) > 0:
+            result.config_data = config_data
+        return result
+
+    def difference(self, other: 'AssemblyInputBundle') -> 'AssemblyInputBundle':
+        """Return the difference of the two ImageAssemblyConfiguration's
+        """
+        result = super().difference(other)
+        for (package, entries) in self.config_data.items():
+            if package not in other.config_data:
+                result.config_data[package] = entries
+            else:
+                entries = entries.difference(other.config_data[package])
+                if len(entries) > 0:
+                    result.config_data[package] = entries
+        return result
 
     def all_file_paths(self) -> List[FilePath]:
         """Return a list of all files that are referenced by this AssemblyInputBundle.
