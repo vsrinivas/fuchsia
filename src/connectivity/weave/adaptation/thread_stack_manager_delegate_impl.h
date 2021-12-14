@@ -18,15 +18,13 @@
 #pragma GCC diagnostic pop
 // clang-format on
 
-#include "src/lib/backoff/exponential_backoff.h"
-
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
 
 class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerImpl::Delegate {
  public:
-  ThreadStackManagerDelegateImpl();
+  ThreadStackManagerDelegateImpl() = default;
 
   // ThreadStackManager implementations.
 
@@ -59,10 +57,6 @@ class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerIm
   std::string interface_name_;
   bool is_thread_supported_ = false;
 
-  // Handle events from fuchsia.lowpan.device to maintain Thread state.
-  void WatchLowpanDeviceChange();
-  void OnLowpanDeviceChange(fuchsia::lowpan::device::DeviceChanges changes);
-
   zx_status_t GetProtocols(fuchsia::lowpan::device::Protocols protocols);
   zx_status_t GetDevice(fuchsia::lowpan::device::DeviceSyncPtr& device);
   zx_status_t GetDeviceState(fuchsia::lowpan::device::DeviceState& device_state);
@@ -83,14 +77,9 @@ class NL_DLL_EXPORT ThreadStackManagerDelegateImpl : public ThreadStackManagerIm
   void HandleProvisioningProgress(
       fuchsia::lowpan::device::ProvisioningMonitor_WatchProgress_Result);
 
-  async::TaskClosure lookup_watcher_delayed_task_;
-  backoff::ExponentialBackoff lookup_watcher_backoff_;
-  fuchsia::lowpan::device::LookupPtr lookup_watcher_;
-
   async::TaskClosure joining_timeout_;
   async::TaskClosure joining_retry_delay_;
   fuchsia::lowpan::device::ProvisioningMonitorPtr provisioning_monitor_;
-
   bool joining_in_progress_ = false;
   bool joining_timeout_expired_ = false;
 };

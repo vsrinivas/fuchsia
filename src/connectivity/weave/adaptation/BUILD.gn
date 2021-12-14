@@ -63,7 +63,6 @@ openweave_adaptation_layer("adaptation") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
-    "//src/lib/backoff",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/json_parser",
