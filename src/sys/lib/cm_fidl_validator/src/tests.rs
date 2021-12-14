@@ -4955,5 +4955,4 @@ macro_rules! cm_fidl_validator_test_suite {
     }
 }
 
-cm_fidl_validator_test_suite!(test_fsys, fsys);
 cm_fidl_validator_test_suite!(test_fdecl, fdecl);

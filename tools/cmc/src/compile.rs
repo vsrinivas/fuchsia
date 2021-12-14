@@ -22,7 +22,6 @@ pub fn compile(
     includeroot: &PathBuf,
     features: &FeatureSet,
     experimental_force_runner: &Option<String>,
-    experimental_sdk_output: bool,
 ) -> Result<(), Error> {
     match file.extension().and_then(|e| e.to_str()) {
         Some("cml") => Ok(()),
@@ -60,13 +59,8 @@ pub fn compile(
     util::ensure_directory_exists(&output)?;
     let mut out_file =
         fs::OpenOptions::new().create(true).truncate(true).write(true).open(output)?;
-    if experimental_sdk_output {
-        let mut out_data = cml::fdecl::compile(&document)?;
-        out_file.write(&encode_persistent(&mut out_data)?)?;
-    } else {
-        let mut out_data = cml::fsys::compile(&document)?;
-        out_file.write(&encode_persistent(&mut out_data)?)?;
-    }
+    let mut out_data = cml::fdecl::compile(&document)?;
+    out_file.write(&encode_persistent(&mut out_data)?)?;
 
     // Write includes to depfile
     if let Some(depfile_path) = depfile {
@@ -133,28 +127,20 @@ macro_rules! test_suite {
                 File::create(&in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
                 let includepath = includepath.unwrap_or(PathBuf::new());
 
-                // First test using the default `fuchsia.sys2` namespace.
-                // Then test using the `fuchsia.component.decl` namespace.
-                // We'll only assert that the output matches the `fuchsia.sys2` type
-                // because it 1) guarantees ABI compatibility and 2) is what is used
-                // by consumers of the generated manifest at the moment.
-                for use_sdk_output_type in vec![false, true].into_iter() {
-                    compile(
-                        &in_path.clone(),
-                        &out_path.clone(),
-                        None,
-                        &vec![includepath.clone()],
-                        &includepath.clone(),
-                        features.clone(),
-                        experimental_force_runner,
-                        use_sdk_output_type,
-                    )?;
-                    let mut buffer = Vec::new();
-                    fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
+                compile(
+                    &in_path.clone(),
+                    &out_path.clone(),
+                    None,
+                    &vec![includepath.clone()],
+                    &includepath.clone(),
+                    features.clone(),
+                    experimental_force_runner,
+                )?;
+                let mut buffer = Vec::new();
+                fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
 
-                    let output: $namespace::ComponentDecl = decode_persistent(&buffer).unwrap();
-                    assert_eq!(output, expected_output);
-                }
+                let output: $namespace::ComponentDecl = decode_persistent(&buffer).unwrap();
+                assert_eq!(output, expected_output);
 
                 Ok(())
             }
@@ -791,7 +777,6 @@ macro_rules! test_suite {
                         &PathBuf::new(),
                         &FeatureSet::empty(),
                         &None,
-                        false,
                     );
                     assert_matches!(
                         result,
@@ -1091,5 +1076,4 @@ macro_rules! test_suite {
     }
 }
 
-test_suite!(fsys_test, fsys);
 test_suite!(fdecl_test, fdecl);

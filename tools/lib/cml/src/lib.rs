@@ -40,13 +40,6 @@ pub use cm_types::{
     StartupMode, StorageId, Url,
 };
 
-// Default to fsys for the moment until all clients have been migrated.
-pub use translate::fsys::compile;
-
-pub mod fsys {
-    pub use crate::translate::fsys::compile;
-}
-
 pub mod fdecl {
     pub use crate::translate::fdecl::compile;
 }

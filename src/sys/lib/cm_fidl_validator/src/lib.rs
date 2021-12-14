@@ -2201,5 +2201,4 @@ macro_rules! cm_fidl_validator {
     };
 }
 
-cm_fidl_validator!(fsys);
 cm_fidl_validator!(fdecl);

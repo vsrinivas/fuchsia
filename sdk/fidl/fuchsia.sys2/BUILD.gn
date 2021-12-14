@@ -8,10 +8,7 @@ import("//build/fidl/fidl.gni")
 # `fuchsia.component.*` libraries.
 fidl("fuchsia.sys2") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "string-bounds-not-specified",
-    "vector-bounds-not-specified",
-  ]
+  excluded_checks = [ "string-bounds-not-specified" ]
 
   sdk_category = "internal"
 
@@ -29,17 +26,6 @@ fidl("fuchsia.sys2") {
 
   sources = [
     "crash_introspect.fidl",
-    "decls/capability_decl.fidl",
-    "decls/child_decl.fidl",
-    "decls/collection_decl.fidl",
-    "decls/component_decl.fidl",
-    "decls/config_decl.fidl",
-    "decls/environment_decl.fidl",
-    "decls/expose_decl.fidl",
-    "decls/offer_decl.fidl",
-    "decls/program_decl.fidl",
-    "decls/relative_refs.fidl",
-    "decls/use_decl.fidl",
     "events.fidl",
     "lifecycle_controller.fidl",
     "runtime/component.fidl",

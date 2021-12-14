@@ -128,5 +128,5 @@ sub-realm decides to set a new environment with the runner absent).
 [doc-use]: https://fuchsia.dev/reference/cml#use
 [elf-runner]: /docs/concepts/components/v2/elf_runner.md
 [fidl-directory]: /sdk/fidl/fuchsia.io/directory.fidl
-[fidl-extends]: /sdk/fidl/fuchsia.sys2/decls/environment_decl.fidl
+[fidl-extends]: /sdk/fidl/fuchsia.component.decl/environment.fidl
 [wiki-least-privilege]: https://en.wikipedia.org/wiki/Principle_of_least_privilege

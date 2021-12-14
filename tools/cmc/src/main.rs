@@ -101,7 +101,6 @@ fn run_cmc() -> Result<(), Error> {
             includeroot,
             features,
             experimental_force_runner,
-            experimental_sdk_output,
         } => {
             path_exists(&file)?;
             compile::compile(
@@ -112,7 +111,6 @@ fn run_cmc() -> Result<(), Error> {
                 &includeroot,
                 &features.into(),
                 &experimental_force_runner,
-                experimental_sdk_output,
             )?
         }
         opts::Commands::PrintReferenceDocs { output } => {

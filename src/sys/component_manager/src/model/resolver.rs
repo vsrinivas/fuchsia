@@ -186,21 +186,12 @@ pub async fn read_and_validate_manifest(
         _ => return Err(ResolverError::RemoteInvalidData),
     };
 
-    Ok(match fidl::encoding::decode_persistent::<fsys::ComponentDecl>(&bytes) {
-        Ok(component_decl) => {
-            cm_fidl_validator::fsys::validate(&component_decl)
-                .map_err(|e| ResolverError::manifest_invalid(e))?;
-            component_decl.fidl_into_native()
-        }
-        Err(_) => {
-            let component_decl: fdecl::Component =
-                fidl::encoding::decode_persistent::<fdecl::Component>(&bytes)
-                    .map_err(|err| ResolverError::manifest_invalid(err))?;
-            cm_fidl_validator::fdecl::validate(&component_decl)
-                .map_err(|e| ResolverError::manifest_invalid(e))?;
-            component_decl.fidl_into_native()
-        }
-    })
+    let component_decl: fdecl::Component =
+        fidl::encoding::decode_persistent::<fdecl::Component>(&bytes)
+            .map_err(|err| ResolverError::manifest_invalid(err))?;
+    cm_fidl_validator::fdecl::validate(&component_decl)
+        .map_err(|e| ResolverError::manifest_invalid(e))?;
+    Ok(component_decl.fidl_into_native())
 }
 
 /// Errors produced by `Resolver`.
@@ -300,7 +291,6 @@ mod tests {
         cm_rust::convert as fdecl,
         cm_rust::NativeIntoFidl,
         cm_rust_testing::new_decl_from_json,
-        fidl_fuchsia_sys2 as fsys,
         lazy_static::lazy_static,
         serde_json::json,
         std::sync::Weak,
@@ -483,6 +473,5 @@ mod tests {
         };
     }
 
-    test_read_and_validate_manifest!(fsys);
     test_read_and_validate_manifest!(fdecl);
 }

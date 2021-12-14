@@ -1619,7 +1619,6 @@ macro_rules! compile {
     };
 }
 
-compile!(fsys);
 compile!(fdecl);
 
 // Tests
@@ -3565,5 +3564,4 @@ macro_rules! compile_tests {
 }
 }
 
-compile_tests!(fsys_translate_tests, fsys);
 compile_tests!(fdecl_translate_tests, fdecl);
