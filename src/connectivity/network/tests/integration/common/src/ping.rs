@@ -107,7 +107,7 @@ impl<'a> Node<'a> {
                             addr,
                         }) => {
                             let v6_candidate = net_types::ip::Ipv6Addr::from_bytes(addr);
-                            if v6_candidate.is_unicast_linklocal() {
+                            if v6_candidate.is_unicast_link_local() {
                                 (v4, Some(v6_candidate))
                             } else {
                                 (v4, v6)
@@ -167,7 +167,7 @@ impl<'a> Node<'a> {
                             std::net::Ipv6Addr::from(addr.ipv6_bytes()),
                             UNSPECIFIED_PORT,
                             0,
-                            if addr.is_unicast_linklocal() {
+                            if addr.is_unicast_link_local() {
                                 u32::try_from(*src_id).expect("interface ID does not fit into u32")
                             } else {
                                 0

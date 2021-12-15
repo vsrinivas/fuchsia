@@ -374,7 +374,7 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
         })
         .await
         .expect("ran out of incoming frames");
-    assert!(src_ip.is_unicast_linklocal(), "src ip {} should be a unicast link-local", src_ip);
+    assert!(src_ip.is_unicast_link_local(), "src ip {} should be a unicast link-local", src_ip);
     assert_eq!(
         Ok(std::net::Ipv6Addr::from(dst_ip.ipv6_bytes())),
         std::net::Ipv6Addr::from_str(

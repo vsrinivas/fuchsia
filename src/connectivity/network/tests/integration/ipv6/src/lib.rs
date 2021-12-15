@@ -1140,7 +1140,7 @@ async fn sends_mld_reports<E: netemul::Endpoint>(name: &str) {
                 //   interface. If a valid link-local address is not available (e.g., one
                 //   has not been configured), the message is sent with the unspecified
                 //   address (::) as the IPv6 source address.
-                assert!(!src_ip.is_specified() || src_ip.is_linklocal(), "MLD messages must be sent from the unspecified or link local address; src_ip = {}", src_ip);
+                assert!(!src_ip.is_specified() || src_ip.is_link_local(), "MLD messages must be sent from the unspecified or link local address; src_ip = {}", src_ip);
 
                 assert!(dst_ip.is_multicast(), "all MLD messages must be sent to a multicast address; dst_ip = {}", dst_ip);
 

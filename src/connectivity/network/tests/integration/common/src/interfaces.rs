@@ -158,7 +158,7 @@ pub async fn wait_for_v4_and_v6_ll(
                     }
                     fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
                         let v6_addr = net_types::ip::Ipv6Addr::from_bytes(addr);
-                        (v4, if v6_addr.is_unicast_linklocal() { Some(v6_addr) } else { v6 })
+                        (v4, if v6_addr.is_unicast_link_local() { Some(v6_addr) } else { v6 })
                     }
                 }
             },
@@ -197,7 +197,7 @@ pub async fn wait_for_v6_ll(
                     }) => None,
                     fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address { addr }) => {
                         let v6_addr = net_types::ip::Ipv6Addr::from_bytes(addr);
-                        v6_addr.is_unicast_linklocal().then(|| v6_addr)
+                        v6_addr.is_unicast_link_local().then(|| v6_addr)
                     }
                 }
             },

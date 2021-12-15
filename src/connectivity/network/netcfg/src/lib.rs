@@ -501,7 +501,7 @@ fn start_dhcpv6_client(
              valid_until: _,
          }| match addr {
             fnet::IpAddress::Ipv6(address) => {
-                if address.is_unicast_linklocal() {
+                if address.is_unicast_link_local() {
                     Some(fnet::Ipv6SocketAddress {
                         address,
                         port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,

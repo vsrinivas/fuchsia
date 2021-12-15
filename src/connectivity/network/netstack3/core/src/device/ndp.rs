@@ -373,7 +373,7 @@ pub(crate) trait NdpContext<D: LinkDevice>:
         non_tentative_addrs
             .clone()
             .find(|addr| addr.scope() == Ipv6Scope::Global)
-            .or_else(|| non_tentative_addrs.find(|addr| addr.is_linklocal()))
+            .or_else(|| non_tentative_addrs.find(|addr| addr.is_link_local()))
     }
 
     // TODO(joshlf): Use `FrameContext` instead.
@@ -1863,7 +1863,7 @@ pub(crate) fn receive_ndp_packet<D: LinkDevice, C: NdpContext<D>, B>(
                             }
                         };
 
-                        if prefix_info.prefix().is_linklocal() {
+                        if prefix_info.prefix().is_link_local() {
                             // As per RFC 4861 section 6.3.4 (on-link prefix
                             // determination) and RFC 4862 section 5.5.3
                             // (SLAAC), ignore options with the the link-local

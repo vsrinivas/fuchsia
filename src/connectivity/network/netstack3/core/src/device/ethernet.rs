@@ -596,7 +596,7 @@ pub(super) fn get_ip_addr_subnet<C: EthernetIpDeviceContext, A: IpAddress>(
     #[ipv6addr]
     return get_assigned_ip_addr_subnets(ctx, device_id).find(|a| {
         let addr: SpecifiedAddr<Ipv6Addr> = a.addr();
-        !addr.is_linklocal()
+        !addr.is_link_local()
     });
 }
 

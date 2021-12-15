@@ -302,7 +302,7 @@ impl_trait_for_witness!(BroadcastAddress, is_broadcast, LinkLocalAddr);
 pub trait LinkLocalAddress {
     /// Is this a link-local address?
     ///
-    /// `is_linklocal` must maintain the invariant that, if it is called twice
+    /// `is_link_local` must maintain the invariant that, if it is called twice
     /// on the same object, and in between those two calls, no code has operated
     /// on a mutable reference to that object, both calls will return the same
     /// value. This property is required in order to implement
@@ -311,14 +311,14 @@ pub trait LinkLocalAddress {
     /// code MAY rely on this property for its correctness.
     ///
     /// If this type also implements [`SpecifiedAddress`], then
-    /// `a.is_linklocal()` implies `a.is_specified()`.
-    fn is_linklocal(&self) -> bool;
+    /// `a.is_link_local()` implies `a.is_specified()`.
+    fn is_link_local(&self) -> bool;
 }
 
-impl_trait_for_witness!(LinkLocalAddress, is_linklocal, SpecifiedAddr);
-impl_trait_for_witness!(LinkLocalAddress, is_linklocal, UnicastAddr);
-impl_trait_for_witness!(LinkLocalAddress, is_linklocal, MulticastAddr);
-impl_trait_for_witness!(LinkLocalAddress, is_linklocal, BroadcastAddr);
+impl_trait_for_witness!(LinkLocalAddress, is_link_local, SpecifiedAddr);
+impl_trait_for_witness!(LinkLocalAddress, is_link_local, UnicastAddr);
+impl_trait_for_witness!(LinkLocalAddress, is_link_local, MulticastAddr);
+impl_trait_for_witness!(LinkLocalAddress, is_link_local, BroadcastAddr);
 
 /// A scope used by [`ScopeableAddress`]. See that trait's documentation for
 /// more information.
@@ -639,7 +639,7 @@ impl_try_from_witness!(
 // UnicastAddr
 impl_witness!(UnicastAddr, "unicast", UnicastAddress, is_unicast);
 impl_into_specified!(UnicastAddr, UnicastAddress, is_unicast);
-impl_nested_witness!(UnicastAddress, UnicastAddr, LinkLocalAddress, LinkLocalAddr, new_linklocal);
+impl_nested_witness!(UnicastAddress, UnicastAddr, LinkLocalAddress, LinkLocalAddr, new_link_local);
 impl_try_from_witness!(
     [UnicastAddr: UnicastAddress],
     [MulticastAddr: MulticastAddress],
@@ -657,7 +657,7 @@ impl_nested_witness!(
     MulticastAddr,
     LinkLocalAddress,
     LinkLocalAddr,
-    new_linklocal
+    new_link_local
 );
 impl_into_specified_for_nested_witness!(
     MulticastAddress,
@@ -682,7 +682,7 @@ impl_nested_witness!(
     BroadcastAddr,
     LinkLocalAddress,
     LinkLocalAddr,
-    new_linklocal
+    new_link_local
 );
 impl_into_specified_for_nested_witness!(
     BroadcastAddress,
@@ -700,8 +700,8 @@ impl_try_from_witness!(
 );
 
 // LinkLocalAddr
-impl_witness!(LinkLocalAddr, "link-local", LinkLocalAddress, is_linklocal);
-impl_into_specified!(LinkLocalAddr, LinkLocalAddress, is_linklocal);
+impl_witness!(LinkLocalAddr, "link-local", LinkLocalAddress, is_link_local);
+impl_into_specified!(LinkLocalAddr, LinkLocalAddress, is_link_local);
 impl_nested_witness!(LinkLocalAddress, LinkLocalAddr, UnicastAddress, UnicastAddr, new_unicast);
 impl_nested_witness!(
     LinkLocalAddress,
@@ -955,7 +955,7 @@ mod tests {
     }
 
     impl LinkLocalAddress for Address {
-        fn is_linklocal(&self) -> bool {
+        fn is_link_local(&self) -> bool {
             use Address::*;
             match self {
                 LinkLocalUnicast | LinkLocalMulticast | LinkLocalBroadcast => true,
@@ -980,7 +980,7 @@ mod tests {
         type Scope = AddressScope;
 
         fn scope(&self) -> AddressScope {
-            if self.is_linklocal() {
+            if self.is_link_local() {
                 AddressScope::LinkLocal
             } else {
                 AddressScope::Global
@@ -1037,7 +1037,7 @@ mod tests {
     }
 
     #[test]
-    fn test_linklocal_addr() {
+    fn test_link_local_addr() {
         assert_eq!(
             LinkLocalAddr::new(Address::LinkLocalUnicast),
             Some(LinkLocalAddr(Address::LinkLocalUnicast))
@@ -1065,7 +1065,7 @@ mod tests {
 
         // Unicast
         test_nested!(
-            UnicastAddr::new_linklocal,
+            UnicastAddr::new_link_local,
             Unspecified => None,
             GlobalUnicast => None,
             GlobalMulticast => None,
@@ -1075,7 +1075,7 @@ mod tests {
         );
 
         // Multicast
-        test_nested!(MulticastAddr::new_linklocal,
+        test_nested!(MulticastAddr::new_link_local,
             Unspecified => None,
             GlobalUnicast => None,
             GlobalMulticast => None,
@@ -1085,7 +1085,7 @@ mod tests {
         );
 
         // Broadcast
-        test_nested!(BroadcastAddr::new_linklocal,
+        test_nested!(BroadcastAddr::new_link_local,
             Unspecified => None,
             GlobalUnicast => None,
             GlobalMulticast => None,

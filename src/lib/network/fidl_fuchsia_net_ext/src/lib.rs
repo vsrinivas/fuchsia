@@ -49,12 +49,12 @@ pub trait DisplayExt {
 /// Extension to IP types.
 pub trait IpExt {
     /// Is the address a unicast and link-local address?
-    fn is_unicast_linklocal(&self) -> bool;
+    fn is_unicast_link_local(&self) -> bool;
 }
 
 impl IpExt for fidl::Ipv6Address {
-    fn is_unicast_linklocal(&self) -> bool {
-        ip::Ipv6Addr::from_bytes(self.addr).is_unicast_linklocal()
+    fn is_unicast_link_local(&self) -> bool {
+        ip::Ipv6Addr::from_bytes(self.addr).is_unicast_link_local()
     }
 }
 

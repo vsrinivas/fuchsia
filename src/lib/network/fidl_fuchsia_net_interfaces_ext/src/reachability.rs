@@ -48,7 +48,7 @@ pub fn is_globally_routable(
     addresses.iter().any(
         |Address { addr: fnet::Subnet { addr, prefix_len: _ }, valid_until: _ }| match addr {
             fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
-                has_default_ipv4_route && !net_types::ip::Ipv4Addr::new(*addr).is_linklocal()
+                has_default_ipv4_route && !net_types::ip::Ipv4Addr::new(*addr).is_link_local()
             }
             fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
                 has_default_ipv6_route

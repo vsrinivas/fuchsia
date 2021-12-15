@@ -740,11 +740,11 @@ impl MulticastAddress for IpAddr {
 impl LinkLocalAddress for Ipv4Addr {
     /// Is this address in the link-local subnet?
     ///
-    /// `is_linklocal` returns true if `self` is in
+    /// `is_link_local` returns true if `self` is in
     /// [`Ipv4::LINK_LOCAL_UNICAST_SUBNET`] or
     /// [`Ipv4::LINK_LOCAL_MULTICAST_SUBNET`].
     #[inline]
-    fn is_linklocal(&self) -> bool {
+    fn is_link_local(&self) -> bool {
         Ipv4::LINK_LOCAL_UNICAST_SUBNET.contains(self)
             || Ipv4::LINK_LOCAL_MULTICAST_SUBNET.contains(self)
     }
@@ -753,7 +753,7 @@ impl LinkLocalAddress for Ipv4Addr {
 impl LinkLocalAddress for Ipv6Addr {
     /// Is this address in the link-local subnet?
     ///
-    /// `is_linklocal` returns true if `self` is in
+    /// `is_link_local` returns true if `self` is in
     /// [`Ipv6::LINK_LOCAL_UNICAST_SUBNET`], is a multicast address whose scope
     /// is link-local, or is the address [`Ipv6::LOOPBACK_ADDRESS`] (per [RFC
     /// 4291 Section 2.5.3], the loopback address is considered to have
@@ -761,7 +761,7 @@ impl LinkLocalAddress for Ipv6Addr {
     ///
     /// [RFC 4291 Section 2.5.3]: https://tools.ietf.org/html/rfc4291#section-2.5.3
     #[inline]
-    fn is_linklocal(&self) -> bool {
+    fn is_link_local(&self) -> bool {
         Ipv6::LINK_LOCAL_UNICAST_SUBNET.contains(self)
             || (self.is_multicast() && self.scope() == Ipv6Scope::LinkLocal)
             || self == Ipv6::LOOPBACK_ADDRESS.deref()
@@ -771,8 +771,8 @@ impl LinkLocalAddress for Ipv6Addr {
 impl LinkLocalAddress for IpAddr {
     /// Is this address link-local?
     #[inline]
-    fn is_linklocal(&self) -> bool {
-        map_ip_addr!(self, is_linklocal)
+    fn is_link_local(&self) -> bool {
+        map_ip_addr!(self, is_link_local)
     }
 }
 
@@ -998,7 +998,7 @@ impl ScopeableAddress for Ipv6Addr {
                 0xF => Reserved(ScopeF),
                 _ => unreachable!(),
             }
-        } else if self.is_linklocal() {
+        } else if self.is_link_local() {
             Ipv6Scope::LinkLocal
         } else if self.is_site_local() {
             Ipv6Scope::SiteLocal
@@ -1442,10 +1442,10 @@ impl Ipv6Addr {
 
     /// Is this a unicast link-local address?
     ///
-    /// `addr.is_unicast_linklocal()` is equivalent to
+    /// `addr.is_unicast_link_local()` is equivalent to
     /// `addr.is_unicast_in_subnet(&Ipv6::LINK_LOCAL_UNICAST_SUBNET)`.
     #[inline]
-    pub fn is_unicast_linklocal(&self) -> bool {
+    pub fn is_unicast_link_local(&self) -> bool {
         self.is_unicast_in_subnet(&Ipv6::LINK_LOCAL_UNICAST_SUBNET)
     }
 
@@ -1829,9 +1829,9 @@ impl UnicastAddress for Ipv6SourceAddr {
 }
 
 impl LinkLocalAddress for Ipv6SourceAddr {
-    fn is_linklocal(&self) -> bool {
+    fn is_link_local(&self) -> bool {
         let addr: Ipv6Addr = self.into();
-        addr.is_linklocal()
+        addr.is_link_local()
     }
 }
 
@@ -1970,10 +1970,10 @@ impl MulticastAddress for UnicastOrMulticastIpv6Addr {
 }
 
 impl LinkLocalAddress for UnicastOrMulticastIpv6Addr {
-    fn is_linklocal(&self) -> bool {
+    fn is_link_local(&self) -> bool {
         match self {
-            UnicastOrMulticastIpv6Addr::Unicast(addr) => addr.is_linklocal(),
-            UnicastOrMulticastIpv6Addr::Multicast(addr) => addr.is_linklocal(),
+            UnicastOrMulticastIpv6Addr::Unicast(addr) => addr.is_link_local(),
+            UnicastOrMulticastIpv6Addr::Multicast(addr) => addr.is_link_local(),
         }
     }
 }
@@ -2434,7 +2434,7 @@ mod tests {
     fn test_specified() {
         // For types that implement SpecifiedAddress,
         // UnicastAddress::is_unicast, MulticastAddress::is_multicast, and
-        // LinkLocalAddress::is_linklocal all imply
+        // LinkLocalAddress::is_link_local all imply
         // SpecifiedAddress::is_specified. Test that that's true for both IPv4
         // and IPv6.
 
@@ -2463,42 +2463,42 @@ mod tests {
 
         // Link-local
 
-        assert!(!Ipv4::UNSPECIFIED_ADDRESS.is_linklocal());
-        assert!(!Ipv6::UNSPECIFIED_ADDRESS.is_linklocal());
+        assert!(!Ipv4::UNSPECIFIED_ADDRESS.is_link_local());
+        assert!(!Ipv6::UNSPECIFIED_ADDRESS.is_link_local());
 
         let link_local = Ipv4::LINK_LOCAL_UNICAST_SUBNET.network;
-        assert!(link_local.is_linklocal());
+        assert!(link_local.is_link_local());
         assert!(link_local.is_specified());
         let link_local = Ipv4::LINK_LOCAL_MULTICAST_SUBNET.network;
-        assert!(link_local.is_linklocal());
+        assert!(link_local.is_link_local());
         assert!(link_local.is_specified());
         let link_local = Ipv6::LINK_LOCAL_UNICAST_SUBNET.network;
-        assert!(link_local.is_linklocal());
+        assert!(link_local.is_link_local());
         assert!(link_local.is_specified());
         let mut link_local = Ipv6::MULTICAST_SUBNET.network;
         link_local.0[1] = 0x02;
-        assert!(link_local.is_linklocal());
+        assert!(link_local.is_link_local());
         assert!(link_local.is_specified());
-        assert!(Ipv6::LOOPBACK_ADDRESS.is_linklocal());
+        assert!(Ipv6::LOOPBACK_ADDRESS.is_link_local());
     }
 
     #[test]
-    fn test_linklocal() {
+    fn test_link_local() {
         // IPv4
-        assert!(Ipv4::LINK_LOCAL_UNICAST_SUBNET.network.is_linklocal());
-        assert!(Ipv4::LINK_LOCAL_MULTICAST_SUBNET.network.is_linklocal());
+        assert!(Ipv4::LINK_LOCAL_UNICAST_SUBNET.network.is_link_local());
+        assert!(Ipv4::LINK_LOCAL_MULTICAST_SUBNET.network.is_link_local());
 
         // IPv6
-        assert!(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network.is_linklocal());
-        assert!(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network.is_unicast_linklocal());
+        assert!(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network.is_link_local());
+        assert!(Ipv6::LINK_LOCAL_UNICAST_SUBNET.network.is_unicast_link_local());
         let mut addr = Ipv6::MULTICAST_SUBNET.network;
         for flags in 0..=0x0F {
             // Set the scope to link-local and the flags to `flags`.
             addr.0[1] = (flags << 4) | 0x02;
             // Test that a link-local multicast address is always considered
             // link-local regardless of which flags are set.
-            assert!(addr.is_linklocal());
-            assert!(!addr.is_unicast_linklocal());
+            assert!(addr.is_link_local());
+            assert!(!addr.is_unicast_link_local());
         }
 
         // Test that a non-multicast address (outside of the link-local subnet)
@@ -2507,7 +2507,7 @@ mod tests {
         let mut addr = Ipv6::LOOPBACK_ADDRESS.get();
         // Explicitly set the scope to link-local.
         addr.0[1] = 0x02;
-        assert!(!addr.is_linklocal());
+        assert!(!addr.is_link_local());
     }
 
     #[test]
@@ -2695,7 +2695,7 @@ mod tests {
         assert!(!Ipv6Addr::from([0; 16]).is_specified());
         assert!(Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 1]).is_loopback());
         let link_local = Ipv6Addr::new([0xfe80, 0, 0, 0, 0x52e5, 0x49ff, 0xfeb5, 0x5aa0]);
-        assert!(link_local.is_linklocal());
+        assert!(link_local.is_link_local());
         assert!(link_local.is_valid_unicast());
         assert!(link_local.to_solicited_node_address().is_multicast());
         let global_unicast = Ipv6Addr::new([0x80, 0, 0, 0, 0x52e5, 0x49ff, 0xfeb5, 0x5aa0]);

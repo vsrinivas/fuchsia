@@ -109,7 +109,7 @@ pub async fn verify_v6_dns_servers(
                      valid_until: _,
                  }| match addr {
                     fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: _ }) => None,
-                    fnet::IpAddress::Ipv6(addr) => addr.is_unicast_linklocal().then(|| *addr),
+                    fnet::IpAddress::Ipv6(addr) => addr.is_unicast_link_local().then(|| *addr),
                 },
             )
         },
