@@ -163,6 +163,9 @@ zx_status_t PagerDispatcher::QueryDirtyRanges(VmAspace* current_aspace, fbl::Ref
     // page fault.
     uint64_t offset = 0;
     uint64_t length = 0;
+    // The buffer to copy out ranges to.
+    user_out_ptr<zx_vmo_dirty_range_t> buffer = user_out_ptr<zx_vmo_dirty_range_t>(nullptr);
+    size_t buffer_size = 0;
     // State that will get populated if the user copy in the DirtyRangeEnumerateFunction encounters
     // a page fault.
     vaddr_t pf_va = 0;
@@ -172,56 +175,57 @@ zx_status_t PagerDispatcher::QueryDirtyRanges(VmAspace* current_aspace, fbl::Ref
   CopyToBufferInfo info = {};
   info.offset = offset;
   info.length = length;
+  info.buffer = buffer.reinterpret<zx_vmo_dirty_range_t>();
+  info.buffer_size = buffer_size;
   if (avail) {
     info.compute_total = true;
   }
 
   // Enumeration function that will be invoked on each dirty range found.
-  VmObject::DirtyRangeEnumerateFunction copy_to_buffer =
-      [&info, &buffer, buffer_size](uint64_t range_offset, uint64_t range_len) {
-        // No more space in the buffer.
-        if ((info.index + 1) * sizeof(zx_vmo_dirty_range_t) > buffer_size) {
-          // If we were not asked to compute the total, we can end termination early as there is
-          // nothing more to copy out.
-          if (!info.compute_total) {
-            return ZX_ERR_STOP;
-          }
-          // If there is no more space in the |buffer|, only update the total without trying to copy
-          // out any more ranges.
-          ++info.total;
-          return ZX_ERR_NEXT;
-        }
+  VmObject::DirtyRangeEnumerateFunction copy_to_buffer = [&info](uint64_t range_offset,
+                                                                 uint64_t range_len) {
+    // No more space in the buffer.
+    if ((info.index + 1) * sizeof(zx_vmo_dirty_range_t) > info.buffer_size) {
+      // If we were not asked to compute the total, we can end termination early as there is
+      // nothing more to copy out.
+      if (!info.compute_total) {
+        return ZX_ERR_STOP;
+      }
+      // If there is no more space in the |buffer|, only update the total without trying to copy
+      // out any more ranges.
+      ++info.total;
+      return ZX_ERR_NEXT;
+    }
 
-        zx_vmo_dirty_range_t dirty_range;
-        memset(&dirty_range, 0, sizeof(dirty_range));
-        dirty_range.offset = range_offset;
-        dirty_range.length = range_len;
-        dirty_range.options = 0u;
+    zx_vmo_dirty_range_t dirty_range;
+    memset(&dirty_range, 0, sizeof(dirty_range));
+    dirty_range.offset = range_offset;
+    dirty_range.length = range_len;
+    dirty_range.options = 0u;
 
-        UserCopyCaptureFaultsResult copy_result = buffer.reinterpret<zx_vmo_dirty_range_t>()
-                                                      .element_offset(info.index)
-                                                      .copy_to_user_capture_faults(dirty_range);
-        // Stash fault information if a fault is encountered. Return early from enumeration with
-        // ZX_ERR_SHOULD_WAIT so that the page fault can be resolved.
-        if (copy_result.status != ZX_OK) {
-          info.captured_fault_info = true;
-          info.pf_va = copy_result.fault_info->pf_va;
-          info.pf_flags = copy_result.fault_info->pf_flags;
+    UserCopyCaptureFaultsResult copy_result =
+        info.buffer.element_offset(info.index).copy_to_user_capture_faults(dirty_range);
+    // Stash fault information if a fault is encountered. Return early from enumeration with
+    // ZX_ERR_SHOULD_WAIT so that the page fault can be resolved.
+    if (copy_result.status != ZX_OK) {
+      info.captured_fault_info = true;
+      info.pf_va = copy_result.fault_info->pf_va;
+      info.pf_flags = copy_result.fault_info->pf_flags;
 
-          // Update the offset and length to skip over the range that we've already processed dirty
-          // ranges for, to allow forward progress of the syscall.
-          uint64_t processed = range_offset - info.offset;
-          info.offset += processed;
-          info.length -= processed;
+      // Update the offset and length to skip over the range that we've already processed dirty
+      // ranges for, to allow forward progress of the syscall.
+      uint64_t processed = range_offset - info.offset;
+      info.offset += processed;
+      info.length -= processed;
 
-          return ZX_ERR_SHOULD_WAIT;
-        }
-        // We were able to successfully copy out this dirty range. Advance the index and continue
-        // with the enumeration.
-        ++info.index;
-        ++info.total;
-        return ZX_ERR_NEXT;
-      };
+      return ZX_ERR_SHOULD_WAIT;
+    }
+    // We were able to successfully copy out this dirty range. Advance the index and continue
+    // with the enumeration.
+    ++info.index;
+    ++info.total;
+    return ZX_ERR_NEXT;
+  };
 
   // Enumerate dirty ranges with |copy_to_buffer|. If page faults are captured, resolve them and
   // retry enumeration.
