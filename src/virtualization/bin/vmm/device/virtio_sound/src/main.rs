@@ -7,6 +7,7 @@ mod notification;
 mod reply;
 mod sequencer;
 mod service;
+mod throttled_log;
 mod wire;
 mod wire_convert;
 

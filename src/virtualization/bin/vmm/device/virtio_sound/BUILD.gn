@@ -21,6 +21,7 @@ rustc_binary("virtio_sound_bin") {
     "src/reply.rs",
     "src/sequencer.rs",
     "src/service.rs",
+    "src/throttled_log.rs",
     "src/wire.rs",
     "src/wire_convert.rs",
   ]

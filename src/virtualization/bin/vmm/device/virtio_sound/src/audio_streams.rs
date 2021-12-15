@@ -7,6 +7,7 @@ use {
     crate::reply::*,
     crate::sequencer,
     crate::sequencer::Sequencer,
+    crate::throttled_log,
     crate::wire,
     crate::wire_convert,
     anyhow::{anyhow, Context, Error},
@@ -195,8 +196,7 @@ impl<T> AudioStreamConn<T> {
             Some(bytes) => match num_traits::cast::cast::<usize, u32>(bytes) {
                 Some(bytes) => bytes,
                 None => {
-                    // TODO(fxbug.dev/90031): throttle
-                    tracing::warn!(
+                    throttled_log::warning!(
                         "got unexpectedly large lead time: {}ns ({} bytes)",
                         lead_time.into_nanos(),
                         bytes
@@ -205,8 +205,7 @@ impl<T> AudioStreamConn<T> {
                 }
             },
             None => {
-                // TODO(fxbug.dev/90031): throttle
-                tracing::warn!("got negative lead time: {}ns", lead_time.into_nanos());
+                throttled_log::warning!("got negative lead time: {}ns", lead_time.into_nanos());
                 0
             }
         }

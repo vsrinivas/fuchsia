@@ -6,6 +6,7 @@ use {
     crate::audio_streams::*,
     crate::reply::*,
     crate::sequencer,
+    crate::throttled_log,
     crate::wire,
     crate::wire_convert::*,
     anyhow::{anyhow, Error},
@@ -542,9 +543,8 @@ impl<'s> VirtSoundService<'s> {
         req_wrapper: RequestWrapper<'a, 'b, 'c>,
         infos: &Vec<T>,
     ) -> Result<(), Error> {
-        // INFO messages should be infrequent enough that we can log all of them.
-        // TODO(fxbug.dev/90031): throttle if the driver is spamming this virtqueue
-        tracing::info!("CONTROLQ request: {}", req_wrapper.name);
+        // CONTROLQ messages should be infrequent enough that we can log all of them.
+        throttled_log::info!("CONTROLQ request: {}", req_wrapper.name);
 
         let (req_wrapper, req) =
             match req_wrapper.parse_header_or_reply_controlq_err::<wire::GenericInfoRequest>()? {
@@ -602,9 +602,8 @@ impl<'s> VirtSoundService<'s> {
             return reply_controlq::err(req_wrapper.take_chain(), wire::VIRTIO_SND_S_BAD_MSG);
         }
 
-        // INFO messages should be infrequent enough that we can log all of them.
-        // TODO(fxbug.dev/90031): throttle if the driver is spamming this virtqueue
-        tracing::info!("CONTROLQ request: {} on stream {}", req_wrapper.name, id);
+        // CONTROLQ messages should be infrequent enough that we can log all of them.
+        throttled_log::info!("CONTROLQ request: {} on stream {}", req_wrapper.name, id);
 
         let stream = &self.pcm_streams[id];
         match hdr.hdr.code.get() {
