@@ -588,6 +588,7 @@ template("assemble_system") {
       rebase_path(files.product_config, root_build_dir),
       "--board",
       rebase_path(files.board_config, root_build_dir),
+      "--log-commands",
       "--gendir",
       rebase_path(files.gendir, root_build_dir),
       "--outdir",

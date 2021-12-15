@@ -2,32 +2,27 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
+use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Builder for MinFS. Currently, it only writes an empty minfs.
 pub struct MinFSBuilder {
     /// Path to the minfs host tool.
-    tool: PathBuf,
+    tool: Box<dyn Tool>,
 }
 
 impl MinFSBuilder {
     /// Construct a new MinFSBuilder that uses the minfs |tool|.
-    pub fn new(tool: impl AsRef<Path>) -> Self {
-        Self { tool: tool.as_ref().to_path_buf() }
+    pub fn new(tool: Box<dyn Tool>) -> Self {
+        Self { tool }
     }
 
     /// Build minfs and write the file to `output`.
     pub fn build(self, output: impl AsRef<Path>) -> Result<()> {
         let minfs_args = self.build_args(output)?;
-        let output = std::process::Command::new(&self.tool).args(&minfs_args).output();
-        let output = output.context("Failed to run the minfs tool")?;
-        if !output.status.success() {
-            anyhow::bail!(format!("Failed to generate minfs with output: {:?}", output));
-        }
-
-        Ok(())
+        self.tool.run(&minfs_args)
     }
 
     /// Get the build arguments to pass to the minfs tool.
@@ -39,22 +34,16 @@ impl MinFSBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assembly_test_util::generate_fake_tool_nop;
-    use serial_test::serial;
-    use tempfile::TempDir;
+    use assembly_tool::testing::FakeToolProvider;
+    use assembly_tool::{ToolCommandLog, ToolProvider};
+    use serde_json::json;
+    use std::path::PathBuf;
 
-    // These tests must be ran serially, because otherwise they will affect each
-    // other through process spawming. If a test spawns a process while the
-    // other test has an open file, then the spawned process will get a copy of
-    // the open file descriptor, preventing the other test from executing it.
     #[test]
-    #[serial]
     fn build_args() {
-        let dir = TempDir::new().unwrap();
-        let tool_path = dir.path().join("minfs.sh");
-        generate_fake_tool_nop(&tool_path);
-
-        let builder = MinFSBuilder::new(&tool_path);
+        let tools = FakeToolProvider::default();
+        let minfs_tool = tools.get_tool("minfs").unwrap();
+        let builder = MinFSBuilder::new(minfs_tool);
 
         let args = builder.build_args("minfs").unwrap();
         assert_eq!(args, vec!["minfs".to_string(), "create".to_string()]);
@@ -64,15 +53,26 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn build() {
-        let dir = TempDir::new().unwrap();
-        let tool_path = dir.path().join("minfs.sh");
-        generate_fake_tool_nop(&tool_path);
-
-        let builder = MinFSBuilder::new(&tool_path);
-
-        let minfs_path = dir.as_ref().join("data.blk");
+        let tools = FakeToolProvider::default();
+        let minfs_tool = tools.get_tool("minfs").unwrap();
+        let builder = MinFSBuilder::new(minfs_tool);
+        let minfs_path: PathBuf = "data.blk".into();
         builder.build(&minfs_path).unwrap();
+
+        // Ensure the command was run correctly.
+        let expected_commands: ToolCommandLog = serde_json::from_value(json!({
+            "commands": [
+                {
+                    "tool": "minfs",
+                    "args": [
+                        "data.blk",
+                        "create"
+                    ]
+                }
+            ]
+        }))
+        .unwrap();
+        assert_eq!(&expected_commands, tools.log());
     }
 }

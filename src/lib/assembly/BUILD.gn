@@ -12,6 +12,7 @@ group("tests") {
     "minfs:tests",
     "partitions_config:tests",
     "test_util:tests",
+    "tool:tests",
     "update_package:tests",
     "update_packages_manifest:tests",
     "util:tests",

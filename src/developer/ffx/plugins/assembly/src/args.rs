@@ -42,6 +42,10 @@ pub struct ImageArgs {
     #[argh(option)]
     pub board: PathBuf,
 
+    /// log the external commands to gendir as `commands_log.json`.
+    #[argh(switch)]
+    pub log_commands: bool,
+
     /// the directory to write assembled outputs to.
     #[argh(option)]
     pub outdir: PathBuf,

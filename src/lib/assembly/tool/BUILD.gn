@@ -6,24 +6,33 @@ import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
 
 if (is_host) {
-  rustc_library("zbi") {
+  rustc_library("tool") {
+    name = "assembly_tool"
     version = "0.1.0"
     with_unit_tests = true
     deps = [
-      "//src/lib/assembly/tool",
+      "//src/developer/ffx/config:lib",
       "//src/lib/assembly/util",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:serde",
+    ]
+    test_deps = [
+      "//src/lib/assembly/test_util",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tempfile",
     ]
     sources = [
       "src/lib.rs",
-      "src/zbi.rs",
+      "src/sdk.rs",
+      "src/serde_arc.rs",
+      "src/testing.rs",
+      "src/tool.rs",
     ]
   }
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":zbi_test($host_toolchain)" ]
+  deps = [ ":tool_test($host_toolchain)" ]
 }

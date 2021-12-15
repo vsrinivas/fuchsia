@@ -40,6 +40,7 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/minfs",
     "//src/lib/assembly/partitions_config",
     "//src/lib/assembly/test_keys",
+    "//src/lib/assembly/tool",
     "//src/lib/assembly/update_package",
     "//src/lib/assembly/update_packages_manifest",
     "//src/lib/assembly/util",

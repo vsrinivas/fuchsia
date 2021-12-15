@@ -7,17 +7,18 @@ use crate::config::{BlobFSConfig, ProductConfig};
 
 use anyhow::{Context, Result};
 use assembly_blobfs::BlobFSBuilder;
+use assembly_tool::Tool;
 use std::path::{Path, PathBuf};
 
 pub fn construct_blobfs(
-    blobfs_tool: impl AsRef<Path>,
+    blobfs_tool: Box<dyn Tool>,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
     blobfs_config: &BlobFSConfig,
     base_package: &BasePackage,
 ) -> Result<PathBuf> {
-    let mut blobfs_builder = BlobFSBuilder::new(&blobfs_tool, &blobfs_config.layout);
+    let mut blobfs_builder = BlobFSBuilder::new(blobfs_tool, &blobfs_config.layout);
     blobfs_builder.set_compressed(blobfs_config.compress);
 
     // Add the base and cache packages.
@@ -42,22 +43,17 @@ pub fn construct_blobfs(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    use super::construct_blobfs;
+    use crate::base_package::BasePackage;
     use crate::config::{BlobFSConfig, ProductConfig};
-    use assembly_test_util::generate_fake_tool_nop;
+    use assembly_tool::testing::FakeToolProvider;
+    use assembly_tool::ToolProvider;
     use fuchsia_hash::Hash;
-    use serial_test::serial;
     use std::collections::BTreeMap;
     use std::str::FromStr;
     use tempfile::tempdir;
 
-    // These tests must be ran serially, because otherwise they will affect each
-    // other through process spawming. If a test spawns a process while the
-    // other test has an open file, then the spawned process will get a copy of
-    // the open file descriptor, preventing the other test from executing it.
     #[test]
-    #[serial]
     fn construct() {
         let dir = tempdir().unwrap();
         let product_config = ProductConfig::new("kernel", 0);
@@ -76,12 +72,12 @@ mod tests {
         };
 
         // Create a fake blobfs tool.
-        let tool_path = dir.path().join("blobfs.sh");
-        generate_fake_tool_nop(&tool_path);
+        let tools = FakeToolProvider::default();
+        let blobfs_tool = tools.get_tool("blobfs").unwrap();
 
         // Construct blobfs, and ensure no error is returned.
         construct_blobfs(
-            &tool_path,
+            blobfs_tool,
             dir.path(),
             dir.path(),
             &product_config,

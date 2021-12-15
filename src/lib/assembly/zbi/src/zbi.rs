@@ -2,21 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{anyhow, Context, Error, Result};
+use anyhow::{anyhow, Error, Result};
+use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use log::debug;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 
 /// Builder for the Zircon Boot Image (ZBI), which takes in a kernel, BootFS, boot args, and kernel
 /// command line.
-#[derive(Default)]
 pub struct ZbiBuilder {
-    /// Path to the zbi host tool.
-    tool: PathBuf,
+    /// The zbi host tool.
+    tool: Box<dyn Tool>,
 
     kernel: Option<PathBuf>,
     // Map from file destination in the ZBI to the path of the source file on the host.
@@ -36,9 +35,9 @@ pub struct ZbiBuilder {
 
 impl ZbiBuilder {
     /// Construct a new ZbiBuilder that uses the zbi |tool|.
-    pub fn new(tool: impl AsRef<Path>) -> Self {
+    pub fn new(tool: Box<dyn Tool>) -> Self {
         Self {
-            tool: tool.as_ref().to_path_buf(),
+            tool,
             kernel: None,
             bootfs_files: BTreeMap::default(),
             bootargs: Vec::default(),
@@ -109,19 +108,7 @@ impl ZbiBuilder {
         let zbi_args = self.build_zbi_args(&bootfs_manifest_path, None::<PathBuf>, output)?;
         debug!("ZBI command args: {:?}", zbi_args);
 
-        let output = Command::new(&self.tool)
-            .args(&zbi_args)
-            .output()
-            .context("Failed to run the zbi tool")?;
-        if !output.status.success() {
-            anyhow::bail!(
-                "zbi exited with status: {}\n{}",
-                output.status,
-                String::from_utf8_lossy(output.stderr.as_slice())
-            );
-        }
-
-        Ok(())
+        self.tool.run(&zbi_args)
     }
 
     fn write_bootfs_manifest(
@@ -230,12 +217,17 @@ impl ZbiBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    use assembly_tool::testing::FakeToolProvider;
+    use assembly_tool::ToolProvider;
     use std::ffi::OsString;
     use std::os::unix::ffi::OsStringExt;
 
     #[test]
     fn bootfs_manifest_devmgr_only() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         let mut output: Vec<u8> = Vec::new();
 
         builder.write_bootfs_manifest("devmgr_config.txt", &mut output).unwrap();
@@ -256,7 +248,9 @@ mod tests {
 
     #[test]
     fn bootfs_manifest_invalid_utf8_source() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         let mut output: Vec<u8> = Vec::new();
 
         let invalid_source = OsString::from_vec(b"invalid\xe7".to_vec());
@@ -267,7 +261,9 @@ mod tests {
 
     #[test]
     fn bootfs_manifest() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         let mut output: Vec<u8> = Vec::new();
 
         builder.add_bootfs_file("path/to/file2", "bin/file2");
@@ -281,7 +277,9 @@ mod tests {
 
     #[test]
     fn boot_args() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         let mut output: Vec<u8> = Vec::new();
 
         builder.write_boot_args(&mut output).unwrap();
@@ -296,13 +294,17 @@ mod tests {
 
     #[test]
     fn zbi_args_missing_kernel() {
-        let builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let builder = ZbiBuilder::new(zbi_tool);
         assert!(builder.build_zbi_args("bootfs", Some("bootargs"), "output").is_err());
     }
 
     #[test]
     fn zbi_args_with_kernel() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         builder.set_kernel("path/to/kernel");
         let args = builder.build_zbi_args("bootfs", Some("bootargs"), "output").unwrap();
         assert_eq!(
@@ -322,7 +324,9 @@ mod tests {
 
     #[test]
     fn zbi_args_with_cmdline() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         builder.set_kernel("path/to/kernel");
         builder.add_cmdline_arg("cmd-arg1");
         builder.add_cmdline_arg("cmd-arg2");
@@ -346,7 +350,9 @@ mod tests {
 
     #[test]
     fn zbi_args_without_boot_args() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         builder.set_kernel("path/to/kernel");
         builder.add_cmdline_arg("cmd-arg1");
         builder.add_cmdline_arg("cmd-arg2");
@@ -368,7 +374,9 @@ mod tests {
 
     #[test]
     fn zbi_args_with_compression() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         builder.set_kernel("path/to/kernel");
         builder.add_cmdline_arg("cmd-arg1");
         builder.add_cmdline_arg("cmd-arg2");
@@ -392,7 +400,9 @@ mod tests {
 
     #[test]
     fn zbi_args_with_manifest() {
-        let mut builder = ZbiBuilder::default();
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
+        let mut builder = ZbiBuilder::new(zbi_tool);
         builder.set_kernel("path/to/kernel");
         builder.add_cmdline_arg("cmd-arg1");
         builder.add_cmdline_arg("cmd-arg2");

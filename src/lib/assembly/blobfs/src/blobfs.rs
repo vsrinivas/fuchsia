@@ -4,18 +4,19 @@
 
 use crate::manifest::BlobManifest;
 use anyhow::{Context, Result};
+use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// Builder for BlobFS.
 ///
 /// Example usage:
 ///
 /// ```
-/// let builder = BlobFSBuilder::new("path/to/tool/blobfs", "compact");
+/// let builder = BlobFSBuilder::new(blobfs_tool, "compact");
 /// builder.set_compressed(false);
 /// builder.add_package("path/to/package_manifest.json")?;
 /// builder.add_file("path/to/file.txt")?;
@@ -23,8 +24,7 @@ use std::path::{Path, PathBuf};
 /// ```
 ///
 pub struct BlobFSBuilder {
-    /// Path to the blobfs host tool.
-    tool: PathBuf,
+    tool: Box<dyn Tool>,
     layout: String,
     compress: bool,
     manifest: BlobManifest,
@@ -32,9 +32,9 @@ pub struct BlobFSBuilder {
 
 impl BlobFSBuilder {
     /// Construct a new BlobFSBuilder.
-    pub fn new(tool: impl AsRef<Path>, layout: impl AsRef<str>) -> Self {
+    pub fn new(tool: Box<dyn Tool>, layout: impl AsRef<str>) -> Self {
         BlobFSBuilder {
-            tool: tool.as_ref().to_path_buf(),
+            tool,
             layout: layout.as_ref().to_string(),
             compress: false,
             manifest: BlobManifest::default(),
@@ -85,16 +85,7 @@ impl BlobFSBuilder {
         )?;
 
         // Run the blobfs tool.
-        let output = std::process::Command::new(&self.tool).args(&blobfs_args).output();
-        let output = output.context("Failed to run the blobfs tool")?;
-        if !output.status.success() {
-            anyhow::bail!(format!(
-                "Failed to generate blobfs with status: {}\n{}",
-                output.status,
-                String::from_utf8_lossy(output.stderr.as_slice())
-            ));
-        }
-        Ok(())
+        self.tool.run(&blobfs_args)
     }
 }
 
@@ -132,10 +123,11 @@ fn build_blobfs_args(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assembly_test_util::generate_fake_tool_nop;
-    use serial_test::serial;
+    use assembly_tool::testing::FakeToolProvider;
+    use assembly_tool::{ToolCommandLog, ToolProvider};
+    use serde_json::json;
     use std::io::Write;
-    use tempfile::{NamedTempFile, TempDir};
+    use tempfile::TempDir;
 
     #[test]
     fn blobfs_args() {
@@ -185,31 +177,50 @@ mod tests {
         );
     }
 
-    // These tests must be ran serially, because otherwise they will affect each
-    // other through process spawming. If a test spawns a process while the
-    // other test has an open file, then the spawned process will get a copy of
-    // the open file descriptor, preventing the other test from executing it.
     #[test]
-    #[serial]
     fn blobfs_builder() {
         // Prepare a temporary directory where the intermediate files as well
         // as the input and output files will go.
         let dir = TempDir::new().unwrap();
-
-        // Create a fake blobfs tool.
-        let tool_path = dir.path().join("blobfs.sh");
-        generate_fake_tool_nop(&tool_path);
 
         // Create a test file.
         let filepath = dir.path().join("file.txt");
         let mut file = File::create(&filepath).unwrap();
         write!(file, "Boaty McBoatface").unwrap();
 
+        // Get the path of the output.
+        let output_path = dir.path().join("blob.blk");
+        let output_path_str = output_path.path_to_string().unwrap();
+
         // Build blobfs.
-        let output = NamedTempFile::new().unwrap();
-        let mut builder = BlobFSBuilder::new(&tool_path, "compact");
+        let tools = FakeToolProvider::default();
+        let blobfs_tool = tools.get_tool("blobfs").unwrap();
+        let mut builder = BlobFSBuilder::new(blobfs_tool, "compact");
         builder.set_compressed(true);
         builder.add_file(&filepath).unwrap();
-        builder.build(&dir.path(), &output.path()).unwrap();
+        builder.build(&dir.path(), output_path).unwrap();
+        drop(builder);
+
+        // Ensure the command was run correctly.
+        let blobs_json_path = dir.path().join("blobs.json").path_to_string().unwrap();
+        let blob_manifest_path = dir.path().join("blob.manifest").path_to_string().unwrap();
+        let expected_commands: ToolCommandLog = serde_json::from_value(json!({
+            "commands": [
+                {
+                    "tool": "blobfs",
+                    "args": [
+                        "--json-output",
+                        blobs_json_path,
+                        "--compress",
+                        output_path_str,
+                        "create",
+                        "--manifest",
+                        blob_manifest_path,
+                    ]
+                }
+            ]
+        }))
+        .unwrap();
+        assert_eq!(&expected_commands, tools.log());
     }
 }

@@ -7,6 +7,7 @@ use crate::config::{BoardConfig, ProductConfig, ZbiSigningScript};
 use crate::util::pkg_manifest_from_path;
 
 use anyhow::{anyhow, Context, Result};
+use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use fuchsia_pkg::PackageManifest;
 use std::path::{Path, PathBuf};
@@ -14,7 +15,7 @@ use std::process::Command;
 use zbi::ZbiBuilder;
 
 pub fn construct_zbi(
-    zbi_tool: impl AsRef<Path>,
+    zbi_tool: Box<dyn Tool>,
     outdir: impl AsRef<Path>,
     gendir: impl AsRef<Path>,
     product: &ProductConfig,
@@ -136,7 +137,9 @@ mod tests {
 
     use crate::base_package::BasePackage;
     use crate::config::{BoardConfig, ProductConfig, ZbiConfig, ZbiSigningScript};
-    use assembly_test_util::{generate_fake_tool, generate_fake_tool_nop};
+    use assembly_test_util::generate_fake_tool;
+    use assembly_tool::testing::FakeToolProvider;
+    use assembly_tool::ToolProvider;
     use assembly_util::PathToStringExt;
     use fuchsia_hash::Hash;
     use serde_json::json;
@@ -187,11 +190,11 @@ mod tests {
         };
 
         // Create a fake zbi tool.
-        let tool_path = dir.path().join("zbi.sh");
-        generate_fake_tool_nop(&tool_path);
+        let tools = FakeToolProvider::default();
+        let zbi_tool = tools.get_tool("zbi").unwrap();
 
         construct_zbi(
-            &tool_path,
+            zbi_tool,
             dir.path(),
             dir.path(),
             &product_config,

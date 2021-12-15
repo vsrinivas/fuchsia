@@ -7,6 +7,7 @@ use crate::config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
 use anyhow::Result;
 use assembly_fvm::{Filesystem, FvmBuilder, FvmType, NandFvmBuilder};
 use assembly_minfs::MinFSBuilder;
+use assembly_tool::ToolProvider;
 use std::path::{Path, PathBuf};
 
 /// The resulting paths to each generated FVM.
@@ -28,8 +29,7 @@ pub struct Fvms {
 /// If the |fvm_config| includes information for a NAND, then an NAND-supported
 /// sparse FVM will also be generated for fastboot flashing.
 pub fn construct_fvm(
-    fvm_tool: impl AsRef<Path>,
-    minfs_tool: impl AsRef<Path>,
+    tools: &impl ToolProvider,
     outdir: impl AsRef<Path>,
     fvm_config: &FvmConfig,
     blobfs_path: Option<impl AsRef<Path>>,
@@ -50,7 +50,7 @@ pub fn construct_fvm(
             }
             FvmFilesystemEntry::MinFS { attributes } => {
                 let minfs_path = outdir.as_ref().join("data.blk");
-                let builder = MinFSBuilder::new(&minfs_tool);
+                let builder = MinFSBuilder::new(tools.get_tool("minfs")?);
                 builder.build(&minfs_path)?;
                 filesystems.push(Filesystem {
                     path: minfs_path.to_path_buf(),
@@ -63,7 +63,7 @@ pub fn construct_fvm(
     // Build a default FVM that is non-sparse.
     let default_path = outdir.as_ref().join("fvm.blk");
     let mut fvm_builder = FvmBuilder::new(
-        &fvm_tool,
+        tools.get_tool("fvm")?,
         &default_path,
         fvm_config.slice_size,
         fvm_config.reserved_slices,
@@ -78,7 +78,7 @@ pub fn construct_fvm(
     // Build a sparse FVM for paving.
     let sparse_path = outdir.as_ref().join("fvm.sparse.blk");
     let mut sparse_fvm_builder = FvmBuilder::new(
-        &fvm_tool,
+        tools.get_tool("fvm")?,
         &sparse_path,
         fvm_config.slice_size,
         fvm_config.reserved_slices,
@@ -93,7 +93,7 @@ pub fn construct_fvm(
     // Build a sparse FVM with an empty minfs.
     let sparse_blob_path = outdir.as_ref().join("fvm.blob.sparse.blk");
     let mut sparse_blob_fvm_builder = FvmBuilder::new(
-        &fvm_tool,
+        tools.get_tool("fvm")?,
         &sparse_blob_path,
         fvm_config.slice_size,
         fvm_config.reserved_slices,
@@ -120,7 +120,7 @@ pub fn construct_fvm(
         Some(FastbootConfig::Emmc { compression, length }) => {
             let emmc_path = outdir.as_ref().join("fvm.fastboot.blk");
             let mut emmc_fvm_builder = FvmBuilder::new(
-                &fvm_tool,
+                tools.get_tool("fvm")?,
                 &emmc_path,
                 fvm_config.slice_size,
                 fvm_config.reserved_slices,
@@ -144,7 +144,7 @@ pub fn construct_fvm(
         }) => {
             let nand_path = outdir.as_ref().join("fvm.fastboot.blk");
             let nand_fvm_builder = NandFvmBuilder {
-                tool: fvm_tool.as_ref().to_path_buf(),
+                tool: tools.get_tool("fvm")?,
                 output: nand_path.clone(),
                 sparse_blob_fvm: sparse_blob_path.clone(),
                 max_disk_size: fvm_config.max_disk_size,
@@ -175,16 +175,10 @@ mod tests {
 
     use crate::config::{FastbootConfig, FvmConfig, FvmFilesystemEntry};
     use assembly_fvm::FilesystemAttributes;
-    use assembly_test_util::generate_fake_tool_nop;
-    use serial_test::serial;
+    use assembly_tool::testing::FakeToolProvider;
     use tempfile::tempdir;
 
-    // These tests must be ran serially, because otherwise they will affect each
-    // other through process spawning. If a test spawns a process while the
-    // other test has an open file, then the spawned process will get a copy of
-    // the open file descriptor, preventing the other test from executing it.
     #[test]
-    #[serial]
     fn construct() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
@@ -195,18 +189,10 @@ mod tests {
             filesystems: generate_test_filesystems(),
         };
 
-        // Create a fake fvm/minfs tool.
-        let tool_path = dir.path().join("fvm_or_minfs.sh");
-        generate_fake_tool_nop(&tool_path);
-
-        let fvms = construct_fvm(
-            &tool_path,
-            &tool_path,
-            dir.path(),
-            &fvm_config,
-            Some(dir.path().join("blob.blk")),
-        )
-        .unwrap();
+        let tools = FakeToolProvider::default();
+        let fvms =
+            construct_fvm(&tools, dir.path(), &fvm_config, Some(dir.path().join("blob.blk")))
+                .unwrap();
 
         assert_eq!(fvms.default, dir.path().join("fvm.blk"));
         assert_eq!(fvms.sparse, dir.path().join("fvm.sparse.blk"));
@@ -214,7 +200,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn construct_with_emmc() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
@@ -228,18 +213,10 @@ mod tests {
             filesystems: generate_test_filesystems(),
         };
 
-        // Create a fake fvm/minfs tool.
-        let tool_path = dir.path().join("fvm_or_minfs.sh");
-        generate_fake_tool_nop(&tool_path);
-
-        let fvms = construct_fvm(
-            &tool_path,
-            &tool_path,
-            dir.path(),
-            &fvm_config,
-            Some(dir.path().join("blob.blk")),
-        )
-        .unwrap();
+        let tools = FakeToolProvider::default();
+        let fvms =
+            construct_fvm(&tools, dir.path(), &fvm_config, Some(dir.path().join("blob.blk")))
+                .unwrap();
 
         assert_eq!(fvms.default, dir.path().join("fvm.blk"));
         assert_eq!(fvms.sparse, dir.path().join("fvm.sparse.blk"));
@@ -249,7 +226,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn construct_with_nand() {
         let dir = tempdir().unwrap();
         let fvm_config = FvmConfig {
@@ -266,18 +242,10 @@ mod tests {
             filesystems: generate_test_filesystems(),
         };
 
-        // Create a fake fvm/minfs tool.
-        let tool_path = dir.path().join("fvm_or_minfs.sh");
-        generate_fake_tool_nop(&tool_path);
-
-        let fvms = construct_fvm(
-            &tool_path,
-            &tool_path,
-            dir.path(),
-            &fvm_config,
-            Some(dir.path().join("blob.blk")),
-        )
-        .unwrap();
+        let tools = FakeToolProvider::default();
+        let fvms =
+            construct_fvm(&tools, dir.path(), &fvm_config, Some(dir.path().join("blob.blk")))
+                .unwrap();
 
         assert_eq!(fvms.default, dir.path().join("fvm.blk"));
         assert_eq!(fvms.sparse, dir.path().join("fvm.sparse.blk"));

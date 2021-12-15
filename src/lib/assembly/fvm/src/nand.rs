@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
+use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use std::path::PathBuf;
 
@@ -23,8 +24,8 @@ use std::path::PathBuf;
 /// ```
 
 pub struct NandFvmBuilder {
-    /// Path to the fvm host tool.
-    pub tool: PathBuf,
+    /// The fvm host tool.
+    pub tool: Box<dyn Tool>,
     /// The path to write the FVM to.
     pub output: PathBuf,
     /// The path to the sparse, blob-only FVM on the host.
@@ -48,17 +49,7 @@ impl NandFvmBuilder {
     /// Build the FVM.
     pub fn build(self) -> Result<()> {
         let args = self.build_args()?;
-        let output = std::process::Command::new(&self.tool).args(&args).output();
-        let output = output.context("Failed to run the fvm tool")?;
-        if !output.status.success() {
-            anyhow::bail!(format!(
-                "Failed to generate fvm with status: {}\n{}",
-                output.status,
-                String::from_utf8_lossy(output.stderr.as_slice())
-            ));
-        }
-
-        Ok(())
+        self.tool.run(&args)
     }
 
     fn build_args(&self) -> Result<Vec<String>> {
@@ -95,11 +86,15 @@ impl NandFvmBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_tool::testing::FakeToolProvider;
+    use assembly_tool::ToolProvider;
 
     #[test]
     fn nand_args() {
+        let tools = FakeToolProvider::default();
+        let fvm_tool = tools.get_tool("fvm").unwrap();
         let builder = NandFvmBuilder {
-            tool: "fvm".into(),
+            tool: fvm_tool,
             output: "mypath".into(),
             sparse_blob_fvm: "sparsepath".into(),
             max_disk_size: Some(500),

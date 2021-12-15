@@ -12,11 +12,10 @@ use crate::zbi::{construct_zbi, vendor_sign_zbi};
 
 use anyhow::{Context, Result};
 use assembly_images_manifest::{Image, ImagesManifest};
+use assembly_tool::{SdkToolProvider, ToolProvider};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use ffx_assembly_args::ImageArgs;
-use ffx_config::get_sdk;
 use fuchsia_pkg::PackagePath;
-use futures::executor::block_on;
 use log::info;
 use serde_json::ser;
 use std::collections::BTreeSet;
@@ -24,7 +23,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let ImageArgs { product: products, board, outdir, gendir } = args;
+    let ImageArgs { product: products, board, log_commands, outdir, gendir } = args;
 
     info!("Loading configuration files.");
     info!("  product:");
@@ -39,7 +38,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let gendir = gendir.unwrap_or(outdir.clone());
 
     // Use the sdk to get the host tool paths.
-    let sdk = block_on(get_sdk())?;
+    let sdk_tools = SdkToolProvider::try_new()?;
 
     let base_package: Option<BasePackage> = if has_base_package(&product) {
         info!("Creating base package");
@@ -52,7 +51,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
     let blobfs_path: Option<PathBuf> = if let Some(base_package) = &base_package {
         info!("Creating the blobfs");
         Some(construct_blobfs(
-            sdk.get_host_tool("blobfs")?,
+            sdk_tools.get_tool("blobfs")?,
             &outdir,
             &gendir,
             &product,
@@ -66,13 +65,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     let fvms: Option<Fvms> = if let Some(fvm_config) = &board.fvm {
         info!("Creating the fvm");
-        Some(construct_fvm(
-            sdk.get_host_tool("fvm")?,
-            sdk.get_host_tool("minfs")?,
-            &outdir,
-            &fvm_config,
-            blobfs_path.as_ref(),
-        )?)
+        Some(construct_fvm(&sdk_tools, &outdir, &fvm_config, blobfs_path.as_ref())?)
     } else {
         info!("Skipping fvm creation");
         None
@@ -89,7 +82,7 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     info!("Creating the ZBI");
     let zbi_path = construct_zbi(
-        sdk.get_host_tool("zbi")?,
+        sdk_tools.get_tool("zbi")?,
         &outdir,
         &gendir,
         &product,
@@ -143,6 +136,14 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
 
     info!("Creating the packages manifest");
     create_package_manifest(&outdir, &board, &product, base_package.as_ref())?;
+
+    if log_commands {
+        let command_log_path = gendir.join("command_log.json");
+        let command_log =
+            File::create(command_log_path).context("Failed to create command_log.json")?;
+        serde_json::to_writer(&command_log, sdk_tools.log())
+            .context("Failed to write to command_log.json")?;
+    }
 
     Ok(())
 }

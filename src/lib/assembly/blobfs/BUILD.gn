@@ -19,6 +19,7 @@ if (is_host) {
     ]
 
     deps = [
+      "//src/lib/assembly/tool",
       "//src/lib/assembly/util",
       "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-merkle",
@@ -30,7 +31,7 @@ if (is_host) {
 
     test_deps = [
       "//src/lib/assembly/test_util",
-      "//third_party/rust_crates:serial_test",
+      "//src/lib/assembly/util",
       "//third_party/rust_crates:tempfile",
     ]
   }

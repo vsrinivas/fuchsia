@@ -8,7 +8,7 @@
 /// let slice_size: u64 = 1;
 /// let reserved_slices: u64 = 2;
 /// let builder = FvmBuilder::new(
-///     "path/to/tool/fvm",
+///     fvm_tool,
 ///     "path/to/output.blk",
 ///     slice_size,
 ///     reserved_slices,
@@ -25,15 +25,16 @@
 /// builder.build();
 /// ```
 ///
-use anyhow::{Context, Result};
+use anyhow::Result;
+use assembly_tool::Tool;
 use assembly_util::PathToStringExt;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 /// The FVM builder.
 pub struct FvmBuilder {
-    /// Path to the fvm host tool.
-    tool: PathBuf,
+    /// The fvm host tool.
+    tool: Box<dyn Tool>,
     /// The path to write the FVM to.
     output: PathBuf,
     /// The size of a slice for the FVM.
@@ -92,7 +93,7 @@ pub struct FilesystemAttributes {
 impl FvmBuilder {
     /// Construct a new FvmBuilder.
     pub fn new(
-        tool: impl AsRef<Path>,
+        tool: Box<dyn Tool>,
         output: impl AsRef<Path>,
         slice_size: u64,
         reserved_slices: u64,
@@ -100,7 +101,7 @@ impl FvmBuilder {
         fvm_type: FvmType,
     ) -> Self {
         Self {
-            tool: tool.as_ref().to_path_buf(),
+            tool,
             output: output.as_ref().to_path_buf(),
             slice_size,
             reserved_slices,
@@ -118,17 +119,7 @@ impl FvmBuilder {
     /// Build the FVM.
     pub fn build(self) -> Result<()> {
         let args = self.build_args()?;
-        let output = std::process::Command::new(&self.tool).args(&args).output();
-        let output = output.context("Failed to run the fvm tool")?;
-        if !output.status.success() {
-            anyhow::bail!(format!(
-                "Failed to generate fvm with status: {}\n{}",
-                output.status,
-                String::from_utf8_lossy(output.stdout.as_slice())
-            ));
-        }
-
-        Ok(())
+        self.tool.run(&args)
     }
 
     /// Build the arguments to pass to the fvm tool.
@@ -213,17 +204,23 @@ impl FvmBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_tool::testing::FakeToolProvider;
+    use assembly_tool::ToolProvider;
 
     #[test]
     fn default_args_no_filesystem() {
-        let builder = FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Default);
+        let tools = FakeToolProvider::default();
+        let fvm_tool = tools.get_tool("fvm").unwrap();
+        let builder = FvmBuilder::new(fvm_tool, "mypath", 1, 2, None, FvmType::Default);
         let args = builder.build_args().unwrap();
         assert_eq!(args, ["mypath", "create", "--slice", "1", "--reserve-slices", "2"]);
     }
 
     #[test]
     fn default_args_with_filesystem() {
-        let mut builder = FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Default);
+        let tools = FakeToolProvider::default();
+        let fvm_tool = tools.get_tool("fvm").unwrap();
+        let mut builder = FvmBuilder::new(fvm_tool, "mypath", 1, 2, None, FvmType::Default);
         builder.filesystem(Filesystem {
             path: PathBuf::from("path/to/file.blk"),
             attributes: FilesystemAttributes {
@@ -258,7 +255,9 @@ mod tests {
 
     #[test]
     fn default_args_with_data_and_account_filesystem() {
-        let mut builder = FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Default);
+        let tools = FakeToolProvider::default();
+        let fvm_tool = tools.get_tool("fvm").unwrap();
+        let mut builder = FvmBuilder::new(fvm_tool, "mypath", 1, 2, None, FvmType::Default);
         builder.filesystem(Filesystem {
             path: PathBuf::from("path/to/file.blk"),
             attributes: FilesystemAttributes {
@@ -303,8 +302,10 @@ mod tests {
 
     #[test]
     fn sparse_args_no_max_size() {
+        let tools = FakeToolProvider::default();
+        let fvm_tool = tools.get_tool("fvm").unwrap();
         let builder =
-            FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Sparse { empty_minfs: false });
+            FvmBuilder::new(fvm_tool, "mypath", 1, 2, None, FvmType::Sparse { empty_minfs: false });
         let args = builder.build_args().unwrap();
         assert_eq!(
             args,
@@ -314,8 +315,10 @@ mod tests {
 
     #[test]
     fn sparse_args_max_size() {
+        let tools = FakeToolProvider::default();
+        let fvm_tool = tools.get_tool("fvm").unwrap();
         let builder = FvmBuilder::new(
-            "fvm",
+            fvm_tool,
             "mypath",
             1,
             2,
@@ -342,8 +345,10 @@ mod tests {
 
     #[test]
     fn sparse_blob_args() {
+        let tools = FakeToolProvider::default();
+        let fvm_tool = tools.get_tool("fvm").unwrap();
         let builder =
-            FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Sparse { empty_minfs: true });
+            FvmBuilder::new(fvm_tool, "mypath", 1, 2, None, FvmType::Sparse { empty_minfs: true });
         let args = builder.build_args().unwrap();
         assert_eq!(
             args,
@@ -363,8 +368,10 @@ mod tests {
 
     #[test]
     fn emmc_args() {
+        let tools = FakeToolProvider::default();
+        let fvm_tool = tools.get_tool("fvm").unwrap();
         let builder = FvmBuilder::new(
-            "fvm",
+            fvm_tool,
             "mypath",
             1,
             2,
