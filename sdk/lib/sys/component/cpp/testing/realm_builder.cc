@@ -29,7 +29,7 @@ namespace testing {
 
 namespace {
 
-constexpr char kCollectionName[] = "fuchsia_component_test_collection";
+constexpr char kCollectionName[] = "realm_builder";
 constexpr char kFrameworkIntermediaryChildName[] = "realm_builder_server";
 
 void PanicIfMonikerBad(Moniker& moniker) {

@@ -21,7 +21,7 @@ async fn out_can_be_read() {
         instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
 
     let hub_out_path_str = format!(
-        "/hub/children/fuchsia_component_test_collection:{}/children/test/children/archivist/exec/out/",
+        "/hub/children/realm_builder:{}/children/test/children/archivist/exec/out/",
         instance.root.child_name()
     );
     let hub_out_path = Path::new(&hub_out_path_str);

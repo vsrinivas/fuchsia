@@ -51,10 +51,7 @@ async fn component_selectors_filter_logs() {
     // Start listening
     let mut reader = ArchiveReader::new();
     reader
-        .add_selector(format!(
-            "fuchsia_component_test_collection\\:{}/test/a:root",
-            instance.root.child_name()
-        ))
+        .add_selector(format!("realm_builder\\:{}/test/a:root", instance.root.child_name()))
         .with_archive(accessor)
         .with_minimum_schema_count(5)
         .retry_if_empty(true);
@@ -76,10 +73,7 @@ async fn component_selectors_filter_logs() {
     // We should see logs from components started before and after we began to listen.
     for _ in 0..6 {
         let log = stream.next().await.unwrap();
-        assert_eq!(
-            log.moniker,
-            format!("fuchsia_component_test_collection:{}/test/a", instance.root.child_name())
-        );
+        assert_eq!(log.moniker, format!("realm_builder:{}/test/a", instance.root.child_name()));
         assert_data_tree!(log.payload.unwrap(), root: {
             message: {
                 value: "Hello, world!",

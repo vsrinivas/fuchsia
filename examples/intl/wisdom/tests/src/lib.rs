@@ -37,10 +37,7 @@ async fn wisdom_integration_test() -> Result<(), Error> {
     let realm_instance = builder.build().await?;
 
     // Initialize the log reader
-    let moniker = format!(
-        "fuchsia_component_test_collection\\:{}/wisdom_client",
-        realm_instance.root.child_name()
-    );
+    let moniker = format!("realm_builder\\:{}/wisdom_client", realm_instance.root.child_name());
     let mut reader = ArchiveReader::new();
     reader.add_selector(format!("{}:root", moniker));
     let mut log_stream = reader.snapshot_then_subscribe::<Logs>()?;

@@ -44,7 +44,7 @@ async fn register_interest() {
     ];
 
     let selector = selectors::parse_component_selector::<VerboseError>(&format!(
-        "fuchsia_component_test_collection\\:{}/test/child",
+        "realm_builder\\:{}/test/child",
         instance.root.child_name()
     ))
     .unwrap();

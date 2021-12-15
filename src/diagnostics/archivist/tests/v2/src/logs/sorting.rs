@@ -43,7 +43,7 @@ async fn timestamp_sorting_for_batches() {
             time: p.metadata.time,
             dropped_logs: 0,
             msg: "timing log".to_owned(),
-            tags: vec![format!("fuchsia_component_test_collection:{}", instance.root.child_name())],
+            tags: vec![format!("realm_builder:{}", instance.root.child_name())],
             pid: p.metadata.pid,
             tid: p.metadata.tid,
         })

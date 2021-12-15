@@ -57,7 +57,7 @@ fuchsia::examples::inspect::ReverserPtr IntegrationTest::ConnectToReverser(TestO
 
 std::string IntegrationTest::ReverserMonikerForSelectors() const {
   auto root_name = realm_->GetChildName();
-  return "fuchsia_component_test_collection\\:" + root_name + "/reverser";
+  return "realm_builder\\:" + root_name + "/reverser";
 }
 
 }  // namespace codelab::testing

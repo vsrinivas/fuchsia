@@ -897,10 +897,8 @@ impl<P: PkgFs> TestEnv<P> {
     }
 
     pub async fn pkg_resolver_inspect_hierarchy(&self) -> DiagnosticsHierarchy {
-        let nested_environment_label = format!(
-            "fuchsia_component_test_collection\\:{}",
-            self.apps.realm_instance.root.child_name()
-        );
+        let nested_environment_label =
+            format!("realm_builder\\:{}", self.apps.realm_instance.root.child_name());
         ArchiveReader::new()
             .add_selector(ComponentSelector::new(vec![
                 nested_environment_label.to_string(),

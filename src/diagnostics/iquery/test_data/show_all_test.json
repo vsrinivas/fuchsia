@@ -6,7 +6,7 @@
             "filename": "fuchsia.inspect.Tree",
             "timestamp": "TIMESTAMP"
         },
-        "moniker": "fuchsia_component_test_collection\\:CHILD_NAME/basic-1",
+        "moniker": "realm_builder\\:CHILD_NAME/basic-1",
         "payload": {
             "root": {
                 "fuchsia.inspect.Health": {
@@ -25,7 +25,7 @@
             "filename": "fuchsia.inspect.Tree",
             "timestamp": "TIMESTAMP"
         },
-        "moniker": "fuchsia_component_test_collection\\:CHILD_NAME/basic-2",
+        "moniker": "realm_builder\\:CHILD_NAME/basic-2",
         "payload": {
             "root": {
                 "fuchsia.inspect.Health": {

@@ -18,7 +18,7 @@
                 "fuchsia.sys.Loader",
             ],
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
     ],
 }

@@ -489,10 +489,7 @@ mod tests {
 
         // TODO(fxbug.dev/51165): use selectors for this filtering and remove the delayed retry
         // which would be taken care of by the ArchiveReader itself.
-        let moniker = format!(
-            "fuchsia_component_test_collection\\:{}/test_component",
-            instance.root.child_name()
-        );
+        let moniker = format!("realm_builder\\:{}/test_component", instance.root.child_name());
         loop {
             let results = ArchiveReader::new()
                 .snapshot::<Lifecycle>()
@@ -525,10 +522,7 @@ mod tests {
     async fn inspect_data_for_component() -> Result<(), anyhow::Error> {
         let instance = start_component().await?;
 
-        let moniker = format!(
-            "fuchsia_component_test_collection\\:{}/test_component",
-            instance.root.child_name()
-        );
+        let moniker = format!("realm_builder\\:{}/test_component", instance.root.child_name());
         let results = ArchiveReader::new()
             .add_selector(format!("{}:root", moniker))
             .snapshot::<Inspect>()
@@ -570,10 +564,7 @@ mod tests {
     async fn select_all_for_moniker() {
         let instance = start_component().await.expect("started component");
 
-        let moniker = format!(
-            "fuchsia_component_test_collection:{}/test_component",
-            instance.root.child_name()
-        );
+        let moniker = format!("realm_builder:{}/test_component", instance.root.child_name());
         let results = ArchiveReader::new()
             .select_all_for_moniker(&moniker)
             .snapshot::<Inspect>()
@@ -599,7 +590,7 @@ mod tests {
         let mut reader = ArchiveReader::new();
         reader
             .add_selector(format!(
-                "fuchsia_component_test_collection\\:{}/test_component:root",
+                "realm_builder\\:{}/test_component:root",
                 instance.root.child_name()
             ))
             .with_timeout(0.nanos());

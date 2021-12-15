@@ -60,17 +60,17 @@
         {
             protocol: "fuchsia.posix.socket.Provider",
             from: "#netstack",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             protocol: "fuchsia.net.name.Lookup",
             from: "#dns_resolver",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             protocol: [ "fuchsia.process.Launcher" ],
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
     ],
 }

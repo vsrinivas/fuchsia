@@ -19,7 +19,7 @@
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [ "#realm_builder" ],
             rights: [ "r*" ],
             subdir: "sampler-integration-tests",
         },

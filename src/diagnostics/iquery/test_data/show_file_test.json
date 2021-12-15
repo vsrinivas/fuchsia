@@ -1,6 +1,6 @@
 [
     {
-        "path": "/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/basic/exec/out/diagnostics/fuchsia.inspect.Tree",
+        "path": "/hub/children/realm_builder:CHILD_NAME/children/basic/exec/out/diagnostics/fuchsia.inspect.Tree",
         "payload": {
             "root": {
                 "fuchsia.inspect.Health": {
@@ -12,7 +12,7 @@
         }
     },
     {
-        "path": "/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/test/exec/out/diagnostics/fuchsia.inspect.Tree",
+        "path": "/hub/children/realm_builder:CHILD_NAME/children/test/exec/out/diagnostics/fuchsia.inspect.Tree",
         "payload": {
             "root": {
                 "array:0xd": [
@@ -267,7 +267,7 @@
         }
     },
     {
-        "path": "/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/test/exec/out/diagnostics/fuchsia.inspect.deprecated.Inspect",
+        "path": "/hub/children/realm_builder:CHILD_NAME/children/test/exec/out/diagnostics/fuchsia.inspect.deprecated.Inspect",
         "payload": {
             "root": {
                 "table:0x0": {
@@ -329,7 +329,7 @@
         }
     },
     {
-        "path": "/hub/children/fuchsia_component_test_collection:CHILD_NAME/children/test/exec/out/diagnostics/root.inspect",
+        "path": "/hub/children/realm_builder:CHILD_NAME/children/test/exec/out/diagnostics/root.inspect",
         "payload": {
             "root": {
                 "array:0xd": [

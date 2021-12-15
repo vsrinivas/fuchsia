@@ -187,11 +187,8 @@ impl PuppetEnv {
             _ => panic!("did not expect that"),
         };
 
-        let moniker = format!(
-            "fuchsia_component_test_collection:{}/test/puppet-{}",
-            self.instance.root.child_name(),
-            id
-        );
+        let moniker =
+            format!("realm_builder:{}/test/puppet-{}", self.instance.root.child_name(), id);
         let puppet = Puppet { id, moniker: moniker.clone(), proxy };
 
         info!("having the puppet connect to LogSink");

@@ -123,9 +123,9 @@ sys::testing::ScopedChild CobaltTestApp::Connect(const std::string &variant) {
       << "Failed to connect to fuchsia.component.Realm";
 
   auto child = sys::testing::ScopedChild::New(
-      std::move(realm_proxy), "fuchsia_component_test_collection",
+      std::move(realm_proxy), "realm_builder",
       "cobalt_under_test_" + std::to_string(scoped_child_destructors_.size()), variant);
-  logger_.SetCobaltUnderTestMoniker("fuchsia_component_test_collection\\:" + child.GetChildName());
+  logger_.SetCobaltUnderTestMoniker("realm_builder\\:" + child.GetChildName());
 
   fuchsia::cobalt::LoggerFactorySyncPtr logger_factory =
       child.ConnectSync<fuchsia::cobalt::LoggerFactory>();

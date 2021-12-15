@@ -613,7 +613,7 @@ impl TestEnv {
 
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         let nested_environment_label = format!(
-            "test_driver/fuchsia_component_test_collection\\:{}/omaha_client_service:root",
+            "test_driver/realm_builder\\:{}/omaha_client_service:root",
             self.realm_instance.root.child_name()
         );
         ArchiveReader::new()

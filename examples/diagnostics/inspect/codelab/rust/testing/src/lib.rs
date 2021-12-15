@@ -77,6 +77,6 @@ impl IntegrationTest {
     }
 
     pub fn reverser_moniker_for_selectors(&self) -> String {
-        format!("fuchsia_component_test_collection\\:{}/reverser", self.instance.root.child_name())
+        format!("realm_builder\\:{}/reverser", self.instance.root.child_name())
     }
 }

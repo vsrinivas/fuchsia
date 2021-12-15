@@ -27,14 +27,14 @@
         {
             directory: "config-data",
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
             rights: [ "r*" ],
             subdir: "cobalt",
         },
         {
             storage: "data",
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             protocol: [
@@ -42,7 +42,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             protocol: [
@@ -64,12 +64,12 @@
         {
             protocol: "fuchsia.ui.activity.Provider",
             from: "#activity",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             protocol: "fuchsia.sysinfo.SysInfo",
             from: "#sysinfo",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
     ],
 }

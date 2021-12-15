@@ -557,7 +557,7 @@ impl TestEnv<PkgfsRamdisk> {
 impl<P: PkgFs> TestEnv<P> {
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         let nested_environment_label = format!(
-            "pkg_cache_integration_test/fuchsia_component_test_collection\\:{}",
+            "pkg_cache_integration_test/realm_builder\\:{}",
             self.apps.realm_instance.root.child_name()
         );
 

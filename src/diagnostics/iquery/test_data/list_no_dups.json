@@ -1,4 +1,4 @@
 [
     "archivist",
-    "fuchsia_component_test_collection\\:CHILD_NAME/test"
+    "realm_builder\\:CHILD_NAME/test"
 ]

@@ -181,7 +181,7 @@ async fn sampler_inspect_test() {
     // Observe verification shows up in inspect.
     let mut data = ArchiveReader::new()
         .add_selector(format!(
-            "fuchsia_component_test_collection\\:{}/wrapper/sampler:root",
+            "realm_builder\\:{}/wrapper/sampler:root",
             instance.root.child_name()
         ))
         .snapshot::<Inspect>()

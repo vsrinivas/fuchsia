@@ -23,12 +23,12 @@
         {
             directory: "root-ssl-certificates",
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             storage: "data",
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             protocol: [
@@ -38,7 +38,7 @@
                 "fuchsia.process.Launcher",
             ],
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
     ],
 }

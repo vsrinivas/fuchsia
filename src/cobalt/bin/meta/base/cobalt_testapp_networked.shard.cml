@@ -4,12 +4,12 @@
         {
             storage: "tmp",
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             protocol: "fuchsia.net.http.Loader",
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
     ],
 }

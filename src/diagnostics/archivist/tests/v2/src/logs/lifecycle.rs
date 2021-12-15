@@ -105,10 +105,7 @@ async fn test_logs_with_hanging_log_connector() {
         }
     });
 
-    let moniker = format!(
-        "fuchsia_component_test_collection:{}/test/log_and_exit",
-        instance.root.child_name()
-    );
+    let moniker = format!("realm_builder:{}/test/log_and_exit", instance.root.child_name());
 
     reader.retry_if_empty(true);
 
@@ -190,10 +187,7 @@ async fn test_logs_lifecycle() {
         }
     });
 
-    let moniker = format!(
-        "fuchsia_component_test_collection:{}/test/log_and_exit",
-        instance.root.child_name()
-    );
+    let moniker = format!("realm_builder:{}/test/log_and_exit", instance.root.child_name());
 
     let event_source =
         EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());

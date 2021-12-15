@@ -27,7 +27,7 @@ use {
 };
 
 /// The default name of the child component collection that contains built topologies.
-pub const DEFAULT_COLLECTION_NAME: &'static str = "fuchsia_component_test_collection";
+pub const DEFAULT_COLLECTION_NAME: &'static str = "realm_builder";
 const REALM_BUILDER_SERVER_CHILD_NAME: &'static str = "realm_builder_server";
 
 pub mod error;

@@ -1,7 +1,7 @@
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "rust_test_runner",
@@ -14,7 +14,7 @@
         {
             protocol: [ "fuchsia.boot.WriteOnlyLog" ],
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
     ],
     expose: [

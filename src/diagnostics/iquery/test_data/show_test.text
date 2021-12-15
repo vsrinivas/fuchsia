@@ -1,4 +1,4 @@
-fuchsia_component_test_collection\:CHILD_NAME/basic-1:
+realm_builder\:CHILD_NAME/basic-1:
   metadata:
     filename = fuchsia.inspect.Tree
     component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm
@@ -8,7 +8,7 @@ fuchsia_component_test_collection\:CHILD_NAME/basic-1:
       fuchsia.inspect.Health:
         start_timestamp_nanos = TIMESTAMP
         status = OK
-fuchsia_component_test_collection\:CHILD_NAME/basic-2:
+realm_builder\:CHILD_NAME/basic-2:
   metadata:
     filename = fuchsia.inspect.Tree
     component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm
@@ -16,7 +16,7 @@ fuchsia_component_test_collection\:CHILD_NAME/basic-2:
   payload:
     root:
       iquery = rocks
-fuchsia_component_test_collection\:CHILD_NAME/basic-3:
+realm_builder\:CHILD_NAME/basic-3:
   metadata:
     filename = fuchsia.inspect.Tree
     component_url = fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cm

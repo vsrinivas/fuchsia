@@ -31,17 +31,17 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [ "#realm_builder" ],
         },
         {
             protocol: [ "fuchsia.mediacodec.CodecFactory" ],
             from: "#codec-factory",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [ "#realm_builder" ],
         },
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#mock-cobalt",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [ "#realm_builder" ],
         },
     ],
 }

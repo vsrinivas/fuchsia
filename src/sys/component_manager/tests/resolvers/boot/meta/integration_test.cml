@@ -14,7 +14,7 @@
             // The component manager launched by RealmBuilder requires this to launch processes.
             protocol: "fuchsia.process.Launcher",
             from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [ "#realm_builder" ],
         },
     ],
 }

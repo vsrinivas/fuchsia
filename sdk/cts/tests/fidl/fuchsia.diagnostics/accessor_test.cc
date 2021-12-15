@@ -34,7 +34,7 @@ const char EXPECTED_DATA[] = R"JSON({
         "filename": "fuchsia.inspect.Tree",
         "timestamp": TIMESTAMP
     },
-    "moniker": "fuchsia_component_test_collection\\:CHILD_NAME/inspect-publisher",
+    "moniker": "realm_builder\\:CHILD_NAME/inspect-publisher",
     "payload": {
         "root": {
             "arrays": {
@@ -275,8 +275,7 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
 
   auto _binder = realm.ConnectSync<fuchsia::component::Binder>();
 
-  auto selector =
-      "fuchsia_component_test_collection\\:" + realm.GetChildName() + "/inspect-publisher:root";
+  auto selector = "realm_builder\\:" + realm.GetChildName() + "/inspect-publisher:root";
   inspect::contrib::ArchiveReader reader(std::move(accessor), {selector});
 
   fpromise::result<std::vector<inspect::contrib::DiagnosticsData>, std::string> actual_result;

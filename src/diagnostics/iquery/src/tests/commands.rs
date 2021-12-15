@@ -102,10 +102,7 @@ async fn list_files_empty_path_uses_cwd() {
     test.assert(AssertionParameters {
         command: IqueryCommand::ListFiles,
         golden_basename: "list_files_cwd",
-        iquery_args: vec![&format!(
-            "children/fuchsia_component_test_collection:{}/",
-            test.instance_child_name()
-        )],
+        iquery_args: vec![&format!("children/realm_builder:{}/", test.instance_child_name())],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -125,7 +122,7 @@ async fn list_files() {
         command: IqueryCommand::ListFiles,
         golden_basename: "list_files_test",
         iquery_args: vec![&format!(
-            "/hub/children/fuchsia_component_test_collection:{}/children/test/",
+            "/hub/children/realm_builder:{}/children/test/",
             test.instance_child_name()
         )],
         opts: vec![AssertionOption::Retry],
@@ -166,7 +163,7 @@ async fn test_selectors() {
         .await
         .start()
         .await;
-    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    let prefix = format!("realm_builder\\:{}", test.instance_child_name());
     test.assert(AssertionParameters {
         command: IqueryCommand::Selectors,
         golden_basename: "selectors_test",
@@ -202,7 +199,7 @@ async fn test_selectors_filter() {
 #[fuchsia::test]
 async fn selectors_archive() {
     let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
-    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    let prefix = format!("realm_builder\\:{}", test.instance_child_name());
     test.assert(AssertionParameters {
         command: IqueryCommand::Selectors,
         golden_basename: "selectors_archive",
@@ -246,9 +243,9 @@ async fn show_file_test() {
         command: IqueryCommand::ShowFile,
         golden_basename: "show_file_test",
         iquery_args: vec![
-            &format!("/hub/children/fuchsia_component_test_collection:{}/children/basic/exec/out/diagnostics/fuchsia.inspect.Tree",
+            &format!("/hub/children/realm_builder:{}/children/basic/exec/out/diagnostics/fuchsia.inspect.Tree",
                 test.instance_child_name()),
-            &format!("/hub/children/fuchsia_component_test_collection:{}/children/test/exec/out/diagnostics/*",
+            &format!("/hub/children/realm_builder:{}/children/test/exec/out/diagnostics/*",
                 test.instance_child_name()),
         ],
         opts: vec![AssertionOption::Retry],
@@ -261,12 +258,13 @@ async fn inspect_vmo_file_directly() {
     test.assert(AssertionParameters {
         command: IqueryCommand::ShowFile,
         golden_basename: "show_file_vmo",
-        iquery_args: vec![
-            &format!("/hub/children/fuchsia_component_test_collection:{}/children/test/exec/out/diagnostics/root.inspect",
-                test.instance_child_name()),
-        ],
+        iquery_args: vec![&format!(
+            "/hub/children/realm_builder:{}/children/test/exec/out/diagnostics/root.inspect",
+            test.instance_child_name()
+        )],
         opts: vec![AssertionOption::Retry],
-    }).await;
+    })
+    .await;
 }
 
 // Show
@@ -302,7 +300,7 @@ async fn show_test() {
         .await
         .start()
         .await;
-    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    let prefix = format!("realm_builder\\:{}", test.instance_child_name());
     test.assert(AssertionParameters {
         command: IqueryCommand::Show,
         golden_basename: "show_test",
@@ -319,7 +317,7 @@ async fn show_test() {
 #[fuchsia::test]
 async fn empty_result_on_null_payload() {
     let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
-    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    let prefix = format!("realm_builder\\:{}", test.instance_child_name());
     let result =
         utils::execute_command(&["show", &format!("{}/basic:root/nothing:here", prefix)]).await;
     assert_matches!(result, Ok(res) if res == "" || res.contains("payload: null"));
@@ -372,7 +370,7 @@ async fn show_filter_manifest_no_selectors() {
 #[fuchsia::test]
 async fn show_archive() {
     let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
-    let prefix = format!("fuchsia_component_test_collection\\:{}", test.instance_child_name());
+    let prefix = format!("realm_builder\\:{}", test.instance_child_name());
     test.assert(AssertionParameters {
         command: IqueryCommand::Show,
         golden_basename: "show_archive",

@@ -49,7 +49,7 @@
         {
             storage: "data",
             from: "self",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],

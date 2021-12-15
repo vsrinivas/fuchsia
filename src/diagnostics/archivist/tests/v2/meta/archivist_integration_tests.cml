@@ -33,35 +33,35 @@
         {
             protocol: [ "fuchsia.boot.ReadOnlyLog" ],
             from: "parent",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             directory: "config-data",
             from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [ "#realm_builder" ],
             rights: [ "r*" ],
             subdir: "archivist",
         },
         {
             event: "capability_requested",
             from: "framework",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
             filter: { name: "fuchsia.logger.LogSink" },
         },
         {
             event: "stopped",
             from: "framework",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             event: "started",
             from: "framework",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
         {
             event: "running",
             from: "framework",
-            to: "#fuchsia_component_test_collection",
+            to: "#realm_builder",
         },
     ],
 }

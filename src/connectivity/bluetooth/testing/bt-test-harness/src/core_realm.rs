@@ -51,7 +51,7 @@ mod constants {
 /// `create` method to construct an instance, and the `instance` method to access the various
 /// production capabilities and test interfaces (e.g. from the bt-hci emulator) exposed from the
 /// core stack. Clients of the CoreRealm must route the `tmp` storage capability from the test
-/// manager to the "#fuchsia_component_test_collection" underlying the RealmInstance.
+/// manager to the "#realm_builder" underlying the RealmInstance.
 pub struct CoreRealm {
     realm: RealmInstance,
 }

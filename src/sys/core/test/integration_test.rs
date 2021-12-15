@@ -6,12 +6,8 @@ use {fidl_fidl_examples_routing_echo as fecho, fuchsia_component_test::ScopedIns
 
 #[fuchsia::test]
 async fn core_proxy() {
-    let core = ScopedInstance::new(
-        "fuchsia_component_test_collection".into(),
-        "#meta/fake_core.cm".into(),
-    )
-    .await
-    .unwrap();
+    let core =
+        ScopedInstance::new("realm_builder".into(), "#meta/fake_core.cm".into()).await.unwrap();
     info!("binding to Echo");
     let echo = core.connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>().unwrap();
     let out = echo.echo_string(Some("world")).await.unwrap();
