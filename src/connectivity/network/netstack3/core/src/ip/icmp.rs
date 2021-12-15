@@ -9,7 +9,7 @@ use core::fmt::Debug;
 
 use core::convert::TryInto as _;
 
-use log::{debug, trace};
+use log::{debug, error, trace};
 use net_types::ip::{
     Ip, IpAddress, IpVersionMarker, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr,
 };
@@ -441,33 +441,6 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt>:
 pub(crate) trait InnerBufferIcmpContext<I: IcmpIpExt + IpExt, B: BufferMut>:
     InnerIcmpContext<I> + BufferIcmpContext<I, B> + BufferIpSocketContext<I, B>
 {
-    /// Sends an ICMP reply to a remote host.
-    ///
-    /// `send_icmp_reply` sends a reply to a non-error message (e.g., "echo
-    /// request" or "timestamp request" messages). It takes the ingress device,
-    /// source IP, and destination IP of the packet *being responded to*. It
-    /// uses ICMP-specific logic to figure out whether and how to send an ICMP
-    /// reply.
-    ///
-    /// `dst_ip` must not be the unspecified address, but this is guaranteed
-    /// statically because packets destined to the unspecified address are never
-    /// delivered locally. `src_ip` must not be the unspecified address, as we
-    /// are replying to this packet, and the unspecified address is not
-    /// routable.
-    ///
-    /// `get_body` returns a `Serializer` with the bytes of the ICMP packet,
-    /// and, when called, is given the source IP address chosen for the outbound
-    /// packet. This allows `get_body` to properly compute the ICMP checksum,
-    /// which relies on both the source and destination IP addresses of the IP
-    /// packet it's encapsulated in.
-    fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<I::Addr>) -> S>(
-        &mut self,
-        device: Option<Self::DeviceId>,
-        src_ip: SpecifiedAddr<I::Addr>,
-        dst_ip: SpecifiedAddr<I::Addr>,
-        get_body: F,
-    ) -> Result<(), S>;
-
     /// Sends an ICMP error message to a remote host.
     ///
     /// `send_icmp_error_message` sends an ICMP error message. It takes the
@@ -486,18 +459,18 @@ pub(crate) trait InnerBufferIcmpContext<I: IcmpIpExt + IpExt, B: BufferMut>:
     /// `false`, then it must not send the message regardless of whatever other
     /// logic is used.
     ///
-    /// get_body` returns a `Serializer` with the bytes of the ICMP packet, and,
-    /// when called, is given the source IP address chosen for the outbound
-    /// packet. This allows `get_body` to properly compute the ICMP checksum,
-    /// which relies on both the source and destination IP addresses of the IP
-    /// packet it's encapsulated in.
+    /// `get_body_from_src_ip` returns a `Serializer` with the bytes of the ICMP
+    /// packet, and, when called, is given the source IP address chosen for the
+    /// outbound packet. This allows `get_body_from_src_ip` to properly compute
+    /// the ICMP checksum, which relies on both the source and destination IP
+    /// addresses of the IP packet it's encapsulated in.
     fn send_icmp_error_message<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<I::Addr>) -> S>(
         &mut self,
         device: Self::DeviceId,
         frame_dst: FrameDestination,
-        src_ip: SpecifiedAddr<I::Addr>,
-        dst_ip: SpecifiedAddr<I::Addr>,
-        get_body: F,
+        original_src_ip: SpecifiedAddr<I::Addr>,
+        original_dst_ip: SpecifiedAddr<I::Addr>,
+        get_body_from_src_ip: F,
         ip_mtu: Option<u32>,
         info: I::ShouldSendIcmpErrorInfo,
     ) -> Result<(), S>;
@@ -762,7 +735,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                     let (local_ip, remote_ip) = (dst_ip, src_ip);
                     // TODO(joshlf): Do something if send_icmp_reply returns an
                     // error?
-                    let _ = ctx.send_icmp_reply(device, remote_ip, local_ip, |src_ip| {
+                    let _ = send_icmp_reply(ctx, device, remote_ip, local_ip, |src_ip| {
                         buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                             src_ip,
                             remote_ip,
@@ -816,7 +789,7 @@ impl<B: BufferMut, C: InnerBufferIcmpv4Context<B> + PmtuHandler<Ipv4>>
                         buffer.shrink_front_to(0);
                         // TODO(joshlf): Do something if send_icmp_reply returns
                         // an error?
-                        let _ = ctx.send_icmp_reply(device, remote_ip, local_ip, |src_ip| {
+                        let _ = send_icmp_reply(ctx, device, remote_ip, local_ip, |src_ip| {
                             buffer.encapsulate(IcmpPacketBuilder::<Ipv4, &[u8], _>::new(
                                 src_ip,
                                 remote_ip,
@@ -973,7 +946,8 @@ impl<
                     let (local_ip, remote_ip) = (dst_ip, src_ip);
                     // TODO(joshlf): Do something if send_icmp_reply returns an
                     // error?
-                    let _ = ctx.send_icmp_reply(
+                    let _ = send_icmp_reply(
+                        ctx,
                         device,
                         remote_ip.into_specified(),
                         local_ip,
@@ -1056,6 +1030,46 @@ impl<
 
         Ok(())
     }
+}
+
+/// Sends an ICMP reply to a remote host.
+///
+/// `send_icmp_reply` sends a reply to a non-error message (e.g., "echo request"
+/// or "timestamp request" messages). It takes the ingress device, source IP,
+/// and destination IP of the packet *being responded to*. It uses ICMP-specific
+/// logic to figure out whether and how to send an ICMP reply.
+///
+/// `get_body_from_src_ip` returns a `Serializer` with the bytes of the ICMP
+/// packet, and, when called, is given the source IP address chosen for the
+/// outbound packet. This allows `get_body_from_src_ip` to properly compute the
+/// ICMP checksum, which relies on both the source and destination IP addresses
+/// of the IP packet it's encapsulated in.
+fn send_icmp_reply<
+    I: IcmpIpExt + IpExt,
+    B: BufferMut,
+    C: BufferIpSocketContext<I, B> + IpDeviceIdContext + CounterContext,
+    S: Serializer<Buffer = B>,
+    F: FnOnce(SpecifiedAddr<I::Addr>) -> S,
+>(
+    ctx: &mut C,
+    device: Option<C::DeviceId>,
+    original_src_ip: SpecifiedAddr<I::Addr>,
+    original_dst_ip: SpecifiedAddr<I::Addr>,
+    get_body_from_src_ip: F,
+) -> Result<(), S> {
+    trace!("send_icmp_reply({:?}, {}, {})", device, original_src_ip, original_dst_ip);
+    ctx.increment_counter("send_icmp_reply");
+    ctx.send_oneshot_ip_packet(
+        Some(original_dst_ip),
+        original_src_ip,
+        I::ICMP_IP_PROTO,
+        None,
+        get_body_from_src_ip,
+    )
+    .map_err(|(body, err)| {
+        error!("failed to send ICMP reply: {}", err);
+        body
+    })
 }
 
 /// Receive an ICMP(v4) error message.
@@ -2818,8 +2832,6 @@ mod tests {
     }
 
     struct DummyIcmpCtx<I: IcmpIpExt> {
-        // All calls to `InnerIcmpContext::send_icmp_reply`.
-        send_icmp_reply: Vec<SendIcmpReplyArgs<I::Addr>>,
         // All calls to `InnerIcmpContext::send_icmp_error_message`.
         send_icmp_error_message: Vec<SendIcmpErrorMessageArgs<I>>,
         // We store calls to `InnerIcmpContext::receive_icmp_error` AND calls to
@@ -2858,7 +2870,6 @@ mod tests {
     impl<I: IcmpIpExt> DummyIcmpCtx<I> {
         fn new(socket_ctx: DummyIpSocketCtx<I>) -> DummyIcmpCtx<I> {
             DummyIcmpCtx {
-                send_icmp_reply: Vec::new(),
                 send_icmp_error_message: Vec::new(),
                 receive_icmp_echo_reply: Vec::new(),
                 receive_icmp_error: Vec::new(),
@@ -3020,28 +3031,6 @@ mod tests {
             }
 
             impl<B: BufferMut> InnerBufferIcmpContext<$ip, B> for $outer {
-                // TODO(rheacock): remove the `allow(unreachable_code)` once
-                // this is implemented.
-                #[allow(unreachable_code)]
-                fn send_icmp_reply<
-                    S: Serializer<Buffer = B>,
-                    F: FnOnce(SpecifiedAddr<<$ip as Ip>::Addr>) -> S,
-                >(
-                    &mut self,
-                    device: Option<DummyDeviceId>,
-                    src_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
-                    dst_ip: SpecifiedAddr<<$ip as Ip>::Addr>,
-                    _get_body: F,
-                ) -> Result<(), S> {
-                    self.get_mut().inner.send_icmp_reply.push(SendIcmpReplyArgs {
-                        device,
-                        src_ip,
-                        dst_ip,
-                        body: unimplemented!(),
-                    });
-                    Ok(())
-                }
-
                 fn send_icmp_error_message<
                     S: Serializer<Buffer = B>,
                     F: FnOnce(SpecifiedAddr<<$ip as Ip>::Addr>) -> S,

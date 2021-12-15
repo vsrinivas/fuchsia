@@ -31,7 +31,7 @@ use net_types::ip::{
 };
 use net_types::{MulticastAddr, SpecifiedAddr, Witness};
 use nonzero_ext::nonzero;
-use packet::{Buf, BufferMut, Either, ParseMetadata, Serializer};
+use packet::{Buf, BufferMut, ParseMetadata, Serializer};
 use packet_formats::error::IpParseError;
 use packet_formats::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use packet_formats::ip::{IpPacket, IpProto, Ipv4Proto, Ipv6Proto};
@@ -1647,204 +1647,6 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
     get_state_inner::<A::Version, _>(&ctx.state).table.iter_installed()
 }
 
-/// Send an IPv4 packet to a remote host.
-///
-/// `send_ipv4_packet` accepts a destination IP address, a protocol, and a
-/// callback. It computes the routing information, invokes the callback with
-/// the computed destination address, serializes the callback's result in
-/// a new IP packet, and sends the packet.
-pub(crate) fn send_ipv4_packet<
-    B: BufferMut,
-    D: BufferDispatcher<B>,
-    S: Serializer<Buffer = B>,
-    F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S,
->(
-    ctx: &mut Ctx<D>,
-    dst_ip: SpecifiedAddr<Ipv4Addr>,
-    proto: Ipv4Proto,
-    get_body: F,
-) -> Result<(), S> {
-    trace!("send_ipv4_packet({}, {})", dst_ip, proto);
-    increment_counter!(ctx, "send_ipv4_packet");
-    if Ipv4::LOOPBACK_SUBNET.contains(&dst_ip) {
-        increment_counter!(ctx, "send_ipv4_packet::loopback");
-
-        // TODO(joshlf): Currently, we have no way of representing the loopback
-        // device as a DeviceId. We will need to fix that eventually.
-
-        // TODO(joshlf): Currently, we serialize using the normal Serializer
-        // functionality. I wonder if, in the case of delivering to loopback, we
-        // can do something more efficient?
-        let buffer =
-            get_body(Ipv4::LOOPBACK_ADDRESS).serialize_vec_outer().map_err(|(_, ser)| ser)?;
-        // TODO(joshlf): Respond with some kind of error if we don't have a
-        // handler for that protocol? Maybe simulate what would have happened
-        // (w.r.t ICMP) if this were a remote host?
-
-        // NOTE(joshlf): By passing a DeviceId and ParseMetadata of None here,
-        // we are promising that the protocol will be recognized (and the call
-        // will panic if it's not). This is OK because the fact that we're
-        // sending a packet with this protocol means we are able to process that
-        // protocol.
-        //
-        // NOTE(joshlf): By doing that, we are also promising that the port will
-        // be recognized. That is NOT OK, and the call will panic in that case.
-        // TODO(joshlf): Fix this.
-
-        // The reason for this match is so that, in each case, we are guaranteed
-        // that the buffer type is a supported buffer type for our event
-        // dispatcher. If we were to just pass the original buffer itself, then
-        // in addition to supporting `B`, the event dispatcher would need to
-        // support `Either<B, Vec<u8>>`, but then `Either<B, Vec<u8>>` would
-        // become `B` from the perspective of `dispatch_receive_ip_packet`, so
-        // it would need to support `Either<Either<B, Vec<u8>>, Vec<u8>>`, and
-        // so on. This match allows us to break that type recursion.
-        match buffer {
-            Either::A(buffer) => dispatch_receive_ipv4_packet(
-                ctx,
-                None,
-                FrameDestination::Unicast,
-                Ipv4::LOOPBACK_ADDRESS.get(),
-                dst_ip,
-                proto,
-                buffer,
-                None,
-            ),
-            Either::B(buffer) => dispatch_receive_ipv4_packet::<Buf<Vec<u8>>, _>(
-                ctx,
-                None,
-                FrameDestination::Unicast,
-                Ipv4::LOOPBACK_ADDRESS.get(),
-                dst_ip,
-                proto,
-                buffer,
-                None,
-            ),
-        }
-    } else if let Some(dest) = lookup_route(ctx, dst_ip) {
-        // TODO(joshlf): Are we sure that a device route can never be set for a
-        // device without an IP address? At the least, this is not currently
-        // enforced anywhere, and is a DoS vector.
-        let src_ip: SpecifiedAddr<Ipv4Addr> = crate::device::get_ip_addr_subnet(ctx, dest.device)
-            .expect("IP device route set for device without IP address")
-            .addr();
-        send_ip_packet_from_device(
-            ctx,
-            dest.device,
-            src_ip.get(),
-            dst_ip.get(),
-            dest.next_hop,
-            proto,
-            get_body(src_ip),
-            None,
-        )?;
-    } else {
-        debug!("No route to host");
-        // TODO(joshlf): No route to host
-    }
-
-    Ok(())
-}
-
-/// Send an IPv6 packet to a remote host.
-///
-/// `send_ipv6_packet` accepts a destination IP address, a protocol, and a
-/// callback. It computes the routing information, invokes the callback with
-/// the computed destination address, serializes the callback's result in
-/// a new IP packet, and sends the packet.
-pub(crate) fn send_ipv6_packet<
-    B: BufferMut,
-    D: BufferDispatcher<B>,
-    S: Serializer<Buffer = B>,
-    F: FnOnce(SpecifiedAddr<Ipv6Addr>) -> S,
->(
-    ctx: &mut Ctx<D>,
-    dst_ip: SpecifiedAddr<Ipv6Addr>,
-    proto: Ipv6Proto,
-    get_body: F,
-) -> Result<(), S> {
-    trace!("send_ipv6_packet({}, {})", dst_ip, proto);
-    increment_counter!(ctx, "send_ipv6_packet");
-    if Ipv6::LOOPBACK_SUBNET.contains(&dst_ip) {
-        increment_counter!(ctx, "send_ipv6_packet::loopback");
-
-        // TODO(joshlf): Currently, we have no way of representing the loopback
-        // device as a DeviceId. We will need to fix that eventually.
-
-        // TODO(joshlf): Currently, we serialize using the normal Serializer
-        // functionality. I wonder if, in the case of delivering to loopback, we
-        // can do something more efficient?
-        let buffer =
-            get_body(Ipv6::LOOPBACK_ADDRESS).serialize_vec_outer().map_err(|(_, ser)| ser)?;
-        // TODO(joshlf): Respond with some kind of error if we don't have a
-        // handler for that protocol? Maybe simulate what would have happened
-        // (w.r.t ICMP) if this were a remote host?
-
-        // NOTE(joshlf): By passing a DeviceId and ParseMetadata of None here,
-        // we are promising that the protocol will be recognized (and the call
-        // will panic if it's not). This is OK because the fact that we're
-        // sending a packet with this protocol means we are able to process that
-        // protocol.
-        //
-        // NOTE(joshlf): By doing that, we are also promising that the port will
-        // be recognized. That is NOT OK, and the call will panic in that case.
-        // TODO(joshlf): Fix this.
-
-        // The reason for this match is so that, in each case, we are guaranteed
-        // that the buffer type is a supported buffer type for our event
-        // dispatcher. If we were to just pass the original buffer itself, then
-        // in addition to supporting `B`, the event dispatcher would need to
-        // support `Either<B, Vec<u8>>`, but then `Either<B, Vec<u8>>` would
-        // become `B` from the perspective of `dispatch_receive_ip_packet`, so
-        // it would need to support `Either<Either<B, Vec<u8>>, Vec<u8>>`, and
-        // so on. This match allows us to break that type recursion.
-        match buffer {
-            Either::A(buffer) => dispatch_receive_ipv6_packet(
-                ctx,
-                None,
-                FrameDestination::Unicast,
-                Ipv6::LOOPBACK_IPV6_ADDRESS.into(),
-                dst_ip,
-                proto,
-                buffer,
-                None,
-            ),
-            Either::B(buffer) => dispatch_receive_ipv6_packet::<Buf<Vec<u8>>, _>(
-                ctx,
-                None,
-                FrameDestination::Unicast,
-                Ipv6::LOOPBACK_IPV6_ADDRESS.into(),
-                dst_ip,
-                proto,
-                buffer,
-                None,
-            ),
-        }
-    } else if let Some(dest) = lookup_route(ctx, dst_ip) {
-        // TODO(joshlf): Are we sure that a device route can never be set for a
-        // device without an IP address? At the least, this is not currently
-        // enforced anywhere, and is a DoS vector.
-        let src_ip: SpecifiedAddr<Ipv6Addr> = crate::device::get_ip_addr_subnet(ctx, dest.device)
-            .expect("IP device route set for device without IP address")
-            .addr();
-        send_ip_packet_from_device(
-            ctx,
-            dest.device,
-            src_ip.get(),
-            dst_ip.get(),
-            dest.next_hop,
-            proto,
-            get_body(src_ip),
-            None,
-        )?;
-    } else {
-        debug!("No route to host");
-        // TODO(joshlf): No route to host
-    }
-
-    Ok(())
-}
-
 /// Send an IP packet to a remote host over a specific device.
 ///
 /// `send_ip_packet_from_device` accepts a device, a source and destination IP
@@ -1985,20 +1787,6 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv4> for Ctx<D> {
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for Ctx<D> {
-    fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S>(
-        &mut self,
-        device: Option<DeviceId>,
-        src_ip: SpecifiedAddr<Ipv4Addr>,
-        dst_ip: SpecifiedAddr<Ipv4Addr>,
-        get_body: F,
-    ) -> Result<(), S> {
-        trace!("send_icmp_reply({:?}, {}, {})", device, src_ip, dst_ip);
-        self.increment_counter("send_icmp_reply");
-
-        // TODO(joshlf): Use `dst_ip` for anything?
-        send_ipv4_packet(self, src_ip, Ipv4Proto::Icmp, get_body)
-    }
-
     fn send_icmp_error_message<
         S: Serializer<Buffer = B>,
         F: FnOnce(SpecifiedAddr<Ipv4Addr>) -> S,
@@ -2006,30 +1794,41 @@ impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv4, B> for C
         &mut self,
         device: DeviceId,
         frame_dst: FrameDestination,
-        src_ip: SpecifiedAddr<Ipv4Addr>,
-        dst_ip: SpecifiedAddr<Ipv4Addr>,
-        get_body: F,
+        original_src_ip: SpecifiedAddr<Ipv4Addr>,
+        original_dst_ip: SpecifiedAddr<Ipv4Addr>,
+        get_body_from_src_ip: F,
         ip_mtu: Option<u32>,
         should_send_info: ShouldSendIcmpv4ErrorInfo,
     ) -> Result<(), S> {
-        trace!("send_icmp_error_message({}, {}, {}, {:?})", device, src_ip, dst_ip, ip_mtu);
+        trace!(
+            "send_icmp_error_message({}, {}, {}, {:?})",
+            device,
+            original_src_ip,
+            original_dst_ip,
+            ip_mtu
+        );
         self.increment_counter("send_icmp_error_message");
 
-        if !crate::ip::icmp::should_send_icmpv4_error(frame_dst, src_ip, dst_ip, should_send_info) {
+        if !crate::ip::icmp::should_send_icmpv4_error(
+            frame_dst,
+            original_src_ip,
+            original_dst_ip,
+            should_send_info,
+        ) {
             return Ok(());
         }
 
         if let Some((device, local_ip, next_hop)) =
-            get_icmp_error_message_destination(self, device, src_ip, dst_ip)
+            get_icmp_error_message_destination(self, device, original_src_ip, original_dst_ip)
         {
             send_ip_packet_from_device(
                 self,
                 device,
                 local_ip.get(),
-                src_ip.get(),
+                original_src_ip.get(),
                 next_hop,
                 Ipv4Proto::Icmp,
-                get_body(local_ip),
+                get_body_from_src_ip(local_ip),
                 ip_mtu,
             )?;
         }
@@ -2083,20 +1882,6 @@ impl<D: EventDispatcher> InnerIcmpContext<Ipv6> for Ctx<D> {
 }
 
 impl<B: BufferMut, D: BufferDispatcher<B>> InnerBufferIcmpContext<Ipv6, B> for Ctx<D> {
-    fn send_icmp_reply<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<Ipv6Addr>) -> S>(
-        &mut self,
-        device: Option<DeviceId>,
-        src_ip: SpecifiedAddr<Ipv6Addr>,
-        dst_ip: SpecifiedAddr<Ipv6Addr>,
-        get_body: F,
-    ) -> Result<(), S> {
-        trace!("send_icmp_reply({:?}, {}, {})", device, src_ip, dst_ip);
-        self.increment_counter("send_icmp_reply");
-
-        // TODO(joshlf): Use `dst_ip` for anything?
-        send_ipv6_packet(self, src_ip, Ipv6Proto::Icmpv6, get_body)
-    }
-
     fn send_icmp_error_message<
         S: Serializer<Buffer = B>,
         F: FnOnce(SpecifiedAddr<Ipv6Addr>) -> S,

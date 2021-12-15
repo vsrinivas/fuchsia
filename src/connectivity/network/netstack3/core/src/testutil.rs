@@ -1219,7 +1219,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::ip;
+    use crate::ip::socket::BufferIpSocketContext;
     use crate::{assert_empty, TimerIdInner};
 
     #[test]
@@ -1228,10 +1228,13 @@ mod tests {
         let mut net = new_dummy_network_from_config("alice", "bob", DUMMY_CONFIG_V4);
 
         // Alice sends Bob a ping.
-        ip::send_ipv4_packet(
+
+        BufferIpSocketContext::<Ipv4, _>::send_oneshot_ip_packet(
             net.context("alice"),
+            None, // local_ip
             DUMMY_CONFIG_V4.remote_ip,
             Ipv4Proto::Icmp,
+            None, // builder
             |_| {
                 let req = IcmpEchoRequest::new(0, 0);
                 let req_body = &[1, 2, 3, 4];
@@ -1401,10 +1404,12 @@ mod tests {
         );
 
         // Alice sends Bob a ping.
-        ip::send_ipv4_packet(
+        BufferIpSocketContext::<Ipv4, _>::send_oneshot_ip_packet(
             net.context("alice"),
+            None, // local_ip
             DUMMY_CONFIG_V4.remote_ip,
             Ipv4Proto::Icmp,
+            None, // builder
             |_| {
                 let req = IcmpEchoRequest::new(0, 0);
                 let req_body = &[1, 2, 3, 4];

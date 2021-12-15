@@ -80,6 +80,20 @@ pub enum IpSockSendError {
     Unroutable(#[from] IpSockUnroutableError),
 }
 
+/// An error in sending a packet on a temporary IP socket.
+#[derive(Error, Copy, Clone, Debug)]
+pub enum IpSockCreateAndSendError {
+    /// An MTU was exceeded.
+    ///
+    /// This could be caused by an MTU at any layer of the stack, including both
+    /// device MTUs and packet format body size limits.
+    #[error("a maximum transmission unit (MTU) was exceeded")]
+    Mtu,
+    /// The temporary socket could not be created.
+    #[error("the temporary socket could not be created: {}", _0)]
+    Create(#[from] IpSockCreationError),
+}
+
 pub(crate) trait BufferIpSocketContext<I: IpExt, B: BufferMut>: IpSocketContext<I> {
     /// Send an IP packet on a socket.
     ///
@@ -94,6 +108,47 @@ pub(crate) trait BufferIpSocketContext<I: IpExt, B: BufferMut>: IpSocketContext<
         socket: &Self::IpSocket,
         body: S,
     ) -> Result<(), (S, IpSockSendError)>;
+
+    /// Creates a temporary IP socket and sends a single packet on it.
+    ///
+    /// `local_ip`, `remote_ip`, `proto`, and `builder` are passed directly to
+    /// [`IpSocketContext::new_ip_socket`]. `get_body_from_src_ip` is given the
+    /// source IP address for the packet - which may have been chosen
+    /// automatically if `local_ip` is `None` - and returns the body to be
+    /// encapsulated. This is provided in case the body's contents depend on the
+    /// chosen source IP address.
+    ///
+    /// # Errors
+    ///
+    /// If an error is encountered while sending the packet, the body returned
+    /// from `get_body_from_src_ip` will be returned along with the error. If an
+    /// error is encountered while constructing the temporary IP socket,
+    /// `get_body_from_src_ip` will be called on an arbitrary IP address in
+    /// order to obtain a body to return. In the case where a buffer was passed
+    /// by ownership to `get_body_from_src_ip`, this allows the caller to
+    /// recover that buffer.
+    fn send_oneshot_ip_packet<S: Serializer<Buffer = B>, F: FnOnce(SpecifiedAddr<I::Addr>) -> S>(
+        &mut self,
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        proto: I::Proto,
+        builder: Option<Self::Builder>,
+        get_body_from_src_ip: F,
+    ) -> Result<(), (S, IpSockCreateAndSendError)> {
+        // We use a `match` instead of `map_err` because `map_err` would require passing a closure
+        // which takes ownership of `get_body_from_src_ip`, which we also use in the success case.
+        match self.new_ip_socket(local_ip, remote_ip, proto, UnroutableBehavior::Close, builder) {
+            Err(err) => Err((get_body_from_src_ip(I::LOOPBACK_ADDRESS), err.into())),
+            Ok(tmp) => self.send_ip_packet(&tmp, get_body_from_src_ip(*tmp.local_ip())).map_err(
+                |(body, err)| match err {
+                    IpSockSendError::Mtu => (body, IpSockCreateAndSendError::Mtu),
+                    IpSockSendError::Unroutable(_) => {
+                        unreachable!("socket which was just created should still be routable")
+                    }
+                },
+            ),
+        }
+    }
 }
 
 /// What should a socket do when it becomes unroutable?
