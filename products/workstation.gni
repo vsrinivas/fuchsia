@@ -41,6 +41,9 @@ base_package_labels += [
   # text_manager.
   "//src/ui/bin/text:ime_service",
   "//src/ui/bin/text:text_manager",
+
+  # Setting service configuration
+  "//src/setui/config:workstation_interface_config",
 ]
 base_package_labels -= [ "//src/intl/intl_services/config:sysmgr_small" ]
 

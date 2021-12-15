@@ -1,0 +1,32 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/dist/resource.gni")
+
+config_data("workstation_interface_config") {
+  for_pkg = "setui_service"
+
+  outputs = [ "interface_configuration.json" ]
+  sources = [ "workstation_interface_configuration.json" ]
+}
+
+resource("test_jsons") {
+  sources = [ "workstation_interface_configuration.json" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_package("config_test") {
+  manifest = "meta/config_test.cml"
+  deps = [
+    ":test_jsons",
+    "//garnet/bin/setui:setui-config-test",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":config_test" ]
+}
