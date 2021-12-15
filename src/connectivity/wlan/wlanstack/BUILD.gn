@@ -45,7 +45,6 @@ rustc_binary("bin") {
     "//src/connectivity/wlan/lib/eapol",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect",
-    "//src/connectivity/wlan/lib/isolated-devmgr",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",
     "//src/connectivity/wlan/lib/sme:wlan-sme",
     "//src/connectivity/wlan/lib/wlan_dev",

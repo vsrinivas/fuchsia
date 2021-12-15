@@ -35,7 +35,6 @@ wlandevicemonitor_deps = [
   "//sdk/lib/device-watcher/rust",
   "//src/connectivity/wlan/lib/common/rust/:wlan-common",
   "//src/connectivity/wlan/lib/ieee80211",
-  "//src/connectivity/wlan/lib/isolated-devmgr",
   "//src/connectivity/wlan/lib/wlan_dev",
   "//src/lib/diagnostics/inspect/contrib/rust",
   "//src/lib/diagnostics/inspect/runtime/rust",

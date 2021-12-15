@@ -6,11 +6,7 @@ import("//build/rust/rustc_library.gni")
 
 rustc_library("isolated-devmgr") {
   edition = "2018"
-
-  # TODO(fxbug.dev/45790): this should be true. wlanstack depends on this because it is
-  # built for both real devices and integration tests. Those cases need to be
-  # separated into different binaries so that this can be testonly.
-  testonly = false
+  testonly = true
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
