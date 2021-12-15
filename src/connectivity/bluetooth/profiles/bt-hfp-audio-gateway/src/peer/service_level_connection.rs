@@ -9,8 +9,11 @@ use {
         pin::Pin,
         task::{Context, Poll},
     },
+    fuchsia_async as fasync,
     fuchsia_async::Timer,
     fuchsia_bluetooth::types::Channel,
+    fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self, Receiver, Sender},
@@ -23,12 +26,13 @@ use {
 
 use super::{
     indicators::{AgIndicators, AgIndicatorsReporting, HfIndicators},
-    procedure::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
+    procedure::{IProcedure, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
     slc_request::SlcRequest,
     update::AgUpdate,
 };
 
 use crate::features::{AgFeatures, CodecId, HfFeatures};
+use crate::inspect::ServiceLevelConnectionInspect;
 
 /// The maximum number of concurrent procedures currently supported by this SLC.
 /// This value is chosen as a number significantly more than the total number of procedures
@@ -245,7 +249,7 @@ pub struct ServiceLevelConnection {
     /// The current state associated with this connection.
     state: SlcState,
     /// The current active procedures serviced by this SLC.
-    procedures: HashMap<ProcedureMarker, Box<dyn Procedure>>,
+    procedures: HashMap<ProcedureMarker, IProcedure>,
     /// Queued AG requests waiting for the SLC to be initialized.
     requests_pending_initialization: VecDeque<(ProcedureMarker, AgUpdate)>,
     /// The sender used to relay updates to the stream implementation.
@@ -259,6 +263,18 @@ pub struct ServiceLevelConnection {
     /// The SlcRequests that have not yet been processed.
     unprocessed_slc_requests: VecDeque<SlcRequest>,
     initialization_timeout: Option<Timer>,
+    inspect: ServiceLevelConnectionInspect,
+}
+
+impl Inspect for &mut ServiceLevelConnection {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        self.inspect.iattach(parent, name.as_ref())?;
+        self.inspect.update_slc_state(&self.state);
+        if self.connection.is_some() {
+            self.inspect.connected(fasync::Time::now());
+        }
+        Ok(())
+    }
 }
 
 impl ServiceLevelConnection {
@@ -276,6 +292,7 @@ impl ServiceLevelConnection {
             unprocessed_slc_requests: VecDeque::new(),
             // Timeout is set to `None` until explicitly assigned.
             initialization_timeout: None,
+            inspect: ServiceLevelConnectionInspect::default(),
         }
     }
 
@@ -297,7 +314,8 @@ impl ServiceLevelConnection {
     }
 
     pub fn set_selected_codec(&mut self, codec: Option<CodecId>) {
-        self.state.selected_codec = codec
+        self.state.selected_codec = codec;
+        self.inspect.set_selected_codec(&self.state.selected_codec);
     }
 
     pub fn get_selected_codec(&self) -> Option<CodecId> {
@@ -316,6 +334,7 @@ impl ServiceLevelConnection {
         // stale procedure requests.
         self.reset();
         self.connection = Some(DataController::new(channel));
+        self.inspect.connected(fasync::Time::now());
         debug!("Initializing Service Level Connection");
     }
 
@@ -335,6 +354,7 @@ impl ServiceLevelConnection {
     fn set_initialized(&mut self) {
         info!("Service Level Connection initialized: {:?}", SlcInitializationDebug(&self.state));
         self.state.initialized = true;
+        self.inspect.initialized(fasync::Time::now());
     }
 
     pub fn network_operator_name_format(&self) -> &Option<at::NetworkOperatorNameFormat> {
@@ -384,11 +404,17 @@ impl ServiceLevelConnection {
         Ok(())
     }
 
-    /// Garbage collects the provided `procedure` and returns true if it has terminated.
+    /// Cleans up the `procedure` and returns true if it has completed.
     fn check_and_cleanup_procedure(&mut self, procedure: &ProcedureMarker) -> bool {
         let is_terminated = self.procedures.get(procedure).map_or(false, |p| p.is_terminated());
+
         if is_terminated {
-            drop(self.procedures.remove(procedure));
+            let mut finished_procedure =
+                self.procedures.remove(procedure).expect("just checked existence");
+            // Save the inspect data associated with the finished procedure.
+            if let Some(inspect_node) = finished_procedure.take_inspect_node() {
+                self.inspect.record_procedure(inspect_node);
+            }
 
             // Special case of the SLCI Procedure - once this is complete, the channel is
             // considered initialized.
@@ -396,6 +422,7 @@ impl ServiceLevelConnection {
                 self.set_initialized();
             }
         }
+
         is_terminated
     }
 
@@ -546,15 +573,23 @@ impl ServiceLevelConnection {
         command: Command,
     ) -> ProcedureRequest {
         // Progress the procedure with the message.
+        let node = self.inspect.node();
+        let procedure = self.procedures.entry(procedure_id).or_insert_with(|| {
+            let mut p = procedure_id.initialize();
+            let _ = p.iattach(node, &inspect::unique_name("procedure_"));
+            p
+        });
         let request = match command {
-            Command::Hf(cmd) => self.hf_message(procedure_id, cmd),
-            Command::Ag(cmd) => self.ag_message(procedure_id, cmd),
+            Command::Hf(cmd) => procedure.hf_update(cmd, &mut self.state),
+            Command::Ag(cmd) => procedure.ag_update(cmd, &mut self.state),
         };
+        // Update the SLC State inspect tree as the procedure may have modified state.
+        self.inspect.update_slc_state(&self.state);
 
-        // Potentially clean up the procedure if this was the last stage. Procedures that
-        // have been cleaned up cannot require additional responses, as this would violate
-        // the `Procedure::is_terminated()` guarantee.
+        // Potentially clean up the procedure if this was the last stage.
         if self.check_and_cleanup_procedure(&procedure_id) && request.requires_response() {
+            // Procedures that have been cleaned up cannot require additional responses, as this
+            // would violate the `Procedure::is_terminated()` guarantee.
             return ProcedureError::UnexpectedRequest.into();
         }
         request
@@ -581,30 +616,6 @@ impl ServiceLevelConnection {
             }
             res => res,
         }
-    }
-
-    /// Updates the the procedure specified by the `marker` with the received AG `message`.
-    /// Initializes the procedure if it is not already in progress.
-    /// Returns the request associated with the `message`.
-    pub fn ag_message(&mut self, marker: ProcedureMarker, message: AgUpdate) -> ProcedureRequest {
-        self.procedures
-            .entry(marker)
-            .or_insert(marker.initialize())
-            .ag_update(message, &mut self.state)
-    }
-
-    /// Updates the the procedure specified by the `marker` with the received HF `message`.
-    /// Initializes the procedure if it is not already in progress.
-    /// Returns the request associated with the `message`.
-    pub fn hf_message(
-        &mut self,
-        marker: ProcedureMarker,
-        message: at::Command,
-    ) -> ProcedureRequest {
-        self.procedures
-            .entry(marker)
-            .or_insert(marker.initialize())
-            .hf_update(message, &mut self.state)
     }
 
     /// Helper function to process any requests that are pending SLC initialization.

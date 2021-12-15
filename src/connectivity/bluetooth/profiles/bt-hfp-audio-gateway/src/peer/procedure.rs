@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use at_commands as at;
+use fuchsia_inspect as inspect;
+use fuchsia_inspect_contrib::nodes::NodeExt;
+use fuchsia_inspect_derive::{AttachError, Inspect};
+use thiserror::Error;
 use tracing::warn;
-use {at_commands as at, thiserror::Error};
 
 use crate::peer::{
     service_level_connection::{Command, SlcState},
@@ -223,8 +227,8 @@ pub enum ProcedureMarker {
 
 impl ProcedureMarker {
     /// Initializes a new procedure for the current marker.
-    pub fn initialize(&self) -> Box<dyn Procedure> {
-        match self {
+    pub fn initialize(&self) -> IProcedure {
+        let procedure: Box<dyn Procedure> = match self {
             Self::SlcInitialization => Box::new(SlcInitProcedure::new()),
             Self::Nrec => Box::new(NrecProcedure::new()),
             Self::QueryOperatorSelection => Box::new(QueryOperatorProcedure::new()),
@@ -253,7 +257,8 @@ impl ProcedureMarker {
             Self::CodecSupport => Box::new(CodecSupportProcedure::new()),
             Self::ThreeWaySupport => Box::new(ThreeWaySupportProcedure::new()),
             Self::SupportedHfIndicators => Box::new(SupportedHfIndicatorsProcedure::new()),
-        }
+        };
+        IProcedure::new(procedure)
     }
 
     /// Matches the HF `command` to the SLC Initialization procedure. Before initialization is
@@ -275,7 +280,7 @@ impl ProcedureMarker {
         }
     }
 
-    /// Matches the HF `command` to a procedure. `initialized` represents the initialization state
+    /// Matches the AT `command` to a procedure. `initialized` represents the initialization state
     /// of the Service Level Connection.
     ///
     /// Returns an error if the command is unable to be matched.
@@ -319,6 +324,12 @@ impl ProcedureMarker {
                 _ => Err(ProcedureError::NotImplemented),
             }
         }
+    }
+}
+
+impl std::fmt::Display for ProcedureMarker {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
     }
 }
 
@@ -371,8 +382,7 @@ pub trait Procedure {
     /// Returns the unique identifier associated with this procedure.
     fn marker(&self) -> ProcedureMarker;
 
-    /// Receive an HF `update` to progress the procedure. Returns a request
-    /// to the update.
+    /// Receive an HF `update` to progress the procedure. Returns a request to the update.
     ///
     /// `update` is the incoming AT message received from the HF.
     /// `state` is the shared state associated with the service level connection and may be
@@ -388,8 +398,7 @@ pub trait Procedure {
         ProcedureRequest::Error(ProcedureError::UnexpectedHf(update))
     }
 
-    /// Receive an AG `update` to progress the procedure. Returns a request
-    /// to the update.
+    /// Receive an AG `update` to progress the procedure. Returns a request to the update.
     ///
     /// `update` is the incoming AT message received from the AG.
     /// `state` is the shared state associated with the service level connection and may be
@@ -409,11 +418,90 @@ pub trait Procedure {
     fn is_terminated(&self) -> bool {
         false
     }
+
+    /// Add an inspect node to this procedure.
+    /// `child` is already within the inspect tree, and properties can be added as children of it.
+    /// `name`, `started_at`, and `finished_at` are already tracked.
+    /// If there are no additional properties to be recorded, `child` can be dropped.
+    /// Note: Properties that are created (but not recorded) will be tracked for the duration of the
+    ///       procedure and will not be saved once the procedure terminates. Use the
+    ///       `fuchsia_inspect::record_*()` methods to pass ownership of created nodes to the
+    ///       `child` node - such nodes will exist even after a procedure terminates.
+    fn push_inspect(&mut self, _child: inspect::Node) {}
+}
+
+/// An Inspectable Procedure.
+pub struct IProcedure {
+    procedure: Box<dyn Procedure>,
+    /// The inspect Node associated with this procedure. This node is populated when Inspect is
+    /// attached to the object and will persist for the lifetime of the procedure.
+    /// Use `take_inspect_node` to take the relevant inspect information when the procedure has
+    /// completed.
+    inspect: Option<inspect::Node>,
+}
+
+impl IProcedure {
+    fn new(procedure: Box<dyn Procedure>) -> Self {
+        Self { procedure, inspect: None }
+    }
+
+    /// Returns the inspect node associated with this procedure.
+    /// Returns None if the inspect node has already been taken, or if the procedure is not
+    /// terminated yet.
+    pub fn take_inspect_node(&mut self) -> Option<inspect::Node> {
+        if !self.is_terminated() {
+            return None;
+        }
+
+        self.inspect.take().map(|n| {
+            n.record_time("completed_at");
+            n
+        })
+    }
+}
+
+/// The Procedure implementation for an Inspectable Procedure simply forwards the requests to the
+/// inner procedure.
+impl Procedure for IProcedure {
+    fn marker(&self) -> ProcedureMarker {
+        self.procedure.marker()
+    }
+
+    fn hf_update(&mut self, update: at::Command, state: &mut SlcState) -> ProcedureRequest {
+        self.procedure.hf_update(update, state)
+    }
+
+    fn ag_update(&mut self, update: AgUpdate, state: &mut SlcState) -> ProcedureRequest {
+        self.procedure.ag_update(update, state)
+    }
+
+    fn is_terminated(&self) -> bool {
+        self.procedure.is_terminated()
+    }
+}
+
+impl Inspect for &mut IProcedure {
+    fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
+        let node = parent.create_child(name.as_ref());
+
+        // By default, every procedure will expose the procedure name & the time it was started at.
+        node.record_string("name", &self.marker().to_string());
+        node.record_time("started_at");
+        // In some cases, a procedure may want to expose additional inspect properties. A weak_clone
+        // of the node can be used by the procedure to record any extra information.
+        // The effectiveness of the weak clone is tied to that of the original `node`.
+        let weak_node = node.clone_weak();
+        self.procedure.push_inspect(weak_node);
+
+        self.inspect = Some(node);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fuchsia_inspect::assert_data_tree;
     use matches::assert_matches;
 
     /// A vec of responses converts to the expected request
@@ -437,5 +525,48 @@ mod tests {
         let command = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
         let marker = ProcedureMarker::match_command(&command, true).expect("command to match");
         assert_eq!(marker, ProcedureMarker::Indicators);
+    }
+
+    #[test]
+    fn answer_procedure_default_inspect_tree() {
+        let exec = fuchsia_async::TestExecutor::new_with_fake_time().unwrap();
+        exec.set_fake_time(fuchsia_async::Time::from_nanos(1000));
+
+        let inspect = inspect::Inspector::new();
+        let mut proc = ProcedureMarker::Answer.initialize();
+        let mut state = SlcState::default();
+        proc.iattach(&inspect.root(), "procedure_0").expect("can initialize inspect");
+        // Default inspect tree.
+        assert_data_tree!(inspect, root: {
+            procedure_0: {
+                name: "Answer",
+                started_at: 1000i64,
+            }
+        });
+
+        // Procedure just started so it is not terminated. Can't grab inspect data.
+        assert!(!proc.is_terminated());
+        assert_matches!(proc.take_inspect_node(), None);
+
+        let req = proc.hf_update(at::Command::Answer {}, &mut state);
+        let update = match req {
+            ProcedureRequest::Request(SlcRequest::Answer { response }) => response(Ok(())),
+            x => panic!("Unexpected message: {:?}", x),
+        };
+
+        exec.set_fake_time(fuchsia_async::Time::from_nanos(5000));
+
+        let _req = proc.ag_update(update, &mut state);
+        assert!(proc.is_terminated());
+
+        let node = proc.take_inspect_node();
+        assert_matches!(node, Some(_));
+        assert_data_tree!(inspect, root: {
+            procedure_0: {
+                name: "Answer",
+                started_at: 1000i64,
+                completed_at: 5000i64
+            }
+        });
     }
 }

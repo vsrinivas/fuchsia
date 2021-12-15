@@ -207,6 +207,7 @@ impl PeerTask {
             info!("Connection request from {}", self.id);
         }
         self.connection.connect(channel);
+        let _ = self.connection.iattach(self.inspect.node(), "service_level_connection");
         if let Some(id) = self.manager_id {
             self.notify_peer_connected(id).await;
             self.setup_handler().await?;
@@ -227,6 +228,7 @@ impl PeerTask {
             .await?
             .map_err(|e| format_err!("Profile connection request error: {:?}", e))?;
         self.connection.connect(channel.try_into()?);
+        let _ = self.connection.iattach(self.inspect.node(), "service_level_connection");
         if let Some(id) = self.manager_id {
             self.notify_peer_connected(id).await;
             self.setup_handler()

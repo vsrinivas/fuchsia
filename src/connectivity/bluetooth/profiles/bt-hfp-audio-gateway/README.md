@@ -80,4 +80,34 @@ root:
             service_available
             signal_strength
             roaming
+          service_level_connection:
+            connected_at
+            initialized_at
+            hf_supported_codecs
+            selected_codec
+            handsfree_feature_support:
+              echo_canceling_and_noise_reduction
+              three_way_calling
+              cli_presentation
+              voice_recognition_activation
+              remote_volume_control
+              enhanced_call_status
+              enhanced_call_control
+              codec_negotiation
+              handsfree_indicators
+              esco_s4
+              enhanced_voice_recognition
+              enhanced_voice_recognition_with_text
+            extended_errors
+            call_waiting_notifications
+            call_line_ident_notifications
+            procedures:
+              procedure_0:
+                name
+                started_at
+                completed_at
+              procedure_1:
+                name
+                started_at
+
 ```

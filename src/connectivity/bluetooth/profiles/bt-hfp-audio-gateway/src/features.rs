@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use bitflags::bitflags;
+use std::string::ToString;
 
 use crate::config::AudioGatewayFeatureSupport;
 
@@ -106,4 +107,21 @@ impl PartialEq<i64> for CodecId {
     fn eq(&self, other: &i64) -> bool {
         self.0 as i64 == *other
     }
+}
+
+impl std::fmt::Display for CodecId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.0 {
+            0x01 => write!(f, "{}", "CVSD"),
+            0x02 => write!(f, "{}", "MSBC"),
+            _x => panic!("Unexpected Codec Id: {}", _x), // Can't occur
+        }
+    }
+}
+
+pub fn codecs_to_string(codecs: &Vec<CodecId>) -> String {
+    let codecs_string: Vec<String> = codecs.iter().map(ToString::to_string).collect();
+    let codecs_string: Vec<&str> = codecs_string.iter().map(AsRef::as_ref).collect();
+    let joined = codecs_string.join(", ");
+    joined
 }
