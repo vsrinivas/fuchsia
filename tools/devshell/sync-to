@@ -353,7 +353,7 @@ class SyncToCommand:
                 " https://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source"
             )
 
-    def assert_correct_integration_manifest(self, manifest: str) -> None:
+    def assert_correct_integration_manifest(self, checkout_info: dict) -> None:
         jiri_manifest = self.fuchsia_dir.joinpath(".jiri_manifest")
         local_manifest = self.jiri(
             "manifest",
@@ -363,9 +363,23 @@ class SyncToCommand:
             dry_run_safe=True,
             stdout=subprocess.PIPE,
         ).stdout.strip()
+        manifest = checkout_info["manifest"]
         if local_manifest != manifest:
+            workaround = (
+                f"create a separate Fuchsia checkout that uses the {manifest!r} manifest and "
+                f"re-run your command there."
+            )
+            if not checkout_info.get("patches"):
+                rev = checkout_info["base_manifest_revision"]
+                workaround += (
+                    f"\nAlternatively, you can ignore this error by running `fx sync-to {rev}`, "
+                    f"which will sync to the correct revision but may not include the same "
+                    f"repositories and packages used by the build."
+                )
             raise Error(
-                f"Manifest {manifest!r} does not match local manifest {local_manifest!r}"
+                f"Manifest {manifest!r} does not match local manifest {local_manifest!r}, so "
+                f"unable to reproduce the build's checkout.\n"
+                f"As a workaround, you can {workaround}"
             )
 
     def sync_to_build_id(self) -> None:
@@ -409,8 +423,7 @@ class SyncToCommand:
             return
         integration_remote = checkout_info["manifest_remote"]
         self.assert_correct_integration_repo(integration_remote)
-        manifest = checkout_info["manifest"]
-        self.assert_correct_integration_manifest(manifest)
+        self.assert_correct_integration_manifest(checkout_info)
 
         self.sync_to_integration_ref(checkout_info["base_manifest_revision"])
         has_integration_patch = False
