@@ -82,6 +82,10 @@ template("ffx") {
                            ])
 
     configs += [ "//build/config/rust:panic_abort" ]
+
+    # https//fxbug.dev/90331
+    # Disable remote build until size/memory/flakiness issues are resolved.
+    disable_rbe = true
   }
 
   group(ffx_name + "_tests") {
