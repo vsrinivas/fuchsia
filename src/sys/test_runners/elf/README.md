@@ -39,4 +39,4 @@ all the test logic exists in `src/test_server.rs`. Unit tests are co-located
 with the implementation.
 
 [test-runner]: ../README.md
-[passing-arguments]: /docs/concepts/testing/v2/test_runner_framework.md#passing_arguments
+[passing-arguments]: /docs/development/testing/components/test_runner_framework.md#passing_arguments
