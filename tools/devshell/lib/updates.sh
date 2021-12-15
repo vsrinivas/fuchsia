@@ -178,3 +178,14 @@ function ffx-repository-check-server-address {
 
   return 0
 }
+
+function default-repository-url {
+    if is_feature_enabled "legacy_serve"; then
+        echo "fuchsia-pkg://devhost"
+    else
+        local ffx_repo="$(ffx-default-repository-name)" || return $?
+        echo "fuchsia-pkg://${ffx_repo}"
+    fi
+
+    return 0
+}

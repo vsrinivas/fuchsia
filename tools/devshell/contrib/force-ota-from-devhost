@@ -1,0 +1,23 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Software delivery
+### force an Over The Air system update from devhost (reboots!)
+## This command is essentially an alias for:
+##   fx shell update force-install fuchsia-pkg://devhost/update
+## This command requires an update server (`fx serve`) to be running in order to succeed.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/updates.sh || exit $?
+fx-config-read
+
+repo_url="$(default-repository-url)"
+err=$?
+if [[ $err != 0 ]]; then
+    fx-error "Unable to determine default package repository name"
+    exit $err
+fi
+
+fx-command-run shell update force-install "${repo_url}/update"
