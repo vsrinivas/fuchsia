@@ -12,7 +12,6 @@ use {
     futures::{AsyncBufReadExt, AsyncWriteExt, FutureExt, StreamExt},
     futures_lite::io::BufReader,
     std::process::{Child, Command, Stdio},
-    std::sync::Arc,
     symbol_index::ensure_symbol_index_registered,
 };
 
@@ -37,16 +36,16 @@ pub trait Symbolizer {
 }
 
 struct LogSymbolizerInner {
-    _child: Child,
+    child: Child,
     _task: Task<Result<()>>,
 }
 pub struct LogSymbolizer {
-    inner: Arc<Mutex<Option<LogSymbolizerInner>>>,
+    inner: std::cell::RefCell<Option<LogSymbolizerInner>>,
 }
 
 impl LogSymbolizer {
     pub fn new() -> Self {
-        Self { inner: Arc::new(Mutex::new(None)) }
+        Self { inner: std::cell::RefCell::new(None) }
     }
 }
 
@@ -84,9 +83,9 @@ impl<'a> Symbolizer for LogSymbolizer {
         let stdout = Async::new(c.stdout.take().context("missing stdout")?)?;
         let mut stdin = Async::new(c.stdin.take().context("missing stdin")?)?;
 
-        let mut inner = self.inner.lock().await;
+        let mut inner = self.inner.borrow_mut();
         inner.replace(LogSymbolizerInner {
-            _child: c,
+            child: c,
             _task: Task::local(async move {
                 let mut stdout_reader = BufReader::new(stdout);
                 loop {
@@ -145,6 +144,21 @@ impl<'a> Symbolizer for LogSymbolizer {
             })
         });
         Ok(())
+    }
+}
+
+impl Drop for LogSymbolizer {
+    fn drop(&mut self) {
+        let mut inner = self.inner.borrow_mut();
+        log::info!("LogSymbolizer dropped. Killing `symbolizer` process.");
+        if let Some(mut inner) = inner.take() {
+            if let Err(_) = inner.child.kill() {
+                log::warn!("symbolizer process already stopped.");
+            }
+            // Wait on the child so it doesn't hang around as a zombie process.
+            let r = inner.child.wait();
+            log::info!("Symbolizer exited with result status: {:?}", r);
+        }
     }
 }
 
