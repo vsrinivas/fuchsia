@@ -1413,6 +1413,10 @@ TEST(ChannelTest, ReadAndWriteWithMultipleSizes) {
 
 // Verify that a process is killed by a policy exception if it writes to a "full" channel.
 TEST(ChannelTest, ChannelFullException) {
+  if (getenv("NO_NEW_PROCESS")) {
+    ZXTEST_SKIP("Running without the ZX_POL_NEW_PROCESS policy, skipping test case.");
+  }
+
   zx::process proc;
   zx::thread thread;
   zx::vmar vmar;

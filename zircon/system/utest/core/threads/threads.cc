@@ -291,6 +291,9 @@ TEST(Threads, LongNameSucceeds) {
 // process's first thread.  That's what zx_process_start() is for.
 // Check that zx_thread_start() returns an error in this case.
 TEST(Threads, ThreadStartOnInitialThread) {
+  if (getenv("NO_NEW_PROCESS")) {
+    ZXTEST_SKIP("Running without the ZX_POL_NEW_PROCESS policy, skipping test case.");
+  }
   static const char kProcessName[] = "test-proc-thread1";
   zx_handle_t process;
   zx_handle_t vmar;

@@ -1,0 +1,10 @@
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+    ],
+    program: {
+        binary: "test/core-channel",
+        environ: [ "NO_NEW_PROCESS=1" ],
+    },
+}

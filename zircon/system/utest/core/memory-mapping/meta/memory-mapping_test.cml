@@ -1,0 +1,10 @@
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/test_runners/elf/default.shard.cml",
+    ],
+    program: {
+        binary: "test/core-memory-mapping",
+        environ: [ "NO_AMBIENT_MARK_VMO_EXEC=1" ],
+    },
+}

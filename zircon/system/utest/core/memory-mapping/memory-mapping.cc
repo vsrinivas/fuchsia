@@ -124,6 +124,10 @@ __asm__(
     ".popsection");
 
 TEST(MemoryMappingTest, MmapProtExecTest) {
+  if (getenv("NO_AMBIENT_MARK_VMO_EXEC")) {
+    ZXTEST_SKIP("Running without the AMBIENT_MARK_VMO_EXEC policy, skipping test case.");
+  }
+
   // Allocate a page that will later be made executable.
   size_t page_size = getpagesize();
   void* addr =

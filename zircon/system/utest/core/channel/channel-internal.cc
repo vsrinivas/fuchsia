@@ -83,6 +83,9 @@ void WaitForThreadState(zx_handle_t thread_handle, zx_thread_state_t state) {
 // TODO(fxbug.dev/34013): This test ensures that currently undefined behavior does not change
 // unexpectedly. Once the behavior is properly undefined, this test should be updated.
 TEST(ChannelInternalTest, TransferChannelWithPendingCallInSourceProcess) {
+  if (getenv("NO_NEW_PROCESS")) {
+    ZXTEST_SKIP("Running without the ZX_POL_NEW_PROCESS policy, skipping test case.");
+  }
   constexpr uint32_t kRequestPayload = 0xc0ffee;
   constexpr uint32_t kReplyPayload = 0xdeadbeef;
 

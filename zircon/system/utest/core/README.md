@@ -4,7 +4,7 @@ The "core" tests exist for one main purpose:
 To test basic functionality when things like devmgr aren't working.
 
 There are three different ways in which core tests are built and run:
-unified, standalone, and as components.
+unified, standalone, and as Fuchsia components.
 
 ## Unified mode
 
@@ -59,7 +59,16 @@ or
 runtests /boot/test/core-*
 ```
 
-## Components
+## Fuchsia components
+
+In this mode, each test is built into its own binary and wrapped up as a
+component in a package. Not all core tests can operate in this mode, and some
+tests require policies that are not granted to regular components. Some tests
+are not available in this mode and some tests skip specific cases in this mode.
+
+This mode can provide a faster iteration cycle for the tests since the
+edit-compile-test cycle only needs to rebuild and update the package containing
+the test and not rebuilding or rebooting the system.
 
 Some tests require the next vDSO, which is not available in the
 standalone mode on bringup builds. These tests are built as standalone
@@ -69,25 +78,36 @@ being available in the standalone mode in bringup builds. Refer to
 fxbug.dev/89597 for more context. See `requires_next_vdso` in BUILD.gn
 for a list of such tests.
 
+
 ### Example usage
 
 ```
 fx set core.x64 --with //zircon/system/utest/core:tests
 fx build
-fx qemu -N ...
+fx emu ...
 ```
 
 Then on the host,
+```
+fx test fuchsia-pkg://fuchsia.com/core-page-size-test-package
+```
 
-```
-fx serve
-```
+### Limitations
 
-and separately,
+In this mode the set of job policies applied to the tests is restricted compared
+to the unified and standalone modes. Some test cases are skipped due to missing
+these policies:
 
-```
-fx test fuchsia-pkg://fuchsia.com/core-pager-writeback-test
-```
+* ZX_POL_NEW_PROCESS
+
+  If this policy is not available, the environment variable "NO_NEW_PROCESS=1" is
+set and tests requiring this are skipped.
+
+* ZX_POL_AMBIENT_MARK_VMO_EXEC
+
+  If this policy is not available, the environment variable
+"NO_AMBIENT_MARK_VMO_EXEC=1" is set and tests requiring this are skipped.
+
 
 ## Notes
 

@@ -878,7 +878,13 @@ TEST(VmoTestCase, Rights) {
 }
 
 // This test covers VMOs with the execute bit set using the vmo_replace_as_executable syscall.
+// This call is available in the unified core-tests binary and in the bootfs environment, but not
+// when running as a component in a full Fuchsia system.
 TEST(VmoTestCase, RightsExec) {
+  if (getenv("NO_AMBIENT_MARK_VMO_EXEC")) {
+    ZXTEST_SKIP("Running without the ZX_POL_AMBIENT_MARK_VMO_EXEC policy, skipping test case.");
+  }
+
   size_t len = zx_system_get_page_size() * 4;
   zx_status_t status;
   zx_handle_t vmo, vmo2;
