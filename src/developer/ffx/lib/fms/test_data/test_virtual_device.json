@@ -25,20 +25,6 @@
                 "units": "gigabytes"
             }
         },
-        "behaviors": {
-            "test_behavior": {
-                "description": "Text",
-                "handler": "HandlerName",
-                "data": {
-                    "femu": {
-                        "args": [],
-                        "features": [],
-                        "kernel_args": [],
-                        "options": []
-                    }
-                }
-            }
-        },
         "name": "virtual-arm64",
         "type": "virtual_device"
     },

@@ -103,12 +103,6 @@ impl FromStr for EngineType {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum FilterResult {
-    Accept,
-    Reject(String),
-}
-
 /// Selector for which type of graphics acceleration to enable for the emulator.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]

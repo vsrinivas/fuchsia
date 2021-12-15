@@ -5,7 +5,6 @@
 //! The ffx_emulator_engines crate contains the implementation
 //! of each emulator "engine" such as aemu and qemu.
 
-mod behaviors;
 mod femu;
 mod qemu;
 pub mod serialization;

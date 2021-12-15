@@ -8,12 +8,11 @@
 //! runtime.
 
 use crate::enumerations::{
-    AccelerationMode, ConsoleType, EngineType, FilterResult, GpuType, LogLevel, NetworkingMode,
-    VirtualCpu,
+    AccelerationMode, ConsoleType, EngineType, GpuType, LogLevel, NetworkingMode, VirtualCpu,
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use sdk_metadata::{AudioDevice, Behavior, DataAmount, PointingDevice, Screen};
+use sdk_metadata::{AudioDevice, DataAmount, PointingDevice, Screen};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 
@@ -60,7 +59,6 @@ pub trait EmulatorEngine {
 /// Collects the specific configurations into a single struct for ease of passing around.
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct EmulatorConfiguration {
-    pub behaviors: HashMap<String, Behavior>,
     pub device: DeviceConfig,
     pub guest: GuestConfig,
     pub host: HostConfig,
@@ -160,37 +158,4 @@ pub struct RuntimeConfig {
     /// The human-readable name for this instance. Must be unique from any other current
     /// instance on the host.
     pub name: String,
-}
-
-pub trait BehaviorTrait {
-    /// Any code that needs to be executed during shutdown, if this Behavior has been included.
-    /// This might include actions like removing files or tearing down network interfaces that
-    /// were added in the setup() routine. Returns Ok(()) if everything was torn down successfully.
-    /// If it returns an error, that error will be logged and the engine will continue processing
-    /// the shutdown command.
-    fn cleanup(&self) -> Result<()> {
-        log::debug!("SimpleBehavior cleanup");
-        Ok(())
-    }
-
-    /// Used to decide if a Behavior included in the manifest is appropriate for this emulator
-    /// instance. If this function returns Ok(Accept), the Behavior will be included;
-    /// Ok(Reject(message)) indicates the Behavior is not included, and the message indicates why.
-    /// An Err(_) is exceptional, and generally indicates the emulator should not be launched in
-    /// its current state. Examples for filtering include checking command line flag values, host
-    /// OS configuration, installed helper programs like KVM or Fuchsia utilities, etc.
-    fn filter(&self, _config: &EmulatorConfiguration) -> Result<FilterResult> {
-        log::debug!("SimpleBehavior filter");
-        Ok(FilterResult::Accept)
-    }
-
-    /// Any code that needs to be executed during start, if this Behavior has been included. This
-    /// might include actions like resizing or staging additional files, setting up network
-    /// interfaces and allocating ports for mapping between the host and guest, etc. If it returns
-    /// an error, the start command will stop processing additional Behaviors, the call shutdown
-    /// and and run cleanup on any that have already been processed.
-    fn setup(&self) -> Result<()> {
-        log::debug!("SimpleBehavior setup");
-        Ok(())
-    }
 }
